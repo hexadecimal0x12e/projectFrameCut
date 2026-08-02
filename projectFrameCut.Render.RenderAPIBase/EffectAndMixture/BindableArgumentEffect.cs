@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
+    [Obsolete("All BindableEffect is deprecated and will be removed in future version, please use EffectProvider with a DynamicEffectParamField instead.")]
     public interface IBindableArgumentEffect : IEffect
     {
         /// <summary>

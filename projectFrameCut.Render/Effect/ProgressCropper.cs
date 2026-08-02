@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ProgressCropper_IPicture : IContinuousEffect
+    public class ProgressCropper_IPicture : IContinuousEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -30,6 +30,7 @@ namespace projectFrameCut.Render.Effect
         public int Width { get; init; }
         public float Angle { get; init; }
         public List<CropData> CropList { get; set; } = new();
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -43,7 +44,12 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, float progress, IComputer? computer, int targetWidth, int targetHeight)
         {
-            var crop = ResolveCrop(progress, targetWidth, targetHeight);
+            int cropX = DynamicParam.Resolve(DynamicProviders, "StartX", StartX);
+            int cropY = DynamicParam.Resolve(DynamicProviders, "StartY", StartY);
+            int cropW = DynamicParam.Resolve(DynamicProviders, "Width", Width);
+            int cropH = DynamicParam.Resolve(DynamicProviders, "Height", Height);
+            float cropAngle = DynamicParam.Resolve(DynamicProviders, "Angle", Angle);
+            var crop = ResolveCrop(progress, targetWidth, targetHeight, cropX, cropY, cropW, cropH, cropAngle);
             return CropEffectShared.CropAndProcess(source, crop.StartX, crop.StartY, crop.Width, crop.Height, crop.Angle);
         }
 
@@ -77,18 +83,18 @@ namespace projectFrameCut.Render.Effect
             }
         }
 
-        private CropData ResolveCrop(float progress, int targetWidth, int targetHeight)
+        private CropData ResolveCrop(float progress, int targetWidth, int targetHeight, int startX, int startY, int width, int height, float angle)
         {
             CropData crop = CropList.Count > 0
                 ? CropEffectShared.GetCropForProgress(CropList, Math.Clamp(progress, 0.0, 1.0))
-                : new CropData(0, StartX, StartY, Width, Height, Angle);
+                : new CropData(0, startX, startY, width, height, angle);
 
             return CropEffectShared.Scale(crop, targetWidth, targetHeight, RelativeWidth, RelativeHeight);
         }
     }
 
 
-    public class ProgressCropper_HwAccel : IContinuousEffect
+    public class ProgressCropper_HwAccel : IContinuousEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -105,6 +111,7 @@ namespace projectFrameCut.Render.Effect
         public int Width { get; init; }
         public float Angle { get; init; }
         public List<CropData> CropList { get; set; } = new();
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -144,11 +151,16 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, float progress, IComputer? computer, int targetWidth, int targetHeight)
         {
-            int startX = StartX;
-            int startY = StartY;
-            int width = Width;
-            int height = Height;
-            float angle = Angle;
+            int cropX = DynamicParam.Resolve(DynamicProviders, "StartX", StartX);
+            int cropY = DynamicParam.Resolve(DynamicProviders, "StartY", StartY);
+            int cropW = DynamicParam.Resolve(DynamicProviders, "Width", Width);
+            int cropH = DynamicParam.Resolve(DynamicProviders, "Height", Height);
+            float cropAngle = DynamicParam.Resolve(DynamicProviders, "Angle", Angle);
+            int startX = cropX;
+            int startY = cropY;
+            int width = cropW;
+            int height = cropH;
+            float angle = cropAngle;
 
             if (CropList.Count > 0)
             {
@@ -162,10 +174,10 @@ namespace projectFrameCut.Render.Effect
             }
             else if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
             {
-                startX = (int)Math.Round((double)StartX * targetWidth / RelativeWidth);
-                startY = (int)Math.Round((double)StartY * targetHeight / RelativeHeight);
-                width = (int)Math.Round((double)Width * targetWidth / RelativeWidth);
-                height = (int)Math.Round((double)Height * targetHeight / RelativeHeight);
+                startX = (int)Math.Round((double)cropX * targetWidth / RelativeWidth);
+                startY = (int)Math.Round((double)cropY * targetHeight / RelativeHeight);
+                width = (int)Math.Round((double)cropW * targetWidth / RelativeWidth);
+                height = (int)Math.Round((double)cropH * targetHeight / RelativeHeight);
             }
 
             if (width <= 0 || height <= 0)
@@ -271,7 +283,7 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class CropEffectFactory : IEffectFactory
+    public class CropEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
@@ -319,7 +331,7 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class ProgressCropperEffectFactory : IEffectFactory
+    public class ProgressCropperEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
@@ -408,6 +420,54 @@ namespace projectFrameCut.Render.Effect
                 Angle = Convert.ToSingle(parameters["Angle"]),
                 CropList = CropEffectShared.ParseCropList(parameters["CropList"]),
             };
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the ProgressCrop keyframed crop provider.
+    /// </summary>
+    public class ProgressCropProvider : EffectProviderBase
+    {
+        public ProgressCropProvider()
+        {
+            Name = "ProgressCrop";
+            Parameters = new Dictionary<string, object>
+            {
+                { "StartX", 0 },
+                { "StartY", 0 },
+                { "Width", 1280 },
+                { "Height", 720 },
+                { "Angle", 0f },
+                { "CropList", "[]" },
+            };
+        }
+
+        public override string TypeName => "ProgressCrop";
+
+        public override EffectType TypeOfEffect => EffectType.ContinuousEffect;
+
+        public override EffectTarget Target => EffectTarget.Video | EffectTarget.IsKeyFramed | EffectTarget.IsNotVisibleInNewEffectSelector;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("StartX", EffectArgumentFieldType.Integer, "0"),
+                Field("StartY", EffectArgumentFieldType.Integer, "0"),
+                Field("Width", EffectArgumentFieldType.Integer, "1280", min: "1"),
+                Field("Height", EffectArgumentFieldType.Integer, "720", min: "1"),
+                Field("Angle", EffectArgumentFieldType.Numeric, "0", min: "-180", max: "180"),
+                Field("CropList", EffectArgumentFieldType.String, "[]", remarks: "Serialized CropData array as JSON string")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration, EffectImplementType.IPicture];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new ProgressCropperEffectFactory().Build(implementType, parameters)];
         }
     }
 }

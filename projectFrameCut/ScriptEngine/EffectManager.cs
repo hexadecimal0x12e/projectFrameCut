@@ -7,6 +7,7 @@ using System.Threading;
 using Microsoft.Maui.ApplicationModel;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 
@@ -102,9 +103,9 @@ namespace projectFrameCut.ScriptEngine
         /// <summary>
         /// 按 Guid 查找 clip 上的 EffectBundle，未找到时写非终止错误。
         /// </summary>
-        protected IEffectBundle? ResolveEffectBundle(ClipElementUI clip, Guid bundleId)
+        protected IEffectProvider? ResolveEffectBundle(ClipElementUI clip, Guid bundleId)
         {
-            if (clip.EffectBundles is not null && clip.EffectBundles.TryGetValue(bundleId, out var bundle))
+            if (clip.EffectProviders is not null && clip.EffectProviders.TryGetValue(bundleId, out var bundle))
                 return bundle;
 
             WriteError(new ErrorRecord(
@@ -118,45 +119,17 @@ namespace projectFrameCut.ScriptEngine
         // ─── PSObject 输出构建器 ───────────────────────────────
 
         /// <summary>构造标准的 EffectBundle PSObject（含元数据概要）。</summary>
-        protected PSObject NewEffectBundleObject(IEffectBundle bundle)
+        protected PSObject NewEffectBundleObject(IEffectProvider bundle)
         {
-            var obj = new PSObject();
-            obj.Properties.Add(new PSNoteProperty("Id", bundle.Id));
-            obj.Properties.Add(new PSNoteProperty("Name", bundle.Name));
-            obj.Properties.Add(new PSNoteProperty("TypeName", bundle.TypeName));
-            obj.Properties.Add(new PSNoteProperty("FromPlugin", bundle.FromPlugin));
-            obj.Properties.Add(new PSNoteProperty("EffectType", bundle.TypeOfEffect.ToString()));
-            obj.Properties.Add(new PSNoteProperty("Target", bundle.Target.ToString()));
-            obj.Properties.Add(new PSNoteProperty("Enabled", bundle.Enabled));
-            obj.Properties.Add(new PSNoteProperty("ParameterCount", bundle.Parameters?.Count ?? 0));
-            obj.Properties.Add(new PSNoteProperty("ParameterNames",
-                bundle.Parameters?.Keys.ToArray() ?? Array.Empty<string>()));
-            obj.Properties.Add(new PSNoteProperty("SettableFieldCount", bundle.SettableFields?.Count ?? 0));
-            obj.Properties.Add(new PSNoteProperty("SettableFields",
-                bundle.SettableFields?.Values.Select(f => new
-                {
-                    f.Id,
-                    f.DisplayName,
-                    f.Description,
-                    ValueType = f.ValueType.ToString(),
-                    f.DefaultValue,
-                    f.MinValue,
-                    f.MaxValue,
-                    f.PresetOptions,
-                    f.Remarks
-                }).ToList() ?? new()));
-            obj.Properties.Add(new PSNoteProperty("BindedInputId", bundle.BindedInputId));
-            obj.Properties.Add(new PSNoteProperty("BindedOutputId", bundle.BindedOutputId));
-            obj.Properties.Add(new PSNoteProperty("StartPoint", bundle.StartPoint));
-            obj.Properties.Add(new PSNoteProperty("EndPoint", bundle.EndPoint));
-            return obj;
+            // SettableFields / BindedInputId / BindedOutputId / StartPoint / EndPoint were removed from the provider API.
+            throw new NotImplementedException("NewEffectBundleObject was disabled after the IEffectBundle removal.");
         }
 
         /// <summary>
         /// 构造简化的 EffectBundle PSObject（仅 Id、Name、Type、Enabled 和当前参数值）。
         /// 用于快速查看 Bundle 列表。
         /// </summary>
-        protected PSObject NewEffectBundleSummaryObject(IEffectBundle bundle)
+        protected PSObject NewEffectBundleSummaryObject(IEffectProvider bundle)
         {
             var obj = new PSObject();
             obj.Properties.Add(new PSNoteProperty("Id", bundle.Id));
@@ -212,63 +185,8 @@ namespace projectFrameCut.ScriptEngine
 
         protected override void ProcessRecordImpl()
         {
-            if (!EnsurePageLoaded(out _)) return;
-
-            var available = EffectServices.GetAvailableEffectBundles();
-            if (available.Count == 0)
-            {
-                WriteWarning("No EffectBundle types available. Plugins may not be initialized yet.");
-                return;
-            }
-
-            var filtered = available.AsEnumerable();
-
-            if (!string.IsNullOrEmpty(Name))
-            {
-                var pattern = "^" + System.Text.RegularExpressions.Regex.Escape(Name)
-                    .Replace("\\*", ".*").Replace("\\?", ".") + "$";
-                filtered = filtered.Where(kv =>
-                    System.Text.RegularExpressions.Regex.IsMatch(kv.Key, pattern,
-                        System.Text.RegularExpressions.RegexOptions.IgnoreCase));
-            }
-
-            if (EffectType.HasValue)
-                filtered = filtered.Where(kv => kv.Value().TypeOfEffect == EffectType.Value);
-
-            if (Target.HasValue)
-                filtered = filtered.Where(kv => kv.Value().Target.HasFlag(Target.Value));
-
-            // 对每种类型实例化一次以获取元数据
-            var results = filtered.Select(kv =>
-            {
-                var instance = kv.Value();
-                var obj = new PSObject();
-                obj.Properties.Add(new PSNoteProperty("TypeName", kv.Key));
-                obj.Properties.Add(new PSNoteProperty("Name", instance.Name));
-                obj.Properties.Add(new PSNoteProperty("FromPlugin", instance.FromPlugin));
-                obj.Properties.Add(new PSNoteProperty("EffectType", instance.TypeOfEffect.ToString()));
-                obj.Properties.Add(new PSNoteProperty("Target", instance.Target.ToString()));
-                obj.Properties.Add(new PSNoteProperty("IsMultiInput", instance.IsMultiInput));
-                obj.Properties.Add(new PSNoteProperty("SettableFieldCount", instance.SettableFields?.Count ?? 0));
-                obj.Properties.Add(new PSNoteProperty("SettableFields",
-                    instance.SettableFields?.Values.Select(f => new
-                    {
-                        f.Id,
-                        f.DisplayName,
-                        f.Description,
-                        ValueType = f.ValueType.ToString(),
-                        f.DefaultValue,
-                        f.MinValue,
-                        f.MaxValue,
-                        f.PresetOptions,
-                        f.Remarks
-                    }).ToList() ?? new()));
-                obj.Properties.Add(new PSNoteProperty("ParametersNeeded",
-                    instance.ParametersNeeded?.ToArray() ?? Array.Empty<string>()));
-                return obj;
-            }).ToList();
-
-            WriteObject(results, enumerateCollection: false);
+            // IsMultiInput / SettableFields / ParametersNeeded were removed from the provider API.
+            throw new NotImplementedException("Get-ProjectEffectBundleType was disabled after the IEffectBundle removal.");
         }
     }
 
@@ -302,55 +220,8 @@ namespace projectFrameCut.ScriptEngine
 
         protected override void ProcessRecordImpl()
         {
-            if (!EnsurePageLoaded(out var page)) return;
-            var clip = ResolveClip(page!, ClipId);
-            if (clip is null) return;
-
-            if (clip.EffectBundles is null || clip.EffectBundles.Count == 0)
-            {
-                WriteObject(null); // 返回空
-                return;
-            }
-
-            var bundles = clip.EffectBundles.Values.AsEnumerable();
-
-            if (BundleId.HasValue)
-                bundles = bundles.Where(b => b.Id == BundleId.Value);
-
-            if (!string.IsNullOrEmpty(TypeName))
-            {
-                var pattern = "^" + System.Text.RegularExpressions.Regex.Escape(TypeName)
-                    .Replace("\\*", ".*").Replace("\\?", ".") + "$";
-                bundles = bundles.Where(b =>
-                    System.Text.RegularExpressions.Regex.IsMatch(b.TypeName, pattern,
-                        System.Text.RegularExpressions.RegexOptions.IgnoreCase));
-            }
-
-            var list = bundles.ToList();
-
-            if (ShowFields)
-            {
-                // 输出每个 Bundle 的 SettableFields 元数据
-                foreach (var bundle in list)
-                {
-                    if (bundle.SettableFields is null || bundle.SettableFields.Count == 0)
-                        continue;
-
-                    WriteObject(NewEffectBundleObject(bundle));
-                    foreach (var field in bundle.SettableFields.Values)
-                    {
-                        WriteObject(NewSettableFieldObject(field));
-                    }
-                }
-            }
-            else if (Detailed)
-            {
-                WriteObject(list.Select(NewEffectBundleObject).ToList(), enumerateCollection: true);
-            }
-            else
-            {
-                WriteObject(list.Select(NewEffectBundleSummaryObject).ToList(), enumerateCollection: true);
-            }
+            // SettableFields / NewEffectBundleObject were removed from the provider API.
+            throw new NotImplementedException("Get-ProjectClipEffectBundle was disabled after the IEffectBundle removal.");
         }
     }
 
@@ -396,83 +267,8 @@ namespace projectFrameCut.ScriptEngine
 
         protected override void ProcessRecordImpl()
         {
-            if (!EnsurePageLoaded(out var page)) return;
-            var clip = ResolveClip(page!, ClipId);
-            if (clip is null) return;
-
-            if (string.IsNullOrEmpty(TypeName))
-            {
-                WriteError(new ErrorRecord(
-                    new ArgumentException("TypeName is required."),
-                    "InvalidArgument", ErrorCategory.InvalidArgument, null));
-                return;
-            }
-
-            var available = EffectServices.GetAvailableEffectBundles();
-            if (!available.TryGetValue(TypeName, out var factory))
-            {
-                WriteError(new ErrorRecord(
-                    new ArgumentException($"EffectBundle type '{TypeName}' not found. " +
-                        "Use Get-ProjectEffectBundleType to see available types."),
-                    "EffectBundleTypeNotFound",
-                    ErrorCategory.ObjectNotFound,
-                    TypeName));
-                return;
-            }
-
-            if (!ShouldProcess($"Clip '{clip.DisplayName}'", $"Add EffectBundle '{TypeName}'"))
-                return;
-
-            try
-            {
-                var bundle = factory();
-                bundle.Name = Name ?? TypeName;
-                bundle.Enabled = !Disabled;
-
-                // 通过 SettableFields 设置初始字段值
-                if (Fields is { Count: > 0 })
-                {
-                    if (bundle.SettableFields is null || bundle.SettableFields.Count == 0)
-                    {
-                        WriteWarning($"EffectBundle '{TypeName}' has no settable fields. Ignoring -Fields parameter.");
-                    }
-                    else
-                    {
-                        foreach (var key in Fields.Keys)
-                        {
-                            var fieldId = key?.ToString();
-                            if (string.IsNullOrEmpty(fieldId)) continue;
-
-                            if (!bundle.SettableFields.TryGetValue(fieldId, out var fieldDef))
-                            {
-                                WriteWarning($"Field '{fieldId}' not found on EffectBundle '{TypeName}'. " +
-                                    $"Available fields: {string.Join(", ", bundle.SettableFields.Keys)}");
-                                continue;
-                            }
-
-                            if (!bundle.HandleSettableFieldsChange(fieldDef, Fields[key]!, out var feedback))
-                            {
-                                WriteWarning($"Failed to set field '{fieldId}' on EffectBundle '{TypeName}': {feedback}");
-                            }
-                        }
-                    }
-                }
-
-                // 添加到 clip
-                clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
-                clip.EffectBundles[bundle.Id] = bundle;
-
-                if (PassThru)
-                    WriteObject(NewEffectBundleObject(bundle));
-            }
-            catch (Exception ex)
-            {
-                WriteError(new ErrorRecord(
-                    ex,
-                    "AddEffectBundleFailed",
-                    ErrorCategory.NotSpecified,
-                    null));
-            }
+            // SettableFields / HandleSettableFieldsChange / NewEffectBundleObject were removed from the provider API.
+            throw new NotImplementedException("Add-ProjectClipEffectBundle was disabled after the IEffectBundle removal.");
         }
     }
 
@@ -536,72 +332,8 @@ namespace projectFrameCut.ScriptEngine
 
         protected override void ProcessRecordImpl()
         {
-            if (!EnsurePageLoaded(out var page)) return;
-            var clip = ResolveClip(page!, ClipId);
-            if (clip is null) return;
-
-            var bundle = ResolveEffectBundle(clip, BundleId);
-            if (bundle is null) return;
-
-            if (!ShouldProcess($"EffectBundle '{bundle.Name}' ({BundleId}) on clip '{clip.DisplayName}'",
-                    "Modify effect bundle"))
-                return;
-
-            // ── 通用属性 ──
-            if (Name is not null)
-                bundle.Name = Name;
-
-            if (Enabled.HasValue)
-                bundle.Enabled = Enabled.Value;
-
-            // ── 锚点绑定 ──
-            if (BindedInputId.HasValue)
-                bundle.BindedInputId = BindedInputId.Value;
-
-            if (BindedOutputId.HasValue)
-                bundle.BindedOutputId = BindedOutputId.Value;
-
-            // ── 重置为默认 ──
-            if (ResetToDefaults)
-                bundle.Parameters?.Clear();
-
-            // ── 通过 SettableFields 设置字段值 ──
-            if (Fields is { Count: > 0 })
-            {
-                if (bundle.SettableFields is null || bundle.SettableFields.Count == 0)
-                {
-                    WriteWarning($"EffectBundle '{bundle.TypeName}' has no settable fields. Ignoring -Fields parameter.");
-                }
-                else
-                {
-                    var fieldResultLog = new List<string>();
-
-                    foreach (var key in Fields.Keys)
-                    {
-                        var fieldId = key?.ToString();
-                        if (string.IsNullOrEmpty(fieldId)) continue;
-
-                        if (!bundle.SettableFields.TryGetValue(fieldId, out var fieldDef))
-                        {
-                            WriteWarning($"Field '{fieldId}' not found on EffectBundle '{bundle.TypeName}'. " +
-                                $"Available fields: {string.Join(", ", bundle.SettableFields.Keys)}");
-                            continue;
-                        }
-
-                        if (bundle.HandleSettableFieldsChange(fieldDef, Fields[key]!, out var feedback))
-                        {
-                            fieldResultLog.Add($"{fieldId} = {Fields[key]}");
-                        }
-                        else
-                        {
-                            WriteWarning($"Failed to set field '{fieldId}' on EffectBundle '{bundle.TypeName}': {feedback}");
-                        }
-                    }
-                }
-            }
-
-            if (PassThru)
-                WriteObject(NewEffectBundleObject(bundle));
+            // BindedInputId / BindedOutputId / SettableFields / HandleSettableFieldsChange were removed from the provider API.
+            throw new NotImplementedException("Set-ProjectClipEffectBundle was disabled after the IEffectBundle removal.");
         }
     }
 
@@ -628,7 +360,7 @@ namespace projectFrameCut.ScriptEngine
             var clip = ResolveClip(page!, ClipId);
             if (clip is null) return;
 
-            if (clip.EffectBundles is null || !clip.EffectBundles.TryGetValue(BundleId, out var bundle))
+            if (clip.EffectProviders is null || !clip.EffectProviders.TryGetValue(BundleId, out var bundle))
             {
                 WriteError(new ErrorRecord(
                     new ArgumentException($"EffectBundle with Id '{BundleId}' not found on clip '{clip.DisplayName}'."),
@@ -642,7 +374,7 @@ namespace projectFrameCut.ScriptEngine
             if (!Force && !ShouldProcess(clip.DisplayName, bundle.Name, action))
                 return;
 
-            clip.EffectBundles.Remove(BundleId);
+            clip.EffectProviders.Remove(BundleId);
         }
     }
 
@@ -662,38 +394,8 @@ namespace projectFrameCut.ScriptEngine
 
         protected override void ProcessRecordImpl()
         {
-            if (!EnsurePageLoaded(out _)) return;
-
-            if (string.IsNullOrEmpty(TypeName))
-            {
-                WriteError(new ErrorRecord(
-                    new ArgumentException("TypeName is required."),
-                    "InvalidArgument", ErrorCategory.InvalidArgument, null));
-                return;
-            }
-
-            var available = EffectServices.GetAvailableEffectBundles();
-            if (!available.TryGetValue(TypeName, out var factory))
-            {
-                WriteError(new ErrorRecord(
-                    new ArgumentException($"EffectBundle type '{TypeName}' not found."),
-                    "EffectBundleTypeNotFound",
-                    ErrorCategory.ObjectNotFound,
-                    TypeName));
-                return;
-            }
-
-            var instance = factory();
-
-            if (instance.SettableFields is null || instance.SettableFields.Count == 0)
-            {
-                WriteWarning($"EffectBundle '{TypeName}' has no settable fields.");
-                return;
-            }
-
-            WriteObject(
-                instance.SettableFields.Values.Select(NewSettableFieldObject).ToList(),
-                enumerateCollection: true);
+            // SettableFields were removed from the provider API.
+            throw new NotImplementedException("Get-EffectBundleField was disabled after the IEffectBundle removal.");
         }
     }
 }

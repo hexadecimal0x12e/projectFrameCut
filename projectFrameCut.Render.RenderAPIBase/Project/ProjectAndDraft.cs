@@ -290,6 +290,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public int TargetY { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
         public EffectBundleJSONStructure[]? EffectBundles { get; set; }
+        /// <summary>
+        /// The provider-native serialized effects. Preferred over <see cref="EffectBundles"/>; the latter is kept
+        /// for reading legacy project files and MCP compatibility.
+        /// </summary>
+        public EffectProviderJSONStructure[]? EffectProviders { get; set; }
 
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }

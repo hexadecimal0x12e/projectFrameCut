@@ -90,25 +90,17 @@ namespace projectFrameCut.Render.Effect
             return effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray();
         }
 
-        public static Dictionary<string, Func<IEffect>> EffectsEnum =>
+        /// <summary>
+        /// All effect providers registered across the loaded plugins, keyed by effect type name.
+        /// The value is a factory that creates a fresh provider instance.
+        /// </summary>
+        public static Dictionary<string, Func<IEffectProvider>> EffectsProviderEnum =>
                 PluginManager.LoadedPlugins.Values
-                .SelectMany(p =>
-                       p.EffectProvider
-                        .Concat(p.ContinuousEffectProvider)
-                        .Concat(p.BindableArgumentEffectProvider))
-                .DistinctBy(kv => kv.Value().TypeName)
+                .SelectMany(p => p.EffectProviderProvider)
                 .GroupBy(kv => kv.Key)
                 .ToDictionary(g => g.Key, g => g.First().Value);
 
-        public static Dictionary<string, IEffectFactory> EffectsFactoriesEnum =>
-                PluginManager.LoadedPlugins.Values
-                .SelectMany(p => p.EffectFactoryProvider
-                        .Concat(p.ContinuousEffectFactoryProvider)
-                        .Concat(p.BindableArgumentEffectFactoryProvider))
-                .GroupBy(kv => kv.Key)
-                .ToDictionary(g => g.Key, g => g.First().Value);
-
-        public static IEnumerable<string> GetEffectTypes() => EffectsEnum.Keys;
+        public static IEnumerable<string> GetEffectTypes() => EffectsProviderEnum.Keys;
 
     }
 }

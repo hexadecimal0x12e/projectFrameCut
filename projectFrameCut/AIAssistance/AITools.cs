@@ -101,11 +101,11 @@ namespace projectFrameCut.AIAssistance
                 AIFunctionFactory.Create(async (string clipId, string typeName) =>
                 {
                     if (currentPage is null) return null;
-                    var pageBundle = PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectBundleProvider).FirstOrDefault(c => c.Key == typeName).Value?.Invoke();
+                    var pageBundle = PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectProviderProvider).FirstOrDefault(c => c.Key == typeName).Value?.Invoke();
                     if (pageBundle is null) return null;
                     var added = TimelineMcpLiveService.AddEffectBundle(currentPage, clipId, pageBundle);
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
-                    return added.GetEffectBundleItem();
+                    return new { added.Id, added.Name, added.TypeName };
                 }, "add_effect_bundle_to_clip","Add an effect bundle on the selected clip."),
                 AIFunctionFactory.Create((string clipId, Guid bundleId) =>
                 {
@@ -114,44 +114,12 @@ namespace projectFrameCut.AIAssistance
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                     return removed;
                 }, "remove_effect_bundle_from_clip","Remove an effect bundle from a clip by id."),
-                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().Select(c => c.EffectBundleProvider).FirstOrDefault(c => c.ContainsKey(Type))?[Type]?.Invoke()?.GetEffectBundleItem(), "get_effect_bundle_info","Get a specific effect bundle's information."),
-                AIFunctionFactory.Create((string effectType) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectBundleProvider).FirstOrDefault(c => c.Key == effectType).Value?.Invoke()?.SettableFields, "get_effect_bundle_settable_fields","Get a specific kind of effect bundle's SettableFields."),
+                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectProviderProvider).FirstOrDefault(c => c.Key == Type).Value?.Invoke() is { } p ? new { p.TypeName, p.Name, p.FromPlugin, p.TypeOfEffect, p.Target } : null, "get_effect_bundle_info","Get a specific effect bundle's information."),
+                AIFunctionFactory.Create((string effectType) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectProviderProvider).FirstOrDefault(c => c.Key == effectType).Value?.Invoke()?.Fields?.Keys?.ToArray(), "get_effect_bundle_settable_fields","Get a specific kind of effect bundle's settable field ids."),
                 AIFunctionFactory.Create((string clipId, Guid bundleId, Dictionary<string, object> fields) =>
                 {
-                    if (currentPage is null) return "No project is loaded.";
-                    if (!Guid.TryParse(clipId, out var clipGuid))
-                        return $"Invalid clip id '{clipId}'.";
-                    if (!currentPage.Clips.TryGetValue(clipGuid, out var clip))
-                        return $"Clip '{clipId}' not found.";
-                    if (clip.EffectBundles is null || !clip.EffectBundles.TryGetValue(bundleId, out var bundle))
-                        return $"Effect bundle '{bundleId}' not found on clip '{clipId}'.";
-                    if (fields is null || fields.Count == 0)
-                        return "No fields were provided.";
-                    if (bundle.SettableFields is null || bundle.SettableFields.Count == 0)
-                        return $"Effect bundle '{bundle.TypeName}' has no settable fields.";
-
-                    var result = new List<string>();
-                    foreach (var field in fields)
-                    {
-                        if (string.IsNullOrWhiteSpace(field.Key))
-                            continue;
-                        if (!bundle.SettableFields.TryGetValue(field.Key, out var fieldDefinition))
-                        {
-                            result.Add($"Warning: Field '{field.Key}' not found on effect bundle '{bundle.TypeName}'. " +
-                                       $"Available: {string.Join(", ", bundle.SettableFields.Keys)}");
-                            continue;
-                        }
-
-                        if (bundle.HandleSettableFieldsChange(fieldDefinition, field.Value, out var feedback))
-                            result.Add($"{field.Key} = {field.Value}");
-                        else
-                            result.Add($"Warning: Failed to set field '{field.Key}' on effect bundle '{bundle.TypeName}': {feedback}");
-                    }
-
-                    ClipInfoBuilder.RebuildAllEffects(clip);
-                    currentPage.RefreshPropertyPanel(clip);
-                    update();
-                    return result.Count > 0 ? string.Join("\n", result) : "No fields were changed.";
+                    // SettableFields / HandleSettableFieldsChange were removed from the provider API.
+                    throw new NotImplementedException("set_effect_bundle_fields was disabled after the IEffectBundle removal.");
                 }, "set_effect_bundle_fields","Update an existing effect bundle on a clip using its SettableFields. Provide the clip id, bundle id, and a dictionary of field id -> value. Use get_draft_info to find bundle ids and get_effect_bundle_info to discover effect types."),
                 AIFunctionFactory.Create(GenerateImage, "create_an_AIGC_image","Add an AI generated image to the draft. Use param Prompt to define how the picture looks like and NegativePrompt to define what not in the picture. Use param Style to define the style of this image. Use param Width and Height to define the image size (default: 1024x1024)."),
                 AIFunctionFactory.Create(GenerateVideo, "create_an_AIGC_video","Add an AI generated video to the draft. Use param Prompt to define how the video looks like and NegativePrompt to define what not in the video. Use param Style to define the style of this video."),
@@ -267,7 +235,7 @@ namespace projectFrameCut.AIAssistance
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableEffects(), "environment_get_effects","Get all effects available in the user environment.", serializerOptions),
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailablePlugins(), "environment_get_plugins","Get all plugins loaded in the user environment.", serializerOptions),
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableTextStyles(), "environment_get_textstyles","Get all Text clip style providers loaded in the user environment, including their settable fields.", serializerOptions),
-                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().Select(c => c.EffectBundleProvider).FirstOrDefault(c => c.ContainsKey(Type))?[Type]?.Invoke()?.GetEffectBundleItem(), "get_effect_bundle_info","Get a specific effect bundle's information."),
+                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectProviderProvider).FirstOrDefault(c => c.Key == Type).Value?.Invoke() is { } p ? new { p.TypeName, p.Name, p.FromPlugin, p.TypeOfEffect, p.Target } : null, "get_effect_bundle_info","Get a specific effect bundle's information."),
                 AIFunctionFactory.Create(async (string url, int maximumCharacters = 30000) =>
                     await (WebBrowsingService.Current?.BrowseAsync(url, maximumCharacters)
                         ?? Task.FromResult("Error: webpage browsing is not available in the current chat view.")),

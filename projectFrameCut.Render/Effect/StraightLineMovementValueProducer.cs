@@ -71,7 +71,7 @@ namespace projectFrameCut.Render.Effect
         public string OutputAnchorName => "Point";
     }
 
-    public class StraightLineMovementValueProducerFactory : IBindableEffectFactory
+    public class StraightLineMovementValueProducerFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "StraightLineMovementValueProducer";
@@ -128,6 +128,62 @@ namespace projectFrameCut.Render.Effect
                 be.BindedArgumentProviderID = null!;
             }
             return e;
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the StraightLineMovementValueProducer bindable value source.
+    /// </summary>
+    public class StraightLineMovementValueProducerProvider : EffectProviderBase
+    {
+        public StraightLineMovementValueProducerProvider()
+        {
+            Name = "Straight Line Movement";
+            Parameters = new Dictionary<string, object> { { "StartX", 0 }, { "StartY", 0 }, { "EndX", 0 }, { "EndY", 0 } };
+        }
+
+        public override string TypeName => "StraightLineMovementValueProducer";
+
+        public override EffectType TypeOfEffect => EffectType.BindableEffect;
+
+        public override EffectTarget Target => EffectTarget.ValueProvider | EffectTarget.Video;
+
+        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields()
+        {
+            // A value provider has no picture input.
+            return new Dictionary<string, EffectArgumentFieldDescriptor>();
+        }
+
+        protected override EffectArgumentFieldDescriptor DefineOutField()
+        {
+            return new EffectArgumentFieldDescriptor
+            {
+                Id = OutputAnchorKey,
+                TypeName = "float",
+                FromPlugin = FromPlugin,
+                FieldType = EffectArgumentFieldType.Numeric,
+                DefaultValue = "0",
+            };
+        }
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("StartX", EffectArgumentFieldType.Integer, "0"),
+                Field("StartY", EffectArgumentFieldType.Integer, "0"),
+                Field("EndX", EffectArgumentFieldType.Integer, "0"),
+                Field("EndY", EffectArgumentFieldType.Integer, "0")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [StraightLineMovementValueProducer.FromParametersDictionary(parameters)];
         }
     }
 }

@@ -56,7 +56,7 @@ namespace projectFrameCut.Render.Effect
         public string OutputAnchorName => "Mask";
     }
 
-    public class MaskApplierFactory : IBindableEffectFactory
+    public class MaskApplierFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "MaskApplier";
@@ -93,6 +93,33 @@ namespace projectFrameCut.Render.Effect
         public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
         {
             return new MaskApplier { ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType };
+        }
+    }
+
+    /// <summary>
+    /// The Render-side provider of the MaskApplier bindable result generator.
+    /// </summary>
+    public class MaskApplierProvider : EffectProviderBase
+    {
+        public MaskApplierProvider()
+        {
+            Name = "Mask Applier";
+            Parameters = new Dictionary<string, object>();
+        }
+
+        public override string TypeName => "MaskApplier";
+
+        public override EffectType TypeOfEffect => EffectType.BindableEffect;
+
+        public override EffectTarget Target => EffectTarget.Video;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => Array.Empty<EffectArgumentFieldDescriptor>();
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new MaskApplier()];
         }
     }
 }

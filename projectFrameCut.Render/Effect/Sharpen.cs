@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class SharpenEffect_IPicture : INormalEffect
+    public class SharpenEffect_IPicture : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -19,6 +19,7 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
 
         public float Amount { get; init; } = 1f;
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -59,11 +60,12 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            return SharpenEffect.Process(source, Amount);
+            float amount = DynamicParam.Resolve(DynamicProviders, "Amount", Amount);
+            return SharpenEffect.Process(source, amount);
         }
     }
 
-    public class SharpenEffect_HwAccel : INormalEffect
+    public class SharpenEffect_HwAccel : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -72,6 +74,7 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
 
         public float Amount { get; init; } = 1f;
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -110,8 +113,9 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
+            float amount = DynamicParam.Resolve(DynamicProviders, "Amount", Amount);
             if (computer is null)
-                return SharpenEffect.Process(source, Amount);
+                return SharpenEffect.Process(source, amount);
 
             var sw = Stopwatch.StartNew();
             var (r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
@@ -119,11 +123,11 @@ namespace projectFrameCut.Render.Effect
             FourChannelResult computeResult;
             if (computer is ISharpenComputer sc)
             {
-                computeResult = sc.ComputeSharpen(r, g, b, a, source.Width, Amount);
+                computeResult = sc.ComputeSharpen(r, g, b, a, source.Width, amount);
             }
             else
             {
-                var resultArr = computer.Compute([r, g, b, a, source.Width, Amount]);
+                var resultArr = computer.Compute([r, g, b, a, source.Width, amount]);
 
                 if (resultArr.Length != 4 ||
                     resultArr[0] is not float[] rOut ||
@@ -146,13 +150,13 @@ namespace projectFrameCut.Render.Effect
                 OperationDisplayName = "Sharpen (GPU)",
                 Operator = typeof(SharpenEffect_HwAccel),
                 ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object> { { "Amount", Amount } }
+                Properties = new Dictionary<string, object> { { "Amount", amount } }
             }).ToList();
             return result;
         }
     }
 
-    public class SharpenEffectFactory : IEffectFactory
+    public class SharpenEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "Sharpen";
@@ -184,6 +188,41 @@ namespace projectFrameCut.Render.Effect
             parameters ??= new Dictionary<string, object> { { "Amount", 1f } };
             if (!parameters.ContainsKey("Amount")) parameters["Amount"] = 1f;
             return SharpenEffect_IPicture.FromParametersDictionary(parameters);
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the Sharpen effect.
+    /// </summary>
+    public class SharpenEffectProvider : EffectProviderBase
+    {
+        public SharpenEffectProvider()
+        {
+            Name = "Sharpen";
+            Parameters = new Dictionary<string, object> { { "Amount", 1f } };
+        }
+
+        public override string TypeName => "Sharpen";
+
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("Amount", EffectArgumentFieldType.Numeric, "1", min: "0", max: "5")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new SharpenEffectFactory().Build(implementType, parameters)];
         }
     }
 }

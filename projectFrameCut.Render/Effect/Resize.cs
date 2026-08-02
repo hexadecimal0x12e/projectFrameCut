@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ResizeEffect_HwAccel : INormalEffect
+    public class ResizeEffect_HwAccel : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -23,6 +23,7 @@ namespace projectFrameCut.Render.Effect
         public int Width { get; init; }
         public bool PreserveAspectRatio { get; init; } = true;
         public string? BindedEffectGroupID { get; set; }
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -86,13 +87,16 @@ namespace projectFrameCut.Render.Effect
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
             var sw = Stopwatch.StartNew();
-            int width = Width;
-            int height = Height;
+            int resizeWidth = DynamicParam.Resolve(DynamicProviders, "Width", Width);
+            int resizeHeight = DynamicParam.Resolve(DynamicProviders, "Height", Height);
+            bool preserveAspectRatio = DynamicParam.Resolve(DynamicProviders, "PreserveAspectRatio", PreserveAspectRatio);
+            int width = resizeWidth;
+            int height = resizeHeight;
 
             if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
             {
-                width = Math.Max(1, (int)Math.Round((double)Width * targetWidth / RelativeWidth, MidpointRounding.AwayFromZero));
-                height = Math.Max(1, (int)Math.Round((double)Height * targetHeight / RelativeHeight, MidpointRounding.AwayFromZero));
+                width = Math.Max(1, (int)Math.Round((double)resizeWidth * targetWidth / RelativeWidth, MidpointRounding.AwayFromZero));
+                height = Math.Max(1, (int)Math.Round((double)resizeHeight * targetHeight / RelativeHeight, MidpointRounding.AwayFromZero));
             }
             else
             {
@@ -103,7 +107,7 @@ namespace projectFrameCut.Render.Effect
             int destWidth = width;
             int destHeight = height;
 
-            if (PreserveAspectRatio)
+            if (preserveAspectRatio)
             {
                 double sourceRatio = (double)source.Width / source.Height;
                 double targetRatio = (double)width / height;
@@ -213,7 +217,7 @@ namespace projectFrameCut.Render.Effect
                 {
                     { "Width", destWidth },
                     { "Height", destHeight },
-                    { "PreserveAspectRatio", PreserveAspectRatio }
+                    { "PreserveAspectRatio", preserveAspectRatio }
                 }
             }).ToList();
             return result;
@@ -221,7 +225,7 @@ namespace projectFrameCut.Render.Effect
 
     }
 
-    public class ResizeEffect_IPicture : INormalEffect
+    public class ResizeEffect_IPicture : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -235,6 +239,7 @@ namespace projectFrameCut.Render.Effect
         public int Width { get; init; }
         public bool PreserveAspectRatio { get; init; } = true;
         public string? BindedEffectGroupID { get; set; }
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -298,13 +303,16 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            int width = Width;
-            int height = Height;
+            int resizeWidth = DynamicParam.Resolve(DynamicProviders, "Width", Width);
+            int resizeHeight = DynamicParam.Resolve(DynamicProviders, "Height", Height);
+            bool preserveAspectRatio = DynamicParam.Resolve(DynamicProviders, "PreserveAspectRatio", PreserveAspectRatio);
+            int width = resizeWidth;
+            int height = resizeHeight;
 
             if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
             {
-                width = Math.Max(1, (int)Math.Round((double)Width * targetWidth / RelativeWidth, MidpointRounding.AwayFromZero));
-                height = Math.Max(1, (int)Math.Round((double)Height * targetHeight / RelativeHeight, MidpointRounding.AwayFromZero));
+                width = Math.Max(1, (int)Math.Round((double)resizeWidth * targetWidth / RelativeWidth, MidpointRounding.AwayFromZero));
+                height = Math.Max(1, (int)Math.Round((double)resizeHeight * targetHeight / RelativeHeight, MidpointRounding.AwayFromZero));
             }
             else
             {
@@ -312,12 +320,12 @@ namespace projectFrameCut.Render.Effect
                 height = Math.Max(1, height);
             }
 
-            return source.Resize(width, height, PreserveAspectRatio);
+            return source.Resize(width, height, preserveAspectRatio);
         }
 
     }
 
-    public class ResizeEffectFactory : IEffectFactory
+    public class ResizeEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
@@ -362,6 +370,48 @@ namespace projectFrameCut.Render.Effect
             Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
 
             return ResizeEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the Resize effect.
+    /// </summary>
+    public class ResizeEffectProvider : EffectProviderBase
+    {
+        public ResizeEffectProvider()
+        {
+            Name = "Resize";
+            Parameters = new Dictionary<string, object>
+            {
+                { "Width", 1920 },
+                { "Height", 1080 },
+                { "PreserveAspectRatio", true },
+            };
+        }
+
+        public override string TypeName => "Resize";
+
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("Width", EffectArgumentFieldType.Integer, "1920", min: "1"),
+                Field("Height", EffectArgumentFieldType.Integer, "1080", min: "1"),
+                Field("PreserveAspectRatio", EffectArgumentFieldType.Boolean, "true")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new ResizeEffectFactory().Build(implementType, parameters)];
         }
     }
 }

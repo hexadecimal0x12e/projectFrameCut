@@ -58,58 +58,42 @@ public class InternalPluginBase : IPluginBase
 
     };
 
-    public Dictionary<string, Func<IEffect>> EffectProvider => new Dictionary<string, Func<IEffect>>
+    public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider => new Dictionary<string, Func<IEffectProvider>>
     {
-        {"RemoveColor",  new(() => new RemoveColorEffect_HwAccel())},
-        {"Place",  new(() => new PlaceEffect_HwAccel())},
-        {"Crop",  new(() => new CropEffect_IPicture())},
-        {"Resize",  new(() => new ResizeEffect_IPicture())},
-        {"Blur",  new(() => new BlurEffect_IPicture())},
-        {"Flip", new(() => new FlipEffect_IPicture()) },
-        {"Sharpen", new(() => new SharpenEffect_IPicture()) },
-        {"Vignette", new(() => new VignetteEffect_IPicture()) },
-        {"FadeOpacity", new(() => new FadeOpacityEffect_IPicture()) },
-        {"ClassicSpeedVarianceProvider", new(() => new RenderAPIBase.EffectAndMixture.ClassicSpeedVarianceProvider()) },
-        {"ColorAdjustment", new(() => new ColorAdjustmentEffect_IPicture()) },
-        {"ClassicOverlayMixture", new(() => new Compose.ClassicOverlayMixture()) },
-        {"AddMixture", new(() => new Compose.AddMixture()) },
-        {"SubtractMixture", new(() => new Compose.SubtractMixture()) },
-        {"MultiplyMixture", new(() => new Compose.MultiplyMixture()) },
-        {"ScreenMixture", new(() => new Compose.ScreenMixture()) },
-        {"OverlayBlendMixture", new(() => new Compose.OverlayBlendMixture()) },
-        {"DarkenMixture", new(() => new Compose.DarkenMixture()) },
-        {"LightenMixture", new(() => new Compose.LightenMixture()) },
-        {"DifferenceMixture", new(() => new Compose.DifferenceMixture()) },
-        {"TextFadeIn", new(() => new Effect.TextFadeInContinuousEffect()) },
-        {"Rotation", new(() => new Effect.RotationEffect_IPicture()) }
-    };
-
-    public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
-    {
-        {"Place", new PlaceEffectFactory()},
-        {"Crop", new CropEffectFactory()},
-        {"Resize", new ResizeEffectFactory()},
-        {"RemoveColor", new RemoveColorEffectFactory()},
-        {"Blur", new BlurEffectFactory()},
-        {"Flip", new FlipEffectFactory()},
-        {"Sharpen", new SharpenEffectFactory()},
-        {"Vignette", new VignetteEffectFactory()},
-        {"FadeOpacity", new FadeOpacityEffectFactory()},
-        {"ClassicSpeedVarianceProvider", new ClassicSpeedVarianceProviderFactory()},
-        {"ColorAdjustment", new ColorAdjustmentEffectFactory()},
-        {"Jitter", new JitterContinuousEffectFactory()},
-        {"ProgressPlacer", new ProgressPlacerFactory()},
-        {"TextFadeIn", new Effect.TextFadeInContinuousEffectFactory()},
-        {"ClassicOverlayMixture", new ClassicOverlayMixtureFactory()},
-        {"AddMixture", new BlendModeMixtureFactory { MixtureType = "Add" }},
-        {"SubtractMixture", new BlendModeMixtureFactory { MixtureType = "Subtract" }},
-        {"MultiplyMixture", new BlendModeMixtureFactory { MixtureType = "Multiply" }},
-        {"ScreenMixture", new BlendModeMixtureFactory { MixtureType = "Screen" }},
-        {"OverlayBlendMixture", new BlendModeMixtureFactory { MixtureType = "OverlayBlend" }},
-        {"DarkenMixture", new BlendModeMixtureFactory { MixtureType = "Darken" }},
-        {"LightenMixture", new BlendModeMixtureFactory { MixtureType = "Lighten" }},
-        {"DifferenceMixture", new BlendModeMixtureFactory { MixtureType = "Difference" }},
-        {"Rotation", new RotationEffectFactory()},
+        { "ZoomIn", () => new ZoomInEffectProvider() },
+        { "RemoveColor", () => new RemoveColorEffectProvider() },
+        { "Jitter", () => new JitterEffectProvider() },
+        { "Movement", () => new MovementEffectProvider() },
+        { "Blur", () => new BlurEffectProvider() },
+        { "Crop", () => new CropEffectProvider() },
+        { "Place", () => new PlaceEffectProvider() },
+        { "Resize", () => new ResizeEffectProvider() },
+        { "Flip", () => new FlipEffectProvider() },
+        { "Sharpen", () => new SharpenEffectProvider() },
+        { "Vignette", () => new VignetteEffectProvider() },
+        { "FadeOpacity", () => new FadeOpacityEffectProvider() },
+        { "ColorAdjustment", () => new ColorAdjustmentEffectProvider() },
+        { "ClassicSpeedVarianceProvider", () => new ClassicSpeedVarianceProviderEffectProvider() },
+        { "ClassicOverlayMixture", () => new ClassicOverlayMixtureProvider() },
+        { "BlendModeMixture", () => new BlendModeMixtureProvider { ProviderTypeName = "BlendModeMixture" } },
+        { "ProgressPlacer", () => new ProgressPlacerProvider() },
+        { "ProgressCrop", () => new ProgressCropProvider() },
+        { "TextFadeIn", () => new TextFadeInEffectProvider() },
+        { "LinearAnimationValueProvider", () => new LinearAnimationValueProviderProvider() },
+        { "ConstantValueProvider", () => new ConstantValueProviderProvider() },
+        { "Rotation", () => new RotationEffectProvider() },
+        { "StraightLineMovementValueProducer", () => new StraightLineMovementValueProducerProvider() },
+        { "PointPlacer", () => new PointPlacerProvider() },
+        { "SubjectMattingMaskGenerator", () => new SubjectMattingMaskGeneratorProvider() },
+        { "MaskApplier", () => new MaskApplierProvider() },
+        { "AddMixture", () => new BlendModeMixtureProvider { MixtureType = "Add" } },
+        { "SubtractMixture", () => new BlendModeMixtureProvider { MixtureType = "Subtract" } },
+        { "MultiplyMixture", () => new BlendModeMixtureProvider { MixtureType = "Multiply" } },
+        { "ScreenMixture", () => new BlendModeMixtureProvider { MixtureType = "Screen" } },
+        { "OverlayBlendMixture", () => new BlendModeMixtureProvider { MixtureType = "OverlayBlend" } },
+        { "DarkenMixture", () => new BlendModeMixtureProvider { MixtureType = "Darken" } },
+        { "LightenMixture", () => new BlendModeMixtureProvider { MixtureType = "Lighten" } },
+        { "DifferenceMixture", () => new BlendModeMixtureProvider { MixtureType = "Difference" } },
     };
 
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>
@@ -122,38 +106,6 @@ public class InternalPluginBase : IPluginBase
         {"DarkenComputer", () => new Compose.DarkenComputer() },
         {"LightenComputer", () => new Compose.LightenComputer() },
         {"DifferenceComputer", () => new Compose.DifferenceComputer() },
-    };
-
-    public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>>
-    {
-        {"ZoomIn", new(() => new ZoomInContinuousEffect())  },
-        {"Jitter", new(() => new JitterEffect()) },
-        {"ProgressPlacer", new(() => new ProgressPlacer()) },
-        {"Crop", new(() => new ProgressCropper_IPicture()) }
-    };
-
-    public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider => new Dictionary<string, IEffectFactory>
-    {
-        {"ZoomIn", new ZoomInContinuousEffectFactory()},
-        {"Crop", new ProgressCropperEffectFactory()},
-    };
-
-    public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>
-    {
-        { "SubjectMattingMaskGenerator", () => new SubjectMattingMaskGenerator() },
-        { "MaskApplier", () => new MaskApplier() },
-        { "StraightLineMovementValueProducer",() => new StraightLineMovementValueProducer() },
-        { "PointPlacer",() => new PointPlacer() },
-
-    };
-
-    public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider => new Dictionary<string, IEffectFactory>
-    {
-        { "SubjectMattingMaskGenerator", new SubjectMattingMaskGeneratorFactory() },
-        { "MaskApplier", new MaskApplierFactory() },
-        { "StraightLineMovementValueProducer",new StraightLineMovementValueProducerFactory() },
-        { "PointPlacer", new PointPlacerFactory() },
-
     };
 
 

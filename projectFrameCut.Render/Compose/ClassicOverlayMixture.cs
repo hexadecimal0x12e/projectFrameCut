@@ -1,5 +1,6 @@
 ﻿using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.HwAccelContracts;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -1255,7 +1256,7 @@ namespace projectFrameCut.Render.Compose
         public IEffect WithParameters(Dictionary<string, object> parameters) => new ClassicOverlayMixture { Parameters = parameters };
     }
 
-    public class ClassicOverlayMixtureFactory : IEffectFactory
+    public class ClassicOverlayMixtureFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "ClassicOverlayMixture";
@@ -1270,6 +1271,42 @@ namespace projectFrameCut.Render.Compose
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
             return new ClassicOverlayMixture { };
+        }
+    }
+
+    /// <summary>
+    /// The Render-side provider of the ClassicOverlayMixture.
+    /// </summary>
+    public class ClassicOverlayMixtureProvider : EffectProviderBase
+    {
+        public ClassicOverlayMixtureProvider()
+        {
+            Name = "Classic Overlay";
+            Parameters = new Dictionary<string, object>
+            {
+                { "AccuracyMode", "Accurate" }
+            };
+        }
+
+        public override string TypeName => "ClassicOverlayMixture";
+
+        public override EffectType TypeOfEffect => EffectType.MixtureProvider;
+
+        public override EffectTarget Target => EffectTarget.Mixture;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("AccuracyMode", EffectArgumentFieldType.String, "Accurate", presetOptions: ["Accurate", "Approximate"])
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new ClassicOverlayMixtureFactory().Build(implementType, parameters)];
         }
     }
 }

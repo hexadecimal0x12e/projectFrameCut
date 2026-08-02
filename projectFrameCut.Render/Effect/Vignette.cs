@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class VignetteEffect_IPicture : INormalEffect
+    public class VignetteEffect_IPicture : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -20,6 +20,7 @@ namespace projectFrameCut.Render.Effect
 
         public float Strength { get; init; } = 0.5f;
         public float Radius { get; init; } = 0.65f;
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -63,11 +64,13 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            return VignetteEffect.Process(source, Strength, Radius);
+            float strength = DynamicParam.Resolve(DynamicProviders, "Strength", Strength);
+            float radius = DynamicParam.Resolve(DynamicProviders, "Radius", Radius);
+            return VignetteEffect.Process(source, strength, radius);
         }
     }
 
-    public class VignetteEffect_HwAccel : INormalEffect
+    public class VignetteEffect_HwAccel : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -77,6 +80,7 @@ namespace projectFrameCut.Render.Effect
 
         public float Strength { get; init; } = 0.5f;
         public float Radius { get; init; } = 0.65f;
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -118,8 +122,10 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
+            float strength = DynamicParam.Resolve(DynamicProviders, "Strength", Strength);
+            float radius = DynamicParam.Resolve(DynamicProviders, "Radius", Radius);
             if (computer is null)
-                return VignetteEffect.Process(source, Strength, Radius);
+                return VignetteEffect.Process(source, strength, radius);
 
             var sw = Stopwatch.StartNew();
             var (r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
@@ -127,11 +133,11 @@ namespace projectFrameCut.Render.Effect
             FourChannelResult computeResult;
             if (computer is IVignetteComputer vc)
             {
-                computeResult = vc.ComputeVignette(r, g, b, a, source.Width, source.Height, Strength, Radius);
+                computeResult = vc.ComputeVignette(r, g, b, a, source.Width, source.Height, strength, radius);
             }
             else
             {
-                var resultArr = computer.Compute([r, g, b, a, source.Width, source.Height, Strength, Radius]);
+                var resultArr = computer.Compute([r, g, b, a, source.Width, source.Height, strength, radius]);
 
                 if (resultArr.Length != 4 ||
                     resultArr[0] is not float[] rOut ||
@@ -154,13 +160,13 @@ namespace projectFrameCut.Render.Effect
                 OperationDisplayName = "Vignette (GPU)",
                 Operator = typeof(VignetteEffect_HwAccel),
                 ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object> { { "Strength", Strength }, { "Radius", Radius } }
+                Properties = new Dictionary<string, object> { { "Strength", strength }, { "Radius", radius } }
             }).ToList();
             return result;
         }
     }
 
-    public class VignetteEffectFactory : IEffectFactory
+    public class VignetteEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "Vignette";
@@ -198,6 +204,42 @@ namespace projectFrameCut.Render.Effect
             if (!parameters.ContainsKey("Strength")) parameters["Strength"] = 0.5f;
             if (!parameters.ContainsKey("Radius")) parameters["Radius"] = 0.65f;
             return VignetteEffect_IPicture.FromParametersDictionary(parameters);
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the Vignette effect.
+    /// </summary>
+    public class VignetteEffectProvider : EffectProviderBase
+    {
+        public VignetteEffectProvider()
+        {
+            Name = "Vignette";
+            Parameters = new Dictionary<string, object> { { "Strength", 0.5f }, { "Radius", 0.65f } };
+        }
+
+        public override string TypeName => "Vignette";
+
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("Strength", EffectArgumentFieldType.Numeric, "0.5", min: "0", max: "1"),
+                Field("Radius", EffectArgumentFieldType.Numeric, "0.65", min: "0", max: "1")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new VignetteEffectFactory().Build(implementType, parameters)];
         }
     }
 }

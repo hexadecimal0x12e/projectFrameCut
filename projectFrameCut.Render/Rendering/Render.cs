@@ -1807,6 +1807,14 @@ namespace projectFrameCut.Render.Rendering
                     // (many effects in a chain often share the same computer type)
                     string? lastComputerType = null;
                     IComputer? cachedComputer = null;
+                    // Begin the per-frame value-provider context: pre-fills the built-in frame/progress
+                    // sources and clears provider values. Value-provider effects write into it during
+                    // the effect loop and consumer dynamic parameters read from it.
+                    var clipDuration = clip.GetEffectiveDuration();
+                    var clipProgress = clipDuration > 0
+                        ? Math.Clamp((float)((long)targetFrame - (long)clip.StartFrame) / clipDuration, 0f, 1f)
+                        : 0f;
+                    ValueProviderFrameContext.BeginFrame(targetFrame, clipProgress);
                     for (int _effectIdx = 0; _effectIdx < effects.Length; _effectIdx++)
                     {
                         // Try GPU batch processing (2+ consecutive GPU effects)
@@ -1849,6 +1857,14 @@ namespace projectFrameCut.Render.Rendering
                                     frame = c.Render(frame, continuousProgress, computer, TargetWidth, TargetHeight);
                                     continue;
                                 case EffectType.BindableEffect:
+                                    if (item is IValueProviderEffect vp)
+                                    {
+                                        // New-system value provider: write the current frame value keyed by its
+                                        // effect Id (= provider bundle Guid); consumers' bound dynamic parameters
+                                        // read it via ValueProviderFrameContext. The frame is not modified.
+                                        ValueProviderFrameContext.Set(vp.Id, vp.GenerateValue(targetFrame, computer, TargetWidth, TargetHeight));
+                                        continue;
+                                    }
                                     if (item is not IBindableArgumentEffect b) goto notdefined;
                                     if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, b, computer, TargetWidth, TargetHeight))
                                     {
@@ -1983,6 +1999,8 @@ namespace projectFrameCut.Render.Rendering
                         }
 
                     }
+                    // The per-frame value-provider values are only needed during effect processing.
+                    ValueProviderFrameContext.EndFrame();
 
                     if (effectCopy is not null)
                     {

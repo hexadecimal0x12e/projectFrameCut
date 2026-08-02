@@ -48,9 +48,15 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         public int AppLevelPluginAPIVersion { get; }
 
         /// <summary>
-        /// Gets a dictionary that maps effect names to their corresponding effect bundle creation functions.
+        /// Gets a dictionary that maps effect type names to their UI provider creation functions.
+        /// The function receives the current <see cref="IEffectProvider"/> instance being edited and returns
+        /// the property-panel UI wrapper for it. Aggregated the same way as <see cref="IPluginBase.EffectProviderProvider"/>.
         /// </summary>
-        public Dictionary<string, Func<IEffectBundle>> EffectBundleProvider { get; }
+        /// <remarks>
+        /// <see cref="IEffectProvider"/> itself is a Render-side, UI-free contract; the mapping to a UI provider
+        /// (with custom property panels, keyframing, color pickers, etc.) lives here at the App layer.
+        /// </remarks>
+        public Dictionary<string, Func<IEffectProvider, IEffectProviderUIProvider>> EffectProviderUIProvider { get; }
 
         /// <summary>
         /// Gets a dictionary that maps text style provider names to their corresponding provider creation functions.
@@ -129,11 +135,11 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
             sb.AppendLine();
             sb.AppendLine();
 
-            // ----- Effect Bundles -----
-            if (pluginBase.EffectBundleProvider.Any())
+            // ----- Effect Providers -----
+            if (pluginBase.EffectProviderProvider.Any())
             {
-                sb.AppendLine("EffectBundle:");
-                foreach (var item in pluginBase.EffectBundleProvider)
+                sb.AppendLine("EffectProvider:");
+                foreach (var item in pluginBase.EffectProviderProvider)
                 {
                     sb.AppendLine($"- {item.Key}");
                 }

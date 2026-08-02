@@ -21,7 +21,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Get the current plugin API version.
         /// </summary>
-        public const int CurrentPluginAPIVersion = 7;
+        public const int CurrentPluginAPIVersion = 8;
 
         /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
@@ -107,46 +107,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider { get; }
 
         /// <summary>
-        /// Create an blank IEffect instance from the given id.
+        /// Create an <see cref="IEffectProvider"/> instance for the given effect type name (e.g. "Resize").
+        /// The provider owns both the property metadata (fields/parameters) and the effect factory capability
+        /// (<see cref="IEffectProvider.Build(EffectImplementType, Dictionary{string, object})"/>).
         /// </summary>
-        /// <remarks>
-        /// Although we have <see cref="IEffectFactory"/>, but you STILL need to register ONE implementation of IEffect here for each effect type.
-        /// </remarks>
-        public Dictionary<string, Func<IEffect>> EffectProvider { get; }
-
-        /// <summary>
-        /// Create an <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
-        /// Key is effect type name (e.g. "Resize").
-        /// </summary>
-        /// <remarks>
-        /// This is also for the factory of <see cref="IColorAdjustEffect"/>, <see cref="IClipPositionProvider"/>, <see cref="IContinuousClipPositionProvider"/> and <see cref="ISpeedVarianceProvider"/>.
-        /// </remarks>
-        public Dictionary<string, IEffectFactory> EffectFactoryProvider { get; }
-        /// <summary>
-        /// Create an blank IEffect instance from the given id.
-        /// </summary>
-        /// <remarks>
-        /// <b>DO NOT register</b> <see cref="IContinuousTextEffect"/> here. Register it in <see cref="EffectProvider"/>
-        /// </remarks>
-        public Dictionary<string, Func<IEffect>> ContinuousEffectProvider { get; }
-
-        /// <summary>
-        /// Create a continuous <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
-        /// </summary>
-        /// <remarks>
-        /// <b>DO NOT register</b> <see cref="IContinuousTextEffect"/> here. Register it in <see cref="EffectFactoryProvider"/>
-        /// </remarks>
-        public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider { get; }
-
-        /// <summary>
-        /// Create an blank IEffect instance from the given id.
-        /// </summary>
-        public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider { get; }
-
-        /// <summary>
-        /// Create a variable-argument <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
-        /// </summary>
-        public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider { get; }
+        public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
 
         /// <summary>
         /// Create an IComputer instance from the given JSON structure.
@@ -269,7 +234,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Creates an effect instance from the given JSON structure.
         /// </summary>
         /// <remarks>
-        /// We provide you a default implement, which can cover 99% of purpose when you make factories correctly, so you probably don't need to override this method unless you have some special needs that cannot be achieved by factories, or you want to support some special effect types that are not covered by current implementation.
+        /// We provide you a default implement, which can cover 99% of purpose when you make providers correctly,
+        /// so you probably don't need to override this method unless you have some special needs that cannot be
+        /// achieved by providers, or you want to support some special effect types that are not covered by current implementation.
         /// </remarks>
         /// <param name="stru">the source structure</param>
         /// <returns>the effect</returns>
@@ -279,7 +246,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
 #pragma warning disable CS0618 // we need to handle fallback for deprecated implement types for compatibility, but we don't want to have Obsolete warning in the main logic.
             if (implementType == EffectImplementType.ImageSharp_Deprecated) implementType = EffectImplementType.IPicture;
             if (stru.ImplementType == EffectImplementType.ImageSharp_Deprecated) stru.ImplementType = EffectImplementType.IPicture;
-#pragma warning restore CS0618 
+#pragma warning restore CS0618
             static IEffect ApplyCommonProperties(IEffect effect, EffectAndMixtureJSONStructure s)
             {
                 effect.Name = s.Name;
@@ -313,83 +280,23 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 return EffectArgsHelper.ConvertElementDictToObjectDict(source, parameterTypes);
             }
 
+            if (!EffectProviderProvider.TryGetValue(stru.TypeName, out var creator))
+            {
+                throw new NotSupportedException($"No suitable effect found for the given type '{stru.TypeName}'.");
+            }
+
+            var provider = creator();
+            var parameters = ConvertParams(stru.Parameters, provider.ParametersType);
+            // The continuous-Crop branch (and any future dual-mode provider) is driven by this reserved key.
             if (stru.IsContinuousEffect)
             {
-                if (ContinuousEffectFactoryProvider.TryGetValue(stru.TypeName, out var cFactory))
-                {
-                    if (implementType != EffectImplementType.NotSpecified && cFactory.SupportsImplementTypes.Contains(implementType))
-                    {
-                        return ApplyCommonProperties(cFactory.Build(implementType, ConvertParams(stru.Parameters, cFactory.ParametersType)), stru);
-                    }
-                    return ApplyCommonProperties(cFactory.BuildContinuousWithDefaultType(ConvertParams(stru.Parameters, cFactory.ParametersType)), stru);
-                }
-            }
-            else if (stru.IsVariableArgumentEffect)
-            {
-                if (BindableArgumentEffectFactoryProvider.TryGetValue(stru.TypeName, out var vFactory))
-                {
-                    if (vFactory is IBindableEffectFactory bef)
-                    {
-                        if (implementType != EffectImplementType.NotSpecified && bef.SupportsImplementTypes.Contains(implementType))
-                        {
-                            return ApplyCommonProperties(bef.Build(implementType, stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, vFactory.ParametersType)), stru);
-                        }
-                        return ApplyCommonProperties(bef.BuildWithDefaultType(stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, vFactory.ParametersType)), stru);
-                    }
-                    else
-                    {
-                        throw new InvalidDataException($"{stru.Name} is marked as a variable argument effect but does not implement IBindableEffectFactory.");
-                    }
-                }
-            }
-            else
-            {
-                if (EffectFactoryProvider.TryGetValue(stru.TypeName, out var factory))
-                {
-                    if (implementType != EffectImplementType.NotSpecified && factory.SupportsImplementTypes.Contains(implementType))
-                    {
-                        return ApplyCommonProperties(factory.Build(implementType, ConvertParams(stru.Parameters, factory.ParametersType)), stru);
-                    }
-                    return ApplyCommonProperties(factory.BuildWithDefaultType(ConvertParams(stru.Parameters, factory.ParametersType)), stru);
-                }
+                parameters[IEffectProvider.IsContinuousEffectParameterKey] = true;
             }
 
-            // Compatibility fallback: the serialized flags may be stale or inferred from interfaces.
-            // Resolve by TypeName across all factory registries before failing.
-            if (EffectFactoryProvider.TryGetValue(stru.TypeName, out var fallbackFactory))
-            {
-                if (implementType != EffectImplementType.NotSpecified && fallbackFactory.SupportsImplementTypes.Contains(implementType))
-                {
-                    return ApplyCommonProperties(fallbackFactory.Build(implementType, ConvertParams(stru.Parameters, fallbackFactory.ParametersType)), stru);
-                }
-
-                return ApplyCommonProperties(fallbackFactory.BuildWithDefaultType(ConvertParams(stru.Parameters, fallbackFactory.ParametersType)), stru);
-            }
-
-            if (ContinuousEffectFactoryProvider.TryGetValue(stru.TypeName, out var fallbackContinuousFactory))
-            {
-                if (implementType != EffectImplementType.NotSpecified && fallbackContinuousFactory.SupportsImplementTypes.Contains(implementType))
-                {
-                    return ApplyCommonProperties(fallbackContinuousFactory.Build(implementType, ConvertParams(stru.Parameters, fallbackContinuousFactory.ParametersType)), stru);
-                }
-
-                return ApplyCommonProperties(fallbackContinuousFactory.BuildContinuousWithDefaultType(ConvertParams(stru.Parameters, fallbackContinuousFactory.ParametersType)), stru);
-            }
-
-            if (BindableArgumentEffectFactoryProvider.TryGetValue(stru.TypeName, out var fallbackBindableFactory))
-            {
-                if (fallbackBindableFactory is IBindableEffectFactory fallbackBindable)
-                {
-                    if (implementType != EffectImplementType.NotSpecified && fallbackBindable.SupportsImplementTypes.Contains(implementType))
-                    {
-                        return ApplyCommonProperties(fallbackBindable.Build(implementType, stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, fallbackBindableFactory.ParametersType)), stru);
-                    }
-
-                    return ApplyCommonProperties(fallbackBindable.BuildWithDefaultType(stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, fallbackBindableFactory.ParametersType)), stru);
-                }
-            }
-
-            throw new NotSupportedException($"No suitable effect found for the given type '{stru.TypeName}'.");
+            var effect = (implementType != EffectImplementType.NotSpecified && provider.SupportsImplementTypes.Contains(implementType))
+                ? provider.Build(implementType, parameters)
+                : provider.BuildWithDefaultType(parameters);
+            return ApplyCommonProperties(effect, stru);
         }
 
 
@@ -650,31 +557,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             }
 
             // ----- Effects -----
-            var effectTypes = pluginBase.EffectFactoryProvider.Keys.Concat(pluginBase.EffectProvider.Keys).Distinct();
-            if (effectTypes.Any())
+            if (pluginBase.EffectProviderProvider.Any())
             {
                 providedContent.AppendLine("Effect:");
-                foreach (var key in effectTypes)
-                {
-                    providedContent.AppendLine($"- {key}");
-                }
-            }
-
-            var continuousEffectTypes = pluginBase.ContinuousEffectFactoryProvider.Keys.Concat(pluginBase.ContinuousEffectProvider.Keys).Distinct();
-            if (continuousEffectTypes.Any())
-            {
-                providedContent.AppendLine("ContinuousEffect:");
-                foreach (var key in continuousEffectTypes)
-                {
-                    providedContent.AppendLine($"- {key}");
-                }
-            }
-
-            var variableArgumentEffectTypes = pluginBase.BindableArgumentEffectFactoryProvider.Keys.Concat(pluginBase.BindableArgumentEffectProvider.Keys).Distinct();
-            if (variableArgumentEffectTypes.Any())
-            {
-                providedContent.AppendLine("VariableArgumentEffect:");
-                foreach (var key in variableArgumentEffectTypes)
+                foreach (var key in pluginBase.EffectProviderProvider.Keys)
                 {
                     providedContent.AppendLine($"- {key}");
                 }

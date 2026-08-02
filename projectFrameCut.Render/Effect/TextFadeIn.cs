@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class TextFadeInContinuousEffect : IContinuousTextEffect
+    public class TextFadeInContinuousEffect : IContinuousTextEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -24,6 +24,8 @@ namespace projectFrameCut.Render.Effect
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
         public bool IsScoped { get; set; }
+
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new();
 
@@ -61,7 +63,7 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class TextFadeInContinuousEffectFactory : IEffectFactory
+    public class TextFadeInContinuousEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "TextFadeIn";
@@ -93,6 +95,38 @@ namespace projectFrameCut.Render.Effect
             {
                 ImplementType = implementType,
             };
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the TextFadeIn continuous text effect.
+    /// </summary>
+    public class TextFadeInEffectProvider : EffectProviderBase
+    {
+        public TextFadeInEffectProvider()
+        {
+            Name = "TextFadeIn";
+            Parameters = new Dictionary<string, object>();
+        }
+
+        public override string TypeName => "TextFadeIn";
+
+        public override EffectType TypeOfEffect => EffectType.ContinuousTextEffect;
+
+        public override EffectTarget Target => EffectTarget.Text;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return Array.Empty<EffectArgumentFieldDescriptor>();
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new TextFadeInContinuousEffectFactory().Build(implementType, parameters)];
         }
     }
 }

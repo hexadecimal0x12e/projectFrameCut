@@ -367,20 +367,20 @@ public partial class Program
 
         try
         {
-            if (EffectHelper.EffectsEnum != null)
+            if (EffectHelper.EffectsProviderEnum != null)
             {
-                foreach (var kv in EffectHelper.EffectsEnum)
+                foreach (var kv in EffectHelper.EffectsProviderEnum)
                 {
                     try
                     {
-                        var effectInstance = kv.Value();
+                        var provider = kv.Value();
                         effects.Add(new
                         {
                             typeName = kv.Key,
-                            name = effectInstance.Name,
-                            fromPlugin = effectInstance.FromPlugin,
-                            effectType = effectInstance.TypeOfEffect.ToString(),
-                            description = effectInstance.GetInfo()?.Description ?? "No description available"
+                            name = provider.Name,
+                            fromPlugin = provider.FromPlugin,
+                            effectType = provider.TypeOfEffect.ToString(),
+                            description = "No description available"
                         });
                     }
                     catch
@@ -404,9 +404,9 @@ public partial class Program
         {
             IEffect? effect = null;
 
-            if (EffectHelper.EffectsEnum != null && EffectHelper.EffectsEnum.TryGetValue(effectType, out var creator))
+            if (EffectHelper.EffectsProviderEnum != null && EffectHelper.EffectsProviderEnum.TryGetValue(effectType, out var creator))
             {
-                effect = creator();
+                effect = creator().BuildWithDefaultType();
             }
 
             if (effect == null)

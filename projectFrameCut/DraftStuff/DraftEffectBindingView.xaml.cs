@@ -6,6 +6,7 @@ using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
@@ -19,6 +20,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using Color = Microsoft.Maui.Graphics.Color;
 using Image = Microsoft.Maui.Controls.Image;
@@ -302,10 +304,10 @@ public partial class DraftEffectBindingView : ContentView
             Kind = NodeKind.Input,
             X = inputX,
             Y = inputY,
-            Id = IEffectBundle.InputAnchorGUID,
+            Id = IEffectProvider.InputAnchorGUID,
             Bundle = null,
-            InputAnchorID = IEffectBundle.NoConnectionGUID,
-            OutputAnchorID = IEffectBundle.NoConnectionGUID,
+            InputAnchorID = IEffectProvider.NoConnectionGUID,
+            OutputAnchorID = IEffectProvider.NoConnectionGUID,
             DisplayName = PPLocalizedResources.EffectBind_SourcePicture
         };
         if (!inputHasPosition)
@@ -316,13 +318,13 @@ public partial class DraftEffectBindingView : ContentView
         }
         AddNode(_inputNode);
 
-        if (_clip.EffectBundles != null)
+        if (_clip.EffectProviders != null)
         {
-            // The logic to load factories and instantiate IEffectBundle has been removed.
+            // The logic to load factories and instantiate IEffectProvider has been removed.
             // We iterate bundleData directly to create visual nodes.
 
             var effectTarget = _clip.GetEffectTarget();
-            foreach (var bundle in _clip.EffectBundles.Values)
+            foreach (var bundle in _clip.EffectProviders.Values)
             {
                 // Skip bundles that are internal/special effects (e.g. Crop, Place, Resize)
                 // to keep consistent with ClipInfoBuilder.BuildEffectTab filtering behavior.
@@ -331,12 +333,16 @@ public partial class DraftEffectBindingView : ContentView
 
                 // Placeholder Node Creation
                 // We assume 1 input port "Input" because we cannot inspect the real effect logic anymore.
+                // Value providers have no picture input, so they get an empty port list.
+                bool isValueProvider = bundle.Target.HasFlag(EffectTarget.ValueProvider);
                 var node = new NodeViewModel
                 {
                     Id = bundle.Id,
                     Kind = NodeKind.Effect,
                     Bundle = bundle,
-                    InputPortNames = bundle.InputAnchorsDisplayName ?? [string.IsNullOrWhiteSpace(bundle.InputAnchorDisplayName) ? "Frame" : bundle.InputAnchorDisplayName],
+                    InputPortNames = isValueProvider
+                        ? []
+                        : ["TODO: Let DraftEffectBindingView use EffectProvider."],// bundle.InputAnchorsDisplayName ?? [string.IsNullOrWhiteSpace(bundle.InputAnchorDisplayName) ? "Frame" : bundle.InputAnchorDisplayName],
                     DisplayName = bundle.Name
                 };
 
@@ -369,10 +375,10 @@ public partial class DraftEffectBindingView : ContentView
             Kind = NodeKind.Output,
             X = outputX,
             Y = outputY,
-            Id = IEffectBundle.OutputAnchorGUID,
+            Id = IEffectProvider.OutputAnchorGUID,
             Bundle = null,
-            InputAnchorID = IEffectBundle.NoConnectionGUID,
-            OutputAnchorID = IEffectBundle.NoConnectionGUID,
+            InputAnchorID = IEffectProvider.NoConnectionGUID,
+            OutputAnchorID = IEffectProvider.NoConnectionGUID,
             DisplayName = PPLocalizedResources.EffectBind_FinalResult
         };
         if (!outputHasPosition)
@@ -552,7 +558,12 @@ public partial class DraftEffectBindingView : ContentView
         // Ports
         View inputPortView;
 
-        if (node.InputPortNames != null && node.InputPortNames.Length > 0)
+        if (node.InputPortNames is { Length: 0 })
+        {
+            // Explicitly no picture input (e.g. value providers): reserve the column but render no port.
+            inputPortView = new BoxView { Color = Colors.Transparent, WidthRequest = 15, HeightRequest = 15, InputTransparent = true };
+        }
+        else if (node.InputPortNames != null && node.InputPortNames.Length > 0)
         {
             var stack = new VerticalStackLayout { Spacing = 5, VerticalOptions = LayoutOptions.Center };
             for (int i = 0; i < node.InputPortNames.Length; i++)
@@ -606,7 +617,7 @@ public partial class DraftEffectBindingView : ContentView
         }
 
         var outputPort = new BoxView { Color = Colors.Red, WidthRequest = 15, HeightRequest = 15, VerticalOptions = LayoutOptions.Center };
-        ToolTipProperties.SetText(outputPort, node?.Bundle?.OutputAnchorDisplayName ?? PPLocalizedResources.EffectBind_OutputAnchor);
+        ToolTipProperties.SetText(outputPort, "TODO: Let DraftEffectBindingView use EffectProvider.");//node?.Bundle?.OutputAnchorDisplayName ?? PPLocalizedResources.EffectBind_OutputAnchor);
 
         // Handle visibility for System Nodes
         if (node.Kind == NodeKind.Input) inputPortView.IsVisible = false; // Hide Input on Input Node
@@ -661,7 +672,7 @@ public partial class DraftEffectBindingView : ContentView
         layout.Add(bodyActionContainer, 1, 0);
         layout.Add(outputPort, 2, 0);
 
-        if (node.OutputAnchorID == IEffectBundle.NoConnectionGUID && node.InputAnchorID != IEffectBundle.NoConnectionGUID)
+        if (node.OutputAnchorID == IEffectProvider.NoConnectionGUID && node.InputAnchorID != IEffectProvider.NoConnectionGUID)
         {
             frame.Opacity = 0.8;
         }
@@ -1080,12 +1091,23 @@ public partial class DraftEffectBindingView : ContentView
         try
         {
             ArgumentNullException.ThrowIfNull(node.Bundle);
-            var ppb = node.Bundle.CreateUI();
+            var ui = EffectServices.GetUIProvider(node.Bundle);
+            // Inject the binding host so each field in the property UI can offer a bind action.
+            if (ui is IBindingHostHolder bindingHostHolder && _clip is not null)
+            {
+                bindingHostHolder.BindingHost = new ClipBindingHost(_clip, node.Bundle, _page,
+                    onChanged: () => { NotifyEffectBundlesChanged(); RefreshSelectedNode(); });
+            }
+            var ppb = ui.CreateUI();
             ArgumentNullException.ThrowIfNull(ppb, $"CreateUI() for {node.Bundle?.TypeName}");
             ppb.PropertyChanged += (s, args) =>
             {
                 ArgumentNullException.ThrowIfNull(node.Bundle);
-                node.Bundle.Parameters = node.Bundle.HandlePropertyPanelChange(args);
+                if (node.Bundle is IEffectProvider p)
+                {
+                    ui.HandlePropertyPanelChange(node.Bundle, args);
+                    node.Bundle.Parameters = p.Parameters;
+                }
                 RebuildConnections();
                 ConnectionsLayer.Invalidate();
                 NotifyEffectBundlesChanged();
@@ -1099,6 +1121,18 @@ public partial class DraftEffectBindingView : ContentView
             PropertiesPanel.Children.Add(new Label { Text = $"Error loading properties. {Environment.NewLine}{Localized._ExceptionTemplate(ex)}" });
         }
 
+    }
+
+    /// <summary>
+    /// Rebuilds the property panel of the currently selected effect node.
+    /// Used by the binding host after a binding is applied / removed so the UI reflects the new state.
+    /// </summary>
+    private void RefreshSelectedNode()
+    {
+        if (_selectedNode is not null && _selectedNode.Kind == NodeKind.Effect)
+        {
+            SelectNode(_selectedNode);
+        }
     }
 
     private async Task ShowContextMenu(NodeViewModel node)
@@ -1174,7 +1208,7 @@ public partial class DraftEffectBindingView : ContentView
 
         DisconnectNode(node);
 
-        _clip.EffectBundles?.Remove(node.Id);
+        _clip.EffectProviders?.Remove(node.Id);
         ClipInfoBuilder.RebuildAllEffects(_clip);
 
         _nodes.Remove(node.Id);
@@ -1253,7 +1287,7 @@ public partial class DraftEffectBindingView : ContentView
             else if (item.Value.OutputAnchorID == target.Id)
             {
                 var n = item.Value;
-                n.OutputAnchorID = IEffectBundle.NoConnectionGUID;
+                n.OutputAnchorID = IEffectProvider.NoConnectionGUID;
                 newList[item.Key] = n;
             }
         }
@@ -1276,7 +1310,7 @@ public partial class DraftEffectBindingView : ContentView
             {
                 var n = item.Value;
                 ArgumentNullException.ThrowIfNull(n.InputPortNames);
-                if (n.InputAnchorIDs is null) n.InputAnchorIDs = Enumerable.Repeat(IEffectBundle.NoConnectionGUID, n.InputPortNames.Length).ToList();
+                if (n.InputAnchorIDs is null) n.InputAnchorIDs = Enumerable.Repeat(IEffectProvider.NoConnectionGUID, n.InputPortNames.Length).ToList();
                 n.InputAnchorIDs[targetPortIndex] = source.Id;
                 newList[item.Key] = n;
 
@@ -1284,7 +1318,7 @@ public partial class DraftEffectBindingView : ContentView
             else if (item.Value.OutputAnchorID == target.Id)
             {
                 var n = item.Value;
-                n.OutputAnchorID = IEffectBundle.NoConnectionGUID;
+                n.OutputAnchorID = IEffectProvider.NoConnectionGUID;
                 newList[item.Key] = n;
             }
         }
@@ -1302,9 +1336,9 @@ public partial class DraftEffectBindingView : ContentView
                 {
                     foreach (var item in _nodes)
                     {
-                        if (item.Value.InputAnchorID == IEffectBundle.InputAnchorGUID)
+                        if (item.Value.InputAnchorID == IEffectProvider.InputAnchorGUID)
                         {
-                            item.Value.InputAnchorID = IEffectBundle.NoConnectionGUID;
+                            item.Value.InputAnchorID = IEffectProvider.NoConnectionGUID;
                             newList[item.Key] = item.Value;
                         }
                     }
@@ -1315,9 +1349,9 @@ public partial class DraftEffectBindingView : ContentView
                 {
                     foreach (var item in _nodes)
                     {
-                        if (item.Value.OutputAnchorID == IEffectBundle.OutputAnchorGUID)
+                        if (item.Value.OutputAnchorID == IEffectProvider.OutputAnchorGUID)
                         {
-                            item.Value.OutputAnchorID = IEffectBundle.NoConnectionGUID;
+                            item.Value.OutputAnchorID = IEffectProvider.NoConnectionGUID;
                             newList[item.Key] = item.Value;
                         }
 
@@ -1327,9 +1361,9 @@ public partial class DraftEffectBindingView : ContentView
                 }
             default:
                 {
-                    node.InputAnchorID = IEffectBundle.NoConnectionGUID;
-                    node.OutputAnchorID = IEffectBundle.NoConnectionGUID;
-                    if (node.InputAnchorIDs is not null) node.InputAnchorIDs = Enumerable.Repeat(IEffectBundle.NoConnectionGUID, node.InputAnchorIDs.Count).ToList();
+                    node.InputAnchorID = IEffectProvider.NoConnectionGUID;
+                    node.OutputAnchorID = IEffectProvider.NoConnectionGUID;
+                    if (node.InputAnchorIDs is not null) node.InputAnchorIDs = Enumerable.Repeat(IEffectProvider.NoConnectionGUID, node.InputAnchorIDs.Count).ToList();
                     newList[node.Id] = node;
 
                     foreach (var item in _nodes)
@@ -1341,7 +1375,7 @@ public partial class DraftEffectBindingView : ContentView
 
                         if (other.InputAnchorID == node.Id)
                         {
-                            other.InputAnchorID = IEffectBundle.NoConnectionGUID;
+                            other.InputAnchorID = IEffectProvider.NoConnectionGUID;
                             changed = true;
                         }
 
@@ -1351,7 +1385,7 @@ public partial class DraftEffectBindingView : ContentView
                             {
                                 if (other.InputAnchorIDs[i] == node.Id)
                                 {
-                                    other.InputAnchorIDs[i] = IEffectBundle.NoConnectionGUID;
+                                    other.InputAnchorIDs[i] = IEffectProvider.NoConnectionGUID;
                                     changed = true;
                                 }
                             }
@@ -1359,7 +1393,7 @@ public partial class DraftEffectBindingView : ContentView
 
                         if (other.OutputAnchorID == node.Id)
                         {
-                            other.OutputAnchorID = IEffectBundle.NoConnectionGUID;
+                            other.OutputAnchorID = IEffectProvider.NoConnectionGUID;
                             changed = true;
                         }
 
@@ -1398,20 +1432,20 @@ public partial class DraftEffectBindingView : ContentView
         // 找到第一个可见节点（或 InputAnchorGUID / NoConnectionGUID）。
         Guid ResolveVisibleSourceId(Guid sourceId)
         {
-            while (sourceId != IEffectBundle.InputAnchorGUID
-                   && sourceId != IEffectBundle.NoConnectionGUID
+            while (sourceId != IEffectProvider.InputAnchorGUID
+                   && sourceId != IEffectProvider.NoConnectionGUID
                    && !_nodes.ContainsKey(sourceId))
             {
-                if (_clip?.EffectBundles?.TryGetValue(sourceId, out var hiddenBundle) == true)
-                    sourceId = hiddenBundle.BindedInputId;
+                if (_clip?.EffectProviders?.TryGetValue(sourceId, out var hiddenBundle) == true)
+                    sourceId = hiddenBundle.GetInputAnchor();
                 else
-                    return IEffectBundle.NoConnectionGUID;
+                    return IEffectProvider.NoConnectionGUID;
             }
             return sourceId;
         }
 
-        if (!_nodes.Any(n => n.Value.Kind == NodeKind.Effect && n.Value.OutputAnchorID == IEffectBundle.OutputAnchorGUID)
-            && !(_clip?.EffectBundles?.Values.Any(b => b.BindedOutputId == IEffectBundle.OutputAnchorGUID
+        if (!_nodes.Any(n => n.Value.Kind == NodeKind.Effect && n.Value.OutputAnchorID == IEffectProvider.OutputAnchorGUID)
+            && !(_clip?.EffectProviders?.Values.Any(b => b.GetOutputAnchor() == IEffectProvider.OutputAnchorGUID
                                                     && !b.Target.HasFlag(EffectTarget.SpeedVariance)
                                                     && !b.Target.HasFlag(EffectTarget.Mixture)) ?? false))
         {
@@ -1421,33 +1455,33 @@ public partial class DraftEffectBindingView : ContentView
 
         foreach (var kvp in _nodes)
         {
-            if (kvp.Key == IEffectBundle.InputAnchorGUID) continue;
+            if (kvp.Key == IEffectProvider.InputAnchorGUID) continue;
             var item = kvp.Value;
             if (item.InputAnchorIDs.ListAny())
             {
                 for (int i = 0; i < item.InputAnchorIDs.Count; i++)
                 {
                     var inputId = item.InputAnchorIDs[i];
-                    if (inputId == IEffectBundle.NoConnectionGUID) continue;
+                    if (inputId == IEffectProvider.NoConnectionGUID) continue;
 
                     var resolvedId = ResolveVisibleSourceId(inputId);
-                    if (resolvedId == IEffectBundle.NoConnectionGUID
+                    if (resolvedId == IEffectProvider.NoConnectionGUID
                         || !TryAddConnection(resolvedId, item, i))
                     {
                         // Ensure stale or deleted node references do not keep crashing the editor.
-                        item.InputAnchorIDs[i] = IEffectBundle.NoConnectionGUID;
+                        item.InputAnchorIDs[i] = IEffectProvider.NoConnectionGUID;
                     }
                 }
             }
             else
             {
-                if (item.InputAnchorID != IEffectBundle.NoConnectionGUID)
+                if (item.InputAnchorID != IEffectProvider.NoConnectionGUID)
                 {
                     var resolvedId = ResolveVisibleSourceId(item.InputAnchorID);
-                    if (resolvedId == IEffectBundle.NoConnectionGUID
+                    if (resolvedId == IEffectProvider.NoConnectionGUID
                         || !TryAddConnection(resolvedId, item, 0))
                     {
-                        item.InputAnchorID = IEffectBundle.NoConnectionGUID;
+                        item.InputAnchorID = IEffectProvider.NoConnectionGUID;
                     }
                 }
 
@@ -1457,27 +1491,27 @@ public partial class DraftEffectBindingView : ContentView
             {
                 // 追踪输出链：如果 output 指向隐藏 Bundle，沿链向下找到 OutputAnchorGUID 或可见节点
                 var resolvedOutput = item.OutputAnchorID;
-                while (resolvedOutput != IEffectBundle.OutputAnchorGUID
-                       && resolvedOutput != IEffectBundle.NoConnectionGUID
+                while (resolvedOutput != IEffectProvider.OutputAnchorGUID
+                       && resolvedOutput != IEffectProvider.NoConnectionGUID
                        && !_nodes.ContainsKey(resolvedOutput))
                 {
-                    if (_clip?.EffectBundles?.TryGetValue(resolvedOutput, out var hiddenBundle) == true)
-                        resolvedOutput = hiddenBundle.BindedOutputId;
+                    if (_clip?.EffectProviders?.TryGetValue(resolvedOutput, out var hiddenBundle) == true)
+                        resolvedOutput = hiddenBundle.GetOutputAnchor();
                     else
                         break;
                 }
-                if (resolvedOutput == IEffectBundle.OutputAnchorGUID)
+                if (resolvedOutput == IEffectProvider.OutputAnchorGUID)
                 {
                     _drawable.Connections.Add((item, _outputNode ?? throw new NullReferenceException(), 0));
                 }
             }
 
-            if (kvp.Key == IEffectBundle.OutputAnchorGUID) continue;
+            if (kvp.Key == IEffectProvider.OutputAnchorGUID) continue;
 
             bool hasInput = item.InputAnchorIDs.ListAny()
-                ? item.InputAnchorIDs.Any(id => id != IEffectBundle.NoConnectionGUID)
-                : item.InputAnchorID != IEffectBundle.NoConnectionGUID;
-            bool hasOutput = item.OutputAnchorID != IEffectBundle.NoConnectionGUID;
+                ? item.InputAnchorIDs.Any(id => id != IEffectProvider.NoConnectionGUID)
+                : item.InputAnchorID != IEffectProvider.NoConnectionGUID;
+            bool hasOutput = item.OutputAnchorID != IEffectProvider.NoConnectionGUID;
 
             item.View?.Opacity = hasInput && hasOutput ? 1 : 0.8;
         }
@@ -1529,7 +1563,7 @@ public partial class DraftEffectBindingView : ContentView
             // BindedEffectGroupID might not always be correctly configured,
             // so we use multiple strategies to find the right node.
             var effectToNodeMapping = new Dictionary<IEffect, NodeViewModel>();
-            if (_clip.EffectBundles != null && _clip.Effects != null)
+            if (_clip.EffectProviders != null && _clip.Effects != null)
             {
                 foreach (var effect in _clip.Effects.Values)
                 {
@@ -1545,7 +1579,7 @@ public partial class DraftEffectBindingView : ContentView
                     // Strategy 2: Match by TypeName between effect and bundle → node
                     if (node == null)
                     {
-                        foreach (var bundle in _clip.EffectBundles.Values)
+                        foreach (var bundle in _clip.EffectProviders.Values)
                         {
                             if (string.Equals(bundle.TypeName, effect.TypeName, StringComparison.Ordinal)
                                 && _nodes.TryGetValue(bundle.Id, out var n))
@@ -1644,20 +1678,21 @@ public partial class DraftEffectBindingView : ContentView
         });
     }
 
+
     [DebuggerDisplay("{Id}, {Bundle?.TypeName}")]
     class NodeViewModel
     {
         public required Guid Id;
         public required NodeKind Kind;
-        public required IEffectBundle? Bundle;
+        public required IEffectProvider? Bundle;
         public View? View;
         public double X, Y;
         public bool IsBindable => Bundle is not null && (Bundle.TypeOfEffect == EffectType.BindableEffect || Bundle.TypeOfEffect == EffectType.AudioBindableEffect);
         public string[]? InputPortNames;
 
-        public Guid InputAnchorID { get => Bundle?.BindedInputId ?? field; set { if (Bundle != null) Bundle.BindedInputId = value; else field = value; } }
-        public Guid OutputAnchorID { get => Bundle?.BindedOutputId ?? field; set { if (Bundle != null) Bundle.BindedOutputId = value; else field = value; } }
-        public List<Guid>? InputAnchorIDs { get => Bundle?.BindedInputIds; set { Bundle?.BindedInputIds = value; } }
+        public Guid InputAnchorID { get => Bundle?.GetInputAnchor() ?? field; set { if (Bundle != null) Bundle.SetInputAnchor(value); else field = value; } }
+        public Guid OutputAnchorID { get => Bundle?.GetOutputAnchor() ?? field; set { if (Bundle != null) Bundle.SetOutputAnchor(value); else field = value; } }
+        public List<Guid>? InputAnchorIDs { get => Bundle?.GetInputAnchors(); set { Bundle?.SetInputAnchors(value); } }
 
         public double DragStartX, DragStartY;
         public double DragTotalX, DragTotalY;
@@ -1689,7 +1724,7 @@ public partial class DraftEffectBindingView : ContentView
         AddEffectsPanel.Children.Add(ClipInfoBuilder.BuildAddEffectPanel(
             _clip.ClipType switch { ClipMode.Special => EffectTarget.NotSpecified, ClipMode.MarkingClip => EffectTarget.NotSpecified, ClipMode.AudioClip => EffectTarget.Audio, _ => EffectTarget.Video },
             _page,
-            EffectServices.GetAvailableEffectBundles(),
+            EffectServices.GetAvailableEffectProviders(),
             new(),
             (s, e) =>
             {
@@ -1699,7 +1734,7 @@ public partial class DraftEffectBindingView : ContentView
                     if (!string.IsNullOrWhiteSpace(BundleType)) AddBundle(BundleType);
                 }
             },
-            hideKeyFramedBundles: true
+            hideKeyFramedProviders: true
         ));
     }
 
@@ -1707,16 +1742,16 @@ public partial class DraftEffectBindingView : ContentView
     {
         if (_clip == null) return;
 
-        var bundlesFactories = EffectServices.GetAvailableEffectBundles();
+        var bundlesFactories = EffectServices.GetAvailableEffectProviders();
 
         if (bundlesFactories.TryGetValue(bundleTypeName, out var factory))
         {
             var instance = factory();
             instance.Id = Guid.NewGuid();
-            instance.BindedInputId = IEffectBundle.NoConnectionGUID;
-            instance.BindedOutputId = IEffectBundle.NoConnectionGUID;
-            _clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
-            _clip.EffectBundles[instance.Id] = instance;
+            instance.SetInputAnchor(IEffectProvider.NoConnectionGUID);
+            instance.SetOutputAnchor(IEffectProvider.NoConnectionGUID);
+            _clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
+            _clip.EffectProviders[instance.Id] = instance;
             ClipInfoBuilder.RebuildAllEffects(_clip);
 
             LoadClip(_clip, _page);

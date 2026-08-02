@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class FadeOpacityEffect_IPicture : INormalEffect
+    public class FadeOpacityEffect_IPicture : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -19,6 +19,7 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
 
         public float Opacity { get; init; } = 0.8f;
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -59,11 +60,12 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            return OpacityEffect.Process(source, Opacity);
+            float opacity = DynamicParam.Resolve(DynamicProviders, "Opacity", Opacity);
+            return OpacityEffect.Process(source, opacity);
         }
     }
 
-    public class FadeOpacityEffect_HwAccel : INormalEffect
+    public class FadeOpacityEffect_HwAccel : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -72,6 +74,7 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
 
         public float Opacity { get; init; } = 0.8f;
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -110,8 +113,9 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
+            float opacity = DynamicParam.Resolve(DynamicProviders, "Opacity", Opacity);
             if (computer is null)
-                return OpacityEffect.Process(source, Opacity);
+                return OpacityEffect.Process(source, opacity);
 
             var sw = Stopwatch.StartNew();
             var (r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
@@ -119,11 +123,11 @@ namespace projectFrameCut.Render.Effect
             FourChannelResult computeResult;
             if (computer is IOpacityComputer oc)
             {
-                computeResult = oc.ComputeOpacity(r, g, b, a, Opacity);
+                computeResult = oc.ComputeOpacity(r, g, b, a, opacity);
             }
             else
             {
-                var resultArr = computer.Compute([r, g, b, a, Opacity]);
+                var resultArr = computer.Compute([r, g, b, a, opacity]);
 
                 if (resultArr.Length != 4 ||
                     resultArr[0] is not float[] rOut ||
@@ -146,13 +150,13 @@ namespace projectFrameCut.Render.Effect
                 OperationDisplayName = "FadeOpacity (GPU)",
                 Operator = typeof(FadeOpacityEffect_HwAccel),
                 ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object> { { "Opacity", Opacity } }
+                Properties = new Dictionary<string, object> { { "Opacity", opacity } }
             }).ToList();
             return result;
         }
     }
 
-    public class FadeOpacityEffectFactory : IEffectFactory
+    public class FadeOpacityEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "FadeOpacity";
@@ -187,6 +191,41 @@ namespace projectFrameCut.Render.Effect
             };
             if (!parameters.ContainsKey("Opacity")) parameters["Opacity"] = 0.8f;
             return FadeOpacityEffect_IPicture.FromParametersDictionary(parameters);
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the FadeOpacity effect.
+    /// </summary>
+    public class FadeOpacityEffectProvider : EffectProviderBase
+    {
+        public FadeOpacityEffectProvider()
+        {
+            Name = "FadeOpacity";
+            Parameters = new Dictionary<string, object> { { "Opacity", 0.8f } };
+        }
+
+        public override string TypeName => "FadeOpacity";
+
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("Opacity", EffectArgumentFieldType.Numeric, "0.8", min: "0", max: "1")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new FadeOpacityEffectFactory().Build(implementType, parameters)];
         }
     }
 }

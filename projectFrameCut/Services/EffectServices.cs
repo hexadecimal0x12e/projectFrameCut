@@ -1,10 +1,12 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
@@ -40,16 +42,10 @@ namespace projectFrameCut.Services
 
         public static Dictionary<string, string> GetLocalizedEffectNames(string splitter = " ")
         {
-            string GetEffectDisplayName(KeyValuePair<string, Func<IEffect>> e)
+            string GetEffectDisplayName(KeyValuePair<string, Func<IEffectProvider>> e)
             {
                 var instance = e.Value();
                 var type = instance.TypeOfEffect.ToString();
-                //instance switch
-                //{
-                //    var t when t is IContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
-                //    var t when t is IBindableArgumentEffect => PPLocalizedResources.Effect_BindableArgsEffect,
-                //    _ => PPLocalizedResources.Effect_GeneralEffect,
-                //};
                 if (instance.FromPlugin == InternalPluginBase.InternalPluginBaseID || SettingsManager.IsBoolSettingTrue("edit_AlwaysShowEffectsSource"))
                 {
                     var dispName = PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);
@@ -64,18 +60,32 @@ namespace projectFrameCut.Services
 
             }
 
-            return EffectHelper.EffectsEnum.ToDictionary(c => c.Key, GetEffectDisplayName);
+            return EffectHelper.EffectsProviderEnum.ToDictionary(c => c.Key, GetEffectDisplayName);
         }
 
-        public static Dictionary<string, Func<IEffectBundle>> GetAvailableEffectBundles()
+        public static Dictionary<string, Func<IEffectProvider>> GetAvailableEffectProviders()
         {
             if (!PluginManager.Inited) return [];
-            return PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectBundleProvider).ToDictionary(k => k.Key, v => v.Value);
+            return PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectProviderProvider).ToDictionary(k => k.Key, v => v.Value);
         }
 
-        public static Dictionary<string, string> GetLocalizedEffectBundleNames(string splitter = " ", bool haveSubFix = true)
+        /// <summary>
+        /// Get the App-layer UI provider for the given Render-side provider. The UI provider is resolved from
+        /// the <see cref="IApplicationPluginBase.EffectProviderUIProvider"/> registrations (custom UI for color pickers,
+        /// keyframing, position tuples, ...); when no plugin registers the effect type, a generic metadata-driven
+        /// <see cref="EffectProviderUI"/> is returned.
+        /// </summary>
+        public static IEffectProviderUIProvider GetUIProvider(IEffectProvider provider)
         {
-            string GetEffectDisplayName(KeyValuePair<string, Func<IEffectBundle>> e)
+            var factory = PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>()
+                .SelectMany(c => c.EffectProviderUIProvider)
+                .FirstOrDefault(kv => kv.Key == provider.TypeName).Value;
+            return factory is not null ? factory(provider) : new EffectProviderUI(provider);
+        }
+
+        public static Dictionary<string, string> GetLocalizedEffectProviderNames(string splitter = " ", bool haveSubFix = true)
+        {
+            string GetEffectDisplayName(KeyValuePair<string, Func<IEffectProvider>> e)
             {
                 var instance = e.Value();
                 var type = instance.TypeOfEffect switch
@@ -106,7 +116,7 @@ namespace projectFrameCut.Services
 
             }
 
-            return GetAvailableEffectBundles().ToDictionary(c => c.Key, GetEffectDisplayName);
+            return GetAvailableEffectProviders().ToDictionary(c => c.Key, GetEffectDisplayName);
         }
     }
 }

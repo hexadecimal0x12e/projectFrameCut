@@ -158,6 +158,13 @@ namespace projectFrameCut.Render.Rendering
                     IPicture effected = srcFrame.Clip;
                     var effectsList = srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
                     ClipPositionTuple clipPos = srcFrame.ParentClip.PositionTuple;
+                    // Begin the per-frame value-provider context for this clip: pre-fills the built-in
+                    // frame/progress sources and clears provider values.
+                    var clipDuration = srcFrame.ParentClip.GetEffectiveDuration();
+                    var clipProgress = clipDuration > 0
+                        ? Math.Clamp((float)((long)frameIndex - (long)srcFrame.ParentClip.StartFrame) / clipDuration, 0f, 1f)
+                        : 0f;
+                    ValueProviderFrameContext.BeginFrame(frameIndex, clipProgress);
                     foreach (var effect in effectsList)
                     {
                         if (effect is IContinuousEffect c)
@@ -171,6 +178,12 @@ namespace projectFrameCut.Render.Rendering
                         else if (effect is INormalEffect n)
                         {
                             effected = n.Render(effected, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                        }
+                        else if (effect is IValueProviderEffect vp)
+                        {
+                            // New-system value provider: write the current frame value keyed by its
+                            // effect Id; consumers' bound dynamic parameters read it back.
+                            ValueProviderFrameContext.Set(vp.Id, vp.GenerateValue(frameIndex, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight));
                         }
                         else if (effect is IBindableArgumentEffect b)
                         {
@@ -226,6 +239,8 @@ namespace projectFrameCut.Render.Rendering
                             AfterEffectCallback(effect, d);
                         }
                     }
+                    // The per-frame value-provider values are only needed during effect processing.
+                    ValueProviderFrameContext.EndFrame();
 
                     int clipX = ScaleCoordinateToTarget(clipPos.TargetX, projectRelativeWidth, targetWidth);
                     int clipY = ScaleCoordinateToTarget(clipPos.TargetY, projectRelativeHeight, targetHeight);

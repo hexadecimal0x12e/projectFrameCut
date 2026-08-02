@@ -2,8 +2,10 @@
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
+using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.ApplicationPluginBase.Text;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System;
 using System.Collections.Generic;
@@ -20,27 +22,19 @@ namespace projectFrameCut.ApplicationPluginBase
 {
     internal class InternalApplicationPluginBase : InternalPluginBase, IApplicationPluginBase
     {
-        public Dictionary<string, Func<IEffectBundle>> EffectBundleProvider => new Dictionary<string, Func<IEffectBundle>>
+        /// <summary>
+        /// Maps effect type names to their App-layer UI provider factories. The custom UI types (color pickers,
+        /// keyframing, position tuples, ...) are registered explicitly; every other type falls back to the generic
+        /// metadata-driven <see cref="EffectProviderUI"/> via <see cref="EffectServices.GetUIProvider"/>.
+        /// The render providers themselves are inherited from <see cref="InternalPluginBase.EffectProviderProvider"/>.
+        /// </summary>
+        public Dictionary<string, Func<IEffectProvider, IEffectProviderUIProvider>> EffectProviderUIProvider => new Dictionary<string, Func<IEffectProvider, IEffectProviderUIProvider>>
         {
-            { "ZoomIn", () => new Effect.ZoominEffectBundle() },
-            { "RemoveColor", () => new Effect.RemoveColorEffectBundle() },
-            { "Jitter", () => new Effect.JitterEffectBundle() },
-            { "Movement", () => new Effect.MovementEffectBundle()  },
-            { "Blur", () => new Effect.BlurEffectBundle() },
-            { "Crop", () => new Effect.CropEffectBundle() },
-            { "Place", () => new Effect.PlaceEffectBundle() },
-            { "Resize", () => new Effect.ResizeEffectBundle() },
-            { "Flip", () => new Effect.FlipEffectBundle() },
-            { "Sharpen", () => new Effect.SharpenEffectBundle() },
-            { "Vignette", () => new Effect.VignetteEffectBundle() },
-            { "FadeOpacity", () => new Effect.FadeOpacityEffectBundle() },
-            { "ClassicSpeedVarianceProvider", () => new Effect.ClassicSpeedVarianceProviderEffectBundle() },
-            { "ClassicOverlayMixture", () => new Effect.ClassicOverlayMixtureEffectBundle() },
-            { "BlendModeMixture", () => new Effect.BlendModeMixtureEffectBundle() },
-            { "ColorAdjustment", () => new Effect.ColorAdjustmentEffectBundle() },
-            { "ProgressPlacer", () => new Effect.ProgressPlacerEffectBundle() },
-            { "ProgressCrop", () => new Effect.ProgressCropEffectBundle() },
-            { "TextFadeIn", () => new Effect.TextFadeInEffectBundle() },
+            { "RemoveColor", p => new RemoveColorUI(p) },
+            { "Movement", p => new MovementUI(p) },
+            { "TextFadeIn", p => new TextFadeInUI(p) },
+            { "ProgressPlacer", p => new ProgressPlacerUI(p) },
+            { "ProgressCrop", p => new ProgressCropUI(p) },
         };
 
         public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => new Dictionary<string, Func<ITextClipStyleProvider>>

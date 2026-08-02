@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class RotationEffect_IPicture : INormalEffect
+    public class RotationEffect_IPicture : INormalEffect, IDynamicArgumentsEffect
     {
         private TimeSpan? _elapsed;
 
@@ -26,6 +26,8 @@ namespace projectFrameCut.Render.Effect
         /// false 时保持原始画布大小（旋转超出部分被裁剪）。
         /// </summary>
         public bool ExpandCanvas { get; init; } = false;
+
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -83,30 +85,32 @@ namespace projectFrameCut.Render.Effect
         {
             var sw = Stopwatch.StartNew();
 
-            var result = RotationEffect.Process(source, Angle, ExpandCanvas);
+            float angle = DynamicParam.Resolve(DynamicProviders, "Angle", Angle);
+            bool expandCanvas = DynamicParam.Resolve(DynamicProviders, "ExpandCanvas", ExpandCanvas);
+            var result = RotationEffect.Process(source, angle, expandCanvas);
 
             sw.Stop();
             _elapsed = sw.Elapsed;
-            result.ProcessStack = source.ProcessStack.Append(GetProcessStack()).ToList();
+            result.ProcessStack = source.ProcessStack.Append(GetProcessStack(angle, expandCanvas)).ToList();
             return result;
         }
 
-        private PictureProcessStack GetProcessStack() => new PictureProcessStack
+        private PictureProcessStack GetProcessStack(float angle, bool expandCanvas) => new PictureProcessStack
         {
             Elapsed = _elapsed,
             OperationDisplayName = "Rotation",
             Operator = typeof(RotationEffect_IPicture),
             ProcessingFuncStackTrace = new StackTrace(true),
-            
+
             Properties = new Dictionary<string, object>
             {
-                { nameof(Angle), Angle },
-                { nameof(ExpandCanvas), ExpandCanvas },
+                { nameof(Angle), angle },
+                { nameof(ExpandCanvas), expandCanvas },
             }
         };
     }
 
-    public class RotationEffect_HwAccel : INormalEffect
+    public class RotationEffect_HwAccel : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -116,6 +120,7 @@ namespace projectFrameCut.Render.Effect
 
         public float Angle { get; init; }
         public bool ExpandCanvas { get; init; } = false;
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -163,18 +168,20 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            if (Math.Abs(Angle % 360f) < float.Epsilon)
+            float angle = DynamicParam.Resolve(DynamicProviders, "Angle", Angle);
+            bool expandCanvas = DynamicParam.Resolve(DynamicProviders, "ExpandCanvas", ExpandCanvas);
+            if (Math.Abs(angle % 360f) < float.Epsilon)
                 return source;
 
             if (computer is null)
-                return RotationEffect.Process(source, Angle, ExpandCanvas);
+                return RotationEffect.Process(source, angle, expandCanvas);
 
-            float angleRad = Angle * MathF.PI / 180f;
+            float angleRad = angle * MathF.PI / 180f;
             float cos = MathF.Abs(MathF.Cos(angleRad));
             float sin = MathF.Abs(MathF.Sin(angleRad));
 
             int outW, outH;
-            if (ExpandCanvas)
+            if (expandCanvas)
             {
                 outW = (int)MathF.Ceiling(source.Width * cos + source.Height * sin);
                 outH = (int)MathF.Ceiling(source.Width * sin + source.Height * cos);
@@ -191,11 +198,11 @@ namespace projectFrameCut.Render.Effect
             FourChannelResult computeResult;
             if (computer is IRotationComputer rc)
             {
-                computeResult = rc.ComputeRotation(r, g, b, a, source.Width, source.Height, outW, outH, Angle);
+                computeResult = rc.ComputeRotation(r, g, b, a, source.Width, source.Height, outW, outH, angle);
             }
             else
             {
-                var resultArr = computer.Compute([r, g, b, a, source.Width, source.Height, outW, outH, Angle]);
+                var resultArr = computer.Compute([r, g, b, a, source.Width, source.Height, outW, outH, angle]);
 
                 if (resultArr.Length != 4 ||
                     resultArr[0] is not float[] rOut ||
@@ -218,13 +225,13 @@ namespace projectFrameCut.Render.Effect
                 OperationDisplayName = "Rotation (GPU)",
                 Operator = typeof(RotationEffect_HwAccel),
                 ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object> { { "Angle", Angle }, { "ExpandCanvas", ExpandCanvas } }
+                Properties = new Dictionary<string, object> { { "Angle", angle }, { "ExpandCanvas", expandCanvas } }
             }).ToList();
             return result;
         }
     }
 
-    public class RotationEffectFactory : IEffectFactory
+    public class RotationEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "Rotation";
@@ -257,6 +264,42 @@ namespace projectFrameCut.Render.Effect
             parameters ??= new Dictionary<string, object> { { "Angle", 0f } };
             if (!parameters.ContainsKey("Angle")) parameters["Angle"] = 0f;
             return RotationEffect_IPicture.FromParametersDictionary(parameters);
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the Rotation effect.
+    /// </summary>
+    public class RotationEffectProvider : EffectProviderBase
+    {
+        public RotationEffectProvider()
+        {
+            Name = "Rotation";
+            Parameters = new Dictionary<string, object> { { "Angle", 0f }, { "ExpandCanvas", false } };
+        }
+
+        public override string TypeName => "Rotation";
+
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("Angle", EffectArgumentFieldType.Numeric, "0"),
+                Field("ExpandCanvas", EffectArgumentFieldType.Boolean, "false")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new RotationEffectFactory().Build(implementType, parameters)];
         }
     }
 }

@@ -9,7 +9,7 @@ using System.Diagnostics;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ZoomInContinuousEffect : IContinuousEffect
+    public class ZoomInContinuousEffect : IContinuousEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -30,6 +30,7 @@ namespace projectFrameCut.Render.Effect
         public bool IsScoped { get; set; }
         public int TargetX { get; init; }
         public int TargetY { get; init; }
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -42,8 +43,10 @@ namespace projectFrameCut.Render.Effect
         {
             double clampedProgress = Math.Clamp(progress, 0.0, 1.0);
 
-            int currentWidth = (int)Math.Round(source.Width + (TargetX - source.Width) * clampedProgress);
-            int currentHeight = (int)Math.Round(source.Height + (TargetY - source.Height) * progress);
+            int zoomTargetX = DynamicParam.Resolve(DynamicProviders, "TargetX", TargetX);
+            int zoomTargetY = DynamicParam.Resolve(DynamicProviders, "TargetY", TargetY);
+            int currentWidth = (int)Math.Round(source.Width + (zoomTargetX - source.Width) * clampedProgress);
+            int currentHeight = (int)Math.Round(source.Height + (zoomTargetY - source.Height) * progress);
             if (currentWidth < 1) currentWidth = 1;
             if (currentHeight < 1) currentHeight = 1;
 
@@ -81,7 +84,7 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class ZoomInContinuousEffectFactory : IEffectFactory
+    public class ZoomInContinuousEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
@@ -137,6 +140,46 @@ namespace projectFrameCut.Render.Effect
                 TargetY = Convert.ToInt32(parameters["TargetY"]),
                 ImplementType = implementType,
             };
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the ZoomIn continuous effect.
+    /// </summary>
+    public class ZoomInEffectProvider : EffectProviderBase
+    {
+        public ZoomInEffectProvider()
+        {
+            Name = "ZoomIn";
+            Parameters = new Dictionary<string, object>
+            {
+                { "TargetX", 960 },
+                { "TargetY", 540 },
+            };
+        }
+
+        public override string TypeName => "ZoomIn";
+
+        public override EffectType TypeOfEffect => EffectType.ContinuousEffect;
+
+        public override EffectTarget Target => EffectTarget.Video;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("TargetX", EffectArgumentFieldType.Integer, "960", min: "1"),
+                Field("TargetY", EffectArgumentFieldType.Integer, "540", min: "1")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new ZoomInContinuousEffectFactory().Build(implementType, parameters)];
         }
     }
 }

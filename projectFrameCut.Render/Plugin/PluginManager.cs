@@ -240,21 +240,35 @@ namespace projectFrameCut.Render.Plugin
             IEffect effect = null!;
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {
+                // Strip the reserved __Binding_* keys before the factory consumes the parameters
+                // (ConvertElementDictToObjectDict would throw on undefined parameter types), then
+                // restore the original dictionary so the binding state survives for later rebuilds.
+                var originalParameters = stru.Parameters;
+                var stripped = DynamicParam.StripBindings(originalParameters ?? new Dictionary<string, object>());
+                bool replaced = !ReferenceEquals(stripped, originalParameters);
+                if (replaced) stru.Parameters = stripped;
                 try
-                {
-                    effect = plugin.EffectCreator(stru, type);
-                }
-                catch
                 {
                     try
                     {
-                        effect = plugin.EffectCreator(stru, EffectImplementType.NotSpecified);
+                        effect = plugin.EffectCreator(stru, type);
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        Log(ex, $"Create effect {stru.Name}/{stru.TypeName}", effect);
-                        throw;
+                        try
+                        {
+                            effect = plugin.EffectCreator(stru, EffectImplementType.NotSpecified);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, $"Create effect {stru.Name}/{stru.TypeName}", effect);
+                            throw;
+                        }
                     }
+                }
+                finally
+                {
+                    if (replaced) stru.Parameters = originalParameters;
                 }
                 try
                 {
@@ -268,6 +282,8 @@ namespace projectFrameCut.Render.Plugin
                     Log(ex, $"Init effect {effect?.Name}/{stru.TypeName}", effect);
                     throw;
                 }
+                MountDynamicProviders(effect, originalParameters);
+                if (effect is IValueProviderEffect vpe && !string.IsNullOrEmpty(stru.Id)) effect.Id = stru.Id;
                 return effect;
             }
             else
@@ -282,7 +298,19 @@ namespace projectFrameCut.Render.Plugin
             if (stru.RelativeHeight <= 0) stru.RelativeHeight = relativeHeight;
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {
-                var effect = plugin.EffectCreator(stru);
+                var originalParameters = stru.Parameters;
+                var stripped = DynamicParam.StripBindings(originalParameters ?? new Dictionary<string, object>());
+                bool replaced = !ReferenceEquals(stripped, originalParameters);
+                if (replaced) stru.Parameters = stripped;
+                IEffect effect;
+                try
+                {
+                    effect = plugin.EffectCreator(stru);
+                }
+                finally
+                {
+                    if (replaced) stru.Parameters = originalParameters;
+                }
                 effect.Index = stru.Index;
                 effect.Enabled = stru.Enabled;
                 effect.BindedEffectGroupID = stru.BindedEffectGroupID;
@@ -295,11 +323,26 @@ namespace projectFrameCut.Render.Plugin
                     Log(ex, $"Init effect {effect.Name}", effect);
                     throw;
                 }
+                MountDynamicProviders(effect, originalParameters);
+                if (effect is IValueProviderEffect vpe && !string.IsNullOrEmpty(stru.Id)) effect.Id = stru.Id;
                 return effect;
             }
             else
             {
                 throw new ArgumentException($"Plugin not found: {stru.FromPlugin}");
+            }
+        }
+
+        /// <summary>
+        /// Mounts the per-frame dynamic parameter getters onto an effect that implements
+        /// <see cref="IDynamicArgumentsEffect"/>, built from the provider's original parameters
+        /// (containing the reserved <c>__Binding_*</c> keys).
+        /// </summary>
+        private static void MountDynamicProviders(IEffect effect, Dictionary<string, object>? originalParameters)
+        {
+            if (effect is IDynamicArgumentsEffect dyn)
+            {
+                dyn.DynamicProviders = DynamicParam.BuildProviders(originalParameters ?? new Dictionary<string, object>());
             }
         }
 

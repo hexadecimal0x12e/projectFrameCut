@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class JitterEffect : IContinuousClipPositionProvider
+    public class JitterEffect : IContinuousClipPositionProvider, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -21,6 +21,7 @@ namespace projectFrameCut.Render.Effect
         public int MaxOffsetY { get; init; }
         public int Seed { get; init; } = 0;
         public string Direction { get; init; } = Direction_Both;
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public const string Direction_Both = "Both";
         public const string Direction_XOnly = "XOnly";
@@ -106,19 +107,22 @@ namespace projectFrameCut.Render.Effect
 
         public ClipPositionTuple GetPosition(IClip source, uint index, int targetWidth, int targetHeight)
         {
+            string direction = DynamicParam.Resolve(DynamicProviders, "Direction", Direction);
+            int maxOffsetX = DynamicParam.Resolve(DynamicProviders, "MaxOffsetX", MaxOffsetX);
+            int maxOffsetY = DynamicParam.Resolve(DynamicProviders, "MaxOffsetY", MaxOffsetY);
             int offX = 0, offY = 0;
-            if (Direction == Direction_Both || Direction == Direction_XOnly)
+            if (direction == Direction_Both || direction == Direction_XOnly)
             {
-                if (MaxOffsetX > 0)
+                if (maxOffsetX > 0)
                 {
-                    offX = rnd.Next(-MaxOffsetX, MaxOffsetX + 1);
+                    offX = rnd.Next(-maxOffsetX, maxOffsetX + 1);
                 }
             }
-            if (Direction == Direction_Both || Direction == Direction_YOnly)
+            if (direction == Direction_Both || direction == Direction_YOnly)
             {
-                if (MaxOffsetY > 0)
+                if (maxOffsetY > 0)
                 {
-                    offY = rnd.Next(-MaxOffsetY, MaxOffsetY + 1);
+                    offY = rnd.Next(-maxOffsetY, maxOffsetY + 1);
                 }
             }
             return new ClipPositionTuple(offX, offY, 0, 0, true);
@@ -128,7 +132,7 @@ namespace projectFrameCut.Render.Effect
 
     }
 
-    public class JitterContinuousEffectFactory : IEffectFactory
+    public class JitterContinuousEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
@@ -178,6 +182,50 @@ namespace projectFrameCut.Render.Effect
                 Seed = Convert.ToInt32(parameters["Seed"]),
                 Direction = parameters["Direction"].ToString() ?? JitterEffect.Direction_Both,
             };
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the Jitter continuous effect.
+    /// </summary>
+    public class JitterEffectProvider : EffectProviderBase
+    {
+        public JitterEffectProvider()
+        {
+            Name = "Jitter";
+            Parameters = new Dictionary<string, object>
+            {
+                { "MaxOffsetX", 10 },
+                { "MaxOffsetY", 10 },
+                { "Direction", JitterEffect.Direction_Both },
+                { "Seed", 0 },
+            };
+        }
+
+        public override string TypeName => "Jitter";
+
+        public override EffectType TypeOfEffect => EffectType.ContinuousEffect;
+
+        public override EffectTarget Target => EffectTarget.Video;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("MaxOffsetX", EffectArgumentFieldType.Integer, "10", min: "0"),
+                Field("MaxOffsetY", EffectArgumentFieldType.Integer, "10", min: "0"),
+                Field("Direction", EffectArgumentFieldType.String, "Both", presetOptions: [JitterEffect.Direction_Both, JitterEffect.Direction_XOnly, JitterEffect.Direction_YOnly]),
+                Field("Seed", EffectArgumentFieldType.Integer, "0")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new JitterContinuousEffectFactory().Build(implementType, parameters)];
         }
     }
 }

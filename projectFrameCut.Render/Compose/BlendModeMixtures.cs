@@ -1,5 +1,6 @@
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.HwAccelContracts;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -505,7 +506,7 @@ namespace projectFrameCut.Render.Compose
         public override string? NeedComputer => "DifferenceComputer";
     }
 
-    public class BlendModeMixtureFactory : IEffectFactory
+    public class BlendModeMixtureFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectTarget Target => EffectTarget.Mixture;
@@ -536,6 +537,53 @@ namespace projectFrameCut.Render.Compose
 
             ((BlendModeMixtureBase)mixture).Parameters = p;
             return mixture;
+        }
+    }
+
+    /// <summary>
+    /// The Render-side provider of the blend-mode mixtures. Each registered type (AddMixture, SubtractMixture, ...)
+    /// is an instance with the corresponding <see cref="MixtureType"/>, whose <see cref="TypeName"/> is
+    /// <c>MixtureType + "Mixture"</c>. The legacy standalone <c>"BlendModeMixture"</c> type (with a selectable
+    /// <c>MixtureType</c> parameter) is represented by an instance with <see cref="ProviderTypeName"/> set.
+    /// </summary>
+    public class BlendModeMixtureProvider : EffectProviderBase
+    {
+        public BlendModeMixtureProvider()
+        {
+            Name = "Blend Mode";
+            Parameters = new Dictionary<string, object>
+            {
+                { "MixtureType", "Add" }
+            };
+        }
+
+        public string MixtureType { get; init; } = "Add";
+
+        /// <summary>
+        /// When set, overrides <see cref="TypeName"/> (used for the standalone <c>"BlendModeMixture"</c> type).
+        /// </summary>
+        public string? ProviderTypeName { get; init; }
+
+        public override string TypeName => ProviderTypeName ?? MixtureType + "Mixture";
+
+        public override EffectType TypeOfEffect => EffectType.MixtureProvider;
+
+        public override EffectTarget Target => EffectTarget.Mixture;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("MixtureType", EffectArgumentFieldType.String, "Add", presetOptions: ["Add", "Subtract", "Multiply", "Screen", "OverlayBlend", "Darken", "Lighten", "Difference"])
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            var mixtureType = parameters.TryGetValue("MixtureType", out var v) ? v?.ToString() ?? MixtureType : MixtureType;
+            return [new BlendModeMixtureFactory { MixtureType = mixtureType }.Build(implementType, parameters)];
         }
     }
 }

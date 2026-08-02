@@ -1,98 +1,41 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
+using CommunityToolkit.Maui.Views;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
-using projectFrameCut.Render.Effect;
-using projectFrameCut.Render.Plugin;
-using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.InteractableEditor;
-using projectFrameCut.Services;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using CommunityToolkit.Maui.Views;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
-    public class ProgressPlacerEffectBundle : IEffectBundle, IKeyFramedEffectProvider
+    /// <summary>
+    /// Custom property UI of the ProgressPlacer effect, including the keyframe-step editing UI.
+    /// </summary>
+    public class ProgressPlacerUI : EffectProviderUI, IKeyFramedEffectProvider
     {
         private const string ProgressListKey = "ProgressList";
 
-        public string TypeName => "ProgressPlacer";
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public EffectType TypeOfEffect => EffectType.ContinuousClipPositionProvider;
-        public EffectTarget Target => EffectTarget.Video | EffectTarget.IsKeyFramed | EffectTarget.IsNotVisibleInNewEffectSelector;
-
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public string Name { get; set; } = "ProgressPlacer";
-        public bool Enabled { get; set; } = true;
-
-        public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
-        public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
-        public List<Guid>? BindedInputIds { get; set; }
-        public bool IsMultiInput => false;
-        public bool IsUserAddableEffect => false;
-
-        public string InputAnchorDisplayName => string.Empty;
-        public string[]? InputAnchorsDisplayName => null;
-        public string OutputAnchorDisplayName => string.Empty;
-
-        public int StartPoint { get; set; }
-        public int EndPoint { get; set; }
-
-        public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>
+        public ProgressPlacerUI(IEffectProvider inner) : base(inner)
         {
-            { ProgressListKey, "[]" }
-        };
-
-        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
-        {
-            { "ProgressList", EffectBundleHelper.StringField("ProgressList", "Position Keyframes", "JSON array of ProgressData keyframe objects", "[]", remarks: "Serialized ProgressData array as JSON string") }
-        };
-
-        public List<string> ParametersNeeded => new List<string> { ProgressListKey };
-        public Dictionary<string, string> ParametersType => new Dictionary<string, string>
-        {
-            { ProgressListKey, "string" }
-        };
-        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
-
-        public IEffectFactory[] Create()
-        {
-            var factory = new ProgressPlacerFactory();
-            this.ConfigureFactory(factory);
-            return [factory];
         }
 
-        public PropertyPanelBuilder CreateUI()
+        public string TypeName => Inner.TypeName;
+
+        public string FromPlugin => Inner.FromPlugin;
+
+        public Dictionary<string, object> Parameters => Inner.Parameters;
+
+        public override PropertyPanelBuilder CreateUI()
         {
             var panel = new PropertyPanelBuilder();
             panel.AddText(new SingleLineLabel(
-                EffectBundleHelper.L("Effect_ProgressPlacer_Desc", "Configure keyframes in the Keyframe tab."), 14));
+                EffectProviderHelper.L("Effect_ProgressPlacer_Desc", "Configure keyframes in the Keyframe tab."), 14));
             return panel;
-        }
-
-        public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
-        {
-            Parameters[args.Id] = args.Value;
-            return Parameters;
-        }
-
-        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
-        {
-            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
-        }
-
-        public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)
-        {
-            return new EffectBundleDisplayItem
-            {
-                Name = EffectBundleHelper.L("DisplayName_Effect_ProgressPlacer", "Progress Placer"),
-                Description = EffectBundleHelper.L("Description_Effect_ProgressPlacer", "Animate clip position, size via keyframes."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "source.png")),
-                VideoThumbnail = MediaSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "progressplace.mp4"))
-            };
         }
 
         #region IKeyFramedEffectProvider
@@ -119,12 +62,12 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
             panel.AddSlider(
                 $"step_progress_{index}",
-                EffectBundleHelper.L("Effect_ProgressPlacer_Progress", "Progress"),
+                EffectProviderHelper.L("Effect_ProgressPlacer_Progress", "Progress"),
                 0d, 1d, item.Index,
                 eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
 
 
-            panel.AddButton(EffectBundleHelper.L("Effect_ProgressPlacer_OpenEditor", "Open editor"), async (s, e) =>
+            panel.AddButton(EffectProviderHelper.L("Effect_ProgressPlacer_OpenEditor", "Open editor"), async (s, e) =>
             {
                 try
                 {
@@ -214,27 +157,27 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             panel.AddSeparator();
 
             panel.AddCollapsibleSection(
-                EffectBundleHelper.L("Effect_Placer_Collapsible_Position", "Position"),
+                EffectProviderHelper.L("Effect_Placer_Collapsible_Position", "Position"),
                 contentPanel =>
                 {
-                    EffectBundleHelper.AddNumericEntry(
+                    EffectProviderHelper.AddNumericEntry(
                         contentPanel, $"step_x_{index}",
-                        EffectBundleHelper.L("_StartX", "X"),
+                        EffectProviderHelper.L("_StartX", "X"),
                         item.Position.TargetX.ToString(), "0");
 
-                    EffectBundleHelper.AddNumericEntry(
+                    EffectProviderHelper.AddNumericEntry(
                         contentPanel, $"step_y_{index}",
-                        EffectBundleHelper.L("_StartY", "Y"),
+                        EffectProviderHelper.L("_StartY", "Y"),
                         item.Position.TargetY.ToString(), "0");
 
-                    EffectBundleHelper.AddNumericEntry(
+                    EffectProviderHelper.AddNumericEntry(
                         contentPanel, $"step_w_{index}",
-                        EffectBundleHelper.L("_Width", "W"),
+                        EffectProviderHelper.L("_Width", "W"),
                         item.Position.TargetWidth.ToString(), "1");
 
-                    EffectBundleHelper.AddNumericEntry(
+                    EffectProviderHelper.AddNumericEntry(
                         contentPanel, $"step_h_{index}",
-                        EffectBundleHelper.L("_Height", "H"),
+                        EffectProviderHelper.L("_Height", "H"),
                         item.Position.TargetHeight.ToString(), "1");
                 });
 
@@ -346,7 +289,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private List<ProgressData> GetProgressList()
         {
-            if (!Parameters.TryGetValue(ProgressListKey, out var raw))
+            if (!Inner.Parameters.TryGetValue(ProgressListKey, out var raw))
                 return new List<ProgressData>();
 
             return ParseProgressList(raw);
@@ -354,7 +297,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private void SaveProgressList(List<ProgressData> list)
         {
-            Parameters[ProgressListKey] = JsonSerializer.Serialize(list);
+            Inner.Parameters[ProgressListKey] = JsonSerializer.Serialize(list);
         }
 
         private static List<ProgressData> ParseProgressList(object? value)

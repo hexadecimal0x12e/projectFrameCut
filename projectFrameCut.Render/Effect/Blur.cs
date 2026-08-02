@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class BlurEffect_IPicture : INormalEffect
+    public class BlurEffect_IPicture : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -18,6 +18,7 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
 
         public float Sigma { get; init; }
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -61,11 +62,12 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            return BlurEffect.Process(source, Sigma);
+            float sigma = DynamicParam.Resolve(DynamicProviders, "Sigma", Sigma);
+            return BlurEffect.Process(source, sigma);
         }
     }
 
-    public class BlurEffect_HwAccel : INormalEffect
+    public class BlurEffect_HwAccel : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -74,6 +76,7 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
 
         public float Sigma { get; init; }
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -114,11 +117,12 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            if (Sigma <= float.Epsilon)
+            float sigma = DynamicParam.Resolve(DynamicProviders, "Sigma", Sigma);
+            if (sigma <= float.Epsilon)
                 return source;
 
             if (computer is null)
-                return BlurEffect.Process(source, Sigma);
+                return BlurEffect.Process(source, sigma);
 
             var sw = Stopwatch.StartNew();
             var (r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
@@ -126,11 +130,11 @@ namespace projectFrameCut.Render.Effect
             FourChannelResult computeResult;
             if (computer is IBlurComputer bc)
             {
-                computeResult = bc.ComputeBlur(r, g, b, a, source.Width, Sigma);
+                computeResult = bc.ComputeBlur(r, g, b, a, source.Width, sigma);
             }
             else
             {
-                var resultArr = computer.Compute([r, g, b, a, source.Width, Sigma]);
+                var resultArr = computer.Compute([r, g, b, a, source.Width, sigma]);
 
                 if (resultArr.Length != 4 ||
                     resultArr[0] is not float[] rOut ||
@@ -153,13 +157,13 @@ namespace projectFrameCut.Render.Effect
                 OperationDisplayName = "Blur (GPU)",
                 Operator = typeof(BlurEffect_HwAccel),
                 ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object> { { "Sigma", Sigma } }
+                Properties = new Dictionary<string, object> { { "Sigma", sigma } }
             }).ToList();
             return result;
         }
     }
 
-    public class BlurEffectFactory : IEffectFactory
+    public class BlurEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "Blur";
@@ -188,6 +192,41 @@ namespace projectFrameCut.Render.Effect
             parameters ??= new Dictionary<string, object> { { "Sigma", 0f } };
             if (!parameters.ContainsKey("Sigma")) parameters["Sigma"] = 0f;
             return BlurEffect_IPicture.FromParametersDictionary(parameters);
+        }
+    }
+
+
+    /// <summary>
+    /// The Render-side provider of the Blur effect. It owns the factory capability and the property metadata
+    /// (previously split between <c>BlurEffectBundle</c> and <c>BlurEffectFactory</c>).
+    /// </summary>
+    public class BlurEffectProvider : EffectProviderBase
+    {
+        public BlurEffectProvider()
+        {
+            Name = "Blur";
+            Parameters = new Dictionary<string, object> { { "Sigma", 4f } };
+        }
+
+        public override string TypeName => "Blur";
+
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("Sigma", EffectArgumentFieldType.Numeric, "4", min: "0", max: "128")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new BlurEffectFactory().Build(implementType, parameters)];
         }
     }
 }

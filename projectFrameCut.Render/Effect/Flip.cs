@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class FlipEffect_IPicture : INormalEffect
+    public class FlipEffect_IPicture : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -20,6 +20,7 @@ namespace projectFrameCut.Render.Effect
 
         public bool Horizontal { get; init; }
         public bool Vertical { get; init; }
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -64,11 +65,13 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            return FlipEffect.Process(source, Horizontal, Vertical);
+            bool horizontal = DynamicParam.Resolve(DynamicProviders, "Horizontal", Horizontal);
+            bool vertical = DynamicParam.Resolve(DynamicProviders, "Vertical", Vertical);
+            return FlipEffect.Process(source, horizontal, vertical);
         }
     }
 
-    public class FlipEffect_HwAccel : INormalEffect
+    public class FlipEffect_HwAccel : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -78,6 +81,7 @@ namespace projectFrameCut.Render.Effect
 
         public bool Horizontal { get; init; }
         public bool Vertical { get; init; }
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -119,8 +123,10 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
+            bool horizontal = DynamicParam.Resolve(DynamicProviders, "Horizontal", Horizontal);
+            bool vertical = DynamicParam.Resolve(DynamicProviders, "Vertical", Vertical);
             if (computer is null)
-                return FlipEffect.Process(source, Horizontal, Vertical);
+                return FlipEffect.Process(source, horizontal, vertical);
 
             var sw = Stopwatch.StartNew();
             var (r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
@@ -128,11 +134,11 @@ namespace projectFrameCut.Render.Effect
             FourChannelResult computeResult;
             if (computer is IFlipComputer fc)
             {
-                computeResult = fc.ComputeFlip(r, g, b, a, source.Width, source.Height, Horizontal, Vertical);
+                computeResult = fc.ComputeFlip(r, g, b, a, source.Width, source.Height, horizontal, vertical);
             }
             else
             {
-                var resultArr = computer.Compute([r, g, b, a, source.Width, source.Height, Horizontal, Vertical]);
+                var resultArr = computer.Compute([r, g, b, a, source.Width, source.Height, horizontal, vertical]);
 
                 if (resultArr.Length != 4 ||
                     resultArr[0] is not float[] rOut ||
@@ -155,13 +161,13 @@ namespace projectFrameCut.Render.Effect
                 OperationDisplayName = "Flip (GPU)",
                 Operator = typeof(FlipEffect_HwAccel),
                 ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object> { { "Horizontal", Horizontal }, { "Vertical", Vertical } }
+                Properties = new Dictionary<string, object> { { "Horizontal", horizontal }, { "Vertical", vertical } }
             }).ToList();
             return result;
         }
     }
 
-    public class FlipEffectFactory : IEffectFactory
+    public class FlipEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "Flip";
@@ -199,6 +205,42 @@ namespace projectFrameCut.Render.Effect
             if (!parameters.ContainsKey("Horizontal")) parameters["Horizontal"] = false;
             if (!parameters.ContainsKey("Vertical")) parameters["Vertical"] = false;
             return FlipEffect_IPicture.FromParametersDictionary(parameters);
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the Flip effect.
+    /// </summary>
+    public class FlipEffectProvider : EffectProviderBase
+    {
+        public FlipEffectProvider()
+        {
+            Name = "Flip";
+            Parameters = new Dictionary<string, object> { { "Horizontal", false }, { "Vertical", false } };
+        }
+
+        public override string TypeName => "Flip";
+
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("Horizontal", EffectArgumentFieldType.Boolean, "false"),
+                Field("Vertical", EffectArgumentFieldType.Boolean, "false")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new FlipEffectFactory().Build(implementType, parameters)];
         }
     }
 }

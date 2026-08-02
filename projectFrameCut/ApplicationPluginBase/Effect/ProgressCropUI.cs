@@ -1,12 +1,10 @@
-﻿using CommunityToolkit.Maui.Views;
+using CommunityToolkit.Maui.Views;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.Effect;
-using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -15,115 +13,29 @@ using System.Text.Json;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
-    public class ProgressCropEffectBundle : IEffectBundle, IKeyFramedEffectProvider
+    /// <summary>
+    /// Custom property UI of the ProgressCrop effect, including the keyframe-step editing UI.
+    /// </summary>
+    public class ProgressCropUI : EffectProviderUI, IKeyFramedEffectProvider
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public string Name { get; set; } = "ProgressCrop";
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        private const string CropListKey = "CropList";
 
-        public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>
+        public ProgressCropUI(IEffectProvider inner) : base(inner)
         {
-            { "StartX", 0 },
-            { "StartY", 0 },
-            { "Width", 1280 },
-            { "Height", 720 },
-            { "Angle", 0f },
-            { "CropList", "[]" },
-        };
-
-        private static readonly Dictionary<string, EffectBundleSettableFields> s_settableFields = new()
-        {
-            { "StartX", EffectBundleHelper.IntField("StartX", "X", "Crop start X position", 0) },
-            { "StartY", EffectBundleHelper.IntField("StartY", "Y", "Crop start Y position", 0) },
-            { "Width", EffectBundleHelper.IntField("Width", "Width", "Crop width", 1280, 1) },
-            { "Height", EffectBundleHelper.IntField("Height", "Height", "Crop height", 720, 1) },
-            { "Angle", EffectBundleHelper.FloatField("Angle", "Rotation", "Crop rotation angle", 0f, -180f, 180f) },
-            { "CropList", EffectBundleHelper.StringField("CropList", "Crop Keyframes", "JSON array of CropData keyframe objects", "[]", remarks: "Serialized CropData array as JSON string") }
-        };
-
-        public List<string> ParametersNeeded => new ProgressCropperEffectFactory().ParametersNeeded;
-        public Dictionary<string, string> ParametersType => new ProgressCropperEffectFactory().ParametersType;
-        public Dictionary<string, EffectBundleSettableFields> SettableFields => s_settableFields;
-
-        public string TypeName => "ProgressCrop";
-        public bool IsNormalEffect => false;
-        public bool IsContinuousEffect => true;
-        public bool IsBindableEffect => false;
-        public EffectType TypeOfEffect => EffectType.ContinuousEffect;
-        public EffectTarget Target => EffectTarget.Video | EffectTarget.IsKeyFramed | EffectTarget.IsNotVisibleInNewEffectSelector;
-
-        public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
-        public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
-        public List<Guid>? BindedInputIds { get; set; }
-        public bool IsMultiInput => false;
-        public bool IsUserAddableEffect => false;
-        public string InputAnchorDisplayName => string.Empty;
-        public string[]? InputAnchorsDisplayName => null;
-        public string OutputAnchorDisplayName => string.Empty;
-
-        public bool Enabled { get; set; } = true;
-        public int StartPoint { get; set; }
-        public int EndPoint { get; set; }
-
-        public IEffectFactory[] Create()
-        {
-            var factory = new ProgressCropperEffectFactory();
-            this.ConfigureFactory(factory);
-            return [factory];
         }
 
-        public PropertyPanelBuilder CreateUI()
+        public string TypeName => Inner.TypeName;
+
+        public string FromPlugin => Inner.FromPlugin;
+
+        public Dictionary<string, object> Parameters => Inner.Parameters;
+
+        public override PropertyPanelBuilder CreateUI()
         {
             var panel = new PropertyPanelBuilder();
             panel.AddText(new SingleLineLabel(
-                EffectBundleHelper.L("Effect_ProgressPlacer_Desc", "Configure keyframes in the Keyframe tab."), 14));
+                EffectProviderHelper.L("Effect_ProgressPlacer_Desc", "Configure keyframes in the Keyframe tab."), 14));
             return panel;
-        }
-
-        public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
-        {
-            if (args.Id == "StartX")
-            {
-                EffectBundleHelper.TrySetInt(Parameters, "StartX", args.Value);
-            }
-            else if (args.Id == "StartY")
-            {
-                EffectBundleHelper.TrySetInt(Parameters, "StartY", args.Value);
-            }
-            else if (args.Id == "Width" && EffectBundleHelper.TrySetInt(Parameters, "Width", args.Value))
-            {
-                Parameters["Width"] = Math.Max(1, EffectBundleHelper.GetInt(Parameters, "Width", 1280));
-            }
-            else if (args.Id == "Height" && EffectBundleHelper.TrySetInt(Parameters, "Height", args.Value))
-            {
-                Parameters["Height"] = Math.Max(1, EffectBundleHelper.GetInt(Parameters, "Height", 720));
-            }
-            else if (args.Id == "Angle")
-            {
-                EffectBundleHelper.TrySetFloat(Parameters, "Angle", args.Value);
-            }
-            else if (args.Id == "CropList")
-            {
-                Parameters["CropList"] = args.Value?.ToString() ?? "[]";
-            }
-
-            return Parameters;
-        }
-
-        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
-        {
-            return EffectBundleHelper.HandleSettableFieldChange(Parameters, field, value, out feedback);
-        }
-
-        public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)
-        {
-            return new EffectBundleDisplayItem
-            {
-                Name = EffectBundleHelper.L("DisplayName_Effect_Crop", "Crop"),
-                Description = EffectBundleHelper.L("Description_Effect_Crop", "Crop frame area, optionally rotate it, and keyframe the crop rectangle."),
-                Thumbnail = ImageSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "source.png")),
-                VideoThumbnail = MediaSource.FromFile(FileSystemService.GetAppPackageFileSync("EffectSample", "progresscrop.mp4"))
-            };
         }
 
         #region IKeyFramedEffectProvider
@@ -150,11 +62,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
             panel.AddSlider(
                 $"step_progress_{index}",
-                EffectBundleHelper.L("Effect_ProgressPlacer_Progress", "Progress"),
+                EffectProviderHelper.L("Effect_ProgressPlacer_Progress", "Progress"),
                 0d, 1d, item.Index,
                 eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
 
-            panel.AddButton(EffectBundleHelper.L("Effect_ProgressPlacer_OpenEditor", "Open editor"), async (s, e) =>
+            panel.AddButton(EffectProviderHelper.L("Effect_ProgressPlacer_OpenEditor", "Open editor"), async (s, e) =>
             {
                 try
                 {
@@ -248,32 +160,32 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             panel.AddSeparator();
 
             panel.AddCollapsibleSection(
-                EffectBundleHelper.L("Effect_Crop_Collapsible_Transform", "Transform"),
+                EffectProviderHelper.L("Effect_Crop_Collapsible_Transform", "Transform"),
                 contentPanel =>
                 {
-                    EffectBundleHelper.AddNumericEntry(
+                    EffectProviderHelper.AddNumericEntry(
                         contentPanel, $"step_startX_{index}",
-                        EffectBundleHelper.L("_StartX", "X"),
+                        EffectProviderHelper.L("_StartX", "X"),
                         item.StartX.ToString(), "0");
 
-                    EffectBundleHelper.AddNumericEntry(
+                    EffectProviderHelper.AddNumericEntry(
                         contentPanel, $"step_startY_{index}",
-                        EffectBundleHelper.L("_StartY", "Y"),
+                        EffectProviderHelper.L("_StartY", "Y"),
                         item.StartY.ToString(), "0");
 
-                    EffectBundleHelper.AddNumericEntry(
+                    EffectProviderHelper.AddNumericEntry(
                         contentPanel, $"step_w_{index}",
-                        EffectBundleHelper.L("_Width", "W"),
+                        EffectProviderHelper.L("_Width", "W"),
                         item.Width.ToString(), "1");
 
-                    EffectBundleHelper.AddNumericEntry(
+                    EffectProviderHelper.AddNumericEntry(
                         contentPanel, $"step_h_{index}",
-                        EffectBundleHelper.L("_Height", "H"),
+                        EffectProviderHelper.L("_Height", "H"),
                         item.Height.ToString(), "1");
 
                     contentPanel.AddSlider(
                         $"step_angle_{index}",
-                        EffectBundleHelper.L("General_Rotation", "Rotation"),
+                        EffectProviderHelper.L("General_Rotation", "Rotation"),
                         -180d, 180d, item.Angle,
                         eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
                 });
@@ -358,11 +270,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 ? 0d
                 : Math.Min(1d, list.Max(item => item.Index) + 0.1d);
 
-            int defaultX = EffectBundleHelper.GetInt(Parameters, "StartX", 0);
-            int defaultY = EffectBundleHelper.GetInt(Parameters, "StartY", 0);
-            int defaultW = Math.Max(1, EffectBundleHelper.GetInt(Parameters, "Width", 1280));
-            int defaultH = Math.Max(1, EffectBundleHelper.GetInt(Parameters, "Height", 720));
-            float defaultAngle = EffectBundleHelper.GetFloat(Parameters, "Angle", 0f);
+            int defaultX = EffectProviderHelper.GetInt(Inner.Parameters, "StartX", 0);
+            int defaultY = EffectProviderHelper.GetInt(Inner.Parameters, "StartY", 0);
+            int defaultW = Math.Max(1, EffectProviderHelper.GetInt(Inner.Parameters, "Width", 1280));
+            int defaultH = Math.Max(1, EffectProviderHelper.GetInt(Inner.Parameters, "Height", 720));
+            float defaultAngle = EffectProviderHelper.GetFloat(Inner.Parameters, "Angle", 0f);
 
             list.Add(new CropData(nextProgress, defaultX, defaultY, defaultW, defaultH, defaultAngle));
             list.Sort((a, b) => a.Index.CompareTo(b.Index));
@@ -405,9 +317,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             SaveCropList(list);
         }
 
+        #endregion
+
         private List<CropData> GetCropList()
         {
-            if (!Parameters.TryGetValue("CropList", out var raw) || raw is null)
+            if (!Inner.Parameters.TryGetValue(CropListKey, out var raw) || raw is null)
                 return new List<CropData>();
 
             if (raw is List<CropData> list)
@@ -431,7 +345,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private void SaveCropList(List<CropData> list)
         {
-            Parameters["CropList"] = JsonSerializer.Serialize(list);
+            Inner.Parameters[CropListKey] = JsonSerializer.Serialize(list);
         }
 
         private static bool TryParseEntryInt(object? value, out int result)
@@ -451,7 +365,5 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             result = 0;
             return false;
         }
-
-        #endregion
     }
 }

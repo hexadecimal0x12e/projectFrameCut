@@ -9,7 +9,7 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ProgressPlacer : IContinuousClipPositionProvider
+    public class ProgressPlacer : IContinuousClipPositionProvider, IDynamicArgumentsEffect
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
@@ -20,6 +20,10 @@ namespace projectFrameCut.Render.Effect
         public int Index { get; set; }
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
+
+        // ProgressPlacer's only parameter is the composite ProgressList; it cannot be expressed as a
+        // single Func<T> dynamic value, so the interface is implemented for API uniformity only.
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -202,7 +206,7 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class ProgressPlacerFactory : IEffectFactory
+    public class ProgressPlacerFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
@@ -237,4 +241,42 @@ namespace projectFrameCut.Render.Effect
     }
 
     public record struct ProgressData(double Index, ClipPositionTuple Position);
+
+
+
+    /// <summary>
+    /// The Render-side provider of the ProgressPlacer keyframed clip-position provider.
+    /// </summary>
+    public class ProgressPlacerProvider : EffectProviderBase
+    {
+        public ProgressPlacerProvider()
+        {
+            Name = "ProgressPlacer";
+            Parameters = new Dictionary<string, object>
+            {
+                { "ProgressList", "[]" }
+            };
+        }
+
+        public override string TypeName => "ProgressPlacer";
+
+        public override EffectType TypeOfEffect => EffectType.ContinuousClipPositionProvider;
+
+        public override EffectTarget Target => EffectTarget.Video | EffectTarget.IsKeyFramed | EffectTarget.IsNotVisibleInNewEffectSelector;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("ProgressList", EffectArgumentFieldType.String, "[]", remarks: "Serialized ProgressData array as JSON string")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new ProgressPlacerFactory().Build(implementType, parameters)];
+        }
+    }
 }

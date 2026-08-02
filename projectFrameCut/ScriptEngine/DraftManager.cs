@@ -659,11 +659,11 @@ namespace projectFrameCut.ScriptEngine
                 newClip.TargetWidth = source.TargetWidth;
                 newClip.TargetHeight = source.TargetHeight;
 
-                // 复制 Effects 和 EffectBundles（浅拷贝）
+                // 复制 Effects 和 EffectProviders（浅拷贝）
                 if (source.Effects is { Count: > 0 })
                     newClip.Effects = new Dictionary<string, IEffect>(source.Effects);
-                if (source.EffectBundles is { Count: > 0 })
-                    newClip.EffectBundles = new Dictionary<Guid, projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle>(source.EffectBundles);
+                if (source.EffectProviders is { Count: > 0 })
+                    newClip.EffectProviders = new Dictionary<Guid, IEffectProvider>(source.EffectProviders);
 
                 // 复制 ExtraData
                 newClip.ExtraData = new Dictionary<string, object>(source.ExtraData);
@@ -926,7 +926,7 @@ namespace projectFrameCut.ScriptEngine
             var obj = new PSObject();
             obj.Properties.Add(new PSNoteProperty("LoadedPlugins", new PSDataCollection<IPluginBase>(PluginManager.LoadedPlugins.Values)));
             obj.Properties.Add(new PSNoteProperty("TextStyles", new PSDataCollection<ITextClipStyleProvider>(PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.TextClipStyleProvider).Select(c => c.Value()))));
-            obj.Properties.Add(new PSNoteProperty("Effects", new PSDataCollection<IEffectBundle>(PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectBundleProvider).Select(c => c.Value()))));
+            obj.Properties.Add(new PSNoteProperty("Effects", new PSDataCollection<IEffectProvider>(PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectProviderProvider).Select(c => c.Value()))));
             WriteObject(obj);
         }
     }

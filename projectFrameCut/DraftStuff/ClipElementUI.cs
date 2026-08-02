@@ -8,6 +8,7 @@ using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
+using System.Collections;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -97,7 +98,9 @@ namespace projectFrameCut.DraftStuff
         public bool IsShadow { get; set; } = false;
 
         public Dictionary<string, IEffect>? Effects { get; set; } = new();
-        public Dictionary<Guid, IEffectBundle>? EffectBundles { get; set; } = new();
+        [JsonIgnore]
+        public Dictionary<Guid, IEffectProvider>? EffectProviders { get; set; } = new();
+
         public Dictionary<string, object> ExtraData { get; set; } = new();
 
         public float GetAverageSpeedRatio()
@@ -574,4 +577,5 @@ namespace projectFrameCut.DraftStuff
         }
 
     }
+
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using projectFrameCut.Drawing.Base;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -67,6 +68,7 @@ namespace projectFrameCut.Shared
         ColorAdjustment = 32,
         Text = 64,
         SourceReplacement = 128,
+        ValueProvider = 256,
 
         IsKeyFramed = 1 << 16,
         IsNotVisibleInEffectEditor = 1 << 17,

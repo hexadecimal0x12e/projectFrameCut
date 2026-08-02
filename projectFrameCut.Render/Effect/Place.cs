@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class PlaceEffect_HwAccel : INormalEffect
+    public class PlaceEffect_HwAccel : INormalEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -22,6 +22,7 @@ namespace projectFrameCut.Render.Effect
 
         public int StartX { get; set; }
         public int StartY { get; set; }
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -82,8 +83,10 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException("targetWidth and targetHeight must be positive");
             }
 
-            int startX = StartX;
-            int startY = StartY;
+            int placeX = DynamicParam.Resolve(DynamicProviders, "StartX", StartX);
+            int placeY = DynamicParam.Resolve(DynamicProviders, "StartY", StartY);
+            int startX = placeX;
+            int startY = placeY;
             if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
             {
                 startX = (int)Math.Round((double)startX * targetWidth / RelativeWidth);
@@ -216,7 +219,7 @@ namespace projectFrameCut.Render.Effect
 
     }
 
-    public class PlaceEffectFactory : IEffectFactory
+    public class PlaceEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
@@ -257,6 +260,46 @@ namespace projectFrameCut.Render.Effect
         {
             Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
             return PlaceEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the Place effect.
+    /// </summary>
+    public class PlaceEffectProvider : EffectProviderBase
+    {
+        public PlaceEffectProvider()
+        {
+            Name = "Place";
+            Parameters = new Dictionary<string, object>
+            {
+                { "StartX", 0 },
+                { "StartY", 0 },
+            };
+        }
+
+        public override string TypeName => "Place";
+
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("StartX", EffectArgumentFieldType.Integer, "0"),
+                Field("StartY", EffectArgumentFieldType.Integer, "0")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new PlaceEffectFactory().Build(implementType, parameters)];
         }
     }
 }

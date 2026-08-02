@@ -79,9 +79,9 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// </summary>
         Dictionary<string, IEffect>? Effects { get; set; }
         /// <summary>
-        /// Gets or sets grouped effect bundles attached to this clip.
+        /// Gets or sets grouped effect providers attached to this clip.
         /// </summary>
-        Dictionary<Guid, IEffectBundle>? EffectBundles { get; set; }
+        Dictionary<Guid, IEffectProvider>? EffectProviders { get; set; }
         /// <summary>
         /// Gets or sets extensible metadata for clip-specific custom options.
         /// </summary>

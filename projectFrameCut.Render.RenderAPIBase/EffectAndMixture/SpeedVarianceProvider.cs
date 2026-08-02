@@ -112,7 +112,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         }
     }
 
-    public class ClassicSpeedVarianceProviderFactory : IEffectFactory
+    public class ClassicSpeedVarianceProviderFactory
     {
         public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
         public string TypeName => "ClassicSpeedVarianceProvider";

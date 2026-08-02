@@ -43,6 +43,7 @@ using ITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System.Reflection;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System.Runtime.InteropServices;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
@@ -3482,10 +3483,10 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             if (dto.EffectBundles != null)
             {
-                var bundles = new Dictionary<Guid, IEffectBundle>();
+                var providers = new Dictionary<Guid, IEffectProvider>();
                 foreach (var bundle in dto.EffectBundles)
                 {
-                    if (!EffectServices.GetAvailableEffectBundles().TryGetValue(bundle.BundleTypeName, out var factory))
+                    if (!EffectServices.GetAvailableEffectProviders().TryGetValue(bundle.BundleTypeName, out var factory))
                     {
                         continue;
                     }
@@ -3494,13 +3495,13 @@ public partial class DraftPage : ContentPage, IDraftPage
                     instance.Id = bundle.Id;
                     instance.Name = bundle.Name;
                     instance.Parameters = bundle.Parameters ?? new Dictionary<string, object>();
-                    instance.BindedInputId = bundle.BindedInputId;
-                    instance.BindedOutputId = bundle.BindedOutputId;
-                    instance.BindedInputIds = bundle.BindedInputIds?.ToList();
-                    bundles[instance.Id] = instance;
+                    instance.SetInputAnchor(bundle.BindedInputId);
+                    instance.SetOutputAnchor(bundle.BindedOutputId);
+                    instance.SetInputAnchors(bundle.BindedInputIds ?? []);
+                    providers[instance.Id] = instance;
                 }
 
-                pasted.EffectBundles = bundles;
+                pasted.EffectProviders = providers;
             }
 
             pasted.ApplySpeedRatio();
@@ -7082,12 +7083,13 @@ public partial class DraftPage : ContentPage, IDraftPage
             return;
         }
 
-        clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+        clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
 
         IKeyFramedEffectProvider? provider = null;
-        foreach (var eb in clip.EffectBundles.Values)
+        foreach (var eb in clip.EffectProviders.Values)
         {
-            if (string.Equals(eb.TypeName, "ProgressPlacer", StringComparison.Ordinal) && eb is IKeyFramedEffectProvider kfp)
+            if (string.Equals(eb.TypeName, "ProgressPlacer", StringComparison.Ordinal)
+                && EffectServices.GetUIProvider(eb) is IKeyFramedEffectProvider kfp)
             {
                 provider = kfp;
                 break;
@@ -7096,11 +7098,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         if (provider is null)
         {
-            var newBundle = new ProgressPlacerEffectBundle();
-            newBundle.BindedInputId = IEffectBundle.InputAnchorGUID;
-            newBundle.BindedOutputId = IEffectBundle.OutputAnchorGUID;
-            clip.EffectBundles[newBundle.Id] = newBundle;
-            provider = newBundle;
+            var newProvider = new ProgressPlacerProvider();
+            newProvider.SetInputAnchor(IEffectProvider.InputAnchorGUID);
+            newProvider.SetOutputAnchor(IEffectProvider.OutputAnchorGUID);
+            clip.EffectProviders[newProvider.Id] = newProvider;
+            provider = EffectServices.GetUIProvider(newProvider) as IKeyFramedEffectProvider;
             ClipInfoBuilder.RebuildAllEffects(clip);
         }
 
@@ -8707,7 +8709,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 draft.Clips
                            .Select(c => c.FromPlugin)
                            .Concat(draft.Clips.SelectMany(c => c.Effects?.Select(eff => eff.FromPlugin) ?? []))
-                           .Concat(draft.Clips.SelectMany(c => c.EffectBundles?.Select(eff => eff.FromPlugin) ?? []))
+                           .Concat(draft.Clips.SelectMany(c => c.EffectProviders?.Select(eff => eff.FromPlugin) ?? []))
                            .Where(c => !c.StartsWith("projectFrameCut.Render."))
                            .Distinct().ToList();
 

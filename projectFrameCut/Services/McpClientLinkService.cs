@@ -3,6 +3,7 @@ using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -188,7 +189,7 @@ public sealed class McpClientLinkService
     private object BuildEnvironmentPayload()
     {
         var effects = new List<object>();
-        foreach (var kv in EffectHelper.EffectsEnum)
+        foreach (var kv in EffectHelper.EffectsProviderEnum)
         {
             try
             {
@@ -208,7 +209,7 @@ public sealed class McpClientLinkService
 
         var mixtures = PluginManager.LoadedPlugins.Values
             .OfType<IApplicationPluginBase>()
-            .SelectMany(p => p.EffectBundleProvider)
+            .SelectMany(p => p.EffectProviderProvider)
             .Select(kv => new
             {
                 typeName = kv.Key,

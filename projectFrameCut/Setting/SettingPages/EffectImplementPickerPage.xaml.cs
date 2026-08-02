@@ -66,12 +66,12 @@ namespace projectFrameCut.Setting.SettingPages
                .AddText(new SingleLineLabel(SettingLocalizedResources.RenderEffectImplement_Hint, 14, default, Colors.Grey));
 
 
-            foreach (var item in EffectHelper.EffectsEnum)
+            foreach (var item in EffectHelper.EffectsProviderEnum)
             {
                 ppb.AddSeparator();
 
                 var effect = item.Value();
-                ppb.AddPicker($"{effect.FromPlugin}.{effect.TypeName}", EffectServices.GetLocalizedEffectNames()[effect.TypeName], LocalizedImplementTypes.Where(c => c.Key == EffectImplementType.NotSpecified || EffectHelper.EffectsFactoriesEnum[effect.TypeName].SupportsImplementTypes.Contains(c.Key)).Select(c => c.Value).ToArray(), LocalizedImplementTypes[effectImplementTypes.GetOrAdd($"{effect.FromPlugin}.{effect.TypeName}", EffectImplementType.NotSpecified)]);
+                ppb.AddPicker($"{effect.FromPlugin}.{effect.TypeName}", EffectServices.GetLocalizedEffectNames()[effect.TypeName], LocalizedImplementTypes.Where(c => c.Key == EffectImplementType.NotSpecified || effect.SupportsImplementTypes.Contains(c.Key)).Select(c => c.Value).ToArray(), LocalizedImplementTypes[effectImplementTypes.GetOrAdd($"{effect.FromPlugin}.{effect.TypeName}", EffectImplementType.NotSpecified)]);
             }
 
             ppb.ListenToChanges((args) =>

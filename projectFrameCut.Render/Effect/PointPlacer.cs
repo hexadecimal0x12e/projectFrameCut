@@ -71,7 +71,7 @@ namespace projectFrameCut.Render.Effect
         public string OutputAnchorName => "Point";
     }
 
-    public class PointPlacerFactory : IBindableEffectFactory
+    public class PointPlacerFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "PointPlacer";
@@ -119,6 +119,35 @@ namespace projectFrameCut.Render.Effect
                 }
             }
             return e;
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the PointPlacer bindable result generator.
+    /// </summary>
+    public class PointPlacerProvider : EffectProviderBase
+    {
+        public PointPlacerProvider()
+        {
+            Name = "PointPlacer";
+            Parameters = new Dictionary<string, object>();
+        }
+
+        public override string TypeName => "PointPlacer";
+
+        public override EffectType TypeOfEffect => EffectType.BindableEffect;
+
+        public override EffectTarget Target => EffectTarget.Video;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => Array.Empty<EffectArgumentFieldDescriptor>();
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new PointPlacer()];
         }
     }
 }

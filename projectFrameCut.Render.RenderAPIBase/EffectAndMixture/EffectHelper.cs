@@ -55,6 +55,25 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public string[]? BindedInputIDs { get; set; } = null;
     }
 
+    /// <summary>
+    /// The provider-native serialization structure for <see cref="IEffectProvider"/>.
+    /// Used to persist the effects with their anchors binding state and fields.
+    /// </summary>
+    public class EffectProviderJSONStructure
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string FromPlugin { get; set; } = string.Empty;
+        public string TypeName { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public bool Enabled { get; set; } = true;
+        public Dictionary<string, object> Parameters { get; set; } = new();
+        public Dictionary<string, Guid> AnchorsBindingState { get; set; } = new();
+        /// <summary>
+        /// The field descriptors of the provider. Currently null; reserved for future dynamic fields.
+        /// </summary>
+        public EffectArgumentFieldDescriptor[]? Fields { get; set; }
+    }
+
     public class EffectBundleJSONStructure
     {
         private static readonly Guid NoConnectionGuid = new("00001234-5678-90ab-cdef-012345678900");
@@ -81,6 +100,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             {
                 "__DraftEffectBindingView_InteractiveEditorX__" => "double",
                 "__DraftEffectBindingView_InteractiveEditorY__" => "double",
+                "ImplementType" => "ImplementTypeEnum",
                 _ => throw new NotImplementedException($"Parameter '{type}' has an undefined type."),
 
             };
@@ -111,6 +131,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                         "bool" => Convert.ToBoolean(kvp.Value),
                         "long" => Convert.ToInt64(kvp.Value),
                         "enum" => EnumHandler is not null ? EnumHandler.Parse(Convert.ToString(kvp.Value)!) : throw new NotSupportedException($"Source is enum but no handler provided."),
+                        "ImplementTypeEnum" => Enum.TryParse<EffectImplementType>(Convert.ToString(kvp.Value), out var implementType) ? implementType : throw new NotSupportedException($"Source is ImplementType but value '{kvp.Value}' is not a valid EffectImplementType."),
                         _ => throw new NotImplementedException($"Parameter type '{ParametersType[kvp.Key]}' is not implemented."),
                     };
                     result.Add(kvp.Key, obj);

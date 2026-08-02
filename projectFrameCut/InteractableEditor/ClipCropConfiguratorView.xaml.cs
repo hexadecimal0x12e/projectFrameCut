@@ -129,7 +129,7 @@ public partial class ClipCropConfiguratorView : ContentView
         BindingMode.TwoWay,
         propertyChanged: OnAnyBindablePropertyChanged);
 
-    public event EventHandler<projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle>? ConfigurationChanged;
+    public event EventHandler<IEffectProvider>? ConfigurationChanged;
 
     public bool Enabled
     {
@@ -293,7 +293,7 @@ public partial class ClipCropConfiguratorView : ContentView
         return fallback;
     }
 
-    public void LoadFromBundle(projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle? bundle, IEffect? fallbackEffect = null)
+    public void LoadFromProvider(IEffectProvider? bundle, IEffect? fallbackEffect = null)
     {
         if (bundle is null || !string.Equals(bundle.TypeName, "Crop", StringComparison.Ordinal))
         {
@@ -356,16 +356,14 @@ public partial class ClipCropConfiguratorView : ContentView
 
     public void LoadFromEffect(CropEffect_HwAccel? effect) => LoadFromEffect((IEffect?)effect);
 
-    public projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle BuildEffectBundle(Guid? bundleId = null)
+    public IEffectProvider BuildEffectProvider(Guid? providerId = null)
     {
-        _bundleId = bundleId ?? (_bundleId == Guid.Empty ? Guid.NewGuid() : _bundleId);
-        return new CropEffectBundle
+        _bundleId = providerId ?? (_bundleId == Guid.Empty ? Guid.NewGuid() : _bundleId);
+        var provider = new CropEffectProvider
         {
             Id = _bundleId,
             Enabled = Enabled,
             Name = InternalCropKey,
-            BindedInputId = projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle.InputAnchorGUID,
-            BindedOutputId = projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle.OutputAnchorGUID,
             Parameters = new Dictionary<string, object>
             {
                 { "StartX", Math.Max(0, StartX) },
@@ -375,20 +373,22 @@ public partial class ClipCropConfiguratorView : ContentView
                 { "Angle", Angle }
             }
         };
+        provider.SetInputAnchor(IEffectProvider.InputAnchorGUID);
+        provider.SetOutputAnchor(IEffectProvider.OutputAnchorGUID);
+        return provider;
     }
 
     public IEffect BuildEffect(EffectImplementType? implementType = null)
     {
-        var bundle = BuildEffectBundle();
-        var factory = new CropEffectFactory();
+        var provider = BuildEffectProvider();
         var actualImplementType = implementType ?? _implementType;
         if (actualImplementType != EffectImplementType.NotSpecified
-            && Array.IndexOf(factory.SupportsImplementTypes, actualImplementType) < 0)
+            && Array.IndexOf(provider.SupportsImplementTypes, actualImplementType) < 0)
         {
             actualImplementType = EffectImplementType.NotSpecified;
         }
 
-        var effect = factory.Build(actualImplementType, bundle.Parameters);
+        var effect = provider.Build(actualImplementType, provider.Parameters);
         effect.Enabled = Enabled;
         effect.RelativeWidth = Math.Max(0, RelativeWidth);
         effect.RelativeHeight = Math.Max(0, RelativeHeight);
@@ -443,7 +443,7 @@ public partial class ClipCropConfiguratorView : ContentView
         if (normalizedRelativeWidth != RelativeWidth) RelativeWidth = normalizedRelativeWidth;
         if (normalizedRelativeHeight != RelativeHeight) RelativeHeight = normalizedRelativeHeight;
         if (Math.Abs(normalizedAngle - Angle) > float.Epsilon) Angle = normalizedAngle;
-        ConfigurationChanged?.Invoke(this, BuildEffectBundle());
+        ConfigurationChanged?.Invoke(this, BuildEffectProvider());
     }
 
     private void EnabledSwitch_Toggled(object? sender, ToggledEventArgs e)

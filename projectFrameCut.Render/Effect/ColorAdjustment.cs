@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ColorAdjustmentEffect_IPicture : IColorAdjustEffect
+    public class ColorAdjustmentEffect_IPicture : IColorAdjustEffect, IDynamicArgumentsEffect
     {
         public bool Enabled { get; set; } = true;
         public string Name { get; set; } = "ColorAdjustment";
@@ -25,6 +25,15 @@ namespace projectFrameCut.Render.Effect
         public bool Invert { get; init; } = false;
         public float Grayscale { get; init; } = 0f;
         public float Opacity { get; init; } = 1f;
+
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
+
+        /// <summary>
+        /// A snapshot of the (possibly dynamically resolved) adjustment values for one process call.
+        /// </summary>
+        private readonly record struct AdjustmentParams(
+            float Brightness, float Contrast, float Saturation, float Hue, float Gamma,
+            float Vibrance, float Temperature, bool Invert, float Grayscale, float Opacity);
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -90,104 +99,115 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Process(IPicture source, IComputer? computer)
         {
+            var p = new AdjustmentParams(
+                DynamicParam.Resolve(DynamicProviders, "Brightness", Brightness),
+                DynamicParam.Resolve(DynamicProviders, "Contrast", Contrast),
+                DynamicParam.Resolve(DynamicProviders, "Saturation", Saturation),
+                DynamicParam.Resolve(DynamicProviders, "Hue", Hue),
+                DynamicParam.Resolve(DynamicProviders, "Gamma", Gamma),
+                DynamicParam.Resolve(DynamicProviders, "Vibrance", Vibrance),
+                DynamicParam.Resolve(DynamicProviders, "Temperature", Temperature),
+                DynamicParam.Resolve(DynamicProviders, "Invert", Invert),
+                DynamicParam.Resolve(DynamicProviders, "Grayscale", Grayscale),
+                DynamicParam.Resolve(DynamicProviders, "Opacity", Opacity));
             var sw = Stopwatch.StartNew();
             IPicture result = source switch
             {
-                IPicture<byte> p8 => ProcessInternal(p8),
-                IPicture<ushort> p16 => ProcessInternal(p16),
+                IPicture<byte> p8 => ProcessInternal(p8, p),
+                IPicture<ushort> p16 => ProcessInternal(p16, p),
                 _ => throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}"),
             };
             sw.Stop();
             return result;
         }
 
-        private IPicture<byte> ProcessInternal(IPicture<byte> source)
+        private IPicture<byte> ProcessInternal(IPicture<byte> source, in AdjustmentParams p)
         {
             // Fast path: merge simple per-pixel adjustments into a single pass
             // Skip when complex ops (Hue, Gamma, Vibrance) or structural ops (Saturation via HSL) are needed
-            bool canMerge = Hue == 0f && Gamma == 1f && Vibrance == 0f && Saturation == 1f;
-            if (canMerge && HasAnySimpleAdjustment())
+            bool canMerge = p.Hue == 0f && p.Gamma == 1f && p.Vibrance == 0f && p.Saturation == 1f;
+            if (canMerge && HasAnySimpleAdjustment(in p))
             {
-                return ProcessMerged8bpp(source);
+                return ProcessMerged8bpp(source, in p);
             }
 
             IPicture<byte> current = source;
 
-            if (Brightness != 1f)
-                current = BrightnessEffect.Process(current, Brightness - 1f);
-            if (Contrast != 1f)
-                current = ContrastEffect.Process(current, Contrast);
-            if (Saturation != 1f)
-                current = SaturationEffect.Process(current, Saturation);
-            if (Hue != 0f)
-                current = HueRotationEffect.Process(current, Hue);
-            if (Gamma != 1f)
-                current = BlurEffect.Process(current, (Gamma - 1f) * 0.5f);
-            if (Vibrance != 0f)
-                current = SaturationEffect.Process(current, 1f + Vibrance * 0.5f);
-            if (Temperature != 0f)
-                current = ProcessTemperature(current, Temperature);
-            if (Invert)
+            if (p.Brightness != 1f)
+                current = BrightnessEffect.Process(current, p.Brightness - 1f);
+            if (p.Contrast != 1f)
+                current = ContrastEffect.Process(current, p.Contrast);
+            if (p.Saturation != 1f)
+                current = SaturationEffect.Process(current, p.Saturation);
+            if (p.Hue != 0f)
+                current = HueRotationEffect.Process(current, p.Hue);
+            if (p.Gamma != 1f)
+                current = BlurEffect.Process(current, (p.Gamma - 1f) * 0.5f);
+            if (p.Vibrance != 0f)
+                current = SaturationEffect.Process(current, 1f + p.Vibrance * 0.5f);
+            if (p.Temperature != 0f)
+                current = ProcessTemperature(current, p.Temperature);
+            if (p.Invert)
                 current = InvertEffect.Process(current);
-            if (Grayscale > 0f)
+            if (p.Grayscale > 0f)
             {
-                if (Grayscale >= 1f)
+                if (p.Grayscale >= 1f)
                     current = GrayscaleEffect.Process(current);
                 else
-                    current = SaturationEffect.Process(current, 1f - Grayscale);
+                    current = SaturationEffect.Process(current, 1f - p.Grayscale);
             }
-            if (Opacity < 1f)
-                current = OpacityEffect.Process(current, Opacity);
+            if (p.Opacity < 1f)
+                current = OpacityEffect.Process(current, p.Opacity);
 
             return current;
         }
 
-        private IPicture<ushort> ProcessInternal(IPicture<ushort> source)
+        private IPicture<ushort> ProcessInternal(IPicture<ushort> source, in AdjustmentParams p)
         {
-            bool canMerge = Hue == 0f && Gamma == 1f && Vibrance == 0f && Saturation == 1f;
-            if (canMerge && HasAnySimpleAdjustment())
+            bool canMerge = p.Hue == 0f && p.Gamma == 1f && p.Vibrance == 0f && p.Saturation == 1f;
+            if (canMerge && HasAnySimpleAdjustment(in p))
             {
-                return ProcessMerged16bpp(source);
+                return ProcessMerged16bpp(source, in p);
             }
 
             IPicture<ushort> current = source;
 
-            if (Brightness != 1f)
-                current = BrightnessEffect.Process(current, Brightness - 1f);
-            if (Contrast != 1f)
-                current = ContrastEffect.Process(current, Contrast);
-            if (Saturation != 1f)
-                current = SaturationEffect.Process(current, Saturation);
-            if (Hue != 0f)
-                current = HueRotationEffect.Process(current, Hue);
-            if (Gamma != 1f)
-                current = BlurEffect.Process(current, (Gamma - 1f) * 0.5f);
-            if (Vibrance != 0f)
-                current = SaturationEffect.Process(current, 1f + Vibrance * 0.5f);
-            if (Temperature != 0f)
-                current = ProcessTemperature(current, Temperature);
-            if (Invert)
+            if (p.Brightness != 1f)
+                current = BrightnessEffect.Process(current, p.Brightness - 1f);
+            if (p.Contrast != 1f)
+                current = ContrastEffect.Process(current, p.Contrast);
+            if (p.Saturation != 1f)
+                current = SaturationEffect.Process(current, p.Saturation);
+            if (p.Hue != 0f)
+                current = HueRotationEffect.Process(current, p.Hue);
+            if (p.Gamma != 1f)
+                current = BlurEffect.Process(current, (p.Gamma - 1f) * 0.5f);
+            if (p.Vibrance != 0f)
+                current = SaturationEffect.Process(current, 1f + p.Vibrance * 0.5f);
+            if (p.Temperature != 0f)
+                current = ProcessTemperature(current, p.Temperature);
+            if (p.Invert)
                 current = InvertEffect.Process(current);
-            if (Grayscale > 0f)
+            if (p.Grayscale > 0f)
             {
-                if (Grayscale >= 1f)
+                if (p.Grayscale >= 1f)
                     current = GrayscaleEffect.Process(current);
                 else
-                    current = SaturationEffect.Process(current, 1f - Grayscale);
+                    current = SaturationEffect.Process(current, 1f - p.Grayscale);
             }
-            if (Opacity < 1f)
-                current = OpacityEffect.Process(current, Opacity);
+            if (p.Opacity < 1f)
+                current = OpacityEffect.Process(current, p.Opacity);
 
             return current;
         }
 
-        private bool HasAnySimpleAdjustment()
+        private bool HasAnySimpleAdjustment(in AdjustmentParams p)
         {
-            return Brightness != 1f || Contrast != 1f || Temperature != 0f
-                || Invert || Grayscale > 0f || Opacity < 1f;
+            return p.Brightness != 1f || p.Contrast != 1f || p.Temperature != 0f
+                || p.Invert || p.Grayscale > 0f || p.Opacity < 1f;
         }
 
-        private IPicture<byte> ProcessMerged8bpp(IPicture<byte> source)
+        private IPicture<byte> ProcessMerged8bpp(IPicture<byte> source, in AdjustmentParams p)
         {
             int pixels = source.Pixels;
             var sw = Stopwatch.StartNew();
@@ -204,19 +224,19 @@ namespace projectFrameCut.Render.Effect
             };
 
             bool hasAlpha = source.HasAlphaChannel && source.a != null;
-            bool doBrightness = Brightness != 1f;
-            bool doContrast = Contrast != 1f;
-            bool doTemperature = Temperature != 0f;
-            bool doInvert = Invert;
-            bool doGrayscale = Grayscale > 0f;
-            bool doOpacity = Opacity < 1f;
+            bool doBrightness = p.Brightness != 1f;
+            bool doContrast = p.Contrast != 1f;
+            bool doTemperature = p.Temperature != 0f;
+            bool doInvert = p.Invert;
+            bool doGrayscale = p.Grayscale > 0f;
+            bool doOpacity = p.Opacity < 1f;
 
-            float brightFactor = doBrightness ? Brightness : 1f;
-            float contrastFactor = doContrast ? Contrast : 1f;
-            float tempRFactor = doTemperature ? 1f + Temperature * 0.01f : 1f;
-            float tempBFactor = doTemperature ? 1f - Temperature * 0.01f : 1f;
-            float grayAmount = Grayscale;
-            float opacity = Opacity;
+            float brightFactor = doBrightness ? p.Brightness : 1f;
+            float contrastFactor = doContrast ? p.Contrast : 1f;
+            float tempRFactor = doTemperature ? 1f + p.Temperature * 0.01f : 1f;
+            float tempBFactor = doTemperature ? 1f - p.Temperature * 0.01f : 1f;
+            float grayAmount = p.Grayscale;
+            float opacity = p.Opacity;
             const float contrastMid = 128f;
             const float maxVal = 255f;
 
@@ -307,13 +327,18 @@ namespace projectFrameCut.Render.Effect
                 OperationDisplayName = "ColorAdjustment (Merged 8bpp)",
                 Operator = typeof(ColorAdjustmentEffect_IPicture),
                 ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object>(Parameters),
+                Properties = new Dictionary<string, object>
+                {
+                    { "Brightness", p.Brightness }, { "Contrast", p.Contrast }, { "Saturation", p.Saturation },
+                    { "Hue", p.Hue }, { "Gamma", p.Gamma }, { "Vibrance", p.Vibrance },
+                    { "Temperature", p.Temperature }, { "Invert", p.Invert }, { "Grayscale", p.Grayscale }, { "Opacity", p.Opacity }
+                },
                 Elapsed = sw.Elapsed,
             });
             return result;
         }
 
-        private IPicture<ushort> ProcessMerged16bpp(IPicture<ushort> source)
+        private IPicture<ushort> ProcessMerged16bpp(IPicture<ushort> source, in AdjustmentParams p)
         {
             int pixels = source.Pixels;
             var sw = Stopwatch.StartNew();
@@ -330,19 +355,19 @@ namespace projectFrameCut.Render.Effect
             };
 
             bool hasAlpha = source.HasAlphaChannel && source.a != null;
-            bool doBrightness = Brightness != 1f;
-            bool doContrast = Contrast != 1f;
-            bool doTemperature = Temperature != 0f;
-            bool doInvert = Invert;
-            bool doGrayscale = Grayscale > 0f;
-            bool doOpacity = Opacity < 1f;
+            bool doBrightness = p.Brightness != 1f;
+            bool doContrast = p.Contrast != 1f;
+            bool doTemperature = p.Temperature != 0f;
+            bool doInvert = p.Invert;
+            bool doGrayscale = p.Grayscale > 0f;
+            bool doOpacity = p.Opacity < 1f;
 
-            float brightFactor = doBrightness ? Brightness : 1f;
-            float contrastFactor = doContrast ? Contrast : 1f;
-            float tempRFactor = doTemperature ? 1f + Temperature * 0.01f : 1f;
-            float tempBFactor = doTemperature ? 1f - Temperature * 0.01f : 1f;
-            float grayAmount = Grayscale;
-            float opacity = Opacity;
+            float brightFactor = doBrightness ? p.Brightness : 1f;
+            float contrastFactor = doContrast ? p.Contrast : 1f;
+            float tempRFactor = doTemperature ? 1f + p.Temperature * 0.01f : 1f;
+            float tempBFactor = doTemperature ? 1f - p.Temperature * 0.01f : 1f;
+            float grayAmount = p.Grayscale;
+            float opacity = p.Opacity;
             const float contrastMid = 32768f;
             const float maxVal = 65535f;
 
@@ -433,7 +458,12 @@ namespace projectFrameCut.Render.Effect
                 OperationDisplayName = "ColorAdjustment (Merged 16bpp)",
                 Operator = typeof(ColorAdjustmentEffect_IPicture),
                 ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object>(Parameters),
+                Properties = new Dictionary<string, object>
+                {
+                    { "Brightness", p.Brightness }, { "Contrast", p.Contrast }, { "Saturation", p.Saturation },
+                    { "Hue", p.Hue }, { "Gamma", p.Gamma }, { "Vibrance", p.Vibrance },
+                    { "Temperature", p.Temperature }, { "Invert", p.Invert }, { "Grayscale", p.Grayscale }, { "Opacity", p.Opacity }
+                },
                 Elapsed = sw.Elapsed,
             });
             return result;
@@ -521,7 +551,7 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class ColorAdjustmentEffect_HwAccel : IColorAdjustEffect
+    public class ColorAdjustmentEffect_HwAccel : IColorAdjustEffect, IDynamicArgumentsEffect
     {
         public string Name { get; set; } = "ColorAdjustment";
 
@@ -535,6 +565,7 @@ namespace projectFrameCut.Render.Effect
         public bool Invert { get; init; } = false;
         public float Grayscale { get; init; } = 0f;
         public float Opacity { get; init; } = 1f;
+        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -590,17 +621,28 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Process(IPicture source, IComputer? computer)
         {
+            float brightness = DynamicParam.Resolve(DynamicProviders, "Brightness", Brightness);
+            float contrast = DynamicParam.Resolve(DynamicProviders, "Contrast", Contrast);
+            float saturation = DynamicParam.Resolve(DynamicProviders, "Saturation", Saturation);
+            float hue = DynamicParam.Resolve(DynamicProviders, "Hue", Hue);
+            float gamma = DynamicParam.Resolve(DynamicProviders, "Gamma", Gamma);
+            float vibrance = DynamicParam.Resolve(DynamicProviders, "Vibrance", Vibrance);
+            float temperature = DynamicParam.Resolve(DynamicProviders, "Temperature", Temperature);
+            bool invert = DynamicParam.Resolve(DynamicProviders, "Invert", Invert);
+            float grayscale = DynamicParam.Resolve(DynamicProviders, "Grayscale", Grayscale);
+            float opacity = DynamicParam.Resolve(DynamicProviders, "Opacity", Opacity);
+
             bool allNoop =
-                Math.Abs(Brightness - 1f) < float.Epsilon &&
-                Math.Abs(Contrast - 1f) < float.Epsilon &&
-                Math.Abs(Saturation - 1f) < float.Epsilon &&
-                Math.Abs(Hue) < float.Epsilon &&
-                Math.Abs(Gamma - 1f) < float.Epsilon &&
-                Math.Abs(Vibrance) < float.Epsilon &&
-                Math.Abs(Temperature) < float.Epsilon &&
-                !Invert &&
-                Math.Abs(Grayscale) < float.Epsilon &&
-                Math.Abs(Opacity - 1f) < float.Epsilon;
+                Math.Abs(brightness - 1f) < float.Epsilon &&
+                Math.Abs(contrast - 1f) < float.Epsilon &&
+                Math.Abs(saturation - 1f) < float.Epsilon &&
+                Math.Abs(hue) < float.Epsilon &&
+                Math.Abs(gamma - 1f) < float.Epsilon &&
+                Math.Abs(vibrance) < float.Epsilon &&
+                Math.Abs(temperature) < float.Epsilon &&
+                !invert &&
+                Math.Abs(grayscale) < float.Epsilon &&
+                Math.Abs(opacity - 1f) < float.Epsilon;
 
             if (allNoop)
                 return source;
@@ -608,16 +650,16 @@ namespace projectFrameCut.Render.Effect
             if (computer is null)
                 return new ColorAdjustmentEffect_IPicture
                 {
-                    Brightness = Brightness,
-                    Contrast = Contrast,
-                    Saturation = Saturation,
-                    Hue = Hue,
-                    Gamma = Gamma,
-                    Vibrance = Vibrance,
-                    Temperature = Temperature,
-                    Invert = Invert,
-                    Grayscale = Grayscale,
-                    Opacity = Opacity
+                    Brightness = brightness,
+                    Contrast = contrast,
+                    Saturation = saturation,
+                    Hue = hue,
+                    Gamma = gamma,
+                    Vibrance = vibrance,
+                    Temperature = temperature,
+                    Invert = invert,
+                    Grayscale = grayscale,
+                    Opacity = opacity
                 }.Process(source, null);
 
             var sw = Stopwatch.StartNew();
@@ -629,15 +671,15 @@ namespace projectFrameCut.Render.Effect
             {
                 computeResult = cac.ComputeColorAdjustment(
                     r, g, b, a, source.Width, source.Height,
-                    Brightness, Contrast, Saturation, Hue, Gamma,
-                    Vibrance, Temperature, Invert, Grayscale, Opacity, maxVal);
+                    brightness, contrast, saturation, hue, gamma,
+                    vibrance, temperature, invert, grayscale, opacity, maxVal);
             }
             else
             {
                 var resultArr = computer.Compute([
                     r, g, b, a,
-                    Brightness, Contrast, Saturation, Hue, Gamma,
-                    Vibrance, Temperature, Invert ? 1f : 0f, Grayscale, Opacity, maxVal
+                    brightness, contrast, saturation, hue, gamma,
+                    vibrance, temperature, invert ? 1f : 0f, grayscale, opacity, maxVal
                 ]);
 
                 if (resultArr.Length != 4 ||
@@ -663,16 +705,16 @@ namespace projectFrameCut.Render.Effect
                 ProcessingFuncStackTrace = new StackTrace(true),
                 Properties = new Dictionary<string, object>
                 {
-                    { "Brightness", Brightness }, { "Contrast", Contrast }, { "Saturation", Saturation },
-                    { "Hue", Hue }, { "Gamma", Gamma }, { "Vibrance", Vibrance },
-                    { "Temperature", Temperature }, { "Invert", Invert }, { "Grayscale", Grayscale }, { "Opacity", Opacity }
+                    { "Brightness", brightness }, { "Contrast", contrast }, { "Saturation", saturation },
+                    { "Hue", hue }, { "Gamma", gamma }, { "Vibrance", vibrance },
+                    { "Temperature", temperature }, { "Invert", invert }, { "Grayscale", grayscale }, { "Opacity", opacity }
                 }
             }).ToList();
             return result;
         }
     }
 
-    public class ColorAdjustmentEffectFactory : IEffectFactory
+    public class ColorAdjustmentEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "ColorAdjustment";
@@ -725,6 +767,62 @@ namespace projectFrameCut.Render.Effect
             if (!parameters.ContainsKey("Grayscale")) parameters["Grayscale"] = 0f;
             if (!parameters.ContainsKey("Opacity")) parameters["Opacity"] = 1f;
             return ColorAdjustmentEffect_IPicture.FromParametersDictionary(parameters);
+        }
+    }
+
+
+
+    /// <summary>
+    /// The Render-side provider of the ColorAdjustment effect.
+    /// </summary>
+    public class ColorAdjustmentEffectProvider : EffectProviderBase
+    {
+        public ColorAdjustmentEffectProvider()
+        {
+            Name = "ColorAdjustment";
+            Parameters = new Dictionary<string, object>
+            {
+                { "Brightness", 1f },
+                { "Contrast", 1f },
+                { "Saturation", 1f },
+                { "Hue", 0f },
+                { "Gamma", 1f },
+                { "Vibrance", 0f },
+                { "Temperature", 0f },
+                { "Invert", false },
+                { "Grayscale", 0f },
+                { "Opacity", 1f }
+            };
+        }
+
+        public override string TypeName => "ColorAdjustment";
+
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.ColorAdjustment | EffectTarget.IsNotVisibleInEffectEditor;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("Brightness", EffectArgumentFieldType.Numeric, "1", min: "0", max: "2"),
+                Field("Contrast", EffectArgumentFieldType.Numeric, "1", min: "0", max: "3"),
+                Field("Saturation", EffectArgumentFieldType.Numeric, "1", min: "0", max: "3"),
+                Field("Hue", EffectArgumentFieldType.Numeric, "0", min: "0", max: "360"),
+                Field("Gamma", EffectArgumentFieldType.Numeric, "1", min: "0.5", max: "2"),
+                Field("Vibrance", EffectArgumentFieldType.Numeric, "0", min: "-1", max: "1"),
+                Field("Temperature", EffectArgumentFieldType.Numeric, "0", min: "-100", max: "100"),
+                Field("Grayscale", EffectArgumentFieldType.Numeric, "0", min: "0", max: "1"),
+                Field("Opacity", EffectArgumentFieldType.Numeric, "1", min: "0", max: "1"),
+                Field("Invert", EffectArgumentFieldType.Boolean, "false")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new ColorAdjustmentEffectFactory().Build(implementType, parameters)];
         }
     }
 }

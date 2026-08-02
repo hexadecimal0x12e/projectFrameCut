@@ -42,9 +42,9 @@ public static class TimelineMcpLiveService
 
     public static IEnumerable GetAllAvailableEffects()
     {
-        var effects = EffectServices.GetAvailableEffectBundles();
+        var effects = EffectServices.GetAvailableEffectProviders();
         var locNames = EffectServices.GetLocalizedEffectNames();
-        return effects.Select(c => c.Value()).Select((e) => new { type = e.TypeName, localizedDisplayName = locNames.TryGetValue(e.TypeName, out var name) ? name : e.TypeName, effectTarget = e.Target, typeOfEffect = e.TypeOfEffect, @params = e.ParametersType, fromPlugin = e.FromPlugin });
+        return effects.Select(c => c.Value()).Select((e) => new { type = e.TypeName, localizedDisplayName = locNames.TryGetValue(e.TypeName, out var name) ? name : e.TypeName, effectTarget = e.Target, typeOfEffect = e.TypeOfEffect, @params = e.Fields.Keys.ToArray(), fromPlugin = e.FromPlugin });
     }
 
     public static IEnumerable GetAllAvailablePlugins()
@@ -492,12 +492,12 @@ public static class TimelineMcpLiveService
         IEffect? created = null;
         if (effect.FromPlugin == InternalPluginBase.InternalPluginBaseID)
         {
-            created = EffectHelper.EffectsEnum.TryGetValue(effect.TypeName, out var creator) ? creator() : null;
+            created = EffectHelper.EffectsProviderEnum.TryGetValue(effect.TypeName, out var creator) ? creator().BuildWithDefaultType() : null;
         }
         else
         {
             created = PluginManager.LoadedPlugins.TryGetValue(effect.FromPlugin, out var plugin)
-                ? plugin.EffectProvider.TryGetValue(effect.TypeName, out var creator) ? creator() : null
+                ? plugin.EffectProviderProvider.TryGetValue(effect.TypeName, out var creator) ? creator().BuildWithDefaultType() : null
                 : null;
         }
 
@@ -539,15 +539,15 @@ public static class TimelineMcpLiveService
         return removed;
     }
 
-    public static IEffectBundle AddEffectBundle(DraftPage page, string clipId, IEffectBundle bundle)
+    public static IEffectProvider AddEffectBundle(DraftPage page, string clipId, IEffectProvider bundle)
     {
         if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip))
         {
             throw new KeyNotFoundException($"Clip '{clipId}' not found.");
         }
 
-        clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
-        clip.EffectBundles[bundle.Id] = bundle;
+        clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
+        clip.EffectProviders[bundle.Id] = bundle;
         ClipInfoBuilder.RebuildAllEffects(clip);
         page.RefreshPropertyPanel(clip);
         return bundle;
@@ -555,12 +555,12 @@ public static class TimelineMcpLiveService
 
     public static bool RemoveEffectBundle(DraftPage page, string clipId, Guid bundleId)
     {
-        if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip) || clip.EffectBundles is null)
+        if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip) || clip.EffectProviders is null)
         {
             return false;
         }
 
-        bool removed = clip.EffectBundles.Remove(bundleId);
+        bool removed = clip.EffectProviders.Remove(bundleId);
         if (removed)
         {
             ClipInfoBuilder.RebuildAllEffects(clip);
