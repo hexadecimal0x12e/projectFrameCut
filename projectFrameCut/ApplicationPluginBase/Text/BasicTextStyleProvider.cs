@@ -1,7 +1,6 @@
 using Microsoft.Maui.Graphics;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
-using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
@@ -11,6 +10,7 @@ using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Drawing.Text.Typology;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using Microsoft.Maui.Controls.Shapes;
@@ -124,12 +124,12 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
         }
 
-        public Dictionary<string, EffectBundleSettableFields> SettableFields
+        public Dictionary<string, EffectArgumentFieldDescriptor> SettableFields
         {
             get
             {
                 var fontNames = TextStyleProviderSettableFieldHelper.GetAvailableFontNames();
-                return new Dictionary<string, EffectBundleSettableFields>
+                return new Dictionary<string, EffectArgumentFieldDescriptor>
                 {
                     [TextKey] = TextStyleProviderSettableFieldHelper.StringField(TextKey, "Text", "Text content", DefaultText),
                     [FontKey] = TextStyleProviderSettableFieldHelper.EnumField(FontKey, "Font Family", "Font used to render the text", "HarmonyOS Sans SC Medium", fontNames),
@@ -152,7 +152,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
         }
 
-        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        public bool HandleSettableFieldsChange(EffectArgumentFieldDescriptor field, object value, out string feedback)
         {
             if (field is null || !SettableFields.TryGetValue(field.Id, out var canonicalField))
             {

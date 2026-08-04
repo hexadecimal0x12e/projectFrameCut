@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class JitterEffect : IContinuousClipPositionProvider, IDynamicArgumentsEffect
+    public class JitterEffect : IContinuousClipPositionProvider
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -21,19 +21,12 @@ namespace projectFrameCut.Render.Effect
         public int MaxOffsetY { get; init; }
         public int Seed { get; init; } = 0;
         public string Direction { get; init; } = Direction_Both;
-        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
 
         public const string Direction_Both = "Both";
         public const string Direction_XOnly = "XOnly";
         public const string Direction_YOnly = "YOnly";
 
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "MaxOffsetX", MaxOffsetX },
-            { "MaxOffsetY", MaxOffsetY },
-            { "Seed", Seed },
-            { "Direction", Direction },
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string? NeedComputer => ImplementType == EffectImplementType.HwAcceleration ? "PlaceComputer" : null;
@@ -72,22 +65,24 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
 
-            int maxX = Convert.ToInt32(parameters["MaxOffsetX"]);
-            int maxY = Convert.ToInt32(parameters["MaxOffsetY"]);
+            int maxX = DynamicParam.ToInt32(parameters.GetValueOrDefault("MaxOffsetX"));
+            int maxY = DynamicParam.ToInt32(parameters.GetValueOrDefault("MaxOffsetY"));
             int seed = 0;
             if (parameters.TryGetValue("Seed", out var s))
             {
-                seed = Convert.ToInt32(s);
+                seed = DynamicParam.ToInt32(s);
             }
-            string direction = parameters.TryGetValue("Direction", out var d) ? d.ToString() : Direction_Both;
+            string direction = parameters.TryGetValue("Direction", out var d) ? DynamicParam.ToStringValue(d) : Direction_Both;
 
-            return new JitterEffect
+            var effect = new JitterEffect
             {
                 MaxOffsetX = maxX,
                 MaxOffsetY = maxY,
                 Seed = seed,
                 Direction = direction,
             };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
@@ -107,9 +102,9 @@ namespace projectFrameCut.Render.Effect
 
         public ClipPositionTuple GetPosition(IClip source, uint index, int targetWidth, int targetHeight)
         {
-            string direction = DynamicParam.Resolve(DynamicProviders, "Direction", Direction);
-            int maxOffsetX = DynamicParam.Resolve(DynamicProviders, "MaxOffsetX", MaxOffsetX);
-            int maxOffsetY = DynamicParam.Resolve(DynamicProviders, "MaxOffsetY", MaxOffsetY);
+            string direction = DynamicParam.Resolve(Parameters.GetValueOrDefault("Direction"), Direction);
+            int maxOffsetX = DynamicParam.Resolve(Parameters.GetValueOrDefault("MaxOffsetX"), MaxOffsetX);
+            int maxOffsetY = DynamicParam.Resolve(Parameters.GetValueOrDefault("MaxOffsetY"), MaxOffsetY);
             int offX = 0, offY = 0;
             if (direction == Direction_Both || direction == Direction_XOnly)
             {
@@ -128,64 +123,9 @@ namespace projectFrameCut.Render.Effect
             return new ClipPositionTuple(offX, offY, 0, 0, true);
         }
 
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
     }
-
-    public class JitterContinuousEffectFactory
-    {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-
-        public string TypeName => "Jitter";
-
-        public EffectTarget Target => EffectTarget.Video;
-
-        public List<string> ParametersNeeded { get; } = new List<string>
-        {
-            "MaxOffsetX",
-            "MaxOffsetY",
-            "Direction",
-        };
-
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
-        {
-            {"MaxOffsetX", "int"},
-            {"MaxOffsetY", "int"},
-            {"Seed", "int"},
-            {"Direction", "string"},
-        };
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.NotSpecified };
-
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            return BuildWithDefaultType(parameters);
-        }
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
-        {
-            return BuildWithType(parameters);
-        }
-
-        private static IEffect BuildWithType(Dictionary<string, object>? parameters)
-        {
-            parameters ??= new Dictionary<string, object>();
-            if (!parameters.ContainsKey("MaxOffsetX")) parameters["MaxOffsetX"] = 0;
-            if (!parameters.ContainsKey("MaxOffsetY")) parameters["MaxOffsetY"] = 0;
-            if (!parameters.ContainsKey("Seed")) parameters["Seed"] = 0;
-            if (!parameters.ContainsKey("Direction")) parameters["Direction"] = JitterEffect.Direction_Both;
-
-            return new JitterEffect
-            {
-                MaxOffsetX = Convert.ToInt32(parameters["MaxOffsetX"]),
-                MaxOffsetY = Convert.ToInt32(parameters["MaxOffsetY"]),
-                Seed = Convert.ToInt32(parameters["Seed"]),
-                Direction = parameters["Direction"].ToString() ?? JitterEffect.Direction_Both,
-            };
-        }
-    }
-
-
 
     /// <summary>
     /// The Render-side provider of the Jitter continuous effect.
@@ -195,13 +135,10 @@ namespace projectFrameCut.Render.Effect
         public JitterEffectProvider()
         {
             Name = "Jitter";
-            Parameters = new Dictionary<string, object>
-            {
-                { "MaxOffsetX", 10 },
-                { "MaxOffsetY", 10 },
-                { "Direction", JitterEffect.Direction_Both },
-                { "Seed", 0 },
-            };
+            SetField("MaxOffsetX", 10);
+            SetField("MaxOffsetY", 10);
+            SetField("Direction", JitterEffect.Direction_Both);
+            SetField("Seed", 0);
         }
 
         public override string TypeName => "Jitter";
@@ -225,7 +162,21 @@ namespace projectFrameCut.Render.Effect
 
         protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
-            return [new JitterContinuousEffectFactory().Build(implementType, parameters)];
+            if (!parameters.ContainsKey("MaxOffsetX")) parameters["MaxOffsetX"] = 0;
+            if (!parameters.ContainsKey("MaxOffsetY")) parameters["MaxOffsetY"] = 0;
+            if (!parameters.ContainsKey("Seed")) parameters["Seed"] = 0;
+            if (!parameters.ContainsKey("Direction")) parameters["Direction"] = JitterEffect.Direction_Both;
+
+            return
+            [
+                new JitterEffect
+                {
+                    MaxOffsetX = Convert.ToInt32(parameters["MaxOffsetX"]),
+                    MaxOffsetY = Convert.ToInt32(parameters["MaxOffsetY"]),
+                    Seed = Convert.ToInt32(parameters["Seed"]),
+                    Direction = parameters["Direction"].ToString() ?? JitterEffect.Direction_Both,
+                }
+            ];
         }
     }
 }

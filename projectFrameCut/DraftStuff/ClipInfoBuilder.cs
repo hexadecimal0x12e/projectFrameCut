@@ -943,12 +943,12 @@ namespace projectFrameCut.DraftStuff
                 bundle.Enabled = false;
                 bundle.SetInputAnchor(IEffectProvider.InputAnchorGUID);
                 bundle.SetOutputAnchor(IEffectProvider.OutputAnchorGUID);
-                bundle.Parameters ??= new Dictionary<string, object>();
-                bundle.Parameters["StartX"] = 0;
-                bundle.Parameters["StartY"] = 0;
-                bundle.Parameters["Width"] = page.ProjectInfo.RelativeWidth;
-                bundle.Parameters["Height"] = page.ProjectInfo.RelativeHeight;
-                bundle.Parameters["Angle"] = 0f;
+                bundle.Fields ??= new Dictionary<string, IEffectArgumentField>();
+                bundle.Fields["StartX"] = new StaticEffectArgumentField(0, EffectArgumentFieldType.Integer);
+                bundle.Fields["StartY"] = new StaticEffectArgumentField(0, EffectArgumentFieldType.Integer);
+                bundle.Fields["Width"] = new StaticEffectArgumentField(page.ProjectInfo.RelativeWidth, EffectArgumentFieldType.Integer);
+                bundle.Fields["Height"] = new StaticEffectArgumentField(page.ProjectInfo.RelativeHeight, EffectArgumentFieldType.Integer);
+                bundle.Fields["Angle"] = new StaticEffectArgumentField(0f, EffectArgumentFieldType.Numeric);
                 return bundle;
             }
 
@@ -959,22 +959,22 @@ namespace projectFrameCut.DraftStuff
                 if (source != null && string.Equals(source.TypeName, "Crop", StringComparison.Ordinal))
                 {
                     normalized.Enabled = source.Enabled;
-                    normalized.Parameters["StartX"] = Math.Max(0, ReadDictionaryIntValue(source.Parameters, "StartX", 0));
-                    normalized.Parameters["StartY"] = Math.Max(0, ReadDictionaryIntValue(source.Parameters, "StartY", 0));
-                    normalized.Parameters["Width"] = Math.Max(1, ReadDictionaryIntValue(source.Parameters, "Width", page.ProjectInfo.RelativeWidth));
-                    normalized.Parameters["Height"] = Math.Max(1, ReadDictionaryIntValue(source.Parameters, "Height", page.ProjectInfo.RelativeHeight));
-                    normalized.Parameters["Angle"] = ReadDictionaryFloatValue(source.Parameters, "Angle", 0f);
+                    normalized.Fields["StartX"] = new StaticEffectArgumentField(Math.Max(0, ReadProviderFieldInt(source.Fields, "StartX", 0)), EffectArgumentFieldType.Integer);
+                    normalized.Fields["StartY"] = new StaticEffectArgumentField(Math.Max(0, ReadProviderFieldInt(source.Fields, "StartY", 0)), EffectArgumentFieldType.Integer);
+                    normalized.Fields["Width"] = new StaticEffectArgumentField(Math.Max(1, ReadProviderFieldInt(source.Fields, "Width", page.ProjectInfo.RelativeWidth)), EffectArgumentFieldType.Integer);
+                    normalized.Fields["Height"] = new StaticEffectArgumentField(Math.Max(1, ReadProviderFieldInt(source.Fields, "Height", page.ProjectInfo.RelativeHeight)), EffectArgumentFieldType.Integer);
+                    normalized.Fields["Angle"] = new StaticEffectArgumentField(ReadProviderFieldFloat(source.Fields, "Angle", 0f), EffectArgumentFieldType.Numeric);
                     return normalized;
                 }
 
                 if (fallbackEffect != null && IsCropEffect(fallbackEffect))
                 {
                     normalized.Enabled = fallbackEffect.Enabled;
-                    normalized.Parameters["StartX"] = Math.Max(0, ReadEffectIntParameter(fallbackEffect, "StartX", 0));
-                    normalized.Parameters["StartY"] = Math.Max(0, ReadEffectIntParameter(fallbackEffect, "StartY", 0));
-                    normalized.Parameters["Width"] = Math.Max(1, ReadEffectIntParameter(fallbackEffect, "Width", page.ProjectInfo.RelativeWidth));
-                    normalized.Parameters["Height"] = Math.Max(1, ReadEffectIntParameter(fallbackEffect, "Height", page.ProjectInfo.RelativeHeight));
-                    normalized.Parameters["Angle"] = ReadEffectFloatParameter(fallbackEffect, "Angle", 0f);
+                    normalized.Fields["StartX"] = new StaticEffectArgumentField(Math.Max(0, ReadEffectIntParameter(fallbackEffect, "StartX", 0)), EffectArgumentFieldType.Integer);
+                    normalized.Fields["StartY"] = new StaticEffectArgumentField(Math.Max(0, ReadEffectIntParameter(fallbackEffect, "StartY", 0)), EffectArgumentFieldType.Integer);
+                    normalized.Fields["Width"] = new StaticEffectArgumentField(Math.Max(1, ReadEffectIntParameter(fallbackEffect, "Width", page.ProjectInfo.RelativeWidth)), EffectArgumentFieldType.Integer);
+                    normalized.Fields["Height"] = new StaticEffectArgumentField(Math.Max(1, ReadEffectIntParameter(fallbackEffect, "Height", page.ProjectInfo.RelativeHeight)), EffectArgumentFieldType.Integer);
+                    normalized.Fields["Angle"] = new StaticEffectArgumentField(ReadEffectFloatParameter(fallbackEffect, "Angle", 0f), EffectArgumentFieldType.Numeric);
                 }
 
                 return normalized;
@@ -1333,7 +1333,7 @@ namespace projectFrameCut.DraftStuff
             {
                 var newProvider = new ProgressPlacerProvider();
                 clip.EffectProviders[newProvider.Id] = newProvider;
-                AutoConnectProviderToOutput(clip, newProvider);
+                EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, newProvider, clip.GetEffectTarget());
                 RebuildAllEffects(clip);
                 bundle = newProvider;
                 provider = EffectServices.GetUIProvider(newProvider) as IKeyFramedEffectProvider;
@@ -1443,7 +1443,7 @@ namespace projectFrameCut.DraftStuff
                             instance.SetOutputAnchor(IEffectProvider.NoConnectionGUID);
                             clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
                             clip.EffectProviders[instance.Id] = instance;
-                            AutoConnectProviderToOutput(clip, instance);
+                            EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, instance, clip.GetEffectTarget());
                             RebuildAllEffects(clip);
                             handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs("ProgressList", null, null));
                             // 重建标签页
@@ -2651,426 +2651,8 @@ namespace projectFrameCut.DraftStuff
         #region effect
         public static void RebuildAllEffects(ClipElementUI clip, bool diag = false)
         {
-            var newEffects = new Dictionary<string, IEffect>();
-            int globalIndex = 0;
-
-            // Preserve manually-added effects (those without a BindedEffectGroupID) from the current Effects.
-            if (clip.Effects != null)
-            {
-                foreach (var kvp in clip.Effects)
-                {
-                    if (string.IsNullOrWhiteSpace(kvp.Value.BindedEffectGroupID))
-                    {
-                        newEffects[kvp.Key] = kvp.Value;
-                        if (kvp.Value.Index >= globalIndex)
-                            globalIndex = kvp.Value.Index + 1;
-                    }
-                }
-            }
-
-            if (clip.EffectProviders != null)
-            {
-                NormalizeProviderPipeline(clip);
-                var sortedProviders = SortEffectProviders(clip.EffectProviders);
-                if (!sortedProviders.ListAny()) return;
-                foreach (var bundleData in sortedProviders)
-                {
-                    bundleData.Parameters ??= new();
-                }
-
-                var subIdxByProvider = new Dictionary<Guid, int>();
-                foreach (var bundleData in sortedProviders.Where(b => b.Enabled))
-                {
-                    if (bundleData is not IEffectProvider provider)
-                    {
-                        throw new InvalidOperationException($"{bundleData.TypeName} is not IEffectProvider");
-                    }
-
-                    var imp = EffectHelper.ForcePreferToType
-                        ?? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{provider.FromPlugin}.{provider.TypeName}", EffectImplementType.NotSpecified);
-                    provider.Parameters[projectFrameCut.Render.Effect.EffectProviderBase.ImplementTypeParameterKey] = imp;
-                    IEffect[] effects;
-                    try
-                    {
-                        effects = provider.Build();
-                    }
-                    finally
-                    {
-                        provider.Parameters.Remove(projectFrameCut.Render.Effect.EffectProviderBase.ImplementTypeParameterKey);
-                    }
-
-                    // Mount the per-frame dynamic parameter getters from the provider's binding state
-                    // (the reserved __Binding_* keys). When nothing is bound this yields null and the
-                    // effects keep their static parameter values.
-                    var dynamicProviders = DynamicParam.BuildProviders(provider.Parameters);
-                    foreach (var e in effects)
-                    {
-                        if (e is IDynamicArgumentsEffect dyn) dyn.DynamicProviders = dynamicProviders;
-                    }
-
-                    for (int i = 0; i < effects.Length; i++)
-                    {
-                        var effect = effects[i];
-                        int subIdx = subIdxByProvider.TryGetValue(bundleData.Id, out var n) ? n : 0;
-                        subIdxByProvider[bundleData.Id] = subIdx + 1;
-                        effect.Name = $"EffectProvider {bundleData.TypeName}({bundleData.Id}){Environment.NewLine} - Subeffect #{subIdx}";
-                        if (effect is IValueProviderEffect)
-                        {
-                            // Value providers don't connect an IPicture output; keep them enabled
-                            // whenever the bundle is, and key their per-frame value by the bundle Guid.
-                            effect.Enabled = bundleData.Enabled;
-                            effect.Id = bundleData.Id.ToString();
-                        }
-                        else
-                        {
-                            effect.Enabled = bundleData.Enabled && bundleData.GetOutputAnchor() != IEffectProvider.NoConnectionGUID;
-                            if (effect is not IBindableArgumentEffect) effect.Id = Guid.NewGuid().ToString();
-                        }
-                        effect.Index = globalIndex++;
-                        effect.BindedEffectGroupID = bundleData.Id.ToString();
-                        string key = $"{bundleData.Id}_{subIdx}";
-                        if (newEffects.TryGetValue(key, out var previousEffect))
-                        {
-                            if (effect.RelativeWidth <= 0 && previousEffect.RelativeWidth > 0)
-                            {
-                                effect.RelativeWidth = previousEffect.RelativeWidth;
-                            }
-
-                            if (effect.RelativeHeight <= 0 && previousEffect.RelativeHeight > 0)
-                            {
-                                effect.RelativeHeight = previousEffect.RelativeHeight;
-                            }
-                        }
-
-                        newEffects[key] = effect;
-                    }
-                }
-
-            }
-            clip.Effects = newEffects
-                .Where(e => string.IsNullOrWhiteSpace(e.Value.BindedEffectGroupID)
-                           || (clip.EffectProviders?.ContainsKey(Guid.TryParse(e.Value.BindedEffectGroupID, out var g) ? g : Guid.Empty) ?? false))
-                .ToDictionary();
-        }
-
-        private static List<IEffectProvider> SortEffectProviders(IReadOnlyDictionary<Guid, IEffectProvider> bundles)
-        {
-            var ordered = bundles.ToList();
-            var adjacency = new Dictionary<Guid, List<Guid>>();
-            var incoming = new Dictionary<Guid, int>();
-
-            foreach (var kvp in ordered)
-            {
-                adjacency[kvp.Key] = new List<Guid>();
-                incoming[kvp.Key] = 0;
-            }
-
-            foreach (var kvp in ordered)
-            {
-                var bundle = kvp.Value;
-                var bundleId = kvp.Key;
-
-                foreach (var inputId in GetInputDependencyIds(bundle))
-                {
-                    if (!bundles.ContainsKey(inputId) || inputId == bundleId) continue;
-                    adjacency[inputId].Add(bundleId);
-                    incoming[bundleId]++;
-                }
-
-                // Dynamic parameter bindings: the consumer depends on the value-provider bundle it
-                // binds to, so the provider is built earlier and gets a lower Index in the render chain.
-                foreach (var boundProviderId in GetBoundProviderDependencyIds(bundle))
-                {
-                    if (!bundles.ContainsKey(boundProviderId) || boundProviderId == bundleId) continue;
-                    adjacency[boundProviderId].Add(bundleId);
-                    incoming[bundleId]++;
-                }
-
-                var outputId = bundle.GetOutputAnchor();
-                if (IsValidOutputDependency(outputId) && bundles.ContainsKey(outputId) && outputId != bundleId)
-                {
-                    adjacency[bundleId].Add(outputId);
-                    incoming[outputId]++;
-                }
-            }
-
-            var queue = new Queue<Guid>(ordered.Where(kvp => incoming[kvp.Key] == 0).Select(kvp => kvp.Key));
-            var result = new List<IEffectProvider>(ordered.Count);
-            var visited = new HashSet<Guid>();
-
-            while (queue.Count > 0)
-            {
-                var id = queue.Dequeue();
-                if (!visited.Add(id)) continue;
-                result.Add(bundles[id]);
-
-                foreach (var next in adjacency[id])
-                {
-                    incoming[next]--;
-                    if (incoming[next] == 0) queue.Enqueue(next);
-                }
-            }
-
-            if (result.Count < ordered.Count)
-            {
-                var cycleIds = ordered.Where(kvp => !visited.Contains(kvp.Key)).Select(kvp => kvp.Key);
-                throw new InvalidOperationException($"Effect bundle graph has a cycle. Unresolved ids: {string.Join(", ", cycleIds)}");
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Yields the value-provider bundle Guids that this bundle's parameters bind to
-        /// (via the reserved <c>__Binding_*</c> keys). Built-in sources like <c>builtin://frame</c>
-        /// are not Guids and are ignored here.
-        /// </summary>
-        private static IEnumerable<Guid> GetBoundProviderDependencyIds(IEffectProvider bundle)
-        {
-            if (bundle.Parameters is null) yield break;
-            foreach (var kvp in bundle.Parameters)
-            {
-                if (!kvp.Key.StartsWith(DynamicParam.BindingPrefix, StringComparison.Ordinal)) continue;
-                var sourceId = kvp.Value as string ?? kvp.Value?.ToString();
-                if (Guid.TryParse(sourceId, out var g)) yield return g;
-            }
-        }
-
-        private static IEnumerable<Guid> GetInputDependencyIds(IEffectProvider bundle)
-        {
-            if (bundle.HasMultiInputAnchors())
-            {
-                if (bundle.GetInputAnchors() is null) yield break;
-                foreach (var id in bundle.GetInputAnchors())
-                {
-                    if (IsValidInputDependency(id)) yield return id;
-                }
-                yield break;
-            }
-
-            if (IsValidInputDependency(bundle.GetInputAnchor()))
-            {
-                yield return bundle.GetInputAnchor();
-                yield break;
-            }
-
-            if (bundle.GetInputAnchors() is not null && bundle.GetInputAnchors().Count > 0 && IsValidInputDependency(bundle.GetInputAnchors()[0]))
-            {
-                // DraftEffectBindingView may store single-input connections in BindedInputIds[0].
-                yield return bundle.GetInputAnchors()[0];
-            }
-        }
-
-        private static bool IsValidInputDependency(Guid id)
-        {
-            return id != IEffectProvider.NoConnectionGUID && id != IEffectProvider.InputAnchorGUID;
-        }
-
-        private static bool IsValidOutputDependency(Guid id)
-        {
-            return id != IEffectProvider.NoConnectionGUID && id != IEffectProvider.OutputAnchorGUID;
-        }
-
-        /// <summary>
-        /// 将新添加的 EffectProvider 自动接入到输出链中：插在距离输出画面最近的同Target Provider 与输出画面之间。
-        /// </summary>
-        private static void AutoConnectProviderToOutput(ClipElementUI clip, IEffectProvider newProvider)
-        {
-            clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
-            var target = clip.GetEffectTarget();
-
-            var lastProvider = clip.EffectProviders.Values
-                .FirstOrDefault(b => b.GetOutputAnchor() == IEffectProvider.OutputAnchorGUID
-                                   && AreTargetsCompatible(b.Target, target)
-                                   && b.Id != newProvider.Id);
-
-            if (lastProvider != null)
-            {
-                lastProvider.SetOutputAnchor(newProvider.Id);
-                newProvider.SetInputAnchor(lastProvider.Id);
-                newProvider.SetOutputAnchor(IEffectProvider.OutputAnchorGUID);
-            }
-            else
-            {
-                newProvider.SetInputAnchor(IEffectProvider.InputAnchorGUID);
-                newProvider.SetOutputAnchor(IEffectProvider.OutputAnchorGUID);
-            }
-        }
-
-        /// <summary>
-        /// 判断两个 EffectTarget 是否兼容（可连接）。
-        /// </summary>
-        private static bool AreTargetsCompatible(EffectTarget a, EffectTarget b)
-        {
-            var aBase = a & ~(EffectTarget.IsKeyFramed | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector);
-            var bBase = b & ~(EffectTarget.IsKeyFramed | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector);
-            if (aBase == EffectTarget.NotSpecified || bBase == EffectTarget.NotSpecified)
-                return true;
-            return (aBase & bBase) != 0;
-        }
-
-        /// <summary>
-        /// 验证并修复所有 EffectProvider 的连接一致性：
-        /// - 自身连接 → 断开
-        /// - 单向连接（A→B 但 B 没有指回 A）→ 断开
-        /// - 扇入（多个 bundle 的输入指向同一个 source）→ 只保留第一个
-        /// </summary>
-        private static void ValidateAndFixProviderConnections(ClipElementUI clip)
-        {
-            if (clip.EffectProviders == null || clip.EffectProviders.Count == 0) return;
-            var bundles = clip.EffectProviders;
-
-            foreach (var bundle in bundles.Values)
-            {
-                // 自身连接
-                if (bundle.GetInputAnchor() == bundle.Id)
-                {
-                    bundle.SetInputAnchor(IEffectProvider.NoConnectionGUID);
-                    if (bundle.GetInputAnchors() is not null && bundle.GetInputAnchors().Count > 0)
-                        bundle.GetInputAnchors()[0] = IEffectProvider.NoConnectionGUID;
-                }
-                if (bundle.GetOutputAnchor() == bundle.Id)
-                {
-                    bundle.SetOutputAnchor(IEffectProvider.NoConnectionGUID);
-                }
-
-                // 单输入：BindedInputId 指向的 bundle 必须将其 BindedOutputId 指回自己
-                if (!bundle.HasMultiInputAnchors())
-                {
-                    if (IsValidInputDependency(bundle.GetInputAnchor()))
-                    {
-                        if (!bundles.TryGetValue(bundle.GetInputAnchor(), out var src) || src.GetOutputAnchor() != bundle.Id)
-                        {
-                            bundle.SetInputAnchor(IEffectProvider.NoConnectionGUID);
-                            if (bundle.GetInputAnchors() is not null && bundle.GetInputAnchors().Count > 0)
-                                bundle.GetInputAnchors()[0] = IEffectProvider.NoConnectionGUID;
-                        }
-                    }
-                }
-
-                // 多输入：逐个检查 BindedInputIds
-                if (bundle.GetInputAnchors() is not null && bundle.HasMultiInputAnchors())
-                {
-                    for (int i = 0; i < bundle.GetInputAnchors().Count; i++)
-                    {
-                        var id = bundle.GetInputAnchors()[i];
-                        if (IsValidInputDependency(id))
-                        {
-                            if (!bundles.TryGetValue(id, out var src) || src.GetOutputAnchor() != bundle.Id)
-                                bundle.GetInputAnchors()[i] = IEffectProvider.NoConnectionGUID;
-                        }
-                    }
-                }
-
-                // BindedOutputId 指向的 bundle 必须将其 BindedInputId/BindedInputIds 指回自己
-                if (IsValidOutputDependency(bundle.GetOutputAnchor()))
-                {
-                    if (!bundles.TryGetValue(bundle.GetOutputAnchor(), out var tgt))
-                    {
-                        bundle.SetOutputAnchor(IEffectProvider.NoConnectionGUID);
-                    }
-                    else
-                    {
-                        bool pointsBack = tgt.GetInputAnchor() == bundle.Id
-                            || (tgt.GetInputAnchors()?.Contains(bundle.Id) ?? false);
-                        if (!pointsBack)
-                            bundle.SetOutputAnchor(IEffectProvider.NoConnectionGUID);
-                    }
-                }
-            }
-
-            // 扇入修复：不允许两个 bundle 的 BindedInputId 指向同一个 source
-            var usedOutputs = new Dictionary<Guid, Guid>();
-            foreach (var bundle in bundles.Values)
-            {
-                if (!bundle.HasMultiInputAnchors())
-                {
-                    if (IsValidInputDependency(bundle.GetInputAnchor()))
-                    {
-                        if (usedOutputs.TryGetValue(bundle.GetInputAnchor(), out var firstConsumer))
-                        {
-                            bundle.SetInputAnchor(IEffectProvider.NoConnectionGUID);
-                            if (bundle.GetInputAnchors() is not null && bundle.GetInputAnchors().Count > 0)
-                                bundle.GetInputAnchors()[0] = IEffectProvider.NoConnectionGUID;
-                        }
-                        else
-                        {
-                            usedOutputs[bundle.GetInputAnchor()] = bundle.Id;
-                        }
-                    }
-                }
-                else if (bundle.GetInputAnchors() is not null)
-                {
-                    for (int i = 0; i < bundle.GetInputAnchors().Count; i++)
-                    {
-                        var id = bundle.GetInputAnchors()[i];
-                        if (IsValidInputDependency(id))
-                        {
-                            if (usedOutputs.TryGetValue(id, out var firstConsumer))
-                                bundle.GetInputAnchors()[i] = IEffectProvider.NoConnectionGUID;
-                            else
-                                usedOutputs[id] = bundle.Id;
-                        }
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// 规范化 Provider 管线：若检测到并行链，将其合并为单链。
-        /// 仅在确实存在并行链时才执行重排，避免覆盖用户已手动配置好的单链顺序。
-        /// 内部 Effect（ColorAdjustment、Crop 等）排在前面，用户 Effect 排在后面。
-        /// Mixture 和 SpeedVariance 断开连接（它们在渲染时由系统直接提取，不参与绑定管线）。
-        /// </summary>
-        private static void NormalizeProviderPipeline(ClipElementUI clip)
-        {
-            if (clip.EffectProviders == null || clip.EffectProviders.Count <= 1) return;
-            var bundles = clip.EffectProviders;
-
-            var pipelineProviders = new List<IEffectProvider>();
-            var detachedProviders = new List<IEffectProvider>();
-
-            foreach (var b in bundles.Values)
-            {
-                if (b.Target.HasFlag(EffectTarget.SpeedVariance)
-                    || b.Target.HasFlag(EffectTarget.Mixture)
-                    || b.Target.HasFlag(EffectTarget.ValueProvider))
-                    detachedProviders.Add(b);
-                else
-                    pipelineProviders.Add(b);
-            }
-
-            foreach (var b in detachedProviders)
-            {
-                b.SetInputAnchor(IEffectProvider.NoConnectionGUID);
-                b.SetOutputAnchor(IEffectProvider.NoConnectionGUID);
-                if (b.GetInputAnchors() != null)
-                {
-                    for (int i = 0; i < b.GetInputAnchors().Count; i++)
-                        b.GetInputAnchors()[i] = IEffectProvider.NoConnectionGUID;
-                }
-            }
-
-            if (pipelineProviders.Count <= 1) return;
-
-            var directToInputCount = pipelineProviders.Count(b =>
-               b.GetInputAnchor() == IEffectProvider.InputAnchorGUID ||
-               (b.GetInputAnchors()?.Contains(IEffectProvider.InputAnchorGUID) ?? false));
-
-            if (directToInputCount <= 1) return;
-
-            var sorted = pipelineProviders
-                .OrderBy(b => b.Target.HasFlag(EffectTarget.ColorAdjustment) ? 0 : 1)
-                .ThenBy(b => b.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor) ? 0 : 1)
-                .ToList();
-
-            for (int i = 0; i < sorted.Count; i++)
-            {
-                var b = sorted[i];
-                b.SetInputAnchor(i == 0 ? IEffectProvider.InputAnchorGUID : sorted[i - 1].Id);
-                b.SetOutputAnchor(i == sorted.Count - 1 ? IEffectProvider.OutputAnchorGUID : sorted[i + 1].Id);
-
-            }
+            var effects = EffectBindingHelper.RebuildAllEffects(clip.EffectProviders, clip.Effects);
+            if (effects != null) clip.Effects = effects;
         }
 
         public async Task<View> BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
@@ -3210,7 +2792,7 @@ namespace projectFrameCut.DraftStuff
                                 });
                         }
 
-                        var bundlePpb = bundleUI.CreateUI();
+                        var bundlePpb = bundleUI.CreateUI(bundleInstance);
 
                         ppb.AddText(new TitleAndDescriptionLineLabel(bundleInstance.Name ?? bundleInstance.TypeName, bundleInstance.TypeName));
                         ppb.AddCheckbox($"Provider|{bundleId}|Enabled", PPLocalizedResources._Enabled, bundleInstance.Enabled);
@@ -3245,7 +2827,7 @@ namespace projectFrameCut.DraftStuff
                         // 构建过滤后的 InAnchor 下拉选项：排除自身、类型不兼容和（showAllEffect=false 时）内部 bundle
                         var inAnchorProviderOptions = clip.EffectProviders
                              .Where(b => b.Key != bundleId
-                                 && AreTargetsCompatible(b.Value.Target, bundleInstance.Target)
+                                 && EffectBindingHelper.AreTargetsCompatible(b.Value.Target, bundleInstance.Target)
                                  && (showAllEffect || !b.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)))
                              .Select(b => $"{b.Value.Name} ({b.Key})")
                              .ToList();
@@ -3273,7 +2855,7 @@ namespace projectFrameCut.DraftStuff
                         // 构建过滤后的 OutAnchor 下拉选项：排除自身、类型不兼容和（showAllEffect=false 时）内部 bundle
                         var outTargetProviderOptions = clip.EffectProviders
                              .Where(b => b.Key != bundleId
-                                 && AreTargetsCompatible(b.Value.Target, bundleInstance.Target)
+                                 && EffectBindingHelper.AreTargetsCompatible(b.Value.Target, bundleInstance.Target)
                                  && (showAllEffect || !b.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)))
                              .Select(b => $"{b.Value.TypeName} ({b.Key})")
                              .ToList();
@@ -3357,7 +2939,15 @@ namespace projectFrameCut.DraftStuff
                         {
                             if (!clip?.EffectProviders?.TryGetValue(eb.Id, out bundle) ?? false) throw new KeyNotFoundException($"Effect bundle with ID {eb.Id} not found in clip.");
                             if (bundle is null) throw new KeyNotFoundException($"Effect bundle with ID {eb.Id} not found in clip.");
-                            bundle.Parameters = data;
+                            if (data is { Count: > 0 })
+                            {
+                                var fields = new Dictionary<string, IEffectArgumentField>();
+                                foreach (var kvp in data)
+                                {
+                                    fields[kvp.Key] = new StaticEffectArgumentField(kvp.Value, EffectArgumentFieldType.Unknown);
+                                }
+                                bundle.Fields = fields;
+                            }
 
                         }
                         RebuildAllEffects(clip);
@@ -3409,7 +2999,7 @@ namespace projectFrameCut.DraftStuff
                                             {
                                                 var oldSourceId = inProvider.GetInputAnchor();
 
-                                                if (IsValidInputDependency(oldSourceId) && oldSourceId != newSourceId)
+                                                if (EffectBindingHelper.IsValidInputDependency(oldSourceId) && oldSourceId != newSourceId)
                                                 {
                                                     if (clip.EffectProviders.TryGetValue(oldSourceId, out var oldSource))
                                                     {
@@ -3420,7 +3010,7 @@ namespace projectFrameCut.DraftStuff
 
                                                 inProvider.SetInputAnchor(newSourceId);
 
-                                                if (IsValidInputDependency(newSourceId))
+                                                if (EffectBindingHelper.IsValidInputDependency(newSourceId))
                                                 {
                                                     if (clip.EffectProviders.TryGetValue(newSourceId, out var newSource))
                                                     {
@@ -3446,7 +3036,7 @@ namespace projectFrameCut.DraftStuff
                                                     }
                                                 }
 
-                                                ValidateAndFixProviderConnections(clip);
+                                                EffectBindingHelper.ValidateAndFixProviderConnections(clip.EffectProviders);
                                                 RebuildAllEffects(clip);
                                                 handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                             }
@@ -3470,7 +3060,7 @@ namespace projectFrameCut.DraftStuff
 
                                                     // 1. 断开该端口的旧源端
                                                     var oldSourceId = insProvider.GetInputAnchors()[idx];
-                                                    if (IsValidInputDependency(oldSourceId) && oldSourceId != newSourceId)
+                                                    if (EffectBindingHelper.IsValidInputDependency(oldSourceId) && oldSourceId != newSourceId)
                                                     {
                                                         if (clip.EffectProviders.TryGetValue(oldSourceId, out var oldSource))
                                                         {
@@ -3485,7 +3075,7 @@ namespace projectFrameCut.DraftStuff
                                                         insProvider.SetInputAnchor(newSourceId);
 
                                                     // 3. 如果新源端是有效的 bundle，将其 BindedOutputId 指向当前 bundle
-                                                    if (IsValidInputDependency(newSourceId))
+                                                    if (EffectBindingHelper.IsValidInputDependency(newSourceId))
                                                     {
                                                         if (clip.EffectProviders.TryGetValue(newSourceId, out var newSource))
                                                         {
@@ -3511,7 +3101,7 @@ namespace projectFrameCut.DraftStuff
                                                         }
                                                     }
 
-                                                    ValidateAndFixProviderConnections(clip);
+                                                    EffectBindingHelper.ValidateAndFixProviderConnections(clip.EffectProviders);
                                                     RebuildAllEffects(clip);
                                                     handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                                 }
@@ -3533,12 +3123,12 @@ namespace projectFrameCut.DraftStuff
                                                 var lastProvider = clip.EffectProviders?.Values
                                                      .FirstOrDefault(b => b.Id != outProvider.Id
                                                         && b.GetOutputAnchor() == IEffectProvider.OutputAnchorGUID
-                                                         && AreTargetsCompatible(b.Target, outProvider.Target));
+                                                         && EffectBindingHelper.AreTargetsCompatible(b.Target, outProvider.Target));
                                                 if (lastProvider != null)
                                                 {
                                                     // a. 断开旧目标端
                                                     var oldTargetId = outProvider.GetOutputAnchor();
-                                                    if (IsValidOutputDependency(oldTargetId) && oldTargetId != newTargetId)
+                                                    if (EffectBindingHelper.IsValidOutputDependency(oldTargetId) && oldTargetId != newTargetId)
                                                     {
                                                         if (clip.EffectProviders.TryGetValue(oldTargetId, out var oldTarget))
                                                         {
@@ -3562,7 +3152,7 @@ namespace projectFrameCut.DraftStuff
                                                     outProvider.SetInputAnchor(lastProvider.Id);
                                                     outProvider.SetOutputAnchor(IEffectProvider.OutputAnchorGUID);
 
-                                                    ValidateAndFixProviderConnections(clip);
+                                                    EffectBindingHelper.ValidateAndFixProviderConnections(clip.EffectProviders);
                                                     RebuildAllEffects(clip);
                                                     handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                                     outAnchorHandled = true;
@@ -3574,7 +3164,7 @@ namespace projectFrameCut.DraftStuff
                                                 var oldTargetId = outProvider.GetOutputAnchor();
 
                                                 // 1. 断开旧目标端的输入指向
-                                                if (IsValidOutputDependency(oldTargetId) && oldTargetId != newTargetId)
+                                                if (EffectBindingHelper.IsValidOutputDependency(oldTargetId) && oldTargetId != newTargetId)
                                                 {
                                                     if (clip.EffectProviders.TryGetValue(oldTargetId, out var oldTarget))
                                                     {
@@ -3595,7 +3185,7 @@ namespace projectFrameCut.DraftStuff
                                                 outProvider.SetOutputAnchor(newTargetId);
 
                                                 // 3. 如果新目标是有效的 bundle，将其 BindedInputId 指向当前 bundle
-                                                if (IsValidOutputDependency(newTargetId))
+                                                if (EffectBindingHelper.IsValidOutputDependency(newTargetId))
                                                 {
                                                     if (clip.EffectProviders.TryGetValue(newTargetId, out var newTarget))
                                                     {
@@ -3618,7 +3208,7 @@ namespace projectFrameCut.DraftStuff
                                                     }
                                                 }
 
-                                                ValidateAndFixProviderConnections(clip);
+                                                EffectBindingHelper.ValidateAndFixProviderConnections(clip.EffectProviders);
                                                 RebuildAllEffects(clip);
                                                 handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                             }
@@ -3640,7 +3230,7 @@ namespace projectFrameCut.DraftStuff
                                 instance.SetOutputAnchor(IEffectProvider.NoConnectionGUID);
                                 clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
                                 clip.EffectProviders[instance.Id] = instance;
-                                AutoConnectProviderToOutput(clip, instance);
+                                EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, instance, clip.GetEffectTarget());
 
                                 RebuildAllEffects(clip);
                                 handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
@@ -3748,17 +3338,15 @@ namespace projectFrameCut.DraftStuff
                 try
                 {
                     var instance = kvp.Value();
-                    EffectBundleDisplayItem? display = null;
                     // GetEffectProviderItem was removed from the provider API; keep display null and fall back to Name/TypeName below.
-                    // throw new NotImplementedException("GetEffectProviderItem was removed.");
 
                     cards.Add(new EffectProviderCardItem
                     {
                         ProviderTypeName = bundleTypeName,
                         Title = EffectServices.GetLocalizedEffectProviderNames(Environment.NewLine, showSubfix).GetValueOrDefault(bundleTypeName, bundleTypeName),
-                        Description = display?.Description ?? "",
-                        Thumbnail = display?.Thumbnail,
-                        VideoThumbnail = display?.VideoThumbnail,
+                        Description = "",
+                        Thumbnail = null,
+                        VideoThumbnail = null,
                         EffectTypeName = GetEffectTypeName(instance.Target),
                     });
                 }
@@ -4136,10 +3724,10 @@ namespace projectFrameCut.DraftStuff
                     ppb.AddCustomChild("IEffect.TypeOfEffect", new Label { Text = effect.TypeOfEffect.ToString() });
                     ppb.AddCustomChild("IEffect.ImplementType", new Label { Text = effect.ImplementType.ToString() });
                     ppb.AppendWhen(
-                       condition: (Guid.TryParse(effect.BindedEffectGroupID, out var g) && (clip.EffectProviders?.TryGetValue(g, out eb) ?? false) && eb is not null),
-                       onTrue: c => c.AddCustomChild("Binded IEffectProvider", new Label { Text = $"{eb.Name} ({effect.BindedEffectGroupID})" })
+                       condition: (Guid.TryParse(effect.BindedEffectProvidingSystemID, out var g) && (clip.EffectProviders?.TryGetValue(g, out eb) ?? false) && eb is not null),
+                       onTrue: c => c.AddCustomChild("Binded IEffectProvider", new Label { Text = $"{eb.Name} ({effect.BindedEffectProvidingSystemID})" })
                                      .AddCustomChild("IEffectProvider.EffectTarget", new Label { Text = eb?.Target is not null ? eb.Target.ToString() : "No bundle" }),
-                       onFalse: c => c.AddCustomChild("Binded IEffectProvider", new Label { Text = $"Unknown bundle '{effect.BindedEffectGroupID}'" }));
+                       onFalse: c => c.AddCustomChild("Binded IEffectProvider", new Label { Text = $"Unknown bundle '{effect.BindedEffectProvidingSystemID}'" }));
                     if (effect is IBindableArgumentEffect be)
                     {
                         ppb.AddSeparator();
@@ -4285,7 +3873,7 @@ namespace projectFrameCut.DraftStuff
                         {
                             try
                             {
-                                newEffect = creator?.Invoke().BuildWithDefaultType();
+                                newEffect = creator?.Invoke().RestoreInstanceWithDefaultType();
                             }
                             catch (Exception ex)
                             {
@@ -4469,7 +4057,7 @@ namespace projectFrameCut.DraftStuff
                 colorProviderBindingHostHolder.BindingHost = new ClipBindingHost(clip, bundle, page,
                     onChanged: () => { RebuildAllEffects(clip, false); handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null)); });
             }
-            ppb.AddFromAnother(bundleUI.CreateUI(), bundle);
+            ppb.AddFromAnother(bundleUI.CreateUI(bundle), bundle);
             foreach (var item in clip.EffectProviders.Where(c => c.Value.Target == EffectTarget.ColorAdjustment && c.Value.Id != InternalColorAdjustmentProviderGuid))
             {
                 var bundleId = item.Key;
@@ -4484,7 +4072,7 @@ namespace projectFrameCut.DraftStuff
                     itemBindingHostHolder.BindingHost = new ClipBindingHost(clip, bundleInstance, page,
                         onChanged: () => { RebuildAllEffects(clip, false); handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null)); });
                 }
-                ppb.AddFromAnother(itemUI.CreateUI(), bundleInstance);
+                ppb.AddFromAnother(itemUI.CreateUI(bundleInstance), bundleInstance);
                 ppb.AddButton($"Provider|{bundleId}|Remove", PPLocalizedResources.EffectProp_Remove);
             }
             ppb.AppendWhen(colorAdjustProviderFactories.Any(), c => c.AddSeparator());
@@ -4507,7 +4095,15 @@ namespace projectFrameCut.DraftStuff
                     if (clip.EffectProviders.TryGetValue(senderProvider.Id, out var editingProvider))
                     {
                         var updated = EffectServices.GetUIProvider(senderProvider).HandlePropertyPanelChange(senderProvider, e).newParams;
-                        editingProvider.Parameters = updated ?? editingProvider.Parameters;
+                        if (updated is { Count: > 0 })
+                        {
+                            var fields = new Dictionary<string, IEffectArgumentField>();
+                            foreach (var kvp in updated)
+                            {
+                                fields[kvp.Key] = new StaticEffectArgumentField(kvp.Value, EffectArgumentFieldType.Unknown);
+                            }
+                            editingProvider.Fields = fields;
+                        }
                         RebuildAllEffects(clip);
                         clip.ApplySpeedRatio();
                         handler?.Invoke(s, e);
@@ -4518,8 +4114,18 @@ namespace projectFrameCut.DraftStuff
                             new ColorAdjustmentEffectProvider()
                             {
                                 Id = InternalColorAdjustmentProviderGuid,
-                                Parameters = EffectServices.GetUIProvider(senderProvider).HandlePropertyPanelChange(senderProvider, e).newParams ?? new Dictionary<string, object>()
                             };
+                        var cap = clip.EffectProviders[InternalColorAdjustmentProviderGuid];
+                        var newParams = EffectServices.GetUIProvider(senderProvider).HandlePropertyPanelChange(senderProvider, e).newParams;
+                        if (newParams is { Count: > 0 })
+                        {
+                            var fields = new Dictionary<string, IEffectArgumentField>();
+                            foreach (var kvp in newParams)
+                            {
+                                fields[kvp.Key] = new StaticEffectArgumentField(kvp.Value, EffectArgumentFieldType.Unknown);
+                            }
+                            cap.Fields = fields;
+                        }
 
                         RebuildAllEffects(clip);
                         clip.ApplySpeedRatio();
@@ -4642,7 +4248,7 @@ namespace projectFrameCut.DraftStuff
 
                 try
                 {
-                    var bundlePpb = EffectServices.GetUIProvider(bundle).CreateUI();
+                    var bundlePpb = EffectServices.GetUIProvider(bundle).CreateUI(bundle);
                     ppb.AddFromAnother(bundlePpb, bundle);
                 }
                 catch (Exception ex)
@@ -4678,7 +4284,15 @@ namespace projectFrameCut.DraftStuff
                     if (clip.EffectProviders.TryGetValue(senderProvider.Id, out var editingProvider))
                     {
                         var updated = EffectServices.GetUIProvider(senderProvider).HandlePropertyPanelChange(senderProvider, e).newParams;
-                        editingProvider.Parameters = updated ?? editingProvider.Parameters;
+                        if (updated is { Count: > 0 })
+                        {
+                            var fields = new Dictionary<string, IEffectArgumentField>();
+                            foreach (var kvp in updated)
+                            {
+                                fields[kvp.Key] = new StaticEffectArgumentField(kvp.Value, EffectArgumentFieldType.Unknown);
+                            }
+                            editingProvider.Fields = fields;
+                        }
                         RebuildAllEffects(clip);
                         clip.ApplySpeedRatio();
                         if (ppb.Components.TryGetValue("durationHintLabel", out var la) && la is Label l)
@@ -4711,7 +4325,7 @@ namespace projectFrameCut.DraftStuff
                             instance.SetOutputAnchor(IEffectProvider.NoConnectionGUID);
                             clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
                             clip.EffectProviders[instance.Id] = instance;
-                            AutoConnectProviderToOutput(clip, instance);
+                            EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, instance, clip.GetEffectTarget());
 
                             RebuildAllEffects(clip);
                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
@@ -4785,7 +4399,7 @@ namespace projectFrameCut.DraftStuff
                 });
                 try
                 {
-                    var bundlePpb = EffectServices.GetUIProvider(bundle).CreateUI();
+                    var bundlePpb = EffectServices.GetUIProvider(bundle).CreateUI(bundle);
                     ppb.AddFromAnother(bundlePpb, bundle);
                 }
                 catch (Exception ex)
@@ -4819,7 +4433,15 @@ namespace projectFrameCut.DraftStuff
                     if (clip.EffectProviders.TryGetValue(senderProvider.Id, out var editingProvider))
                     {
                         var updated = EffectServices.GetUIProvider(senderProvider).HandlePropertyPanelChange(senderProvider, e).newParams;
-                        editingProvider.Parameters = updated ?? editingProvider.Parameters;
+                        if (updated is { Count: > 0 })
+                        {
+                            var fields = new Dictionary<string, IEffectArgumentField>();
+                            foreach (var kvp in updated)
+                            {
+                                fields[kvp.Key] = new StaticEffectArgumentField(kvp.Value, EffectArgumentFieldType.Unknown);
+                            }
+                            editingProvider.Fields = fields;
+                        }
                         RebuildAllEffects(clip);
                         handler?.Invoke(s, e);
                     }
@@ -4846,7 +4468,7 @@ namespace projectFrameCut.DraftStuff
                             instance.SetOutputAnchor(IEffectProvider.NoConnectionGUID);
                             clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
                             clip.EffectProviders[instance.Id] = instance;
-                            AutoConnectProviderToOutput(clip, instance);
+                            EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, instance, clip.GetEffectTarget());
 
                             RebuildAllEffects(clip);
                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
@@ -5233,6 +4855,12 @@ namespace projectFrameCut.DraftStuff
         private static float ReadDictionaryFloatValue(IReadOnlyDictionary<string, object>? values, string key, float fallback)
             => values != null && values.TryGetValue(key, out var raw) ? ReadFloatValue(raw, fallback) : fallback;
 
+        private static int ReadProviderFieldInt(Dictionary<string, IEffectArgumentField>? fields, string key, int fallback)
+            => fields != null && fields.TryGetValue(key, out var field) && field is StaticEffectArgumentField sf ? ReadIntValue(sf.Value, fallback) : fallback;
+
+        private static float ReadProviderFieldFloat(Dictionary<string, IEffectArgumentField>? fields, string key, float fallback)
+            => fields != null && fields.TryGetValue(key, out var field) && field is StaticEffectArgumentField sf ? ReadFloatValue(sf.Value, fallback) : fallback;
+
         private static int ReadEffectIntParameter(IEffect effect, string key, int fallback)
         {
             ArgumentNullException.ThrowIfNull(effect);
@@ -5280,7 +4908,7 @@ namespace projectFrameCut.DraftStuff
 
             var fromProvider = clip.Effects.Values.FirstOrDefault(e =>
                 IsCropEffect(e)
-                && string.Equals(e.BindedEffectGroupID, InternalCropProviderGuid.ToString(), StringComparison.Ordinal));
+                && string.Equals(e.BindedEffectProvidingSystemID, InternalCropProviderGuid.ToString(), StringComparison.Ordinal));
             if (fromProvider != null)
             {
                 effect = fromProvider;
@@ -5463,7 +5091,7 @@ namespace projectFrameCut.DraftStuff
             public Guid Id { get; set; }
             public string TypeName => "Dummy";
             public string Name { get => "Dummy Effect Provider"; set { } }
-            public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+            public Dictionary<string, object> MetaData { get; set; } = new Dictionary<string, object>();
             public bool Enabled { get; set; } = true;
             public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
             public EffectType TypeOfEffect => EffectType.NotSpecified;
@@ -5480,6 +5108,11 @@ namespace projectFrameCut.DraftStuff
             public Dictionary<string, IEffectArgumentField> Fields { get; set; } = new();
 
             public IEffect[] Build() => throw new NotImplementedException();
+
+            public IEffect RestoreInstance(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
+            {
+                throw new NotImplementedException();
+            }
         }
 
         private class ClipRangeSlider : ContentView

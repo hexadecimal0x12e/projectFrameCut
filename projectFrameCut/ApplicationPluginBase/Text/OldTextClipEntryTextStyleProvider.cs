@@ -1,9 +1,9 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Text;
-using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.ClipsAndTracks.Text;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Shared;
 using System;
@@ -41,9 +41,9 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
         public TextClipLayoutMode LayoutMode { get; set; }
 
-        public Dictionary<string, EffectBundleSettableFields> SettableFields => [];
+        public Dictionary<string, EffectArgumentFieldDescriptor> SettableFields => [];
 
-        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        public bool HandleSettableFieldsChange(EffectArgumentFieldDescriptor field, object value, out string feedback)
         {
             feedback = "The legacy text style has no settable fields.";
             return false;

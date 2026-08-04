@@ -15,13 +15,13 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
         }
 
-        public override PropertyPanelBuilder CreateUI()
+        public override PropertyPanelBuilder CreateUI(IEffectProvider _)
         {
-            int startX = EffectProviderHelper.GetInt(Inner.Parameters, "StartX", 0);
-            int startY = EffectProviderHelper.GetInt(Inner.Parameters, "StartY", 0);
-            int endX = EffectProviderHelper.GetInt(Inner.Parameters, "EndX", 200);
-            int endY = EffectProviderHelper.GetInt(Inner.Parameters, "EndY", 0);
-            int duration = Math.Max(100, EffectProviderHelper.GetInt(Inner.Parameters, "Duration", 1000));
+            int startX = EffectProviderHelper.GetFieldInt(Inner.Fields, "StartX", 0);
+            int startY = EffectProviderHelper.GetFieldInt(Inner.Fields, "StartY", 0);
+            int endX = EffectProviderHelper.GetFieldInt(Inner.Fields, "EndX", 200);
+            int endY = EffectProviderHelper.GetFieldInt(Inner.Fields, "EndY", 0);
+            int duration = Math.Max(100, EffectProviderHelper.GetFieldInt(Inner.Fields, "Duration", 1000));
 
             var panel = new PropertyPanelBuilder();
             panel.AddPositionTupleInputBox("start", new SingleLineLabel(EffectProviderHelper.L("_MovementStart", "Start")), PositionTupleMode.XY, (startX, startY, 0, 0));
@@ -42,28 +42,30 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             switch (args.Id)
             {
                 case "start_X":
-                    EffectProviderHelper.TrySetInt(Inner.Parameters, "StartX", args.Value);
-                    return (Inner.Parameters, Inner.Fields);
+                    EffectProviderHelper.SetFieldValue(Inner.Fields, "StartX", DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
+                    return (null, Inner.Fields);
                 case "start_Y":
-                    EffectProviderHelper.TrySetInt(Inner.Parameters, "StartY", args.Value);
-                    return (Inner.Parameters, Inner.Fields);
+                    EffectProviderHelper.SetFieldValue(Inner.Fields, "StartY", DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
+                    return (null, Inner.Fields);
                 case "end_X":
-                    EffectProviderHelper.TrySetInt(Inner.Parameters, "EndX", args.Value);
-                    return (Inner.Parameters, Inner.Fields);
+                    EffectProviderHelper.SetFieldValue(Inner.Fields, "EndX", DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
+                    return (null, Inner.Fields);
                 case "end_Y":
-                    EffectProviderHelper.TrySetInt(Inner.Parameters, "EndY", args.Value);
-                    return (Inner.Parameters, Inner.Fields);
+                    EffectProviderHelper.SetFieldValue(Inner.Fields, "EndY", DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
+                    return (null, Inner.Fields);
             }
 
-            if (Inner.Fields.ContainsKey(args.Id) && EffectProviderHelper.TrySetInt(Inner.Parameters, args.Id, args.Value))
+            if (Inner.Fields.ContainsKey(args.Id))
             {
+                EffectProviderHelper.SetFieldValue(Inner.Fields, args.Id, DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
                 if (args.Id == "Duration")
                 {
-                    Inner.Parameters["Duration"] = Math.Max(100, EffectProviderHelper.GetInt(Inner.Parameters, "Duration", 1000));
+                    var duration = Math.Max(100, EffectProviderHelper.GetFieldInt(Inner.Fields, "Duration", 1000));
+                    EffectProviderHelper.SetFieldValue(Inner.Fields, "Duration", duration, EffectArgumentFieldType.Integer);
                 }
             }
 
-            return (Inner.Parameters, Inner.Fields);
+            return (null, Inner.Fields);
         }
     }
 }

@@ -9,12 +9,12 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
     public interface IEffectProviderUIProvider
     {
         /// <summary>
-        /// Create the Effect property UI.
+        /// Create the Effect property UI for the given source.
         /// </summary>
         /// <remarks>
         /// To maintenance a uniform UI style, you'll need to use <see cref="PropertyPanelBuilder"/>.
         /// </remarks>
-        public PropertyPanelBuilder CreateUI();
+        public PropertyPanelBuilder CreateUI(IEffectProvider source);
 
         /// <summary>
         /// Handle the change of the Effect property UI created via <see cref="CreateUI"/>.
@@ -23,5 +23,19 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// <param name="args">The input arguments for the property panel change event.</param>
         /// <returns>The updated parameters or fields after handling the property panel change. Keep newParams to null means no changes to the parameters, and keep newFields to null means no changes to the fields.</returns>
         public (Dictionary<string, object>? newParams, Dictionary<string, IEffectArgumentField>? newFields) HandlePropertyPanelChange(IEffectProvider source,  PropertyPanelPropertyChangedEventArgs args);
+    }
+
+    /// <summary>
+    /// Marks a UI provider that can hold an <see cref="IEffectBindingHost"/>.
+    /// The binding host is injected by the node editor before the property UI is built so each field
+    /// can offer a bind action. Implemented by <c>EffectProviderUI</c> and its subclasses.
+    /// </summary>
+    public interface IBindingHostHolder
+    {
+        /// <summary>
+        /// The UI binding host used to configure dynamic field bindings, injected by the node editor
+        /// before the property UI is built. Null when the UI is built outside the node editor.
+        /// </summary>
+        public IEffectBindingHost? BindingHost { get; set; }
     }
 }

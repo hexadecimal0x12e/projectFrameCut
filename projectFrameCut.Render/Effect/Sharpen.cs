@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class SharpenEffect_IPicture : INormalEffect, IDynamicArgumentsEffect
+    public class SharpenEffect_IPicture : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -19,12 +19,7 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
 
         public float Amount { get; init; } = 1f;
-        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "Amount", Amount }
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -38,7 +33,7 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string TypeName => "Sharpen";
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.IPicture)
@@ -49,23 +44,25 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
 
-            return new SharpenEffect_IPicture
+            var effect = new SharpenEffect_IPicture
             {
-                Amount = Convert.ToSingle(parameters["Amount"]),
+                Amount = DynamicParam.ToFloat(parameters.GetValueOrDefault("Amount")),
                 ImplementType = implementType
             };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            float amount = DynamicParam.Resolve(DynamicProviders, "Amount", Amount);
+            float amount = DynamicParam.Resolve(Parameters.GetValueOrDefault("Amount"), Amount);
             return SharpenEffect.Process(source, amount);
         }
     }
 
-    public class SharpenEffect_HwAccel : INormalEffect, IDynamicArgumentsEffect
+    public class SharpenEffect_HwAccel : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -74,12 +71,7 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
 
         public float Amount { get; init; } = 1f;
-        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "Amount", Amount }
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string? NeedComputer => "SharpenComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -93,7 +85,7 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string TypeName => "Sharpen";
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
@@ -103,17 +95,19 @@ namespace projectFrameCut.Render.Effect
             {
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
-            return new SharpenEffect_HwAccel
+            var effect = new SharpenEffect_HwAccel
             {
-                Amount = Convert.ToSingle(parameters["Amount"])
+                Amount = DynamicParam.ToFloat(parameters.GetValueOrDefault("Amount"))
             };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            float amount = DynamicParam.Resolve(DynamicProviders, "Amount", Amount);
+            float amount = DynamicParam.Resolve(Parameters.GetValueOrDefault("Amount"), Amount);
             if (computer is null)
                 return SharpenEffect.Process(source, amount);
 
@@ -156,43 +150,6 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class SharpenEffectFactory
-    {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "Sharpen";
-        public EffectTarget Target => EffectTarget.Video;
-        public List<string> ParametersNeeded { get; } = ["Amount"];
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
-        {
-            { "Amount", "float" }
-        };
-
-        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
-
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            if (implementType == EffectImplementType.NotSpecified)
-            {
-                return BuildWithDefaultType(parameters);
-            }
-            return implementType switch
-            {
-                EffectImplementType.IPicture => SharpenEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
-                EffectImplementType.HwAcceleration => SharpenEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>()),
-                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
-            };
-        }
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
-        {
-            parameters ??= new Dictionary<string, object> { { "Amount", 1f } };
-            if (!parameters.ContainsKey("Amount")) parameters["Amount"] = 1f;
-            return SharpenEffect_IPicture.FromParametersDictionary(parameters);
-        }
-    }
-
-
-
     /// <summary>
     /// The Render-side provider of the Sharpen effect.
     /// </summary>
@@ -201,7 +158,7 @@ namespace projectFrameCut.Render.Effect
         public SharpenEffectProvider()
         {
             Name = "Sharpen";
-            Parameters = new Dictionary<string, object> { { "Amount", 1f } };
+            SetField("Amount", 1f);
         }
 
         public override string TypeName => "Sharpen";
@@ -222,7 +179,17 @@ namespace projectFrameCut.Render.Effect
 
         protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
-            return [new SharpenEffectFactory().Build(implementType, parameters)];
+            if (implementType == EffectImplementType.NotSpecified)
+            {
+                if (!parameters.ContainsKey("Amount")) parameters["Amount"] = 1f;
+                return [SharpenEffect_IPicture.FromParametersDictionary(parameters)];
+            }
+            return implementType switch
+            {
+                EffectImplementType.IPicture => [SharpenEffect_IPicture.FromParametersDictionary(parameters)],
+                EffectImplementType.HwAcceleration => [SharpenEffect_HwAccel.FromParametersDictionary(parameters)],
+                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
+            };
         }
     }
 }

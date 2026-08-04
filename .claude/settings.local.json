@@ -34,7 +34,11 @@
       "Bash(xgrep -l \"*\" --include=\"*.cs\")",
       "Bash(xargs grep -l *)",
       "PowerShell(xargs grep -l *)",
-      "Bash(dotnet new *)"
+      "Bash(dotnet new *)",
+      "Bash([ -s \"$f\" ])",
+      "Bash(grep -q . C:/Users/azert/AppData/Local/Temp/claude/d--code-projectFrameCut/d1809852-e63d-4f69-998d-49e1e63da4a1/tasks/a151571ceefe1fc5d.output)",
+      "Bash(sleep 5)",
+      "Bash(echo \"PLAN DONE\")"
     ],
     "deny": [
       "Bash(Select-*)",

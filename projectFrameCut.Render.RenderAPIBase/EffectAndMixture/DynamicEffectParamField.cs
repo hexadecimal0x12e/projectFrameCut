@@ -50,11 +50,13 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             StaticFallbackValue = staticFallbackValue;
         }
 
-        public Lazy<object> GetGetter()
+        public bool IsDynamicAtRenderTime => true;
+
+        public Func<object> GetGetter()
         {
             var boundId = BoundProviderId ?? string.Empty;
             var fallback = StaticFallbackValue;
-            return new Lazy<object>(() => ValueProviderFrameContext.Get(boundId) ?? fallback ?? new object());
+            return () => ValueProviderFrameContext.Get(boundId) ?? fallback ?? new object();
         }
     }
 }

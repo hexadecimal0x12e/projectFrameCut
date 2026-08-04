@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
@@ -90,13 +90,19 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public Dictionary<string, Dictionary<string, string>> LocalizationProvider { get; }
 
         /// <summary>
+        /// Create an <see cref="IEffectProvider"/> instance for the given effect type name (e.g. "Resize").
+        /// The provider owns both the property metadata (fields/parameters) and the effect factory capability
+        /// (<see cref="IEffectProvider.RestoreInstance(EffectImplementType, Dictionary{string, object})"/>).
+        /// </summary>
+        public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
+
+        /// <summary>
         /// Create an ISoundTrack instance from the given file path and JSON data.
         /// </summary>
         /// <remarks>
         /// The argument for value is Id of the sound track, and the second argument is the name of the sound track.
         /// </remarks>
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
-
 
         /// <summary>
         /// Create an IClip instance from the given file path and JSON data.
@@ -105,13 +111,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// The argument for value is Id of the previous clip, and the second argument is Id of the next clip
         /// </remarks>
         public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider { get; }
-
-        /// <summary>
-        /// Create an <see cref="IEffectProvider"/> instance for the given effect type name (e.g. "Resize").
-        /// The provider owns both the property metadata (fields/parameters) and the effect factory capability
-        /// (<see cref="IEffectProvider.Build(EffectImplementType, Dictionary{string, object})"/>).
-        /// </summary>
-        public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
 
         /// <summary>
         /// Create an IComputer instance from the given JSON structure.
@@ -246,11 +245,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
 #pragma warning disable CS0618 // we need to handle fallback for deprecated implement types for compatibility, but we don't want to have Obsolete warning in the main logic.
             if (implementType == EffectImplementType.ImageSharp_Deprecated) implementType = EffectImplementType.IPicture;
             if (stru.ImplementType == EffectImplementType.ImageSharp_Deprecated) stru.ImplementType = EffectImplementType.IPicture;
-#pragma warning restore CS0618
             static IEffect ApplyCommonProperties(IEffect effect, EffectAndMixtureJSONStructure s)
             {
                 effect.Name = s.Name;
-                effect.BindedEffectGroupID = s.BindedEffectGroupID;
+                effect.BindedEffectProvidingSystemID = s.BindedEffectGroupID;
                 if (effect.TypeOfEffect != EffectType.SpeedVarianceProvider)
                 {
                     effect.RelativeWidth = s.RelativeWidth;
@@ -282,7 +280,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
 
             if (!EffectProviderProvider.TryGetValue(stru.TypeName, out var creator))
             {
-                throw new NotSupportedException($"No suitable effect found for the given type '{stru.TypeName}'.");
+                throw new KeyNotFoundException($"No suitable effect provider found for the given type '{stru.TypeName}'. If you are trying to use a custom effect, make sure it is properly registered.");
             }
 
             var provider = creator();
@@ -290,13 +288,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             // The continuous-Crop branch (and any future dual-mode provider) is driven by this reserved key.
             if (stru.IsContinuousEffect)
             {
-                parameters[IEffectProvider.IsContinuousEffectParameterKey] = true;
+                provider.MetaData[IEffectProvider.IsContinuousEffectParameterKey] = true;
             }
 
             var effect = (implementType != EffectImplementType.NotSpecified && provider.SupportsImplementTypes.Contains(implementType))
-                ? provider.Build(implementType, parameters)
-                : provider.BuildWithDefaultType(parameters);
+                ? provider.RestoreInstance(implementType, parameters)
+                : provider.RestoreInstanceWithDefaultType(parameters);
             return ApplyCommonProperties(effect, stru);
+#pragma warning restore CS0618
         }
 
 
@@ -456,12 +455,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         {
 
         }
-
-        /// <summary>
-        /// Represents the messaging queue provided by the host application.
-        /// </summary>
-        [Obsolete("Use GlobalPluginHelper.MessagingService instead. This property is no longer been assigned while initialization and it will be removed in next Plugin API version.", false)]
-        public virtual IMessagingService MessagingQueue { get => null; set { } }
     }
 
 #pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。

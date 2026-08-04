@@ -492,12 +492,12 @@ public static class TimelineMcpLiveService
         IEffect? created = null;
         if (effect.FromPlugin == InternalPluginBase.InternalPluginBaseID)
         {
-            created = EffectHelper.EffectsProviderEnum.TryGetValue(effect.TypeName, out var creator) ? creator().BuildWithDefaultType() : null;
+            created = EffectHelper.EffectsProviderEnum.TryGetValue(effect.TypeName, out var creator) ? creator().RestoreInstanceWithDefaultType() : null;
         }
         else
         {
             created = PluginManager.LoadedPlugins.TryGetValue(effect.FromPlugin, out var plugin)
-                ? plugin.EffectProviderProvider.TryGetValue(effect.TypeName, out var creator) ? creator().BuildWithDefaultType() : null
+                ? plugin.EffectProviderProvider.TryGetValue(effect.TypeName, out var creator) ? creator().RestoreInstanceWithDefaultType() : null
                 : null;
         }
 

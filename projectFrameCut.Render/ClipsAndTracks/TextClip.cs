@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Render.ClipsAndTracks.Text;
@@ -30,7 +30,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
         public bool NeedFilePath => false;
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }

@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Vector.ImportExport;
+using projectFrameCut.Drawing.Vector.ImportExport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,7 +30,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// The TypeName of the EffectGroup.
         /// </summary>
         /// <remarks>
-        /// it SHOULD equals to <see cref="IEffect.TypeName"/>, <see cref="IEffectFactory.TypeName"/> and so on.
+        /// it SHOULD equals to <see cref="IEffect.TypeName"/> and so on.
         /// </remarks>
         public string TypeName { get; }
 
@@ -74,7 +74,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> InFields { get; }
 
         /// <summary>
-        /// The output field's type of the effect provider.
+        /// The output field's descriptor of the effect provider.
         /// </summary>
         public EffectArgumentFieldDescriptor OutField { get; }
 
@@ -94,9 +94,11 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public Dictionary<string, IEffectArgumentField> Fields { get; set; }
 
         /// <summary>
-        /// The parameters of the effect provider, which is used to determine the settings of the effect.
+        /// Metadata dictionary for the effect provider. Carries extra information that is not part of
+        /// the effect parameters, such as <c>ImplementType</c>, <c>__IsContinuous__</c>, and
+        /// <c>__DraftEffectBindingView_InteractiveEditorX/Y__</c>.
         /// </summary>
-        public Dictionary<string, object> Parameters { get; set; }
+        public Dictionary<string, object> MetaData { get; set; }
 
         /// <summary>
         /// Build the final effect(s) instance from the effect provider.
@@ -107,10 +109,50 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// return multiple effects in the order of the effect stack, the first effect will be rendered first, and the last effect will be rendered last.
         /// </returns>
         /// <remarks>
-        /// <b>DO NOT</b> set the output effect's <see cref="IEffect.Id"/>, <see cref="IEffect.BindedEffectGroupID"/> and <see cref="IEffect.Index"/> property manually.
+        /// <b>DO NOT</b> set the output effect's <see cref="IEffect.Id"/>, <see cref="IEffect.BindedEffectProvidingSystemID"/> and <see cref="IEffect.Index"/> property manually.
         /// It will be set when the effect is created.
+        /// <para/>
+        /// Throw a <see cref="NotSupportedException"/> if the effect does not yield IPicture output (e.g. <see cref="IValueProviderEffect"/>)
+        /// and Providers that can create a ordinary effect (e.g. <see cref="INormalEffect"/>) override this member.
         /// </remarks>
         public IEffect[] Build();
+
+        /// <summary>
+        /// Restore the <see cref="IEffect"/> instance from the <paramref name="parameters"/> param dictionary with a specific implementation type.
+        /// </summary>
+        /// <param name="implementType">the desired implementation type.</param>
+        /// <param name="parameters">the normalized parameters.</param>
+        /// <returns>the single built effect.</returns>
+        /// <remarks>
+        /// Not recommended to use this method directly. Use <see cref="Build"/> instead to allow dynamic binding.
+        /// Let it throw a <see cref="NotSupportedException"/> to indicate that the provider does not support stateless factory. 
+        /// <para/>
+        /// This allows legacy providers which do not implement the stateless factory capability still compile. Providers that
+        /// support it (e.g. <c>EffectProviderBase</c>) override this member.
+        /// </remarks>
+        public IEffect RestoreInstance(EffectImplementType implementType, Dictionary<string, object>? parameters = null);
+
+        /// <summary>
+        /// Get the supported implement types of this effect.
+        /// </summary>
+        public virtual EffectImplementType[] SupportsImplementTypes => [];
+
+        /// <summary>
+        /// Gets the default effect implementation type supported by this instance.
+        /// </summary>
+        /// <remarks>
+        /// The default implementation type is determined by the first entry in the
+        /// <see cref="SupportsImplementTypes"/> array. If no implementation types are supported, the value is
+        /// <see cref="EffectImplementType.NotSpecified"/>.
+        /// </remarks>
+        public virtual EffectImplementType DefaultImplementType => SupportsImplementTypes.Length > 0 ? SupportsImplementTypes[0] : EffectImplementType.NotSpecified;
+
+        /// <summary>
+        /// Build an effect with the default implementation type (stateless factory).
+        /// </summary>
+        /// <param name="parameters">the normalized parameters.</param>
+        /// <returns>the single built effect.</returns>
+        public virtual IEffect RestoreInstanceWithDefaultType(Dictionary<string, object>? parameters = null) => RestoreInstance(DefaultImplementType, parameters);
 
         /// <summary>
         /// Indicates which parameters are needed for this effect.
@@ -132,44 +174,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public virtual Dictionary<string, string> ParametersType => Fields
             .Where(c => !c.Value.FieldType.HasFlag(EffectArgumentFieldType.IPicture))
             .ToDictionary(c => c.Key, c => EffectProviderContractMapping.FieldTypeToParamType(c.Value.FieldType));
-
-        /// <summary>
-        /// Get the supported implement types of this effect.
-        /// </summary>
-        public virtual EffectImplementType[] SupportsImplementTypes => [];
-
-        /// <summary>
-        /// Gets the default effect implementation type supported by this instance.
-        /// </summary>
-        /// <remarks>
-        /// The default implementation type is determined by the first entry in the
-        /// <see cref="SupportsImplementTypes"/> array. If no implementation types are supported, the value is
-        /// <see cref="EffectImplementType.NotSpecified"/>.
-        /// </remarks>
-        public virtual EffectImplementType DefaultImplementType => SupportsImplementTypes.Length > 0 ? SupportsImplementTypes[0] : EffectImplementType.NotSpecified;
-
-        /// <summary>
-        /// Build the specified effect implementation type (stateless factory).
-        /// </summary>
-        /// <param name="implementType">the desired implementation type.</param>
-        /// <param name="parameters">the normalized parameters.</param>
-        /// <returns>the single built effect.</returns>
-        /// <remarks>
-        /// The default implementation is conservative: it throws <see cref="NotSupportedException"/> so that
-        /// providers which do not implement the stateless factory capability still compile. Providers that
-        /// support it (e.g. <c>EffectProviderBase</c>) override this member.
-        /// </remarks>
-        public virtual IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            throw new NotSupportedException($"EffectProvider '{TypeName}' does not support stateless Build(implementType, parameters). Override Build(EffectImplementType, Dictionary<string, object>) to support it.");
-        }
-
-        /// <summary>
-        /// Build an effect with the default implementation type (stateless factory).
-        /// </summary>
-        /// <param name="parameters">the normalized parameters.</param>
-        /// <returns>the single built effect.</returns>
-        public virtual IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null) => Build(DefaultImplementType, parameters);
     }
 
     /// <summary>
@@ -191,25 +195,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                 EffectArgumentFieldType.Boolean => EffectArgsHelper.ArgTypeBool,
                 _ => EffectArgsHelper.ArgTypeString,
             };
-        }
-    }
-
-    public record EffectArgumentFieldDescriptor : IEffectArgumentField
-    {
-        public string Id { get; set; } = string.Empty;
-        public string TypeName { get; set; } = string.Empty;
-        public string FromPlugin { get; set; } = string.Empty;
-        public bool IsDynamic { get; set; } = false;
-        public EffectArgumentFieldType FieldType { get; set; } = EffectArgumentFieldType.Unknown;
-        public string DefaultValue { get; set; } = string.Empty;
-        public string MinValue { get; set; } = string.Empty;
-        public string MaxValue { get; set; } = string.Empty;
-        public string[]? PresetOptions { get; set; }
-        public string? Remarks { get; set; }
-
-        public Lazy<object> GetGetter()
-        {
-            return new Lazy<object>(() => DefaultValue);
         }
     }
 
@@ -244,8 +229,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public static void SetInputAnchor(this IEffectProvider provider, Guid id)
         {
-            provider.AnchorsBindingState ??= new Dictionary<string, Guid>();
-            provider.AnchorsBindingState[InputKey] = id;
+            var state = provider.AnchorsBindingState ?? new Dictionary<string, Guid>();
+            state[InputKey] = id;
+            provider.AnchorsBindingState = state;   // assign the whole dictionary so the property setter captures it
         }
 
         /// <summary>
@@ -263,8 +249,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public static void SetOutputAnchor(this IEffectProvider provider, Guid id)
         {
-            provider.AnchorsBindingState ??= new Dictionary<string, Guid>();
-            provider.AnchorsBindingState[OutputKey] = id;
+            var state = provider.AnchorsBindingState ?? new Dictionary<string, Guid>();
+            state[OutputKey] = id;
+            provider.AnchorsBindingState = state;   // assign the whole dictionary so the property setter captures it
         }
 
         /// <summary>
@@ -283,16 +270,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public static void SetInputAnchors(this IEffectProvider provider, IEnumerable<Guid> ids)
         {
-            provider.AnchorsBindingState ??= new Dictionary<string, Guid>();
             var list = ids?.ToList() ?? new List<Guid>();
-            if (list.Count > 0)
-            {
-                provider.AnchorsBindingState[InputKey] = list[0];
-            }
-            else
-            {
-                provider.AnchorsBindingState[InputKey] = IEffectProvider.InputAnchorGUID;
-            }
+            var state = provider.AnchorsBindingState ?? new Dictionary<string, Guid>();
+            state[InputKey] = list.Count > 0 ? list[0] : IEffectProvider.InputAnchorGUID;
+            provider.AnchorsBindingState = state;   // assign the whole dictionary so the property setter captures it
         }
 
         /// <summary>
@@ -309,6 +290,25 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static string[]? GetInputAnchorNames(this IEffectProvider provider)
         {
             return provider.InFields is { Count: > 1 } ? provider.InFields.Keys.ToArray() : null;
+        }
+
+        /// <summary>
+        /// Write one anchor binding by its anchor key (e.g. <c>__Input__</c> or a multi-input anchor key).
+        /// Assigns the whole dictionary so the property setter captures it.
+        /// </summary>
+        public static void SetInputAnchorValue(this IEffectProvider provider, string anchorKey, Guid id)
+        {
+            var state = provider.AnchorsBindingState ?? new Dictionary<string, Guid>();
+            state[anchorKey] = id;
+            provider.AnchorsBindingState = state;
+        }
+
+        /// <summary>
+        /// Read one anchor binding by its anchor key; falls back to <see cref="IEffectProvider.NoConnectionGUID"/>.
+        /// </summary>
+        public static Guid GetInputAnchorValue(this IEffectProvider provider, string anchorKey)
+        {
+            return provider.AnchorsBindingState is { } s && s.TryGetValue(anchorKey, out var id) ? id : IEffectProvider.NoConnectionGUID;
         }
     }
 

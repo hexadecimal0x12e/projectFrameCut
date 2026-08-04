@@ -41,7 +41,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public string TypeName => "ClassicSpeedVarianceProvider";
         public string Name { get; set; } = "ClassicSpeedVarianceProvider";
         public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public Dictionary<string, object> Parameters { get; set; } = new();
 
         public float Ratio { get; set; } = 1f;

@@ -1,4 +1,4 @@
-﻿using LocalizedResources;
+using LocalizedResources;
 using Microsoft.Maui.Dispatching;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Platform;
@@ -492,6 +492,7 @@ public partial class HomePage : ContentPage
             LastChanged = DateTime.Now,
             LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion,
             LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
+            LastOpenAppName = MauiProgram.AssemblyName,
             PluginUsed = []
         };
 
@@ -590,6 +591,7 @@ public partial class HomePage : ContentPage
             LastChanged = DateTime.Now,
             LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion,
             LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
+            LastOpenAppName = MauiProgram.AssemblyName,
             PluginUsed = []
         };
 
@@ -843,8 +845,22 @@ public partial class HomePage : ContentPage
                     return;
                 }
             ok:
-                (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline, project);
-                ConcurrentDictionary<string, AssetItem> assetDict = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((AssetItem a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (AssetItem a) => a));
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    if (timeline.Clips.Any(c => c.EffectBundles?.Any() ?? false))
+                    {
+                        if (!await DisplayAlertAsync(Localized._Info, Localized.HomePage_GoDraft_OneWayUpdateWarn("- EffectBundle"), Localized._Confirm, Localized._Cancel))
+                        {
+                            return;
+                        }
+                    }
+                    if (timeline.Clips.Any(c => c.Effects is { Length: > 0 } && (c.Effects?.Any(d => d.IsVariableArgumentEffect) ?? false)))
+                    {
+                        await DisplayAlertAsync(Localized._Info, Localized.HomePage_GoDraft_DeprecatedFeatureWarn(IPluginBase.CurrentPluginAPIVersion + 1, "- BindableEffect"), Localized._Confirm);
+                    }
+                });
+                (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline, project, restoreFreeFields: true);
+                ConcurrentDictionary<string, AssetItem> assetDict = new(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}"));
                 Dictionary<string, AssetItem> notfounds = new();
                 foreach (var item in dict)
                 {
@@ -931,7 +947,6 @@ public partial class HomePage : ContentPage
                         }
                     });
                 }
-
                 if (!SettingsManager.IsSettingExists("Edit_PreferredPopupMode"))
                 {
                     SettingsManager.WriteSetting("Edit_PreferredPopupMode", "bottom");
@@ -1525,7 +1540,7 @@ public partial class HomePage : ContentPage
                 await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
                 return;
             }
-            (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(tml, project);
+            (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(tml, project, restoreFreeFields: true);
             var draftPage = new DraftPage(project ?? new ProjectJSONStructure(), dict, new(), trackCount, vmItem._projectPath, project?.ProjectName ?? "?", false);
             var draft = DraftImportAndExportHelper.ExportFromDraftPage(draftPage, true, false);
             var renderPage = new RenderPage(vmItem._projectPath, tml.Duration, project, draft);
@@ -1927,6 +1942,7 @@ public partial class HomePage : ContentPage
                 LastChanged = DateTime.Now,
                 LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion,
                 LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
+                LastOpenAppName = MauiProgram.AssemblyName,
                 PluginUsed = []
             };
 

@@ -207,39 +207,9 @@ namespace projectFrameCut.Render.Effect
 
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
         public string OutputAnchorName => "Mask";
-    }
-
-    public class SubjectMattingMaskGeneratorFactory
-    {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "SubjectMattingMaskGenerator";
-        public EffectTarget Target => EffectTarget.Video;
-        public List<string> ParametersNeeded => SubjectMattingMaskGenerator.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => SubjectMattingMaskGenerator.ParametersType;
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.NotSpecified };
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
-        {
-            return Build(SupportsImplementTypes[0], parameters);
-        }
-
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            if (!SupportsImplementTypes.Contains(implementType))
-            {
-                throw new ArgumentException($"ImplementType {implementType} is not supported.", nameof(implementType));
-            }
-
-            if (parameters != null)
-            {
-                return SubjectMattingMaskGenerator.FromParametersDictionary(parameters);
-            }
-            return new SubjectMattingMaskGenerator();
-        }
     }
 
     /// <summary>
@@ -250,7 +220,6 @@ namespace projectFrameCut.Render.Effect
         public SubjectMattingMaskGeneratorProvider()
         {
             Name = "Subject Matting";
-            Parameters = new Dictionary<string, object>();
         }
 
         public override string TypeName => "SubjectMattingMaskGenerator";

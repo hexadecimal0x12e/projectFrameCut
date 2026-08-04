@@ -3,7 +3,6 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
 
 namespace projectFrameCut.Render.Effect
@@ -14,10 +13,10 @@ namespace projectFrameCut.Render.Effect
     /// The property-panel UI is provided separately by the App-layer <c>EffectProviderUI</c> wrappers.
     /// </summary>
     /// <remarks>
-    /// The instance state is driven by <see cref="Parameters"/> / <see cref="Fields"/> / <see cref="AnchorsBindingState"/>.
+    /// The instance state is driven by <see cref="Fields"/> / <see cref="AnchorsBindingState"/>.
     /// Subclasses implement <see cref="BuildEffects"/> to create the final effect(s); the stateless factory
-    /// members (<see cref="Build(EffectImplementType, Dictionary{string, object})"/> /
-    /// <see cref="BuildWithDefaultType"/>) and the stateful <see cref="Build()"/> all route into it.
+    /// members (<see cref="RestoreInstance(EffectImplementType, Dictionary{string, object})"/> /
+    /// <see cref="RestoreInstanceWithDefaultType"/>) and the stateful <see cref="Build()"/> all route into it.
     /// </remarks>
     public abstract class EffectProviderBase : IEffectProvider
     {
@@ -40,9 +39,15 @@ namespace projectFrameCut.Render.Effect
         /// </summary>
         public const string IsContinuousEffectParameterKey = IEffectProvider.IsContinuousEffectParameterKey;
 
+        /// <summary>
+        /// Internal storage for field values.
+        /// Keyed by field Id.
+        /// </summary>
+        private Dictionary<string, object> _fieldValues = new();
+
         protected EffectProviderBase()
         {
-            Parameters = new Dictionary<string, object>();
+            MetaData = new Dictionary<string, object>();
         }
 
         #region Identity (IEffectProvider)
@@ -74,33 +79,16 @@ namespace projectFrameCut.Render.Effect
         /// <summary>
         /// Define the input fields (anchors) of the effect. Defaults to a single IPicture input.
         /// </summary>
-        protected virtual IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields()
-        {
-            return new Dictionary<string, EffectArgumentFieldDescriptor>
+        protected virtual IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() 
+            => new Dictionary<string, EffectArgumentFieldDescriptor>
             {
-                { PrimaryInputAnchorKey, DefaultField(PrimaryInputAnchorKey) }
+                { PrimaryInputAnchorKey, Field(PrimaryInputAnchorKey, EffectArgumentFieldType.IPicture, "", remarks: "The primary input for the effect to process. This is a mandatory input.") }
             };
-        }
 
         /// <summary>
         /// Define the output field (anchor) of the effect. Defaults to an IPicture output.
         /// </summary>
-        protected virtual EffectArgumentFieldDescriptor DefineOutField()
-        {
-            return DefaultField(OutputAnchorKey);
-        }
-
-        private EffectArgumentFieldDescriptor DefaultField(string id)
-        {
-            return new EffectArgumentFieldDescriptor
-            {
-                Id = id,
-                TypeName = "IPicture",
-                FromPlugin = FromPlugin,
-                FieldType = EffectArgumentFieldType.IPicture,
-                DefaultValue = string.Empty,
-            };
-        }
+        protected virtual EffectArgumentFieldDescriptor DefineOutField() => Field(OutputAnchorKey, EffectArgumentFieldType.IPicture, "", remarks: "The output of the effect. This is a mandatory output.");
 
         /// <summary>
         /// A compact helper for subclasses to declare a settable argument field.
@@ -143,28 +131,33 @@ namespace projectFrameCut.Render.Effect
 
         /// <summary>
         /// The single source of truth of the anchor bindings.
-        /// Only the reserved <c>__Input__</c> / <c>__Output__</c> keys are written back on set.
+        /// Kept as a live backing dictionary so arbitrary anchor keys (e.g. multi-input anchors)
+        /// persist. Read via the <see cref="EffectProviderAnchorExtensions"/> helpers.
         /// </summary>
+        private readonly Dictionary<string, Guid> _anchors = new()
+        {
+            { PrimaryInputAnchorKey, IEffectProvider.InputAnchorGUID },
+            { OutputAnchorKey, IEffectProvider.OutputAnchorGUID },
+        };
+
         public Dictionary<string, Guid> AnchorsBindingState
         {
-            get => new()
-            {
-                { PrimaryInputAnchorKey, _inputId },
-                { OutputAnchorKey, _outputId }
-            };
+            get => _anchors;
             set
             {
                 if (value is null) return;
-                if (value.TryGetValue(PrimaryInputAnchorKey, out var inputId)) _inputId = inputId;
-                if (value.TryGetValue(OutputAnchorKey, out var outputId)) _outputId = outputId;
+                _anchors.Clear();
+                foreach (var kv in value) _anchors[kv.Key] = kv.Value;
+                if (!_anchors.ContainsKey(PrimaryInputAnchorKey)) _anchors[PrimaryInputAnchorKey] = IEffectProvider.InputAnchorGUID;
+                if (!_anchors.ContainsKey(OutputAnchorKey)) _anchors[OutputAnchorKey] = IEffectProvider.OutputAnchorGUID;
             }
         }
 
         /// <summary>
-        /// The current settable fields, materialized from <see cref="DefineFields"/> and <see cref="Parameters"/>.
-        /// A field bound to a value provider (via the <c>__Binding_{id}</c> reserved parameter key) is returned
+        /// The current settable fields, materialized from <see cref="DefineFields"/> and <see cref="_fieldValues"/>.
+        /// A field bound to a value provider (via the <c>__Binding_{id}</c> reserved key) is returned
         /// as a <see cref="DynamicEffectParamField"/>; otherwise a <see cref="StaticEffectArgumentField"/> is returned.
-        /// The setter merges the given field values back into <see cref="Parameters"/>.
+        /// The setter merges the given field values back into <see cref="_fieldValues"/>.
         /// </summary>
         public Dictionary<string, IEffectArgumentField> Fields
         {
@@ -173,16 +166,24 @@ namespace projectFrameCut.Render.Effect
                 var result = new Dictionary<string, IEffectArgumentField>();
                 foreach (var desc in DefineFields())
                 {
-                    object value = Parameters.TryGetValue(desc.Id, out var raw) && raw is not null
+                    object value = _fieldValues.TryGetValue(desc.Id, out var raw) && raw is not null
                         ? raw
                         : ParseDefault(desc);
-                    if (DynamicParam.IsBound(Parameters, desc.Id))
+                    var bindingKey = BoundParameterKey(desc.Id);
+                    if (_fieldValues.TryGetValue(bindingKey, out var bsRaw) && bsRaw is not null)
                     {
+                        // 内联的值提供器效果：原样返回它作为字段，而不是重新包装成从 context 读值的动态字段。
+                        if (bsRaw is IValueProviderEffect injected)
+                        {
+                            result[desc.Id] = injected;
+                            continue;
+                        }
+                        var boundSourceId = bsRaw as string ?? bsRaw?.ToString();
                         result[desc.Id] = new DynamicEffectParamField
                         {
                             Id = desc.Id,
                             FieldType = desc.FieldType,
-                            BoundProviderId = DynamicParam.GetBoundSource(Parameters, desc.Id),
+                            BoundProviderId = boundSourceId,
                             StaticFallbackValue = value,
                             DefaultValue = desc.DefaultValue,
                             MinValue = desc.MinValue,
@@ -214,21 +215,32 @@ namespace projectFrameCut.Render.Effect
                 foreach (var kvp in value)
                 {
                     if (kvp.Value is null) continue;
-                    Parameters[kvp.Key] = kvp.Value is StaticEffectArgumentField sf
-                        ? sf.Value
-                        : kvp.Value.GetGetter().Value;
+                    var bindingKey = BoundParameterKey(kvp.Key);
+                    if (kvp.Value is DynamicEffectParamField df && df.BoundProviderId is { } boundId)
+                    {
+                        _fieldValues[bindingKey] = boundId;
+                        _fieldValues[kvp.Key] = df.StaticFallbackValue; // null → getter 走 ParseDefault
+                    }
+                    else if (kvp.Value is IValueProviderEffect vpe)
+                    {
+                        // 内联的值提供器效果：作为绑定源原样存储，BuildDynamicParameters 会直接使用它的 getter。
+                        _fieldValues[bindingKey] = vpe;
+                        _fieldValues.Remove(kvp.Key);
+                    }
+                    else
+                    {
+                        _fieldValues.Remove(bindingKey);                // 静态写入 = 解除绑定
+                        _fieldValues[kvp.Key] = kvp.Value is StaticEffectArgumentField sf ? sf.Value : kvp.Value.GetGetter()();
+                    }
                 }
             }
         }
 
-        public Dictionary<string, object> Parameters { get; set; }
+        public Dictionary<string, object> MetaData { get; set; }
 
         #endregion
 
         #region Anchor synchronization
-
-        private Guid _inputId = IEffectProvider.InputAnchorGUID;
-        private Guid _outputId = IEffectProvider.OutputAnchorGUID;
 
         #endregion
 
@@ -252,9 +264,10 @@ namespace projectFrameCut.Render.Effect
         /// <summary>
         /// Build the specified effect implementation type (stateless factory, single effect).
         /// </summary>
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
+        public IEffect RestoreInstance(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
-            var effects = BuildEffects(implementType, NormalizedParameters(parameters));
+            var p = parameters ?? BuildDynamicParameters();
+            var effects = BuildEffects(implementType, p);
             if (effects is null || effects.Length == 0)
             {
                 throw new InvalidOperationException($"EffectProvider '{TypeName}' returned no effects from BuildEffects.");
@@ -265,16 +278,16 @@ namespace projectFrameCut.Render.Effect
         /// <summary>
         /// Build an effect with the default implementation type (stateless factory).
         /// </summary>
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
+        public IEffect RestoreInstanceWithDefaultType(Dictionary<string, object>? parameters = null)
         {
-            return Build(DefaultImplementType, parameters);
+            return RestoreInstance(DefaultImplementType, parameters);
         }
 
         /// <summary>
         /// Create a fresh effect instance of this provider's default implementation type.
         /// This is the "blank effect" entry point used by <see cref="EffectProvider"/>.
         /// </summary>
-        public virtual IEffect CreateNewEffect() => BuildWithDefaultType(null);
+        public virtual IEffect CreateNewEffect() => RestoreInstanceWithDefaultType(null);
 
         /// <summary>
         /// A factory delegate that creates a new effect instance via <see cref="CreateNewEffect"/>.
@@ -291,6 +304,14 @@ namespace projectFrameCut.Render.Effect
         /// </summary>
         public static string BoundParameterKey(string fieldId) => DynamicParam.BindingPrefix + fieldId;
 
+        /// <summary>
+        /// Set a field value in the internal storage. Used by subclasses to initialize default values.
+        /// </summary>
+        protected void SetField(string fieldId, object value)
+        {
+            _fieldValues[fieldId] = value;
+        }
+
         #endregion
 
         #region Build pipeline
@@ -305,75 +326,76 @@ namespace projectFrameCut.Render.Effect
 
         /// <summary>
         /// Stateful build: resolves the <see cref="ImplementTypeParameterKey"/> from the current
-        /// <see cref="Parameters"/> and creates the effect(s). Returns the effect stack in render order.
+        /// <see cref="_fieldValues"/> and creates the effect(s). Returns the effect stack in render order.
         /// </summary>
         public IEffect[] Build()
         {
             var imp = ResolveImplementType(SupportedImplementTypes(), DefaultImplementType);
-            var p = NormalizedParameters();
+            var p = BuildDynamicParameters();
             return BuildEffects(imp, p);
         }
 
         /// <summary>
-        /// Reads and removes the <see cref="ImplementTypeParameterKey"/> from <see cref="Parameters"/>.
+        /// Build the parameter dictionary for the effect factory.
+        /// For each field, if <see cref="IEffectArgumentField.IsDynamicAtRenderTime"/> is true,
+        /// the value is a <see cref="Func{T}"/> (the getter closure); otherwise it is the evaluated static value.
+        /// </summary>
+        protected Dictionary<string, object> BuildDynamicParameters()
+        {
+            var result = new Dictionary<string, object>();
+            foreach (var desc in DefineFields())
+            {
+                if (desc.FieldType.HasFlag(EffectArgumentFieldType.IPicture)) continue;
+
+                var bindingKey = BoundParameterKey(desc.Id);
+                if (_fieldValues.TryGetValue(bindingKey, out var bsRaw) && bsRaw is not null)
+                {
+                    // 内联的值提供器效果：直接使用它的 getter，不再经 ValueProviderFrameContext。
+                    if (bsRaw is IValueProviderEffect inline)
+                    {
+                        result[desc.Id] = inline.GetGetter();
+                        continue;
+                    }
+                    var boundSourceId = bsRaw as string ?? bsRaw?.ToString();
+                    var field = new DynamicEffectParamField
+                    {
+                        Id = desc.Id,
+                        FieldType = desc.FieldType,
+                        BoundProviderId = boundSourceId,
+                        StaticFallbackValue = _fieldValues.TryGetValue(desc.Id, out var raw) && raw is not null ? raw : ParseDefault(desc),
+                    };
+                    result[desc.Id] = field.GetGetter(); // Func<object> — dynamic
+                }
+                else
+                {
+                    var value = _fieldValues.TryGetValue(desc.Id, out var raw) && raw is not null
+                        ? raw
+                        : ParseDefault(desc);
+                    result[desc.Id] = value; // static bare value
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Reads and removes the <see cref="ImplementTypeParameterKey"/> from <see cref="MetaData"/>.
         /// </summary>
         protected EffectImplementType ResolveImplementType(IReadOnlyList<EffectImplementType> supported, EffectImplementType defaultType = EffectImplementType.NotSpecified)
         {
             EffectImplementType requested = defaultType;
-            if (Parameters.TryGetValue(ImplementTypeParameterKey, out var raw) && raw is not null)
+            if (MetaData.TryGetValue(ImplementTypeParameterKey, out var raw) && raw is not null)
             {
                 if (raw is EffectImplementType e) requested = e;
                 else if (raw is int i && Enum.IsDefined(typeof(EffectImplementType), i)) requested = (EffectImplementType)i;
                 else if (raw is string s && Enum.TryParse<EffectImplementType>(s, out var parsed)) requested = parsed;
                 else if (raw is JsonElement je && je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var ji) && Enum.IsDefined(typeof(EffectImplementType), ji)) requested = (EffectImplementType)ji;
             }
-            Parameters.Remove(ImplementTypeParameterKey);
+            MetaData.Remove(ImplementTypeParameterKey);
             if (requested != EffectImplementType.NotSpecified && !supported.Contains(requested))
             {
                 return defaultType;
             }
             return requested;
-        }
-
-        /// <summary>
-        /// Filters out the <c>__DraftEffectBindingView*</c> keys and strips the reserved <c>__Binding_*</c>
-        /// keys and raw <see cref="Func{T}"/>/<see cref="Lazy{T}"/> dynamic values, then converts
-        /// <see cref="Parameters"/> to an object dictionary typed by <see cref="BuildParametersType"/>.
-        /// The stripped entries are only consumed by the dynamic-parameter machinery
-        /// (<see cref="DynamicParam.BuildProviders"/>) and must never leak into effect factories.
-        /// </summary>
-        protected Dictionary<string, object> NormalizedParameters()
-        {
-            return NormalizedParameters(Parameters);
-        }
-
-        /// <summary>
-        /// Same as <see cref="NormalizedParameters()"/> but against an explicit source dictionary,
-        /// used by the stateless factory members.
-        /// </summary>
-        protected Dictionary<string, object> NormalizedParameters(Dictionary<string, object>? source)
-        {
-            var filtered = (source ?? Parameters)
-                .Where(c => !c.Key.StartsWith("__DraftEffectBindingView"))
-                .ToDictionary(c => c.Key, c => c.Value);
-            return EffectArgsHelper.ConvertElementDictToObjectDict(DynamicParam.StripBindings(filtered), BuildParametersType());
-        }
-
-        /// <summary>
-        /// Maps the declared argument fields to their parameter type names, keyed by field id.
-        /// Used by <see cref="NormalizedParameters"/> to type the serialized parameter values.
-        /// </summary>
-        protected virtual Dictionary<string, string> BuildParametersType()
-        {
-            var result = new Dictionary<string, string>();
-            foreach (var desc in DefineFields())
-            {
-                if (desc.FieldType.HasFlag(EffectArgumentFieldType.IPicture)) continue;
-                result[desc.Id] = EffectProviderContractMapping.FieldTypeToParamType(desc.FieldType);
-            }
-            // Reserved key consumed by the continuous-Crop branch; registered so normalization tolerates it.
-            result[IsContinuousEffectParameterKey] = EffectArgsHelper.ArgTypeBool;
-            return result;
         }
 
         private static object ParseDefault(EffectArgumentFieldDescriptor desc)

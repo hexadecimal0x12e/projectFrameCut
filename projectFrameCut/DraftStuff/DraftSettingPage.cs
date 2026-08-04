@@ -1,4 +1,4 @@
-﻿using LocalizedResources;
+using LocalizedResources;
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
@@ -256,6 +256,7 @@ public class DraftSettingPage
             {
                 info.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
                 info.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
+                info.LastOpenAppName = MauiProgram.AssemblyName;
                 await SaveStandaloneProjectInfo(info);
             }
         })
@@ -1480,7 +1481,7 @@ public class DraftSettingPage
 
     private static string BuildEffectBundleSummary(EffectBundleJSONStructure bundle)
     {
-        int parameterCount = bundle.Parameters?.Count ?? 0;
+        int parameterCount = bundle.Fields?.Count ?? 0;
         int multiInputCount = bundle.BindedInputIds?.Length ?? 0;
         return $"Name: {bundle.Name} | ClipType: {bundle.BundleTypeName} | Id: {bundle.Id}\n"
              + $"Input: {bundle.BindedInputId} | Output: {bundle.BindedOutputId} | MultiInput: {multiInputCount} | Params: {parameterCount}";
@@ -1491,7 +1492,7 @@ public class DraftSettingPage
         int parameterCount = effect.Parameters?.Count ?? 0;
         string bindingId = string.IsNullOrWhiteSpace(effect.BindedEffectGroupID) ? "(none)" : effect.BindedEffectGroupID;
         return $"Name: {effect.Name} | ClipType: {effect.TypeName} | Index: {effect.Index} | Enabled: {effect.Enabled}\n"
-             + $"Implement: {effect.ImplementType} | Params: {parameterCount} | BindedEffectGroupID: {bindingId}";
+             + $"Implement: {effect.ImplementType} | Params: {parameterCount} | BindedEffectProvidingSystemID: {bindingId}";
     }
 
     private View BuildStandaloneAssetEditorCard(AssetItem asset, DraftStructureJSON draft, List<ClipDraftDTO> clips, List<AssetItem> assets, string projectRoot)
@@ -1948,7 +1949,7 @@ public class DraftSettingPage
             return;
         }
 
-        (var clips, _) = DraftImportAndExportHelper.ImportFromJSON(draft, parent.ProjectInfo);
+        (var clips, _) = DraftImportAndExportHelper.ImportFromJSON(draft, parent.ProjectInfo, restoreFreeFields: true);
         parent.Clips = new System.Collections.Concurrent.ConcurrentDictionary<Guid, ClipElementUI>(clips);
         parent.Assets = CreateAssetDictionary(assets);
 

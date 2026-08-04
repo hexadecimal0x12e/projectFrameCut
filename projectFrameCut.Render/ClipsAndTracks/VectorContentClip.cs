@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Render.Effect;
@@ -51,9 +51,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public bool ExtendToWholeDraft { get; set; }
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
 
         [JsonIgnore]
         public IEffect[]? EffectsInstances { get; set; }
+        [JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
 
         public string? FilePath { get; set; }
         public bool NeedFilePath => true;
@@ -331,7 +334,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IMixture? MixtureInstance { get; set; }
         public bool ExtendToWholeDraft { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
         public string? FilePath { get; set; }
 
         public bool NeedFilePath => true;

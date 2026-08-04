@@ -26,8 +26,6 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// </summary>
         public string FromPlugin { get; }
 
-        public Dictionary<string, object> Parameters { get; }
-
         /// <summary>
         /// Get the descriptors of all keyframe steps, ordered by progress.
         /// </summary>

@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Effect;
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
@@ -167,6 +167,11 @@ namespace projectFrameCut.Render.Rendering
                     ValueProviderFrameContext.BeginFrame(frameIndex, clipProgress);
                     foreach (var effect in effectsList)
                     {
+                        if (effect.TypeOfEffect == EffectType.NonIPictureOutputValueProvider && effect is IValueProviderEffect vp)
+                        {
+                            ValueProviderFrameContext.Set(effect.BindedEffectProvidingSystemID ?? effect.Id, vp.GetGetter()());
+                            continue;
+                        }
                         if (effect is IContinuousEffect c)
                         {
                             int scopedStart = c.IsScoped ? c.StartPoint : (int)srcFrame.ParentClip.StartFrame;
@@ -178,12 +183,6 @@ namespace projectFrameCut.Render.Rendering
                         else if (effect is INormalEffect n)
                         {
                             effected = n.Render(effected, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
-                        }
-                        else if (effect is IValueProviderEffect vp)
-                        {
-                            // New-system value provider: write the current frame value keyed by its
-                            // effect Id; consumers' bound dynamic parameters read it back.
-                            ValueProviderFrameContext.Set(vp.Id, vp.GenerateValue(frameIndex, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight));
                         }
                         else if (effect is IBindableArgumentEffect b)
                         {

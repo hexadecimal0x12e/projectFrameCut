@@ -28,9 +28,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public string FromPlugin => Inner.FromPlugin;
 
-        public Dictionary<string, object> Parameters => Inner.Parameters;
-
-        public override PropertyPanelBuilder CreateUI()
+        public override PropertyPanelBuilder CreateUI(IEffectProvider _)
         {
             var panel = new PropertyPanelBuilder();
             panel.AddText(new SingleLineLabel(
@@ -289,7 +287,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private List<ProgressData> GetProgressList()
         {
-            if (!Inner.Parameters.TryGetValue(ProgressListKey, out var raw))
+            var raw = EffectProviderHelper.GetFieldRawValue(Inner.Fields, ProgressListKey);
+            if (raw is null)
                 return new List<ProgressData>();
 
             return ParseProgressList(raw);
@@ -297,7 +296,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private void SaveProgressList(List<ProgressData> list)
         {
-            Inner.Parameters[ProgressListKey] = JsonSerializer.Serialize(list);
+            EffectProviderHelper.SetFieldValue(Inner.Fields, ProgressListKey, JsonSerializer.Serialize(list), EffectArgumentFieldType.String);
         }
 
         private static List<ProgressData> ParseProgressList(object? value)

@@ -1,5 +1,4 @@
 ﻿using Microsoft.Maui.Graphics;
-using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
@@ -16,6 +15,7 @@ using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Drawing.Text.Typology;
 using projectFrameCut.Render.ClipsAndTracks.Text;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using TextAlignment = projectFrameCut.Drawing.Text.Entry.TextAlignment;
 
 namespace projectFrameCut.ApplicationPluginBase.Text
@@ -115,12 +115,12 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
         }
 
-        public Dictionary<string, EffectBundleSettableFields> SettableFields
+        public Dictionary<string, EffectArgumentFieldDescriptor> SettableFields
         {
             get
             {
                 var fontNames = TextStyleProviderSettableFieldHelper.GetAvailableFontNames();
-                return new Dictionary<string, EffectBundleSettableFields>
+                return new Dictionary<string, EffectArgumentFieldDescriptor>
                 {
                     [TextKey] = TextStyleProviderSettableFieldHelper.StringField(TextKey, "Text", "Text content to annotate with pronunciation", DefaultText),
                     [FontKey] = TextStyleProviderSettableFieldHelper.EnumField(FontKey, "Font Family", "Font used for the text and pronunciation", "HarmonyOS Sans SC Medium", fontNames),
@@ -139,7 +139,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
         }
 
-        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        public bool HandleSettableFieldsChange(EffectArgumentFieldDescriptor field, object value, out string feedback)
         {
             if (field is null || !SettableFields.TryGetValue(field.Id, out var canonicalField))
             {

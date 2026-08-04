@@ -35,7 +35,7 @@ namespace projectFrameCut.Services
             }
 
             // Preserve BindedEffectGroupID
-            newEffect.BindedEffectGroupID = effect.BindedEffectGroupID;
+            newEffect.BindedEffectProvidingSystemID = effect.BindedEffectProvidingSystemID;
 
             return newEffect;
         }

@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
@@ -9,7 +9,7 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ProgressPlacer : IContinuousClipPositionProvider, IDynamicArgumentsEffect
+    public class ProgressPlacer : IContinuousClipPositionProvider
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
@@ -23,16 +23,11 @@ namespace projectFrameCut.Render.Effect
 
         // ProgressPlacer's only parameter is the composite ProgressList; it cannot be expressed as a
         // single Func<T> dynamic value, so the interface is implemented for API uniformity only.
-        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "ProgressList", JsonSerializer.Serialize(ProgressList) }
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public bool Enabled { get; set; } = true;
         public bool IsReorderable => true;
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
         public List<ProgressData> ProgressList { get; set; } = new List<ProgressData>();
 
@@ -206,40 +201,6 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class ProgressPlacerFactory
-    {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-
-        public string TypeName => "ProgressPlacer";
-
-        public EffectTarget Target => EffectTarget.Video;
-
-        public List<string> ParametersNeeded { get; } = new List<string>();
-
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
-        {
-            { "ProgressList", "string" }
-        };
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.NotSpecified };
-
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            return BuildWithDefaultType(parameters);
-        }
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
-        {
-            parameters ??= new Dictionary<string, object>();
-            if (!parameters.ContainsKey("ProgressList"))
-            {
-                parameters["ProgressList"] = "[]";
-            }
-
-            return new ProgressPlacer().WithParameters(parameters);
-        }
-    }
-
     public record struct ProgressData(double Index, ClipPositionTuple Position);
 
 
@@ -252,10 +213,7 @@ namespace projectFrameCut.Render.Effect
         public ProgressPlacerProvider()
         {
             Name = "ProgressPlacer";
-            Parameters = new Dictionary<string, object>
-            {
-                { "ProgressList", "[]" }
-            };
+            SetField("ProgressList", "[]");
         }
 
         public override string TypeName => "ProgressPlacer";
@@ -276,7 +234,12 @@ namespace projectFrameCut.Render.Effect
 
         protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
-            return [new ProgressPlacerFactory().Build(implementType, parameters)];
+            if (!parameters.ContainsKey("ProgressList"))
+            {
+                parameters["ProgressList"] = "[]";
+            }
+
+            return [new ProgressPlacer().WithParameters(parameters)];
         }
     }
 }

@@ -68,9 +68,9 @@ using Windows.Storage;
 using Foundation;
 using UIKit;
 using MobileCoreServices;
+#if IOS
 using projectFrameCut.Render.HwAccelEngine.Platforms.iOS;
-
-
+#endif
 #endif
 
 #if ANDROID
@@ -667,7 +667,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         });
         ComputerHelper.Init();
-#elif iDevices
+#elif IOS
         MetalComputerHelper.RegisterComputerBridge();
 #elif WINDOWS
         // AcceleratorsManager was initialized during plugin load.
@@ -3481,28 +3481,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,
                 e => PluginManager.CreateEffect(e, ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight));
 
-            if (dto.EffectBundles != null)
-            {
-                var providers = new Dictionary<Guid, IEffectProvider>();
-                foreach (var bundle in dto.EffectBundles)
-                {
-                    if (!EffectServices.GetAvailableEffectProviders().TryGetValue(bundle.BundleTypeName, out var factory))
-                    {
-                        continue;
-                    }
-
-                    var instance = factory();
-                    instance.Id = bundle.Id;
-                    instance.Name = bundle.Name;
-                    instance.Parameters = bundle.Parameters ?? new Dictionary<string, object>();
-                    instance.SetInputAnchor(bundle.BindedInputId);
-                    instance.SetOutputAnchor(bundle.BindedOutputId);
-                    instance.SetInputAnchors(bundle.BindedInputIds ?? []);
-                    providers[instance.Id] = instance;
-                }
-
-                pasted.EffectProviders = providers;
-            }
+            pasted.EffectProviders = EffectBindingHelper.MigrateToEffectProviders(dto.EffectProviders, dto.EffectBundles);
 
             pasted.ApplySpeedRatio();
             pasted.ApplyClipColor();
@@ -8705,6 +8684,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             ProjectInfo.LastChanged = DateTime.Now;
             ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
             ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
+            ProjectInfo.LastOpenAppName = MauiProgram.AssemblyName;
             ProjectInfo.PluginUsed =
                 draft.Clips
                            .Select(c => c.FromPlugin)
@@ -8992,7 +8972,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 SetStateOK(Localized.DraftPage_RedoAndUndo_Failed);
                 return;
             }
-            (var clips, var tracks) = DraftImportAndExportHelper.ImportFromJSON(draftJson, ProjectInfo);
+            (var clips, var tracks) = DraftImportAndExportHelper.ImportFromJSON(draftJson, ProjectInfo, restoreFreeFields: true);
             Clips = new ConcurrentDictionary<Guid, ClipElementUI>(clips);
             Assets = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a));
 

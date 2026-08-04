@@ -28,9 +28,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public string FromPlugin => Inner.FromPlugin;
 
-        public Dictionary<string, object> Parameters => Inner.Parameters;
-
-        public override PropertyPanelBuilder CreateUI()
+        public override PropertyPanelBuilder CreateUI(IEffectProvider _)
         {
             var panel = new PropertyPanelBuilder();
             panel.AddText(new SingleLineLabel(
@@ -270,11 +268,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 ? 0d
                 : Math.Min(1d, list.Max(item => item.Index) + 0.1d);
 
-            int defaultX = EffectProviderHelper.GetInt(Inner.Parameters, "StartX", 0);
-            int defaultY = EffectProviderHelper.GetInt(Inner.Parameters, "StartY", 0);
-            int defaultW = Math.Max(1, EffectProviderHelper.GetInt(Inner.Parameters, "Width", 1280));
-            int defaultH = Math.Max(1, EffectProviderHelper.GetInt(Inner.Parameters, "Height", 720));
-            float defaultAngle = EffectProviderHelper.GetFloat(Inner.Parameters, "Angle", 0f);
+            int defaultX = EffectProviderHelper.GetFieldInt(Inner.Fields, "StartX", 0);
+            int defaultY = EffectProviderHelper.GetFieldInt(Inner.Fields, "StartY", 0);
+            int defaultW = Math.Max(1, EffectProviderHelper.GetFieldInt(Inner.Fields, "Width", 1280));
+            int defaultH = Math.Max(1, EffectProviderHelper.GetFieldInt(Inner.Fields, "Height", 720));
+            float defaultAngle = EffectProviderHelper.GetFieldFloat(Inner.Fields, "Angle", 0f);
 
             list.Add(new CropData(nextProgress, defaultX, defaultY, defaultW, defaultH, defaultAngle));
             list.Sort((a, b) => a.Index.CompareTo(b.Index));
@@ -321,7 +319,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private List<CropData> GetCropList()
         {
-            if (!Inner.Parameters.TryGetValue(CropListKey, out var raw) || raw is null)
+            var raw = EffectProviderHelper.GetFieldRawValue(Inner.Fields, CropListKey);
+            if (raw is null)
                 return new List<CropData>();
 
             if (raw is List<CropData> list)
@@ -345,7 +344,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private void SaveCropList(List<CropData> list)
         {
-            Inner.Parameters[CropListKey] = JsonSerializer.Serialize(list);
+            EffectProviderHelper.SetFieldValue(Inner.Fields, CropListKey, JsonSerializer.Serialize(list), EffectArgumentFieldType.String);
         }
 
         private static bool TryParseEntryInt(object? value, out int result)

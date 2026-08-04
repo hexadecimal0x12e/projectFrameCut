@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Effect;
+using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ColorAdjustmentEffect_IPicture : IColorAdjustEffect, IDynamicArgumentsEffect
+    public class ColorAdjustmentEffect_IPicture : IColorAdjustEffect
     {
         public bool Enabled { get; set; } = true;
         public string Name { get; set; } = "ColorAdjustment";
@@ -26,8 +26,6 @@ namespace projectFrameCut.Render.Effect
         public float Grayscale { get; init; } = 0f;
         public float Opacity { get; init; } = 1f;
 
-        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
-
         /// <summary>
         /// A snapshot of the (possibly dynamically resolved) adjustment values for one process call.
         /// </summary>
@@ -35,19 +33,7 @@ namespace projectFrameCut.Render.Effect
             float Brightness, float Contrast, float Saturation, float Hue, float Gamma,
             float Vibrance, float Temperature, bool Invert, float Grayscale, float Opacity);
 
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            {"Brightness", Brightness},
-            {"Contrast", Contrast},
-            {"Saturation", Saturation},
-            {"Hue", Hue},
-            {"Gamma", Gamma},
-            {"Vibrance", Vibrance},
-            {"Temperature", Temperature},
-            {"Invert", Invert},
-            {"Grayscale", Grayscale},
-            {"Opacity", Opacity}
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -67,7 +53,7 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string TypeName => "ColorAdjustment";
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
         bool IEffect.IsReorderable => false;
 
@@ -79,20 +65,22 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
 
-            return new ColorAdjustmentEffect_IPicture
+            var effect = new ColorAdjustmentEffect_IPicture
             {
-                Brightness = Convert.ToSingle(parameters["Brightness"]),
-                Contrast = Convert.ToSingle(parameters["Contrast"]),
-                Saturation = Convert.ToSingle(parameters["Saturation"]),
-                Hue = Convert.ToSingle(parameters["Hue"]),
-                Gamma = Convert.ToSingle(parameters["Gamma"]),
-                Vibrance = Convert.ToSingle(parameters["Vibrance"]),
-                Temperature = Convert.ToSingle(parameters["Temperature"]),
-                Invert = Convert.ToBoolean(parameters["Invert"]),
-                Grayscale = Convert.ToSingle(parameters["Grayscale"]),
-                Opacity = Convert.ToSingle(parameters["Opacity"]),
+                Brightness = DynamicParam.ToFloat(parameters.GetValueOrDefault("Brightness")),
+                Contrast = DynamicParam.ToFloat(parameters.GetValueOrDefault("Contrast")),
+                Saturation = DynamicParam.ToFloat(parameters.GetValueOrDefault("Saturation")),
+                Hue = DynamicParam.ToFloat(parameters.GetValueOrDefault("Hue")),
+                Gamma = DynamicParam.ToFloat(parameters.GetValueOrDefault("Gamma")),
+                Vibrance = DynamicParam.ToFloat(parameters.GetValueOrDefault("Vibrance")),
+                Temperature = DynamicParam.ToFloat(parameters.GetValueOrDefault("Temperature")),
+                Invert = DynamicParam.ToBool(parameters.GetValueOrDefault("Invert")),
+                Grayscale = DynamicParam.ToFloat(parameters.GetValueOrDefault("Grayscale")),
+                Opacity = DynamicParam.ToFloat(parameters.GetValueOrDefault("Opacity")),
                 ImplementType = implementType
             };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
@@ -100,16 +88,16 @@ namespace projectFrameCut.Render.Effect
         public IPicture Process(IPicture source, IComputer? computer)
         {
             var p = new AdjustmentParams(
-                DynamicParam.Resolve(DynamicProviders, "Brightness", Brightness),
-                DynamicParam.Resolve(DynamicProviders, "Contrast", Contrast),
-                DynamicParam.Resolve(DynamicProviders, "Saturation", Saturation),
-                DynamicParam.Resolve(DynamicProviders, "Hue", Hue),
-                DynamicParam.Resolve(DynamicProviders, "Gamma", Gamma),
-                DynamicParam.Resolve(DynamicProviders, "Vibrance", Vibrance),
-                DynamicParam.Resolve(DynamicProviders, "Temperature", Temperature),
-                DynamicParam.Resolve(DynamicProviders, "Invert", Invert),
-                DynamicParam.Resolve(DynamicProviders, "Grayscale", Grayscale),
-                DynamicParam.Resolve(DynamicProviders, "Opacity", Opacity));
+                DynamicParam.Resolve(Parameters.GetValueOrDefault("Brightness"), Brightness),
+                DynamicParam.Resolve(Parameters.GetValueOrDefault("Contrast"), Contrast),
+                DynamicParam.Resolve(Parameters.GetValueOrDefault("Saturation"), Saturation),
+                DynamicParam.Resolve(Parameters.GetValueOrDefault("Hue"), Hue),
+                DynamicParam.Resolve(Parameters.GetValueOrDefault("Gamma"), Gamma),
+                DynamicParam.Resolve(Parameters.GetValueOrDefault("Vibrance"), Vibrance),
+                DynamicParam.Resolve(Parameters.GetValueOrDefault("Temperature"), Temperature),
+                DynamicParam.Resolve(Parameters.GetValueOrDefault("Invert"), Invert),
+                DynamicParam.Resolve(Parameters.GetValueOrDefault("Grayscale"), Grayscale),
+                DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity));
             var sw = Stopwatch.StartNew();
             IPicture result = source switch
             {
@@ -551,7 +539,7 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class ColorAdjustmentEffect_HwAccel : IColorAdjustEffect, IDynamicArgumentsEffect
+    public class ColorAdjustmentEffect_HwAccel : IColorAdjustEffect
     {
         public string Name { get; set; } = "ColorAdjustment";
 
@@ -565,14 +553,7 @@ namespace projectFrameCut.Render.Effect
         public bool Invert { get; init; } = false;
         public float Grayscale { get; init; } = 0f;
         public float Opacity { get; init; } = 1f;
-        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "Brightness", Brightness }, { "Contrast", Contrast }, { "Saturation", Saturation },
-            { "Hue", Hue }, { "Gamma", Gamma }, { "Vibrance", Vibrance },
-            { "Temperature", Temperature }, { "Invert", Invert }, { "Grayscale", Grayscale }, { "Opacity", Opacity }
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string? NeedComputer => "ColorAdjustmentComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -591,7 +572,7 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string TypeName => "ColorAdjustment";
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
         bool IEffect.IsReorderable => false;
 
@@ -602,35 +583,37 @@ namespace projectFrameCut.Render.Effect
             {
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
-            return new ColorAdjustmentEffect_HwAccel
+            var effect = new ColorAdjustmentEffect_HwAccel
             {
-                Brightness = Convert.ToSingle(parameters["Brightness"]),
-                Contrast = Convert.ToSingle(parameters["Contrast"]),
-                Saturation = Convert.ToSingle(parameters["Saturation"]),
-                Hue = Convert.ToSingle(parameters["Hue"]),
-                Gamma = Convert.ToSingle(parameters["Gamma"]),
-                Vibrance = Convert.ToSingle(parameters["Vibrance"]),
-                Temperature = Convert.ToSingle(parameters["Temperature"]),
-                Invert = Convert.ToBoolean(parameters["Invert"]),
-                Grayscale = Convert.ToSingle(parameters["Grayscale"]),
-                Opacity = Convert.ToSingle(parameters["Opacity"])
+                Brightness = DynamicParam.ToFloat(parameters.GetValueOrDefault("Brightness")),
+                Contrast = DynamicParam.ToFloat(parameters.GetValueOrDefault("Contrast")),
+                Saturation = DynamicParam.ToFloat(parameters.GetValueOrDefault("Saturation")),
+                Hue = DynamicParam.ToFloat(parameters.GetValueOrDefault("Hue")),
+                Gamma = DynamicParam.ToFloat(parameters.GetValueOrDefault("Gamma")),
+                Vibrance = DynamicParam.ToFloat(parameters.GetValueOrDefault("Vibrance")),
+                Temperature = DynamicParam.ToFloat(parameters.GetValueOrDefault("Temperature")),
+                Invert = DynamicParam.ToBool(parameters.GetValueOrDefault("Invert")),
+                Grayscale = DynamicParam.ToFloat(parameters.GetValueOrDefault("Grayscale")),
+                Opacity = DynamicParam.ToFloat(parameters.GetValueOrDefault("Opacity"))
             };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Process(IPicture source, IComputer? computer)
         {
-            float brightness = DynamicParam.Resolve(DynamicProviders, "Brightness", Brightness);
-            float contrast = DynamicParam.Resolve(DynamicProviders, "Contrast", Contrast);
-            float saturation = DynamicParam.Resolve(DynamicProviders, "Saturation", Saturation);
-            float hue = DynamicParam.Resolve(DynamicProviders, "Hue", Hue);
-            float gamma = DynamicParam.Resolve(DynamicProviders, "Gamma", Gamma);
-            float vibrance = DynamicParam.Resolve(DynamicProviders, "Vibrance", Vibrance);
-            float temperature = DynamicParam.Resolve(DynamicProviders, "Temperature", Temperature);
-            bool invert = DynamicParam.Resolve(DynamicProviders, "Invert", Invert);
-            float grayscale = DynamicParam.Resolve(DynamicProviders, "Grayscale", Grayscale);
-            float opacity = DynamicParam.Resolve(DynamicProviders, "Opacity", Opacity);
+            float brightness = DynamicParam.Resolve(Parameters.GetValueOrDefault("Brightness"), Brightness);
+            float contrast = DynamicParam.Resolve(Parameters.GetValueOrDefault("Contrast"), Contrast);
+            float saturation = DynamicParam.Resolve(Parameters.GetValueOrDefault("Saturation"), Saturation);
+            float hue = DynamicParam.Resolve(Parameters.GetValueOrDefault("Hue"), Hue);
+            float gamma = DynamicParam.Resolve(Parameters.GetValueOrDefault("Gamma"), Gamma);
+            float vibrance = DynamicParam.Resolve(Parameters.GetValueOrDefault("Vibrance"), Vibrance);
+            float temperature = DynamicParam.Resolve(Parameters.GetValueOrDefault("Temperature"), Temperature);
+            bool invert = DynamicParam.Resolve(Parameters.GetValueOrDefault("Invert"), Invert);
+            float grayscale = DynamicParam.Resolve(Parameters.GetValueOrDefault("Grayscale"), Grayscale);
+            float opacity = DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity);
 
             bool allNoop =
                 Math.Abs(brightness - 1f) < float.Epsilon &&
@@ -714,64 +697,6 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class ColorAdjustmentEffectFactory
-    {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "ColorAdjustment";
-        public EffectTarget Target => EffectTarget.ColorAdjustment;
-        public List<string> ParametersNeeded { get; } = new List<string>
-        {
-            "Brightness", "Contrast", "Saturation", "Hue", "Gamma",
-            "Vibrance", "Temperature", "Invert", "Grayscale", "Opacity"
-        };
-
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
-        {
-            {"Brightness", "float"}, {"Contrast", "float"}, {"Saturation", "float"},
-            {"Hue", "float"}, {"Gamma", "float"}, {"Vibrance", "float"},
-            {"Temperature", "float"}, {"Invert", "bool"}, {"Grayscale", "float"}, {"Opacity", "float"}
-        };
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture, EffectImplementType.HwAcceleration };
-
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            if (implementType == EffectImplementType.NotSpecified)
-            {
-                return BuildWithDefaultType(parameters);
-            }
-            return implementType switch
-            {
-                EffectImplementType.IPicture => ColorAdjustmentEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
-                EffectImplementType.HwAcceleration => ColorAdjustmentEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>()),
-                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
-            };
-        }
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
-        {
-            parameters ??= new Dictionary<string, object>
-            {
-                { "Brightness", 1f }, { "Contrast", 1f }, { "Saturation", 1f },
-                { "Hue", 0f }, { "Gamma", 1f }, { "Vibrance", 0f },
-                { "Temperature", 0f }, { "Invert", false }, { "Grayscale", 0f }, { "Opacity", 1f }
-            };
-            if (!parameters.ContainsKey("Brightness")) parameters["Brightness"] = 1f;
-            if (!parameters.ContainsKey("Contrast")) parameters["Contrast"] = 1f;
-            if (!parameters.ContainsKey("Saturation")) parameters["Saturation"] = 1f;
-            if (!parameters.ContainsKey("Hue")) parameters["Hue"] = 0f;
-            if (!parameters.ContainsKey("Gamma")) parameters["Gamma"] = 1f;
-            if (!parameters.ContainsKey("Vibrance")) parameters["Vibrance"] = 0f;
-            if (!parameters.ContainsKey("Temperature")) parameters["Temperature"] = 0f;
-            if (!parameters.ContainsKey("Invert")) parameters["Invert"] = false;
-            if (!parameters.ContainsKey("Grayscale")) parameters["Grayscale"] = 0f;
-            if (!parameters.ContainsKey("Opacity")) parameters["Opacity"] = 1f;
-            return ColorAdjustmentEffect_IPicture.FromParametersDictionary(parameters);
-        }
-    }
-
-
-
     /// <summary>
     /// The Render-side provider of the ColorAdjustment effect.
     /// </summary>
@@ -780,19 +705,16 @@ namespace projectFrameCut.Render.Effect
         public ColorAdjustmentEffectProvider()
         {
             Name = "ColorAdjustment";
-            Parameters = new Dictionary<string, object>
-            {
-                { "Brightness", 1f },
-                { "Contrast", 1f },
-                { "Saturation", 1f },
-                { "Hue", 0f },
-                { "Gamma", 1f },
-                { "Vibrance", 0f },
-                { "Temperature", 0f },
-                { "Invert", false },
-                { "Grayscale", 0f },
-                { "Opacity", 1f }
-            };
+            SetField("Brightness", 1f);
+            SetField("Contrast", 1f);
+            SetField("Saturation", 1f);
+            SetField("Hue", 0f);
+            SetField("Gamma", 1f);
+            SetField("Vibrance", 0f);
+            SetField("Temperature", 0f);
+            SetField("Invert", false);
+            SetField("Grayscale", 0f);
+            SetField("Opacity", 1f);
         }
 
         public override string TypeName => "ColorAdjustment";
@@ -822,7 +744,26 @@ namespace projectFrameCut.Render.Effect
 
         protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
-            return [new ColorAdjustmentEffectFactory().Build(implementType, parameters)];
+            if (implementType == EffectImplementType.NotSpecified)
+            {
+                if (!parameters.ContainsKey("Brightness")) parameters["Brightness"] = 1f;
+                if (!parameters.ContainsKey("Contrast")) parameters["Contrast"] = 1f;
+                if (!parameters.ContainsKey("Saturation")) parameters["Saturation"] = 1f;
+                if (!parameters.ContainsKey("Hue")) parameters["Hue"] = 0f;
+                if (!parameters.ContainsKey("Gamma")) parameters["Gamma"] = 1f;
+                if (!parameters.ContainsKey("Vibrance")) parameters["Vibrance"] = 0f;
+                if (!parameters.ContainsKey("Temperature")) parameters["Temperature"] = 0f;
+                if (!parameters.ContainsKey("Invert")) parameters["Invert"] = false;
+                if (!parameters.ContainsKey("Grayscale")) parameters["Grayscale"] = 0f;
+                if (!parameters.ContainsKey("Opacity")) parameters["Opacity"] = 1f;
+                return [ColorAdjustmentEffect_IPicture.FromParametersDictionary(parameters)];
+            }
+            return implementType switch
+            {
+                EffectImplementType.IPicture => [ColorAdjustmentEffect_IPicture.FromParametersDictionary(parameters)],
+                EffectImplementType.HwAcceleration => [ColorAdjustmentEffect_HwAccel.FromParametersDictionary(parameters)],
+                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
+            };
         }
     }
 }

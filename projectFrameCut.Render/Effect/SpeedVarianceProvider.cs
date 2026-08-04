@@ -13,10 +13,7 @@ namespace projectFrameCut.Render.Effect
         public ClassicSpeedVarianceProviderEffectProvider()
         {
             Name = "Classic Speed";
-            Parameters = new Dictionary<string, object>
-            {
-                { "Ratio", 1f }
-            };
+            SetField("Ratio", 1f);
         }
 
         public override string TypeName => "ClassicSpeedVarianceProvider";
@@ -37,7 +34,10 @@ namespace projectFrameCut.Render.Effect
 
         protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
-            return [new ClassicSpeedVarianceProviderFactory().Build(implementType, parameters)];
+            if (!parameters.ContainsKey("Ratio")) parameters["Ratio"] = 1f;
+            var effect = new ClassicSpeedVarianceProvider { Parameters = parameters };
+            effect.Initialize();
+            return [effect];
         }
     }
 }

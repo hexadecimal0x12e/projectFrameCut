@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
@@ -29,7 +29,7 @@ namespace projectFrameCut.Render.Compose
         public string Name { get; set; }
         public string Id { get; set; }
         public Dictionary<string, object> Parameters { get; set; }
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
         public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)
             => MixInternal(basePicture, topPicture, computer, targetPPB, true, 0, 0, basePicture.Width, basePicture.Height);
@@ -1282,10 +1282,7 @@ namespace projectFrameCut.Render.Compose
         public ClassicOverlayMixtureProvider()
         {
             Name = "Classic Overlay";
-            Parameters = new Dictionary<string, object>
-            {
-                { "AccuracyMode", "Accurate" }
-            };
+            SetField("AccuracyMode", "Accurate");
         }
 
         public override string TypeName => "ClassicOverlayMixture";

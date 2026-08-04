@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render;
+using projectFrameCut.Render;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
@@ -31,6 +31,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// Determine the version of Application while the draft is saved.
         /// </summary>
         public string LastOpenAppVersion { get; set; } = "0.0.0.0";
+        /// <summary>
+        /// Determine the name of Application while the draft is saved.
+        /// </summary>
+        public string LastOpenAppName { get; set; } = "Unknown";
         /// <summary>
         /// Determine what plugins used in this project.
         /// </summary>
@@ -225,6 +229,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// </summary>
         public SoundtrackDTO[] SoundTracks { get; set; } = Array.Empty<SoundtrackDTO>();
 
+        /// <summary>
+        /// Free fields that live outside of any <see cref="IEffectProvider"/>.
+        /// Persisted as a top-level array so they survive round-trips independently of clip providers.
+        /// </summary>
+        public FreeEffectFieldJSONStructure[] FreeFields { get; set; } = Array.Empty<FreeEffectFieldJSONStructure>();
 
         /// <summary>
         /// Get the total duration of the draft in frames.
@@ -289,11 +298,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public int TargetX { get; set; }
         public int TargetY { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
+        [Obsolete("Use EffectProviders instead. Keep for auto migration use only.")]
         public EffectBundleJSONStructure[]? EffectBundles { get; set; }
-        /// <summary>
-        /// The provider-native serialized effects. Preferred over <see cref="EffectBundles"/>; the latter is kept
-        /// for reading legacy project files and MCP compatibility.
-        /// </summary>
         public EffectProviderJSONStructure[]? EffectProviders { get; set; }
 
         [JsonExtensionData]

@@ -869,6 +869,32 @@
         "DontTranslate": false
       },
       {
+        "Id": "EffectBindView_Bound",
+        "Value": "\u5DF2\u7ED1\u5B9A\u53C2\u6570\u300C{a}\u300D\u5230\u300C{b}\u300D\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
         "Id": "EffectBindView_Configure",
         "Value": "\u914D\u7F6E",
         "Mode": "ConstString",
@@ -937,6 +963,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "\u5168\u5C40\u7ED1\u5B9A\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "EffectBindView_Hint",
         "Value": "\u62D6\u52A8\u8282\u70B9\u4EE5\u79FB\u52A8\u3001\u5728\u951A\u70B9\u4E4B\u95F4\u62D6\u52A8\u4EE5\u8FDE\u63A5\u3002\r\u53CC\u51FB\u4EFB\u610F\u4EE5\u65AD\u5F00\u6240\u6709\u7684\u8FDE\u63A5\uFF0C\u62D6\u52A8\u7A7A\u767D\u533A\u57DF\u4EE5\u79FB\u52A8\u89C6\u56FE\u3002\r\u4F7F\u7528Control\u002B\u6EDA\u8F6E\u6216\u8005\u53CC\u6307\u634F\u5408\u6765\u7F29\u653E\u3002",
         "Mode": "ConstString",
@@ -968,6 +1002,14 @@
             "Value": ""
           }
         ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "\u65E0\u6CD5\u8FDE\u63A5\uFF1A\u7AEF\u53E3\u7C7B\u578B\u4E0D\u517C\u5BB9\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {

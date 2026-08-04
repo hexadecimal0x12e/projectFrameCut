@@ -15,7 +15,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
         }
 
-        public override PropertyPanelBuilder CreateUI()
+        public override PropertyPanelBuilder CreateUI(IEffectProvider _)
         {
             var panel = new PropertyPanelBuilder();
             panel.AddText(

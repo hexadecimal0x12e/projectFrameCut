@@ -283,6 +283,15 @@ public partial class ClipCropConfiguratorView : ContentView
         return fallback;
     }
 
+    private static int ReadIntParameter(Dictionary<string, IEffectArgumentField>? fields, string key, int fallback)
+    {
+        if (fields != null && fields.TryGetValue(key, out var field) && field is StaticEffectArgumentField sf)
+        {
+            return ReadIntValue(sf.Value, fallback);
+        }
+        return fallback;
+    }
+
     private static float ReadFloatParameter(IReadOnlyDictionary<string, object>? parameters, string key, float fallback)
     {
         if (parameters != null && parameters.TryGetValue(key, out var raw))
@@ -290,6 +299,15 @@ public partial class ClipCropConfiguratorView : ContentView
             return ReadFloatValue(raw, fallback);
         }
 
+        return fallback;
+    }
+
+    private static float ReadFloatParameter(Dictionary<string, IEffectArgumentField>? fields, string key, float fallback)
+    {
+        if (fields != null && fields.TryGetValue(key, out var field) && field is StaticEffectArgumentField sf)
+        {
+            return ReadFloatValue(sf.Value, fallback);
+        }
         return fallback;
     }
 
@@ -306,13 +324,13 @@ public partial class ClipCropConfiguratorView : ContentView
         _implementType = fallbackEffect?.ImplementType ?? EffectImplementType.NotSpecified;
 
         Enabled = bundle.Enabled;
-        StartX = Math.Max(0, ReadIntParameter(bundle.Parameters, "StartX", 0));
-        StartY = Math.Max(0, ReadIntParameter(bundle.Parameters, "StartY", 0));
-        CropWidth = Math.Max(1, ReadIntParameter(bundle.Parameters, "Width", 1));
-        CropHeight = Math.Max(1, ReadIntParameter(bundle.Parameters, "Height", 1));
+        StartX = Math.Max(0, ReadIntParameter(bundle.Fields, "StartX", 0));
+        StartY = Math.Max(0, ReadIntParameter(bundle.Fields, "StartY", 0));
+        CropWidth = Math.Max(1, ReadIntParameter(bundle.Fields, "Width", 1));
+        CropHeight = Math.Max(1, ReadIntParameter(bundle.Fields, "Height", 1));
         RelativeWidth = Math.Max(0, fallbackEffect?.RelativeWidth ?? RelativeWidth);
         RelativeHeight = Math.Max(0, fallbackEffect?.RelativeHeight ?? RelativeHeight);
-        Angle = ReadFloatParameter(bundle.Parameters, "Angle", 0f);
+        Angle = ReadFloatParameter(bundle.Fields, "Angle", 0f);
     }
 
     public void LoadFromEffect(IEffect? effect)
@@ -364,13 +382,13 @@ public partial class ClipCropConfiguratorView : ContentView
             Id = _bundleId,
             Enabled = Enabled,
             Name = InternalCropKey,
-            Parameters = new Dictionary<string, object>
+            Fields = new Dictionary<string, IEffectArgumentField>
             {
-                { "StartX", Math.Max(0, StartX) },
-                { "StartY", Math.Max(0, StartY) },
-                { "Width", Math.Max(1, CropWidth) },
-                { "Height", Math.Max(1, CropHeight) },
-                { "Angle", Angle }
+                { "StartX", new StaticEffectArgumentField(Math.Max(0, StartX), EffectArgumentFieldType.Integer) },
+                { "StartY", new StaticEffectArgumentField(Math.Max(0, StartY), EffectArgumentFieldType.Integer) },
+                { "Width", new StaticEffectArgumentField(Math.Max(1, CropWidth), EffectArgumentFieldType.Integer) },
+                { "Height", new StaticEffectArgumentField(Math.Max(1, CropHeight), EffectArgumentFieldType.Integer) },
+                { "Angle", new StaticEffectArgumentField(Angle, EffectArgumentFieldType.Numeric) }
             }
         };
         provider.SetInputAnchor(IEffectProvider.InputAnchorGUID);
@@ -388,7 +406,7 @@ public partial class ClipCropConfiguratorView : ContentView
             actualImplementType = EffectImplementType.NotSpecified;
         }
 
-        var effect = provider.Build(actualImplementType, provider.Parameters);
+        var effect = provider.RestoreInstance(actualImplementType);
         effect.Enabled = Enabled;
         effect.RelativeWidth = Math.Max(0, RelativeWidth);
         effect.RelativeHeight = Math.Max(0, RelativeHeight);

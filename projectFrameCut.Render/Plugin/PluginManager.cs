@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -244,7 +244,7 @@ namespace projectFrameCut.Render.Plugin
                 // (ConvertElementDictToObjectDict would throw on undefined parameter types), then
                 // restore the original dictionary so the binding state survives for later rebuilds.
                 var originalParameters = stru.Parameters;
-                var stripped = DynamicParam.StripBindings(originalParameters ?? new Dictionary<string, object>());
+                var stripped = StripBindings(originalParameters ?? new Dictionary<string, object>());
                 bool replaced = !ReferenceEquals(stripped, originalParameters);
                 if (replaced) stru.Parameters = stripped;
                 try
@@ -274,7 +274,7 @@ namespace projectFrameCut.Render.Plugin
                 {
                     effect.Index = stru.Index;
                     effect.Enabled = stru.Enabled;
-                    effect.BindedEffectGroupID = stru.BindedEffectGroupID;
+                    effect.BindedEffectProvidingSystemID = stru.BindedEffectGroupID;
                     effect.Initialize();
                 }
                 catch (Exception ex)
@@ -282,8 +282,6 @@ namespace projectFrameCut.Render.Plugin
                     Log(ex, $"Init effect {effect?.Name}/{stru.TypeName}", effect);
                     throw;
                 }
-                MountDynamicProviders(effect, originalParameters);
-                if (effect is IValueProviderEffect vpe && !string.IsNullOrEmpty(stru.Id)) effect.Id = stru.Id;
                 return effect;
             }
             else
@@ -299,7 +297,7 @@ namespace projectFrameCut.Render.Plugin
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {
                 var originalParameters = stru.Parameters;
-                var stripped = DynamicParam.StripBindings(originalParameters ?? new Dictionary<string, object>());
+                var stripped = StripBindings(originalParameters ?? new Dictionary<string, object>());
                 bool replaced = !ReferenceEquals(stripped, originalParameters);
                 if (replaced) stru.Parameters = stripped;
                 IEffect effect;
@@ -313,7 +311,7 @@ namespace projectFrameCut.Render.Plugin
                 }
                 effect.Index = stru.Index;
                 effect.Enabled = stru.Enabled;
-                effect.BindedEffectGroupID = stru.BindedEffectGroupID;
+                effect.BindedEffectProvidingSystemID = stru.BindedEffectGroupID;
                 try
                 {
                     effect.Initialize();
@@ -323,26 +321,11 @@ namespace projectFrameCut.Render.Plugin
                     Log(ex, $"Init effect {effect.Name}", effect);
                     throw;
                 }
-                MountDynamicProviders(effect, originalParameters);
-                if (effect is IValueProviderEffect vpe && !string.IsNullOrEmpty(stru.Id)) effect.Id = stru.Id;
                 return effect;
             }
             else
             {
                 throw new ArgumentException($"Plugin not found: {stru.FromPlugin}");
-            }
-        }
-
-        /// <summary>
-        /// Mounts the per-frame dynamic parameter getters onto an effect that implements
-        /// <see cref="IDynamicArgumentsEffect"/>, built from the provider's original parameters
-        /// (containing the reserved <c>__Binding_*</c> keys).
-        /// </summary>
-        private static void MountDynamicProviders(IEffect effect, Dictionary<string, object>? originalParameters)
-        {
-            if (effect is IDynamicArgumentsEffect dyn)
-            {
-                dyn.DynamicProviders = DynamicParam.BuildProviders(originalParameters ?? new Dictionary<string, object>());
             }
         }
 
@@ -600,6 +583,34 @@ namespace projectFrameCut.Render.Plugin
                 }
             }
             throw new NotSupportedException($"No suitable computer found for the given type '{computerType}'.");
+        }
+
+        /// <summary>
+        /// Remove all reserved <c>__Binding_</c> keys and all raw <see cref="Func{T}"/> / <see cref="Lazy{T}"/>
+        /// dynamic values from the parameters.
+        /// </summary>
+        private static Dictionary<string, object> StripBindings(Dictionary<string, object> parameters)
+        {
+            if (parameters is null) return parameters;
+            bool needsStrip = false;
+            foreach (var kvp in parameters)
+            {
+                if (kvp.Key.StartsWith(DynamicParam.BindingPrefix, StringComparison.Ordinal) || DynamicParam.IsDynamicValue(kvp.Value))
+                {
+                    needsStrip = true;
+                    break;
+                }
+            }
+            if (!needsStrip) return parameters;
+
+            var result = new Dictionary<string, object>(parameters.Count);
+            foreach (var kvp in parameters)
+            {
+                if (kvp.Key.StartsWith(DynamicParam.BindingPrefix, StringComparison.Ordinal) || DynamicParam.IsDynamicValue(kvp.Value))
+                    continue;
+                result[kvp.Key] = kvp.Value;
+            }
+            return result;
         }
     }
 }

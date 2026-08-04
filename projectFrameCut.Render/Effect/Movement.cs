@@ -14,14 +14,11 @@ namespace projectFrameCut.Render.Effect
         public MovementEffectProvider()
         {
             Name = "Movement";
-            Parameters = new Dictionary<string, object>
-            {
-                { "StartX", 0 },
-                { "StartY", 0 },
-                { "EndX", 200 },
-                { "EndY", 0 },
-                { "Duration", 1000 },
-            };
+            SetField("StartX", 0);
+            SetField("StartY", 0);
+            SetField("EndX", 200);
+            SetField("EndY", 0);
+            SetField("Duration", 1000);
         }
 
         public override string TypeName => "Movement";

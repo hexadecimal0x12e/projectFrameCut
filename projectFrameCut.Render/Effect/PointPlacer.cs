@@ -62,7 +62,7 @@ namespace projectFrameCut.Render.Effect
 
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
         public string InputAnchorName => "Input";
 
@@ -70,59 +70,6 @@ namespace projectFrameCut.Render.Effect
 
         public string OutputAnchorName => "Point";
     }
-
-    public class PointPlacerFactory
-    {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "PointPlacer";
-        public EffectTarget Target => EffectTarget.Video;
-        public List<string> ParametersNeeded => PointPlacer.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => PointPlacer.ParametersType;
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture, EffectImplementType.IPicture };
-
-
-        public string? ID { get; set; }
-        public string? BindedInputID { get; set; }
-        public string[]? BindedInputIDs { get; set; }
-
-        public IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
-        {
-            return Build(SupportsImplementTypes[0], ID, BindedInputID, BindedInputIDs, parameters);
-        }
-
-        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
-        {
-            if (implementType != EffectImplementType.NotSpecified && !SupportsImplementTypes.Contains(implementType))
-            {
-                throw new ArgumentException($"ImplementType {implementType} is not supported.", nameof(implementType));
-            }
-
-            var e = parameters != null ? PointPlacer.FromParametersDictionary(parameters) : new PointPlacer();
-
-            if (e is PointPlacer pointPlacer)
-            {
-                pointPlacer.ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType;
-            }
-
-            if (e is IBindableArgumentEffect be)
-            {
-                be.Id = Guid.NewGuid().ToString();
-
-                if (BindedInputID != null)
-                {
-                    be.BindedArgumentProviderID = BindedInputID;
-                }
-                else if (parameters != null)
-                {
-                    throw new InvalidDataException("Invaild source ID.");
-                }
-            }
-            return e;
-        }
-    }
-
-
 
     /// <summary>
     /// The Render-side provider of the PointPlacer bindable result generator.
@@ -132,7 +79,6 @@ namespace projectFrameCut.Render.Effect
         public PointPlacerProvider()
         {
             Name = "PointPlacer";
-            Parameters = new Dictionary<string, object>();
         }
 
         public override string TypeName => "PointPlacer";

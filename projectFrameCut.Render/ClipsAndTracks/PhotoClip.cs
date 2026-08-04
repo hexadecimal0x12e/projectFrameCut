@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Drawing.Processing.Resizing;
@@ -39,7 +39,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
         public int TargetWidth { get; set; }
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }

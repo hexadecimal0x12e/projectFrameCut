@@ -33,8 +33,21 @@ namespace projectFrameCut.Render.Effect
             { "EndY", EndY },
         };
 
-        public static List<string> ParametersNeeded { get; } = StraightLineMovementValueProducerFactory.s_ParametersNeeded;
-        public static Dictionary<string, string> ParametersType { get; } = StraightLineMovementValueProducerFactory.s_ParametersType;
+        public static List<string> ParametersNeeded { get; } = new List<string>
+        {
+            "StartX",
+            "StartY",
+            "EndX",
+            "EndY",
+        };
+
+        public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        {
+            {"StartX", "int" },
+            {"StartY", "int" },
+            {"EndX", "int" },
+            {"EndY", "int" },
+        };
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {
@@ -66,72 +79,10 @@ namespace projectFrameCut.Render.Effect
 
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
         public string OutputAnchorName => "Point";
     }
-
-    public class StraightLineMovementValueProducerFactory
-    {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "StraightLineMovementValueProducer";
-        public EffectTarget Target => EffectTarget.Video;
-        public static List<string> s_ParametersNeeded = new List<string>
-        {
-            "StartX",
-            "StartY",
-            "EndX",
-            "EndY",
-        };
-
-        public static Dictionary<string, string> s_ParametersType = new Dictionary<string, string>
-        {
-            {"StartX", "int" },
-            {"StartY", "int" },
-            {"EndX", "int" },
-            {"EndY", "int" },
-        };
-        public List<string> ParametersNeeded => s_ParametersNeeded;
-        public Dictionary<string, string> ParametersType => s_ParametersType;
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.NotSpecified };
-
-
-        public string? ID { get; set; }
-        public string? BindedInputID { get; set; }
-        public string[]? BindedInputIDs { get; set; }
-
-        public IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
-        {
-            return Build(SupportsImplementTypes[0], ID, BindedInputID, BindedInputIDs, parameters);
-        }
-
-        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
-        {
-            if (implementType != EffectImplementType.NotSpecified && !SupportsImplementTypes.Contains(implementType))
-            {
-                throw new ArgumentException($"ImplementType {implementType} is not supported.", nameof(implementType));
-            }
-
-            var e = parameters != null ? StraightLineMovementValueProducer.FromParametersDictionary(parameters) : new StraightLineMovementValueProducer();
-
-            if (e is IBindableArgumentEffect be)
-            {
-                if (ID != null)
-                {
-                    be.Id = ID;
-                }
-                else if (parameters != null)
-                {
-                    throw new InvalidDataException("Invaild source ID.");
-                }
-                be.BindedArgumentProviderID = null!;
-            }
-            return e;
-        }
-    }
-
-
 
     /// <summary>
     /// The Render-side provider of the StraightLineMovementValueProducer bindable value source.
@@ -141,7 +92,10 @@ namespace projectFrameCut.Render.Effect
         public StraightLineMovementValueProducerProvider()
         {
             Name = "Straight Line Movement";
-            Parameters = new Dictionary<string, object> { { "StartX", 0 }, { "StartY", 0 }, { "EndX", 0 }, { "EndY", 0 } };
+            SetField("StartX", 0);
+            SetField("StartY", 0);
+            SetField("EndX", 0);
+            SetField("EndY", 0);
         }
 
         public override string TypeName => "StraightLineMovementValueProducer";

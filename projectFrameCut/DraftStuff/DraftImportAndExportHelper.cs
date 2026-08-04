@@ -1,4 +1,4 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Asset;
 using projectFrameCut.Drawing.Text.Entry;
@@ -147,6 +147,7 @@ namespace projectFrameCut.DraftStuff
             {
                 Clips = clips.ToArray(),
                 SoundTracks = soundtracks.ToArray(),
+                FreeFields = EffectFieldPool.ExportFreeFields(),
                 Duration = (uint)max,
                 SavedAt = DateTime.Now
             };
@@ -299,23 +300,13 @@ namespace projectFrameCut.DraftStuff
                 Effects = elem.Effects?.Select((kv) =>
                 {
                     var effect = kv.Value;
-                    // Merge the provider's reserved __Binding_* keys into the serialized parameters so the
-                    // binding state survives the render round-trip (the effect.Parameters view only carries
-                    // static values; the dynamic getters are mounted from these keys after recreation).
-                    var parameters = effect.Parameters;
-                    if (effect.BindedEffectGroupID is { } groupId && Guid.TryParse(groupId, out var bundleId)
-                        && elem.EffectProviders?.TryGetValue(bundleId, out var bundle) == true
-                        && bundle is IEffectProvider provider
-                        && provider.Parameters is { } providerParams
-                        && providerParams.Keys.Any(k => k.StartsWith(DynamicParam.BindingPrefix, StringComparison.Ordinal)))
-                    {
-                        parameters = new Dictionary<string, object>(effect.Parameters);
-                        foreach (var (key, value) in providerParams)
-                        {
-                            if (key.StartsWith(DynamicParam.BindingPrefix, StringComparison.Ordinal))
-                                parameters[key] = value;
-                        }
-                    }
+                    // Filter out Func<object> dynamic values from effect.Parameters (they cannot be serialized).
+                    // The binding state is preserved in the provider-level Fields serialization.
+                    var parameters = effect.Parameters is { Count: > 0 }
+                        ? effect.Parameters
+                            .Where(kvp => !DynamicParam.IsDynamicValue(kvp.Value))
+                            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+                        : effect.Parameters;
 
                     var structure = new EffectAndMixtureJSONStructure
                     {
@@ -328,9 +319,9 @@ namespace projectFrameCut.DraftStuff
                         RelativeHeight = effect.RelativeHeight,
                         RelativeWidth = effect.RelativeWidth,
                         IsContinuousEffect = effect.TypeOfEffect == EffectType.ContinuousEffect,
-                        IsVariableArgumentEffect = effect is IBindableArgumentEffect || effect is IValueProviderEffect,
+                        IsVariableArgumentEffect = effect is IBindableArgumentEffect,
                         ImplementType = effect.ImplementType,
-                        BindedEffectGroupID = effect.BindedEffectGroupID ?? "",
+                        BindedEffectGroupID = effect.BindedEffectProvidingSystemID ?? "",
                     };
 
                     if (effect is IBindableArgumentEffect bindableEffect)
@@ -347,28 +338,28 @@ namespace projectFrameCut.DraftStuff
                         }
                         structure.Enabled = true;
                     }
-                    else if (effect is IValueProviderEffect vp)
-                    {
-                        // Value providers are keyed by their effect Id (= provider bundle Guid) so the
-                        // render loop can write/read their per-frame value consistently after recreation.
-                        structure.Id = vp.Id;
-                        structure.Enabled = true;
-                    }
 
                     return structure;
                 }).ToArray(),
-                EffectBundles = elem.EffectProviders?.Values
-                    .Select(b => new EffectBundleJSONStructure
-                    {
-                        Id = b.Id,
-                        BundleTypeName = b.TypeName,
-                        Parameters = b.Parameters,
-                        Name = b.Name,
-                        Enabled = b.Enabled,
-                        BindedInputId = b.GetInputAnchor(),
-                        BindedOutputId = b.GetOutputAnchor(),
-                        BindedInputIds = b.GetInputAnchors().ToArray(),
-                    }).ToArray(),
+                // 新格式 EffectProviders 已能完整表达 provider 数据（加载时优先使用），
+                // 为避免同一数据重复写入，有 EffectProviders 时不再生成 legacy EffectBundles。
+                EffectBundles = elem.EffectProviders is { Count: > 0 }
+                    ? null
+                    : elem.EffectProviders?.Values
+                        .Select(b => new EffectBundleJSONStructure
+                        {
+                            Id = b.Id,
+                            BundleTypeName = b.TypeName,
+                            Parameters = b.Fields?
+                                .Where(kv => kv.Value is StaticEffectArgumentField sf)
+                                .ToDictionary(kv => kv.Key, kv => ((StaticEffectArgumentField)kv.Value).Value)
+                                ?? new Dictionary<string, object>(),
+                            Name = b.Name,
+                            Enabled = b.Enabled,
+                            BindedInputId = b.GetInputAnchor(),
+                            BindedOutputId = b.GetOutputAnchor(),
+                            BindedInputIds = b.GetInputAnchors().ToArray(),
+                        }).ToArray(),
                 // Provider-native serialization (the preferred shape). The legacy EffectBundles write above is kept for MCP compatibility.
                 EffectProviders = elem.EffectProviders?.Values
                     .Select(p => new EffectProviderJSONStructure
@@ -378,8 +369,28 @@ namespace projectFrameCut.DraftStuff
                         TypeName = p.TypeName,
                         Name = p.Name,
                         Enabled = p.Enabled,
-                        Parameters = p.Parameters,
                         AnchorsBindingState = p.AnchorsBindingState,
+                        Fields = p.Fields?.Select(kv =>
+                        {
+                            var f = kv.Value;
+                            return new EffectProviderFieldJSONStructure
+                            {
+                                Id = f.Id,
+                                TypeName = f.TypeName,
+                                FieldType = f.FieldType.ToString(),
+                                DefaultValue = f.DefaultValue,
+                                MinValue = f.MinValue,
+                                MaxValue = f.MaxValue,
+                                PresetOptions = f.PresetOptions,
+                                Remarks = f.Remarks,
+                                IsBound = f.IsDynamic,
+                                BoundSourceId = f is DynamicEffectParamField df ? df.BoundProviderId
+                                    : f is IValueProviderEffect vpe ? vpe.BindedEffectProvidingSystemID
+                                    : null,
+                                StaticValue = f is StaticEffectArgumentField sf ? sf.Value : null,
+                            };
+                        }).ToArray(),
+                        MetaData = p.MetaData is { Count: > 0 } ? p.MetaData : null,
                     }).ToArray()
             };
         }
@@ -728,9 +739,11 @@ namespace projectFrameCut.DraftStuff
             }
         }
 
-        public static (ConcurrentDictionary<Guid, ClipElementUI>, int) ImportFromJSON(DraftStructureJSON draft, ProjectJSONStructure proj)
+        public static (ConcurrentDictionary<Guid, ClipElementUI>, int) ImportFromJSON(DraftStructureJSON draft, ProjectJSONStructure proj, bool restoreFreeFields = false)
         {
             if (draft == null) throw new ArgumentNullException(nameof(draft));
+
+            if (restoreFreeFields) EffectFieldPool.ImportFreeFields(draft.FreeFields);
 
             var dtos = new List<ClipDraftDTO>();
             foreach (var obj in draft.Clips ?? Array.Empty<object>())
@@ -804,42 +817,7 @@ namespace projectFrameCut.DraftStuff
                     e => PluginManager.CreateEffect(e, proj.RelativeWidth, proj.RelativeHeight)
                 );
 
-                if (dto.EffectProviders is { Length: > 0 })
-                {
-                    // Provider-native shape (preferred).
-                    var dict = new Dictionary<Guid, IEffectProvider>();
-                    for (int i = 0; i < dto.EffectProviders.Length; i++)
-                    {
-                        var p = dto.EffectProviders[i];
-                        var f = EffectServices.GetAvailableEffectProviders()[p.TypeName]();
-                        f.Id = p.Id;
-                        f.Enabled = p.Enabled;
-                        f.Name = p.Name;
-                        f.Parameters = p.Parameters ?? new Dictionary<string, object>();
-                        f.AnchorsBindingState = p.AnchorsBindingState ?? new Dictionary<string, Guid>();
-                        dict.Add(p.Id, f);
-                    }
-                    element.EffectProviders = dict;
-                }
-                else if (dto.EffectBundles != null)
-                {
-                    // Legacy project file fallback.
-                    var dict = new Dictionary<Guid, IEffectProvider>();
-                    for (int i = 0; i < dto.EffectBundles.Length; i++)
-                    {
-                        var b = dto.EffectBundles[i];
-                        var f = EffectServices.GetAvailableEffectProviders()[b.BundleTypeName]();
-                        f.Id = b.Id;
-                        f.Enabled = b.Enabled;
-                        f.Name = b.Name;
-                        f.Parameters = b.Parameters ?? new Dictionary<string, object>();
-                        f.SetInputAnchor(b.BindedInputId);
-                        f.SetOutputAnchor(b.BindedOutputId);
-                        f.SetInputAnchors(b.BindedInputIds ?? []);
-                        dict.Add(b.Id, f);
-                    }
-                    element.EffectProviders = dict;
-                }
+                element.EffectProviders = EffectBindingHelper.MigrateToEffectProviders(dto.EffectProviders, dto.EffectBundles);
 
                 if (element.Effects is null)
                 {
@@ -1073,48 +1051,7 @@ namespace projectFrameCut.DraftStuff
             ) ?? new Dictionary<string, IEffect>();
 
             // Reconstruct Effect Providers
-            if (clip.EffectProviders is { Length: > 0 })
-            {
-                // Provider-native shape (preferred).
-                var dict = new Dictionary<Guid, IEffectProvider>();
-                foreach (var p in clip.EffectProviders)
-                {
-                    if (EffectServices.GetAvailableEffectProviders().TryGetValue(p.TypeName, out var factory))
-                    {
-                        var f = factory();
-                        f.Id = p.Id;
-                        f.Name = p.Name;
-                        f.Parameters = p.Parameters ?? new Dictionary<string, object>();
-                        f.AnchorsBindingState = p.AnchorsBindingState ?? new Dictionary<string, Guid>();
-                        dict[p.Id] = f;
-                    }
-                }
-                element.EffectProviders = dict;
-            }
-            else if (clip.EffectBundles != null)
-            {
-                // Legacy project file fallback.
-                var dict = new Dictionary<Guid, IEffectProvider>();
-                foreach (var b in clip.EffectBundles)
-                {
-                    if (EffectServices.GetAvailableEffectProviders().TryGetValue(b.BundleTypeName, out var factory))
-                    {
-                        var f = factory();
-                        f.Id = b.Id;
-                        f.Name = b.Name;
-                        f.Parameters = b.Parameters ?? new Dictionary<string, object>();
-                        f.SetInputAnchor(b.BindedInputId);
-                        f.SetOutputAnchor(b.BindedOutputId);
-                        f.SetInputAnchors(b.BindedInputIds ?? []);
-                        dict[b.Id] = f;
-                    }
-                }
-                element.EffectProviders = dict;
-            }
-            else
-            {
-                element.EffectProviders = new Dictionary<Guid, IEffectProvider>();
-            }
+            element.EffectProviders = EffectBindingHelper.MigrateToEffectProviders(clip.EffectProviders, clip.EffectBundles);
 
             // Rebuild generated effects from bundles before applying UI width from speed ratio.
             ClipInfoBuilder.RebuildAllEffects(element);

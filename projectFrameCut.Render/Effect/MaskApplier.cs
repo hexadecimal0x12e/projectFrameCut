@@ -44,7 +44,7 @@ namespace projectFrameCut.Render.Effect
 
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
         public string InputAnchorName => "Mask";
 
@@ -56,46 +56,6 @@ namespace projectFrameCut.Render.Effect
         public string OutputAnchorName => "Mask";
     }
 
-    public class MaskApplierFactory
-    {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "MaskApplier";
-        public EffectTarget Target => EffectTarget.Video;
-        public List<string> ParametersNeeded => MaskApplier.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => MaskApplier.ParametersType;
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture };
-
-        public string? ID { get; set; }
-        public string? BindedInputID { get; set; }
-        public string[]? BindedInputIDs { get; set; }
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
-        {
-            return Build(SupportsImplementTypes[0], parameters);
-        }
-
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            if (!SupportsImplementTypes.Contains(implementType))
-            {
-                throw new ArgumentException($"ImplementType {implementType} is not supported.", nameof(implementType));
-            }
-
-            return new MaskApplier { ImplementType = implementType };
-        }
-
-        public IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
-        {
-            return new MaskApplier { ImplementType = EffectImplementType.IPicture };
-        }
-
-        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
-        {
-            return new MaskApplier { ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType };
-        }
-    }
-
     /// <summary>
     /// The Render-side provider of the MaskApplier bindable result generator.
     /// </summary>
@@ -104,7 +64,6 @@ namespace projectFrameCut.Render.Effect
         public MaskApplierProvider()
         {
             Name = "Mask Applier";
-            Parameters = new Dictionary<string, object>();
         }
 
         public override string TypeName => "MaskApplier";

@@ -10,7 +10,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
     /// The App-layer UI wrapper of a Render-side <see cref="IEffectProvider"/>.
     /// It implements ONLY <see cref="IEffectProviderUIProvider"/> (plus <see cref="IBindingHostHolder"/>);
     /// it does NOT implement <see cref="IEffectProvider"/>. The wrapped provider is the exact instance being
-    /// edited in the node editor, so its <see cref="IEffectProvider.Parameters"/> / <see cref="IEffectProvider.Fields"/>
+    /// edited in the node editor, so its <see cref="IEffectProvider.Fields"/>
     /// are read and written by the property UI.
     /// </summary>
     public class EffectProviderUI : IEffectProviderUIProvider, IBindingHostHolder
@@ -34,7 +34,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         /// <summary>
         /// Metadata driven property UI built from the provider's fields.
         /// </summary>
-        public virtual PropertyPanelBuilder CreateUI()
+        public virtual PropertyPanelBuilder CreateUI(IEffectProvider _)
         {
             var panel = new PropertyPanelBuilder();
             EffectProviderUIHelper.BuildUI(Inner, panel, BindingHost);

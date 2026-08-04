@@ -1,4 +1,5 @@
 ﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
@@ -125,10 +126,22 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
 
         /// <summary>
+        /// The effect providers used to create the effects applied to this clip's Data.
+        /// Used in serialization and deserialization.
+        /// </summary>
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
+
+        /// <summary>
         /// The actual effects applied to this clip.
         /// </summary>
         [JsonIgnore]
         public IEffect[]? EffectsInstances { get; set; }
+
+        /// <summary>
+        /// The actual effect providers used to create the effects applied to this clip.
+        /// </summary>
+        [JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
 
         /// <summary>
         /// Get the path of the source file for this clip. May be null when <see cref="NeedFilePath"/> is false.
@@ -364,6 +377,8 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
     }
 
+
+
     internal sealed class SpeedVarianceProfile
     {
         public required uint Duration { get; init; }
@@ -531,4 +546,5 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
         public string[] ChildrenSoundTracks { get; set; }
     }
+
 }

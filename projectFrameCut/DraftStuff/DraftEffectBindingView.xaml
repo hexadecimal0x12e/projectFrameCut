@@ -8,7 +8,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition x:Name="TopRow" Height="*"/>
-            <RowDefinition x:Name="BottomRow" Height="{OnIdiom Phone=260, Default=0}"/>
+            <RowDefinition x:Name="BottomRow" Height="0"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
@@ -33,7 +33,7 @@
                             InputTransparent="False">
             </AbsoluteLayout>
 
-            <Label Text="Drag nodes to move. Drag between ports to connect. Double Click to disconnect. Pan empty space to move view." 
+            <Label Text="Drag nodes to move. Drag between ports to connect. Double Click to disconnect. Pan empty space to move view."
                    x:Name="InfoLabel" TextColor="Gray" Margin="10" VerticalOptions="End" HorizontalOptions="Start" InputTransparent="True"/>
             <HorizontalStackLayout x:Name="BottomCommandBar" HorizontalOptions="End" VerticalOptions="End" Margin="10,0,10,10">
                 <Button x:Name="GeneratePreviewButton" Margin="4,0,4,0" Clicked="GeneratePreviewButton_Clicked" Text="{l:Localized Key=AssetPage_ShowPreview}"/>
@@ -41,7 +41,26 @@
                 <Button x:Name="ResetButton" Margin="4,0,4,0" Text="↺"/>
                 <Button x:Name="ZoomOutButton" Margin="4,0,4,0" Text="-"/>
             </HorizontalStackLayout>
+            <Button x:Name="FreeFieldDrawerToggle" Text="Free Fields"
+                    Margin="10,0,0,10" HorizontalOptions="Start" VerticalOptions="End"
+                    Clicked="OnFreeFieldDrawerToggleClicked" FontSize="12" Padding="8,4"/>
         </Grid>
+
+        <!-- Free Field Drawer -->
+        <Border x:Name="FreeFieldDrawer" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                IsVisible="False" BackgroundColor="#252526" Stroke="#555" StrokeThickness="1">
+            <Grid RowDefinitions="Auto,*">
+                <Grid Padding="8,4" ColumnDefinitions="*,Auto" BackgroundColor="#2d2d2d">
+                    <Label Text="Free Fields" FontAttributes="Bold" TextColor="White" VerticalOptions="Center"/>
+                    <Button Grid.Column="1" x:Name="FreeFieldDrawerClose" Text="✕"
+                            Clicked="OnFreeFieldDrawerToggleClicked"
+                            WidthRequest="28" HeightRequest="28" FontSize="11"/>
+                </Grid>
+                <ScrollView Grid.Row="1" Padding="8">
+                    <VerticalStackLayout x:Name="FreeFieldDrawerContent" Spacing="4"/>
+                </ScrollView>
+            </Grid>
+        </Border>
 
         <!-- Splitter -->
         <Grid Grid.Column="1" BackgroundColor="{Binding PanelCollapsed, Converter={toolkit:BoolToObjectConverter FalseObject=#801a1a1a, TrueObject=#1e1e1e}}" IsVisible="{OnIdiom Phone=False, Default=True}">

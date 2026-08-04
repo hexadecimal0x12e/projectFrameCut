@@ -1,4 +1,5 @@
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.Context;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
@@ -16,11 +17,13 @@ namespace projectFrameCut.Render.Effect
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Linear Animation";
+
+        // IEffect.Id: effect instance id (provider bundle Guid)
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
         public string TypeName => "LinearAnimationValueProvider";
 
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.NotSpecified;
@@ -29,17 +32,10 @@ namespace projectFrameCut.Render.Effect
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
 
-        public string OutputAnchorName => "Value";
-        public bool GenerateOnce => false;
-
         public float FromValue { get; set; }
         public float ToValue { get; set; }
 
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "FromValue", FromValue },
-            { "ToValue", ToValue },
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public static List<string> ParametersNeeded { get; } = new() { "FromValue", "ToValue" };
         public static Dictionary<string, string> ParametersType { get; } = new()
@@ -51,20 +47,49 @@ namespace projectFrameCut.Render.Effect
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {
             var effect = new LinearAnimationValueProviderEffect();
-            if (parameters.TryGetValue("FromValue", out var from)) effect.FromValue = Convert.ToSingle(from);
-            if (parameters.TryGetValue("ToValue", out var to)) effect.ToValue = Convert.ToSingle(to);
+            effect.FromValue = DynamicParam.ToFloat(parameters.GetValueOrDefault("FromValue"));
+            effect.ToValue = DynamicParam.ToFloat(parameters.GetValueOrDefault("ToValue"));
+            effect.Parameters = parameters;
             return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public object? GenerateValue(uint frameIndex, IComputer? computer, int targetWidth, int targetHeight)
+        public object? GenerateValue(uint frameIndex, int targetWidth, int targetHeight)
         {
             var progress = ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInProgressProviderId) as float? ?? 0f;
             return FromValue + (ToValue - FromValue) * progress;
         }
 
         public void Initialize() { }
+
+        // ── IEffectArgumentField members ────────────────────────────────
+
+        // IEffectArgumentField.Id: field id (used as the output field name)
+        string IEffectArgumentField.Id => "Value";
+
+        string IEffectArgumentField.TypeName => "float";
+
+        string IEffectArgumentField.FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        EffectArgumentFieldType IEffectArgumentField.FieldType => EffectArgumentFieldType.Numeric;
+
+        bool IEffectArgumentField.IsDynamicAtRenderTime => true;
+
+        string IEffectArgumentField.DefaultValue { get => "0"; set { } }
+        string IEffectArgumentField.MinValue { get => "0"; set { } }
+        string IEffectArgumentField.MaxValue { get => "1"; set { } }
+        string[]? IEffectArgumentField.PresetOptions { get => null; set { } }
+        string? IEffectArgumentField.Remarks { get => null; set { } }
+
+        public Func<object> GetGetter() => () =>
+        {
+            var ctx = IRenderContext.Current;
+            uint frame = IRenderContext.WorkerState?.CurrentFrame ?? 0;
+            int w = ctx?.TargetWidth ?? 0;
+            int h = ctx?.TargetHeight ?? 0;
+            return GenerateValue(frame, w, h) ?? 0f;
+        };
     }
 
     /// <summary>
@@ -75,7 +100,8 @@ namespace projectFrameCut.Render.Effect
         public LinearAnimationValueProviderProvider()
         {
             Name = "Linear Animation";
-            Parameters = new Dictionary<string, object> { { "FromValue", 0f }, { "ToValue", 1f } };
+            SetField("FromValue", 0f);
+            SetField("ToValue", 1f);
         }
 
         public override string TypeName => "LinearAnimationValueProvider";

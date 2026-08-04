@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -43,6 +44,7 @@ namespace projectFrameCut.Shared
     {
         NormalEffect,
         ContinuousEffect,
+        [Obsolete("All BindableEffect is deprecated. Use EffectProvider, and mark a EffectProvider with a not IPicture output as NonIPictureOutputValueProvider.")]
         BindableEffect,
         AudioNormalEffect,
         AudioContinuousEffect,
@@ -54,6 +56,7 @@ namespace projectFrameCut.Shared
         TextEffect,
         ContinuousTextEffect,
         SourceReplacement,
+        NonIPictureOutputValueProvider,
         NotSpecified = -1,
     }
 
@@ -76,6 +79,7 @@ namespace projectFrameCut.Shared
         InternalUse = 1 << 19,
     }
 
+    [Obsolete("All BindableEffect is deprecated, no longer be processed and will be removed in API V9, please use EffectProvider with a dynamic EffectParamField instead.")]
     public enum BindableArgumentEffectType
     {
         ValueProvider,

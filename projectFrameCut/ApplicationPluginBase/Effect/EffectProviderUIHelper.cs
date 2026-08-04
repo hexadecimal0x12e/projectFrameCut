@@ -21,7 +21,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 var field = kvp.Value;
                 if (field is null) continue;
                 if (field.FieldType.HasFlag(EffectArgumentFieldType.IPicture)) continue;
-                bool isBound = DynamicParam.IsBound(provider.Parameters, field.Id);
+                bool isBound = field.IsDynamic;
 
                 // Enum-like string fields are rendered as a picker.
                 if (field.PresetOptions is { Length: > 0 })
@@ -87,7 +87,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 BackgroundColor = isBound ? Microsoft.Maui.Graphics.Color.FromArgb("#f2c94c") : Microsoft.Maui.Graphics.Color.FromArgb("#3a3a3a"),
                 TextColor = Microsoft.Maui.Graphics.Colors.White,
             };
-            if (isBound && DynamicParam.GetBoundSource(provider.Parameters, field.Id) is { } boundSource
+            if (isBound && field is DynamicEffectParamField df && df.BoundProviderId is { } boundSource
                 && bindingHost.GetSourceDisplayName(boundSource) is { } sourceName)
             {
                 Microsoft.Maui.Controls.ToolTipProperties.SetText(button, $"Bound to: {sourceName}");
@@ -134,7 +134,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         }
 
         /// <summary>
-        /// Writes the changed value back into <see cref="IEffectProvider.Parameters"/> typed by the field's <see cref="EffectArgumentFieldType"/>.
+        /// Writes the changed value back into the provider's fields.
         /// </summary>
         public static (Dictionary<string, object>? newParams, Dictionary<string, IEffectArgumentField>? newFields) HandleChange(IEffectProvider provider, PropertyPanelPropertyChangedEventArgs args)
         {
@@ -149,11 +149,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 int sep = args.Id.LastIndexOf('_');
                 if (sep > 0 && provider.Fields.TryGetValue(args.Id[..sep], out _))
                 {
-                    provider.Parameters[args.Id] = args.Value;
+                    provider.Fields[args.Id] = new StaticEffectArgumentField(args.Value, EffectArgumentFieldType.Integer);
                 }
             }
 
-            return (provider.Parameters, provider.Fields);
+            return (null, provider.Fields);
         }
 
         private static void WriteBack(IEffectProvider provider, IEffectArgumentField field, string id, object? value)
@@ -162,36 +162,50 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             switch (baseType)
             {
                 case EffectArgumentFieldType.Boolean:
-                    EffectProviderHelper.TrySetBool(provider.Parameters, id, value);
+                    if (EffectParamConvert.TryConvertToBool(value, out var b))
+                        provider.Fields[id] = new StaticEffectArgumentField(b, EffectArgumentFieldType.Boolean);
                     break;
                 case EffectArgumentFieldType.UnsignedInteger:
-                    EffectProviderHelper.TrySetUShort(provider.Parameters, id, value);
+                    if (EffectParamConvert.TryConvertToUShort(value, out var us))
+                        provider.Fields[id] = new StaticEffectArgumentField(us, EffectArgumentFieldType.UnsignedInteger);
                     break;
                 case EffectArgumentFieldType.Integer:
-                    EffectProviderHelper.TrySetInt(provider.Parameters, id, value);
+                    if (EffectParamConvert.TryConvertToInt(value, out var i))
+                        provider.Fields[id] = new StaticEffectArgumentField(i, EffectArgumentFieldType.Integer);
                     break;
                 case EffectArgumentFieldType.Numeric:
-                    EffectProviderHelper.TrySetFloat(provider.Parameters, id, value);
+                    if (EffectParamConvert.TryConvertToFloat(value, out var f))
+                        provider.Fields[id] = new StaticEffectArgumentField(f, EffectArgumentFieldType.Numeric);
                     break;
                 default:
-                    provider.Parameters[id] = value?.ToString() ?? "";
+                    provider.Fields[id] = new StaticEffectArgumentField(value?.ToString() ?? "", EffectArgumentFieldType.String);
                     break;
             }
         }
 
         private static bool GetBool(IEffectProvider provider, string id)
         {
-            return EffectProviderHelper.GetBool(provider.Parameters, id, false);
+            if (provider.Fields.TryGetValue(id, out var field) && field is StaticEffectArgumentField sf && sf.Value is bool b)
+                return b;
+            return false;
         }
 
         private static string GetString(IEffectProvider provider, string id)
         {
-            return EffectProviderHelper.GetString(provider.Parameters, id, string.Empty);
+            if (provider.Fields.TryGetValue(id, out var field) && field is StaticEffectArgumentField sf)
+                return sf.Value?.ToString() ?? string.Empty;
+            return string.Empty;
         }
 
         private static double GetDouble(IEffectProvider provider, string id)
         {
-            return EffectProviderHelper.GetFloat(provider.Parameters, id, 0f);
+            if (provider.Fields.TryGetValue(id, out var field) && field is StaticEffectArgumentField sf)
+            {
+                if (sf.Value is float f) return f;
+                if (sf.Value is double d) return d;
+                if (sf.Value is int i) return i;
+            }
+            return 0f;
         }
 
         private static PropertyPanelItemLabel Label(string id)

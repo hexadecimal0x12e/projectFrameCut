@@ -20,7 +20,7 @@ namespace projectFrameCut.Render.Compose
         public string Name { get; set; }
         public string Id { get; set; }
         public Dictionary<string, object> Parameters { get; set; }
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
         public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)
             => MixInternal(
@@ -551,10 +551,6 @@ namespace projectFrameCut.Render.Compose
         public BlendModeMixtureProvider()
         {
             Name = "Blend Mode";
-            Parameters = new Dictionary<string, object>
-            {
-                { "MixtureType", "Add" }
-            };
         }
 
         public string MixtureType { get; init; } = "Add";
@@ -583,7 +579,15 @@ namespace projectFrameCut.Render.Compose
         protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
             var mixtureType = parameters.TryGetValue("MixtureType", out var v) ? v?.ToString() ?? MixtureType : MixtureType;
-            return [new BlendModeMixtureFactory { MixtureType = mixtureType }.Build(implementType, parameters)];
+            if (DefineFields().First(f => f.Id == "MixtureType").PresetOptions.Contains(mixtureType))
+            {
+                return [new BlendModeMixtureFactory { MixtureType = mixtureType }.Build(implementType, parameters)];
+            }
+            else
+            {
+                Log($"The mixture type '{mixtureType}' is not supported, fallback to ClassicOverlayMixture.", "error");
+                return [new ClassicOverlayMixture()]; // Fallback to AddMixture
+            }
         }
     }
 }

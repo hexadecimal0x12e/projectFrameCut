@@ -98,7 +98,7 @@ namespace projectFrameCut.DraftStuff
         public bool IsShadow { get; set; } = false;
 
         public Dictionary<string, IEffect>? Effects { get; set; } = new();
-        [JsonIgnore]
+
         public Dictionary<Guid, IEffectProvider>? EffectProviders { get; set; } = new();
 
         public Dictionary<string, object> ExtraData { get; set; } = new();

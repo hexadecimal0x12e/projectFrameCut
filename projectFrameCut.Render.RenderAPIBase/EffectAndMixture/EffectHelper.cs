@@ -1,4 +1,4 @@
-﻿//most classes in this file are used for saving and reading draft/effect/clip, so you probably not excepted to use these classes while you're making plugin.
+//most classes in this file are used for saving and reading draft/effect/clip, so you probably not excepted to use these classes while you're making plugin.
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -29,6 +29,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public object[] Compute(object[] args);
     }
 
+    [Obsolete("No longer used. Migrate to IEffectProvider and IEffectArgumentField with Enum types.")]
     public interface IEffectArgsEnumHandler
     {
         public int Parse(string value);
@@ -40,6 +41,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     {
         public string BindedEffectGroupID { get; set; } = string.Empty;
         public bool IsContinuousEffect { get; set; } = false;
+        [Obsolete("No longer used.")]
         public bool IsVariableArgumentEffect { get; set; } = false;
         public string FromPlugin { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
@@ -51,7 +53,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public EffectImplementType ImplementType { get; set; } = EffectImplementType.NotSpecified;
         public Dictionary<string, object>? Parameters { get; set; }
         public string? Id { get; set; }
+        [Obsolete("No longer used. The binding will be calculated at render time.")]
         public string? BindedInputID { get; set; } = null;
+        [Obsolete("No longer used. The binding will be calculated at render time.")]
         public string[]? BindedInputIDs { get; set; } = null;
     }
 
@@ -66,14 +70,47 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public string TypeName { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public bool Enabled { get; set; } = true;
-        public Dictionary<string, object> Parameters { get; set; } = new();
         public Dictionary<string, Guid> AnchorsBindingState { get; set; } = new();
-        /// <summary>
-        /// The field descriptors of the provider. Currently null; reserved for future dynamic fields.
-        /// </summary>
-        public EffectArgumentFieldDescriptor[]? Fields { get; set; }
+        public EffectProviderFieldJSONStructure[]? Fields { get; set; }
+        public Dictionary<string, object>? MetaData { get; set; }
     }
 
+    public class FreeEffectFieldJSONStructure
+    {
+        public Guid GlobalId { get; set; } = Guid.Empty;
+        public string? OwnerHint { get; set; }
+        public string Id { get; set; } = string.Empty;
+        public string TypeName { get; set; } = string.Empty;
+        public string FieldType { get; set; } = string.Empty;
+        public string DefaultValue { get; set; } = string.Empty;
+        public string MinValue { get; set; } = string.Empty;
+        public string MaxValue { get; set; } = string.Empty;
+        public string[]? PresetOptions { get; set; }
+        public string? Remarks { get; set; }
+        public bool IsBound { get; set; }
+        public string? BoundSourceId { get; set; }
+        public object? StaticValue { get; set; }
+    }
+
+    /// <summary>
+    /// Serializable field descriptor for a single <see cref="IEffectArgumentField"/> in a provider.
+    /// </summary>
+    public class EffectProviderFieldJSONStructure
+    {
+        public string Id { get; set; } = string.Empty;
+        public string TypeName { get; set; } = string.Empty;
+        public string FieldType { get; set; } = string.Empty;
+        public string DefaultValue { get; set; } = string.Empty;
+        public string MinValue { get; set; } = string.Empty;
+        public string MaxValue { get; set; } = string.Empty;
+        public string[]? PresetOptions { get; set; }
+        public string? Remarks { get; set; }
+        public bool IsBound { get; set; }
+        public string? BoundSourceId { get; set; }
+        public object? StaticValue { get; set; }
+    }
+
+    [Obsolete("No longer used, and keep for auto-migration purposes only. Migrate to IEffectProvider.")]
     public class EffectBundleJSONStructure
     {
         private static readonly Guid NoConnectionGuid = new("00001234-5678-90ab-cdef-012345678900");
@@ -82,6 +119,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public string FromPlugin { get; set; } = string.Empty;
         public string BundleTypeName { get; set; } = string.Empty;
         public Dictionary<string, object> Parameters { get; set; } = new();
+        public Dictionary<string, IEffectArgumentField>? Fields { get; set; }
         public string Name { get; set; } = string.Empty;
         public bool Enabled { get; set; } = true;
         public Guid BindedInputId { get; set; } = NoConnectionGuid;
@@ -113,12 +151,19 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <param name="ParametersType"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
+        [Obsolete("No longer used as there is a new DynamicParam.Resolve can do this.")]
         public static Dictionary<string, object> ConvertElementDictToObjectDict(Dictionary<string, object> elements, Dictionary<string, string> ParametersType, IEffectArgsEnumHandler? EnumHandler = null)
         {
             var result = new Dictionary<string, object>();
 
             foreach (var kvp in elements)
             {
+                if (DynamicParam.IsDynamicValue(kvp.Value))
+                {
+                    result[kvp.Key] = kvp.Value;
+                    continue;
+                }
+
                 if (kvp.Value is not JsonElement)
                 {
                     object obj = GetParamType(kvp.Key, ParametersType) switch

@@ -406,7 +406,7 @@ public partial class Program
 
             if (EffectHelper.EffectsProviderEnum != null && EffectHelper.EffectsProviderEnum.TryGetValue(effectType, out var creator))
             {
-                effect = creator().BuildWithDefaultType();
+                effect = creator().RestoreInstanceWithDefaultType();
             }
 
             if (effect == null)

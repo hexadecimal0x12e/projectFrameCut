@@ -553,6 +553,7 @@ public partial class TemplateCreatePage : ContentView
             project.NormallyExited = true;
             project.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
             project.LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
+            project.LastOpenAppName = MauiProgram.AssemblyName;
             project.PluginUsed ??= [];
 
             draft.SavedAt = DateTime.Now;

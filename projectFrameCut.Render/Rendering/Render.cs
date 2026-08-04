@@ -1856,21 +1856,6 @@ namespace projectFrameCut.Render.Rendering
                                     float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
                                     frame = c.Render(frame, continuousProgress, computer, TargetWidth, TargetHeight);
                                     continue;
-                                case EffectType.BindableEffect:
-                                    if (item is IValueProviderEffect vp)
-                                    {
-                                        // New-system value provider: write the current frame value keyed by its
-                                        // effect Id (= provider bundle Guid); consumers' bound dynamic parameters
-                                        // read it via ValueProviderFrameContext. The frame is not modified.
-                                        ValueProviderFrameContext.Set(vp.Id, vp.GenerateValue(targetFrame, computer, TargetWidth, TargetHeight));
-                                        continue;
-                                    }
-                                    if (item is not IBindableArgumentEffect b) goto notdefined;
-                                    if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, b, computer, TargetWidth, TargetHeight))
-                                    {
-                                        (effectCopy ??= new List<IEffect>(effects)).Remove(item);
-                                    }
-                                    continue;
                                 case EffectType.ContinuousClipPositionProvider:
                                     if (item is not IContinuousClipPositionProvider cp) goto notdefined;
                                     var pos = cp.GetPosition(clip, targetFrame, TargetWidth, TargetHeight);
@@ -1944,6 +1929,11 @@ namespace projectFrameCut.Render.Rendering
 
 
                     notdefined:
+                        if (item.TypeOfEffect == EffectType.NonIPictureOutputValueProvider && item is IValueProviderEffect vp)
+                        {
+                            ValueProviderFrameContext.Set(item.BindedEffectProvidingSystemID ?? item.Id, vp.GetGetter()());
+                            continue;
+                        }
                         Log($"[Render] Effect {item.Name} of clip {clip.Id} has an not static defined type.", "warn");
                         if (item is IBindableArgumentEffect be)
                         {

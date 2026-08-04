@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Text.Json;
 
-namespace projectFrameCut.Render.Effect
+namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
     /// <summary>
     /// Pure parameter-conversion helpers shared by the Render-side <see cref="EffectProviderBase"/>

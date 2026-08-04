@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -27,7 +27,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public float SecondPerFrameRatio { get; init; }
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
         public string? FilePath { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }

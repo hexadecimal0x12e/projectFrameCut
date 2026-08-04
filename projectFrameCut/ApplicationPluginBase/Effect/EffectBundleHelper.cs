@@ -2,6 +2,7 @@ using Microsoft.Maui.Controls;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Plugin;
 using System;
 using System.Collections.Generic;
@@ -103,5 +104,53 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             parameters[key] = parsed;
             return true;
         }
+
+        #region Fields-based helpers (IEffectProvider.Fields)
+
+        public static int GetFieldInt(Dictionary<string, IEffectArgumentField> fields, string key, int fallback)
+        {
+            return fields.TryGetValue(key, out var field) && field is StaticEffectArgumentField sf
+                && EffectParamConvert.TryConvertToInt(sf.Value, out var v) ? v : fallback;
+        }
+
+        public static float GetFieldFloat(Dictionary<string, IEffectArgumentField> fields, string key, float fallback)
+        {
+            return fields.TryGetValue(key, out var field) && field is StaticEffectArgumentField sf
+                && EffectParamConvert.TryConvertToFloat(sf.Value, out var v) ? v : fallback;
+        }
+
+        public static ushort GetFieldUShort(Dictionary<string, IEffectArgumentField> fields, string key, ushort fallback)
+        {
+            return fields.TryGetValue(key, out var field) && field is StaticEffectArgumentField sf
+                && EffectParamConvert.TryConvertToUShort(sf.Value, out var v) ? v : fallback;
+        }
+
+        public static bool GetFieldBool(Dictionary<string, IEffectArgumentField> fields, string key, bool fallback)
+        {
+            return fields.TryGetValue(key, out var field) && field is StaticEffectArgumentField sf
+                && EffectParamConvert.TryConvertToBool(sf.Value, out var v) ? v : fallback;
+        }
+
+        public static string GetFieldString(Dictionary<string, IEffectArgumentField> fields, string key, string fallback)
+        {
+            if (!fields.TryGetValue(key, out var field) || field is not StaticEffectArgumentField sf)
+                return fallback;
+            var raw = EffectParamConvert.Normalize(sf.Value);
+            return raw?.ToString() ?? fallback;
+        }
+
+        public static object? GetFieldRawValue(Dictionary<string, IEffectArgumentField> fields, string key)
+        {
+            if (fields.TryGetValue(key, out var field) && field is StaticEffectArgumentField sf)
+                return sf.Value;
+            return null;
+        }
+
+        public static void SetFieldValue(Dictionary<string, IEffectArgumentField> fields, string key, object value, EffectArgumentFieldType fieldType)
+        {
+            fields[key] = new StaticEffectArgumentField(value, fieldType);
+        }
+
+        #endregion
     }
 }

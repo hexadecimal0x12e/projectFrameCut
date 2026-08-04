@@ -9,7 +9,7 @@ using System.Diagnostics;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ZoomInContinuousEffect : IContinuousEffect, IDynamicArgumentsEffect
+    public class ZoomInContinuousEffect : IContinuousEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -19,7 +19,7 @@ namespace projectFrameCut.Render.Effect
         public string TypeName => "ZoomIn";
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public bool IsReorderable => true;
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; }
 
 
@@ -30,21 +30,15 @@ namespace projectFrameCut.Render.Effect
         public bool IsScoped { get; set; }
         public int TargetX { get; init; }
         public int TargetY { get; init; }
-        public IReadOnlyDictionary<string, Func<object?>>? DynamicProviders { get; set; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            {"TargetX", TargetX},
-            {"TargetY", TargetY},
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
 
         public IPicture Render(IPicture source, float progress, IComputer? computer, int targetWidth, int targetHeight)
         {
             double clampedProgress = Math.Clamp(progress, 0.0, 1.0);
 
-            int zoomTargetX = DynamicParam.Resolve(DynamicProviders, "TargetX", TargetX);
-            int zoomTargetY = DynamicParam.Resolve(DynamicProviders, "TargetY", TargetY);
+            int zoomTargetX = DynamicParam.Resolve(Parameters.GetValueOrDefault("TargetX"), TargetX);
+            int zoomTargetY = DynamicParam.Resolve(Parameters.GetValueOrDefault("TargetY"), TargetY);
             int currentWidth = (int)Math.Round(source.Width + (zoomTargetX - source.Width) * clampedProgress);
             int currentHeight = (int)Math.Round(source.Height + (zoomTargetY - source.Height) * progress);
             if (currentWidth < 1) currentWidth = 1;
@@ -65,8 +59,8 @@ namespace projectFrameCut.Render.Effect
         {
             return new ZoomInContinuousEffect
             {
-                TargetX = (int)parameters["TargetX"],
-                TargetY = (int)parameters["TargetY"],
+                TargetX = DynamicParam.ToInt32(parameters.GetValueOrDefault("TargetX")),
+                TargetY = DynamicParam.ToInt32(parameters.GetValueOrDefault("TargetY")),
                 ImplementType = this.ImplementType,
                 RelativeWidth = this.RelativeWidth,
                 RelativeHeight = this.RelativeHeight,
@@ -84,67 +78,6 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class ZoomInContinuousEffectFactory
-    {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-
-        public string TypeName => "ZoomIn";
-
-        public EffectTarget Target => EffectTarget.Video;
-
-        public List<string> ParametersNeeded => s_ParametersNeeded;
-        public static List<string> s_ParametersNeeded { get; } = new List<string>
-        {
-            "TargetX",
-            "TargetY",
-        };
-
-        public Dictionary<string, string> ParametersType => s_ParametersType;
-
-        public static Dictionary<string, string> s_ParametersType { get; } = new Dictionary<string, string>
-        {
-            {"TargetX", "int"},
-            {"TargetY", "int"},
-        };
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture };
-
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            if (implementType == EffectImplementType.NotSpecified)
-            {
-                return BuildWithDefaultType(parameters);
-            }
-
-            return implementType switch
-            {
-                EffectImplementType.IPicture => BuildWithType(implementType, parameters),
-                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
-            };
-        }
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
-        {
-            return BuildWithType(EffectImplementType.IPicture, parameters);
-        }
-
-        private static IEffect BuildWithType(EffectImplementType implementType, Dictionary<string, object>? parameters)
-        {
-            parameters ??= new Dictionary<string, object>();
-            if (!parameters.ContainsKey("TargetX")) parameters["TargetX"] = 1;
-            if (!parameters.ContainsKey("TargetY")) parameters["TargetY"] = 1;
-
-            return new ZoomInContinuousEffect
-            {
-                TargetX = Convert.ToInt32(parameters["TargetX"]),
-                TargetY = Convert.ToInt32(parameters["TargetY"]),
-                ImplementType = implementType,
-            };
-        }
-    }
-
-
-
     /// <summary>
     /// The Render-side provider of the ZoomIn continuous effect.
     /// </summary>
@@ -153,11 +86,8 @@ namespace projectFrameCut.Render.Effect
         public ZoomInEffectProvider()
         {
             Name = "ZoomIn";
-            Parameters = new Dictionary<string, object>
-            {
-                { "TargetX", 960 },
-                { "TargetY", 540 },
-            };
+            SetField("TargetX", 960);
+            SetField("TargetY", 540);
         }
 
         public override string TypeName => "ZoomIn";
@@ -179,7 +109,18 @@ namespace projectFrameCut.Render.Effect
 
         protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
-            return [new ZoomInContinuousEffectFactory().Build(implementType, parameters)];
+            if (!parameters.ContainsKey("TargetX")) parameters["TargetX"] = 1;
+            if (!parameters.ContainsKey("TargetY")) parameters["TargetY"] = 1;
+
+            return
+            [
+                new ZoomInContinuousEffect
+                {
+                    TargetX = Convert.ToInt32(parameters["TargetX"]),
+                    TargetY = Convert.ToInt32(parameters["TargetY"]),
+                    ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType,
+                }
+            ];
         }
     }
 }

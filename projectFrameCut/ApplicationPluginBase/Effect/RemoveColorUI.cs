@@ -21,23 +21,23 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             if (args.Id == "ColorPreview" && args.Value is Color color)
             {
-                Inner.Parameters["R"] = (ushort)(color.Red * 65535.0);
-                Inner.Parameters["G"] = (ushort)(color.Green * 65535.0);
-                Inner.Parameters["B"] = (ushort)(color.Blue * 65535.0);
-                Inner.Parameters["A"] = (ushort)(color.Alpha * 65535.0);
-                return (Inner.Parameters, Inner.Fields);
+                EffectProviderHelper.SetFieldValue(Inner.Fields, "R", (ushort)(color.Red * 65535.0), EffectArgumentFieldType.UnsignedInteger);
+                EffectProviderHelper.SetFieldValue(Inner.Fields, "G", (ushort)(color.Green * 65535.0), EffectArgumentFieldType.UnsignedInteger);
+                EffectProviderHelper.SetFieldValue(Inner.Fields, "B", (ushort)(color.Blue * 65535.0), EffectArgumentFieldType.UnsignedInteger);
+                EffectProviderHelper.SetFieldValue(Inner.Fields, "A", (ushort)(color.Alpha * 65535.0), EffectArgumentFieldType.UnsignedInteger);
+                return (null, Inner.Fields);
             }
 
             return base.HandlePropertyPanelChange(source, args);
         }
 
-        public override PropertyPanelBuilder CreateUI()
+        public override PropertyPanelBuilder CreateUI(IEffectProvider _)
         {
-            ushort r = EffectProviderHelper.GetUShort(Inner.Parameters, "R", 0);
-            ushort g = EffectProviderHelper.GetUShort(Inner.Parameters, "G", 0);
-            ushort b = EffectProviderHelper.GetUShort(Inner.Parameters, "B", 0);
-            ushort a = EffectProviderHelper.GetUShort(Inner.Parameters, "A", ushort.MaxValue);
-            ushort tolerance = EffectProviderHelper.GetUShort(Inner.Parameters, "Tolerance", 1200);
+            ushort r = EffectProviderHelper.GetFieldUShort(Inner.Fields, "R", 0);
+            ushort g = EffectProviderHelper.GetFieldUShort(Inner.Fields, "G", 0);
+            ushort b = EffectProviderHelper.GetFieldUShort(Inner.Fields, "B", 0);
+            ushort a = EffectProviderHelper.GetFieldUShort(Inner.Fields, "A", ushort.MaxValue);
+            ushort tolerance = EffectProviderHelper.GetFieldUShort(Inner.Fields, "Tolerance", 1200);
 
             var panel = new PropertyPanelBuilder();
 
@@ -79,10 +79,10 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                             var newB = (ushort)(color.Blue * 65535.0);
                             var newA = (ushort)(color.Alpha * 65535.0);
 
-                            Inner.Parameters["R"] = newR;
-                            Inner.Parameters["G"] = newG;
-                            Inner.Parameters["B"] = newB;
-                            Inner.Parameters["A"] = newA;
+                            EffectProviderHelper.SetFieldValue(Inner.Fields, "R", newR, EffectArgumentFieldType.UnsignedInteger);
+                            EffectProviderHelper.SetFieldValue(Inner.Fields, "G", newG, EffectArgumentFieldType.UnsignedInteger);
+                            EffectProviderHelper.SetFieldValue(Inner.Fields, "B", newB, EffectArgumentFieldType.UnsignedInteger);
+                            EffectProviderHelper.SetFieldValue(Inner.Fields, "A", newA, EffectArgumentFieldType.UnsignedInteger);
                             swatch.BackgroundColor = color;
                             currentColor = color;
 

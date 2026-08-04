@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Plugin;
@@ -33,7 +33,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string? FilePath { get; set; }
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
 
@@ -453,7 +456,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string? FilePath { get; set; }
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
         public Dictionary<string, object> ExtraData { get; set; } = new();
         public bool ExtendToWholeDraft { get; set; }
         [JsonIgnore]
