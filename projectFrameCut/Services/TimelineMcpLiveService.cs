@@ -548,6 +548,7 @@ public static class TimelineMcpLiveService
 
         clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
         clip.EffectProviders[bundle.Id] = bundle;
+        EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, bundle, clip.GetEffectTarget());
         ClipInfoBuilder.RebuildAllEffects(clip);
         page.RefreshPropertyPanel(clip);
         return bundle;
@@ -560,7 +561,7 @@ public static class TimelineMcpLiveService
             return false;
         }
 
-        bool removed = clip.EffectProviders.Remove(bundleId);
+        bool removed = EffectBindingHelper.RemoveProvider(clip.EffectProviders, bundleId);
         if (removed)
         {
             ClipInfoBuilder.RebuildAllEffects(clip);

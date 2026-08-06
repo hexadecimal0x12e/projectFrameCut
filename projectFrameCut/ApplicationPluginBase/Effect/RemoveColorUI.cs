@@ -21,11 +21,13 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             if (args.Id == "ColorPreview" && args.Value is Color color)
             {
-                EffectProviderHelper.SetFieldValue(Inner.Fields, "R", (ushort)(color.Red * 65535.0), EffectArgumentFieldType.UnsignedInteger);
-                EffectProviderHelper.SetFieldValue(Inner.Fields, "G", (ushort)(color.Green * 65535.0), EffectArgumentFieldType.UnsignedInteger);
-                EffectProviderHelper.SetFieldValue(Inner.Fields, "B", (ushort)(color.Blue * 65535.0), EffectArgumentFieldType.UnsignedInteger);
-                EffectProviderHelper.SetFieldValue(Inner.Fields, "A", (ushort)(color.Alpha * 65535.0), EffectArgumentFieldType.UnsignedInteger);
-                return (null, Inner.Fields);
+                var fields = Inner.Fields;
+                EffectProviderHelper.SetFieldValue(fields, "R", (ushort)(color.Red * 65535.0), EffectArgumentFieldType.UnsignedInteger);
+                EffectProviderHelper.SetFieldValue(fields, "G", (ushort)(color.Green * 65535.0), EffectArgumentFieldType.UnsignedInteger);
+                EffectProviderHelper.SetFieldValue(fields, "B", (ushort)(color.Blue * 65535.0), EffectArgumentFieldType.UnsignedInteger);
+                EffectProviderHelper.SetFieldValue(fields, "A", (ushort)(color.Alpha * 65535.0), EffectArgumentFieldType.UnsignedInteger);
+                Inner.Fields = fields;
+                return (null, fields);
             }
 
             return base.HandlePropertyPanelChange(source, args);
@@ -79,10 +81,12 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                             var newB = (ushort)(color.Blue * 65535.0);
                             var newA = (ushort)(color.Alpha * 65535.0);
 
-                            EffectProviderHelper.SetFieldValue(Inner.Fields, "R", newR, EffectArgumentFieldType.UnsignedInteger);
-                            EffectProviderHelper.SetFieldValue(Inner.Fields, "G", newG, EffectArgumentFieldType.UnsignedInteger);
-                            EffectProviderHelper.SetFieldValue(Inner.Fields, "B", newB, EffectArgumentFieldType.UnsignedInteger);
-                            EffectProviderHelper.SetFieldValue(Inner.Fields, "A", newA, EffectArgumentFieldType.UnsignedInteger);
+                            var fields = Inner.Fields;
+                            EffectProviderHelper.SetFieldValue(fields, "R", newR, EffectArgumentFieldType.UnsignedInteger);
+                            EffectProviderHelper.SetFieldValue(fields, "G", newG, EffectArgumentFieldType.UnsignedInteger);
+                            EffectProviderHelper.SetFieldValue(fields, "B", newB, EffectArgumentFieldType.UnsignedInteger);
+                            EffectProviderHelper.SetFieldValue(fields, "A", newA, EffectArgumentFieldType.UnsignedInteger);
+                            Inner.Fields = fields;
                             swatch.BackgroundColor = color;
                             currentColor = color;
 

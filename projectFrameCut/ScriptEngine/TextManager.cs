@@ -49,14 +49,13 @@ namespace projectFrameCut.ScriptEngine
                 provider.SettableFields.Values.Select(f => new PSObject(new
                 {
                     f.Id,
-                    f.DisplayName,
-                    f.Description,
-                    ValueType = f.ValueType.ToString(),
+                    Name = f.Id,
+                    f.Remarks,
+                    FieldType = f.FieldType.ToString(),
                     f.DefaultValue,
                     f.MinValue,
                     f.MaxValue,
                     f.PresetOptions,
-                    f.Remarks
                 })).ToList(),
                 enumerateCollection: true);
         }

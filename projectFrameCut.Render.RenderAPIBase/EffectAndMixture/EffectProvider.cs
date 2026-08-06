@@ -2,7 +2,6 @@ using projectFrameCut.Drawing.Vector.ImportExport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
@@ -79,13 +78,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public EffectArgumentFieldDescriptor OutField { get; }
 
         /// <summary>
-        /// The connected effect providers for the anchors in the effect group. 
-        /// The key is the anchor id, and the value is the connected effect provider.
+        /// Persisted binding configuration. <c>__Input__</c> stores the single picture source,
+        /// <c>__Output__</c> stores the final-output marker, and ordinary field ids store value sources.
+        /// Values are strings so both Guid-based sources and <c>builtin://</c> sources are representable.
         /// </summary>
         /// <remarks>
         /// For output anchor the key should be <c>__Output__</c>.
         /// </remarks>
-        public Dictionary<string, Guid> AnchorsBindingState { get; set; }
+        public Dictionary<string, string> AnchorsBindingState { get; set; }
 
         /// <summary>
         /// The connected effect providers for the anchors in the effect group. 
@@ -199,9 +199,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     }
 
     /// <summary>
-    /// Anchor helpers over <see cref="IEffectProvider.AnchorsBindingState"/>.
-    /// They read/write the reserved <c>__Input__</c> / <c>__Output__</c> keys so the core stack
-    /// can work with anchors uniformly without depending on the legacy <see cref="IEffectBundle"/> model.
+    /// Binding configuration helpers over <see cref="IEffectProvider.AnchorsBindingState"/>.
+    /// The dictionary is the persisted source of truth. <see cref="IEffectProvider.Fields"/> is a
+    /// materialized runtime projection and must not be used to discover stored bindings.
     /// </summary>
     public static class EffectProviderAnchorExtensions
     {
@@ -215,100 +215,118 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public const string OutputKey = "__Output__";
 
         /// <summary>
-        /// Reads the primary input anchor. Falls back to <see cref="IEffectProvider.InputAnchorGUID"/> when unbound.
+        /// Returns whether the provider declares <c>__Input__</c> as its only picture input.
+        /// Non-picture descriptors do not participate in the picture graph.
         /// </summary>
-        public static Guid GetInputAnchor(this IEffectProvider provider)
+        public static bool HasMainPictureInput(this IEffectProvider provider)
+        {
+            return provider.InFields.TryGetValue(InputKey, out var main)
+                && main.FieldType.HasFlag(EffectArgumentFieldType.IPicture)
+                && !provider.InFields.Any(field => field.Key != InputKey
+                    && field.Value.FieldType.HasFlag(EffectArgumentFieldType.IPicture));
+        }
+
+        /// <summary>
+        /// Reads the configured source of the single picture input.
+        /// </summary>
+        public static string GetMainInputSource(this IEffectProvider provider)
         {
             return provider.AnchorsBindingState is { } state && state.TryGetValue(InputKey, out var id)
                 ? id
-                : IEffectProvider.InputAnchorGUID;
+                : IEffectProvider.NoConnectionGUID.ToString();
         }
 
         /// <summary>
-        /// Writes the primary input anchor.
+        /// Configures the source of the single picture input.
         /// </summary>
-        public static void SetInputAnchor(this IEffectProvider provider, Guid id)
+        public static void SetMainInputSource(this IEffectProvider provider, string sourceId)
         {
-            var state = provider.AnchorsBindingState ?? new Dictionary<string, Guid>();
-            state[InputKey] = id;
-            provider.AnchorsBindingState = state;   // assign the whole dictionary so the property setter captures it
+            ArgumentException.ThrowIfNullOrWhiteSpace(sourceId);
+            if (!provider.HasMainPictureInput())
+                throw new InvalidOperationException($"Provider '{provider.TypeName}' does not declare '__Input__' as its only picture input.");
+            var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);
+            state[InputKey] = sourceId;
+            provider.AnchorsBindingState = state;
         }
 
-        /// <summary>
-        /// Reads the output anchor. Falls back to <see cref="IEffectProvider.OutputAnchorGUID"/> when unbound.
-        /// </summary>
-        public static Guid GetOutputAnchor(this IEffectProvider provider)
-        {
-            return provider.AnchorsBindingState is { } state && state.TryGetValue(OutputKey, out var id)
-                ? id
-                : IEffectProvider.OutputAnchorGUID;
-        }
+        public static void SetMainInputSource(this IEffectProvider provider, Guid sourceId) => provider.SetMainInputSource(sourceId.ToString());
 
-        /// <summary>
-        /// Writes the output anchor.
-        /// </summary>
-        public static void SetOutputAnchor(this IEffectProvider provider, Guid id)
+        public static void DisconnectMainInput(this IEffectProvider provider)
         {
-            var state = provider.AnchorsBindingState ?? new Dictionary<string, Guid>();
-            state[OutputKey] = id;
-            provider.AnchorsBindingState = state;   // assign the whole dictionary so the property setter captures it
-        }
-
-        /// <summary>
-        /// Returns every input anchor value currently bound in <see cref="IEffectProvider.AnchorsBindingState"/>.
-        /// Excludes the output anchor key. Single-input providers yield a single-element list.
-        /// </summary>
-        public static List<Guid> GetInputAnchors(this IEffectProvider provider)
-        {
-            if (provider.AnchorsBindingState is not { } state) return new List<Guid>();
-            return state.Where(kv => kv.Key != OutputKey).Select(kv => kv.Value).ToList();
-        }
-
-        /// <summary>
-        /// Replaces the input anchors in <see cref="IEffectProvider.AnchorsBindingState"/>.
-        /// The first element is stored under the primary <c>__Input__</c> key.
-        /// </summary>
-        public static void SetInputAnchors(this IEffectProvider provider, IEnumerable<Guid> ids)
-        {
-            var list = ids?.ToList() ?? new List<Guid>();
-            var state = provider.AnchorsBindingState ?? new Dictionary<string, Guid>();
-            state[InputKey] = list.Count > 0 ? list[0] : IEffectProvider.InputAnchorGUID;
-            provider.AnchorsBindingState = state;   // assign the whole dictionary so the property setter captures it
-        }
-
-        /// <summary>
-        /// True when the provider declares more than one input anchor (in <see cref="IEffectProvider.InFields"/>).
-        /// </summary>
-        public static bool HasMultiInputAnchors(this IEffectProvider provider)
-        {
-            return provider.InFields is { Count: > 1 };
-        }
-
-        /// <summary>
-        /// The input anchor names declared in <see cref="IEffectProvider.InFields"/>, or null for single-input providers.
-        /// </summary>
-        public static string[]? GetInputAnchorNames(this IEffectProvider provider)
-        {
-            return provider.InFields is { Count: > 1 } ? provider.InFields.Keys.ToArray() : null;
-        }
-
-        /// <summary>
-        /// Write one anchor binding by its anchor key (e.g. <c>__Input__</c> or a multi-input anchor key).
-        /// Assigns the whole dictionary so the property setter captures it.
-        /// </summary>
-        public static void SetInputAnchorValue(this IEffectProvider provider, string anchorKey, Guid id)
-        {
-            var state = provider.AnchorsBindingState ?? new Dictionary<string, Guid>();
-            state[anchorKey] = id;
+            var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);
+            state[InputKey] = IEffectProvider.NoConnectionGUID.ToString();
             provider.AnchorsBindingState = state;
         }
 
         /// <summary>
-        /// Read one anchor binding by its anchor key; falls back to <see cref="IEffectProvider.NoConnectionGUID"/>.
+        /// Returns true when this provider is the sole configured source of the final picture output.
         /// </summary>
-        public static Guid GetInputAnchorValue(this IEffectProvider provider, string anchorKey)
+        public static bool IsFinalOutputSource(this IEffectProvider provider)
         {
-            return provider.AnchorsBindingState is { } s && s.TryGetValue(anchorKey, out var id) ? id : IEffectProvider.NoConnectionGUID;
+            return provider.AnchorsBindingState is { } state
+                && state.TryGetValue(OutputKey, out var id)
+                && id == IEffectProvider.OutputAnchorGUID.ToString();
+        }
+
+        /// <summary>
+        /// Sets or clears the final-output marker. Collection-level callers are responsible for
+        /// clearing the marker on other providers before setting it here.
+        /// </summary>
+        public static void SetFinalOutputSource(this IEffectProvider provider, bool isFinalOutput)
+        {
+            var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);
+            state[OutputKey] = (isFinalOutput ? IEffectProvider.OutputAnchorGUID : IEffectProvider.NoConnectionGUID).ToString();
+            provider.AnchorsBindingState = state;
+        }
+
+        /// <summary>
+        /// Reads a stored value-field binding without consulting the materialized Fields collection.
+        /// </summary>
+        public static bool TryGetFieldBinding(this IEffectProvider provider, string fieldId, out string sourceId)
+        {
+            sourceId = string.Empty;
+            return fieldId != InputKey
+                && fieldId != OutputKey
+                && provider.AnchorsBindingState is { } state
+                && state.TryGetValue(fieldId, out sourceId)
+                && !string.IsNullOrWhiteSpace(sourceId);
+        }
+
+        /// <summary>
+        /// Stores a value-field binding on the provider that owns the target field.
+        /// </summary>
+        public static void SetFieldBinding(this IEffectProvider provider, string fieldId, string sourceId)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(fieldId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(sourceId);
+            if (fieldId == InputKey || fieldId == OutputKey)
+                throw new ArgumentException($"'{fieldId}' is a reserved picture binding key.", nameof(fieldId));
+            if (!provider.Fields.ContainsKey(fieldId))
+                throw new ArgumentException($"Provider '{provider.TypeName}' does not own field '{fieldId}'.", nameof(fieldId));
+
+            var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);
+            state[fieldId] = sourceId;
+            provider.AnchorsBindingState = state;
+        }
+
+        /// <summary>
+        /// Removes a stored value-field binding. The static fallback remains in Fields and is restored
+        /// by the next BindingHelper materialization pass.
+        /// </summary>
+        public static void ClearFieldBinding(this IEffectProvider provider, string fieldId)
+        {
+            var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);
+            state.Remove(fieldId);
+            provider.AnchorsBindingState = state;
+        }
+
+        /// <summary>
+        /// Enumerates only stored value-field bindings, excluding the two reserved picture keys.
+        /// </summary>
+        public static IEnumerable<KeyValuePair<string, string>> EnumerateFieldBindings(this IEffectProvider provider)
+        {
+            return (provider.AnchorsBindingState ?? [])
+                .Where(kv => kv.Key != InputKey && kv.Key != OutputKey);
         }
     }
 

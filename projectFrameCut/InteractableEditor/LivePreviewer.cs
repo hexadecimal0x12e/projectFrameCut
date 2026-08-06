@@ -2,6 +2,7 @@
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
@@ -58,7 +59,17 @@ namespace projectFrameCut.LivePreview
             }
             foreach (var item in Clips)
             {
-                item.ReInit(8);
+                try
+                {
+                    item.ReInit(8);
+                    if (!ClipInitializationFailure.HasDeferredFailures(item.ExtraData))
+                        ClipInitializationFailure.Clear(item);
+                }
+                catch (Exception ex)
+                {
+                    ClipInitializationFailure.Mark(item, "Source or effect initialization", ex);
+                    Log(ex, $"Initialize live-render clip {item.Name} ({item.Id}); using checkerboard fallback", this);
+                }
             }
             var layers = Timeline.GetFramesInOneFrame(
                 Clips,
@@ -118,6 +129,7 @@ namespace projectFrameCut.LivePreview
                     continue;
                 }
 
+                DraftImportAndExportHelper.RestoreFailedInitializationData(clip);
                 var clipJson = JsonSerializer.SerializeToElement(clip);
                 var clipInstance = PluginManager.CreateClip(clipJson);
                 if (clipInstance.FilePath is not null)
@@ -153,7 +165,20 @@ namespace projectFrameCut.LivePreview
                     }
                 }
                 clipsList.Add(clipInstance);
-                reinitTasks.Add(Task.Run(() => clipInstance.ReInit(8)));
+                reinitTasks.Add(Task.Run(() =>
+                {
+                    try
+                    {
+                        clipInstance.ReInit(8);
+                        if (!ClipInitializationFailure.HasDeferredFailures(clipInstance.ExtraData))
+                            ClipInitializationFailure.Clear(clipInstance);
+                    }
+                    catch (Exception ex)
+                    {
+                        ClipInitializationFailure.Mark(clipInstance, "Source or effect initialization", ex);
+                        Log(ex, $"Initialize live-preview clip {clipInstance.Name} ({clipInstance.Id}); using checkerboard fallback", this);
+                    }
+                }));
             }
 
             await Task.WhenAll(reinitTasks);

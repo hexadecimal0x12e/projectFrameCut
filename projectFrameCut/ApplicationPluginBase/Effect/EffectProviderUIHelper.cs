@@ -41,7 +41,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                         MaybeWrapWithBind(panel, provider, field, bindingHost, isBound);
                         break;
                     case EffectArgumentFieldType.UnsignedInteger:
-                        AddNumericEntry(panel, field);
+                        AddNumericEntry(panel, provider, field);
                         MaybeWrapWithBind(panel, provider, field, bindingHost, isBound);
                         break;
                     case EffectArgumentFieldType.Integer:
@@ -111,13 +111,13 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             }
             else
             {
-                AddNumericEntry(panel, field);
+                AddNumericEntry(panel, provider, field);
             }
         }
 
-        private static void AddNumericEntry(PropertyPanelBuilder panel, IEffectArgumentField field)
+        private static void AddNumericEntry(PropertyPanelBuilder panel, IEffectProvider provider, IEffectArgumentField field)
         {
-            panel.AddEntry(field.Id, Label(field.Id), field.DefaultValue, field.DefaultValue, entry => entry.Keyboard = Microsoft.Maui.Keyboard.Numeric);
+            panel.AddEntry(field.Id, Label(field.Id), GetString(provider, field.Id), field.DefaultValue, entry => entry.Keyboard = Microsoft.Maui.Keyboard.Numeric);
         }
 
         private static bool TryGetMinMax(IEffectArgumentField field, out double min, out double max)
@@ -138,49 +138,85 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         /// </summary>
         public static (Dictionary<string, object>? newParams, Dictionary<string, IEffectArgumentField>? newFields) HandleChange(IEffectProvider provider, PropertyPanelPropertyChangedEventArgs args)
         {
-            if (provider.Fields.TryGetValue(args.Id, out var field) && field is not null)
+            var fields = provider.Fields;
+            if (fields.TryGetValue(args.Id, out var field) && field is not null)
             {
-                WriteBack(provider, field, args.Id, args.Value);
+                WriteBack(fields, field, args.Id, args.Value);
             }
             else
             {
                 // Compound Position / Size coordinates use the {id}_X / {id}_Y / {id}_W / {id}_H convention.
                 // No built-in effect uses a single Position/Size field currently, so a generic fallback is enough here.
                 int sep = args.Id.LastIndexOf('_');
-                if (sep > 0 && provider.Fields.TryGetValue(args.Id[..sep], out _))
+                if (sep > 0 && fields.TryGetValue(args.Id[..sep], out _))
                 {
-                    provider.Fields[args.Id] = new StaticEffectArgumentField(args.Value, EffectArgumentFieldType.Integer);
+                    fields[args.Id] = new StaticEffectArgumentField
+                    {
+                        Id = args.Id,
+                        FieldType = EffectArgumentFieldType.Integer,
+                        Value = args.Value ?? string.Empty,
+                    };
                 }
             }
 
-            return (null, provider.Fields);
+            provider.Fields = fields;
+            return (null, fields);
         }
 
-        private static void WriteBack(IEffectProvider provider, IEffectArgumentField field, string id, object? value)
+        private static void WriteBack(Dictionary<string, IEffectArgumentField> fields, IEffectArgumentField field, string id, object? value)
         {
+            object? convertedValue = null;
+            bool converted = false;
             var baseType = field.FieldType & (EffectArgumentFieldType)0x3FF;
             switch (baseType)
             {
                 case EffectArgumentFieldType.Boolean:
                     if (EffectParamConvert.TryConvertToBool(value, out var b))
-                        provider.Fields[id] = new StaticEffectArgumentField(b, EffectArgumentFieldType.Boolean);
+                    {
+                        convertedValue = b;
+                        converted = true;
+                    }
                     break;
                 case EffectArgumentFieldType.UnsignedInteger:
                     if (EffectParamConvert.TryConvertToUShort(value, out var us))
-                        provider.Fields[id] = new StaticEffectArgumentField(us, EffectArgumentFieldType.UnsignedInteger);
+                    {
+                        convertedValue = us;
+                        converted = true;
+                    }
                     break;
                 case EffectArgumentFieldType.Integer:
                     if (EffectParamConvert.TryConvertToInt(value, out var i))
-                        provider.Fields[id] = new StaticEffectArgumentField(i, EffectArgumentFieldType.Integer);
+                    {
+                        convertedValue = i;
+                        converted = true;
+                    }
                     break;
                 case EffectArgumentFieldType.Numeric:
                     if (EffectParamConvert.TryConvertToFloat(value, out var f))
-                        provider.Fields[id] = new StaticEffectArgumentField(f, EffectArgumentFieldType.Numeric);
+                    {
+                        convertedValue = f;
+                        converted = true;
+                    }
                     break;
                 default:
-                    provider.Fields[id] = new StaticEffectArgumentField(value?.ToString() ?? "", EffectArgumentFieldType.String);
+                    convertedValue = value?.ToString() ?? string.Empty;
+                    converted = true;
                     break;
             }
+
+            if (!converted) return;
+
+            fields[id] = new StaticEffectArgumentField
+            {
+                Id = id,
+                FieldType = field.FieldType,
+                Value = convertedValue!,
+                DefaultValue = field.DefaultValue,
+                MinValue = field.MinValue,
+                MaxValue = field.MaxValue,
+                PresetOptions = field.PresetOptions,
+                Remarks = field.Remarks,
+            };
         }
 
         private static bool GetBool(IEffectProvider provider, string id)

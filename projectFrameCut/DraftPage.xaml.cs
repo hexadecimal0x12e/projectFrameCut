@@ -354,6 +354,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         SetStatusText(Localized.DraftPage_PleaseWait);
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = true, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill };
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview();
+        DynamicPreviewProvider.ClipInitializationFailed += OnClipInitializationFailed;
+        DynamicPreviewProvider.ClipInitializationRecovered += OnClipInitializationRecovered;
         DynamicPreviewProvider.PreviewResolutionDivisor = DynamicPreviewResolutionDivisor;
         ClipEditorHost.Content = ClipEditor;
         ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
@@ -411,6 +413,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         SetStatusText(Localized.DraftPage_PleaseWait);
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = true, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill };
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview();
+        DynamicPreviewProvider.ClipInitializationFailed += OnClipInitializationFailed;
+        DynamicPreviewProvider.ClipInitializationRecovered += OnClipInitializationRecovered;
         DynamicPreviewProvider.PreviewResolutionDivisor = DynamicPreviewResolutionDivisor;
         ClipEditorHost.Content = ClipEditor;
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
@@ -1327,7 +1331,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-#endregion
+    #endregion
 
     #region add stuff
     public ClipElementUI CreateAndAddClip(
@@ -1695,6 +1699,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             _activeClipPreviews[element.Id] = previewGen;
             var previewView = previewGen.Update();
             element.UpdateContent(previewView);
+            element.ApplyInitializationFailureIndicator();
 
         }
         catch (Exception ex)
@@ -4543,6 +4548,20 @@ public partial class DraftPage : ContentPage, IDraftPage
             Clips[clip.Id] = clip;
             await ReRenderUI();
             RefreshPropertyPanel(clip);
+            // 节点编辑器（DraftEffectBindingView）的 EffectBundlesChanged 经 __REFRESH_PANEL__ 路由到这里。
+            // 绑定/连线在渲染层只有通过 provider 重建才生效（见 EffectHelper.GetClipEffectsInstances），
+            // 因此这里必须同步刷新预览，否则关闭节点编辑器后画面不会反映新的绑定。
+            try
+            {
+                var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+                await previewer.UpdateDraft(d);
+                DynamicPreviewProvider.SetClips(previewer.Clips);
+                await RefreshPreviewFromCurrentProviderAsync();
+            }
+            catch (Exception refreshEx)
+            {
+                Log(refreshEx, "refresh preview after effect binding changed", this);
+            }
             return;
         }
 
@@ -7078,8 +7097,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (provider is null)
         {
             var newProvider = new ProgressPlacerProvider();
-            newProvider.SetInputAnchor(IEffectProvider.InputAnchorGUID);
-            newProvider.SetOutputAnchor(IEffectProvider.OutputAnchorGUID);
+            newProvider.SetMainInputSource(IEffectProvider.InputAnchorGUID);
+            EffectBindingHelper.SetFinalOutput(clip.EffectProviders, null);
+            newProvider.SetFinalOutputSource(true);
             clip.EffectProviders[newProvider.Id] = newProvider;
             provider = EffectServices.GetUIProvider(newProvider) as IKeyFramedEffectProvider;
             ClipInfoBuilder.RebuildAllEffects(clip);
@@ -7348,6 +7368,42 @@ public partial class DraftPage : ContentPage, IDraftPage
             _dynamicPreviewCts = new CancellationTokenSource();
             return _dynamicPreviewCts.Token;
         }
+    }
+
+    private void OnClipInitializationFailed(Guid clipId, string description)
+    {
+        Dispatcher.Dispatch(() =>
+        {
+            if (!Clips.TryGetValue(clipId, out var clip)) return;
+            if (ClipInitializationFailure.IsMarked(clip.ExtraData)) return;
+            ClipInitializationFailure.Mark(clip.ExtraData, "Source or effect initialization", new InvalidOperationException(description));
+            clip.ApplyInitializationFailureIndicator();
+            DraftChanged(this, new ClipUpdateEventArgs
+            {
+                DetailInfo = $"Clip initialization failed: {clip.DisplayName}",
+                ChangedClipID = clip.Id,
+                SourceId = clip.Id,
+                SourceName = clip.DisplayName,
+                Reason = ClipUpdateReason.PropertyChanged
+            });
+        });
+    }
+
+    private void OnClipInitializationRecovered(Guid clipId)
+    {
+        Dispatcher.Dispatch(() =>
+        {
+            if (!Clips.TryGetValue(clipId, out var clip) || !ClipInitializationFailure.IsMarked(clip.ExtraData)) return;
+            clip.ClearInitializationFailureIndicator();
+            DraftChanged(this, new ClipUpdateEventArgs
+            {
+                DetailInfo = $"Clip initialization recovered: {clip.DisplayName}",
+                ChangedClipID = clip.Id,
+                SourceId = clip.Id,
+                SourceName = clip.DisplayName,
+                Reason = ClipUpdateReason.PropertyChanged
+            });
+        });
     }
 
     private void CancelDynamicPreview()
@@ -8693,6 +8749,11 @@ public partial class DraftPage : ContentPage, IDraftPage
                            .Where(c => !c.StartsWith("projectFrameCut.Render."))
                            .Distinct().ToList();
 
+            if (ProjectInfo.ProjectUniqueId == Guid.Empty)
+            {
+                ProjectInfo.ProjectUniqueId = Guid.NewGuid();
+            }
+
             if (ClipEditor != null)
             {
                 ProjectInfo.Properties["InteractableEditor_LockLayout"] = ClipEditor.LockLayout.ToString();
@@ -8972,7 +9033,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 SetStateOK(Localized.DraftPage_RedoAndUndo_Failed);
                 return;
             }
-            (var clips, var tracks) = DraftImportAndExportHelper.ImportFromJSON(draftJson, ProjectInfo, restoreFreeFields: true);
+            (var clips, var tracks) = DraftImportAndExportHelper.ImportFromJSON(draftJson, ProjectInfo);
             Clips = new ConcurrentDictionary<Guid, ClipElementUI>(clips);
             Assets = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a));
 

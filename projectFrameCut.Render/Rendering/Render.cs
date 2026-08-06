@@ -62,6 +62,7 @@ namespace projectFrameCut.Render.Rendering
         public int MaxPendingWriteFrames { get => field > 0 ? field : Math.Max(ThrottleThreshold * 2, 32); set; }
         public bool BlockPreparingBeforeRendering { get; set; } = false;
         public bool DisableAllThrottleOptions { get; set; } = false;
+        public bool EnableEffectAutoRetry { get; set; } = true;
 
         public int ProjectRelativeWidth { get; set; }
         public int ProjectRelativeHeight { get; set; }
@@ -321,6 +322,7 @@ namespace projectFrameCut.Render.Rendering
                             FrameTime = textClip.FrameTime,
                             SecondPerFrameRatio = textClip.SecondPerFrameRatio,
                             Effects = textClip.Effects,
+                            EffectProviders = textClip.EffectProviders,   // 必须带上，否则转换后 provider 绑定数据丢失
                             ExtraData = textClip.ExtraData,
                             ExtendToWholeDraft = textClip.ExtendToWholeDraft,
                             BindedSoundTrack = textClip.BindedSoundTrack,
@@ -351,7 +353,8 @@ namespace projectFrameCut.Render.Rendering
                     Log($"[Preparer] Clip {item.Id} ({item.Name}) is marked as AI-generated.");
                 }
                 if (isAI) IsClipGeneratedByAI.TryAdd(item.Id, isAI);
-                var effectInstances = EffectHelper.GetEffectsInstances(item.Effects);
+                // 优先从 EffectProviders 重建（保留动态绑定，值提供器被内联进消费者字段），无 provider 时回退静态 Effects。
+                var effectInstances = EffectHelper.GetClipEffectsInstances(item);
 
                 if (HasExplicitTargetRect(item))
                 {
@@ -1855,7 +1858,7 @@ namespace projectFrameCut.Render.Rendering
                                     if (scopedEnd <= scopedStart || targetFrame < scopedStart || targetFrame >= scopedEnd) continue;
                                     float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
                                     frame = c.Render(frame, continuousProgress, computer, TargetWidth, TargetHeight);
-                                    continue;
+                                    continue; 
                                 case EffectType.ContinuousClipPositionProvider:
                                     if (item is not IContinuousClipPositionProvider cp) goto notdefined;
                                     var pos = cp.GetPosition(clip, targetFrame, TargetWidth, TargetHeight);
@@ -1891,6 +1894,8 @@ namespace projectFrameCut.Render.Rendering
                                         targetPos = pos1;
                                     }
                                     continue;
+                                case EffectType.NonIPictureOutputValueProvider:
+                                    throw new InvalidOperationException($"Effect {item.Name} ({item.Id}) of clip {clip.Id} is a NonIPictureOutputValueProvider and should have been handled in the EffectBindingHelper.RebuildAllEffects. This indicates a logic error.");
 
                                 case EffectType.MixtureProvider:
                                 case EffectType.SpeedVarianceProvider:
@@ -1898,49 +1903,34 @@ namespace projectFrameCut.Render.Rendering
                                 case EffectType.ContinuousTextEffect:
                                 case EffectType.SourceReplacement:
                                     continue; //they've processed somewhere else
+
+                                case EffectType.NotSpecified:
+                                    throw new InvalidOperationException($"EffectType cannot be NotSpecified. Processing: {item.Name} of clip {clip.Id}");
+
                                 default:
+                                    Log($"[Render] Effect {item.Name} of clip {clip.Id} has an not defined type {item.TypeOfEffect}.", "warn");
                                     goto notdefined;
                             }
                         }
-#if !DEBUG
-                        catch (NotSupportedException)
-                        {
-                            goto notdefined;
-                        }
-                        catch (NotImplementedException)
-                        {
-                            goto notdefined;
-                        }
-                        catch (InvalidOperationException)
-                        {
-                            goto notdefined;
-                        }
-#endif
                         catch (Exception ex)
                         {
                             Log(ex, $"Processing effect {item?.Name} ({item?.Id}) of clip {clip.Id}", this);
-#if DEBUG
-                            goto notdefined;
-#else
-                            throw;
-#endif
+                            if (EnableEffectAutoRetry)
+                            {
+                                goto notdefined;
+                            }
+                            else
+                            {
+                                throw;
+                            }
                         }
 
 
 
                     notdefined:
-                        if (item.TypeOfEffect == EffectType.NonIPictureOutputValueProvider && item is IValueProviderEffect vp)
-                        {
-                            ValueProviderFrameContext.Set(item.BindedEffectProvidingSystemID ?? item.Id, vp.GetGetter()());
-                            continue;
-                        }
-                        Log($"[Render] Effect {item.Name} of clip {clip.Id} has an not static defined type.", "warn");
                         if (item is IBindableArgumentEffect be)
                         {
-                            if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, be, computer, TargetWidth, TargetHeight))
-                            {
-                                (effectCopy ??= new List<IEffect>(effects)).Remove(item);
-                            }
+                            EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, be, computer, TargetWidth, TargetHeight);
                         }
                         else if (item is IContinuousEffect c)
                         {
@@ -1978,6 +1968,10 @@ namespace projectFrameCut.Render.Rendering
                                 targetPos = new(x, y, w, h, false);
                             }
                         }
+                        else if(item is IValueProviderEffect)
+                        {
+                            throw new InvalidOperationException($"Effect {item.Name} ({item.Id}) of clip {clip.Id} is a IValueProviderEffect and should have been handled in the EffectBindingHelper.RebuildAllEffects. This indicates a logic error.");
+                        }
                         else if (item is IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect or ISourceReplacementEffect)
                         {
                             //skip here, they've processed somewhere else
@@ -1991,20 +1985,6 @@ namespace projectFrameCut.Render.Rendering
                     }
                     // The per-frame value-provider values are only needed during effect processing.
                     ValueProviderFrameContext.EndFrame();
-
-                    if (effectCopy is not null)
-                    {
-                        // effectCopy preserves original array order (minus removed effect).
-                        // Skip sort when reorder is disabled — OrderBy is redundant without it.
-                        var updated = effectCopy.ToArray();
-                        if (AllowReorderEffect)
-                        {
-                            // Restore Index order before GPU re-batching for deterministic result.
-                            Array.Sort(updated, (a, b) => a.Index.CompareTo(b.Index));
-                            updated = ReorderEffectsForGpuBatching(updated);
-                        }
-                        EffectCache[clip.Id] = updated;
-                    }
                 }
 
                 // Resize frame to match targetPos dimensions when they differ (replaces legacy __Internal_Resize__ effect)

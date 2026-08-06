@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
@@ -23,6 +24,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// is converted to <typeparamref name="T"/>; when it is a static value, it is converted directly.
         /// When <paramref name="param"/> is null, <paramref name="staticValue"/> is returned.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static T Resolve<T>(object? param, T staticValue)
         {
             if (param is null) return staticValue;
@@ -62,6 +64,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Convert a parameter value to <see cref="int"/> using <see cref="EffectParamConvert"/>.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static int ToInt32(object? raw)
         {
             return EffectParamConvert.TryConvertToInt(raw, out var v) ? v : 0;
@@ -70,6 +73,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Convert a parameter value to <see cref="float"/> using <see cref="EffectParamConvert"/>.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static float ToFloat(object? raw)
         {
             return EffectParamConvert.TryConvertToFloat(raw, out var v) ? v : 0f;
@@ -78,6 +82,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Convert a parameter value to <see cref="ushort"/> using <see cref="EffectParamConvert"/>.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static ushort ToUShort(object? raw)
         {
             return EffectParamConvert.TryConvertToUShort(raw, out var v) ? v : (ushort)0;
@@ -86,6 +91,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Convert a parameter value to <see cref="bool"/> using <see cref="EffectParamConvert"/>.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static bool ToBool(object? raw)
         {
             return EffectParamConvert.TryConvertToBool(raw, out var v) && v;
@@ -94,6 +100,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Convert a parameter value to <see cref="string"/>.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static string ToStringValue(object? raw)
         {
             return raw?.ToString() ?? string.Empty;
@@ -103,6 +110,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Whether a raw value is a <see cref="Func{T}"/> / <see cref="Lazy{T}"/> dynamic value that cannot be
         /// converted by the effect factories and must be kept out of the static parameter dictionary.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static bool IsDynamicValue(object? raw)
         {
             if (raw is null) return false;

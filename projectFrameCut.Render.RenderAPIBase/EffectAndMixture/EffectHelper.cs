@@ -70,44 +70,13 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public string TypeName { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public bool Enabled { get; set; } = true;
-        public Dictionary<string, Guid> AnchorsBindingState { get; set; } = new();
-        public EffectProviderFieldJSONStructure[]? Fields { get; set; }
+        public Dictionary<string, string> AnchorsBindingState { get; set; } = new();
+        /// <summary>
+        /// Static values owned by this provider, keyed by field id.
+        /// Runtime-only <see cref="IValueProviderEffect"/> instances are not persisted here.
+        /// </summary>
+        public Dictionary<string, object>? StaticFields { get; set; }
         public Dictionary<string, object>? MetaData { get; set; }
-    }
-
-    public class FreeEffectFieldJSONStructure
-    {
-        public Guid GlobalId { get; set; } = Guid.Empty;
-        public string? OwnerHint { get; set; }
-        public string Id { get; set; } = string.Empty;
-        public string TypeName { get; set; } = string.Empty;
-        public string FieldType { get; set; } = string.Empty;
-        public string DefaultValue { get; set; } = string.Empty;
-        public string MinValue { get; set; } = string.Empty;
-        public string MaxValue { get; set; } = string.Empty;
-        public string[]? PresetOptions { get; set; }
-        public string? Remarks { get; set; }
-        public bool IsBound { get; set; }
-        public string? BoundSourceId { get; set; }
-        public object? StaticValue { get; set; }
-    }
-
-    /// <summary>
-    /// Serializable field descriptor for a single <see cref="IEffectArgumentField"/> in a provider.
-    /// </summary>
-    public class EffectProviderFieldJSONStructure
-    {
-        public string Id { get; set; } = string.Empty;
-        public string TypeName { get; set; } = string.Empty;
-        public string FieldType { get; set; } = string.Empty;
-        public string DefaultValue { get; set; } = string.Empty;
-        public string MinValue { get; set; } = string.Empty;
-        public string MaxValue { get; set; } = string.Empty;
-        public string[]? PresetOptions { get; set; }
-        public string? Remarks { get; set; }
-        public bool IsBound { get; set; }
-        public string? BoundSourceId { get; set; }
-        public object? StaticValue { get; set; }
     }
 
     [Obsolete("No longer used, and keep for auto-migration purposes only. Migrate to IEffectProvider.")]

@@ -35,6 +35,7 @@ namespace projectFrameCut.ApplicationPluginBase
             { "TextFadeIn", p => new TextFadeInUI(p) },
             { "ProgressPlacer", p => new ProgressPlacerUI(p) },
             { "ProgressCrop", p => new ProgressCropUI(p) },
+            { "ColorAdjustment", p => new ColorAdjustmentUI(p) },
         };
 
         public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => new Dictionary<string, Func<ITextClipStyleProvider>>

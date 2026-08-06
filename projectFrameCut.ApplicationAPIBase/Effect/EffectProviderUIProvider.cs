@@ -1,4 +1,4 @@
-﻿using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Collections.Generic;
@@ -23,6 +23,55 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// <param name="args">The input arguments for the property panel change event.</param>
         /// <returns>The updated parameters or fields after handling the property panel change. Keep newParams to null means no changes to the parameters, and keep newFields to null means no changes to the fields.</returns>
         public (Dictionary<string, object>? newParams, Dictionary<string, IEffectArgumentField>? newFields) HandlePropertyPanelChange(IEffectProvider source,  PropertyPanelPropertyChangedEventArgs args);
+
+        /// <summary>
+        /// Returns the static display configuration for the given provider, including thumbnail sources
+        /// and localization keys. The default implementation uses key conventions and the thumbnail
+        /// mapping table.
+        /// </summary>
+        public EffectProviderDisplayItem GetDisplayItem(IEffectProvider source) => EffectProviderDisplayDefaults.BuildDefault(source);
+
+        /// <summary>
+        /// Returns the localized effect name for the given provider and BCP-47 locale tag.
+        /// </summary>
+        public string GetLocalizedEffectName(IEffectProvider source, string locate)
+        {
+            var item = GetDisplayItem(source);
+            return EffectProviderDisplayDefaults.ResolveLocalized(item.LocalizedNameKey, source.TypeName, locate);
+        }
+
+        /// <summary>
+        /// Returns the localized effect description for the given provider and BCP-47 locale tag.
+        /// </summary>
+        public string GetLocalizedEffectDescription(IEffectProvider source, string locate)
+        {
+            var item = GetDisplayItem(source);
+            return EffectProviderDisplayDefaults.ResolveLocalized(item.LocalizedDescriptionKey, "", locate);
+        }
+
+        /// <summary>
+        /// Returns the localized field name and description for the given provider, field ID,
+        /// and BCP-47 locale tag. Uses key conventions when no explicit mapping is provided.
+        /// </summary>
+        public (string name, string description) GetLocalizedFieldInfo(IEffectProvider source, string fieldId, string locate)
+        {
+            var item = GetDisplayItem(source);
+            string? nameKey = null;
+            string? descKey = null;
+
+            if (item.Fields is not null && item.Fields.TryGetValue(fieldId, out var fieldItem))
+            {
+                nameKey = fieldItem.LocalizedNameKey;
+                descKey = fieldItem.LocalizedDescriptionKey;
+            }
+
+            nameKey ??= $"_{fieldId}";
+            descKey ??= $"Description_Field_{source.TypeName}_{fieldId}";
+
+            var name = EffectProviderDisplayDefaults.ResolveLocalized(nameKey, fieldId, locate);
+            var desc = EffectProviderDisplayDefaults.ResolveLocalized(descKey, "", locate);
+            return (name, desc);
+        }
     }
 
     /// <summary>

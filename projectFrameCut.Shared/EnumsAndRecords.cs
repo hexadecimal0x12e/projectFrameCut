@@ -48,6 +48,7 @@ namespace projectFrameCut.Shared
         BindableEffect,
         AudioNormalEffect,
         AudioContinuousEffect,
+        [Obsolete("All BindableEffect is deprecated. Use EffectProvider, and mark a EffectProvider with a not IPicture output as NonIPictureOutputValueProvider.")]
         AudioBindableEffect,
         SpeedVarianceProvider,
         ClipPositionProvider,

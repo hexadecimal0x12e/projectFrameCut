@@ -24,6 +24,28 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string? ProjectName { get; set; }
 
         /// <summary>
+        /// A unique id of this project.
+        /// DO NOT change after project creates.
+        /// </summary>
+        /// <remarks>
+        /// Use UUID V7 for all new projects; UUID v4 will indicates the project is auto-updated from earlier version.
+        /// </remarks>
+        public Guid ProjectUniqueId
+        {
+            get;
+            set
+            {
+                if (field != Guid.Empty) throw new InvalidOperationException("Cannot set ProjectUniqueId after initialization.");
+                if (value == Guid.Empty)
+                {
+                    Logger.Log($"Setting Guid.Empty for ProjectUniqueId of project {ProjectName ?? "(unknown)"}, ignoring.");
+                    return;
+                }
+                field = value;
+            }
+        }
+
+        /// <summary>
         /// Determine the version of APIBase while the draft is saved.
         /// </summary>
         public int LastOpenAPIBaseVersion { get; set; } = 0;
@@ -228,12 +250,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// All of the soundtracks in the draft.
         /// </summary>
         public SoundtrackDTO[] SoundTracks { get; set; } = Array.Empty<SoundtrackDTO>();
-
-        /// <summary>
-        /// Free fields that live outside of any <see cref="IEffectProvider"/>.
-        /// Persisted as a top-level array so they survive round-trips independently of clip providers.
-        /// </summary>
-        public FreeEffectFieldJSONStructure[] FreeFields { get; set; } = Array.Empty<FreeEffectFieldJSONStructure>();
 
         /// <summary>
         /// Get the total duration of the draft in frames.

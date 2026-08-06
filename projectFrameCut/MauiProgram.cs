@@ -1,4 +1,4 @@
-﻿#pragma warning disable CS8974 //log a exception will cause this
+#pragma warning disable CS8974 //log a exception will cause this
 using System;
 using System.Diagnostics;
 using FFmpeg.AutoGen;
@@ -24,6 +24,7 @@ using projectFrameCut.Render.Effect;
 using Microsoft.Maui.LifecycleEvents;
 using CommunityToolkit.Maui.Core;
 using projectFrameCut.AIAssistance;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Render.TemplateSystem;
 using projectFrameCut.Template;
@@ -394,6 +395,16 @@ namespace projectFrameCut
                            essentials.UseVersionTracking();
                        });
 #pragma warning restore CA1416
+                var lastPath = SettingsManager.GetSetting("General_LastOpenedProject","");
+                if (!string.IsNullOrWhiteSpace(lastPath) && Directory.Exists(lastPath))
+                {
+                    var dirName = Path.GetFileName(Path.GetDirectoryName(lastPath).TrimEnd(Path.DirectorySeparatorChar));
+                    builder = builder.ConfigureEssentials(essentials =>
+                              {
+                                essentials.AddAppAction("--continue", Localized.HomePage_Continue(dirName?.Split('\\')?.Last() ?? "Project"), icon: "icon_project")
+                                          .OnAppAction(HomePage.HandleAppActionLaunch);
+                              });
+                }
                 try
                 {
                     Log($"StoreMode: {IsStoreMode}, StoreModeOverride: {SettingsManager.GetSetting("StoreModeOverride", "disable")}");
@@ -625,6 +636,16 @@ namespace projectFrameCut
                     return Localized.IsItemExist(k) ? Localized.DynamicLookup(k, k) : null;
                 });
 
+                EffectProviderDisplayDefaults.AppPackageFileResolver = paths => FileSystemService.GetAppPackageFileSync(paths);
+                EffectProviderDisplayDefaults.TaggedLocalizedStringResolver = (key, fallback, locate) =>
+                {
+                    var map = ISimpleLocalizerBase_PropertyPanel.GetMapping();
+                    var loc = map.TryGetValue(locate, out var l) ? l
+                            : map.TryGetValue(PluginManager.CurrentLocale, out var c) ? c
+                            : SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources;
+                    return loc is not null && loc.IsItemExist(key) ? loc.DynamicLookup(key, key) : fallback;
+                };
+
 
 
                 Log($"OS default current culture: {culture.Name}, locate defined in settings:{locate} ");
@@ -651,6 +672,15 @@ namespace projectFrameCut
                 LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
                 PluginManager.CurrentLocale = "en-US";
                 PluginManager.ExtenedLocalizationGetter = new((k) => ISimpleLocalizerBase.GetMapping().First().Value.DynamicLookup(k));
+                EffectProviderDisplayDefaults.AppPackageFileResolver = paths => FileSystemService.GetAppPackageFileSync(paths);
+                EffectProviderDisplayDefaults.TaggedLocalizedStringResolver = (key, fallback, locate) =>
+                {
+                    var map = ISimpleLocalizerBase_PropertyPanel.GetMapping();
+                    var loc = map.TryGetValue(locate, out var l) ? l
+                            : map.TryGetValue(PluginManager.CurrentLocale, out var c) ? c
+                            : SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources;
+                    return loc is not null && loc.IsItemExist(key) ? loc.DynamicLookup(key, key) : fallback;
+                };
             }
         }
 

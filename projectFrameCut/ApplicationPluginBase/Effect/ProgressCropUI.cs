@@ -344,7 +344,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private void SaveCropList(List<CropData> list)
         {
-            EffectProviderHelper.SetFieldValue(Inner.Fields, CropListKey, JsonSerializer.Serialize(list), EffectArgumentFieldType.String);
+            var fields = Inner.Fields;
+            EffectProviderHelper.SetFieldValue(fields, CropListKey, JsonSerializer.Serialize(list), EffectArgumentFieldType.String);
+            Inner.Fields = fields;
         }
 
         private static bool TryParseEntryInt(object? value, out int result)

@@ -189,6 +189,7 @@ public partial class CreatePage : ContentPage
         projectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
         projectInfo.LastOpenAppName = MauiProgram.AssemblyName;
         projectInfo.PluginUsed = [];
+        projectInfo.ProjectUniqueId = Guid.CreateVersion7();
 
         draft.SavedAt = DateTime.Now;
 

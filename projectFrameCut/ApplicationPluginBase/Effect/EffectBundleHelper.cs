@@ -148,7 +148,28 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public static void SetFieldValue(Dictionary<string, IEffectArgumentField> fields, string key, object value, EffectArgumentFieldType fieldType)
         {
-            fields[key] = new StaticEffectArgumentField(value, fieldType);
+            if (fields.TryGetValue(key, out var existing) && existing is not null)
+            {
+                fields[key] = new StaticEffectArgumentField
+                {
+                    Id = key,
+                    FieldType = existing.FieldType,
+                    Value = value,
+                    DefaultValue = existing.DefaultValue,
+                    MinValue = existing.MinValue,
+                    MaxValue = existing.MaxValue,
+                    PresetOptions = existing.PresetOptions,
+                    Remarks = existing.Remarks,
+                };
+                return;
+            }
+
+            fields[key] = new StaticEffectArgumentField
+            {
+                Id = key,
+                FieldType = fieldType,
+                Value = value,
+            };
         }
 
         #endregion

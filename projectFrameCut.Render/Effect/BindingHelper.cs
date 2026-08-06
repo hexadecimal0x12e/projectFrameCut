@@ -3,6 +3,7 @@ using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace projectFrameCut.Render.Effect
 {
@@ -13,7 +14,6 @@ namespace projectFrameCut.Render.Effect
         /// 若已存在新的 EffectProvider 数据则优先使用；否则从 EffectBundles 转换。
         /// 找不到对应工厂的类型会被跳过，保证加载过程稳定。
         /// </summary>
-        private static readonly Dictionary<Guid, int> subIdxByProvider = new();
         public static Dictionary<Guid, IEffectProvider> MigrateToEffectProviders(
             EffectProviderJSONStructure[]? effectProviders,
             EffectBundleJSONStructure[]? effectBundles)
@@ -34,13 +34,14 @@ namespace projectFrameCut.Render.Effect
                     instance.Id = p.Id;
                     instance.Enabled = p.Enabled;
                     instance.Name = p.Name;
-                    instance.AnchorsBindingState = p.AnchorsBindingState ?? new Dictionary<string, Guid>();
+                    instance.AnchorsBindingState = p.AnchorsBindingState ?? new Dictionary<string, string>();
                     instance.MetaData = p.MetaData ?? new Dictionary<string, object>();
-                    RestoreProviderFields(instance, p.Fields);
+                    RestoreStaticFields(instance, p.StaticFields);
                     result[instance.Id] = instance;
                 }
 
-                InlineValueProvidersIntoConsumers(result);
+                NormalizeStoredBindings(result);
+                MaterializeFields(result.Values);
                 return result;
             }
 
@@ -60,75 +61,63 @@ namespace projectFrameCut.Render.Effect
                 instance.Id = b.Id;
                 instance.Enabled = b.Enabled;
                 instance.Name = b.Name;
-                instance.Fields = new();
                 instance.MetaData = new Dictionary<string, object>();
-                instance.SetInputAnchor(b.BindedInputId);
-                instance.SetOutputAnchor(b.BindedOutputId);
-                instance.SetInputAnchors(b.BindedInputIds ?? []);
+                if (instance.HasMainPictureInput())
+                    instance.SetMainInputSource(b.BindedInputId);
+                else
+                    instance.DisconnectMainInput();
+                instance.SetFinalOutputSource(
+                    instance.OutField.FieldType.HasFlag(EffectArgumentFieldType.IPicture)
+                    && b.BindedOutputId == IEffectProvider.OutputAnchorGUID);
+                var legacyFields = new Dictionary<string, IEffectArgumentField>();
                 foreach (var kvp in b.Parameters ?? new Dictionary<string, object>())
                 {
-                    instance.Fields[kvp.Key] = new StaticEffectArgumentField(kvp.Value, EffectArgumentFieldType.Unknown);
+                    legacyFields[kvp.Key] = new StaticEffectArgumentField(kvp.Value, EffectArgumentFieldType.Unknown);
                 }
+                instance.Fields = legacyFields;
                 result[instance.Id] = instance;
             }
 
+            NormalizeStoredBindings(result);
+            MaterializeFields(result.Values);
             return result;
         }
 
         /// <summary>
-        /// 从序列化的字段描述重建 provider 的 <see cref="IEffectProvider.Fields"/>。
-        /// 与 <see cref="EffectFieldPool.RebuildField"/> 保持相同的判定规则，避免导入后绑定状态丢失。
+        /// Restores provider-owned static values from the provider JSON structure.
+        /// Field metadata comes from the provider factory; only the persisted value is replaced.
         /// </summary>
-        private static void RestoreProviderFields(IEffectProvider provider, EffectProviderFieldJSONStructure[]? fieldDtos)
+        private static void RestoreStaticFields(IEffectProvider provider, Dictionary<string, object>? staticFields)
         {
-            if (fieldDtos is null || fieldDtos.Length == 0) return;
+            if (staticFields is null || staticFields.Count == 0) return;
 
-            var fields = new Dictionary<string, IEffectArgumentField>();
-            foreach (var dto in fieldDtos)
-            {
-                if (!Enum.TryParse<EffectArgumentFieldType>(dto.FieldType, ignoreCase: true, out var fieldType))
-                    fieldType = EffectArgumentFieldType.Unknown;
-
-                var isDynamic = dto.IsBound || string.Equals(dto.TypeName, "DynamicEffectParamField", StringComparison.Ordinal);
-                if (isDynamic)
-                {
-                    fields[dto.Id] = new DynamicEffectParamField
-                    {
-                        Id = dto.Id,
-                        FieldType = fieldType,
-                        BoundProviderId = dto.BoundSourceId,
-                        StaticFallbackValue = EffectParamConvert.Normalize(dto.StaticValue),
-                        DefaultValue = dto.DefaultValue,
-                        MinValue = dto.MinValue,
-                        MaxValue = dto.MaxValue,
-                        PresetOptions = dto.PresetOptions,
-                        Remarks = dto.Remarks,
-                    };
-                }
-                else
-                {
-                    fields[dto.Id] = new StaticEffectArgumentField
-                    {
-                        Id = dto.Id,
-                        FieldType = fieldType,
-                        Value = EffectParamConvert.Normalize(dto.StaticValue) ?? new object(),
-                        DefaultValue = dto.DefaultValue,
-                        MinValue = dto.MinValue,
-                        MaxValue = dto.MaxValue,
-                        PresetOptions = dto.PresetOptions,
-                        Remarks = dto.Remarks,
-                    };
-                }
-            }
-
+            Dictionary<string, IEffectArgumentField> fields;
             try
             {
-                provider.Fields = fields;
+                fields = provider.Fields;
             }
             catch
             {
-                // 保留默认字段值：可能缺少必填元数据（如 required 的 FieldType/Value）导致重建失败。
+                return;
             }
+
+            foreach (var (fieldId, rawValue) in staticFields)
+            {
+                if (!fields.TryGetValue(fieldId, out var descriptor)) continue;
+                fields[fieldId] = new StaticEffectArgumentField
+                {
+                    Id = fieldId,
+                    FieldType = descriptor.FieldType,
+                    Value = EffectParamConvert.Normalize(rawValue) ?? new object(),
+                    DefaultValue = descriptor.DefaultValue,
+                    MinValue = descriptor.MinValue,
+                    MaxValue = descriptor.MaxValue,
+                    PresetOptions = descriptor.PresetOptions,
+                    Remarks = descriptor.Remarks,
+                };
+            }
+
+            provider.Fields = fields;
         }
 
         /// <summary>
@@ -200,43 +189,6 @@ namespace projectFrameCut.Render.Effect
         }
 
         /// <summary>
-        /// 计算当前已被内联进某个消费者字段的值提供器 id 集合。
-        /// </summary>
-        /// <remarks>
-        /// 仅当字段已被内联为 <see cref="IValueProviderEffect"/> 时才认为该值提供器已被剔除出渲染管线。
-        /// 仍以 <see cref="DynamicEffectParamField"/> 绑定的值提供器（走 <see cref="ValueProviderFrameContext"/>
-        /// 按 id 寻址的机制）必须保留在管线中构建，否则消费者无法读到它的值。
-        /// </remarks>
-        private static HashSet<Guid> GetInlinedValueProviderIds(IReadOnlyDictionary<Guid, IEffectProvider> providers)
-        {
-            var inlinedIds = new HashSet<Guid>();
-            if (providers.Count == 0) return inlinedIds;
-
-            foreach (var consumer in providers.Values)
-            {
-                Dictionary<string, IEffectArgumentField>? fields;
-                try
-                {
-                    fields = consumer.Fields;
-                }
-                catch
-                {
-                    continue; // 字段物化失败：与 InlineValueProvidersIntoConsumers 保持一致，跳过该消费者。
-                }
-                if (fields is null) continue;
-                foreach (var field in fields.Values)
-                {
-                    if (field is IValueProviderEffect vpe && Guid.TryParse(vpe.BindedEffectProvidingSystemID, out var sourceId))
-                    {
-                        inlinedIds.Add(sourceId);
-                    }
-                }
-            }
-
-            return inlinedIds;
-        }
-
-        /// <summary>
         /// 移除指定 provider 生成的所有 effect 条目（key 为 <c>{id}_{subIdx}</c> 或直接等于 id 字符串）。
         /// 用于将被内联的值提供器从渲染管线中剔除时，清理其残留的旧 effect。
         /// </summary>
@@ -276,13 +228,11 @@ namespace projectFrameCut.Render.Effect
 
             if (effectProviders != null)
             {
-                // 每次重建前刷新内联：将绑定到值提供器的字段内联为 IValueProviderEffect，
-                // 让对源 provider 参数的修改能传播到消费者，并据此从本管线剔除已被内联的值提供器。
-                InlineValueProvidersIntoConsumers(effectProviders);
-                NormalizeProviderPipeline(effectProviders);
+                MaterializeFields(effectProviders.Values);
+                var activePictureProviders = GetActivePictureProviderIds(effectProviders);
+                var inlinedProviderIds = InlineValueProvidersIntoConsumers(effectProviders);
                 var sortedProviders = SortEffectProviders(effectProviders);
                 if (!sortedProviders.ListAny()) return null;
-                var inlinedProviderIds = GetInlinedValueProviderIds(effectProviders);
                 foreach (var bundleData in sortedProviders.Where(b => b.Enabled))
                 {
                     if (bundleData is not IEffectProvider provider)
@@ -314,12 +264,14 @@ namespace projectFrameCut.Render.Effect
                     for (int i = 0; i < effects.Length; i++)
                     {
                         var effect = effects[i];
-                        int subIdx = subIdxByProvider.TryGetValue(bundleData.Id, out var n) ? n : 0;
-                        subIdxByProvider[bundleData.Id] = subIdx + 1;
+                        int subIdx = i;
                         effect.Name = $"EffectProvider {bundleData.TypeName}({bundleData.Id}){Environment.NewLine} - Subeffect #{subIdx}";
-                        effect.Enabled = bundleData.Target.HasFlag(EffectTarget.ValueProvider)
+                        var detached = bundleData.Target.HasFlag(EffectTarget.ValueProvider)
+                            || bundleData.Target.HasFlag(EffectTarget.Mixture)
+                            || bundleData.Target.HasFlag(EffectTarget.SpeedVariance);
+                        effect.Enabled = detached
                             ? bundleData.Enabled
-                            : bundleData.Enabled && bundleData.GetOutputAnchor() != IEffectProvider.NoConnectionGUID;
+                            : bundleData.Enabled && activePictureProviders.Contains(bundleData.Id);
                         effect.Index = globalIndex++;
                         effect.BindedEffectProvidingSystemID = bundleData.Id.ToString();
                         string key = $"{bundleData.Id}_{subIdx}";
@@ -387,12 +339,6 @@ namespace projectFrameCut.Render.Effect
                     incoming[bundleId]++;
                 }
 
-                var outputId = bundle.GetOutputAnchor();
-                if (IsValidOutputDependency(outputId) && bundles.ContainsKey(outputId) && outputId != bundleId)
-                {
-                    adjacency[bundleId].Add(outputId);
-                    incoming[outputId]++;
-                }
             }
 
             var queue = new Queue<Guid>(ordered.Where(kvp => incoming[kvp.Key] == 0).Select(kvp => kvp.Key));
@@ -421,56 +367,292 @@ namespace projectFrameCut.Render.Effect
             return result;
         }
 
+        public sealed record BindingDiagnostic(Guid? ProviderId, string Code, string Message);
+
+        /// <summary>Returns provider dependencies declared by stored value-field bindings.</summary>
+        public static IEnumerable<Guid> GetBoundProviderDependencyIds(IEffectProvider provider)
+        {
+            foreach (var binding in provider.EnumerateFieldBindings())
+                if (Guid.TryParse(binding.Value, out var id)) yield return id;
+        }
+
+        public static IEnumerable<Guid> GetInputDependencyIds(IEffectProvider provider)
+        {
+            var source = provider.GetMainInputSource();
+            if (Guid.TryParse(source, out var id) && IsProviderReference(id)) yield return id;
+        }
+
+        private static bool IsProviderReference(Guid id) =>
+            id != IEffectProvider.NoConnectionGUID
+            && id != IEffectProvider.InputAnchorGUID
+            && id != IEffectProvider.OutputAnchorGUID;
+
+        private static string CanonicalizeSourceIdentifier(string sourceId)
+        {
+            if (Guid.TryParse(sourceId, out var guid)) return guid.ToString();
+            return sourceId switch
+            {
+                "__Builtin_frame" => ValueProviderFrameContext.BuiltInFrameProviderId,
+                "__Builtin_progress" => ValueProviderFrameContext.BuiltInProgressProviderId,
+                _ => sourceId,
+            };
+        }
+
         /// <summary>
-        /// Yields the value-provider bundle Guids that this bundle's parameters bind to
-        /// (via the reserved <c>__Binding_*</c> keys). Built-in sources like <c>builtin://frame</c>
-        /// are not Guids and are ignored here.
+        /// Normalizes legacy two-way picture bindings and legacy field bindings into each target
+        /// provider's own AnchorsBindingState. Ambiguous graphs are preserved for validation.
         /// </summary>
-        public static IEnumerable<Guid> GetBoundProviderDependencyIds(IEffectProvider bundle)
+        public static IReadOnlyList<BindingDiagnostic> NormalizeStoredBindings(IDictionary<Guid, IEffectProvider>? providers)
         {
-            if (bundle.Fields is null) yield break;
-            foreach (var kvp in bundle.Fields)
+            var diagnostics = new List<BindingDiagnostic>();
+            if (providers is null) return diagnostics;
+            var legacyOutputs = new List<(Guid Source, Guid Target)>();
+            var legacyFieldSources = new Dictionary<(Guid ProviderId, string FieldId), string>();
+
+            foreach (var provider in providers.Values)
             {
-                if (kvp.Value is DynamicEffectParamField df && df.BoundProviderId is { } sourceId)
+                var fields = provider.Fields ?? [];
+                var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);
+                foreach (var key in state.Keys.ToList())
+                    state[key] = CanonicalizeSourceIdentifier(state[key]);
+
+                foreach (var (fieldId, field) in fields)
                 {
-                    if (Guid.TryParse(sourceId, out var g)) yield return g;
+                    var legacySource = field switch
+                    {
+                        DynamicEffectParamField dynamicField => dynamicField.BoundProviderId,
+                        IValueProviderEffect valueEffect => valueEffect.BindedEffectProvidingSystemID,
+                        _ => null,
+                    };
+                    if (!string.IsNullOrWhiteSpace(legacySource))
+                        legacyFieldSources[(provider.Id, fieldId)] = CanonicalizeSourceIdentifier(legacySource);
+                    if (!state.ContainsKey(fieldId) && !string.IsNullOrWhiteSpace(legacySource))
+                        state[fieldId] = CanonicalizeSourceIdentifier(legacySource);
+                }
+
+                foreach (var key in state.Keys.ToList())
+                {
+                    if (key == EffectProviderAnchorExtensions.InputKey || key == EffectProviderAnchorExtensions.OutputKey || fields.ContainsKey(key))
+                        continue;
+                    state.Remove(key);
+                    diagnostics.Add(new(provider.Id, "UnknownBindingKey", $"Removed unknown binding key '{key}' from provider {provider.Id}."));
+                }
+
+                var hasPictureInput = provider.HasMainPictureInput();
+                if (!hasPictureInput)
+                {
+                    var declaredPictureInputs = provider.InFields
+                        .Where(field => field.Value.FieldType.HasFlag(EffectArgumentFieldType.IPicture))
+                        .Select(field => field.Key)
+                        .ToList();
+                    if (declaredPictureInputs.Count != 0)
+                    {
+                        diagnostics.Add(new(provider.Id, "UnsupportedPictureInputs",
+                            $"Provider {provider.Id} declares unsupported picture inputs: {string.Join(", ", declaredPictureInputs)}."));
+                    }
+                    state[EffectProviderAnchorExtensions.InputKey] = IEffectProvider.NoConnectionGUID.ToString();
+                    state[EffectProviderAnchorExtensions.OutputKey] = IEffectProvider.NoConnectionGUID.ToString();
+                    provider.AnchorsBindingState = state;
+                    continue;
+                }
+
+                if (!state.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var input) || string.IsNullOrWhiteSpace(input))
+                    state[EffectProviderAnchorExtensions.InputKey] = IEffectProvider.NoConnectionGUID.ToString();
+
+                if (state.TryGetValue(EffectProviderAnchorExtensions.OutputKey, out var oldOutput)
+                    && Guid.TryParse(oldOutput, out var oldOutputId)
+                    && IsProviderReference(oldOutputId))
+                {
+                    legacyOutputs.Add((provider.Id, oldOutputId));
+                    state[EffectProviderAnchorExtensions.OutputKey] = IEffectProvider.NoConnectionGUID.ToString();
+                }
+                else if (oldOutput != IEffectProvider.OutputAnchorGUID.ToString())
+                {
+                    state[EffectProviderAnchorExtensions.OutputKey] = IEffectProvider.NoConnectionGUID.ToString();
+                }
+
+                provider.AnchorsBindingState = state;
+            }
+
+            var duplicatedFieldBindings = providers.Values
+                .SelectMany(provider => provider.EnumerateFieldBindings()
+                    .Select(binding => (Provider: provider, binding.Key, binding.Value)))
+                .GroupBy(item => (item.Key, item.Value))
+                .Where(group => group.Count() > 1);
+            foreach (var group in duplicatedFieldBindings)
+            {
+                var evidencedTargets = group
+                    .Where(item => legacyFieldSources.TryGetValue((item.Provider.Id, item.Key), out var legacySource)
+                        && legacySource == item.Value)
+                    .Select(item => item.Provider.Id)
+                    .Distinct()
+                    .ToList();
+                if (evidencedTargets.Count == 1)
+                {
+                    foreach (var item in group.Where(item => item.Provider.Id != evidencedTargets[0]))
+                    {
+                        item.Provider.ClearFieldBinding(item.Key);
+                        diagnostics.Add(new(item.Provider.Id, "MisplacedDuplicatedBinding",
+                            $"Removed duplicated binding for field '{item.Key}' from provider {item.Provider.Id}."));
+                    }
+                }
+                else
+                {
+                    diagnostics.Add(new(null, "AmbiguousDuplicatedBinding",
+                        $"Binding '{group.Key.Key}' -> '{group.Key.Value}' is duplicated across providers and has no unique legacy target."));
                 }
             }
-        }
 
-        public static IEnumerable<Guid> GetInputDependencyIds(IEffectProvider bundle)
-        {
-            if (bundle.HasMultiInputAnchors())
+            foreach (var group in legacyOutputs.GroupBy(edge => edge.Target))
             {
-                if (bundle.GetInputAnchors() is null) yield break;
-                foreach (var id in bundle.GetInputAnchors())
+                if (!providers.TryGetValue(group.Key, out var target))
                 {
-                    if (IsValidInputDependency(id)) yield return id;
+                    foreach (var edge in group)
+                        diagnostics.Add(new(edge.Source, "DanglingLegacyOutput", $"Removed legacy output reference from {edge.Source} to missing provider {edge.Target}."));
+                    continue;
                 }
-                yield break;
+                if (target.GetMainInputSource() != IEffectProvider.NoConnectionGUID.ToString()) continue;
+                var candidates = group.Select(edge => edge.Source).Distinct().ToList();
+                if (candidates.Count == 1)
+                    target.SetMainInputSource(candidates[0]);
+                else
+                    diagnostics.Add(new(group.Key, "AmbiguousLegacyInput", $"Provider {group.Key} has multiple legacy input candidates: {string.Join(", ", candidates)}."));
             }
 
-            if (IsValidInputDependency(bundle.GetInputAnchor()))
+            foreach (var provider in providers.Values)
             {
-                yield return bundle.GetInputAnchor();
-                yield break;
+                var input = provider.GetMainInputSource();
+                if (input != IEffectProvider.NoConnectionGUID.ToString()
+                    && input != IEffectProvider.InputAnchorGUID.ToString()
+                    && (!Guid.TryParse(input, out var inputId) || !providers.ContainsKey(inputId)))
+                {
+                    provider.DisconnectMainInput();
+                    diagnostics.Add(new(provider.Id, "DanglingPictureInput", $"Disconnected missing picture source '{input}' from provider {provider.Id}."));
+                }
+
+                foreach (var binding in provider.EnumerateFieldBindings().ToList())
+                {
+                    if (binding.Value.StartsWith("builtin://", StringComparison.Ordinal)) continue;
+                    if (Guid.TryParse(binding.Value, out var sourceId)
+                        && providers.ContainsKey(sourceId))
+                        continue;
+                    provider.ClearFieldBinding(binding.Key);
+                    diagnostics.Add(new(provider.Id, "DanglingFieldBinding", $"Removed missing source '{binding.Value}' from field '{binding.Key}' on provider {provider.Id}."));
+                }
             }
 
-            if (bundle.GetInputAnchors() is not null && bundle.GetInputAnchors().Count > 0 && IsValidInputDependency(bundle.GetInputAnchors()[0]))
-            {
-                // DraftEffectBindingView may store single-input connections in BindedInputIds[0].
-                yield return bundle.GetInputAnchors()[0];
-            }
+            return diagnostics;
         }
 
-        public static bool IsValidInputDependency(Guid id)
+        /// <summary>Validates stored bindings without mutating them.</summary>
+        public static IReadOnlyList<BindingDiagnostic> ValidateBindings(IReadOnlyDictionary<Guid, IEffectProvider>? providers)
         {
-            return id != IEffectProvider.NoConnectionGUID && id != IEffectProvider.InputAnchorGUID;
+            var diagnostics = new List<BindingDiagnostic>();
+            if (providers is null) return diagnostics;
+
+            var finalProviders = providers.Values.Where(p => p.IsFinalOutputSource()).ToList();
+            if (finalProviders.Count > 1)
+                diagnostics.Add(new(null, "MultipleFinalOutputs", $"Multiple providers are connected to final output: {string.Join(", ", finalProviders.Select(p => p.Id))}."));
+
+            foreach (var provider in providers.Values)
+            {
+                var pictureInputs = provider.InFields
+                    .Where(field => field.Value.FieldType.HasFlag(EffectArgumentFieldType.IPicture))
+                    .Select(field => field.Key)
+                    .ToList();
+                if (pictureInputs.Count != 0 && !provider.HasMainPictureInput())
+                    diagnostics.Add(new(provider.Id, "UnsupportedPictureInputs", $"Provider {provider.Id} must use '__Input__' as its only picture input."));
+
+                var input = provider.GetMainInputSource();
+                if (input == IEffectProvider.NoConnectionGUID.ToString() || input == IEffectProvider.InputAnchorGUID.ToString())
+                    continue;
+                if (!Guid.TryParse(input, out var sourceId) || !providers.TryGetValue(sourceId, out var source))
+                {
+                    diagnostics.Add(new(provider.Id, "DanglingPictureInput", $"Provider {provider.Id} references missing picture source '{input}'."));
+                    continue;
+                }
+                if (sourceId == provider.Id)
+                    diagnostics.Add(new(provider.Id, "SelfPictureBinding", $"Provider {provider.Id} uses itself as picture input."));
+                if (source.Target.HasFlag(EffectTarget.ValueProvider))
+                    diagnostics.Add(new(provider.Id, "InvalidPictureSource", $"Value provider {sourceId} cannot be used as a picture input."));
+            }
+
+            foreach (var provider in providers.Values)
+            {
+                var seen = new HashSet<Guid>();
+                var current = provider;
+                while (true)
+                {
+                    if (!seen.Add(current.Id))
+                    {
+                        diagnostics.Add(new(provider.Id, "PictureCycle", $"Picture binding cycle detected from provider {provider.Id}."));
+                        break;
+                    }
+                    var source = current.GetMainInputSource();
+                    if (!Guid.TryParse(source, out var sourceId) || !providers.TryGetValue(sourceId, out var next)) break;
+                    current = next;
+                }
+            }
+
+            foreach (var provider in providers.Values)
+            {
+                foreach (var binding in provider.EnumerateFieldBindings())
+                {
+                    if (!provider.Fields.ContainsKey(binding.Key))
+                        diagnostics.Add(new(provider.Id, "UnknownFieldBinding", $"Provider {provider.Id} does not own field '{binding.Key}'."));
+                    if (binding.Value.StartsWith("builtin://", StringComparison.Ordinal)) continue;
+                    if (Guid.TryParse(binding.Value, out var sourceId))
+                    {
+                        if (providers.TryGetValue(sourceId, out var fieldSource))
+                        {
+                            if (!fieldSource.Target.HasFlag(EffectTarget.ValueProvider))
+                                diagnostics.Add(new(provider.Id, "InvalidFieldSource", $"Field '{binding.Key}' references non-value provider {sourceId}."));
+                            continue;
+                        }
+                    }
+                    diagnostics.Add(new(provider.Id, "DanglingFieldBinding", $"Field '{binding.Key}' references missing source '{binding.Value}'."));
+                }
+            }
+
+            if (finalProviders.Count == 1)
+            {
+                var current = finalProviders[0];
+                var seen = new HashSet<Guid>();
+                while (seen.Add(current.Id))
+                {
+                    var source = current.GetMainInputSource();
+                    if (source == IEffectProvider.InputAnchorGUID.ToString()) break;
+                    if (!Guid.TryParse(source, out var sourceId) || !providers.TryGetValue(sourceId, out var next))
+                    {
+                        diagnostics.Add(new(finalProviders[0].Id, "BrokenActivePath", $"Final provider {finalProviders[0].Id} does not have a complete path to the source picture."));
+                        break;
+                    }
+                    current = next;
+                }
+            }
+
+            return diagnostics.Distinct().ToList();
         }
 
-        public static bool IsValidOutputDependency(Guid id)
+        public static HashSet<Guid> GetActivePictureProviderIds(IReadOnlyDictionary<Guid, IEffectProvider>? providers)
         {
-            return id != IEffectProvider.NoConnectionGUID && id != IEffectProvider.OutputAnchorGUID;
+            if (providers is null || providers.Count == 0) return [];
+            var errors = ValidateBindings(providers);
+            if (errors.Count != 0)
+                throw new InvalidOperationException("Invalid effect binding graph: " + string.Join(" ", errors.Select(e => e.Message)));
+
+            var finalProvider = providers.Values.SingleOrDefault(p => p.IsFinalOutputSource());
+            if (finalProvider is null) return [];
+
+            var result = new HashSet<Guid>();
+            var current = finalProvider;
+            while (result.Add(current.Id))
+            {
+                var source = current.GetMainInputSource();
+                if (source == IEffectProvider.InputAnchorGUID.ToString()) return result;
+                current = providers[Guid.Parse(source)];
+            }
+            throw new InvalidOperationException($"Picture binding graph contains a cycle ending at provider {current.Id}.");
         }
 
         /// <summary>
@@ -482,22 +664,46 @@ namespace projectFrameCut.Render.Effect
             EffectTarget effectTarget)
         {
             if (effectProviders is null) throw new ArgumentNullException(nameof(effectProviders));
+            if (!newProvider.HasMainPictureInput())
+            {
+                newProvider.DisconnectMainInput();
+                newProvider.SetFinalOutputSource(false);
+                return;
+            }
             var lastProvider = effectProviders.Values
-                .FirstOrDefault(b => b.GetOutputAnchor() == IEffectProvider.OutputAnchorGUID
+                .FirstOrDefault(b => b.IsFinalOutputSource()
                                    && AreTargetsCompatible(b.Target, effectTarget)
                                    && b.Id != newProvider.Id);
 
+            foreach (var provider in effectProviders.Values) provider.SetFinalOutputSource(false);
             if (lastProvider != null)
             {
-                lastProvider.SetOutputAnchor(newProvider.Id);
-                newProvider.SetInputAnchor(lastProvider.Id);
-                newProvider.SetOutputAnchor(IEffectProvider.OutputAnchorGUID);
+                newProvider.SetMainInputSource(lastProvider.Id);
             }
             else
             {
-                newProvider.SetInputAnchor(IEffectProvider.InputAnchorGUID);
-                newProvider.SetOutputAnchor(IEffectProvider.OutputAnchorGUID);
+                newProvider.SetMainInputSource(IEffectProvider.InputAnchorGUID);
             }
+            newProvider.SetFinalOutputSource(true);
+        }
+
+        /// <summary>Inserts a picture provider immediately after the source picture, preserving every fan-out branch.</summary>
+        public static void AutoConnectProviderToInput(
+            IDictionary<Guid, IEffectProvider> effectProviders,
+            IEffectProvider newProvider)
+        {
+            if (!newProvider.HasMainPictureInput())
+                return;
+
+            var roots = effectProviders.Values
+                .Where(provider => provider.Id != newProvider.Id
+                    && provider.GetMainInputSource() == IEffectProvider.InputAnchorGUID.ToString())
+                .ToList();
+            var hasFinalOutput = effectProviders.Values
+                .Any(provider => provider.Id != newProvider.Id && provider.IsFinalOutputSource());
+            newProvider.SetMainInputSource(IEffectProvider.InputAnchorGUID);
+            newProvider.SetFinalOutputSource(!hasFinalOutput);
+            foreach (var root in roots) root.SetMainInputSource(newProvider.Id);
         }
 
         /// <summary>
@@ -512,168 +718,279 @@ namespace projectFrameCut.Render.Effect
             return (aBase & bBase) != 0;
         }
 
-        /// <summary>
-        /// 验证并修复所有 EffectProvider 的连接一致性：
-        /// - 自身连接 → 断开
-        /// - 单向连接（A→B 但 B 没有指回 A）→ 断开
-        /// - 扇入（多个 bundle 的输入指向同一个 source）→ 只保留第一个
-        /// </summary>
-        public static void ValidateAndFixProviderConnections(IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders)
+        /// <summary>Materializes runtime Fields exclusively from stored binding configuration.</summary>
+        public static void MaterializeFields(IEnumerable<IEffectProvider> providers)
         {
-            if (effectProviders == null || effectProviders.Count == 0) return;
-            var bundles = effectProviders;
-
-            foreach (var bundle in bundles.Values)
+            foreach (var provider in providers)
             {
-                // 自身连接
-                if (bundle.GetInputAnchor() == bundle.Id)
+                var fields = provider.Fields ?? [];
+                foreach (var fieldKey in fields.Keys.ToList())
                 {
-                    bundle.SetInputAnchor(IEffectProvider.NoConnectionGUID);
-                    if (bundle.GetInputAnchors() is not null && bundle.GetInputAnchors().Count > 0)
-                        bundle.GetInputAnchors()[0] = IEffectProvider.NoConnectionGUID;
-                }
-                if (bundle.GetOutputAnchor() == bundle.Id)
-                {
-                    bundle.SetOutputAnchor(IEffectProvider.NoConnectionGUID);
-                }
+                    var field = fields[fieldKey];
+                    object? fallback = field switch
+                    {
+                        StaticEffectArgumentField staticField => staticField.Value,
+                        DynamicEffectParamField dynamicField => dynamicField.StaticFallbackValue,
+                        _ => field.DefaultValue,
+                    };
 
-                // 单输入：BindedInputId 指向的 bundle 必须将其 BindedOutputId 指回自己
-                if (!bundle.HasMultiInputAnchors())
-                {
-                    if (IsValidInputDependency(bundle.GetInputAnchor()))
-                    {
-                        if (!bundles.TryGetValue(bundle.GetInputAnchor(), out var src) || src.GetOutputAnchor() != bundle.Id)
+                    if (provider.TryGetFieldBinding(fieldKey, out var sourceId))
+                        fields[fieldKey] = new DynamicEffectParamField
                         {
-                            bundle.SetInputAnchor(IEffectProvider.NoConnectionGUID);
-                            if (bundle.GetInputAnchors() is not null && bundle.GetInputAnchors().Count > 0)
-                                bundle.GetInputAnchors()[0] = IEffectProvider.NoConnectionGUID;
-                        }
-                    }
-                }
-
-                // 多输入：逐个检查 BindedInputIds
-                if (bundle.GetInputAnchors() is not null && bundle.HasMultiInputAnchors())
-                {
-                    for (int i = 0; i < bundle.GetInputAnchors().Count; i++)
-                    {
-                        var id = bundle.GetInputAnchors()[i];
-                        if (IsValidInputDependency(id))
+                            Id = fieldKey,
+                            FieldType = field.FieldType,
+                            BoundProviderId = sourceId,
+                            StaticFallbackValue = fallback,
+                            DefaultValue = field.DefaultValue,
+                            MinValue = field.MinValue,
+                            MaxValue = field.MaxValue,
+                            PresetOptions = field.PresetOptions,
+                            Remarks = field.Remarks,
+                        };
+                    else if (field is not StaticEffectArgumentField)
+                        fields[fieldKey] = new StaticEffectArgumentField
                         {
-                            if (!bundles.TryGetValue(id, out var src) || src.GetOutputAnchor() != bundle.Id)
-                                bundle.GetInputAnchors()[i] = IEffectProvider.NoConnectionGUID;
-                        }
-                    }
+                            Id = fieldKey,
+                            FieldType = field.FieldType,
+                            Value = EffectParamConvert.Normalize(fallback) ?? new object(),
+                            DefaultValue = field.DefaultValue,
+                            MinValue = field.MinValue,
+                            MaxValue = field.MaxValue,
+                            PresetOptions = field.PresetOptions,
+                            Remarks = field.Remarks,
+                        };
                 }
-
-                // BindedOutputId 指向的 bundle 必须将其 BindedInputId/BindedInputIds 指回自己
-                if (IsValidOutputDependency(bundle.GetOutputAnchor()))
-                {
-                    if (!bundles.TryGetValue(bundle.GetOutputAnchor(), out var tgt))
-                    {
-                        bundle.SetOutputAnchor(IEffectProvider.NoConnectionGUID);
-                    }
-                    else
-                    {
-                        bool pointsBack = tgt.GetInputAnchor() == bundle.Id
-                            || (tgt.GetInputAnchors()?.Contains(bundle.Id) ?? false);
-                        if (!pointsBack)
-                            bundle.SetOutputAnchor(IEffectProvider.NoConnectionGUID);
-                    }
-                }
-            }
-
-            // 扇入修复：不允许两个 bundle 的 BindedInputId 指向同一个 source
-            var usedOutputs = new Dictionary<Guid, Guid>();
-            foreach (var bundle in bundles.Values)
-            {
-                if (!bundle.HasMultiInputAnchors())
-                {
-                    if (IsValidInputDependency(bundle.GetInputAnchor()))
-                    {
-                        if (usedOutputs.TryGetValue(bundle.GetInputAnchor(), out var firstConsumer))
-                        {
-                            bundle.SetInputAnchor(IEffectProvider.NoConnectionGUID);
-                            if (bundle.GetInputAnchors() is not null && bundle.GetInputAnchors().Count > 0)
-                                bundle.GetInputAnchors()[0] = IEffectProvider.NoConnectionGUID;
-                        }
-                        else
-                        {
-                            usedOutputs[bundle.GetInputAnchor()] = bundle.Id;
-                        }
-                    }
-                }
-                else if (bundle.GetInputAnchors() is not null)
-                {
-                    for (int i = 0; i < bundle.GetInputAnchors().Count; i++)
-                    {
-                        var id = bundle.GetInputAnchors()[i];
-                        if (IsValidInputDependency(id))
-                        {
-                            if (usedOutputs.TryGetValue(id, out var firstConsumer))
-                                bundle.GetInputAnchors()[i] = IEffectProvider.NoConnectionGUID;
-                            else
-                                usedOutputs[id] = bundle.Id;
-                        }
-                    }
-                }
+                provider.Fields = fields;
             }
         }
 
-        /// <summary>
-        /// 规范化 Provider 管线：若检测到并行链，将其合并为单链。
-        /// 仅在确实存在并行链时才执行重排，避免覆盖用户已手动配置好的单链顺序。
-        /// 内部 Effect（ColorAdjustment、Crop 等）排在前面，用户 Effect 排在后面。
-        /// Mixture 和 SpeedVariance 断开连接（它们在渲染时由系统直接提取，不参与绑定管线）。
-        /// </summary>
-        public static void NormalizeProviderPipeline(IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders)
+        public static void SetFinalOutput(IDictionary<Guid, IEffectProvider> providers, Guid? providerId)
         {
-            if (effectProviders == null || effectProviders.Count <= 1) return;
-            var bundles = effectProviders;
-
-            var pipelineProviders = new List<IEffectProvider>();
-            var detachedProviders = new List<IEffectProvider>();
-
-            foreach (var b in bundles.Values)
+            if (providerId.HasValue
+                && (!providers.TryGetValue(providerId.Value, out var selected)
+                    || !selected.OutField.FieldType.HasFlag(EffectArgumentFieldType.IPicture)))
             {
-                if (b.Target.HasFlag(EffectTarget.SpeedVariance)
-                    || b.Target.HasFlag(EffectTarget.Mixture)
-                    || b.Target.HasFlag(EffectTarget.ValueProvider))
-                    detachedProviders.Add(b);
-                else
-                    pipelineProviders.Add(b);
+                throw new ArgumentException($"Provider '{providerId}' cannot be used as the final picture output.", nameof(providerId));
             }
 
-            foreach (var b in detachedProviders)
+            foreach (var provider in providers.Values)
+                provider.SetFinalOutputSource(providerId.HasValue && provider.Id == providerId.Value);
+        }
+
+        public static void RemoveReferencesTo(IEnumerable<IEffectProvider> providers, string sourceId)
+        {
+            foreach (var provider in providers)
             {
-                b.SetInputAnchor(IEffectProvider.NoConnectionGUID);
-                b.SetOutputAnchor(IEffectProvider.NoConnectionGUID);
-                if (b.GetInputAnchors() != null)
+                if (provider.GetMainInputSource() == sourceId) provider.DisconnectMainInput();
+                foreach (var binding in provider.EnumerateFieldBindings().Where(b => b.Value == sourceId).ToList())
+                    provider.ClearFieldBinding(binding.Key);
+            }
+        }
+
+        public static bool RemoveProvider(IDictionary<Guid, IEffectProvider> providers, Guid providerId)
+        {
+            if (!providers.ContainsKey(providerId)) return false;
+            RemoveReferencesTo(providers.Values, providerId.ToString());
+            return providers.Remove(providerId);
+        }
+
+        private const string InputNodeId = "INPUT";
+        private const string OutputNodeId = "OUTPUT";
+
+        /// <summary>
+        /// 生成一张描述该 Clip 的 EffectProvider 渲染绑定关系的 Mermaid 图。
+        /// 反映 <see cref="IEffectProvider.Build()"/> 实际构建 effect 时使用的 <see cref="IEffectProvider.Fields"/>
+        /// 绑定关系（动态字段绑定 / 内联值提供器），以及 <see cref="IEffectProvider.AnchorsBindingState"/>
+        /// 中的输入/输出锚点连接。图中包含"输入（源画面）"与"输出（最终画面）"两个终端节点，
+        /// 连接线上标注接收侧的锚点键 / 字段 Id。
+        /// </summary>
+        /// <remarks>
+        /// 图以 <see cref="IEffectProvider.Build()"/> 的角度绘制，而非 <see cref="RebuildAllEffects"/> 的角度，
+        /// 因此能反映内联后的真实绑定状态，但无法表达渲染后实际子效果条目的顺序。
+        /// </remarks>
+        public static string GenerateRenderTimeMermaidDiagram(IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders)
+        {
+            if (effectProviders is null || effectProviders.Count == 0)
+                return "graph TD;\n    empty[\"无 EffectProvider 数据\"];";
+
+            var sb = new StringBuilder();
+            sb.AppendLine("graph TD;");
+
+            var nodeByProvider = AssignNodes(sb, effectProviders.Values, p =>
+            {
+                var displayName = string.IsNullOrWhiteSpace(p.Name) ? p.TypeName : p.Name;
+                var flags = p.Target.HasFlag(EffectTarget.ValueProvider) ? " (值提供器)" : "";
+                if (!p.Enabled) flags += " (已禁用)";
+                return $"{p.TypeName}: {displayName}{flags}";
+            });
+            AppendTerminalNodes(sb);
+            AppendAnchorEdges(sb, effectProviders, nodeByProvider);
+            AppendFieldBindingEdges(sb, effectProviders, nodeByProvider, useRenderTimeFields: true);
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// 生成一张描述该 Clip 的 EffectProvider 存储绑定关系的 Mermaid 图。
+        /// 直接反映规范化后的 <see cref="IEffectProvider.AnchorsBindingState"/>：
+        /// 主图片输入、最终输出标记，以及以普通 field id 为 key 的值来源配置。
+        /// 同样包含"输入（源画面）"/"输出（最终画面）"终端节点，连接线上标注锚点键 / 字段 Id。
+        /// </summary>
+        /// <remarks>
+        /// 该图表示磁盘/保存模型，不反映渲染时内联后的字段绑定状态。
+        /// </remarks>
+        public static string GenerateStoredMermaidDiagram(IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders)
+        {
+            if (effectProviders is null || effectProviders.Count == 0)
+                return "graph TD;\n    empty[\"无 EffectProvider 数据\"];";
+
+            var sb = new StringBuilder();
+            sb.AppendLine("graph TD;");
+
+            var nodeByProvider = AssignNodes(sb, effectProviders.Values, p => p.TypeName);
+            AppendTerminalNodes(sb);
+            AppendAnchorEdges(sb, effectProviders, nodeByProvider);
+            AppendFieldBindingEdges(sb, effectProviders, nodeByProvider, useRenderTimeFields: false);
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// 为每个 provider 生成节点定义，返回 <see cref="Guid"/> → Mermaid 节点 id 的映射。
+        /// </summary>
+        private static Dictionary<Guid, string> AssignNodes(StringBuilder sb, IEnumerable<IEffectProvider> providers, Func<IEffectProvider, string> labelBuilder)
+        {
+            var nodeByProvider = new Dictionary<Guid, string>();
+            int counter = 0;
+            foreach (var p in providers)
+            {
+                nodeByProvider[p.Id] = "P" + counter++;
+                sb.AppendLine($"    {nodeByProvider[p.Id]}[\"{Escape(labelBuilder(p))}\"];");
+            }
+            return nodeByProvider;
+        }
+
+        /// <summary>
+        /// 定义"输入（源画面）"与"输出（最终画面）"两个终端节点。
+        /// </summary>
+        private static void AppendTerminalNodes(StringBuilder sb)
+        {
+            sb.AppendLine($"    {InputNodeId}[\"输入 (源画面)\"];");
+            sb.AppendLine($"    {OutputNodeId}[\"输出 (最终画面)\"];");
+        }
+
+        /// <summary>
+        /// 根据输入/输出锚点连接生成边：输入锚 → 本 Provider（标注接收锚点键），
+        /// 本 Provider → 输出锚（标注输出键 <c>__Output__</c>），并连接到终端节点。
+        /// 输出锚直接指向 <see cref="IEffectProvider.OutputAnchorGUID"/> 的节点连到"输出"。
+        /// </summary>
+        private static void AppendAnchorEdges(StringBuilder sb, IReadOnlyDictionary<Guid, IEffectProvider> effectProviders, Dictionary<Guid, string> nodeByProvider)
+        {
+            var anchorLines = new List<string>();
+            foreach (var p in effectProviders.Values)
+            {
+                var input = p.GetMainInputSource();
+                if (input == IEffectProvider.InputAnchorGUID.ToString())
                 {
-                    for (int i = 0; i < b.GetInputAnchors().Count; i++)
-                        b.GetInputAnchors()[i] = IEffectProvider.NoConnectionGUID;
+                    anchorLines.Add($"    {InputNodeId} -->|\"{Escape(EffectProviderAnchorExtensions.InputKey)}\"| {nodeByProvider[p.Id]};");
+                }
+                else if (Guid.TryParse(input, out var sourceId) && effectProviders.ContainsKey(sourceId))
+                {
+                    anchorLines.Add($"    {nodeByProvider[sourceId]} -->|\"{Escape(EffectProviderAnchorExtensions.InputKey)}\"| {nodeByProvider[p.Id]};");
+                }
+
+                if (p.IsFinalOutputSource())
+                {
+                    anchorLines.Add($"    {nodeByProvider[p.Id]} -->|\"{Escape(EffectProviderAnchorExtensions.OutputKey)}\"| {OutputNodeId};");
                 }
             }
 
-            if (pipelineProviders.Count <= 1) return;
+            if (!effectProviders.Values.Any(p => p.IsFinalOutputSource()))
+                anchorLines.Add($"    {InputNodeId} -->|\"Picture\"| {OutputNodeId};");
 
-            var directToInputCount = pipelineProviders.Count(b =>
-               b.GetInputAnchor() == IEffectProvider.InputAnchorGUID ||
-               (b.GetInputAnchors()?.Contains(IEffectProvider.InputAnchorGUID) ?? false));
+            foreach (var line in anchorLines.Distinct())
+                sb.AppendLine(line);
+        }
 
-            if (directToInputCount <= 1) return;
-
-            var sorted = pipelineProviders
-                .OrderBy(b => b.Target.HasFlag(EffectTarget.ColorAdjustment) ? 0 : 1)
-                .ThenBy(b => b.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor) ? 0 : 1)
-                .ToList();
-
-            for (int i = 0; i < sorted.Count; i++)
+        /// <summary>
+        /// 根据字段绑定生成边。渲染时使用 <see cref="IEffectProvider.Fields"/>（反映内联后的动态绑定），
+        /// 存储时使用 <see cref="IEffectProvider.AnchorsBindingState"/> 中以普通字段 Id 为 key 的条目。
+        /// 连接线上标注字段 Id，以及绑定模式（动态 / 内联）。
+        /// </summary>
+        private static void AppendFieldBindingEdges(StringBuilder sb, IReadOnlyDictionary<Guid, IEffectProvider> effectProviders, Dictionary<Guid, string> nodeByProvider, bool useRenderTimeFields)
+        {
+            var fieldEdges = new List<string>();
+            foreach (var consumer in effectProviders.Values)
             {
-                var b = sorted[i];
-                b.SetInputAnchor(i == 0 ? IEffectProvider.InputAnchorGUID : sorted[i - 1].Id);
-                b.SetOutputAnchor(i == sorted.Count - 1 ? IEffectProvider.OutputAnchorGUID : sorted[i + 1].Id);
+                var sourceIdAndFieldId = new List<(Guid SourceId, string FieldId, string Mode)>();
+                if (useRenderTimeFields)
+                {
+                    Dictionary<string, IEffectArgumentField>? fields;
+                    try
+                    {
+                        fields = consumer.Fields;
+                    }
+                    catch
+                    {
+                        continue; // 字段物化失败：与 InlineValueProvidersIntoConsumers 保持一致。
+                    }
+                    if (fields is null) continue;
 
+                    foreach (var field in fields.Values)
+                    {
+                        string? sourceIdString = field switch
+                        {
+                            DynamicEffectParamField df => df.BoundProviderId,
+                            IValueProviderEffect vpe => vpe.BindedEffectProvidingSystemID,
+                            _ => null,
+                        };
+                        if (sourceIdString is null) continue;
+                        if (Guid.TryParse(sourceIdString, out var sourceId)
+                            && effectProviders.TryGetValue(sourceId, out var source)
+                            && source.Target.HasFlag(EffectTarget.ValueProvider))
+                        {
+                            sourceIdAndFieldId.Add((sourceId, field.Id, field is IValueProviderEffect ? "内联" : "动态"));
+                        }
+                    }
+                }
+                else
+                {
+                    if (consumer.AnchorsBindingState is null) continue;
+                    foreach (var kvp in consumer.AnchorsBindingState)
+                    {
+                        if (kvp.Key == EffectProviderAnchorExtensions.InputKey
+                            || kvp.Key == EffectProviderAnchorExtensions.OutputKey)
+                            continue;
+                        if (Guid.TryParse(kvp.Value, out var sourceId)
+                            && effectProviders.TryGetValue(sourceId, out var source)
+                            && source.Target.HasFlag(EffectTarget.ValueProvider))
+                        {
+                            sourceIdAndFieldId.Add((sourceId, kvp.Key, "动态"));
+                        }
+                    }
+                }
+
+                foreach (var (sourceId, fieldId, mode) in sourceIdAndFieldId)
+                {
+                    fieldEdges.Add($"    {nodeByProvider[sourceId]} -->|\"{Escape(fieldId)} ({mode})\"| {nodeByProvider[consumer.Id]};");
+                }
             }
+
+            foreach (var line in fieldEdges.Distinct())
+                sb.AppendLine(line);
+        }
+
+        /// <summary>
+        /// 转义 Mermaid 标签文本中需要转义的字符（引号、方括号、大括号）。
+        /// </summary>
+        private static string Escape(string text)
+        {
+            if (text is null) return "";
+            return text
+                .Replace("\\", "\\\\")
+                .Replace("\"", "\\\"")
+                .Replace("[", "\\[")
+                .Replace("]", "\\]")
+                .Replace("{", "\\{")
+                .Replace("}", "\\}");
         }
     }
 }

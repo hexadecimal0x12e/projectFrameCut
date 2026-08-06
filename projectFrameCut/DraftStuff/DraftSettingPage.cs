@@ -6,10 +6,12 @@ using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
 using projectFrameCut.Render;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System.Reflection;
 
@@ -1196,10 +1198,42 @@ public class DraftSettingPage
         layout.Children.Add(new HorizontalStackLayout { Children = { new Label { Text = "TargetWidth", VerticalOptions = LayoutOptions.Center }, targetWEntry }, Spacing = 8 });
         layout.Children.Add(new HorizontalStackLayout { Children = { new Label { Text = "TargetHeight" }, targetHEntry }, Spacing = 8 });
 
-        var effectBundles = (clip.EffectBundles ?? [])
-            .OrderBy(b => b.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(b => b.BundleTypeName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(b => b.Id)
+        // Effect management now runs on the IEffectProvider system.
+        // EffectProviders is the preferred shape; legacy EffectBundles is still auto-migrated
+        // when no provider data exists (keep-for-compatibility read). If plugins are not loaded
+        // or migration fails, the effect section shows a fallback message instead of crashing.
+        var effectProviders = new List<(IEffectProvider Provider, bool MigratedFromBundle)>();
+        string? providerLoadError = null;
+        try
+        {
+            if (clip.EffectProviders is { Length: > 0 } || clip.EffectBundles is { Length: > 0 })
+            {
+                var factories = EffectServices.GetAvailableEffectProviders();
+                if (factories.Count == 0)
+                {
+                    providerLoadError = "Effect providers are unavailable: the plugin system has not been initialized.";
+                }
+                else if (clip.EffectProviders is { Length: > 0 })
+                {
+                    var restored = EffectBindingHelper.MigrateToEffectProviders(clip.EffectProviders, null);
+                    effectProviders.AddRange(restored.Values.Select(p => (p, false)));
+                }
+                else
+                {
+                    var restored = EffectBindingHelper.MigrateToEffectProviders(null, clip.EffectBundles);
+                    effectProviders.AddRange(restored.Values.Select(p => (p, true)));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            providerLoadError = $"Failed to load effect providers: {ex.Message}";
+        }
+
+        var sortedProviders = effectProviders
+            .OrderBy(x => x.Provider.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Provider.TypeName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Provider.Id)
             .ToList();
 
         layout.Children.Add(new Label
@@ -1210,7 +1244,17 @@ public class DraftSettingPage
             Margin = new Thickness(0, 8, 0, 0)
         });
 
-        if (effectBundles.Count == 0)
+        if (providerLoadError is not null)
+        {
+            layout.Children.Add(new Label
+            {
+                Text = providerLoadError,
+                FontSize = 11,
+                TextColor = Colors.IndianRed,
+                LineBreakMode = LineBreakMode.CharacterWrap
+            });
+        }
+        else if (sortedProviders.Count == 0)
         {
             layout.Children.Add(new Label
             {
@@ -1221,17 +1265,18 @@ public class DraftSettingPage
         }
         else
         {
-            foreach (var bundle in effectBundles)
+            foreach (var item in sortedProviders)
             {
-                var bundleInfo = new Label
+                var provider = item.Provider;
+                var providerInfo = new Label
                 {
-                    Text = BuildEffectBundleSummary(bundle),
+                    Text = BuildStandaloneEffectProviderSummary(provider, item.MigratedFromBundle),
                     FontSize = 11,
                     LineBreakMode = LineBreakMode.CharacterWrap,
                     Opacity = 0.9
                 };
 
-                var deleteBundleButton = new Button
+                var deleteProviderButton = new Button
                 {
                     Text = Localized.DraftPage_ContextMenu_Delete,
                     BackgroundColor = Colors.OrangeRed,
@@ -1240,19 +1285,19 @@ public class DraftSettingPage
                     HorizontalOptions = LayoutOptions.Start
                 };
 
-                deleteBundleButton.Clicked += async (_, _) =>
+                deleteProviderButton.Clicked += async (_, _) =>
                 {
-                    bool confirmBundleDelete = await ConfirmAsync(
+                    bool confirmProviderDelete = await ConfirmAsync(
                         Localized._Warn,
-                        Localized.HomePage_ProjectContextMenu_Delete_Confirm0($"'{bundle.Name}' ({bundle.BundleTypeName}@'{clip.Name}')"));
-                    if (!confirmBundleDelete)
+                        Localized.HomePage_ProjectContextMenu_Delete_Confirm0($"'{provider.Name}' ({provider.TypeName}@'{clip.Name}')"));
+                    if (!confirmProviderDelete)
                     {
                         return;
                     }
 
-                    if (!RemoveStandaloneEffectBundle(clip, bundle.Id))
+                    if (!RemoveStandaloneEffectProvider(clip, provider.Id))
                     {
-                        await ShowInfoAsync("Effect bundle not found.");
+                        await ShowInfoAsync("Effect provider not found.");
                         return;
                     }
 
@@ -1261,18 +1306,18 @@ public class DraftSettingPage
                     tabView.SelectedItem.Content = BuildClipAndAssetManageTab();
                 };
 
-                var bundleCard = new VerticalStackLayout
+                var providerCard = new VerticalStackLayout
                 {
                     Spacing = 4,
                     Padding = new Thickness(8, 6),
                     BackgroundColor = new Color(1f, 1f, 1f, 0.03f),
-                    Children = { bundleInfo, deleteBundleButton }
+                    Children = { providerInfo, deleteProviderButton }
                 };
-                layout.Children.Add(bundleCard);
+                layout.Children.Add(providerCard);
             }
         }
 
-        var bundleIdSet = new HashSet<Guid>(effectBundles.Select(b => b.Id));
+        var bundleIdSet = new HashSet<Guid>(effectProviders.Select(x => x.Provider.Id));
         var standaloneEffects = (clip.Effects ?? [])
             .Select((effect, idx) => new { Effect = effect, Index = idx })
             .Where(x => !IsEffectBoundToExistingBundle(x.Effect, bundleIdSet))
@@ -1437,35 +1482,40 @@ public class DraftSettingPage
         return true;
     }
 
-    private static bool RemoveStandaloneEffectBundle(ClipDraftDTO clip, Guid bundleId)
+    /// <summary>
+    /// Removes an <see cref="IEffectProvider"/> from the clip's provider-native JSON array.
+    /// The provider's output binding is cleared as well (a provider being the final output would
+    /// otherwise leave a dangling final-output marker in the stored configuration).
+    /// </summary>
+    private static bool RemoveStandaloneEffectProvider(ClipDraftDTO clip, Guid providerId)
     {
-        if (clip.EffectBundles is null)
+        if (clip.EffectProviders is not { Length: > 0 } || providerId == Guid.Empty)
         {
             return false;
         }
 
-        var bundles = clip.EffectBundles.ToList();
-        int removeIndex = bundles.FindIndex(b => b.Id == bundleId);
+        var providers = clip.EffectProviders.ToList();
+        int removeIndex = providers.FindIndex(p => p.Id == providerId);
         if (removeIndex < 0)
         {
             return false;
         }
 
-        bundles.RemoveAt(removeIndex);
-        clip.EffectBundles = bundles.Count == 0 ? null : bundles.ToArray();
-
-        if (clip.Effects is not null)
+        providers.RemoveAt(removeIndex);
+        if (providers.Count > 0)
         {
-            string groupId = bundleId.ToString();
-            foreach (var effect in clip.Effects)
+            string removedId = providerId.ToString();
+            foreach (var provider in providers)
             {
-                if (string.Equals(effect.BindedEffectGroupID, groupId, StringComparison.OrdinalIgnoreCase))
+                if (provider.AnchorsBindingState is { } state
+                    && state.TryGetValue(EffectProviderAnchorExtensions.OutputKey, out var output)
+                    && output == removedId)
                 {
-                    effect.BindedEffectGroupID = string.Empty;
+                    state[EffectProviderAnchorExtensions.OutputKey] = IEffectProvider.NoConnectionGUID.ToString();
                 }
             }
         }
-
+        clip.EffectProviders = providers.Count == 0 ? null : providers.ToArray();
         return true;
     }
 
@@ -1479,20 +1529,36 @@ public class DraftSettingPage
         return Guid.TryParse(effect.BindedEffectGroupID.Trim(), out var gid) && bundleIds.Contains(gid);
     }
 
-    private static string BuildEffectBundleSummary(EffectBundleJSONStructure bundle)
-    {
-        int parameterCount = bundle.Fields?.Count ?? 0;
-        int multiInputCount = bundle.BindedInputIds?.Length ?? 0;
-        return $"Name: {bundle.Name} | ClipType: {bundle.BundleTypeName} | Id: {bundle.Id}\n"
-             + $"Input: {bundle.BindedInputId} | Output: {bundle.BindedOutputId} | MultiInput: {multiInputCount} | Params: {parameterCount}";
-    }
-
     private static string BuildStandaloneEffectSummary(EffectAndMixtureJSONStructure effect)
     {
         int parameterCount = effect.Parameters?.Count ?? 0;
         string bindingId = string.IsNullOrWhiteSpace(effect.BindedEffectGroupID) ? "(none)" : effect.BindedEffectGroupID;
         return $"Name: {effect.Name} | ClipType: {effect.TypeName} | Index: {effect.Index} | Enabled: {effect.Enabled}\n"
              + $"Implement: {effect.ImplementType} | Params: {parameterCount} | BindedEffectProvidingSystemID: {bindingId}";
+    }
+
+    /// <summary>
+    /// Builds a read-only summary of an <see cref="IEffectProvider"/> instance for the standalone
+    /// clip-management card. <paramref name="migratedFromBundle"/> marks providers restored from a
+    /// legacy <c>EffectBundles</c> array so the UI can hint that they are still on the old format.
+    /// </summary>
+    private static string BuildStandaloneEffectProviderSummary(IEffectProvider provider, bool migratedFromBundle)
+    {
+        if (provider is null) return "(null provider)";
+
+        int parameterCount = provider.Fields?.Count ?? 0;
+        int bindingCount = provider.AnchorsBindingState?.Count ?? 0;
+        string target = provider.Target.ToString();
+        string input = provider.GetMainInputSource();
+        string inputDisplay = input == IEffectProvider.InputAnchorGUID.ToString()
+            ? "Source"
+            : input == IEffectProvider.NoConnectionGUID.ToString()
+                ? "(none)"
+                : input;
+        string output = provider.IsFinalOutputSource() ? "Final" : "(none)";
+        string legacyHint = migratedFromBundle ? " [from legacy bundle]" : string.Empty;
+        return $"Name: {provider.Name} | Type: {provider.TypeName} | Id: {provider.Id} | Enabled: {provider.Enabled}\n"
+             + $"Target: {target} | Input: {inputDisplay} | Output: {output} | Fields: {parameterCount} | Bindings: {bindingCount}{legacyHint}";
     }
 
     private View BuildStandaloneAssetEditorCard(AssetItem asset, DraftStructureJSON draft, List<ClipDraftDTO> clips, List<AssetItem> assets, string projectRoot)
@@ -1949,7 +2015,7 @@ public class DraftSettingPage
             return;
         }
 
-        (var clips, _) = DraftImportAndExportHelper.ImportFromJSON(draft, parent.ProjectInfo, restoreFreeFields: true);
+        (var clips, _) = DraftImportAndExportHelper.ImportFromJSON(draft, parent.ProjectInfo);
         parent.Clips = new System.Collections.Concurrent.ConcurrentDictionary<Guid, ClipElementUI>(clips);
         parent.Assets = CreateAssetDictionary(assets);
 

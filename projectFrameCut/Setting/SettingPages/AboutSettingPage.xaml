@@ -3,40 +3,64 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.Setting.SettingPages.AboutSettingPage"
              xmlns:l="clr-namespace:LocalizedResources"
+             xmlns:local="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Spans;assembly=projectFrameCut.ApplicationAPIBase"
              Title="{l:Localized Key=MainSettingsPage_Tab_About}">
     <Grid RowDefinitions="Auto,*" Padding="8">
-        <VisualStateManager.VisualStateGroups>
-            <VisualStateGroup>
-                <VisualState x:Name="Narrow">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="0" />
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter TargetName="WideLayout" Property="IsVisible" Value="False" />
-                        <Setter TargetName="NarrowLayout" Property="IsVisible" Value="True" />
-                    </VisualState.Setters>
-                </VisualState>
-                <VisualState x:Name="Wide">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="600" />
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter TargetName="WideLayout" Property="IsVisible" Value="True" />
-                        <Setter TargetName="NarrowLayout" Property="IsVisible" Value="False" />
-                    </VisualState.Setters>
-                </VisualState>
-            </VisualStateGroup>
-        </VisualStateManager.VisualStateGroups>
+        <!--  Wide layout -->
+        <Grid x:Name="WideLayout" Grid.Row="0" Padding="8" RowDefinitions="*,*,Auto" >
 
-        <!-- Wide layout: logo left, info right -->
-        <HorizontalStackLayout x:Name="WideLayout" Grid.Row="0" Padding="8">
-            <Image Background="Black" x:Name="AppLogoIcon" WidthRequest="180" HeightRequest="180" Source="appicon.png" />
-            <VerticalStackLayout Padding="8">
-                <Label FontSize="72" Text="{l:Localized Key=AppBrand}" />
-                <Label x:Name="AppVersionLabel" FontSize="32" Margin="0,1,0,10" Text="@Version" />
-                <Label x:Name="AppDetailVersionLabel" FontSize="16" TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}" Text="@Detail" />
-            </VerticalStackLayout>
-        </HorizontalStackLayout>
+            <!-- Row 0: Logo card + Title/Version -->
+            <HorizontalStackLayout Grid.Row="0" VerticalOptions="Fill">
+                <Grid Margin="0,0,16,0">
+                    <Image Background="Black" x:Name="AppLogoIcon" WidthRequest="250" Source="projectframecut.png" />
+                </Grid>
+
+                <VerticalStackLayout VerticalOptions="Start" Padding="0,0,0,16">
+                    <Label FontSize="72" Text="{l:Localized Key=AppBrand}" />
+                    <Label x:Name="AppVersionLabel" FontSize="32"
+                           Margin="0,0,0,8" Text="@Version" />
+                    <Label x:Name="AppCopyrightLabel" FontSize="20"
+                           Margin="0,0,0,4">
+                        <Label.FormattedText>
+                            <FormattedString>
+                                <Span Text="{l:Localized Key=AboutPage_Copyrignt}" />
+                                <local:HyperlinkSpan Url="https://github.com/hexadecimal0x12e" Text="hexadecimal0x12e" />
+                                <Span Text=" 2025-2026. " />
+                                <local:HyperlinkSpan Url="https://github.com/hexadecimal0x12e/projectFrameCut" Text="{l:Localized Key=AboutPage_HomePage}" />
+                            </FormattedString>
+                        </Label.FormattedText>
+                    </Label>
+                    <Label x:Name="AppBuildInfoLabel" FontSize="18"
+                           TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
+                           Text="unknown@unknown unknown" />
+                </VerticalStackLayout>
+            </HorizontalStackLayout>
+
+            <!-- Row 1: .NET bot + Runtime info -->
+            <HorizontalStackLayout Grid.Row="1" VerticalOptions="Fill"  >
+                <Image Source="dotnet_bot.png" Aspect="AspectFit"
+                       WidthRequest="250" Margin="0,0,16,0" />
+
+                <VerticalStackLayout Grid.Row="1" Grid.Column="1"
+                                     VerticalOptions="Center">
+                    <Label FontSize="36" Text="{l:Localized Key=AboutPage_PoweredBy}"
+                           Margin="0,0,0,4" />
+                    <Label x:Name="AppRuntimeVersionLabel" FontSize="22"
+                           TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
+                           Text="Runtime: .NET 10.0.?" />
+                    <Label x:Name="AppMauiVersionLabel" FontSize="22"
+                           TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
+                           Text="MAUI: Microsoft.Maui.Controls 10.0.?" />
+                </VerticalStackLayout>
+            </HorizontalStackLayout>
+
+            <!-- Row 2: Build details -->
+            <Label x:Name="AppDetailVersionLabel" Grid.Row="2"
+                   VerticalOptions="End"
+                   FontSize="14"
+                   TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
+                   Margin="0,16,0,0" Text="@Detail" />
+        </Grid>
 
         <!-- Narrow layout: logo centered top, details below -->
         <VerticalStackLayout x:Name="NarrowLayout" Grid.Row="0" Padding="8" IsVisible="False" HorizontalOptions="Center" Spacing="2">
@@ -48,6 +72,5 @@
             </ScrollView>
         </VerticalStackLayout>
 
-        <WebView Grid.Row="1" Margin="0,8,0,0" MinimumHeightRequest="500" x:Name="AboutWebview" />
     </Grid>
 </ContentPage>

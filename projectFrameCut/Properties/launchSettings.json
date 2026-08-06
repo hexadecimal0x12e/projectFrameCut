@@ -5,6 +5,11 @@
       "commandLineArgs": "--noSplash --noUIWatchdog",
       "nativeDebugging": false
     },
+    "Windows Machine (Fast launch)": {
+      "commandName": "MsixPackage",
+      "commandLineArgs": "--noSplash --noUIWatchdog --continue",
+      "nativeDebugging": false
+    },
     "Windows Machine (Profiler)": {
       "commandName": "MsixPackage",
       "commandLineArgs": " \"D:\\code\\playground\\projectFrameCut\\My Drafts\\cache test.pjfc\\project.pjfc\" --noSettings --noSplash --noUIWatchdog",

@@ -45,6 +45,13 @@ namespace projectFrameCut.Render.Effect
         /// </summary>
         private Dictionary<string, object> _fieldValues = new();
 
+        /// <summary>
+        /// Runtime-only value providers injected for the current effect build.
+        /// They deliberately live outside <see cref="_fieldValues"/> so materialization never
+        /// mistakes a previous build's inline object for persisted binding configuration.
+        /// </summary>
+        private readonly Dictionary<string, IValueProviderEffect> _inlinedFieldValues = new();
+
         protected EffectProviderBase()
         {
             MetaData = new Dictionary<string, object>();
@@ -131,16 +138,16 @@ namespace projectFrameCut.Render.Effect
 
         /// <summary>
         /// The single source of truth of the anchor bindings.
-        /// Kept as a live backing dictionary so arbitrary anchor keys (e.g. multi-input anchors)
-        /// persist. Read via the <see cref="EffectProviderAnchorExtensions"/> helpers.
+        /// Kept as a live backing dictionary. Read and mutate it through the
+        /// <see cref="EffectProviderAnchorExtensions"/> helpers.
         /// </summary>
-        private readonly Dictionary<string, Guid> _anchors = new()
+        private readonly Dictionary<string, string> _anchors = new()
         {
-            { PrimaryInputAnchorKey, IEffectProvider.InputAnchorGUID },
-            { OutputAnchorKey, IEffectProvider.OutputAnchorGUID },
+            { PrimaryInputAnchorKey, IEffectProvider.NoConnectionGUID.ToString() },
+            { OutputAnchorKey, IEffectProvider.NoConnectionGUID.ToString() },
         };
 
-        public Dictionary<string, Guid> AnchorsBindingState
+        public Dictionary<string, string> AnchorsBindingState
         {
             get => _anchors;
             set
@@ -148,8 +155,8 @@ namespace projectFrameCut.Render.Effect
                 if (value is null) return;
                 _anchors.Clear();
                 foreach (var kv in value) _anchors[kv.Key] = kv.Value;
-                if (!_anchors.ContainsKey(PrimaryInputAnchorKey)) _anchors[PrimaryInputAnchorKey] = IEffectProvider.InputAnchorGUID;
-                if (!_anchors.ContainsKey(OutputAnchorKey)) _anchors[OutputAnchorKey] = IEffectProvider.OutputAnchorGUID;
+                if (!_anchors.ContainsKey(PrimaryInputAnchorKey)) _anchors[PrimaryInputAnchorKey] = IEffectProvider.NoConnectionGUID.ToString();
+                if (!_anchors.ContainsKey(OutputAnchorKey)) _anchors[OutputAnchorKey] = IEffectProvider.NoConnectionGUID.ToString();
             }
         }
 
@@ -172,12 +179,6 @@ namespace projectFrameCut.Render.Effect
                     var bindingKey = BoundParameterKey(desc.Id);
                     if (_fieldValues.TryGetValue(bindingKey, out var bsRaw) && bsRaw is not null)
                     {
-                        // 内联的值提供器效果：原样返回它作为字段，而不是重新包装成从 context 读值的动态字段。
-                        if (bsRaw is IValueProviderEffect injected)
-                        {
-                            result[desc.Id] = injected;
-                            continue;
-                        }
                         var boundSourceId = bsRaw as string ?? bsRaw?.ToString();
                         result[desc.Id] = new DynamicEffectParamField
                         {
@@ -218,17 +219,18 @@ namespace projectFrameCut.Render.Effect
                     var bindingKey = BoundParameterKey(kvp.Key);
                     if (kvp.Value is DynamicEffectParamField df && df.BoundProviderId is { } boundId)
                     {
+                        _inlinedFieldValues.Remove(kvp.Key);
                         _fieldValues[bindingKey] = boundId;
                         _fieldValues[kvp.Key] = df.StaticFallbackValue; // null → getter 走 ParseDefault
                     }
                     else if (kvp.Value is IValueProviderEffect vpe)
                     {
-                        // 内联的值提供器效果：作为绑定源原样存储，BuildDynamicParameters 会直接使用它的 getter。
-                        _fieldValues[bindingKey] = vpe;
-                        _fieldValues.Remove(kvp.Key);
+                        // Inline objects are runtime-only. Keep the persisted source id and static fallback intact.
+                        _inlinedFieldValues[kvp.Key] = vpe;
                     }
                     else
                     {
+                        _inlinedFieldValues.Remove(kvp.Key);
                         _fieldValues.Remove(bindingKey);                // 静态写入 = 解除绑定
                         _fieldValues[kvp.Key] = kvp.Value is StaticEffectArgumentField sf ? sf.Value : kvp.Value.GetGetter()();
                     }
@@ -348,14 +350,13 @@ namespace projectFrameCut.Render.Effect
                 if (desc.FieldType.HasFlag(EffectArgumentFieldType.IPicture)) continue;
 
                 var bindingKey = BoundParameterKey(desc.Id);
+                if (_inlinedFieldValues.TryGetValue(desc.Id, out var inline))
+                {
+                    result[desc.Id] = inline.GetGetter();
+                    continue;
+                }
                 if (_fieldValues.TryGetValue(bindingKey, out var bsRaw) && bsRaw is not null)
                 {
-                    // 内联的值提供器效果：直接使用它的 getter，不再经 ValueProviderFrameContext。
-                    if (bsRaw is IValueProviderEffect inline)
-                    {
-                        result[desc.Id] = inline.GetGetter();
-                        continue;
-                    }
                     var boundSourceId = bsRaw as string ?? bsRaw?.ToString();
                     var field = new DynamicEffectParamField
                     {

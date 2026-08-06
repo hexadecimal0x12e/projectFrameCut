@@ -24,7 +24,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Define the type name of the effect. 
         /// </summary>
         /// <remarks>
-        /// it SHOULD equals to <see cref="IEffectBundle.TypeName"/>, <see cref="IEffectFactory.TypeName"/> and so on.
+        /// it SHOULD equals to <see cref="IEffectProvider.TypeName"/> and so on.
         /// </remarks>
         public string TypeName { get; }
         /// <summary>

@@ -19,18 +19,17 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// The built-in binding source id for the current frame index (exposed as <see cref="float"/>).
         /// </summary>
-        public const string BuiltInFrameProviderId = "__Builtin_frame";
+        public const string BuiltInFrameProviderId = "builtin://frame";
         /// <summary>
         /// The built-in binding source id for the current clip progress (0..1, exposed as <see cref="float"/>).
         /// </summary>
-        public const string BuiltInProgressProviderId = "__Builtin_progress";
+        public const string BuiltInProgressProviderId = "builtin://progress";
 
         [ThreadStatic]
         private static Dictionary<string, object>? _values;
 
         /// <summary>
-        /// Begin a render frame: pre-fills the built-in frame/progress sources, clears provider values,
-        /// and syncs non-static free fields into the context.
+        /// Begin a render frame: pre-fills the built-in frame/progress sources and clears provider values.
         /// </summary>
         public static void BeginFrame(uint frameIndex, float progress)
         {
@@ -39,7 +38,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                 [BuiltInFrameProviderId] = (float)frameIndex,
                 [BuiltInProgressProviderId] = progress,
             };
-            SyncFreeFields();
         }
 
         /// <summary>
@@ -48,22 +46,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static void BeginFrame(uint frameIndex)
         {
             BeginFrame(frameIndex, 0f);
-        }
-
-        /// <summary>
-        /// Sync non-static FreeFields into the thread-local value store.
-        /// Called at the start of each frame so dynamic FreeFields are available as binding sources.
-        /// </summary>
-        public static void SyncFreeFields()
-        {
-            foreach (var ff in EffectFieldPool.EnumerateFreeFields())
-            {
-                if (ff.Field is null) continue;
-                if (!ff.Field.IsDynamic && !ff.Field.IsDynamicAtRenderTime) continue;
-                var key = ff.GlobalId.ToString();
-                _values ??= new Dictionary<string, object>(4);
-                _values[key] = ff.Field.GetGetter()();
-            }
         }
 
         /// <summary>

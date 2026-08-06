@@ -296,7 +296,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private void SaveProgressList(List<ProgressData> list)
         {
-            EffectProviderHelper.SetFieldValue(Inner.Fields, ProgressListKey, JsonSerializer.Serialize(list), EffectArgumentFieldType.String);
+            var fields = Inner.Fields;
+            EffectProviderHelper.SetFieldValue(fields, ProgressListKey, JsonSerializer.Serialize(list), EffectArgumentFieldType.String);
+            Inner.Fields = fields;
         }
 
         private static List<ProgressData> ParseProgressList(object? value)

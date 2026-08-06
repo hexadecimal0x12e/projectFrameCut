@@ -125,6 +125,9 @@ public sealed class DynamicPreview : IDisposable
     private readonly object _preparedOverlayCacheGate = new();
     private IReadOnlyList<PreparedPreview> _lastPreparedOverlayPreviews = [];
 
+    public event Action<Guid, string>? ClipInitializationFailed;
+    public event Action<Guid>? ClipInitializationRecovered;
+
     public DynamicPreview()
     {
 
@@ -217,6 +220,7 @@ public sealed class DynamicPreview : IDisposable
                 continue;
             }
 
+            DraftImportAndExportHelper.RestoreFailedInitializationData(clip);
             var clipJson = JsonSerializer.SerializeToElement(clip);
             var clipInstance = PluginManager.CreateClip(clipJson);
             if (clipInstance.FilePath is not null)
@@ -252,7 +256,25 @@ public sealed class DynamicPreview : IDisposable
                 }
             }
             clipsList.Add(clipInstance);
-            reinitTasks.Add(Task.Run(() => clipInstance.ReInit(8)));
+            reinitTasks.Add(Task.Run(() =>
+            {
+                try
+                {
+                    bool wasMarked = ClipInitializationFailure.IsMarked(clipInstance);
+                    clipInstance.ReInit(8);
+                    if (!ClipInitializationFailure.HasDeferredFailures(clipInstance.ExtraData))
+                    {
+                        ClipInitializationFailure.Clear(clipInstance);
+                        if (wasMarked) ClipInitializationRecovered?.Invoke(clipInstance.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ClipInitializationFailure.Mark(clipInstance, "Source or effect initialization", ex);
+                    ClipInitializationFailed?.Invoke(clipInstance.Id, ClipInitializationFailure.GetDescription(clipInstance.ExtraData));
+                    Log(ex, $"Initialize preview clip {clipInstance.Name} ({clipInstance.Id}); using checkerboard fallback", this);
+                }
+            }));
         }
 
         await Task.WhenAll(reinitTasks);

@@ -81,5 +81,20 @@ namespace projectFrameCut.Platforms.Android
                 // ignore errors during shutdown
             }
         }
+
+        protected override void OnResume()
+        {
+            base.OnResume();
+
+            Platform.OnResume(this);
+        }
+
+        protected override void OnNewIntent(Android.Content.Intent intent)
+        {
+            base.OnNewIntent(intent);
+
+            Platform.OnNewIntent(intent);
+        }
+
     }
 }

@@ -49,12 +49,6 @@ namespace projectFrameCut.DraftStuff
                     }
                 }
             }
-            // Append non-static FreeFields as global binding sources
-            foreach (var ff in EffectFieldPool.EnumerateFreeFields())
-            {
-                if (ff.Field is not { IsDynamic: true } && !ff.Field.IsDynamicAtRenderTime) continue;
-                sources.Add(new ValueBindingSource(ff.GlobalId.ToString(), ff.Field.Id ?? ff.GlobalId.ToString()));
-            }
             return sources;
         }
 
@@ -85,27 +79,16 @@ namespace projectFrameCut.DraftStuff
 
         public void ApplyBinding(string fieldId, string sourceId)
         {
-            // Store the binding key in the field values for tracking
-            _provider.Fields[fieldId] = new DynamicEffectParamField
-            {
-                Id = fieldId,
-                FieldType = EffectArgumentFieldType.Unknown,
-                BoundProviderId = sourceId,
-                StaticFallbackValue = null,
-            };
-            EffectFieldPool.SetBound(_provider, fieldId, sourceId, null);
+            if (!_provider.Fields.ContainsKey(fieldId)) return;
+            _provider.SetFieldBinding(fieldId, sourceId);
+            EffectBindingHelper.MaterializeFields([_provider]);
             _onChanged?.Invoke();
         }
 
         public void Unbind(string fieldId)
         {
-            if (_provider.Fields.TryGetValue(fieldId, out var existing))
-            {
-                _provider.Fields[fieldId] = new StaticEffectArgumentField(
-                    existing is DynamicEffectParamField df ? df.StaticFallbackValue ?? new object() : new object(),
-                    existing.FieldType);
-            }
-            EffectFieldPool.Unbind(_provider, fieldId);
+            _provider.ClearFieldBinding(fieldId);
+            EffectBindingHelper.MaterializeFields([_provider]);
             _onChanged?.Invoke();
         }
 

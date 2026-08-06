@@ -247,6 +247,31 @@
         "DontTranslate": false
       },
       {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "\u7248\u6743\u6240\u6709 ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8BF7\u5728\u201C\u7248\u6743\u6240\u6709\u201D\u5B57\u6837\u540E\u9762\u6DFB\u52A0\u4E00\u4E2A\u7A7A\u683C",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "\u9879\u76EE\u4E3B\u9875",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": "\u7531 .NET 10 \u548C .NET MAUI \u9A71\u52A8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "AIAssistant_AIReplyCopyPopup_Copy",
         "Value": "\u590D\u5236\u6240\u6709\u5185\u5BB9",
         "Mode": "ConstString",
@@ -4603,6 +4628,32 @@
         "DontTranslate": false
       },
       {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "\u4F60\u7684\u9879\u76EE\u4E2D\u4F7F\u7528\u7684\u4E00\u4E9B\u529F\u80FD\uFF0C\u5DF2\u88AB\u5F03\u7528\uFF0C\u5E76\u4E14\u5C06\u5728 {AppBrand} \u7684\u4E0B\u4E00\u4E2A\u4E3B\u8981\u7248\u672C\u4E2D\u88AB\u79FB\u9664\u3002\u8BF7\u53C2\u9605\u6587\u6863\uFF0C\u4E86\u89E3\u5982\u4F55\u5347\u7EA7\u4F60\u7684\u9879\u76EE\u3002\r\r\u8FD9\u4E9B\u529F\u80FD\u5C06\u5728 API V{nextAPIVer} \u88AB\u79FB\u9664\uFF1A\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
         "Id": "HomePage_GoDraft_DraftBroken",
         "Value": "\u4F60\u7684\u8349\u7A3F\u4F3C\u4E4E\u635F\u574F\u4E86\uFF0C\u6211\u4EEC\u53EF\u4EE5\u5C1D\u8BD5\u7528\u6700\u540E\u4E00\u6B21\u4FDD\u5B58\u7684\u69FD\u4F4D\u6765\u5C1D\u8BD5\u6062\u590D\u3002\u9009\u62E9\u201C\u786E\u8BA4\u201D\u6765\u5C1D\u8BD5\u81EA\u52A8\u6062\u590D\uFF0C\u6216\u8005\u9009\u62E9\u201C\u53D6\u6D88\u201D\u6765\u53D6\u6D88\u6253\u5F00\u6D41\u7A0B\u3002",
         "Mode": "ConstString",
@@ -4673,6 +4724,42 @@
         "ArgsComment": [
           {
             "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "\u6B64\u9879\u76EE\u4E2D\u5305\u542B\u4E86\u65E7\u7684\u6570\u636E\u7ED3\u6784\uFF0C{AppBrand} \u65E0\u6CD5\u6253\u5F00\u5B83\u3002\r\r\u8BF7\u8003\u8651\u4F7F\u7528\u4E0A\u4E00\u4E2A\u5927\u7248\u672C\u7684 {AppBrand} \u6253\u5F00\uFF0C\u901A\u5E38\u4F60\u53EF\u4EE5\u76F4\u63A5\u5728\u90A3\u91CC\u5347\u7EA7\u4F60\u7684\u9879\u76EE\u3002\r\r{AppBrand} \u4E5F\u53EF\u4EE5\u5BF9\u4F60\u7684\u9879\u76EE\u505A\u4E00\u4E2A\u4E0D\u53EF\u64A4\u56DE\u7684 **\u6BC1\u706D\u6027\u66F4\u6539**\uFF0C\u8FD9\u4F1A\u4F7F\u9879\u76EE\u4E2D\u7684\u4E00\u4E2A\u6216\u8005\u591A\u4E2A\u529F\u80FD\u53D7\u5230\u5F71\u54CD\uFF0C\u5E76\u4E14\u4F1A\u4F7F\u65E7\u7248\u7684\u5E94\u7528\u7A0B\u5E8F\u4E0D\u518D\u80FD\u591F\u76F4\u63A5\u6253\u5F00\u8FD9\u4E2A\u9879\u76EE\u3002\r\r\u66F4\u6539\u540E\uFF0C\u4EE5\u4E0B\u529F\u80FD\u5C06\u4E0D\u53EF\u7528\uFF1A\r{features}\r\r\u8F93\u5165\u201Cyes\u201D\u5E76\u70B9\u51FB\u201C{_Confirm}\u201D\u7EE7\u7EED\uFF0C\u6216\u8005\u70B9\u51FB\u201C{_Cancel}\u201D\u6765\u53D6\u6D88\u64CD\u4F5C\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "\u6B64\u9879\u76EE\u4E2D\u5305\u542B\u4E86\u6BD4\u8F83\u65E7\u7684\u6570\u636E\u7ED3\u6784\uFF0C\u9700\u8981\u5148\u5347\u7EA7\uFF0C{AppBrand} \u624D\u80FD\u6253\u5F00\u5B83\u3002\r\r\u5347\u7EA7\u65F6\uFF0C{AppBrand} \u9700\u8981\u5BF9\u4F60\u7684\u9879\u76EE\u505A\u4E00\u4E2A\u4E0D\u53EF\u64A4\u56DE\u7684\u66F4\u6539\uFF0C\u8FD9\u4F1A\u5BFC\u81F4\u65E7\u7248\u7684\u5E94\u7528\u7A0B\u5E8F\u4E0D\u518D\u80FD\u591F\u76F4\u63A5\u6253\u5F00\u8FD9\u4E2A\u9879\u76EE\u3002\u4F60\u7684\u9879\u76EE\u901A\u5E38\u4E0D\u4F1A\u53D7\u5230\u5F71\u54CD\u3002\r\r\u4EE5\u4E0B\u6570\u636E\u5C06\u88AB\u5347\u7EA7\uFF1A\r{features}\r\r\u70B9\u51FB\u201C{_Confirm}\u201D\u7EE7\u7EED\uFF0C\u6216\u8005\u70B9\u51FB\u201C{_Cancel}\u201D\u6765\u53D6\u6D88\u64CD\u4F5C\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
             "Value": ""
           }
         ],
@@ -8863,87 +8950,18 @@
         "DontTranslate": false
       },
       {
-        "Id": "AboutPage_PoweredBy",
-        "Value": "\u7531 .NET 10 \u548C .NET MAUI \u9A71\u52A8",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "AboutPage_Copyrignt",
-        "Value": "\u7248\u6743\u6240\u6709 ",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u8BF7\u5728\u201C\u7248\u6743\u6240\u6709\u201D\u5B57\u6837\u540E\u9762\u6DFB\u52A0\u4E00\u4E2A\u7A7A\u683C",
-        "DontTranslate": false
-      },
-      {
-        "Id": "AboutPage_HomePage",
-        "Value": "\u9879\u76EE\u4E3B\u9875",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
-        "Value": "\u6B64\u9879\u76EE\u4E2D\u5305\u542B\u4E86\u6BD4\u8F83\u65E7\u7684\u6570\u636E\u7ED3\u6784\uFF0C\u9700\u8981\u5148\u5347\u7EA7\uFF0C{AppBrand} \u624D\u80FD\u6253\u5F00\u5B83\u3002\r\r\u5347\u7EA7\u65F6\uFF0C{AppBrand} \u9700\u8981\u5BF9\u4F60\u7684\u9879\u76EE\u505A\u4E00\u4E2A\u4E0D\u53EF\u64A4\u56DE\u7684\u66F4\u6539\uFF0C\u8FD9\u4F1A\u5BFC\u81F4\u65E7\u7248\u7684\u5E94\u7528\u7A0B\u5E8F\u4E0D\u518D\u80FD\u591F\u76F4\u63A5\u6253\u5F00\u8FD9\u4E2A\u9879\u76EE\u3002\u4F60\u7684\u9879\u76EE\u901A\u5E38\u4E0D\u4F1A\u53D7\u5230\u5F71\u54CD\u3002\r\r\u4EE5\u4E0B\u6570\u636E\u5C06\u88AB\u5347\u7EA7\uFF1A\r{features}\r\r\u70B9\u51FB\u201C{_Confirm}\u201D\u7EE7\u7EED\uFF0C\u6216\u8005\u70B9\u51FB\u201C{_Cancel}\u201D\u6765\u53D6\u6D88\u64CD\u4F5C\u3002",
+        "Id": "HomePage_Continue",
+        "Value": "\u7EE7\u7EED\u5728\u9879\u76EE\u300C{name}\u300D\u4E0A\u5DE5\u4F5C",
         "Mode": "InterpolationString",
         "Args": [
           {
             "Key": "string",
-            "Value": "features"
+            "Value": "name"
           }
         ],
         "ArgsComment": [
           {
-            "Key": "features",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
-        "Value": "\u4F60\u7684\u9879\u76EE\u4E2D\u4F7F\u7528\u7684\u4E00\u4E9B\u529F\u80FD\uFF0C\u5DF2\u88AB\u5F03\u7528\uFF0C\u5E76\u4E14\u5C06\u5728 {AppBrand} \u7684\u4E0B\u4E00\u4E2A\u4E3B\u8981\u7248\u672C\u4E2D\u88AB\u79FB\u9664\u3002\u8BF7\u53C2\u9605\u6587\u6863\uFF0C\u4E86\u89E3\u5982\u4F55\u5347\u7EA7\u4F60\u7684\u9879\u76EE\u3002\r\r\u8FD9\u4E9B\u529F\u80FD\u5C06\u5728 API V{nextAPIVer} \u88AB\u79FB\u9664\uFF1A\r{features}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "int",
-            "Value": "nextAPIVer"
-          },
-          {
-            "Key": "string",
-            "Value": "features"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "nextAPIVer",
-            "Value": ""
-          },
-          {
-            "Key": "features",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
-        "Value": "\u6B64\u9879\u76EE\u4E2D\u5305\u542B\u4E86\u65E7\u7684\u6570\u636E\u7ED3\u6784\uFF0C{AppBrand} \u65E0\u6CD5\u6253\u5F00\u5B83\u3002\r\r\u8BF7\u8003\u8651\u4F7F\u7528\u4E0A\u4E00\u4E2A\u5927\u7248\u672C\u7684 {AppBrand} \u6253\u5F00\uFF0C\u901A\u5E38\u4F60\u53EF\u4EE5\u76F4\u63A5\u5728\u90A3\u91CC\u5347\u7EA7\u4F60\u7684\u9879\u76EE\u3002\r\r{AppBrand} \u4E5F\u53EF\u4EE5\u5BF9\u4F60\u7684\u9879\u76EE\u505A\u4E00\u4E2A\u4E0D\u53EF\u64A4\u56DE\u7684 **\u6BC1\u706D\u6027\u66F4\u6539**\uFF0C\u8FD9\u4F1A\u4F7F\u9879\u76EE\u4E2D\u7684\u4E00\u4E2A\u6216\u8005\u591A\u4E2A\u529F\u80FD\u53D7\u5230\u5F71\u54CD\uFF0C\u5E76\u4E14\u4F1A\u4F7F\u65E7\u7248\u7684\u5E94\u7528\u7A0B\u5E8F\u4E0D\u518D\u80FD\u591F\u76F4\u63A5\u6253\u5F00\u8FD9\u4E2A\u9879\u76EE\u3002\r\r\u66F4\u6539\u540E\uFF0C\u4EE5\u4E0B\u529F\u80FD\u5C06\u4E0D\u53EF\u7528\uFF1A\r{features}\r\r\u8F93\u5165\u201Cyes\u201D\u5E76\u70B9\u51FB\u201C{_Confirm}\u201D\u7EE7\u7EED\uFF0C\u6216\u8005\u70B9\u51FB\u201C{_Cancel}\u201D\u6765\u53D6\u6D88\u64CD\u4F5C\u3002",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "features"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "features",
+            "Key": "name",
             "Value": ""
           }
         ],

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +7,7 @@ using System.Threading;
 using Microsoft.Maui.ApplicationModel;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
@@ -137,10 +138,10 @@ namespace projectFrameCut.ScriptEngine
             obj.Properties.Add(new PSNoteProperty("TypeName", bundle.TypeName));
             obj.Properties.Add(new PSNoteProperty("Enabled", bundle.Enabled));
             obj.Properties.Add(new PSNoteProperty("EffectType", bundle.TypeOfEffect.ToString()));
-            obj.Properties.Add(new PSNoteProperty("ParameterCount", bundle.Parameters?.Count ?? 0));
+            obj.Properties.Add(new PSNoteProperty("ParameterCount", bundle.Fields?.Count ?? 0));
             obj.Properties.Add(new PSNoteProperty("ParameterSummary",
-                bundle.Parameters is { Count: > 0 }
-                    ? string.Join("; ", bundle.Parameters.Select(kv => $"{kv.Key}={kv.Value ?? "null"}"))
+                bundle.Fields is { Count: > 0 }
+                    ? string.Join("; ", bundle.Fields.Select(kv => $"{kv.Key}={kv.Value?.GetType().Name ?? "null"}"))
                     : "(none)"));
             return obj;
         }
@@ -148,13 +149,13 @@ namespace projectFrameCut.ScriptEngine
         /// <summary>
         /// 构造 SettableField 元数据 PSObject。
         /// </summary>
-        protected PSObject NewSettableFieldObject(EffectBundleSettableFields field)
+        protected PSObject NewSettableFieldObject(EffectArgumentFieldDescriptor field)
         {
             var obj = new PSObject();
             obj.Properties.Add(new PSNoteProperty("Id", field.Id));
-            obj.Properties.Add(new PSNoteProperty("DisplayName", field.DisplayName));
-            obj.Properties.Add(new PSNoteProperty("Description", field.Description));
-            obj.Properties.Add(new PSNoteProperty("ValueType", field.ValueType.ToString()));
+            //obj.Properties.Add(new PSNoteProperty("DisplayName", field.DisplayName));
+            //obj.Properties.Add(new PSNoteProperty("Description", field.Description));
+            //obj.Properties.Add(new PSNoteProperty("ValueType", field.ValueType.ToString()));
             obj.Properties.Add(new PSNoteProperty("DefaultValue", field.DefaultValue));
             obj.Properties.Add(new PSNoteProperty("MinValue", field.MinValue));
             obj.Properties.Add(new PSNoteProperty("MaxValue", field.MaxValue));
@@ -374,7 +375,7 @@ namespace projectFrameCut.ScriptEngine
             if (!Force && !ShouldProcess(clip.DisplayName, bundle.Name, action))
                 return;
 
-            clip.EffectProviders.Remove(BundleId);
+            EffectBindingHelper.RemoveProvider(clip.EffectProviders, BundleId);
         }
     }
 

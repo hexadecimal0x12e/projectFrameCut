@@ -294,7 +294,7 @@ public partial class DiagnosticSettingPage : ContentPage
             AppDataPath: {MauiProgram.BasicDataPath}
             UserDataPath: {MauiProgram.DataPath}
             {(OperatingSystem.IsWindows() ? $"IsPackaged: {IsPackaged}" : "")}
-            Bundle Identifier / Package Name: {PackageName}
+            Provider Identifier / Package Name: {PackageName}
 
             CmdLine:
             {string.Join(' ', MauiProgram.CmdlineArgs)}

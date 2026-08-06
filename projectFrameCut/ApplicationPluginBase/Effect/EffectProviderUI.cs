@@ -48,5 +48,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return EffectProviderUIHelper.HandleChange(Inner, args);
         }
+
+        /// <summary>
+        /// Returns the static display configuration for the wrapped provider. Subclasses may override
+        /// to provide custom thumbnails or field display items.
+        /// </summary>
+        public virtual EffectProviderDisplayItem GetDisplayItem(IEffectProvider source) => EffectProviderDisplayDefaults.BuildDefault(source);
     }
 }

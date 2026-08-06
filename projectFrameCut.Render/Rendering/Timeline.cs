@@ -43,7 +43,19 @@ namespace projectFrameCut.Render.Rendering
             List<OneFrame> result = new List<OneFrame>();
             foreach (var clip in video)
             {
-                clip.ReInit(ppb);
+                if (!ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
+                {
+                    try
+                    {
+                        clip.ReInit(ppb);
+                        ClipInitializationFailure.Clear(clip);
+                    }
+                    catch (Exception ex)
+                    {
+                        ClipInitializationFailure.Mark(clip, "Source or effect initialization", ex);
+                        Log(ex, $"Initialize clip {clip.Name} ({clip.Id}); using checkerboard fallback", "Timeline");
+                    }
+                }
                 if (IsFrameInClipRange(clip, targetFrame))
                 {
                     var endPoint = clip.StartFrame + clip.GetEffectiveDuration();
@@ -52,37 +64,50 @@ namespace projectFrameCut.Render.Rendering
                     IPicture frame = null!;
                     int clipTargetWidth = ResolveClipOutputWidth(clip, targetWidth, projectRelativeWidth);
                     int clipTargetHeight = ResolveClipOutputHeight(clip, targetHeight, projectRelativeHeight);
-                    if (clip is TransformContainer c)
+                    try
                     {
-                        if (c.Transform == null) c.ReInit(ppb);
-                        var t = c.Transform;
-                        if (t == null)
+                        if (ClipInitializationFailure.IsMarked(clip))
                         {
-                            Log($"[Timeline] WARN: Transform for clip {c.Id} is null; skipping transform for frame {targetFrame}");
-                            frame = null;
+                            frame = ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb);
                         }
-                        else
+                        else if (clip is TransformContainer c)
                         {
-                            var leftClip = video.FirstOrDefault(cc => cc.Id == t.BindedLeftClip);
-                            var rightClip = video.FirstOrDefault(cc => cc.Id == t.BindedRightClip);
-                            if (leftClip == null || rightClip == null)
+                            if (c.Transform == null) c.ReInit(ppb);
+                            var t = c.Transform;
+                            if (t == null)
                             {
-                                Log($"[Timeline] WARN: Transform inputs not found for transform {c.Id}. Skipping frame {targetFrame}");
+                                Log($"[Timeline] WARN: Transform for clip {c.Id} is null; skipping transform for frame {targetFrame}");
                                 frame = null;
                             }
                             else
                             {
-                                frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, clipTargetWidth, clipTargetHeight, targetFrame, ppb);
+                                var leftClip = video.FirstOrDefault(cc => cc.Id == t.BindedLeftClip);
+                                var rightClip = video.FirstOrDefault(cc => cc.Id == t.BindedRightClip);
+                                if (leftClip == null || rightClip == null)
+                                {
+                                    Log($"[Timeline] WARN: Transform inputs not found for transform {c.Id}. Skipping frame {targetFrame}");
+                                    frame = null;
+                                }
+                                else
+                                {
+                                    frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, clipTargetWidth, clipTargetHeight, targetFrame, ppb);
+                                }
                             }
                         }
+                        else if (clip.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(clip, clipTargetWidth, clipTargetHeight))
+                        {
+                            frame = sre.Compute(clip, PluginManager.CreateComputer(sre.NeedComputer), clipTargetWidth, clipTargetHeight, actualFrame, ppb);
+                        }
+                        else
+                        {
+                            frame = clip.GetFrameRelativeToStartPointOfSource(actualFrame, clipTargetWidth, clipTargetHeight, forceResize, ppb);
+                        }
                     }
-                    else if (clip.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(clip, clipTargetWidth, clipTargetHeight))
+                    catch (Exception ex)
                     {
-                        frame = sre.Compute(clip, PluginManager.CreateComputer(sre.NeedComputer), clipTargetWidth, clipTargetHeight, actualFrame, ppb);
-                    }
-                    else
-                    {
-                        frame = clip.GetFrameRelativeToStartPointOfSource(actualFrame, clipTargetWidth, clipTargetHeight, forceResize, ppb);
+                        ClipInitializationFailure.Mark(clip, "Source reading", ex);
+                        Log(ex, $"Read source for clip {clip.Name} ({clip.Id}); using checkerboard fallback", "Timeline");
+                        frame = ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb);
                     }
                     bool isAI = false;
                     if (clip.ExtraData.TryGetValue("IsAI", out var aiMark))
@@ -95,7 +120,16 @@ namespace projectFrameCut.Render.Rendering
                     if (frame is not null)
                     {
                         if (isAI) frame = EffectProcessing.ProcessAIWatermark(frame, null);
-                        result.Add(new OneFrame(targetFrame, clip, frame));
+                        try
+                        {
+                            result.Add(new OneFrame(targetFrame, clip, frame));
+                        }
+                        catch (Exception ex)
+                        {
+                            ClipInitializationFailure.Mark(clip, "Effect initialization", ex);
+                            Log(ex, $"Build effects for clip {clip.Name} ({clip.Id}); using checkerboard fallback", "Timeline");
+                            result.Add(new OneFrame(targetFrame, clip, ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb)));
+                        }
                     }
                 }
             }
@@ -120,15 +154,19 @@ namespace projectFrameCut.Render.Rendering
                 }
             }
 
-            var f = JsonSerializer.Serialize(result);
+            try
+            {
+                var f = JsonSerializer.Serialize(result);
+                if (f == "[]") return "nullframe";
+                return SHA256.HashData(Encoding.UTF8.GetBytes(f)).Aggregate("0x", ((b, c) => b + c.ToString("x2")));
 
-#if DEBUG
-            Log($"Frame:\r\n{f}\r\n---");
-#endif
+            }
+            catch
+            {
+                Log($"[Timeline] WARN: Failed to serialize frame {targetFrame} for hash computation. Returning fallback hash.");
+                return "__error__";
+            }
 
-            if (f == "[]") return "nullframe";
-
-            return SHA256.HashData(Encoding.UTF8.GetBytes(f)).Aggregate("0x", ((b, c) => b + c.ToString("x2")));
         }
 
 
@@ -167,10 +205,9 @@ namespace projectFrameCut.Render.Rendering
                     ValueProviderFrameContext.BeginFrame(frameIndex, clipProgress);
                     foreach (var effect in effectsList)
                     {
-                        if (effect.TypeOfEffect == EffectType.NonIPictureOutputValueProvider && effect is IValueProviderEffect vp)
+                        if (effect is IValueProviderEffect vp)
                         {
-                            ValueProviderFrameContext.Set(effect.BindedEffectProvidingSystemID ?? effect.Id, vp.GetGetter()());
-                            continue;
+                            throw new InvalidOperationException($"Effect {vp.Name} ({srcFrame.ParentClip.Id}) of clip {srcFrame.ParentClip.Id} is a IValueProviderEffect and should have been handled in the EffectBindingHelper.RebuildAllEffects. This indicates a logic error.");
                         }
                         if (effect is IContinuousEffect c)
                         {
@@ -507,7 +544,23 @@ namespace projectFrameCut.Render.Rendering
             Clip = pic;
             LayerIndex = parent.LayerIndex;
 
-            var effectInstances = EffectHelper.GetEffectsInstances(parent.Effects);
+            IEffect[] effectInstances;
+            if (ClipInitializationFailure.IsMarked(parent))
+            {
+                effectInstances = [];
+            }
+            else
+            {
+                try
+                {
+                    effectInstances = EffectHelper.GetClipEffectsInstances(parent);
+                }
+                catch (Exception ex)
+                {
+                    ClipInitializationFailure.Mark(parent, "Effect initialization", ex);
+                    effectInstances = [];
+                }
+            }
             if (parent.TargetX != 0 || parent.TargetY != 0 || parent.TargetWidth > 0 || parent.TargetHeight > 0)
             {
                 effectInstances = effectInstances

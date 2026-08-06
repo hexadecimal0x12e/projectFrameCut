@@ -391,8 +391,8 @@ public partial class ClipCropConfiguratorView : ContentView
                 { "Angle", new StaticEffectArgumentField(Angle, EffectArgumentFieldType.Numeric) }
             }
         };
-        provider.SetInputAnchor(IEffectProvider.InputAnchorGUID);
-        provider.SetOutputAnchor(IEffectProvider.OutputAnchorGUID);
+        provider.SetMainInputSource(IEffectProvider.InputAnchorGUID);
+        provider.SetFinalOutputSource(true);
         return provider;
     }
 

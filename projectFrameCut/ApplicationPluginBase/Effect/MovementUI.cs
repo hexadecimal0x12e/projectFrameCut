@@ -39,33 +39,35 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public override (Dictionary<string, object>? newParams, Dictionary<string, IEffectArgumentField>? newFields) HandlePropertyPanelChange(IEffectProvider source, PropertyPanelPropertyChangedEventArgs args)
         {
+            var fields = Inner.Fields;
             switch (args.Id)
             {
                 case "start_X":
-                    EffectProviderHelper.SetFieldValue(Inner.Fields, "StartX", DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
-                    return (null, Inner.Fields);
+                    EffectProviderHelper.SetFieldValue(fields, "StartX", DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
+                    break;
                 case "start_Y":
-                    EffectProviderHelper.SetFieldValue(Inner.Fields, "StartY", DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
-                    return (null, Inner.Fields);
+                    EffectProviderHelper.SetFieldValue(fields, "StartY", DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
+                    break;
                 case "end_X":
-                    EffectProviderHelper.SetFieldValue(Inner.Fields, "EndX", DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
-                    return (null, Inner.Fields);
+                    EffectProviderHelper.SetFieldValue(fields, "EndX", DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
+                    break;
                 case "end_Y":
-                    EffectProviderHelper.SetFieldValue(Inner.Fields, "EndY", DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
-                    return (null, Inner.Fields);
+                    EffectProviderHelper.SetFieldValue(fields, "EndY", DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
+                    break;
             }
 
-            if (Inner.Fields.ContainsKey(args.Id))
+            if (fields.ContainsKey(args.Id))
             {
-                EffectProviderHelper.SetFieldValue(Inner.Fields, args.Id, DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
+                EffectProviderHelper.SetFieldValue(fields, args.Id, DynamicParam.ToInt32(args.Value), EffectArgumentFieldType.Integer);
                 if (args.Id == "Duration")
                 {
-                    var duration = Math.Max(100, EffectProviderHelper.GetFieldInt(Inner.Fields, "Duration", 1000));
-                    EffectProviderHelper.SetFieldValue(Inner.Fields, "Duration", duration, EffectArgumentFieldType.Integer);
+                    var duration = Math.Max(100, EffectProviderHelper.GetFieldInt(fields, "Duration", 1000));
+                    EffectProviderHelper.SetFieldValue(fields, "Duration", duration, EffectArgumentFieldType.Integer);
                 }
             }
 
-            return (null, Inner.Fields);
+            Inner.Fields = fields;
+            return (null, fields);
         }
     }
 }

@@ -191,7 +191,18 @@ public partial class HomePage : ContentPage
 
     }
 
-    public async Task LaunchFromFile()
+    public static void HandleAppActionLaunch(AppAction appAction)
+    {
+        App.Current?.Dispatcher?.Dispatch(async () =>
+        {
+            if(Application.Current.Windows?[0]?.Page is HomePage p)
+            {
+                await p.LaunchFromFile([appAction.Id]);
+            }
+        });
+    }
+
+    public async Task LaunchFromFile(string[]? argsOverride = null)
     {
         HasAlreadyLaunchedFromFile = true;
         var origCont = Content;
@@ -208,8 +219,7 @@ public partial class HomePage : ContentPage
         {
             string path = "";
 
-            var args = MauiProgram.CmdlineArgs.ToArray();
-            //var mcpDraftArg = args.FirstOrDefault(c => c.StartsWith("--mcpDraft=", StringComparison.OrdinalIgnoreCase));
+            var args = argsOverride ?? MauiProgram.CmdlineArgs.ToArray();
             var mcpServerArg = args.FirstOrDefault(c => c.StartsWith("--mcpServer=", StringComparison.OrdinalIgnoreCase));
             if (!string.IsNullOrWhiteSpace(mcpServerArg))
             {
@@ -218,40 +228,41 @@ public partial class HomePage : ContentPage
 
             if (string.IsNullOrWhiteSpace(path) && args.ArrayAny())
             {
-                var maybePath = args.OrderByDescending(s => s.Length).First();
-                if (maybePath.Contains(':') && maybePath.Count(c => c == ':') >= 2)
+                //Only treat non-option arguments as path candidates, so switches like --log won't be mistaken as a path.
+                var maybePath = args.Where(c => !c.StartsWith("--", StringComparison.OrdinalIgnoreCase)).OrderByDescending(s => s.Length).FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(maybePath))
                 {
-                    path = maybePath.Split(":", 2, StringSplitOptions.RemoveEmptyEntries)[1] ?? maybePath;
-                }
-                else
-                {
-                    path = maybePath;
+                    if (maybePath.Contains(':') && maybePath.Count(c => c == ':') >= 2)
+                    {
+                        path = maybePath.Split(":", 2, StringSplitOptions.RemoveEmptyEntries)[1] ?? maybePath;
+                    }
+                    else
+                    {
+                        path = maybePath;
+                    }
                 }
             }
 
             if (Preferences.ContainsKey("LaunchedPJFCUri"))
             {
                 path = Preferences.Get("LaunchedPJFCUri", "");
-                //if (TryParseMcpLaunchUri(path, out var draftPath, out var serverAddress))
-                //{
-                //    path = draftPath;
-                //    _pendingMcpDraftPath = draftPath;
-                //    _pendingMcpServerAddress = serverAddress;
-                //}
             }
-            //else if (TryParseMcpLaunchUri(path, out var parsedDraftPath, out var parsedServerAddress))
-            //{
-            //    path = parsedDraftPath;
-            //    _pendingMcpDraftPath = parsedDraftPath;
-            //    _pendingMcpServerAddress = parsedServerAddress;
-            //}
-            LogDiagnostic($"Launch target from cli args:{path}");
+
+            //--continue: directly resume to the last opened project when no explicit path is given.
+            if (string.IsNullOrWhiteSpace(path) && args.Any(c => c.Equals("--continue", StringComparison.OrdinalIgnoreCase)))
+            {
+                if (SettingsManager.IsSettingExists("General_LastOpenedProject"))
+                {
+                    path = SettingsManager.GetSetting("General_LastOpenedProject", "");
+                }
+                LogDiagnostic($"--continue requested, last opened project: {path}");
+            }
             if (string.IsNullOrWhiteSpace(path)) return;
             switch (Path.GetExtension(path))
             {
                 case ".pjfc":
                     {
-                        if (File.Exists(path) || Directory.Exists(path))
+                        if (Path.Exists(path))
                         {
                             if (Directory.Exists(path))
                             {
@@ -265,8 +276,16 @@ public partial class HomePage : ContentPage
                                 }
                                 else
                                 {
-                                    await DisplayAlertAsync(Localized._Error, $"Cannot find a valid project file in the directory '{path}'.", Localized._OK);
-                                    return;
+                                    var dirName = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar));
+                                    if (File.Exists(Path.Combine(path, $"{dirName}.pjfc")))
+                                    {
+                                        path = Path.Combine(path, $"{dirName}.pjfc");
+                                    }
+                                    else
+                                    {
+                                        await DisplayAlertAsync(Localized._Error, $"Cannot find a valid project file in the directory '{path}'.", Localized._OK);
+                                        return;
+                                    }
                                 }
                             }
 
@@ -277,6 +296,7 @@ public partial class HomePage : ContentPage
                                     var draft = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(path), DraftPage.DraftJSONOption);
                                     if (draft is ProjectJSONStructure && Path.GetDirectoryName(path) is string p)
                                     {
+                                        LogDiagnostic($"Launch target from cli args:{path}");
                                         await GoDraft(p, draft.ProjectName ?? "Project", skipAskForRecover: args.Any(c => c.StartsWith("--fromCrashHandler")));
                                         return;
 
@@ -854,12 +874,12 @@ public partial class HomePage : ContentPage
                             return;
                         }
                     }
-                    if (timeline.Clips.Any(c => c.Effects is { Length: > 0 } && (c.Effects?.Any(d => d.IsVariableArgumentEffect) ?? false)))
+                    if (!(skipAskForRecover ?? false) && timeline.Clips.Any(c => c.Effects is { Length: > 0 } && (c.Effects?.Any(d => d.IsVariableArgumentEffect) ?? false)))
                     {
                         await DisplayAlertAsync(Localized._Info, Localized.HomePage_GoDraft_DeprecatedFeatureWarn(IPluginBase.CurrentPluginAPIVersion + 1, "- BindableEffect"), Localized._Confirm);
                     }
                 });
-                (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline, project, restoreFreeFields: true);
+                (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline, project);
                 ConcurrentDictionary<string, AssetItem> assetDict = new(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}"));
                 Dictionary<string, AssetItem> notfounds = new();
                 foreach (var item in dict)
@@ -1145,6 +1165,15 @@ public partial class HomePage : ContentPage
 
         if (!cancelled && page != null && project != null)
         {
+            //Remember the last opened project so it can be resumed with the --continue command line switch.
+            try
+            {
+                SettingsManager.WriteSetting("General_LastOpenedProject", draftSourcePath);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "record last opened project", this);
+            }
 #if WINDOWS
             TryEnableCrashAutoRestart(draftSourcePath);
 #endif
@@ -1540,7 +1569,7 @@ public partial class HomePage : ContentPage
                 await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
                 return;
             }
-            (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(tml, project, restoreFreeFields: true);
+            (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(tml, project);
             var draftPage = new DraftPage(project ?? new ProjectJSONStructure(), dict, new(), trackCount, vmItem._projectPath, project?.ProjectName ?? "?", false);
             var draft = DraftImportAndExportHelper.ExportFromDraftPage(draftPage, true, false);
             var renderPage = new RenderPage(vmItem._projectPath, tml.Duration, project, draft);

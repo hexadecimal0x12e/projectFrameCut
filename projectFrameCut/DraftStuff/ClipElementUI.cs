@@ -3,6 +3,7 @@ using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.Converters;
 using projectFrameCut.Render;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -178,6 +179,54 @@ namespace projectFrameCut.DraftStuff
             if (brush is SolidColorBrush scb)
             {
                 ClipColor = scb.Color.ToArgbHex();
+            }
+        }
+
+        public void ApplyInitializationFailureIndicator()
+        {
+            if (!ClipInitializationFailure.IsMarked(ExtraData)) return;
+
+            var description = ClipInitializationFailure.GetDescription(ExtraData);
+            Clip.Stroke = new SolidColorBrush(Color.FromArgb("#FFFF00FF"));
+            Clip.StrokeThickness = 4;
+            ToolTipProperties.SetText(Clip, $"{DisplayName}\nClip initialization failed\n{description}");
+            SemanticProperties.SetDescription(Clip, $"{DisplayName}, initialization failed, {description}");
+
+            if (Clip.Content is Grid grid)
+            {
+                var content = grid.Children
+                    .OfType<View>()
+                    .FirstOrDefault(view => Grid.GetColumn(view) == 1);
+                if (content is HorizontalStackLayout row && !row.Children.Any(child => child is Element element && element.ClassId == "ClipInitializationFailureIndicator"))
+                {
+                    row.Children.Insert(0, new Label
+                    {
+                        Text = "⚠",
+                        TextColor = Colors.Magenta,
+                        FontAttributes = FontAttributes.Bold,
+                        InputTransparent = true,
+                        ClassId = "ClipInitializationFailureIndicator"
+                    });
+                }
+            }
+        }
+
+        public void ClearInitializationFailureIndicator()
+        {
+            ClipInitializationFailure.Clear(ExtraData);
+            Clip.Stroke = Colors.Gray;
+            Clip.StrokeThickness = 2;
+            ToolTipProperties.SetText(Clip, DisplayName);
+            SemanticProperties.SetDescription(Clip, $"{DisplayName}, {TypeName}");
+
+            if (Clip.Content is Grid grid)
+            {
+                var content = grid.Children.OfType<View>().FirstOrDefault(view => Grid.GetColumn(view) == 1);
+                if (content is HorizontalStackLayout row)
+                {
+                    var indicators = row.Children.Where(child => child is Element element && element.ClassId == "ClipInitializationFailureIndicator").ToArray();
+                    foreach (var indicator in indicators) row.Children.Remove(indicator);
+                }
             }
         }
 
