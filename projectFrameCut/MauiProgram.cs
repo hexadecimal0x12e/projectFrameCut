@@ -432,6 +432,7 @@ namespace projectFrameCut
                 builder.Services.AddSingleton<UIThreadWatchdogService>();
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
+                builder.Services.AddSingleton<projectFrameCut.Services.AIComponent.IAIComponentClient, projectFrameCut.Services.AIComponent.WindowsAIComponentClient>();
 #elif ANDROID
                 builder.ConfigureMauiHandlers(handlers =>
                 {
@@ -518,6 +519,9 @@ namespace projectFrameCut
                         });
                     });
                 });
+#endif
+#if !WINDOWS
+                builder.Services.AddSingleton<projectFrameCut.Services.AIComponent.IAIComponentClient, projectFrameCut.Services.AIComponent.AIComponentUnavailableClient>();
 #endif
 
                 try

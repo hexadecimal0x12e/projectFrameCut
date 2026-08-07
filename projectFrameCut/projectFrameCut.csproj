@@ -171,6 +171,7 @@
 
 		<ItemGroup>
 			<ProjectReference Include="..\projectFrameCut.ApplicationAPIBase\projectFrameCut.ApplicationAPIBase.csproj" />
+			<ProjectReference Include="..\projectFrameCut.AIComponentContracts\projectFrameCut.AIComponentContracts.csproj" />
 			<ProjectReference Include="..\projectFrameCut.Render.HwAccelEngine\projectFrameCut.Render.HwAccelEngine.csproj" />
 			<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
 			<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />

@@ -54,11 +54,6 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(TypeName, parameters);
 
-        public object? GenerateValue(uint frameIndex, int targetWidth, int targetHeight)
-        {
-            return ResolveInt(Parameters, "Value");
-        }
-
         public void Initialize() { }
 
         /// <summary>
@@ -95,11 +90,10 @@ namespace projectFrameCut.Render.Effect
 
         public Func<object> GetGetter() => () =>
         {
-            var ctx = IRenderContext.Current;
-            uint frame = IRenderContext.WorkerState?.CurrentFrame ?? 0;
-            int w = ctx?.TargetWidth ?? 0;
-            int h = ctx?.TargetHeight ?? 0;
-            return GenerateValue(frame, w, h) ?? 0;
+            var value = ResolveInt(Parameters, "Value");
+            Log($"IntConstantValueProviderEffect {Id}/{Name}'s Value: {value} ({Parameters.GetValueOrDefault("Value")?.GetType()?.Name ?? "<null>"})");
+            return value;
+
         };
     }
 

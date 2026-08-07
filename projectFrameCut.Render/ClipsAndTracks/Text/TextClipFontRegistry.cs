@@ -67,15 +67,18 @@ public static class TextClipFontRegistry
         // 从已加载字体中尝试填充后备列表（原有语义，仅填充一次）
         if (FallbackFonts.Count == 0)
         {
-            if (LoadedFonts.TryGetValue("HarmonyOS Sans SC Medium", out var f1))
+            if (LoadedFonts.TryGetValue("HarmonyOS Sans SC Medium Version 1.0", out var f1))
                 FallbackFonts.Add(f1);
-            if (LoadedFonts.TryGetValue("Arial Regular", out var f2))
+            if (LoadedFonts.TryGetValue("HarmonyOS Sans SC Medium", out var f2))
                 FallbackFonts.Add(f2);
+            if (LoadedFonts.TryGetValue("Arial Regular", out var f3))
+                FallbackFonts.Add(f3);
 
             // 懒加载模式下 LoadedFonts 可能为空，尝试从 PendingFonts 加载后备字体
             if (FallbackFonts.Count == 0)
             {
-                var fallback = LoadPendingFont("HarmonyOS Sans SC Medium")
+                var fallback = LoadPendingFont("HarmonyOS Sans SC Medium Version 1.0")
+                            ?? LoadPendingFont("HarmonyOS Sans SC Medium")
                             ?? LoadPendingFont("Arial Regular");
                 if (fallback is not null)
                     FallbackFonts.Add(fallback);

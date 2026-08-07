@@ -270,7 +270,7 @@ public sealed class DynamicPreview : IDisposable
                 }
                 catch (Exception ex)
                 {
-                    ClipInitializationFailure.Mark(clipInstance, "Source or effect initialization", ex);
+                    ClipInitializationFailure.Mark(clipInstance, "Source or ResolveEffect", ex);
                     ClipInitializationFailed?.Invoke(clipInstance.Id, ClipInitializationFailure.GetDescription(clipInstance.ExtraData));
                     Log(ex, $"Initialize preview clip {clipInstance.Name} ({clipInstance.Id}); using checkerboard fallback", this);
                 }

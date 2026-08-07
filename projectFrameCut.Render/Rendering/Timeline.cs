@@ -28,7 +28,6 @@ namespace projectFrameCut.Render.Rendering
         //public static ConcurrentDictionary<string, IComputer> ComputerCache = new();
         public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture16bpp.GenerateSolidColor(w, h, 0, 0, 0, null);
 
-
         public static IEnumerable<OneFrame> GetFramesInOneFrame(
             IClip[] video,
             uint targetFrame,
@@ -52,8 +51,8 @@ namespace projectFrameCut.Render.Rendering
                     }
                     catch (Exception ex)
                     {
-                        ClipInitializationFailure.Mark(clip, "Source or effect initialization", ex);
-                        Log(ex, $"Initialize clip {clip.Name} ({clip.Id}); using checkerboard fallback", "Timeline");
+                        ClipInitializationFailure.Mark(clip, "ResolveBinding", ex);
+                        Log(ex, $"Initialize clip {clip.Name} ({clip.Id}); using fallback", "Timeline");
                     }
                 }
                 if (IsFrameInClipRange(clip, targetFrame))
@@ -68,7 +67,7 @@ namespace projectFrameCut.Render.Rendering
                     {
                         if (ClipInitializationFailure.IsMarked(clip))
                         {
-                            frame = ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb);
+                            frame = ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData);
                         }
                         else if (clip is TransformContainer c)
                         {
@@ -105,9 +104,9 @@ namespace projectFrameCut.Render.Rendering
                     }
                     catch (Exception ex)
                     {
-                        ClipInitializationFailure.Mark(clip, "Source reading", ex);
-                        Log(ex, $"Read source for clip {clip.Name} ({clip.Id}); using checkerboard fallback", "Timeline");
-                        frame = ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb);
+                        ClipInitializationFailure.Mark(clip, "SourceReading", ex);
+                        Log(ex, $"Read source for clip {clip.Name} ({clip.Id}); using fallback", "Timeline");
+                        frame = ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData);
                     }
                     bool isAI = false;
                     if (clip.ExtraData.TryGetValue("IsAI", out var aiMark))
@@ -126,9 +125,9 @@ namespace projectFrameCut.Render.Rendering
                         }
                         catch (Exception ex)
                         {
-                            ClipInitializationFailure.Mark(clip, "Effect initialization", ex);
+                            ClipInitializationFailure.Mark(clip, "ResolveEffect", ex);
                             Log(ex, $"Build effects for clip {clip.Name} ({clip.Id}); using checkerboard fallback", "Timeline");
-                            result.Add(new OneFrame(targetFrame, clip, ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb)));
+                            result.Add(new OneFrame(targetFrame, clip, ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData)));
                         }
                     }
                 }
@@ -156,7 +155,7 @@ namespace projectFrameCut.Render.Rendering
 
             try
             {
-                var f = JsonSerializer.Serialize(result);
+                var f = JsonSerializer.Serialize(result, FrameHashSerializerOptions);
                 if (f == "[]") return "nullframe";
                 return SHA256.HashData(Encoding.UTF8.GetBytes(f)).Aggregate("0x", ((b, c) => b + c.ToString("x2")));
 
@@ -528,6 +527,61 @@ namespace projectFrameCut.Render.Rendering
 
 
         }
+
+        /// <summary>
+        /// Serializer options for <see cref="GetFrameHash"/>. Transparently forwards most values,
+        /// but writes a stable placeholder for runtime-only dynamic values (delegate getters,
+        /// <see cref="Lazy{T}"/>) injected by the EffectProvider system, which would otherwise make
+        /// serialization throw and degrade every frame's hash to "__error__".
+        /// </summary>
+        private static readonly JsonSerializerOptions FrameHashSerializerOptions = CreateFrameHashSerializerOptions();
+
+        private static JsonSerializerOptions CreateFrameHashSerializerOptions()
+        {
+            var options = new JsonSerializerOptions();
+            options.Converters.Add(new FrameHashObjectConverter());
+            return options;
+        }
+
+
+
+        /// <summary>
+        /// Serializes any <see cref="object"/> value, replacing runtime-only dynamic values
+        /// (binding getter closures, <see cref="Lazy{T}"/>) with a stable placeholder so that
+        /// <see cref="GetFrameHash"/> never throws on EffectProvider-built effects. The binding
+        /// configuration lives in <see cref="IEffectProvider.AnchorsBindingState"/> / StaticFields,
+        /// which are serialized normally, so the hash still distinguishes different bindings.
+        /// </summary>
+        private sealed class FrameHashObjectConverter : JsonConverter<object>
+        {
+            public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+                => JsonSerializer.Deserialize<JsonElement>(ref reader, options);
+
+            public override void Write(Utf8JsonWriter writer, object? value, JsonSerializerOptions options)
+            {
+                if (value is null)
+                {
+                    writer.WriteNullValue();
+                    return;
+                }
+                if (IsFrameHashSkippable(value))
+                {
+                    writer.WriteStringValue($"<dynamic:{value.GetType().Name}>");
+                    return;
+                }
+                var type = value.GetType();
+                if (type == typeof(object))
+                {
+                    writer.WriteStartObject();
+                    writer.WriteEndObject();
+                    return;
+                }
+                JsonSerializer.Serialize(writer, value, type, options);
+            }
+
+            private static bool IsFrameHashSkippable(object value) => value is Delegate || DynamicParam.IsDynamicValue(value);
+        }
+
     }
 
     public class OneFrame
@@ -557,7 +611,7 @@ namespace projectFrameCut.Render.Rendering
                 }
                 catch (Exception ex)
                 {
-                    ClipInitializationFailure.Mark(parent, "Effect initialization", ex);
+                    ClipInitializationFailure.Mark(parent, "ResolveEffect", ex);
                     effectInstances = [];
                 }
             }

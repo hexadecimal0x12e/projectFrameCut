@@ -7,6 +7,7 @@ using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.RenderAPIBase.Context;
+using FFmpeg.AutoGen;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
@@ -73,7 +74,16 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             if (_decoderPool is null)
             {
-                throw new NullReferenceException("Decoder is null. Please init it.");
+                if (!File.Exists(FilePath))
+                {
+                    ClipInitializationFailure.Mark(this, "SourceNotFound", new FileNotFoundException($"VideoClip {Name}'s source is not available: {FilePath}.", FilePath));
+                    return ClipInitializationFailure.CreateFallbackFrame(targetWidth, targetHeight, targetPPB, "SourceNotFound", ClipInitializationFailure.GetDescription(ExtraData));
+                }
+                else
+                {
+                    ClipInitializationFailure.Mark(this, "SourceReading", new InvalidOperationException($"VideoClip {Name}'s decoder is not initialized, maybe because the video file is corrupted or the decoder is not available."));
+                    return ClipInitializationFailure.CreateFallbackFrame(targetWidth, targetHeight, targetPPB, "SourceReading", ClipInitializationFailure.GetDescription(ExtraData));
+                }
             }
 
             using var decoderLease = _decoderPool.Rent(targetFrame);
@@ -108,22 +118,42 @@ namespace projectFrameCut.Render.ClipsAndTracks
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
             if (string.IsNullOrWhiteSpace(FilePath)) throw new NullReferenceException($"VideoClip {Id}'s source path is null.");
-
-            var poolKey = BuildDecoderPoolKey(FilePath, TargetDecoder);
-            if (_decoderPool is not null && string.Equals(_decoderPoolKey, poolKey, StringComparison.OrdinalIgnoreCase) && !_decoderPool.Disposed)
+            if (!File.Exists(FilePath))
             {
-                Decoder = _decoderPool.RepresentativeDecoder;
-                (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+                ClipInitializationFailure.Mark(this, "SourceNotFound", new FileNotFoundException($"VideoClip {Name}'s source is not available: {FilePath}.", FilePath));
                 return;
             }
 
-            ReleaseDecoderPool();
+            try
+            {
+                (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            }
+            catch (Exception ex)
+            {
+                ClipInitializationFailure.Mark(this, "ResolveEffect", ex);
+            }
 
-            var pool = AcquireDecoderPool(poolKey, CreateDecoderInstance);
-            _decoderPoolKey = poolKey;
-            _decoderPool = pool;
-            Decoder = pool.RepresentativeDecoder;
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+            try
+            {
+                var poolKey = BuildDecoderPoolKey(FilePath, TargetDecoder);
+                if (_decoderPool is not null && string.Equals(_decoderPoolKey, poolKey, StringComparison.OrdinalIgnoreCase) && !_decoderPool.Disposed)
+                {
+                    Decoder = _decoderPool.RepresentativeDecoder;
+                    (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+                    return;
+                }
+
+                ReleaseDecoderPool();
+
+                var pool = AcquireDecoderPool(poolKey, CreateDecoderInstance);
+                _decoderPoolKey = poolKey;
+                _decoderPool = pool;
+                Decoder = pool.RepresentativeDecoder;
+            }
+            catch (Exception ex)
+            {
+                ClipInitializationFailure.Mark(this, "SourceReading", ex);
+            }
 
         }
 
@@ -135,18 +165,26 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         private IVideoSource CreateDecoderInstance()
         {
-            if (string.IsNullOrWhiteSpace(FilePath))
+            try
             {
-                throw new NullReferenceException($"VideoClip {Id}'s source path is null.");
-            }
+                if (string.IsNullOrWhiteSpace(FilePath))
+                {
+                    throw new NullReferenceException($"VideoClip {Id}'s source path is null.");
+                }
 
-            if (!string.IsNullOrWhiteSpace(TargetDecoder) && TargetDecoder != "auto")
+                if (!string.IsNullOrWhiteSpace(TargetDecoder) && TargetDecoder != "auto")
+                {
+                    var supportedPlugin = PluginManager.LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(TargetDecoder)) ?? throw new NotSupportedException($"The specified video decoder '{TargetDecoder}' was not found for the file '{FilePath}'.");
+                    return supportedPlugin.VideoSourceProvider[TargetDecoder](null!).CreateNew(FilePath);
+                }
+
+                return PluginManager.CreateVideoSource(FilePath);
+            }
+            catch (Exception ex)
             {
-                var supportedPlugin = PluginManager.LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(TargetDecoder)) ?? throw new NotSupportedException($"The specified video decoder '{TargetDecoder}' was not found for the file '{FilePath}'.");
-                return supportedPlugin.VideoSourceProvider[TargetDecoder](null!).CreateNew(FilePath);
+                ClipInitializationFailure.Mark(this, "SourceReading", ex);
+                throw;
             }
-
-            return PluginManager.CreateVideoSource(FilePath);
         }
 
         private void ReleaseDecoderPool()

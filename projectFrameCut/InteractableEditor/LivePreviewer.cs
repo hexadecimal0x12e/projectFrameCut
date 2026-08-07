@@ -67,7 +67,7 @@ namespace projectFrameCut.LivePreview
                 }
                 catch (Exception ex)
                 {
-                    ClipInitializationFailure.Mark(item, "Source or effect initialization", ex);
+                    ClipInitializationFailure.Mark(item, "Source or ResolveEffect", ex);
                     Log(ex, $"Initialize live-render clip {item.Name} ({item.Id}); using checkerboard fallback", this);
                 }
             }
@@ -175,7 +175,7 @@ namespace projectFrameCut.LivePreview
                     }
                     catch (Exception ex)
                     {
-                        ClipInitializationFailure.Mark(clipInstance, "Source or effect initialization", ex);
+                        ClipInitializationFailure.Mark(clipInstance, "Source or ResolveEffect", ex);
                         Log(ex, $"Initialize live-preview clip {clipInstance.Name} ({clipInstance.Id}); using checkerboard fallback", this);
                     }
                 }));

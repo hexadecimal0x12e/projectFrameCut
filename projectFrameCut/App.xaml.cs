@@ -109,44 +109,7 @@ namespace projectFrameCut
             try
             {
                 var watchdogService = Handler?.MauiContext?.Services.GetService<UIThreadWatchdogService>();
-                if (watchdogService != null && !SettingsManager.IsBoolSettingTrue("ui_DisableUIThreadWatchdog") && !Environment.GetCommandLineArgs().Contains("--noUIWatchdog"))
-                {
-#if WINDOWS
-                    bool frozenFromShown = false;
-                    int count = 0;
-                    watchdogService.ThreadFrozen += (sender, e) =>
-                    {
-                        if (frozenFromShown) return;
-                        frozenFromShown = true;
-                        new Thread(Helper.HelperProgram.FrozenMain)
-                        {
-                            Name = "Frozen UI Thread",
-                            Priority = ThreadPriority.Lowest
-                        }.Start();
-                    };
-                    watchdogService.ThreadRecovered += (sender, e) =>
-                    {
-                        Helper.HelperProgram.CloseFrozenDiag();
-                        frozenFromShown = false;
-                    };
-                    watchdogService.FrozenContinues += (S, e) =>
-                    {
-                        if (!watchdogService.IsThreadFrozen || frozenFromShown) return;
-                        count++;
-                        if (count % 10 == 0)
-                        {
-                            new Thread(Helper.HelperProgram.FrozenMain)
-                            {
-                                Name = "Frozen UI Thread",
-                                Priority = ThreadPriority.Lowest
-                            }.Start();
-                        }
-                    };
-#endif
-
-                    watchdogService.Start();
-                    Log("UI Thread Watchdog Service started");
-                }
+                watchdogService?.Start();
             }
             catch (Exception ex)
             {
@@ -209,11 +172,11 @@ namespace projectFrameCut
                 }
                 else
                 {
-                    if(string.IsNullOrWhiteSpace(styleXAML))
+                    if (string.IsNullOrWhiteSpace(styleXAML))
                         Log($"No style file found at {stylePath}, using default style and colors.");
                     if (string.IsNullOrWhiteSpace(colorXAML))
                         Log($"No color file found at {colorPath}, using default style and colors.");
-                    if(SettingsManager.IsBoolSettingTrue("ui_DisableUserStyle"))
+                    if (SettingsManager.IsBoolSettingTrue("ui_DisableUserStyle"))
                         Log($"User style is disabled by settings, using default style and colors.");
                 }
             }

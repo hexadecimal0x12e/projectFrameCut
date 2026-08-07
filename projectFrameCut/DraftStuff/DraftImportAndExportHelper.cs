@@ -49,7 +49,7 @@ namespace projectFrameCut.DraftStuff
                 catch (Exception ex)
                 {
                     failed.Add(structure);
-                    ClipInitializationFailure.Mark(extraData, $"Effect initialization ({structure.Name ?? structure.TypeName})", ex);
+                    ClipInitializationFailure.Mark(extraData, $"ResolveEffect ({structure.Name ?? structure.TypeName})", ex);
                     Log(ex, $"Restore effect {structure.Name}/{structure.TypeName}; keeping it for repair", nameof(DraftImportAndExportHelper));
                 }
             }
@@ -559,6 +559,14 @@ namespace projectFrameCut.DraftStuff
                 try
                 {
                     if (InitAtLoad) clipInstance.ReInit(targetPPB ?? throw new NullReferenceException("You must provide a targetPPB."));
+                }
+                catch (Exception ex)
+                {
+                    ClipInitializationFailure.Mark(clipInstance, "SourceReading", ex);
+                    Log(ex, $"Initialize clip {clipInstance.Name} ({clipInstance.Id}); using fallback", nameof(DraftImportAndExportHelper));
+                }
+                try
+                {
                     // 从 EffectProviders 重建（保留动态绑定），无 provider 时回退静态 Effects。
                     clipInstance.EffectsInstances = EffectHelper.GetClipEffectsInstances(clipInstance);
                     if (!ClipInitializationFailure.HasDeferredFailures(clipInstance.ExtraData))
@@ -566,8 +574,8 @@ namespace projectFrameCut.DraftStuff
                 }
                 catch (Exception ex)
                 {
-                    ClipInitializationFailure.Mark(clipInstance, "Source or effect initialization", ex);
-                    Log(ex, $"Initialize clip {clipInstance.Name} ({clipInstance.Id}); using checkerboard fallback", nameof(DraftImportAndExportHelper));
+                    ClipInitializationFailure.Mark(clipInstance, "ResolveEffect", ex);
+                    Log(ex, $"Initialize clip {clipInstance.Name} ({clipInstance.Id}); using fallback", nameof(DraftImportAndExportHelper));
                 }
                 if (clipInstance is IVectorContentClip vc && clipInstance.ExtraData.TryGetValue("VectorAntiAliasMode", out var aaObj) && aaObj is string aaStr && !string.IsNullOrEmpty(aaStr))
                 {

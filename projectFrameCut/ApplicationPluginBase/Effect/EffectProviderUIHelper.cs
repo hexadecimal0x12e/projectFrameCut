@@ -94,13 +94,23 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             }
             button.Clicked += async (s, e) => await bindingHost.EditBinding(field.Id);
 
-            var row = new Microsoft.Maui.Controls.HorizontalStackLayout
+            var row = new Microsoft.Maui.Controls.Grid
             {
-                Spacing = 4,
+                ColumnDefinitions =
+                {
+                    new Microsoft.Maui.Controls.ColumnDefinition(Microsoft.Maui.GridLength.Star),
+                    new Microsoft.Maui.Controls.ColumnDefinition(Microsoft.Maui.GridLength.Auto),
+                },
+                ColumnSpacing = 4,
                 VerticalOptions = Microsoft.Maui.Controls.LayoutOptions.Center,
-                Children = { control, button },
             };
-            panel.ReplaceComponent(field.Id, row);
+            row.Add(button, 1);
+            if (panel.ReplaceComponent(field.Id, row))
+            {
+                // Replace first so the original control's outer Grid.Column is preserved for the
+                // wrapper. Only then assign the control to the wrapper's first column.
+                row.Add(control, 0);
+            }
         }
 
         private static void AddNumericOrSlider(PropertyPanelBuilder panel, IEffectProvider provider, IEffectArgumentField field)

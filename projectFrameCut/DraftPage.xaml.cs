@@ -7376,7 +7376,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             if (!Clips.TryGetValue(clipId, out var clip)) return;
             if (ClipInitializationFailure.IsMarked(clip.ExtraData)) return;
-            ClipInitializationFailure.Mark(clip.ExtraData, "Source or effect initialization", new InvalidOperationException(description));
+            ClipInitializationFailure.Mark(clip.ExtraData, "Source or ResolveEffect", new InvalidOperationException(description));
             clip.ApplyInitializationFailureIndicator();
             DraftChanged(this, new ClipUpdateEventArgs
             {

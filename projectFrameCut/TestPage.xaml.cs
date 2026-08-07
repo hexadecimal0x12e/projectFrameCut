@@ -2,6 +2,7 @@
 using CommunityToolkit.Maui.Extensions;
 using FFmpeg.AutoGen;
 using Microsoft.Maui.ApplicationModel;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
@@ -23,6 +24,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
+using projectFrameCut.Services.AIComponent;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
@@ -83,8 +85,268 @@ public partial class TestPage : ContentPage
     }
 
 
+    #region Windows System AI IPC test
+
+    private IAIComponentClient? _aiComponentClient;
+    private bool _aiComponentOperationRunning;
+
+    private IAIComponentClient GetAIComponentClient()
+    {
+        if (_aiComponentClient is not null)
+        {
+            return _aiComponentClient;
+        }
+
+        _aiComponentClient = Handler?.MauiContext?.Services.GetService<IAIComponentClient>()
+            ?? App.Current?.Handler?.MauiContext?.Services.GetService<IAIComponentClient>()
+            ?? new AIComponentUnavailableClient();
+        return _aiComponentClient;
+    }
+
+    private void UpdateAIComponentButtons()
+    {
+        var client = GetAIComponentClient();
+        bool canExecute = !_aiComponentOperationRunning && client.IsConnected;
+
+        AIComponentConnectButton.IsEnabled = !_aiComponentOperationRunning && !client.IsConnected;
+        AIComponentDisconnectButton.IsEnabled = !_aiComponentOperationRunning && client.IsConnected;
+        AIComponentTextButton.IsEnabled = canExecute;
+        AIComponentPictureButton.IsEnabled = canExecute;
+        AIComponentAudioButton.IsEnabled = canExecute;
+    }
+
+    private bool TryGetConnectedAIComponentClient(out IAIComponentClient client)
+    {
+        client = GetAIComponentClient();
+        if (!client.IsSupported)
+        {
+            AIComponentStatusLabel.Text = "The Windows System AI extension is unavailable on this platform.";
+            return false;
+        }
+
+        if (!client.IsConnected)
+        {
+            AIComponentStatusLabel.Text = "Connect the extension first.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static string FormatAIComponentCapabilities(IReadOnlyList<projectFrameCut.AIComponentContracts.AICapabilityDescriptor> capabilities)
+    {
+        if (capabilities.Count == 0)
+        {
+            return "No capabilities reported.";
+        }
+
+        return string.Join(
+            Environment.NewLine,
+            capabilities.Select(capability =>
+                $"{capability.Operation}: {capability.Input} -> {capability.Output}"
+                + (string.IsNullOrWhiteSpace(capability.Description) ? string.Empty : $" ({capability.Description})")));
+    }
+
+    private void SetAIComponentOperationRunning(bool running)
+    {
+        _aiComponentOperationRunning = running;
+        UpdateAIComponentButtons();
+    }
+
+    private static Picture8bpp CreateAIComponentTestPicture()
+    {
+        const int width = 96;
+        const int height = 64;
+        int pixels = width * height;
+        var picture = new Picture8bpp(width, height)
+        {
+            a = new float[pixels],
+            HasAlphaChannel = true,
+            Tag = "AIComponent test input"
+        };
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                int index = y * width + x;
+                picture.r[index] = (byte)(x * 255 / (width - 1));
+                picture.g[index] = (byte)(y * 255 / (height - 1));
+                picture.b[index] = (byte)((x + y) * 255 / (width + height - 2));
+                picture.a[index] = 0.5f + 0.5f * x / (width - 1);
+            }
+        }
+
+        return picture;
+    }
+
+    private static FloatAudioSamples CreateAIComponentTestAudio()
+    {
+        const int sampleRate = 16_000;
+        const int sampleCount = 1_600;
+        var samples = new float[sampleCount];
+        for (int i = 0; i < samples.Length; i++)
+        {
+            samples[i] = MathF.Sin(2 * MathF.PI * 440 * i / sampleRate) * 0.25f;
+        }
+
+        return new FloatAudioSamples
+        {
+            Channels = [samples],
+            SampleCount = sampleCount,
+            SamplePerSecond = sampleRate
+        };
+    }
+
+    private async void AIComponentConnectButton_Clicked(object? sender, EventArgs e)
+    {
+        var client = GetAIComponentClient();
+        if (!client.IsSupported)
+        {
+            AIComponentStatusLabel.Text = "The Windows System AI extension is unavailable on this platform.";
+            UpdateAIComponentButtons();
+            return;
+        }
+
+        SetAIComponentOperationRunning(true);
+        AIComponentStatusLabel.Text = "Starting extension and connecting...";
+        try
+        {
+            var capabilities = await client.ConnectAsync();
+            AIComponentCapabilitiesEditor.Text = FormatAIComponentCapabilities(capabilities);
+            AIComponentStatusLabel.Text = $"Connected. {capabilities.Count} capability(s) available.";
+        }
+        catch (Exception ex)
+        {
+            AIComponentStatusLabel.Text = $"Connect failed: {ex.Message}";
+            Debug.WriteLine(ex);
+        }
+        finally
+        {
+            SetAIComponentOperationRunning(false);
+        }
+    }
+
+    private async void AIComponentDisconnectButton_Clicked(object? sender, EventArgs e)
+    {
+        SetAIComponentOperationRunning(true);
+        try
+        {
+            await GetAIComponentClient().DisconnectAsync();
+            AIComponentCapabilitiesEditor.Text = string.Empty;
+            AIComponentResultLabel.Text = string.Empty;
+            AIComponentResultImage.Source = null;
+            AIComponentResultImage.IsVisible = false;
+            AIComponentStatusLabel.Text = "Disconnected.";
+        }
+        catch (Exception ex)
+        {
+            AIComponentStatusLabel.Text = $"Disconnect failed: {ex.Message}";
+            Debug.WriteLine(ex);
+        }
+        finally
+        {
+            SetAIComponentOperationRunning(false);
+        }
+    }
+
+    private async void AIComponentTextButton_Clicked(object? sender, EventArgs e)
+    {
+        if (!TryGetConnectedAIComponentClient(out var client))
+        {
+            return;
+        }
+
+        SetAIComponentOperationRunning(true);
+        try
+        {
+            string input = AIComponentTextEditor.Text ?? string.Empty;
+            string output = await client.ExecuteTextAsync("text.echo", input);
+            AIComponentResultLabel.Text = $"Text echo ({output.Length} chars): {output}";
+            AIComponentStatusLabel.Text = "Text round-trip succeeded.";
+        }
+        catch (Exception ex)
+        {
+            AIComponentResultLabel.Text = $"Text test failed: {ex.Message}";
+            AIComponentStatusLabel.Text = "Text round-trip failed.";
+            Debug.WriteLine(ex);
+        }
+        finally
+        {
+            SetAIComponentOperationRunning(false);
+        }
+    }
+
+    private async void AIComponentPictureButton_Clicked(object? sender, EventArgs e)
+    {
+        if (!TryGetConnectedAIComponentClient(out var client))
+        {
+            return;
+        }
+
+        SetAIComponentOperationRunning(true);
+        try
+        {
+            using var input = CreateAIComponentTestPicture();
+            using var output = await client.ExecutePictureAsync("picture.echo", input);
+            AIComponentResultImage.Source = output.ToImageSource();
+            AIComponentResultImage.IsVisible = true;
+            AIComponentResultLabel.Text = $"Picture echo: {output.Width} x {output.Height}, {output.BitPerPixel} bpp, alpha={output.HasAlphaChannel}";
+            AIComponentStatusLabel.Text = "Picture round-trip succeeded.";
+        }
+        catch (Exception ex)
+        {
+            AIComponentResultLabel.Text = $"Picture test failed: {ex.Message}";
+            AIComponentStatusLabel.Text = "Picture round-trip failed.";
+            Debug.WriteLine(ex);
+        }
+        finally
+        {
+            SetAIComponentOperationRunning(false);
+        }
+    }
+
+    private async void AIComponentAudioButton_Clicked(object? sender, EventArgs e)
+    {
+        if (!TryGetConnectedAIComponentClient(out var client))
+        {
+            return;
+        }
+
+        SetAIComponentOperationRunning(true);
+        try
+        {
+            var input = CreateAIComponentTestAudio();
+            var output = await client.ExecuteAudioAsync("audio.echo", input);
+            bool same = output.SamplePerSecond == input.SamplePerSecond
+                && output.SampleCount == input.SampleCount
+                && output.channelCount == input.channelCount
+                && input.GetSamples(0).AsSpan(0, input.SampleCount).SequenceEqual(output.GetSamples(0).AsSpan(0, output.SampleCount));
+            AIComponentResultLabel.Text = $"Audio echo: {output.SamplePerSecond} Hz, {output.channelCount} channel(s), {output.SampleCount} samples, data match={same}";
+            AIComponentStatusLabel.Text = same ? "Audio round-trip succeeded." : "Audio metadata/data mismatch.";
+        }
+        catch (Exception ex)
+        {
+            AIComponentResultLabel.Text = $"Audio test failed: {ex.Message}";
+            AIComponentStatusLabel.Text = "Audio round-trip failed.";
+            Debug.WriteLine(ex);
+        }
+        finally
+        {
+            SetAIComponentOperationRunning(false);
+        }
+    }
+
+    #endregion
+
     private void TestPage_Loaded(object? sender, EventArgs e)
     {
+        var client = GetAIComponentClient();
+        AIComponentStatusLabel.Text = client.IsSupported
+            ? "Extension is supported. Click Connect extension to start."
+            : "The Windows System AI extension is unavailable on this platform.";
+        UpdateAIComponentButtons();
+
         Border b = new Border
         {
             WidthRequest = 50,

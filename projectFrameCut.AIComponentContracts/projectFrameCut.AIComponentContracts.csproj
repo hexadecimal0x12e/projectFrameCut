@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>projectFrameCut.AIComponentContracts</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>hexadecimal0x12e</Authors>
+    <Description>Dependency-light IPC contracts for projectFrameCut AI components.</Description>
+    <PackageTags>projectFrameCut;AI;IPC;Windows</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+</Project>

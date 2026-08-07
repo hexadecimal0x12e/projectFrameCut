@@ -64,21 +64,6 @@ namespace projectFrameCut.Render.Effect
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(TypeName, Operation, parameters);
-
-        public object? GenerateValue(uint frameIndex, int targetWidth, int targetHeight)
-        {
-            int a = ResolveInt(Parameters, "A");
-            int b = ResolveInt(Parameters, "B");
-            return Operation switch
-            {
-                IntArithmeticOperation.Add => a + b,
-                IntArithmeticOperation.Subtract => a - b,
-                IntArithmeticOperation.Multiply => a * b,
-                IntArithmeticOperation.Divide => b == 0 ? 0 : a / b,
-                _ => 0,
-            };
-        }
-
         public void Initialize() { }
 
         /// <summary>
@@ -115,11 +100,22 @@ namespace projectFrameCut.Render.Effect
 
         public Func<object> GetGetter() => () =>
         {
-            var ctx = IRenderContext.Current;
-            uint frame = IRenderContext.WorkerState?.CurrentFrame ?? 0;
-            int w = ctx?.TargetWidth ?? 0;
-            int h = ctx?.TargetHeight ?? 0;
-            return GenerateValue(frame, w, h) ?? 0;
+            int a = ResolveInt(Parameters, "A");
+            int b = ResolveInt(Parameters, "B");
+            Log($"IntArithmeticValueProviderEffect {Id}/{Name}'s A: {a} ({Parameters.GetValueOrDefault("A")?.GetType()?.Name ?? "<null>"})");
+            Log($"IntArithmeticValueProviderEffect {Id}/{Name}'s B: {b} ({Parameters.GetValueOrDefault("B")?.GetType()?.Name ?? "<null>"})");
+            Log($"IntArithmeticValueProviderEffect {Id}/{Name}'s Operation: {Operation} ");
+            var result = Operation switch
+            {
+                IntArithmeticOperation.Add => a + b,
+                IntArithmeticOperation.Subtract => a - b,
+                IntArithmeticOperation.Multiply => a * b,
+                IntArithmeticOperation.Divide => b == 0 ? 0 : a / b,
+                _ => 0,
+            };
+            Log($"IntArithmeticValueProviderEffect {Id}/{Name}'s Result: {result}");
+            return result;
+
         };
     }
 

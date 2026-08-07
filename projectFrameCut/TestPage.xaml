@@ -41,6 +41,24 @@
                 </VerticalStackLayout>
             </Border>
 
+            <Border StrokeThickness="4" Padding="12">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Windows System AI IPC test" FontAttributes="Bold" FontSize="18" />
+                    <Label x:Name="AIComponentStatusLabel" Text="Not connected" LineBreakMode="WordWrap" />
+                    <HorizontalStackLayout Spacing="8">
+                        <Button x:Name="AIComponentConnectButton" Text="Connect extension" Clicked="AIComponentConnectButton_Clicked" />
+                        <Button x:Name="AIComponentDisconnectButton" Text="Disconnect" Clicked="AIComponentDisconnectButton_Clicked" IsEnabled="False" />
+                    </HorizontalStackLayout>
+                    <Editor x:Name="AIComponentCapabilitiesEditor" HeightRequest="100" IsReadOnly="True" Placeholder="Capabilities" />
+                    <Editor x:Name="AIComponentTextEditor" HeightRequest="80" Text="Hello from projectFrameCut" Placeholder="Text input" />
+                    <Button x:Name="AIComponentTextButton" Text="Text echo" Clicked="AIComponentTextButton_Clicked" IsEnabled="False" />
+                    <Button x:Name="AIComponentPictureButton" Text="Picture echo" Clicked="AIComponentPictureButton_Clicked" IsEnabled="False" />
+                    <Image x:Name="AIComponentResultImage" HeightRequest="180" Aspect="AspectFit" IsVisible="False" />
+                    <Button x:Name="AIComponentAudioButton" Text="Audio echo" Clicked="AIComponentAudioButton_Clicked" IsEnabled="False" />
+                    <Label x:Name="AIComponentResultLabel" Text="" LineBreakMode="WordWrap" />
+                </VerticalStackLayout>
+            </Border>
+
             <Border StrokeThickness="4">
                 <VerticalStackLayout>
                     <Button x:Name="TestFFmpegButton" Text="Test decode" Clicked="TestFFmpegButton_Clicked"/>

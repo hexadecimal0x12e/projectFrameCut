@@ -54,6 +54,7 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException("targetWidth and targetHeight must be positive.");
 
             int value = DynamicParam.Resolve(Parameters.GetValueOrDefault("Value"), 0);
+            Log($"IntOverlayEffect {Id}/{Name}'s value: {value} ({Parameters.GetValueOrDefault("B")?.GetType()?.Name ?? "<null>"})");
             string text = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
             // Layout the number as text on a canvas matching the target size, rasterize it

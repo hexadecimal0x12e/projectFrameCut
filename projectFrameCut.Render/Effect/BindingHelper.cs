@@ -289,7 +289,6 @@ namespace projectFrameCut.Render.Effect
                         }
                         if (!Guid.TryParse(effect.Id, out _))
                         {
-                            Log($"Effect Provider {bundleData.TypeName}({bundleData.Id})'s subeffect #{subIdx} has invalid Id '{effect.Id}', generating a new one.", "warn");
                             effect.Id = Guid.NewGuid().ToString();
                         }
                         newEffects[key] = effect;

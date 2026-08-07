@@ -6,7 +6,6 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
 	xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-	xmlns:systemai="http://schemas.microsoft.com/appx/manifest/systemai/windows10"
 	xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3">
 
 	<!--wtf, why the pfn is not hexadecimal0x12e.projectFrameCut in ms store-->
@@ -111,7 +110,6 @@
 		<Capability Name="internetClientServer"/>
 		<Capability Name="internetClient"/>
 		<uap:Capability Name="removableStorage"/>
-		<systemai:Capability Name="systemAIModels"/>
 	</Capabilities>
 
 </Package>

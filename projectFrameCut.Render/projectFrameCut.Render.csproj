@@ -41,5 +41,13 @@
 		<Using Include="projectFrameCut.Shared" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <None Remove="Resource\*.png" />
+	  <EmbeddedResource Include="Resource\Error.png" LogicalName="projectFrameCut.Render.Resource.Error.png" />
+	  <EmbeddedResource Include="Resource\Error_SourceFail.png" LogicalName="projectFrameCut.Render.Resource.Error_SourceFail.png" />
+	  <EmbeddedResource Include="Resource\Error_BindingFail.png" LogicalName="projectFrameCut.Render.Resource.Error_BindingFail.png" />
+	  <EmbeddedResource Include="Resource\Error_SourceNotFound.png" LogicalName="projectFrameCut.Render.Resource.Error_SourceNotFound.png" />
+	</ItemGroup>
+
 
 </Project>

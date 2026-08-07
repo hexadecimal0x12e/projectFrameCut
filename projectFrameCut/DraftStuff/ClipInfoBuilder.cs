@@ -414,8 +414,51 @@ namespace projectFrameCut.DraftStuff
                 .FirstOrDefault(kv => string.Equals(kv.Value, currentVideoDecoderId, StringComparison.Ordinal)).Key
                 ?? PPLocalizedResources.General_VideoCodec_TargetMode_Auto;
 
-            var ppb = new PropertyPanelBuilder()
-            .AddText(new SingleLineLabel(Localized.PropertyPanel_General, 20))
+            var ppb = new PropertyPanelBuilder();
+            if (ClipInitializationFailure.IsMarked(clip.ExtraData))
+            {
+                var failureDescription = ClipInitializationFailure.GetDescription(clip.ExtraData);
+                var failureContent = new Grid
+                {
+                    ColumnSpacing = 10,
+                    ColumnDefinitions =
+                    {
+                        new ColumnDefinition(GridLength.Auto),
+                        new ColumnDefinition(GridLength.Star)
+                    }
+                };
+                failureContent.Add(new Label
+                {
+                    Text = "⚠",
+                    TextColor = Colors.Magenta,
+                    FontSize = 22,
+                    FontAttributes = FontAttributes.Bold,
+                    VerticalOptions = LayoutOptions.Start
+                }, 0, 0);
+                failureContent.Add(new Label
+                {
+                    Text = failureDescription,
+                    TextColor = Colors.OrangeRed,
+                    LineBreakMode = LineBreakMode.WordWrap,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Center
+                }, 1, 0);
+
+                var failureNotice = new Border
+                {
+                    Margin = new Thickness(8, 8, 8, 4),
+                    Padding = new Thickness(12),
+                    BackgroundColor = Color.FromArgb("#33FF1744"),
+                    Stroke = Color.FromArgb("#FFFF00FF"),
+                    StrokeThickness = 1,
+                    StrokeShape = new RoundRectangle { CornerRadius = 8 },
+                    Content = failureContent
+                };
+                SemanticProperties.SetDescription(failureNotice, failureDescription);
+                ppb.AddCustomChild(failureNotice);
+            }
+
+            ppb.AddText(new SingleLineLabel(Localized.PropertyPanel_General, 20))
             .AddEntry("displayName", Localized.PropertyPanel_General_DisplayName, clip.DisplayName, clip.DisplayName)
             .AddCustomChild(PPLocalizedResources.General_DisplayColor, (invoker) =>
             {
