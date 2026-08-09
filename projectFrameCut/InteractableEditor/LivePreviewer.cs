@@ -21,6 +21,7 @@ namespace projectFrameCut.LivePreview
 {
     public class LivePreviewer
     {
+        private const string StaticFrameCacheVersion = "v2-target-layout";
         public IClip[]? Clips;
         public ISoundTrack[]? SoundTracks;
         public int targetFrameRate = 60;
@@ -336,6 +337,6 @@ namespace projectFrameCut.LivePreview
         }
 
         private static string BuildFrameCacheKey(string frameHash, int width, int height)
-            => $"{frameHash}_{width}x{height}";
+            => $"{StaticFrameCacheVersion}_{frameHash}_{width}x{height}";
     }
 }

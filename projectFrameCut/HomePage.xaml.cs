@@ -908,65 +908,65 @@ public partial class HomePage : ContentPage
                         notfounds.Add(item.Value?.AssetId ?? Guid.NewGuid().ToString(), item.Value);
                     }
                 }
-                if (notfounds.Any())
-                {
-                    var notFoundStr = notfounds.Select(kv => $"- {kv.Value.Name} ({kv.Value.Path})").Aggregate((a, b) => $"{a}{Environment.NewLine}{b}");
-                    await Dispatcher.DispatchAsync(async () =>
-                    {
-                        int result = 0;
-#if WINDOWS
-                        Microsoft.UI.Xaml.Controls.ContentDialog diag = new Microsoft.UI.Xaml.Controls.ContentDialog
-                        {
-                            Title = Localized.HomePage_SourceNotFound_Title,
-                            Content = $"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}",
-                            CloseButtonText = Localized._Cancel,
-                            PrimaryButtonText = Localized.HomePage_SourceNotFound_Continue,
-                            SecondaryButtonText = Localized.HomePage_SourceNotFound_RemoveThem
-                        };
+//                if (notfounds.Any())
+//                {
+//                    var notFoundStr = notfounds.Select(kv => $"- {kv.Value.Name} ({kv.Value.Path})").Aggregate((a, b) => $"{a}{Environment.NewLine}{b}");
+//                    await Dispatcher.DispatchAsync(async () =>
+//                    {
+//                        int result = 0;
+//#if WINDOWS
+//                        Microsoft.UI.Xaml.Controls.ContentDialog diag = new Microsoft.UI.Xaml.Controls.ContentDialog
+//                        {
+//                            Title = Localized.HomePage_SourceNotFound_Title,
+//                            Content = $"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}",
+//                            CloseButtonText = Localized._Cancel,
+//                            PrimaryButtonText = Localized.HomePage_SourceNotFound_Continue,
+//                            SecondaryButtonText = Localized.HomePage_SourceNotFound_RemoveThem
+//                        };
 
-                        var services = Application.Current?.Handler?.MauiContext?.Services;
-                        var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
-                        if (dialogueHelper != null)
-                        {
-                            var r = await dialogueHelper.ShowContentDialogue(diag);
-                            result = (int)r;
-                        }
-#else
-                        string[] opts = [Localized.HomePage_SourceNotFound_RemoveThem, Localized.HomePage_SourceNotFound_Continue];
+//                        var services = Application.Current?.Handler?.MauiContext?.Services;
+//                        var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
+//                        if (dialogueHelper != null)
+//                        {
+//                            var r = await dialogueHelper.ShowContentDialogue(diag);
+//                            result = (int)r;
+//                        }
+//#else
+//                        string[] opts = [Localized.HomePage_SourceNotFound_RemoveThem, Localized.HomePage_SourceNotFound_Continue];
 
-                        var select = await DisplayActionSheetAsync($"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}", null, Localized._Cancel, opts);
-                        if (select == Localized.HomePage_SourceNotFound_RemoveThem) result = 2;
-                        else if (select == Localized.HomePage_SourceNotFound_Continue) result = 1;
-                        else result = 0;
-#endif
+//                        var select = await DisplayActionSheetAsync($"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}", null, Localized._Cancel, opts);
+//                        if (select == Localized.HomePage_SourceNotFound_RemoveThem) result = 2;
+//                        else if (select == Localized.HomePage_SourceNotFound_Continue) result = 1;
+//                        else result = 0;
+//#endif
 
 
-                        switch (result)
-                        {
-                            case 0:
-                                {
-                                    page = null;
-                                    return;
-                                }
-                            case 1:
-                                {
-                                    break;
-                                }
-                            case 2:
-                                {
-                                    var input = await DisplayPromptAsync(Localized._Warn, Localized.HomePage_SourceNotFound_RemoveThem_Conf, Localized._OK, Localized._Cancel, "no", -1, null, null);
-                                    if (input != "yes") return;
-                                    foreach (var item in notfounds)
-                                    {
-                                        dict = new(dict.RemoveRange(dict.Where(c => c.Value.SourcePath == item.Value.Path)));
-                                        assetDict = new(assetDict.RemoveRange(assetDict.Where(c => c.Key == item.Key)));
-                                    }
+//                        switch (result)
+//                        {
+//                            case 0:
+//                                {
+//                                    page = null;
+//                                    return;
+//                                }
+//                            case 1:
+//                                {
+//                                    break;
+//                                }
+//                            case 2:
+//                                {
+//                                    var input = await DisplayPromptAsync(Localized._Warn, Localized.HomePage_SourceNotFound_RemoveThem_Conf, Localized._OK, Localized._Cancel, "no", -1, null, null);
+//                                    if (input != "yes") return;
+//                                    foreach (var item in notfounds)
+//                                    {
+//                                        dict = new(dict.RemoveRange(dict.Where(c => c.Value.SourcePath == item.Value.Path)));
+//                                        assetDict = new(assetDict.RemoveRange(assetDict.Where(c => c.Key == item.Key)));
+//                                    }
 
-                                    break;
-                                }
-                        }
-                    });
-                }
+//                                    break;
+//                                }
+//                        }
+//                    });
+//                }
                 if (!SettingsManager.IsSettingExists("Edit_PreferredPopupMode"))
                 {
                     SettingsManager.WriteSetting("Edit_PreferredPopupMode", "bottom");

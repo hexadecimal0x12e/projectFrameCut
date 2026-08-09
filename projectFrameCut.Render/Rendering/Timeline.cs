@@ -182,6 +182,8 @@ namespace projectFrameCut.Render.Rendering
         {
             try
             {
+                int layoutRelativeWidth = projectRelativeWidth > 0 ? projectRelativeWidth : targetWidth;
+                int layoutRelativeHeight = projectRelativeHeight > 0 ? projectRelativeHeight : targetHeight;
                 IPicture? result = null;
                 ConcurrentDictionary<string, object> bindableEffectResultCache = new();
                 Dictionary<string, object> bindableEffectResultCache2 = new();
@@ -194,7 +196,20 @@ namespace projectFrameCut.Render.Rendering
                     ArgumentNullException.ThrowIfNull(srcFrame.ParentClip, nameof(srcFrame.ParentClip));
                     IPicture effected = srcFrame.Clip;
                     var effectsList = srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
-                    ClipPositionTuple clipPos = srcFrame.ParentClip.PositionTuple;
+                    // TargetX/Y live in project-relative space. Width/height, however, must already
+                    // be converted to the current output space before effects can adjust the rect.
+                    // This mirrors Renderer.ProcessAndCompositeClip; using PositionTuple directly
+                    // mixed full-resolution clip bounds with a reduced preview canvas.
+                    ClipPositionTuple clipPos = new(
+                        srcFrame.ParentClip.TargetX,
+                        srcFrame.ParentClip.TargetY,
+                        srcFrame.ParentClip.TargetWidth > 0
+                            ? ScaleDimensionToTarget(srcFrame.ParentClip.TargetWidth, layoutRelativeWidth, targetWidth)
+                            : targetWidth,
+                        srcFrame.ParentClip.TargetHeight > 0
+                            ? ScaleDimensionToTarget(srcFrame.ParentClip.TargetHeight, layoutRelativeHeight, targetHeight)
+                            : targetHeight,
+                        false);
                     // Begin the per-frame value-provider context for this clip: pre-fills the built-in
                     // frame/progress sources and clears provider values.
                     var clipDuration = srcFrame.ParentClip.GetEffectiveDuration();
@@ -261,8 +276,8 @@ namespace projectFrameCut.Render.Rendering
                         if (AfterEffectCallback is not null)
                         {
                             IPicture d = effected;
-                            int x = ScaleCoordinateToTarget(clipPos.TargetX, projectRelativeWidth, targetWidth);
-                            int y = ScaleCoordinateToTarget(clipPos.TargetY, projectRelativeHeight, targetHeight);
+                            int x = ScaleCoordinateToTarget(clipPos.TargetX, layoutRelativeWidth, targetWidth);
+                            int y = ScaleCoordinateToTarget(clipPos.TargetY, layoutRelativeHeight, targetHeight);
                             if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && y == 0 && effected.Height < targetHeight)
                             {
                                 y += (targetHeight - effected.Height) / 2;
@@ -277,8 +292,23 @@ namespace projectFrameCut.Render.Rendering
                     // The per-frame value-provider values are only needed during effect processing.
                     ValueProviderFrameContext.EndFrame();
 
-                    int clipX = ScaleCoordinateToTarget(clipPos.TargetX, projectRelativeWidth, targetWidth);
-                    int clipY = ScaleCoordinateToTarget(clipPos.TargetY, projectRelativeHeight, targetHeight);
+                    // Position providers may change the clip rectangle without changing the source
+                    // frame itself. Honor the resulting Target size before compositing, just like the
+                    // full Renderer does. This is essential when Target differs from ProjectRelative.
+                    if (clipPos.TargetWidth > 0
+                        && clipPos.TargetHeight > 0
+                        && (effected.Width != clipPos.TargetWidth || effected.Height != clipPos.TargetHeight))
+                    {
+                        var old = effected;
+                        effected = effected.Resize(clipPos.TargetWidth, clipPos.TargetHeight, true);
+                        if (!ReferenceEquals(old, effected))
+                        {
+                            try { old.Dispose(); } catch { }
+                        }
+                    }
+
+                    int clipX = ScaleCoordinateToTarget(clipPos.TargetX, layoutRelativeWidth, targetWidth);
+                    int clipY = ScaleCoordinateToTarget(clipPos.TargetY, layoutRelativeHeight, targetHeight);
                     if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && clipY == 0 && effected.Height < targetHeight)
                     {
                         clipY += (targetHeight - effected.Height) / 2;

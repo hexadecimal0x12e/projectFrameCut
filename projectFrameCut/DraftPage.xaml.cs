@@ -53,6 +53,7 @@ using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using CommunityToolkit.Maui.Extensions;
+using projectFrameCut.Drawing.Base.Picture;
 #if !DISABLE_POWERSHELL_SDK
 using projectFrameCut.ScriptEngine;
 #endif
@@ -7355,6 +7356,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     SemaphoreSlim renderingLock = new(1, 1);
     private CancellationTokenSource? _renderOneFrameCts;
     private readonly object _renderCtsLock = new();
+    private const int InitialStaticPreviewLongEdge = 240;
+    private const int MaxConcurrentStaticPreviewRenders = 3;
 
     private CancellationToken ResetDynamicPreviewToken()
     {
@@ -7505,19 +7508,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
                 if (!await RefreshDynamicPreviewOverlay())
                 {
-                    string fallbackPath = string.Empty;
-                    await Task.Run(() =>
-                    {
-                        cts.Token.ThrowIfCancellationRequested();
-                        fallbackPath = previewer.RenderFrame(duration, targetWidth, targetHeight);
-                        cts.Token.ThrowIfCancellationRequested();
-                    }, cts.Token);
-
-                    await ClipEditor.StaticPreviewOverlayImage.ForceLoadPNGToAImage(fallbackPath);
-                    await Dispatcher.DispatchAsync(() =>
-                    {
-                        ClipEditor.SetStaticPreviewVisible(true);
-                    });
+                    await RenderStaticPreviewProgressivelyAsync(duration, targetWidth, targetHeight, cts.Token);
                 }
             }
             else
@@ -7529,19 +7520,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     LivePreviewPlayer.IsVisible = false;
                 });
 
-                string path = string.Empty;
-                await Task.Run(() =>
-                {
-                    cts.Token.ThrowIfCancellationRequested();
-                    path = previewer.RenderFrame(duration, targetWidth, targetHeight);
-                    cts.Token.ThrowIfCancellationRequested();
-                }, cts.Token);
-
-                await ClipEditor.StaticPreviewOverlayImage.ForceLoadPNGToAImage(path);
-                await Dispatcher.DispatchAsync(() =>
-                {
-                    ClipEditor.SetStaticPreviewVisible(true);
-                });
+                await RenderStaticPreviewProgressivelyAsync(duration, targetWidth, targetHeight, cts.Token);
             }
 
 
@@ -7584,6 +7563,111 @@ public partial class DraftPage : ContentPage, IDraftPage
             cts.Dispose();
             renderingLock.Release();
         }
+    }
+
+    private async Task RenderStaticPreviewProgressivelyAsync(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token)
+    {
+        var sizes = BuildProgressiveStaticPreviewSizes(targetWidth, targetHeight);
+        using var displayLock = new SemaphoreSlim(1, 1);
+        using var renderThrottle = new SemaphoreSlim(MaxConcurrentStaticPreviewRenders, MaxConcurrentStaticPreviewRenders);
+        var displayedTier = -1;
+
+        async Task RenderTierAsync(int tier, bool isFinalTier)
+        {
+            var (width, height) = sizes[tier];
+            try
+            {
+                await renderThrottle.WaitAsync(token);
+                string path;
+                try
+                {
+                    path = await Task.Run(() =>
+                    {
+                        token.ThrowIfCancellationRequested();
+                        var renderedPath = previewer.RenderFrame(frameIndex, width, height);
+                        token.ThrowIfCancellationRequested();
+                        return renderedPath;
+                    }, token);
+                }
+                finally
+                {
+                    renderThrottle.Release();
+                }
+
+                await displayLock.WaitAsync(token);
+                try
+                {
+                    // Tiers complete out of order. Never let a late low-resolution render replace a
+                    // sharper image that has already reached the preview surface.
+                    if (tier <= displayedTier)
+                    {
+                        return;
+                    }
+
+                    token.ThrowIfCancellationRequested();
+                    await ClipEditor.StaticPreviewOverlayImage.ForceLoadPNGToAImage(path);
+                    token.ThrowIfCancellationRequested();
+                    displayedTier = tier;
+                    await Dispatcher.DispatchAsync(() => ClipEditor.SetStaticPreviewVisible(true));
+                }
+                finally
+                {
+                    displayLock.Release();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (!isFinalTier)
+            {
+                // A failed intermediate tier must not prevent the target-resolution render from
+                // completing. The final tier still propagates its error to the normal UI handler.
+                Log(ex, $"Render progressive static preview tier {width}x{height}", this);
+            }
+        }
+
+        // Give the smallest render an uncontested head start. Once something is visible, render the
+        // remaining quality levels in parallel; the display gate above keeps upgrades monotonic.
+        await RenderTierAsync(0, sizes.Count == 1);
+        if (sizes.Count == 1)
+        {
+            return;
+        }
+
+        var finalTier = sizes.Count - 1;
+        var finalRender = RenderTierAsync(finalTier, true);
+        var intermediateRenders = Enumerable.Range(1, Math.Max(0, finalTier - 1))
+            .Select(tier => RenderTierAsync(tier, false));
+        await Task.WhenAll(intermediateRenders.Append(finalRender));
+    }
+
+    private static List<(int Width, int Height)> BuildProgressiveStaticPreviewSizes(int width, int height)
+    {
+        width = Math.Max(1, width);
+        height = Math.Max(1, height);
+        var targetLongEdge = Math.Max(width, height);
+        var sizes = new List<(int Width, int Height)>();
+
+        for (var longEdge = Math.Min(InitialStaticPreviewLongEdge, targetLongEdge);
+             longEdge < targetLongEdge;
+             longEdge = Math.Min(targetLongEdge, longEdge * 2))
+        {
+            var scale = (double)longEdge / targetLongEdge;
+            var tier = (Math.Max(1, (int)Math.Round(width * scale)), Math.Max(1, (int)Math.Round(height * scale)));
+            if (sizes.Count == 0 || sizes[^1] != tier)
+            {
+                sizes.Add(tier);
+            }
+        }
+
+        var target = (width, height);
+        if (sizes.Count == 0 || sizes[^1] != target)
+        {
+            sizes.Add(target);
+        }
+
+        return sizes;
     }
 
     CancellationTokenSource? _playbackCts;
