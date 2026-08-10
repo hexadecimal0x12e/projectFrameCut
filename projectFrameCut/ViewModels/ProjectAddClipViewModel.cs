@@ -3520,7 +3520,7 @@ public class TextStyleItemViewModel
                 var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
                 var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
 
-                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
+                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, 8);
 
                 // Encode to PNG once, share between disk cache and ImageSource
                 var bpp8 = img.ToBitPerPixel(8);
@@ -3611,7 +3611,7 @@ public class TextStyleProviderItemViewModel
                 var imgHeight = Math.Clamp((int)(maxFontSize * 1.2f) + 4, 24, 200);
                 var imgWidth = Math.Clamp((int)(sample.Length * maxFontSize * 0.6f) + 20, 100, 1200);
 
-                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
+                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, 8);
 
                 // Encode to PNG once, share between disk cache and ImageSource
                 var bpp8 = img.ToBitPerPixel(8);

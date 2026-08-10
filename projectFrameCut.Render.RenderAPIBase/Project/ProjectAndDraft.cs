@@ -313,6 +313,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
         [Obsolete("Use EffectProviders instead. Keep for auto migration use only.")]
         public EffectBundleJSONStructure[]? EffectBundles { get; set; }

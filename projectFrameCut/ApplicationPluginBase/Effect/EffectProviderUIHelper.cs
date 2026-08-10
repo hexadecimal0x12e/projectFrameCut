@@ -22,14 +22,15 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 if (field is null) continue;
                 if (field.FieldType.HasFlag(EffectArgumentFieldType.IPicture)) continue;
                 bool isBound = field.IsDynamic;
+                var componentId = ComponentId(provider, field.Id);
 
                 // Enum-like string fields are rendered as a picker.
                 if (field.PresetOptions is { Length: > 0 })
                 {
                     var current = GetString(provider, field.Id);
                     var defaultValue = Array.IndexOf(field.PresetOptions, current) >= 0 ? current : field.PresetOptions[0];
-                    panel.AddPicker(field.Id, Label(field.Id), field.PresetOptions, defaultValue);
-                    MaybeWrapWithBind(panel, provider, field, bindingHost, isBound);
+                    panel.AddPicker(componentId, Label(field.Id), field.PresetOptions, defaultValue);
+                    MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                     continue;
                 }
 
@@ -37,21 +38,21 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 switch (baseType)
                 {
                     case EffectArgumentFieldType.Boolean:
-                        panel.AddCheckbox(field.Id, Label(field.Id), GetBool(provider, field.Id));
-                        MaybeWrapWithBind(panel, provider, field, bindingHost, isBound);
+                        panel.AddCheckbox(componentId, Label(field.Id), GetBool(provider, field.Id));
+                        MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                         break;
                     case EffectArgumentFieldType.UnsignedInteger:
-                        AddNumericEntry(panel, provider, field);
-                        MaybeWrapWithBind(panel, provider, field, bindingHost, isBound);
+                        AddNumericEntry(panel, provider, field, componentId);
+                        MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                         break;
                     case EffectArgumentFieldType.Integer:
                     case EffectArgumentFieldType.Numeric:
-                        AddNumericOrSlider(panel, provider, field);
-                        MaybeWrapWithBind(panel, provider, field, bindingHost, isBound);
+                        AddNumericOrSlider(panel, provider, field, componentId);
+                        MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                         break;
                     case EffectArgumentFieldType.String:
-                        panel.AddEntry(field.Id, Label(field.Id), GetString(provider, field.Id), field.DefaultValue);
-                        MaybeWrapWithBind(panel, provider, field, bindingHost, isBound);
+                        panel.AddEntry(componentId, Label(field.Id), GetString(provider, field.Id), field.DefaultValue);
+                        MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                         break;
                     default:
                         panel.AddText(EffectProviderHelper.L("_UnsupportedField", $"Field '{field.Id}' requires custom handling."));
@@ -65,10 +66,10 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         /// field with a bind button. While the field is bound, the static editor is disabled and the button is
         /// highlighted, showing the bound source in its tooltip.
         /// </summary>
-        private static void MaybeWrapWithBind(PropertyPanelBuilder panel, IEffectProvider provider, IEffectArgumentField field, IEffectBindingHost? bindingHost, bool isBound)
+        private static void MaybeWrapWithBind(PropertyPanelBuilder panel, IEffectProvider provider, IEffectArgumentField field, string componentId, IEffectBindingHost? bindingHost, bool isBound)
         {
             if (bindingHost is null) return;
-            if (!panel.Components.TryGetValue(field.Id, out var control) || control is null) return;
+            if (!panel.Components.TryGetValue(componentId, out var control) || control is null) return;
 
             if (isBound && control is Microsoft.Maui.Controls.View view)
             {
@@ -105,7 +106,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 VerticalOptions = Microsoft.Maui.Controls.LayoutOptions.Center,
             };
             row.Add(button, 1);
-            if (panel.ReplaceComponent(field.Id, row))
+            if (panel.ReplaceComponent(componentId, row))
             {
                 // Replace first so the original control's outer Grid.Column is preserved for the
                 // wrapper. Only then assign the control to the wrapper's first column.
@@ -113,21 +114,21 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             }
         }
 
-        private static void AddNumericOrSlider(PropertyPanelBuilder panel, IEffectProvider provider, IEffectArgumentField field)
+        private static void AddNumericOrSlider(PropertyPanelBuilder panel, IEffectProvider provider, IEffectArgumentField field, string componentId)
         {
             if (TryGetMinMax(field, out var min, out var max))
             {
-                panel.AddSlider(field.Id, Label(field.Id), min, max, GetDouble(provider, field.Id), eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
+                panel.AddSlider(componentId, Label(field.Id), min, max, GetDouble(provider, field.Id), eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
             }
             else
             {
-                AddNumericEntry(panel, provider, field);
+                AddNumericEntry(panel, provider, field, componentId);
             }
         }
 
-        private static void AddNumericEntry(PropertyPanelBuilder panel, IEffectProvider provider, IEffectArgumentField field)
+        private static void AddNumericEntry(PropertyPanelBuilder panel, IEffectProvider provider, IEffectArgumentField field, string componentId)
         {
-            panel.AddEntry(field.Id, Label(field.Id), GetString(provider, field.Id), field.DefaultValue, entry => entry.Keyboard = Microsoft.Maui.Keyboard.Numeric);
+            panel.AddEntry(componentId, Label(field.Id), GetString(provider, field.Id), field.DefaultValue, entry => entry.Keyboard = Microsoft.Maui.Keyboard.Numeric);
         }
 
         private static bool TryGetMinMax(IEffectArgumentField field, out double min, out double max)
@@ -149,20 +150,21 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public static (Dictionary<string, object>? newParams, Dictionary<string, IEffectArgumentField>? newFields) HandleChange(IEffectProvider provider, PropertyPanelPropertyChangedEventArgs args)
         {
             var fields = provider.Fields;
-            if (fields.TryGetValue(args.Id, out var field) && field is not null)
+            var fieldId = FieldId(provider, args.Id);
+            if (fields.TryGetValue(fieldId, out var field) && field is not null)
             {
-                WriteBack(fields, field, args.Id, args.Value);
+                WriteBack(fields, field, fieldId, args.Value);
             }
             else
             {
                 // Compound Position / Size coordinates use the {id}_X / {id}_Y / {id}_W / {id}_H convention.
                 // No built-in effect uses a single Position/Size field currently, so a generic fallback is enough here.
-                int sep = args.Id.LastIndexOf('_');
-                if (sep > 0 && fields.TryGetValue(args.Id[..sep], out _))
+                int sep = fieldId.LastIndexOf('_');
+                if (sep > 0 && fields.TryGetValue(fieldId[..sep], out _))
                 {
-                    fields[args.Id] = new StaticEffectArgumentField
+                    fields[fieldId] = new StaticEffectArgumentField
                     {
-                        Id = args.Id,
+                        Id = fieldId,
                         FieldType = EffectArgumentFieldType.Integer,
                         Value = args.Value ?? string.Empty,
                     };
@@ -257,6 +259,19 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         private static PropertyPanelItemLabel Label(string id)
         {
             return EffectProviderHelper.ParamLabel(id);
+        }
+
+        private static string ComponentId(IEffectProvider provider, string fieldId)
+        {
+            return $"EffectProviderField|{provider.Id:N}|{fieldId}";
+        }
+
+        private static string FieldId(IEffectProvider provider, string componentId)
+        {
+            var prefix = $"EffectProviderField|{provider.Id:N}|";
+            return componentId.StartsWith(prefix, StringComparison.Ordinal)
+                ? componentId[prefix.Length..]
+                : componentId;
         }
     }
 }

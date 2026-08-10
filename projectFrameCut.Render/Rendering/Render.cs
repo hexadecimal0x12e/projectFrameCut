@@ -47,8 +47,10 @@ namespace projectFrameCut.Render.Rendering
         public int MaxThreads { get => field > 0 ? field : (int)(Environment.ProcessorCount * 1.75); set; }
         public int GCOption = 0;
 
+        public bool EnableDecoderSideCropResize { get; set; } = true;
         public bool EnableGPUBatchProcess { get; set; } = true;
         public bool AllowReorderEffect { get; set; } = true;
+        public bool EnableEffectAutoRetry { get; set; } = true;
 
         public int MaxRenderScheduleTimeout { get; set; } = 500;
         public int MinSchedulePreparedFrames { get => field > 0 ? field : MaxThreads; set; }
@@ -62,7 +64,6 @@ namespace projectFrameCut.Render.Rendering
         public int MaxPendingWriteFrames { get => field > 0 ? field : Math.Max(ThrottleThreshold * 2, 32); set; }
         public bool BlockPreparingBeforeRendering { get; set; } = false;
         public bool DisableAllThrottleOptions { get; set; } = false;
-        public bool EnableEffectAutoRetry { get; set; } = true;
 
         public int ProjectRelativeWidth { get; set; }
         public int ProjectRelativeHeight { get; set; }
@@ -1733,7 +1734,7 @@ namespace projectFrameCut.Render.Rendering
                     }
                     else
                     {
-                        f = immutableContent.GetContent(clipTargetWidth, clipTargetHeight, true, ppb);
+                        f = immutableContent.GetContent(clipTargetWidth, clipTargetHeight, ppb);
                     }
                     f.CanBeDisposed = false;
                     f.Tag = $"Immutable content for clip {item.Id} at {clipTargetWidth}x{clipTargetHeight} ppb={ppb}";
@@ -1749,7 +1750,14 @@ namespace projectFrameCut.Render.Rendering
             }
             else
             {
-                frame = item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, true, ppb);
+                if (EnableDecoderSideCropResize)
+                {
+                    frame = item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb);
+                }
+                else
+                {
+                    frame = item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb);
+                }
             }
 
             if (frame is not null && IsClipGeneratedByAI.TryGetValue(item.Id, out var aiMark) && aiMark)

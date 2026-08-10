@@ -658,6 +658,8 @@ namespace projectFrameCut.ScriptEngine
                 newClip.TargetY = source.TargetY;
                 newClip.TargetWidth = source.TargetWidth;
                 newClip.TargetHeight = source.TargetHeight;
+                newClip.StartingX = source.StartingX;
+                newClip.StartingY = source.StartingY;
 
                 // 复制 Effects 和 EffectProviders（浅拷贝）
                 if (source.Effects is { Count: > 0 })

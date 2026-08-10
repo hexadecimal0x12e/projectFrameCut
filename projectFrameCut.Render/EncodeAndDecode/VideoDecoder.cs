@@ -219,6 +219,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
 
         public IPicture<ushort> GetFrame(uint targetFrame, bool hasAlpha = false)
+            => GetFrameCore(targetFrame, hasAlpha, null);
+
+        public IPicture<ushort> GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
+            int targetWidth, int targetHeight, bool hasAlpha = false)
+            => GetFrameCore(targetFrame, hasAlpha,
+                new VideoFrameRegion(sourceX, sourceY, sourceWidth, sourceHeight, targetWidth, targetHeight));
+
+        public IPicture<ushort> GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha = false)
+            => GetFrame(targetFrame, 0, 0, _width, _height, targetWidth, targetHeight, hasAlpha);
+
+        private IPicture<ushort> GetFrameCore(uint targetFrame, bool hasAlpha, VideoFrameRegion? region)
         {
             bool lockTaken = false;
             try
@@ -235,7 +246,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 EnsureDecoderReady(targetFrame);
 
                 // Try disk cache before decoding
-                if (IVideoSource.EnableDiskCache && _diskCache.TryLoad16bpp(targetFrame, out var diskFrame))
+                if (region is null && IVideoSource.EnableDiskCache && _diskCache.TryLoad16bpp(targetFrame, out var diskFrame))
                 {
                     Index++;
                     return diskFrame;
@@ -331,7 +342,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
                     {
                         Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
-                        return GetFrame(targetFrame - 1, hasAlpha);
+                        return GetFrameCore(targetFrame - 1, hasAlpha, region);
                     }
 
                     double fps = _fps > 0 ? _fps : 1.0;
@@ -342,6 +353,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 Index++;
                 if (_frm->width != _width || _frm->height != _height)
                     Log($"[VideoDecoder] Frame dimensions mismatch in '{_path}': expected {_width}x{_height}, got {_frm->width}x{_frm->height}.", "warning");
+
+                if (region is VideoFrameRegion requestedRegion)
+                {
+                    return FFmpegFrameCropScaler.Scale(
+                        _frm,
+                        requestedRegion.SourceX, requestedRegion.SourceY,
+                        requestedRegion.SourceWidth, requestedRegion.SourceHeight,
+                        requestedRegion.TargetWidth, requestedRegion.TargetHeight,
+                        AVPixelFormat.AV_PIX_FMT_BGR48LE,
+                        (data, stride, width, height) => PixelsToPicture(
+                            data, stride, width, height, hasAlpha, _path, targetFrame, height));
+                }
 
                 int scaledRows = ffmpeg.sws_scale(
                     _sws,
@@ -770,7 +793,26 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public IPicture<ushort> GetFrame(uint targetFrame, bool hasAlpha = false) => GetHDRFrame(targetFrame, hasAlpha).DegradeToSDR();
 
+        public IPicture<ushort> GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
+            int targetWidth, int targetHeight, bool hasAlpha = false)
+            => GetHDRFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
+                targetWidth, targetHeight, hasAlpha).DegradeToSDR();
+
+        public IPicture<ushort> GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha = false)
+            => GetFrame(targetFrame, 0, 0, _width, _height, targetWidth, targetHeight, hasAlpha);
+
         public HDRPicture16bpp GetHDRFrame(uint targetFrame, bool hasAlpha = false)
+            => GetHDRFrameCore(targetFrame, hasAlpha, null);
+
+        public HDRPicture16bpp GetHDRFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
+            int targetWidth, int targetHeight, bool hasAlpha = false)
+            => GetHDRFrameCore(targetFrame, hasAlpha,
+                new VideoFrameRegion(sourceX, sourceY, sourceWidth, sourceHeight, targetWidth, targetHeight));
+
+        public HDRPicture16bpp GetHDRFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha = false)
+            => GetHDRFrame(targetFrame, 0, 0, _width, _height, targetWidth, targetHeight, hasAlpha);
+
+        private HDRPicture16bpp GetHDRFrameCore(uint targetFrame, bool hasAlpha, VideoFrameRegion? region)
         {
             bool lockTaken = false;
             try
@@ -787,7 +829,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 EnsureDecoderReady(targetFrame);
 
                 // Try disk cache before decoding
-                if (IVideoSource.EnableDiskCache && _diskCache.TryLoadHDR(targetFrame, out var diskHDRFrame))
+                if (region is null && IVideoSource.EnableDiskCache && _diskCache.TryLoadHDR(targetFrame, out var diskHDRFrame))
                 {
                     Index++;
                     return diskHDRFrame;
@@ -883,7 +925,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
                     {
                         Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
-                        return GetHDRFrame(targetFrame - 1, hasAlpha);
+                        return GetHDRFrameCore(targetFrame - 1, hasAlpha, region);
                     }
 
                     double fps = _fps > 0 ? _fps : 1.0;
@@ -894,6 +936,19 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 Index++;
                 float maximumBrightness = ResolveFrameMaximumBrightness(_frm);
                 AVColorTransferCharacteristic transferCharacteristic = _frm->color_trc;
+
+                if (region is VideoFrameRegion requestedRegion)
+                {
+                    return FFmpegFrameCropScaler.Scale(
+                        _frm,
+                        requestedRegion.SourceX, requestedRegion.SourceY,
+                        requestedRegion.SourceWidth, requestedRegion.SourceHeight,
+                        requestedRegion.TargetWidth, requestedRegion.TargetHeight,
+                        AVPixelFormat.AV_PIX_FMT_BGR48LE,
+                        (data, stride, width, height) => PixelsToHDRPicture(
+                            data, stride, width, height, hasAlpha, _path, targetFrame,
+                            transferCharacteristic, maximumBrightness, height));
+                }
 
                 int scaledRows = ffmpeg.sws_scale(
                     _sws,
@@ -1523,6 +1578,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         [DebuggerNonUserCode()]
         public IPicture<byte> GetFrame(uint targetFrame, bool hasAlpha)
+            => GetFrameCore(targetFrame, hasAlpha, null);
+
+        public IPicture<byte> GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
+            int targetWidth, int targetHeight, bool hasAlpha = false)
+            => GetFrameCore(targetFrame, hasAlpha,
+                new VideoFrameRegion(sourceX, sourceY, sourceWidth, sourceHeight, targetWidth, targetHeight));
+
+        public IPicture<byte> GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha = false)
+            => GetFrame(targetFrame, 0, 0, _width, _height, targetWidth, targetHeight, hasAlpha);
+
+        private IPicture<byte> GetFrameCore(uint targetFrame, bool hasAlpha, VideoFrameRegion? region)
         {
             bool lockTaken = false;
             try
@@ -1539,7 +1605,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 EnsureDecoderReady(targetFrame);
 
                 // Try disk cache before decoding
-                if (IVideoSource.EnableDiskCache && _diskCache.TryLoad8bpp(targetFrame, out var diskFrame))
+                if (region is null && IVideoSource.EnableDiskCache && _diskCache.TryLoad8bpp(targetFrame, out var diskFrame))
                 {
                     Index++;
                     return diskFrame;
@@ -1636,7 +1702,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
                     {
                         Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
-                        return GetFrame(targetFrame - 1, hasAlpha);
+                        return GetFrameCore(targetFrame - 1, hasAlpha, region);
                     }
 
                     double fps = _fps > 0 ? _fps : 1.0;
@@ -1647,6 +1713,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 Index++;
                 if (_frm->width != _width || _frm->height != _height)
                     Log($"[VideoDecoder] Frame dimensions mismatch in '{_path}': expected {_width}x{_height}, got {_frm->width}x{_frm->height}.", "warning");
+
+                if (region is VideoFrameRegion requestedRegion)
+                {
+                    return FFmpegFrameCropScaler.Scale(
+                        _frm,
+                        requestedRegion.SourceX, requestedRegion.SourceY,
+                        requestedRegion.SourceWidth, requestedRegion.SourceHeight,
+                        requestedRegion.TargetWidth, requestedRegion.TargetHeight,
+                        AVPixelFormat.AV_PIX_FMT_BGR24,
+                        (data, stride, width, height) => PixelsToPicture(
+                            data, stride, width, height, hasAlpha, _path, targetFrame, height));
+                }
 
                 int scaledRows = ffmpeg.sws_scale(
                     _sws,

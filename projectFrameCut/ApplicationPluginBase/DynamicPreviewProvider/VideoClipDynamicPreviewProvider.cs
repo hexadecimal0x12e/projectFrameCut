@@ -66,7 +66,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                using var frame = clip.GetFrameRelativeToStartPointOfSource(target.TryGetRelativeFrameIndex(targetFrame, target.StartFrame) ?? 0, renderWidth, renderHeight, true, 8);
+                using var frame = clip.GetFrameRelativeToStartPointOfSource(target.TryGetRelativeFrameIndex(targetFrame, target.StartFrame) ?? 0, renderWidth, renderHeight, 8);
 
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -281,7 +281,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         }
 
         clip.ReInit(8);
-        using var frame = clip.GetFrameRelativeToStartPointOfSource(clip.TryGetRelativeFrameIndex(targetFrame, clip.StartFrame) ?? 0, renderWidth, renderHeight, true, 8);
+        using var frame = clip.GetFrameRelativeToStartPointOfSource(clip.TryGetRelativeFrameIndex(targetFrame, clip.StartFrame) ?? 0, renderWidth, renderHeight, 8);
 
         var result = frame.BitPerPixel == IPicture.PicturePixelMode.BytePicture
             ? frame.Clone()

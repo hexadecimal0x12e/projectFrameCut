@@ -54,6 +54,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
 
@@ -70,7 +72,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
         {
             if (_decoderPool is null)
             {
@@ -89,13 +91,21 @@ namespace projectFrameCut.Render.ClipsAndTracks
             using var decoderLease = _decoderPool.Rent(targetFrame);
             var decoder = decoderLease.Decoder;
             targetFrame = ClampFrameToDecoderRange(decoder, targetFrame);
+            int sourceX = Math.Clamp(StartingX, 0, Math.Max(0, decoder.Width - 1));
+            int sourceY = Math.Clamp(StartingY, 0, Math.Max(0, decoder.Height - 1));
+            int sourceWidth = Math.Min(targetWidth, decoder.Width - sourceX);
+            int sourceHeight = Math.Min(targetHeight, decoder.Height - sourceY);
 
             if (decoder is HDRDecoderContext h)
             {
-                return ((HDRPicture16bpp)h.GetHDRFrame(targetFrame, hasAlpha: true).Resize(targetWidth, targetHeight, forceResize)).SetBrightnessOffset(HDRBrightnessOffset).ToBitPerPixel(targetPPB);
+                return h.GetHDRFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
+                        targetWidth, targetHeight, hasAlpha: true)
+                    .SetBrightnessOffset(HDRBrightnessOffset)
+                    .ToBitPerPixel(targetPPB);
             }
 
-            return decoder.GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB);
+            return decoder.GetFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
+                targetWidth, targetHeight).ToBitPerPixel(targetPPB);
         }
 
         private uint ClampFrameToDecoderRange(IVideoSource? decoder, uint targetFrame)
@@ -515,6 +525,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
         public ISourceReplacementEffect? AlternativeSource { get; set; }
@@ -554,7 +566,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
             uint targetFrame,
             int targetWidth,
             int targetHeight,
-            bool forceResize,
             IPicture.PicturePixelMode targetPPB)
         {
             if (VirtualSource is null)
@@ -571,7 +582,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             return VirtualSource
                 .Generate(targetFrame, hasAlpha: true)
-                .Resize(targetWidth, targetHeight, forceResize)
+                .Resize(targetWidth, targetHeight, true)
                 .ToBitPerPixel(targetPPB);
         }
 

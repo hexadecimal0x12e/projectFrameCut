@@ -3482,6 +3482,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             pasted.TargetHeight = dto.TargetHeight;
             pasted.TargetX = dto.TargetX;
             pasted.TargetY = dto.TargetY;
+            pasted.StartingX = dto.StartingX;
+            pasted.StartingY = dto.StartingY;
             pasted.ExtraData = dto.MetaData?.ToDictionary(kv => kv.Key, kv => kv.Value) ?? new Dictionary<string, object>();
             pasted.Effects = dto.Effects?.ToDictionary(
                 e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,

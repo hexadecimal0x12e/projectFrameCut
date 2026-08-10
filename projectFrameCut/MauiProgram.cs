@@ -215,15 +215,14 @@ namespace projectFrameCut
                 AssemblyName = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut";
             }
             catch { }
-            Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} \r\n" +
-                $"                  {ProgramConfig}@{ProgramCommit},\r\n" +
-                $"                  on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture},\r\n" +
-                $"                  os version {Environment.OSVersion}/{DeviceInfo.Version},\r\n" +
-                $"                  clr version {Environment.Version},\r\n" +
-#if WINDOWS
-                $"                  PackageFullName: {WinUI.App.GetPackageFullName()},\r\n" +
-#endif
-                $"                  cmdline: {Environment.CommandLine}");
+            Log($"""
+                projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} 
+                                  {ProgramConfig}@{ProgramCommit},
+                                  on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture},
+                                  os version {Environment.OSVersion}/{DeviceInfo.Version},
+                                  clr version {Environment.Version},
+                                  cmdline: {Environment.CommandLine}
+                """);
             Log("Copyright (c) hexadecimal0x12e 2025-2026, and thanks to other open-source code's authors.");
             Log($"BasicDataPath:{BasicDataPath}, DataPath:{DataPath}");
             try

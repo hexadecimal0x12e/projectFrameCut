@@ -274,14 +274,14 @@ internal sealed class TransformClipDynamicPreviewProvider : InternalClipDynamicP
                 targetWidth: targetWidth,
                 targetHeight: targetHeight,
                 frameIndex: frameIndex,
-                frameResolver: static (frame, state) => state.Clip.GetFrame(frame, state.TargetWidth, state.TargetHeight, true, IPicture.PicturePixelMode.BytePicture),
+                frameResolver: static (frame, state) => state.Clip.GetFrame(frame, state.TargetWidth, state.TargetHeight, IPicture.PicturePixelMode.BytePicture),
                 state: (Clip: clip, TargetWidth: targetWidth, TargetHeight: targetHeight),
                 out frame);
         }
 
         try
         {
-            frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+            frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, IPicture.PicturePixelMode.BytePicture);
             return true;
         }
         catch

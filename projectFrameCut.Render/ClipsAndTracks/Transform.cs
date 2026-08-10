@@ -38,6 +38,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
 
         public bool NeedFilePath => false;
 
@@ -70,11 +72,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex) => throw new NotSupportedException("Use TransformProcesser.");
-
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
-        {
-            throw new NotSupportedException("Use TransformProcesser.");
-        }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
         {

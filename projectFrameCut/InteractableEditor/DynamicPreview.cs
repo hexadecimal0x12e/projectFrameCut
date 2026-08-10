@@ -1340,7 +1340,7 @@ public sealed class DynamicPreview : IDisposable
                 if (!TryGetResizedFallbackFrame(cacheKey, out frame)
                     && !TryGetResizedFallbackFromDisk(cacheKey, out frame))
                 {
-                    frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+                    frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, IPicture.PicturePixelMode.BytePicture);
                 }
 
                 if (frame is not null)
@@ -1366,7 +1366,7 @@ public sealed class DynamicPreview : IDisposable
                     if (!TryGetResizedFallbackFrame(cacheKey, out frame)
                         && !TryGetResizedFallbackFromDisk(cacheKey, out frame))
                     {
-                        frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+                        frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, IPicture.PicturePixelMode.BytePicture);
                     }
 
                     if (frame is not null)
@@ -1413,7 +1413,7 @@ public sealed class DynamicPreview : IDisposable
             if (!TryGetResizedFallbackFrame(cacheKey, out frame)
                 && !TryGetResizedFallbackFromDisk(cacheKey, out frame))
             {
-                frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
+                frame = clip.GetFrame(frameIndex, targetWidth, targetHeight, IPicture.PicturePixelMode.BytePicture);
             }
 
             if (frame is not null)

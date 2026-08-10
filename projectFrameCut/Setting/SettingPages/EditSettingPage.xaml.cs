@@ -304,7 +304,7 @@ public partial class EditSettingPage : ContentPage
                         var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
                         var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
 
-                        var textPic = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
+                        var textPic = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, 8);
 
                         b.AddText(SettingLocalizedResources.Edit_AddView_Text_Template_TemplateItem(e.Key))
                          .AddCustomChild(new Image { Source = textPic.ToImageSource(), Aspect = Aspect.AspectFit, HeightRequest = imgHeight, WidthRequest = Math.Min(imgWidth, 600), HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start, Margin = new Thickness(0), Background = Color.FromRgb((255 - e.Value.r / 257), (255 - e.Value.g / 257), (255 - e.Value.b / 257)) })

@@ -42,54 +42,65 @@ namespace projectFrameCut.LivePreview
 
         public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight)
         {
-            ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
-            (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
-            LogDiagnostic($"[LiveRender] RenderOne request: frame #{frameIndex}");
-            var frameHash = Timeline.GetFrameHash(Clips, frameIndex);
-            var cacheKey = BuildFrameCacheKey(frameHash, targetWidth, targetHeight);
-            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{cacheKey}.png");
-            LogDiagnostic($"[LiveRender] FrameHash:{frameHash}");
-            if (Path.Exists(destPath))
+            try
             {
-                LogDiagnostic($"[LiveRender] Frame already exist; skip");
+                ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
+                (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
+                LogDiagnostic($"[LiveRender] RenderOne request: frame #{frameIndex}");
+                var frameHash = Timeline.GetFrameHash(Clips, frameIndex);
+                var cacheKey = BuildFrameCacheKey(frameHash, targetWidth, targetHeight);
+                var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{cacheKey}.png");
+                LogDiagnostic($"[LiveRender] FrameHash:{frameHash}");
+                if (Path.Exists(destPath))
+                {
+                    LogDiagnostic($"[LiveRender] Frame already exist; skip");
+                    return destPath;
+                }
+                else
+                {
+                    LogDiagnostic($"[LiveRender] Generating frame #{frameIndex} ({frameHash})...");
+                }
+                foreach (var item in Clips)
+                {
+                    try
+                    {
+                        item.ReInit(8);
+                        if (!ClipInitializationFailure.HasDeferredFailures(item.ExtraData))
+                            ClipInitializationFailure.Clear(item);
+                    }
+                    catch (Exception ex)
+                    {
+                        ClipInitializationFailure.Mark(item, "Source or ResolveEffect", ex);
+                        Log(ex, $"Initialize live-render clip {item.Name} ({item.Id}); using checkerboard fallback", this);
+                    }
+                }
+                var layers = Timeline.GetFramesInOneFrame(
+                    Clips,
+                    frameIndex,
+                    targetWidth,
+                    targetHeight,
+                    projectRelativeWidth: ProjectRelativeWidth,
+                    projectRelativeHeight: ProjectRelativeHeight);
+                var pic = Timeline.MixtureLayers(
+                    layers,
+                    frameIndex,
+                    targetWidth,
+                    targetHeight,
+                    autoCenterImplicitClip: true,
+                    projectRelativeWidth: ProjectRelativeWidth,
+                    projectRelativeHeight: ProjectRelativeHeight);
+                pic.ToBitPerPixel(8).SaveToPng(destPath);
+
                 return destPath;
             }
-            else
+            catch (Exception ex)
             {
-                LogDiagnostic($"[LiveRender] Generating frame #{frameIndex} ({frameHash})...");
+                Log(ex, $"Render frame #{frameIndex}", this);
+                var errFrame = ClipInitializationFailure.CreateFallbackFrame(targetWidth, targetHeight, 8, "Rendering", ex.Message);
+                var destPath = Path.Combine(TempPath, $"projectFrameCut_RenderError_{frameIndex}.png");
+                errFrame.SaveToPng(destPath);
+                return destPath;
             }
-            foreach (var item in Clips)
-            {
-                try
-                {
-                    item.ReInit(8);
-                    if (!ClipInitializationFailure.HasDeferredFailures(item.ExtraData))
-                        ClipInitializationFailure.Clear(item);
-                }
-                catch (Exception ex)
-                {
-                    ClipInitializationFailure.Mark(item, "Source or ResolveEffect", ex);
-                    Log(ex, $"Initialize live-render clip {item.Name} ({item.Id}); using checkerboard fallback", this);
-                }
-            }
-            var layers = Timeline.GetFramesInOneFrame(
-                Clips,
-                frameIndex,
-                targetWidth,
-                targetHeight,
-                forceResize: true,
-                projectRelativeWidth: ProjectRelativeWidth,
-                projectRelativeHeight: ProjectRelativeHeight);
-            var pic = Timeline.MixtureLayers(
-                layers,
-                frameIndex,
-                targetWidth,
-                targetHeight,
-                autoCenterImplicitClip: true,
-                projectRelativeWidth: ProjectRelativeWidth,
-                projectRelativeHeight: ProjectRelativeHeight);
-            pic.ToBitPerPixel(8).SaveToPng(destPath);
-            return destPath;
         }
 
         public IPicture GetFrame(uint frameIndex, int targetWidth, int targetHeight)
@@ -101,7 +112,6 @@ namespace projectFrameCut.LivePreview
                 frameIndex,
                 targetWidth,
                 targetHeight,
-                forceResize: true,
                 projectRelativeWidth: ProjectRelativeWidth,
                 projectRelativeHeight: ProjectRelativeHeight);
             var pic = Timeline.MixtureLayers(

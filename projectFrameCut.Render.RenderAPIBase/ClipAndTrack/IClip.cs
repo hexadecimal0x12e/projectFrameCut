@@ -84,6 +84,20 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// The target Y-axis position of this clip in left-top corner. Related to <see cref="Project.ProjectJSONStructure.RelativeHeight"/>.
         /// </summary>
         public int TargetY { get; set; }
+        /// <summary>
+        /// The starting X-axis position of this clip in the source. Related to <see cref="Project.ProjectJSONStructure.RelativeWidth"/>.
+        /// </summary>
+        /// <remarks>
+        /// Used for decoder-side cropping.
+        /// </remarks>
+        public int StartingX { get; set; }
+        /// <summary>
+        /// The starting Y-axis position of this clip in the source. Related to <see cref="Project.ProjectJSONStructure.RelativeWidth"/>.
+        /// </summary>
+        /// <remarks>
+        /// Used for decoder-side cropping.
+        /// </remarks>
+        public int StartingY { get; set; }
 
         /// <summary>
         /// The source's frame time (1 / frame rate) of this clip, in seconds.
@@ -169,7 +183,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </remarks>
         /// <param name="frameIndex">frame index related to the source.</param>
         /// <returns>the frame (<paramref name="frameIndex"/>) in <b>SOURCE, WITH SPECIFIC SIZE IN <paramref name="requiredWidth"/> * <paramref name="requiredHeight"/>.</b></returns>
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, bool forceResize, IPicture.PicturePixelMode targetPPB);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB);
 
         /// <summary>
         /// Re-initialize the clip. Call this function when the source file is changed and you want to reload it.
@@ -180,19 +194,12 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public void ReInit(IPicture.PicturePixelMode targetPPB);
 
         /// <summary>
-        /// Gets a frame relative to source start point. Kept for compatibility.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
-            => GetFrameRelativeToStartPointOfSource(frameIndex, requiredWidth, requiredHeight, true, targetPPB);
-
-        /// <summary>
         /// Gets a frame at draft-global frame index.
         /// </summary>
         [DebuggerNonUserCode()]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
-            => GetFrameRelativeToStartPointOfSource(GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight, forceResize, targetPPB);
+        public IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
+            => GetFrameRelativeToStartPointOfSource(GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight, targetPPB);
 
         /// <summary>
         /// Gets the effective timeline duration for this clip after applying speed ratio/profile.
@@ -239,10 +246,12 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <returns>the index of frame relative to the source, or null if the frame you want is not available (probably because of little overlap caused by rounding) </returns>
         /// <exception cref="IndexOutOfRangeException">Frame is not exist in this clip.</exception>
         [DebuggerNonUserCode()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public uint? GetRelativeFrameIndex(uint targetFrame)
             => TryGetRelativeFrameIndex(targetFrame, null) ?? throw new IndexOutOfRangeException($"Frame #{targetFrame} is not in clip [{StartFrame}, {StartFrame + GetEffectiveDuration()}).");
 
         [DebuggerNonUserCode()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public uint? TryGetRelativeFrameIndex(uint targetFrame, uint? onFail)
         {
             long offsetFromClipStart = (long)targetFrame - StartFrame;

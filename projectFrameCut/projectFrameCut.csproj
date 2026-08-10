@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 		<PropertyGroup>
 			<TargetFrameworks>net10.0-android;net11.0-ios;net11.0-maccatalyst</TargetFrameworks>
@@ -167,6 +167,7 @@
 			<!-- removing the annoying refs from Solution resource manager and application package (we'll bundle them somewhere else) -->
 			<None Remove="$(UserHome)\.nuget\packages\microsoft.powershell.sdk\*\contentFiles\**\*" Visible="false" />
 			<None Remove="$(UserHome)\.nuget\packages\kawazu\*\contentFiles\**\*" />
+			<None Remove="Platforms\Windows\pjfc-cli.exe" />
 		</ItemGroup>
 
 		<ItemGroup>
@@ -178,6 +179,7 @@
 		</ItemGroup>
 
 		<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+			<StartupObject>projectFrameCut.WinUI.Program</StartupObject>
 			<DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN;DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION</DefineConstants>
 		</PropertyGroup>
 
@@ -189,6 +191,7 @@
 			<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
 			<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
 			<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+			<MauiAsset Include="Platforms\Windows\pjfc-cli.exe" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		</ItemGroup>
 
 		<ItemGroup Condition="'$(BuildingInsideVisualStudio)' != 'true' and '$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">

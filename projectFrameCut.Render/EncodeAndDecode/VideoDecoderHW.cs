@@ -252,6 +252,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         [DebuggerNonUserCode()]
         public IPicture<byte> GetFrame(uint targetFrame, bool hasAlpha)
+            => GetFrameCore(targetFrame, hasAlpha, null);
+
+        public IPicture<byte> GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
+            int targetWidth, int targetHeight, bool hasAlpha = false)
+            => GetFrameCore(targetFrame, hasAlpha,
+                new VideoFrameRegion(sourceX, sourceY, sourceWidth, sourceHeight, targetWidth, targetHeight));
+
+        public IPicture<byte> GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha = false)
+            => GetFrame(targetFrame, 0, 0, _width, _height, targetWidth, targetHeight, hasAlpha);
+
+        private IPicture<byte> GetFrameCore(uint targetFrame, bool hasAlpha, VideoFrameRegion? region)
         {
             bool lockTaken = false;
             try
@@ -268,7 +279,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 EnsureDecoderReady(targetFrame);
 
                 // Try disk cache before decoding
-                if (IVideoSource.EnableDiskCache && _diskCache.TryLoad8bpp(targetFrame, out var diskFrame))
+                if (region is null && IVideoSource.EnableDiskCache && _diskCache.TryLoad8bpp(targetFrame, out var diskFrame))
                 {
                     Index++;
                     return diskFrame;
@@ -353,7 +364,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 if (!frameFound)
                 {
                     if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
-                        return GetFrame(targetFrame - 1, hasAlpha);
+                        return GetFrameCore(targetFrame - 1, hasAlpha, region);
 
                     double fps = _fps > 0 ? _fps : 1.0;
                     double seconds = targetFrame / fps;
@@ -361,8 +372,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 }
 
                 Index++;
-                var picture = ConvertCurrentDecodedFrame(hasAlpha, targetFrame);
-                CacheFinalFrame(targetFrame, picture);
+                var picture = ConvertCurrentDecodedFrame(hasAlpha, targetFrame, region);
+                if (region is null)
+                    CacheFinalFrame(targetFrame, picture);
                 return picture;
             }
             finally
@@ -429,11 +441,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (!IVideoSource.EnableDiskCache)
                 return;
 
-            var picture = ConvertCurrentDecodedFrame(hasAlpha, frameNumber);
+            var picture = ConvertCurrentDecodedFrame(hasAlpha, frameNumber, null);
             CacheFinalFrame(frameNumber, picture);
         }
 
-        private Picture8bpp ConvertCurrentDecodedFrame(bool hasAlpha, uint frameNumber)
+        private Picture8bpp ConvertCurrentDecodedFrame(bool hasAlpha, uint frameNumber, VideoFrameRegion? region)
         {
             AVFrame* srcFrame = _frm;
 
@@ -449,6 +461,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (srcFrame->width != _width || srcFrame->height != _height)
             {
                 Log($"[DecoderContextHW] Frame dimensions mismatch: expected {_width}x{_height}, got {srcFrame->width}x{srcFrame->height} for '{_path}' frame {frameNumber}.", "warning");
+            }
+
+            if (region is VideoFrameRegion requestedRegion)
+            {
+                return FFmpegFrameCropScaler.Scale(
+                    srcFrame,
+                    requestedRegion.SourceX, requestedRegion.SourceY,
+                    requestedRegion.SourceWidth, requestedRegion.SourceHeight,
+                    requestedRegion.TargetWidth, requestedRegion.TargetHeight,
+                    AVPixelFormat.AV_PIX_FMT_BGR24,
+                    (data, stride, width, height) => PixelsToPicture(
+                        data, stride, width, height, hasAlpha, _path, frameNumber, height));
             }
 
             if (_sws == null || _lastPixelFormat != (AVPixelFormat)srcFrame->format)

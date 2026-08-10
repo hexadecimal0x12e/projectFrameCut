@@ -4,6 +4,8 @@ using projectFrameCut.Render.Effect;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Drawing.Vector;
+using projectFrameCut.Render.Plugin;
+using System.Text.Json;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
@@ -47,6 +49,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
         public ISourceReplacementEffect? AlternativeSource { get; set; }
@@ -55,7 +59,32 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
-        public IPicture GetContent(int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => source?.Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB) ?? throw new NullReferenceException("Source is null. Please init it.");
+        public IPicture GetContent(int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
+        {
+            ArgumentNullException.ThrowIfNull(source, $"PhotoClip {Id}'s source is null. Please init it.");
+
+            bool directCropEnabled = ExtraData?.TryGetValue("__Internal_DirectCropEnabled__", out var directCropRaw) == true
+                && (directCropRaw is true
+                    || directCropRaw is JsonElement { ValueKind: JsonValueKind.True }
+                    || bool.TryParse(directCropRaw?.ToString(), out var parsedDirectCrop) && parsedDirectCrop);
+            if (directCropEnabled || StartingX > 0 || StartingY > 0)
+            {
+                var cropper = new CropEffect_HwAccel
+                {
+                    Width = targetWidth,
+                    Height = targetHeight,
+                    StartX = StartingX,
+                    StartY = StartingY,
+                    RelativeWidth = 0,
+                    RelativeHeight = 0,
+                };
+                return cropper.Render(source, PluginManager.CreateComputer(cropper.NeedComputer), targetWidth, targetHeight).ToBitPerPixel(targetPPB);
+            }
+            else
+            {
+                return source.Resize(targetWidth, targetHeight, true).ToBitPerPixel(targetPPB);
+            }
+        }
 
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {

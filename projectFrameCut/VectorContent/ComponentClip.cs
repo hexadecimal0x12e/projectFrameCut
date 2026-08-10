@@ -185,6 +185,10 @@ public partial class VectorComponentWrapperClip : IClip
 
     public int TargetY { get; set; }
 
+    public int StartingX { get; set; }
+
+    public int StartingY { get; set; }
+
     public bool ShowDefaultClipBorder { get; set; } = true;
 
     // ── Effects / source (minimal — no effects for components) ──
@@ -368,7 +372,6 @@ public partial class VectorComponentWrapperClip : IClip
         uint frameIndex,
         int requiredWidth,
         int requiredHeight,
-        bool forceResize,
         IPicture.PicturePixelMode targetPPB)
     {
         int w = Math.Max(1, requiredWidth);

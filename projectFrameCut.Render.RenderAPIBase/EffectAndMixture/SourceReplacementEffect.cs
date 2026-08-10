@@ -11,7 +11,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     /// This can be used for effects which enhance or modify the source content, such as super-resolution, or frame interpolation, or other AI-based enhancements.
     /// </summary>
     /// <remarks>
-    /// When this exists, render pipeline will no longer decode the original source of the clip via <see cref="IClip.GetFrameRelativeToStartPointOfSource(uint, int, int, bool, IPicture.PicturePixelMode)"/>, but instead will use the new source provided by this effect.
+    /// When this exists, render pipeline will no longer decode the original source of the clip via <see cref="IClip.GetFrameRelativeToStartPointOfSource(uint, int, int, IPicture.PicturePixelMode)"/>, but instead will use the new source provided by this effect.
     /// </remarks>
     public interface ISourceReplacementEffect : IEffect
     {

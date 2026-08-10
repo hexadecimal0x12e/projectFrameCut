@@ -969,7 +969,7 @@ public partial class TestPage : ContentPage
             for (int i = 0; i < 1; i++)
             {
                 c.TextEntries = [te with { Text = $"Frame {i}" }];
-                var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, false, 16);
+                var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, 16);
                 textFrame.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 var t = HDRPicture16bpp.ToHDRPictureBySignal(textFrame, 5000);
                 Log(t.GetDiagnosticsInfo());

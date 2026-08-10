@@ -40,6 +40,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
         public float FrameTime { get; init; }
 
         [JsonIgnore]
@@ -185,7 +187,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public IPicture GetFrameRelativeToStartPointOfSource(
             uint frameIndex, int requiredWidth, int requiredHeight,
-            bool forceResize, IPicture.PicturePixelMode targetPPB)
+            IPicture.PicturePixelMode targetPPB)
         {
             var vectorPicture = GetVectorPictureRelativeToStartPointOfSource(
                 frameIndex, requiredWidth, requiredHeight);
@@ -329,6 +331,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
         public float FrameTime { get; init; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }

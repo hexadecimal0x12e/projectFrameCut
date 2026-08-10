@@ -419,6 +419,7 @@ public partial class DraftEffectBindingView : ContentView
 
         // Normalize provider-owned configuration and project it directly into drawable connections.
         NormalizeBindingConfiguration();
+        RefreshBindingDiagnosticIndicators();
         RebuildConnections();
         ApplySavedViewTransform();
         ConnectionsLayer.Invalidate();
@@ -578,6 +579,8 @@ public partial class DraftEffectBindingView : ContentView
     private VerticalStackLayout CreateNodeView(NodeViewModel node)
     {
         ArgumentNullException.ThrowIfNull(node);
+        var bindingDiagnostics = GetBindingDiagnostics(node);
+        node.BindingDiagnosticSignature = GetBindingDiagnosticSignature(bindingDiagnostics);
         var container = new VerticalStackLayout
         {
             Spacing = 0,
@@ -586,16 +589,18 @@ public partial class DraftEffectBindingView : ContentView
             InputTransparent = false
         };
 
-        var borderColor = node.Kind switch
-        {
-            NodeKind.Effect => Colors.Gray,
-            _ => Colors.White,
-        };
+        var borderColor = bindingDiagnostics.Count > 0
+            ? Colors.OrangeRed
+            : node.Kind switch
+            {
+                NodeKind.Effect => Colors.Gray,
+                _ => Colors.White,
+            };
 
         var frame = new Border
         {
             Stroke = borderColor,
-            StrokeThickness = node.Kind == NodeKind.Effect ? 2 : 4,
+            StrokeThickness = bindingDiagnostics.Count > 0 ? 4 : node.Kind == NodeKind.Effect ? 2 : 4,
             StrokeShape = new RoundRectangle { CornerRadius = 5 },
             BackgroundColor = Color.FromArgb("#2d2d2d"),
             Padding = 5,
@@ -623,6 +628,11 @@ public partial class DraftEffectBindingView : ContentView
         };
 
         ToolTipProperties.SetText(label, title);
+        if (bindingDiagnostics.Count > 0)
+        {
+            ToolTipProperties.SetText(frame,
+                string.Join(Environment.NewLine, bindingDiagnostics.Select(d => $"[{d.Code}] {d.Message}")));
+        }
 
         // ── Parameter display strip (above or below the frame, read-only) ──
         VerticalStackLayout? paramStack = null;
@@ -716,6 +726,20 @@ public partial class DraftEffectBindingView : ContentView
         container.Add(frame);
 
         if (paramStack is not null && !paramsOnTop) container.Add(paramStack);
+
+        if (bindingDiagnostics.Count > 0)
+        {
+            container.Add(new Label
+            {
+                Text = string.Join(Environment.NewLine, bindingDiagnostics.Select(d => $"⚠ [{d.Code}] {d.Message}")),
+                TextColor = Colors.OrangeRed,
+                FontSize = 11,
+                FontAttributes = FontAttributes.Bold,
+                LineBreakMode = LineBreakMode.WordWrap,
+                MaximumWidthRequest = 320,
+                Margin = new Thickness(4, 3, 4, 0)
+            });
+        }
 
         var arrow = new BoxView
         {
@@ -1597,7 +1621,12 @@ public partial class DraftEffectBindingView : ContentView
             if (ui is IBindingHostHolder bindingHostHolder && _clip is not null)
             {
                 bindingHostHolder.BindingHost = new ClipBindingHost(_clip, node.Provider, _page,
-                    onChanged: () => { NotifyEffectBundlesChanged(); RefreshSelectedNode(); });
+                    onChanged: () =>
+                    {
+                        OnBindingConfigurationChanged();
+                        NotifyEffectBundlesChanged();
+                        RefreshSelectedNode();
+                    });
             }
             var ppb = ui.CreateUI(node.Provider);
             ArgumentNullException.ThrowIfNull(ppb, $"CreateUI() for {node.Provider?.TypeName}");
@@ -1792,7 +1821,7 @@ public partial class DraftEffectBindingView : ContentView
 
         try
         {
-            var srcFrame = clip.GetFrameRelativeToStartPointOfSource(0, 1280, 720, true, 8);
+            var srcFrame = clip.GetFrameRelativeToStartPointOfSource(0, 1280, 720, 8);
             if (_inputNode is not null)
             {
                 await UpdateNodePreview(_inputNode, srcFrame);
@@ -1928,6 +1957,7 @@ public partial class DraftEffectBindingView : ContentView
         public required NodeKind Kind;
         public required IEffectProvider? Provider;
         public View? View;
+        public string BindingDiagnosticSignature = string.Empty;
         public double X, Y;
 
         /// <summary>
@@ -2076,6 +2106,36 @@ public partial class DraftEffectBindingView : ContentView
     }
 
     /// <summary>
+    /// Returns diagnostics owned by an effect node. Diagnostics without a provider id describe
+    /// graph-wide output state and are therefore attached to the output system node.
+    /// </summary>
+    private IReadOnlyList<EffectBindingHelper.BindingDiagnostic> GetBindingDiagnostics(NodeViewModel node)
+    {
+        if (_clip?.EffectProviders is not { } providers) return [];
+        var diagnostics = EffectBindingHelper.ValidateBindings(providers);
+        return node.Kind switch
+        {
+            NodeKind.Effect => diagnostics.Where(d => d.ProviderId == node.Id).ToList(),
+            NodeKind.Output => diagnostics.Where(d => d.ProviderId is null).ToList(),
+            _ => []
+        };
+    }
+
+    private static string GetBindingDiagnosticSignature(IEnumerable<EffectBindingHelper.BindingDiagnostic> diagnostics) =>
+        string.Join("\n", diagnostics.Select(d => $"{d.ProviderId}|{d.Code}|{d.Message}"));
+
+    /// <summary>Recreates node visuals so newly added or resolved binding diagnostics are visible immediately.</summary>
+    private void RefreshBindingDiagnosticIndicators()
+    {
+        foreach (var node in _nodes.Values.ToList())
+        {
+            var signature = GetBindingDiagnosticSignature(GetBindingDiagnostics(node));
+            if (!string.Equals(signature, node.BindingDiagnosticSignature, StringComparison.Ordinal))
+                RecreateNodeView(node);
+        }
+    }
+
+    /// <summary>
     /// 公开读取当前配置的 UI 图快照。效果/系统/自由字段节点以 <see cref="IEffectProvider.Id"/>、锚点 GUID 或
     /// 自由字段 GlobalId 标识；返回值不作为可写配置源。
     /// </summary>
@@ -2217,6 +2277,7 @@ public partial class DraftEffectBindingView : ContentView
         var diagnostics = EffectBindingHelper.ValidateBindings(providers);
         if (diagnostics.Count > 0)
             SetStatusText(string.Join(Environment.NewLine, diagnostics.Select(d => d.Message)));
+        RefreshBindingDiagnosticIndicators();
         ScheduleProviderRebuild();
     }
 

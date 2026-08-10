@@ -230,7 +230,7 @@ namespace projectFrameCut.Render.Rendering
                     }
                 },
             };
-            return clip.GetFrameRelativeToStartPointOfSource(0, width, height, true, 8);
+            return clip.GetFrameRelativeToStartPointOfSource(0, width, height, 8);
         }
     }
 }

@@ -96,6 +96,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
 
 
@@ -112,16 +114,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint? GetClipLength() => null;
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
-        {
-            throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
-        }
-
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
-        {
-            throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
-        }
-
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
         {
             throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
         }

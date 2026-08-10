@@ -33,7 +33,6 @@ namespace projectFrameCut.Render.Rendering
             uint targetFrame,
             int targetWidth,
             int targetHeight,
-            bool forceResize = false,
             IPicture.PicturePixelMode? targetPPB = null,
             int projectRelativeWidth = 0,
             int projectRelativeHeight = 0)
@@ -99,7 +98,7 @@ namespace projectFrameCut.Render.Rendering
                         }
                         else
                         {
-                            frame = clip.GetFrameRelativeToStartPointOfSource(actualFrame, clipTargetWidth, clipTargetHeight, forceResize, ppb);
+                            frame = clip.GetFrameRelativeToStartPointOfSource(actualFrame, clipTargetWidth, clipTargetHeight, ppb);
                         }
                     }
                     catch (Exception ex)

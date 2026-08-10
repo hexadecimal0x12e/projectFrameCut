@@ -10,11 +10,11 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 {
     public interface IImmutableContentClip : IClip
     {
-        public IPicture GetContent(int width, int height, bool forceResize, IPicture.PicturePixelMode targetPPB);
+        public IPicture GetContent(int width, int height, IPicture.PicturePixelMode targetPPB);
 
-        IPicture IClip.GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => GetContent(requiredWidth, requiredHeight, forceResize, targetPPB);
+        IPicture IClip.GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB) => GetContent(requiredWidth, requiredHeight, targetPPB);
 
-        IPicture IClip.GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => GetContent(targetWidth, targetHeight, forceResize, targetPPB);
+        IPicture IClip.GetFrame(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB) => GetContent(targetWidth, targetHeight, targetPPB);
 
     }
     public interface IImmutableVectorContentClip : IVectorContentClip, IImmutableContentClip
@@ -24,9 +24,9 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         VectorPicture IVectorContentClip.GetVectorPictureRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight)
             => GetVectorPicture(requiredWidth, requiredHeight);
 
-        IPicture IImmutableContentClip.GetContent(int width, int height, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        IPicture IImmutableContentClip.GetContent(int width, int height, IPicture.PicturePixelMode targetPPB)
         {
-            return GlobalDefaultRasterizer.Convert(GetVectorPicture(width, height), width, height, forceResize, GlobalDefaultAntiAliasMode).ToBitPerPixel(targetPPB);
+            return GlobalDefaultRasterizer.Convert(GetVectorPicture(width, height), width, height, true, GlobalDefaultAntiAliasMode).ToBitPerPixel(targetPPB);
         }
     }
 }

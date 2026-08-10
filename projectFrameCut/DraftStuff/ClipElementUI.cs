@@ -77,6 +77,8 @@ namespace projectFrameCut.DraftStuff
         public int TargetHeight { get; set; } = 0;
         public int TargetX { get; set; } = 0;
         public int TargetY { get; set; } = 0;
+        public int StartingX { get; set; } = 0;
+        public int StartingY { get; set; } = 0;
         public int SubLayerIndex { get; set; } = 0;
         public int SubTrackIndex
         {

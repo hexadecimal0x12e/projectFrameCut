@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Effect;
+using projectFrameCut.Drawing.Processing.Resizing;
 
 namespace projectFrameCut.Render.RenderAPIBase.Sources
 {
@@ -54,6 +56,59 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// <param name="hasAlpha">keep the alpha channel if true</param>
         /// <returns>the frame</returns>
         abstract IPicture GetFrame(uint targetFrame, bool hasAlpha = false);
+
+        /// <summary>
+        /// Reads a frame, crops a rectangle in source coordinates, and scales it to the requested output size.
+        /// Decoder implementations may override this method to perform the conversion before the frame leaves
+        /// the decoder. The default implementation preserves compatibility with third-party decoders.
+        /// </summary>
+        public virtual IPicture GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
+            int targetWidth, int targetHeight, bool hasAlpha = false)
+        {
+            ValidateFrameRegion(sourceX, sourceY, sourceWidth, sourceHeight, targetWidth, targetHeight);
+
+            IPicture result = GetFrame(targetFrame, hasAlpha);
+            try
+            {
+                if (sourceX != 0 || sourceY != 0 || sourceWidth != result.Width || sourceHeight != result.Height)
+                {
+                    var cropped = CropEffect.Process(result, sourceX, sourceY, sourceWidth, sourceHeight);
+                    result.Dispose();
+                    result = cropped;
+                }
+
+                if (result.Width != targetWidth || result.Height != targetHeight)
+                {
+                    var resized = result.Resize(targetWidth, targetHeight, preserveAspect: false);
+                    result.Dispose();
+                    result = resized;
+                }
+
+                return result;
+            }
+            catch
+            {
+                result.Dispose();
+                throw;
+            }
+        }
+
+        /// <summary>Reads and scales the complete source frame.</summary>
+        public virtual IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha = false)
+            => GetFrame(targetFrame, 0, 0, Width, Height, targetWidth, targetHeight, hasAlpha);
+
+        private void ValidateFrameRegion(int sourceX, int sourceY, int sourceWidth, int sourceHeight,
+            int targetWidth, int targetHeight)
+        {
+            if (sourceX < 0 || sourceY < 0)
+                throw new ArgumentOutOfRangeException(nameof(sourceX), "The crop origin must be non-negative.");
+            if (sourceWidth <= 0 || sourceHeight <= 0)
+                throw new ArgumentOutOfRangeException(nameof(sourceWidth), "The crop size must be positive.");
+            if (targetWidth <= 0 || targetHeight <= 0)
+                throw new ArgumentOutOfRangeException(nameof(targetWidth), "The output size must be positive.");
+            if (sourceX > Width - sourceWidth || sourceY > Height - sourceHeight)
+                throw new ArgumentOutOfRangeException(nameof(sourceWidth), "The crop rectangle must be inside the decoded frame.");
+        }
         /// <summary>
         /// The <see cref="GetFrame(uint, bool)"/> return's <seealso cref="IPicture.BitPerPixel"/> of the result frames.
         /// Return null if unknown or variable.
@@ -117,5 +172,53 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
     {
         public new IPicture<T> GetFrame(uint targetFrame, bool hasAlpha = false);
         IPicture IVideoSource.GetFrame(uint targetFrame, bool hasAlpha) => GetFrame(targetFrame, hasAlpha);
+
+        public new virtual IPicture<T> GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
+            int targetWidth, int targetHeight, bool hasAlpha = false)
+        {
+            if (sourceX < 0 || sourceY < 0 || sourceWidth <= 0 || sourceHeight <= 0 ||
+                sourceX > Width - sourceWidth || sourceY > Height - sourceHeight)
+                throw new ArgumentOutOfRangeException(nameof(sourceWidth), "The crop rectangle must be inside the decoded frame.");
+            if (targetWidth <= 0 || targetHeight <= 0)
+                throw new ArgumentOutOfRangeException(nameof(targetWidth), "The output size must be positive.");
+
+            IPicture<T> result = GetFrame(targetFrame, hasAlpha);
+            try
+            {
+                if (sourceX != 0 || sourceY != 0 || sourceWidth != result.Width || sourceHeight != result.Height)
+                {
+                    var cropped = (IPicture<T>)CropEffect.Process(
+                        (IPicture)result, sourceX, sourceY, sourceWidth, sourceHeight);
+                    result.Dispose();
+                    result = cropped;
+                }
+
+                if (result.Width != targetWidth || result.Height != targetHeight)
+                {
+                    var resized = (IPicture<T>)((IPicture)result).Resize(
+                        targetWidth, targetHeight, preserveAspect: false);
+                    result.Dispose();
+                    result = resized;
+                }
+
+                return result;
+            }
+            catch
+            {
+                result.Dispose();
+                throw;
+            }
+        }
+
+        IPicture IVideoSource.GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
+            int targetWidth, int targetHeight, bool hasAlpha)
+            => GetFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
+                targetWidth, targetHeight, hasAlpha);
+
+        public new virtual IPicture<T> GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha = false)
+            => GetFrame(targetFrame, 0, 0, Width, Height, targetWidth, targetHeight, hasAlpha);
+
+        IPicture IVideoSource.GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha)
+            => GetFrame(targetFrame, targetWidth, targetHeight, hasAlpha);
     }
 }

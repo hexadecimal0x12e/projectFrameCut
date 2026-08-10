@@ -325,6 +325,8 @@ namespace projectFrameCut.DraftStuff
                     TargetHeight = elem.TargetHeight,
                     TargetX = elem.TargetX,
                     TargetY = elem.TargetY,
+                    StartingX = elem.StartingX,
+                    StartingY = elem.StartingY,
                     MetaData = normalizedMeta,
                     Effects = null
                 };
@@ -396,6 +398,8 @@ namespace projectFrameCut.DraftStuff
                 TargetHeight = exportTargetHeight,
                 TargetX = elem.TargetX,
                 TargetY = elem.TargetY,
+                StartingX = elem.StartingX,
+                StartingY = elem.StartingY,
                 MetaData = normalizedMeta2,
                 Effects = elem.Effects?.Select((kv) =>
                 {
@@ -914,6 +918,8 @@ namespace projectFrameCut.DraftStuff
                 element.TargetHeight = dto.TargetHeight;
                 element.TargetX = dto.TargetX;
                 element.TargetY = dto.TargetY;
+                element.StartingX = dto.StartingX;
+                element.StartingY = dto.StartingY;
                 element.TypeName = dto.TypeName;
                 element.FromPlugin = dto.FromPlugin;
                 element.Effects = RestoreEffectsSafely(dto, proj.RelativeWidth, proj.RelativeHeight, element.ExtraData);
@@ -1150,6 +1156,8 @@ namespace projectFrameCut.DraftStuff
             element.TargetHeight = clip.TargetHeight;
             element.TargetX = clip.TargetX;
             element.TargetY = clip.TargetY;
+            element.StartingX = clip.StartingX;
+            element.StartingY = clip.StartingY;
 
             element.TypeName = clip.TypeName;
             element.FromPlugin = clip.FromPlugin;

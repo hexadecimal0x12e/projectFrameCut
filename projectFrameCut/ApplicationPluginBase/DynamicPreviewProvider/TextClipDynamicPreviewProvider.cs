@@ -79,7 +79,7 @@ internal sealed class TextClipDynamicPreviewProvider : InternalClipDynamicPrevie
         var clipW = target.TargetWidth > 0 ? Math.Max(1, target.TargetWidth) : Math.Max(1, projectW);
         var clipH = target.TargetHeight > 0 ? Math.Max(1, target.TargetHeight) : Math.Max(1, projectH);
 
-        var frame = clip.GetFrameRelativeToStartPointOfSource(0, clipW, clipH, true, IPicture.PicturePixelMode.BytePicture);
+        var frame = clip.GetFrameRelativeToStartPointOfSource(0, clipW, clipH, IPicture.PicturePixelMode.BytePicture);
 
         return new Image
         {

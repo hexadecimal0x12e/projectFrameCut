@@ -7,6 +7,7 @@ using Microsoft.Win32;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -31,11 +32,71 @@ namespace projectFrameCut.WinUI
         public static string PackageFamilyName { get; private set; } = "Portable";
 
         [STAThread] //avoid failed to initialize COM library error, cause a lot of issue like IME not work at all...
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
             System.Threading.Thread.CurrentThread.Name = "App Main thread";
             Debug.WriteLine($"projectFrameCut {Assembly.GetExecutingAssembly().GetName().Version}");
             Debug.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
+            try
+            {
+                if (args.Contains("--consoleLog"))
+                {
+                    MyLoggerExtensions.OnLog += (msg, level) =>
+                    {
+                        Console.WriteLine($"[{level}] {msg}");
+                    };
+                }
+                if (args.Contains("--log"))
+                {
+                    Thread logThread = new Thread(Helper.HelperProgram.LogMain);
+                    logThread.Priority = ThreadPriority.Highest;
+                    logThread.Name = "LogWindow thread";
+                    logThread.IsBackground = false;
+                    logThread.Start();
+                    LogWindowShowing = true;
+                    Log($"Logger window started.");
+                }
+                if (args.Contains("--logDiagnostic"))
+                {
+                    MyLoggerExtensions.LoggingDiagnosticInfo = true;
+                }
+                string processName = Process.GetCurrentProcess().ProcessName.ToLowerInvariant();
+                if (processName == "pjfc-cli" || processName == "pjfc-cli.exe" || processName == "dotnet.exe")
+                {
+                    if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
+                    {
+                        Console.Error.WriteLine("Sorry, projectFrameCut requires Windows 10 2004 / LTSC 2021 (build 19041) or higher to run.\r\nConsider upgrade your Windows system.");
+                        return 255;
+                    }
+                    if (!args.Contains("--quiet"))
+                    {
+                        Console.WriteLine($"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut"} {Assembly.GetExecutingAssembly().GetName().Version}");
+                        Console.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
+                    }
+                    if (args.Contains("--elevated") && !AdminServices.IsRunningAsAdministrator())
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "pjfc-cli.exe",
+                            Arguments = args.Aggregate("", (a, s) => $"{a} \"{s}\""),
+                            UseShellExecute = true,
+                            Verb = "runas"
+                        });
+                        return 0;
+                    }
+                    if (args.First() != "gui")
+                    {
+                        return CLIProgram.Main(args);
+                    }
+                    else
+                    {
+                        args = args.Skip(1).ToArray();
+                        Console.WriteLine($"Launching GUI with parameters: '{string.Join(" ", args)}'");
+                    }
+                }
+            }
+            catch { }
+
             try
             {
                 try
@@ -57,7 +118,7 @@ namespace projectFrameCut.WinUI
                             UseShellExecute = true
                         });
                     }
-                    return;
+                    return 255;
                 }
                 if (Services.AdminServices.IsRunningAsAdministrator())
                 {
@@ -67,12 +128,12 @@ namespace projectFrameCut.WinUI
                         "projectFrameCut",
                         0x10);
                     Environment.Exit(-1);
-                    return;
+                    return 65535;
                 }
-                if(args.Length >= 1 && args[0].StartsWith("pjfc:runtimeConfig", StringComparison.InvariantCultureIgnoreCase))
+                if (args.Length >= 1 && args[0].StartsWith("pjfc:runtimeConfig", StringComparison.InvariantCultureIgnoreCase))
                 {
                     ConfigHandler.ConfigureMain(args.Skip(1).ToArray());
-                    return;
+                    return 0;
                 }
 
                 try
@@ -173,24 +234,6 @@ namespace projectFrameCut.WinUI
                     splash.IsBackground = false;
                     splash.Start();
                 }
-
-                if (args.Any(c => c == "--log"))
-                {
-                    Thread logThread = new Thread(Helper.HelperProgram.LogMain);
-                    logThread.Priority = ThreadPriority.Highest;
-                    logThread.Name = "LogWindow thread";
-                    logThread.IsBackground = false;
-                    logThread.Start();
-                    LogWindowShowing = true;
-                    Log($"Logger window started.");
-                }
-                if (args.Any(c => c == "--consoleLog"))
-                {
-                    MyLoggerExtensions.OnLog += (msg, level) =>
-                    {
-                        Console.WriteLine($"[{level}] {msg}");
-                    };
-                }
                 if (args.Any(c => c.StartsWith("--basicUserData")))
                 {
                     var userDataPath = args.First(c => c.StartsWith("--basicUserData")).Split('=', 2)[1];
@@ -235,7 +278,7 @@ namespace projectFrameCut.WinUI
                 Log("Application exited.");
                 MauiProgram.LogWriter.Flush();
                 Environment.Exit(0);
-                return;
+                return 0;
             }
             catch (Exception ex)
             {
@@ -246,7 +289,7 @@ namespace projectFrameCut.WinUI
                 Crash(ex);
             }
 
-
+            return -1;
         }
 
         private static string[] ParseProtocolArgs(string[] args)
