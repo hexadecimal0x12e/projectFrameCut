@@ -1,6 +1,5 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.ClipsAndTracks.Text;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -10,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using projectFrameCut.Services;
 
 namespace projectFrameCut.ApplicationPluginBase.Text
 {
@@ -158,7 +158,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             var entries = BuildEntries();
             try
             {
-                var rect = TextMeasureHelper.MeasureBounds(entries, canvasWidth, canvasHeight);
+                var rect = TextServices.MeasureBounds(entries, canvasWidth, canvasHeight);
                 return new ClipPositionTuple((int)Math.Round(rect.X), (int)Math.Round(rect.Y), Math.Max(1, (int)Math.Ceiling(rect.Width)), Math.Max(1, (int)Math.Ceiling(rect.Height)), false);
             }
             catch
@@ -185,7 +185,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                         }
                         Parameters[EntriesJsonKey] = System.Text.Json.JsonSerializer.Serialize(list);
                         var migrated = TextEntryMigration.MigrateFromTextClipEntries(list);
-                        var rect = TextMeasureHelper.MeasureBounds(migrated, 1920, 1080);
+                        var rect = TextServices.MeasureBounds(migrated, 1920, 1080);
                         return (new Dictionary<string, string>(Parameters), Math.Max(1, (int)Math.Ceiling(rect.Width)), Math.Max(1, (int)Math.Ceiling(rect.Height)));
                     }
                     else if (args.Value is string js)
@@ -193,7 +193,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                         Parameters[EntriesJsonKey] = js;
                         var des = System.Text.Json.JsonSerializer.Deserialize<TextClipEntry[]>(js) ?? Array.Empty<TextClipEntry>();
                         var migrated = TextEntryMigration.MigrateFromTextClipEntries(des);
-                        var rect = TextMeasureHelper.MeasureBounds(migrated, 1920, 1080);
+                        var rect = TextServices.MeasureBounds(migrated, 1920, 1080);
                         return (new Dictionary<string, string>(Parameters), Math.Max(1, (int)Math.Ceiling(rect.Width)), Math.Max(1, (int)Math.Ceiling(rect.Height)));
                     }
                 }

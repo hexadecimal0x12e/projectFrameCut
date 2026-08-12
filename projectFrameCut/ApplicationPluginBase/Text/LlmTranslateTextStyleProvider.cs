@@ -3,7 +3,6 @@ using Microsoft.Maui.Graphics;
 using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
@@ -444,7 +443,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
             try
             {
-                var rect = TextMeasureHelper.MeasureBounds(entries, canvasWidth, canvasHeight);
+                var rect = TextServices.MeasureBounds(entries, canvasWidth, canvasHeight);
                 return new ClipPositionTuple(
                     (int)Math.Round(rect.X),
                     (int)Math.Round(rect.Y),
@@ -577,7 +576,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             if (entries.Length == 0) return (1f, 1f);
             try
             {
-                var rect = TextMeasureHelper.MeasureBounds(entries, 1920f, 1080f);
+                var rect = TextServices.MeasureBounds(entries, 1920f, 1080f);
                 return (Math.Max(1f, (float)Math.Ceiling(rect.Width)) + 15f, Math.Max(1f, (float)Math.Ceiling(rect.Height)) + 15f);
             }
             catch

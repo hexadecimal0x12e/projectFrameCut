@@ -29,7 +29,7 @@ namespace projectFrameCut.Services
         public static string GetAppPackageFileSync(params string[] paths)
         {
             if (!OperatingSystem.IsAndroid()) return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.Combine(paths));
-            return GetAppPackageFileSync(string.Join(Path.PathSeparator, paths));
+            return GetAppPackageFileSync(string.Join(OperatingSystem.IsWindows() ? '\\' : '/', paths));
         }
 
 
@@ -38,6 +38,7 @@ namespace projectFrameCut.Services
             if (!OperatingSystem.IsAndroid()) return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
             var cacheDir = Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "AppPackageFiles"));
             var tempFilePath = Path.Combine(cacheDir.FullName, path);
+            if (Path.GetDirectoryName(tempFilePath) is string dir) Directory.CreateDirectory(dir);
             if (File.Exists(tempFilePath)) return tempFilePath;
             var s = TaskHelper.SyncWait(() => FileSystem.OpenAppPackageFileAsync(path), cancellationToken: CancellationToken.None);
             if (s == null) throw new FileNotFoundException($"File {path} not found in app package.");

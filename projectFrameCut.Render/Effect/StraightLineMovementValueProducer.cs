@@ -104,6 +104,8 @@ namespace projectFrameCut.Render.Effect
 
         public override EffectTarget Target => EffectTarget.ValueProvider | EffectTarget.Video;
 
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
         protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields()
         {
             // A value provider has no picture input.

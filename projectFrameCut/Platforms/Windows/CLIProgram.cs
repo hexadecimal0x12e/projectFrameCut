@@ -74,8 +74,17 @@ Usage:
 
 Commands:
   gui       Launch the projectFrameCut graphical interface.
+  tui       Start the projectFrameCut text-based interface (TUI) in the console.
   help      Show general help or detailed help for a command.
+  reset     Reset the application to its default state by clearing settings.
   about     Show version and build information.
+
+Global options:
+  --elevated  Launch the CLI with elevated privileges (admin rights).
+              Note that the main application will cannot be run with 
+              elevated even if the GUI is launched from the CLI with this option.
+  --quiet     Suppress the pjfc-cli version banner and copyright notice. 
+              This option does not affect the GUI or other commands.
 
 Help options:
   -h, --help, /?    Show this help text.
@@ -112,30 +121,39 @@ Launch options:
   --userData=<path>                Override the user-data directory for one run
                                    (include your projects, assets, templates, 
                                    skills, and render cache).
+
                                    To change the user-data directory permanently, 
                                    use the Settings in the GUI or edit the config file.
 
   --basicUserData=<path>           Override the application-data directory used
                                    for settings and other internal state in one run.
 
-  --noSettings                     Do not persist setting changes made during this
-                                   run.
+  --noSettings                     Do not persist setting changes automatically
+                                   made during this run. The setting changes will 
+                                   be committed to the file only when this app closes 
+                                   normally.
 
   --disablePlugins                 Disable plugin-engine startup for this run.
 
-  --allowEnterPSHostProcess        Expose the named pipe for the PowerShell host to 
-                                   allow connecting the internal pwsh via Enter-PSHostProcess. 
-                                   This option is very DANGEROUS because it allows any 
-                                   local user to connect to the internal PowerShell host and 
-                                   execute arbitrary code in the context of projectFrameCut. 
-                                   Use with caution.
+  --scripting=disable|enableWithHostingPipe        
+                                   Control the scripting engine for this run. 
+                                   if this argument is omitted, the scripting engine 
+                                   is controlled by the user preferences.
+
+                                   'disable' disables scripting whatever the user preferences are.
+
+                                   'enableWithHostingPipe' is very dangerous and 
+                                   should only be used in a secure environment, because 
+                                   it allows arbitrary code execution from a remote process.
+
+                                   When scripting is disabled in the user preferences,  
+                                   the scripting engine is always disabled and this argument has no effect.
 
 Logging and diagnostics:
   --consoleLog                     Write application log messages to the console.
   --log                            Open the dedicated log window.
   --logDiagnostic                  Include diagnostic-level log messages.
-  --quiet                          Suppress the pjfc-cli version banner. This only
-                                   affects launches through pjfc-cli.
+
 
 Integration options:
   --mcpServer=<address>            Supply the MCP server address associated with

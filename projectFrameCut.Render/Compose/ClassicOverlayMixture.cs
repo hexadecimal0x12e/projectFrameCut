@@ -1,6 +1,5 @@
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.HwAccelContracts;
-using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -1290,6 +1289,8 @@ namespace projectFrameCut.Render.Compose
         public override EffectType TypeOfEffect => EffectType.MixtureProvider;
 
         public override EffectTarget Target => EffectTarget.Mixture;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {

@@ -5,7 +5,6 @@ using Microsoft.Maui.Platform;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.InteractableEditor;
@@ -1312,7 +1311,6 @@ public partial class HomePage : ContentPage
 
         try
         {
-            VideoClipDynamicPreviewProvider.DiskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "perClip");
             DynamicPreview.DiskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
         }
         catch (Exception ex)

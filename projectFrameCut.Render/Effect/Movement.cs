@@ -1,3 +1,4 @@
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
@@ -27,6 +28,8 @@ namespace projectFrameCut.Render.Effect
 
         // movement can be replaced by ProgressPlacer; it will be removed in 1.7.0.0
         public override EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInNewEffectSelector;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {

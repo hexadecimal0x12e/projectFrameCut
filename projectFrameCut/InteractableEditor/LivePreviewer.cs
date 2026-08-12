@@ -140,49 +140,57 @@ namespace projectFrameCut.LivePreview
                     continue;
                 }
 
-                DraftImportAndExportHelper.RestoreFailedInitializationData(clip);
-                var clipJson = JsonSerializer.SerializeToElement(clip);
-                var clipInstance = PluginManager.CreateClip(clipJson);
-                if (clipInstance.FilePath is not null)
-                {
-                    if (clipInstance.FilePath.StartsWith('$'))
-                    {
-                        var asset = AssetDatabase.Assets[clipInstance.FilePath.Substring(1)];
-                        clipInstance.FilePath = asset.Path;
-                        var proxyPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".proxy", $"{asset.AssetId}.mp4");
-                        if (Path.Exists(proxyPath))
-                        {
-                            clipInstance.FilePath = proxyPath;
-                            Log($"The proxy for {clipInstance.Name} is used.");
-                        }
-                        else
-                        {
-                            Log($"The proxy for {clipInstance.Name} does not exist.");
-                        }
-                    }
-                    else if (ProxyRoot is not null && clipInstance.FilePath is not null)
-                    {
-                        var proxiedPath = Path.Combine(ProxyRoot, $"{Path.GetFileNameWithoutExtension(clipInstance.FilePath)}.proxy.mp4");
-
-                        if (Path.Exists(proxiedPath))
-                        {
-                            clipInstance.FilePath = proxiedPath;
-                            Log($"The proxy for {clipInstance.Name} is used.");
-                        }
-                        else
-                        {
-                            Log($"The proxy for {clipInstance.Name} does not exist.");
-                        }
-                    }
-                }
-                clipsList.Add(clipInstance);
                 reinitTasks.Add(Task.Run(() =>
                 {
+                    IClip clipInstance = null!;
+                    try
+                    {
+                        var clipJson = JsonSerializer.SerializeToElement(clip);
+                        clipInstance = PluginManager.CreateClip(clipJson);
+                    }
+                    catch (Exception ex)
+                    {
+                        ClipInitializationFailure.Mark(clipInstance, "Initialization", ex);
+                        Log(ex, $"Create clip instance for {clip.Name}", this);
+                    }
+                    if (clipInstance.FilePath is not null)
+                    {
+                        if (clipInstance.FilePath.StartsWith('$'))
+                        {
+                            var asset = AssetDatabase.Assets[clipInstance.FilePath.Substring(1)];
+                            clipInstance.FilePath = asset.Path;
+                            var proxyPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".proxy", $"{asset.AssetId}.mp4");
+                            if (Path.Exists(proxyPath))
+                            {
+                                clipInstance.FilePath = proxyPath;
+                                Log($"The proxy for {clipInstance.Name} is used.");
+                            }
+                            else
+                            {
+                                Log($"The proxy for {clipInstance.Name} does not exist.");
+                            }
+                        }
+                        else if (ProxyRoot is not null && clipInstance.FilePath is not null)
+                        {
+                            var proxiedPath = Path.Combine(ProxyRoot, $"{Path.GetFileNameWithoutExtension(clipInstance.FilePath)}.proxy.mp4");
+
+                            if (Path.Exists(proxiedPath))
+                            {
+                                clipInstance.FilePath = proxiedPath;
+                                Log($"The proxy for {clipInstance.Name} is used.");
+                            }
+                            else
+                            {
+                                Log($"The proxy for {clipInstance.Name} does not exist.");
+                            }
+                        }
+                    }
                     try
                     {
                         clipInstance.ReInit(8);
                         if (!ClipInitializationFailure.HasDeferredFailures(clipInstance.ExtraData))
                             ClipInitializationFailure.Clear(clipInstance);
+                        clipsList.Add(clipInstance);
                     }
                     catch (Exception ex)
                     {

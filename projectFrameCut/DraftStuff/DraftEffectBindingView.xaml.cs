@@ -90,8 +90,9 @@ public partial class DraftEffectBindingView : ContentView
     private bool _showIsNotVisibleInEffectEditorEffect;
     private bool _subscribedToPageEvents;
 
-    /// <summary>合并延后的渲染重建：一次变化批处理（如同一拖拽手势的多次连线改动）只触发一次 RebuildAllEffects。</summary>
-    private bool _pendingProviderRebuild;
+    /// <summary>合并密集的绑定变更，并避免在 UI 线程执行代价高的 provider.Build()。</summary>
+    private readonly SemaphoreSlim _providerRebuildGate = new(1, 1);
+    private CancellationTokenSource? _providerRebuildCts;
 
     /// <summary>
     /// Raised when effect bundles or connections have been modified inside this view.
@@ -140,7 +141,11 @@ public partial class DraftEffectBindingView : ContentView
             platformView.PointerWheelChanged += OnWindowsPointerWheelChanged;
         }
 #endif
-        if (Handler == null) UnsubscribeFromPageEvents();
+        if (Handler == null)
+        {
+            _providerRebuildCts?.Cancel();
+            UnsubscribeFromPageEvents();
+        }
     }
 
 #if WINDOWS
@@ -1330,7 +1335,6 @@ public partial class DraftEffectBindingView : ContentView
                     SetStatusText(PPLocalizedResources.EffectBindView_Connected(node?.DisplayName ?? "?", match?.DisplayName ?? "?"));
                     RecreateNodeView(node);
                     OnBindingConfigurationChanged();
-                    NotifyEffectBundlesChanged();
                 }
                 else
                 {
@@ -1349,7 +1353,6 @@ public partial class DraftEffectBindingView : ContentView
                     SetStatusText(PPLocalizedResources.EffectBindView_Connected(node?.DisplayName ?? "?", match?.DisplayName ?? "?"));
                     RecreateNodeView(match);
                     OnBindingConfigurationChanged();
-                    NotifyEffectBundlesChanged();
                 }
                 else
                 {
@@ -1363,7 +1366,6 @@ public partial class DraftEffectBindingView : ContentView
                 LogDiagnostic($"Binding: Input node '{node.DisplayName}' connected to source node '{match.DisplayName}'");
                 SetStatusText(PPLocalizedResources.EffectBindView_Connected(match?.DisplayName ?? "?", node?.DisplayName ?? "?"));
                 OnBindingConfigurationChanged();
-                NotifyEffectBundlesChanged();
             }
             else
             {
@@ -1372,7 +1374,6 @@ public partial class DraftEffectBindingView : ContentView
                 LogDiagnostic($"Binding: Output node '{node.DisplayName}' connected to target node '{match.DisplayName}'");
                 SetStatusText(PPLocalizedResources.EffectBindView_Connected(node?.DisplayName ?? "?", match?.DisplayName ?? "?"));
                 OnBindingConfigurationChanged();
-                NotifyEffectBundlesChanged();
             }
 
             // Provider binding configuration is already updated; redraw its projection.
@@ -1399,7 +1400,6 @@ public partial class DraftEffectBindingView : ContentView
             if (removed)
             {
                 RecreateNodeView(node);
-                NotifyEffectBundlesChanged();
             }
         }
         else if (portKind == PortKind.AnchorInput)
@@ -1497,7 +1497,6 @@ public partial class DraftEffectBindingView : ContentView
         RebuildConnections();
         ConnectionsLayer.Invalidate();
         OnBindingConfigurationChanged();
-        NotifyEffectBundlesChanged();
         SetStatusText(Localized._Done);
     }
 
@@ -1624,7 +1623,6 @@ public partial class DraftEffectBindingView : ContentView
                     onChanged: () =>
                     {
                         OnBindingConfigurationChanged();
-                        NotifyEffectBundlesChanged();
                         RefreshSelectedNode();
                     });
             }
@@ -1643,7 +1641,7 @@ public partial class DraftEffectBindingView : ContentView
                 // 属性面板改动字段后，重建连线（例如动态绑定字段值变化可能影响值绑定连线）。
                 RebuildConnections();
                 ConnectionsLayer.Invalidate();
-                NotifyEffectBundlesChanged();
+                OnBindingConfigurationChanged();
             };
 
             PropertiesPanel.Children.Add(ppb.BuildWithScrollView());
@@ -1767,7 +1765,6 @@ public partial class DraftEffectBindingView : ContentView
 
         if (_clip.EffectProviders is { } providers)
             EffectBindingHelper.RemoveProvider(providers, node.Id);
-        ClipInfoBuilder.RebuildAllEffects(_clip);
 
         _nodes.Remove(node.Id);
 
@@ -2056,13 +2053,12 @@ public partial class DraftEffectBindingView : ContentView
             instance.SetFinalOutputSource(false);
             _clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
             _clip.EffectProviders[instance.Id] = instance;
-            ClipInfoBuilder.RebuildAllEffects(_clip);
 
             LoadClip(_clip, _page);
+            OnBindingConfigurationChanged();
         }
 
         SetStatusText(Localized._Done);
-        NotifyEffectBundlesChanged();
     }
 
     private async void GeneratePreviewButton_Clicked(object sender, EventArgs e)
@@ -2109,10 +2105,12 @@ public partial class DraftEffectBindingView : ContentView
     /// Returns diagnostics owned by an effect node. Diagnostics without a provider id describe
     /// graph-wide output state and are therefore attached to the output system node.
     /// </summary>
-    private IReadOnlyList<EffectBindingHelper.BindingDiagnostic> GetBindingDiagnostics(NodeViewModel node)
+    private IReadOnlyList<EffectBindingHelper.BindingDiagnostic> GetBindingDiagnostics(
+        NodeViewModel node,
+        IReadOnlyList<EffectBindingHelper.BindingDiagnostic>? allDiagnostics = null)
     {
         if (_clip?.EffectProviders is not { } providers) return [];
-        var diagnostics = EffectBindingHelper.ValidateBindings(providers);
+        var diagnostics = allDiagnostics ?? EffectBindingHelper.ValidateBindings(providers);
         return node.Kind switch
         {
             NodeKind.Effect => diagnostics.Where(d => d.ProviderId == node.Id).ToList(),
@@ -2125,11 +2123,14 @@ public partial class DraftEffectBindingView : ContentView
         string.Join("\n", diagnostics.Select(d => $"{d.ProviderId}|{d.Code}|{d.Message}"));
 
     /// <summary>Recreates node visuals so newly added or resolved binding diagnostics are visible immediately.</summary>
-    private void RefreshBindingDiagnosticIndicators()
+    private void RefreshBindingDiagnosticIndicators(
+        IReadOnlyList<EffectBindingHelper.BindingDiagnostic>? diagnostics = null)
     {
+        if (_clip?.EffectProviders is not { } providers) return;
+        diagnostics ??= EffectBindingHelper.ValidateBindings(providers);
         foreach (var node in _nodes.Values.ToList())
         {
-            var signature = GetBindingDiagnosticSignature(GetBindingDiagnostics(node));
+            var signature = GetBindingDiagnosticSignature(GetBindingDiagnostics(node, diagnostics));
             if (!string.Equals(signature, node.BindingDiagnosticSignature, StringComparison.Ordinal))
                 RecreateNodeView(node);
         }
@@ -2277,32 +2278,63 @@ public partial class DraftEffectBindingView : ContentView
         var diagnostics = EffectBindingHelper.ValidateBindings(providers);
         if (diagnostics.Count > 0)
             SetStatusText(string.Join(Environment.NewLine, diagnostics.Select(d => d.Message)));
-        RefreshBindingDiagnosticIndicators();
+        RefreshBindingDiagnosticIndicators(diagnostics);
         ScheduleProviderRebuild();
     }
 
     /// <summary>
-    /// 合并延后的完整重建：设置挂起标志并经 Dispatcher 派发一次 <see cref="ClipInfoBuilder.RebuildAllEffects"/>，
-    /// 使一次变化批处理只触发一次代价较高的重建。
+    /// 防抖并串行化完整重建。Provider 构建在工作线程进行，只在完成后
+    /// 回到 UI 线程替换 Effects 并通知预览层，避免松开鼠标后整个界面卡住。
     /// </summary>
-    private void ScheduleProviderRebuild()
+    private async void ScheduleProviderRebuild()
     {
-        if (_clip == null || _pendingProviderRebuild) return;
-        _pendingProviderRebuild = true;
-        Dispatcher.Dispatch(() =>
+        if (_clip == null) return;
+
+        _providerRebuildCts?.Cancel();
+        _providerRebuildCts?.Dispose();
+        var cts = _providerRebuildCts = new CancellationTokenSource();
+        var token = cts.Token;
+
+        try
         {
-            _pendingProviderRebuild = false;
-            if (_clip == null) return;
+            await Task.Delay(150, token);
+            await _providerRebuildGate.WaitAsync(token);
             try
             {
-                ClipInfoBuilder.RebuildAllEffects(_clip);
+                token.ThrowIfCancellationRequested();
+                var clip = _clip;
+                if (clip == null) return;
+
+                var rebuiltEffects = await Task.Run(
+                    () => EffectBindingHelper.RebuildAllEffects(clip.EffectProviders, clip.Effects),
+                    token);
+                token.ThrowIfCancellationRequested();
+
+                if (ReferenceEquals(_clip, clip) && rebuiltEffects != null)
+                {
+                    clip.Effects = rebuiltEffects;
+                    NotifyEffectBundlesChanged();
+                }
             }
-            catch (InvalidOperationException ex)
+            finally
             {
-                SetStatusText(ex.Message);
-                LogDiagnostic($"Effect binding graph is not renderable yet: {ex.Message}");
+                _providerRebuildGate.Release();
             }
-        });
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer graph edit superseded this rebuild.
+        }
+        catch (InvalidOperationException ex)
+        {
+            SetStatusText(ex.Message);
+            LogDiagnostic($"Effect binding graph is not renderable yet: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            SetStatusText(ex.Message);
+            LogDiagnostic($"Failed to rebuild effect binding graph: {ex}");
+        }
     }
 
     /// <summary>

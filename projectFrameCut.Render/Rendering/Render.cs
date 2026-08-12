@@ -47,7 +47,6 @@ namespace projectFrameCut.Render.Rendering
         public int MaxThreads { get => field > 0 ? field : (int)(Environment.ProcessorCount * 1.75); set; }
         public int GCOption = 0;
 
-        public bool EnableDecoderSideCropResize { get; set; } = true;
         public bool EnableGPUBatchProcess { get; set; } = true;
         public bool AllowReorderEffect { get; set; } = true;
         public bool EnableEffectAutoRetry { get; set; } = true;
@@ -1730,7 +1729,14 @@ namespace projectFrameCut.Render.Rendering
                     IPicture f;
                     if (item.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(item, clipTargetWidth, clipTargetHeight))
                     {
-                        f = sre.Compute(item, PluginManager.CreateComputer(sre.NeedComputer), clipTargetWidth, clipTargetHeight, frameIndex, ppb);
+                        f = sre.Compute(
+                                item,
+                                PluginManager.CreateComputer(sre.NeedComputer),
+                               item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb),
+                                clipTargetWidth,
+                                clipTargetHeight,
+                                item.GetRelativeFrameIndex(frameIndex)
+                                    ?? throw new IndexOutOfRangeException($"Frame #{frameIndex} is not in clip [{StartFrame}, {StartFrame + item.GetEffectiveDuration()})."), ppb);
                     }
                     else
                     {
@@ -1746,18 +1752,18 @@ namespace projectFrameCut.Render.Rendering
             }
             else if (item.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(item, clipTargetWidth, clipTargetHeight))
             {
-                frame = sre.Compute(item, PluginManager.CreateComputer(sre.NeedComputer), clipTargetWidth, clipTargetHeight, frameIndex, ppb);
+                frame = sre.Compute(
+                        item, 
+                        PluginManager.CreateComputer(sre.NeedComputer), 
+                        item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb), 
+                        clipTargetWidth, 
+                        clipTargetHeight, 
+                        item.GetRelativeFrameIndex(frameIndex) 
+                            ?? throw new IndexOutOfRangeException($"Frame #{frameIndex} is not in clip [{StartFrame}, {StartFrame + item.GetEffectiveDuration()})."), ppb);
             }
             else
             {
-                if (EnableDecoderSideCropResize)
-                {
-                    frame = item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb);
-                }
-                else
-                {
-                    frame = item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb);
-                }
+                frame = item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb);
             }
 
             if (frame is not null && IsClipGeneratedByAI.TryGetValue(item.Id, out var aiMark) && aiMark)

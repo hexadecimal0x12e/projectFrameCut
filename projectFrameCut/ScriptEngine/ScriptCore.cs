@@ -15,6 +15,8 @@ namespace projectFrameCut.ScriptEngine
     /// </summary>
     public class ScriptCore : IDisposable
     {
+        public static bool Enabled { get; set; } = true;
+
         private Runspace? _runspace;
 
         /// <summary>
@@ -111,7 +113,7 @@ namespace projectFrameCut.ScriptEngine
         public string Execute(string script)
         {
             // ---- 安全检查：是否允许执行脚本 ----
-            if (!SettingsManager.IsBoolSettingTrueOrDefault("Security_EnableScript", true))
+            if (!SettingsManager.IsBoolSettingTrueOrDefault("Security_EnableScript", true) || !Enabled)
                 throw new InvalidOperationException(Localized.ScriptEngine_ScriptDisabled);
 
             // ---- 安全检查：$page 对象访问控制 ----
@@ -160,7 +162,7 @@ namespace projectFrameCut.ScriptEngine
         public async Task<string> ExecuteAsync(string script)
         {
             // ---- 安全检查：是否允许执行脚本 ----
-            if (!SettingsManager.IsBoolSettingTrueOrDefault("Security_EnableScript", true))
+            if (!SettingsManager.IsBoolSettingTrueOrDefault("Security_EnableScript", true) || !Enabled)
                 throw new InvalidOperationException(Localized.ScriptEngine_ScriptDisabled);
 
             // ---- 安全检查：$page 对象访问控制 ----

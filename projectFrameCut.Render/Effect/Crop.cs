@@ -43,6 +43,7 @@ namespace projectFrameCut.Render.Effect
         public static List<string> OptionalParameters { get; } = new List<string>
         {
             "Angle",
+            "CropList"
         };
 
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
@@ -292,15 +293,17 @@ namespace projectFrameCut.Render.Effect
             float angleRad = angle * MathF.PI / 180f;
             float cosA = MathF.Cos(angleRad);
             float sinA = MathF.Sin(angleRad);
+            var alpha = new float[pixels];
 
             var result = new Picture8bpp(outW, outH)
             {
                 r = GC.AllocateUninitializedArray<byte>(pixels),
                 g = GC.AllocateUninitializedArray<byte>(pixels),
                 b = GC.AllocateUninitializedArray<byte>(pixels),
-                a = src.HasAlphaChannel && src.a != null
-                    ? GC.AllocateUninitializedArray<float>(pixels) : null,
-                HasAlphaChannel = src.HasAlphaChannel,
+                // Keep RGB allocations uninitialized for performance. Pixels outside the
+                // rotated source are hidden by the zero-initialized alpha channel.
+                a = alpha,
+                HasAlphaChannel = true,
                 Tag = src.Tag,
             };
 
@@ -324,25 +327,11 @@ namespace projectFrameCut.Render.Effect
                         result.r[idx] = rr;
                         result.g[idx] = gg;
                         result.b[idx] = bb;
+                        alpha[idx] = src.HasAlphaChannel && src.a != null
+                            ? SampleBilinearAlpha(src, sx, sy)
+                            : 1f;
                     }
-                    // out-of-bounds pixels stay 0 (black/transparent)
-                }
-            }
-
-            if (result.a != null && src.a != null)
-            {
-                for (int oy = 0; oy < outH; oy++)
-                {
-                    int dstRowStart = oy * outW;
-                    for (int ox = 0; ox < outW; ox++)
-                    {
-                        float rx = safe.X + ox - cx;
-                        float ry = safe.Y + oy - cy;
-                        float sx = cosA * rx - sinA * ry + cx;
-                        float sy = sinA * rx + cosA * ry + cy;
-                        if (sx >= 0 && sx < srcW && sy >= 0 && sy < srcH)
-                            result.a[dstRowStart + ox] = SampleBilinearAlpha(src, sx, sy);
-                    }
+                    // Out-of-bounds RGB values remain uninitialized, but alpha stays 0.
                 }
             }
 
@@ -360,15 +349,17 @@ namespace projectFrameCut.Render.Effect
             float angleRad = angle * MathF.PI / 180f;
             float cosA = MathF.Cos(angleRad);
             float sinA = MathF.Sin(angleRad);
+            var alpha = new float[pixels];
 
             var result = new Picture16bpp(outW, outH)
             {
                 r = GC.AllocateUninitializedArray<ushort>(pixels),
                 g = GC.AllocateUninitializedArray<ushort>(pixels),
                 b = GC.AllocateUninitializedArray<ushort>(pixels),
-                a = src.HasAlphaChannel && src.a != null
-                    ? GC.AllocateUninitializedArray<float>(pixels) : null,
-                HasAlphaChannel = src.HasAlphaChannel,
+                // Keep RGB allocations uninitialized for performance. Pixels outside the
+                // rotated source are hidden by the zero-initialized alpha channel.
+                a = alpha,
+                HasAlphaChannel = true,
                 Tag = src.Tag,
             };
 
@@ -391,24 +382,11 @@ namespace projectFrameCut.Render.Effect
                         result.r[idx] = rr;
                         result.g[idx] = gg;
                         result.b[idx] = bb;
+                        alpha[idx] = src.HasAlphaChannel && src.a != null
+                            ? SampleBilinearAlpha(src, sx, sy)
+                            : 1f;
                     }
-                }
-            }
-
-            if (result.a != null && src.a != null)
-            {
-                for (int oy = 0; oy < outH; oy++)
-                {
-                    int dstRowStart = oy * outW;
-                    for (int ox = 0; ox < outW; ox++)
-                    {
-                        float rx = safe.X + ox - cx;
-                        float ry = safe.Y + oy - cy;
-                        float sx = cosA * rx - sinA * ry + cx;
-                        float sy = sinA * rx + cosA * ry + cy;
-                        if (sx >= 0 && sx < srcW && sy >= 0 && sy < srcH)
-                            result.a[dstRowStart + ox] = SampleBilinearAlpha(src, sx, sy);
-                    }
+                    // Out-of-bounds RGB values remain uninitialized, but alpha stays 0.
                 }
             }
 
@@ -602,6 +580,7 @@ namespace projectFrameCut.Render.Effect
         public static List<string> OptionalParameters { get; } = new List<string>
         {
             "Angle",
+            "CropList"
         };
 
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
@@ -825,6 +804,8 @@ namespace projectFrameCut.Render.Effect
         public override EffectType TypeOfEffect => EffectType.NormalEffect;
 
         public override EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {

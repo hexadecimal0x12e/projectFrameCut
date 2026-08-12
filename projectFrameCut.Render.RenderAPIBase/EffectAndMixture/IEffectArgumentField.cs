@@ -1,5 +1,8 @@
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
+    /// <summary>
+    /// The interface for an effect argument field, which is used to describe the properties of a field that can be set/bind in an effect provider.
+    /// </summary>
     public interface IEffectArgumentField
     {
         /// <summary>
@@ -163,6 +166,15 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         SizeAndPosition = Size | Position,
 
         /// <summary>
+        /// A field that represents a frame in <see cref="IPicture"/>, but flows as a parameter instead of the rendering pipeline. 
+        /// This is used for effects that need to process a frame as a parameter, but not as a rendering target.
+        /// </summary>
+        /// <remarks>
+        /// <b>This node cannot be connected to another <see cref="IPicture"/> node, and the effect provider should not use this node as a rendering target.</b>
+        /// </remarks>
+        FrameAsParameterFlow = 1 << 12,
+
+        /// <summary>
         /// Indicate that the field is a mandatory field, which means it must be set before the effect can be applied.
         /// </summary>
         Mandatory = 1 << 16,
@@ -205,21 +217,21 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Indicate that the field supports 8-bit color input.
         /// </summary>
         /// <remarks>
-        /// Only meaningful when the field is a <see cref="IPicture"/> or <see cref="Color"/> type field. 
+        /// Only meaningful when the field is a <see cref="IPicture"/> or <see cref="FrameAsParameterFlow"/> or <see cref="Color"/> type field. 
         /// </remarks>
         Supports8BitColor = 1 << 23,
         /// <summary>
         /// Indicate that the field supports 16-bit color input.
         /// </summary>
         /// <remarks>
-        /// Only meaningful when the field is a <see cref="IPicture"/> or <see cref="Color"/> type field. 
+        /// Only meaningful when the field is a <see cref="IPicture"/> or <see cref="FrameAsParameterFlow"/> or <see cref="Color"/> type field. 
         /// </remarks>
         Supports16BitColor = 1 << 24,
         /// <summary>
         /// Indicate that the field supports 16-bit color with Brightness channel input.
         /// </summary>
         /// <remarks>
-        /// Only meaningful when the field is a <see cref="IPicture"/> type field. 
+        /// Only meaningful when the field is a <see cref="IPicture"/> or <see cref="FrameAsParameterFlow"/> type field. 
         /// </remarks>
         SupportsHDR = 1 << 25,
 

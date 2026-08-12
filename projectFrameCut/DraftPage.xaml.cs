@@ -48,7 +48,6 @@ using System.Runtime.InteropServices;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.InteractableEditor;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.ApplicationPluginBase.Effect;
@@ -338,7 +337,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public bool IsPopupClosableByTapBackground { get; set; } = true;
     public bool UseDynamicPreview { get; set; } = true;
     public int DynamicPreviewTimeout { get; set; } = 4096;
-    public int DynamicPreviewResolutionDivisor { get; set; } = 1;
+    public int DynamicPreviewResolutionDivisor { get => DynamicPreviewProvider?.PreviewResolutionDivisor ?? 1; set { DynamicPreviewProvider?.PreviewResolutionDivisor = value; } }
 
 
     #endregion
@@ -416,7 +415,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview();
         DynamicPreviewProvider.ClipInitializationFailed += OnClipInitializationFailed;
         DynamicPreviewProvider.ClipInitializationRecovered += OnClipInitializationRecovered;
-        DynamicPreviewProvider.PreviewResolutionDivisor = DynamicPreviewResolutionDivisor;
         ClipEditorHost.Content = ClipEditor;
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
@@ -628,7 +626,6 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         ApplyClipEditorPreviewOverlayMode();
 
-        VideoClipDynamicPreviewProvider.DiskCacheRoot = Path.Combine(WorkingPath, "thumbs", "perClip");
         DynamicPreview.DiskCacheRoot = Path.Combine(WorkingPath, "thumbs", "clipLocalFallback");
 
         previewWidth = ProjectInfo.RelativeWidth;
@@ -4546,6 +4543,33 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (_selected is null) return;
         var clip = _selected;
 
+        if (e.Id == "__EFFECT_BINDING_CHANGED__")
+        {
+            // The binding editor already rebuilt clip.Effects off the UI thread. Updating the timeline
+            // and property panel here used to turn every completed connection into a full-page refresh.
+            // Keep the model/history current and refresh only the preview that actually depends on it.
+            var changedClip = e.Value as ClipElementUI ?? clip;
+            Clips[changedClip.Id] = changedClip;
+            MarkHistoryPanelDirty();
+            try
+            {
+                // The changed clip was rebuilt by DraftEffectBindingView. Rebuilding every clip again
+                // during export is both redundant and the largest source of the 10-15 second UI stall.
+                var d = DraftImportAndExportHelper.ExportFromDraftPage(
+                    this,
+                    includeUiOnlyClips: false,
+                    rebuildEffects: false);
+                await previewer.UpdateDraft(d);
+                DynamicPreviewProvider.SetClips(previewer.Clips);
+                await RefreshPreviewFromCurrentProviderAsync();
+            }
+            catch (Exception refreshEx)
+            {
+                Log(refreshEx, "refresh preview after effect binding changed", this);
+            }
+            return;
+        }
+
         if (e.Id == "__REFRESH_PANEL__")
         {
             Clips[clip.Id] = clip;
@@ -7440,7 +7464,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             var targetWidth = Math.Max(1, previewWidth);
             var targetHeight = Math.Max(1, previewHeight);
-            var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, targetWidth, targetHeight, ClipEditor.Width, ClipEditor.Height, token);
+            var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, targetWidth, targetHeight, token);
             token.ThrowIfCancellationRequested();
             return await ClipEditor.ApplyPreparedPreviewsAsync(preparedPreviews);
         }
@@ -8094,8 +8118,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     private async Task RenderSomeFramesDynamicSynced(int startPoint, CancellationToken ct)
     {
         uint lastRenderedFrame = 0, targetFrame = (uint)startPoint;
-        var targetWidth = Math.Max(1, previewWidth);
-        var targetHeight = Math.Max(1, previewHeight);
         var totalDisplay = TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame).ToString("mm\\:ss");
         var developerMode = SettingsManager.IsBoolSettingTrue("DeveloperMode");
         int maxFrame = (int)Math.Max(previewer.TotalDuration, ProjectDuration);
@@ -8107,7 +8129,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         Stopwatch prepareWatch = new(), applyWatch = new();
         Task? pendingUiUpdate = null;
         IReadOnlyList<DynamicPreview.PreparedPreview>? preparedPreviews = null!;
-        var (canvasWidth, canvasHeight) = DynamicPreviewProvider.ResolveDimensions(targetWidth, targetHeight, ClipEditor.Width, ClipEditor.Height);
+        var projectWidth = Math.Max(1, ProjectInfo.RelativeWidth);
+        var projectHeight = Math.Max(1, ProjectInfo.RelativeHeight);
+        var (canvasWidth, canvasHeight) = DynamicPreviewProvider.ResolveDimensions(projectWidth, projectHeight, ClipEditor.Width, ClipEditor.Height);
 
         MainThread.BeginInvokeOnMainThread(() =>
         {
@@ -8169,9 +8193,9 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 prepareWatch.Restart();
                 preparedPreviews = await DynamicPreviewProvider.PrepareRequestsAsync(
-                    DynamicPreviewProvider.ResolveRequests(DynamicPreviewProvider.Clips, targetFrame, canvasWidth, canvasHeight),
+                    DynamicPreviewProvider.ResolveRequests(DynamicPreviewProvider.Clips, targetFrame, projectWidth, projectHeight),
                     canvasWidth, canvasHeight,
-                    targetWidth, targetHeight,
+                    projectWidth, projectHeight,
                     targetFrame,
                     true, false,
                     0,
@@ -8371,7 +8395,12 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
         UpdatePlayheadHeight();
-        var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+        DraftStructureJSON d = null!;
+        await Dispatcher.DispatchAsync(async () => 
+        {
+            d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+            await previewer.UpdateDraft(d);
+        });
         SetStateBusy();
         SetStatusText(Localized.DraftPage_ApplyingChanges);
 
@@ -8381,7 +8410,6 @@ public partial class DraftPage : ContentPage, IDraftPage
             TryMoveToInitialPreviewFrame(d);
             await ClipEditor.UpdateClips(Clips);
             ClipEditor.SetCurrentFrame((uint)Math.Max(0, _currentFrame));
-            await previewer.UpdateDraft(d);
             DynamicPreviewProvider.SetClips(previewer.Clips);
             await RefreshPreviewFromCurrentProviderAsync();
             SetStatusText(Localized.DraftPage_ChangesApplied);
@@ -9517,7 +9545,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 "Debug_ReRenderLivePreview", new Command(async () =>
                 {
                     var token = ResetDynamicPreviewToken();
-                    var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, previewWidth, previewHeight, ClipEditor.Width, ClipEditor.Height, token);
+                    var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, previewWidth, previewHeight, token);
                     token.ThrowIfCancellationRequested();
                     ClipEditor.ApplyPreparedPreviews(preparedPreviews);
                 })

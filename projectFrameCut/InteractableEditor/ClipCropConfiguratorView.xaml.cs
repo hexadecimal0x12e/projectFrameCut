@@ -423,9 +423,21 @@ public partial class ClipCropConfiguratorView : ContentView
             return;
         }
 
-        view.SyncUiFromProperties();
-        view.UpdateCanvasVisuals();
-        view.InvokeConfigurationChanged();
+        try
+        {
+            view.SyncUiFromProperties();
+            view.UpdateCanvasVisuals();
+            view.InvokeConfigurationChanged();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "ClipCropConfiguratorView.OnAnyBindablePropertyChanged", view);
+            view.Dispatcher.Dispatch(() =>
+            {
+                view.SummaryLabel.TextColor = Colors.Red;
+                view.SummaryLabel.Text = Localized._ExceptionTemplate(ex);
+            });
+        }
     }
 
     private void SyncUiFromProperties()

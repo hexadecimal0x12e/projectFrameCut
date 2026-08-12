@@ -10,8 +10,6 @@ using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Codeblock;
 using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
@@ -25,7 +23,7 @@ namespace projectFrameCut.ApplicationPluginBase
         /// <summary>
         /// Maps effect type names to their App-layer UI provider factories. The custom UI types (color pickers,
         /// keyframing, position tuples, ...) are registered explicitly; every other type falls back to the generic
-        /// metadata-driven <see cref="EffectProviderUI"/> via <see cref="EffectServices.GetUIProvider"/>.
+        /// metadata-driven <see cref="EffectProviderUI"/> via <see cref="GetDefaultEffectProviderUIProvider(IEffectProvider)"/>.
         /// The render providers themselves are inherited from <see cref="InternalPluginBase.EffectProviderProvider"/>.
         /// </summary>
         public Dictionary<string, Func<IEffectProvider, IEffectProviderUIProvider>> EffectProviderUIProvider => new Dictionary<string, Func<IEffectProvider, IEffectProviderUIProvider>>
@@ -37,6 +35,11 @@ namespace projectFrameCut.ApplicationPluginBase
             { "ProgressCrop", p => new ProgressCropUI(p) },
             { "ColorAdjustment", p => new ColorAdjustmentUI(p) },
         };
+
+        public IEffectProviderUIProvider? GetDefaultEffectProviderUIProvider(IEffectProvider source)
+        {
+            return new EffectProviderUI(source);
+        }
 
         public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => new Dictionary<string, Func<ITextClipStyleProvider>>
         {
@@ -62,34 +65,6 @@ namespace projectFrameCut.ApplicationPluginBase
 
         public int AppLevelPluginAPIVersion => IApplicationPluginBase.CurrentAppLevelPluginAPIVersion;
 
-        public Dictionary<string, IClipDynamicPreviewProvider> ClipDynamicPreviewProvider => new Dictionary<string, IClipDynamicPreviewProvider>
-        {
-            { "VideoClip", new VideoClipDynamicPreviewProvider() },
-            { "PhotoClip", new PhotoClipDynamicPreviewProvider() },
-            { "SolidColorClip", new SolidColorClipDynamicPreviewProvider() },
-            { "TransformClip", new TransformClipDynamicPreviewProvider() },
-            { "TextClip", new TextClipDynamicPreviewProvider() },
-        };
-
-        public Dictionary<string, IEffectDynamicPreviewProvider> EffectDynamicPreviewProvider => new Dictionary<string, IEffectDynamicPreviewProvider>
-        {
-            //{ "Blur", new BlurEffectDynamicPreviewProvider() },
-            //{ "Crop", new CropEffectDynamicPreviewProvider() },
-            { "Jitter", new JitterEffectDynamicPreviewProvider() },
-            { "Place", new PlaceEffectDynamicPreviewProvider() },
-            { "PointPlacer", new PointPlacerEffectDynamicPreviewProvider() },
-            { "RemoveColor", new RemoveColorEffectDynamicPreviewProvider() },
-            { "Resize", new ResizeEffectDynamicPreviewProvider() },
-            { "Rotation", new RotationEffectDynamicPreviewProvider() },
-            { "Flip", new FlipEffectDynamicPreviewProvider() },
-            { "Sharpen", new SharpenEffectDynamicPreviewProvider() },
-            { "Vignette", new VignetteEffectDynamicPreviewProvider() },
-            { "FadeOpacity", new FadeOpacityEffectDynamicPreviewProvider() },
-            { "StraightLineMovementValueProducer", new StraightLineMovementValueProducerEffectDynamicPreviewProvider() },
-            { "SubjectMattingMaskGenerator", new SubjectMattingMaskGeneratorEffectDynamicPreviewProvider() },
-            { "ZoomIn", new ZoomInEffectDynamicPreviewProvider() },
-        };
-
         public View? SettingPageProvider(ref IApplicationPluginBase instance)
         {
             return null;
@@ -106,7 +81,5 @@ namespace projectFrameCut.ApplicationPluginBase
             Markdown2XAML.RegisterCodeBlockRenderer(new MermaidCodeBlockRenderer());
             Markdown2XAML.RegisterCodeBlockRenderer(new SvgCodeBlockRenderer());
         }
-
-
     }
 }

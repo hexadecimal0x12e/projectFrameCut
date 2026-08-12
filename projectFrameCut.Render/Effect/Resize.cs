@@ -334,6 +334,8 @@ namespace projectFrameCut.Render.Effect
 
         public override EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector;
 
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {
             return

@@ -69,7 +69,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public VideoClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+           EffectHelper.ResolveClipEffects(this);
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
@@ -93,19 +93,32 @@ namespace projectFrameCut.Render.ClipsAndTracks
             targetFrame = ClampFrameToDecoderRange(decoder, targetFrame);
             int sourceX = Math.Clamp(StartingX, 0, Math.Max(0, decoder.Width - 1));
             int sourceY = Math.Clamp(StartingY, 0, Math.Max(0, decoder.Height - 1));
-            int sourceWidth = Math.Min(targetWidth, decoder.Width - sourceX);
-            int sourceHeight = Math.Min(targetHeight, decoder.Height - sourceY);
+            // targetWidth/targetHeight describe the requested output resolution. They must not
+            // limit the source region, otherwise a low-resolution preview decodes only the
+            // top-left corner of the video instead of scaling the complete source frame.
+            // StartingX/StartingY intentionally crop the leading source area; the remaining
+            // source rectangle is then scaled to the requested output dimensions by the decoder.
+            int sourceWidth = Math.Max(1, decoder.Width - sourceX);
+            int sourceHeight = Math.Max(1, decoder.Height - sourceY);
 
+            IPicture result;
             if (decoder is HDRDecoderContext h)
             {
-                return h.GetHDRFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
+                result = h.GetHDRFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
                         targetWidth, targetHeight, hasAlpha: true)
                     .SetBrightnessOffset(HDRBrightnessOffset)
                     .ToBitPerPixel(targetPPB);
             }
+            else
+            {
+                result = decoder.GetFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
+                    targetWidth, targetHeight).ToBitPerPixel(targetPPB);
+            }
 
-            return decoder.GetFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
-                targetWidth, targetHeight).ToBitPerPixel(targetPPB);
+            // Only publish the position after a successful decode. Decoder.Index is a request
+            // counter, not a source-frame position, and must never be used for pool routing.
+            decoderLease.MarkPosition(targetFrame);
+            return result;
         }
 
         private uint ClampFrameToDecoderRange(IVideoSource? decoder, uint targetFrame)
@@ -136,7 +149,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             try
             {
-                (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+               EffectHelper.ResolveClipEffects(this);
             }
             catch (Exception ex)
             {
@@ -149,7 +162,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 if (_decoderPool is not null && string.Equals(_decoderPoolKey, poolKey, StringComparison.OrdinalIgnoreCase) && !_decoderPool.Disposed)
                 {
                     Decoder = _decoderPool.RepresentativeDecoder;
-                    (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+                   EffectHelper.ResolveClipEffects(this);
                     return;
                 }
 
@@ -360,6 +373,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             private PooledDecoderEntry? GetBestFreeEntry(uint targetFrame)
             {
                 PooledDecoderEntry? bestEntry = null;
+                PooledDecoderEntry? unpositionedEntry = null;
                 long bestDistance = long.MaxValue;
 
                 foreach (var entry in _decoders)
@@ -369,7 +383,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
                         continue;
                     }
 
-                    long distance = Math.Abs((long)entry.Decoder.Index - targetFrame);
+                    if (!entry.HasSuccessfulPosition)
+                    {
+                        unpositionedEntry ??= entry;
+                        continue;
+                    }
+
+                    long distance = Math.Abs((long)entry.LastSuccessfulFrame - targetFrame);
                     if (distance < bestDistance)
                     {
                         bestDistance = distance;
@@ -377,7 +397,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
                 }
 
-                return bestEntry;
+                return bestEntry ?? unpositionedEntry;
             }
 
             private IVideoSource CreateDecoder()
@@ -399,6 +419,18 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
 
                     entry.InUse = false;
+                }
+            }
+
+            internal void MarkPosition(PooledDecoderEntry entry, uint frameIndex)
+            {
+                lock (_sync)
+                {
+                    if (_disposed || !entry.InUse)
+                        return;
+
+                    entry.LastSuccessfulFrame = frameIndex;
+                    entry.HasSuccessfulPosition = true;
                 }
             }
 
@@ -431,6 +463,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
                 public IVideoSource Decoder { get; }
                 public bool InUse { get; set; }
+                public uint LastSuccessfulFrame { get; set; }
+                public bool HasSuccessfulPosition { get; set; }
 
                 public void Dispose()
                 {
@@ -459,6 +493,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 }
 
                 public IVideoSource Decoder { get; }
+
+                public void MarkPosition(uint frameIndex)
+                {
+                    if (_entry is not null && _pool is not null)
+                        _pool.MarkPosition(_entry, frameIndex);
+                }
 
                 public void Dispose()
                 {

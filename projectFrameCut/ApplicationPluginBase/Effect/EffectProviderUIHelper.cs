@@ -1,5 +1,6 @@
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Collections.Generic;
@@ -29,7 +30,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 {
                     var current = GetString(provider, field.Id);
                     var defaultValue = Array.IndexOf(field.PresetOptions, current) >= 0 ? current : field.PresetOptions[0];
-                    panel.AddPicker(componentId, Label(field.Id), field.PresetOptions, defaultValue);
+                    panel.AddPicker(componentId, Label(provider.TypeName, field), field.PresetOptions, defaultValue);
                     MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                     continue;
                 }
@@ -38,7 +39,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 switch (baseType)
                 {
                     case EffectArgumentFieldType.Boolean:
-                        panel.AddCheckbox(componentId, Label(field.Id), GetBool(provider, field.Id));
+                        panel.AddCheckbox(componentId, Label(provider.TypeName, field), GetBool(provider, field.Id));
                         MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                         break;
                     case EffectArgumentFieldType.UnsignedInteger:
@@ -51,7 +52,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                         MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                         break;
                     case EffectArgumentFieldType.String:
-                        panel.AddEntry(componentId, Label(field.Id), GetString(provider, field.Id), field.DefaultValue);
+                        panel.AddEntry(componentId, Label(provider.TypeName, field), GetString(provider, field.Id), field.DefaultValue);
                         MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                         break;
                     default:
@@ -118,7 +119,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             if (TryGetMinMax(field, out var min, out var max))
             {
-                panel.AddSlider(componentId, Label(field.Id), min, max, GetDouble(provider, field.Id), eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
+                panel.AddSlider(componentId, Label(provider.TypeName, field), min, max, GetDouble(provider, field.Id), eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
             }
             else
             {
@@ -128,7 +129,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private static void AddNumericEntry(PropertyPanelBuilder panel, IEffectProvider provider, IEffectArgumentField field, string componentId)
         {
-            panel.AddEntry(componentId, Label(field.Id), GetString(provider, field.Id), field.DefaultValue, entry => entry.Keyboard = Microsoft.Maui.Keyboard.Numeric);
+            panel.AddEntry(componentId, Label(provider.TypeName, field), GetString(provider, field.Id), field.DefaultValue, entry => entry.Keyboard = Microsoft.Maui.Keyboard.Numeric);
         }
 
         private static bool TryGetMinMax(IEffectArgumentField field, out double min, out double max)
@@ -256,9 +257,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             return 0f;
         }
 
-        private static PropertyPanelItemLabel Label(string id)
+        private static PropertyPanelItemLabel Label(string provider, IEffectArgumentField field)
         {
-            return EffectProviderHelper.ParamLabel(id);
+            return PluginManager.GetLocalizationItem($"Effect_{provider}_{field.Id}", field.Id);
         }
 
         private static string ComponentId(IEffectProvider provider, string fieldId)

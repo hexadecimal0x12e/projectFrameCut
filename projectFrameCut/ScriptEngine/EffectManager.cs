@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Management.Automation;
 using System.Threading;
@@ -122,8 +123,15 @@ namespace projectFrameCut.ScriptEngine
         /// <summary>构造标准的 EffectBundle PSObject（含元数据概要）。</summary>
         protected PSObject NewEffectBundleObject(IEffectProvider bundle)
         {
-            // SettableFields / BindedInputId / BindedOutputId / StartPoint / EndPoint were removed from the provider API.
-            throw new NotImplementedException("NewEffectBundleObject was disabled after the IEffectBundle removal.");
+            var obj = NewEffectBundleSummaryObject(bundle);
+            obj.Properties.Add(new PSNoteProperty("FromPlugin", bundle.FromPlugin));
+            obj.Properties.Add(new PSNoteProperty("Target", bundle.Target.ToString()));
+            obj.Properties.Add(new PSNoteProperty("InputSource", bundle.HasMainPictureInput() ? bundle.GetMainInputSource() : null));
+            obj.Properties.Add(new PSNoteProperty("IsFinalOutput", bundle.IsFinalOutputSource()));
+            obj.Properties.Add(new PSNoteProperty("AnchorsBindingState", ToHashtable(bundle.AnchorsBindingState)));
+            obj.Properties.Add(new PSNoteProperty("Fields", bundle.Fields.Values.Select(NewSettableFieldObject).ToArray()));
+            obj.Properties.Add(new PSNoteProperty("MetaData", ToHashtable(bundle.MetaData)));
+            return obj;
         }
 
         /// <summary>
@@ -141,7 +149,7 @@ namespace projectFrameCut.ScriptEngine
             obj.Properties.Add(new PSNoteProperty("ParameterCount", bundle.Fields?.Count ?? 0));
             obj.Properties.Add(new PSNoteProperty("ParameterSummary",
                 bundle.Fields is { Count: > 0 }
-                    ? string.Join("; ", bundle.Fields.Select(kv => $"{kv.Key}={kv.Value?.GetType().Name ?? "null"}"))
+                    ? string.Join("; ", bundle.Fields.Select(kv => $"{kv.Key}={GetFieldValue(kv.Value) ?? "null"}"))
                     : "(none)"));
             return obj;
         }
@@ -149,19 +157,96 @@ namespace projectFrameCut.ScriptEngine
         /// <summary>
         /// 构造 SettableField 元数据 PSObject。
         /// </summary>
-        protected PSObject NewSettableFieldObject(EffectArgumentFieldDescriptor field)
+        protected PSObject NewSettableFieldObject(IEffectArgumentField field)
         {
             var obj = new PSObject();
             obj.Properties.Add(new PSNoteProperty("Id", field.Id));
-            //obj.Properties.Add(new PSNoteProperty("DisplayName", field.DisplayName));
-            //obj.Properties.Add(new PSNoteProperty("Description", field.Description));
-            //obj.Properties.Add(new PSNoteProperty("ValueType", field.ValueType.ToString()));
+            obj.Properties.Add(new PSNoteProperty("FieldType", field.FieldType.ToString()));
+            obj.Properties.Add(new PSNoteProperty("Value", GetFieldValue(field)));
+            obj.Properties.Add(new PSNoteProperty("IsDynamic", field.IsDynamic));
             obj.Properties.Add(new PSNoteProperty("DefaultValue", field.DefaultValue));
             obj.Properties.Add(new PSNoteProperty("MinValue", field.MinValue));
             obj.Properties.Add(new PSNoteProperty("MaxValue", field.MaxValue));
             obj.Properties.Add(new PSNoteProperty("PresetOptions", field.PresetOptions));
             obj.Properties.Add(new PSNoteProperty("Remarks", field.Remarks ?? ""));
             return obj;
+        }
+
+        protected int ApplyFields(IEffectProvider provider, Hashtable values)
+        {
+            var fields = provider.Fields;
+            int changed = 0;
+            foreach (DictionaryEntry entry in values)
+            {
+                var fieldId = entry.Key?.ToString() ?? string.Empty;
+                if (!fields.TryGetValue(fieldId, out var field))
+                {
+                    WriteError(new ErrorRecord(
+                        new ArgumentException($"Unknown field '{fieldId}' for effect provider '{provider.TypeName}'."),
+                        "EffectProviderFieldNotFound", ErrorCategory.InvalidArgument, fieldId));
+                    continue;
+                }
+
+                try
+                {
+                    fields[fieldId] = new StaticEffectArgumentField
+                    {
+                        Id = fieldId,
+                        FieldType = field.FieldType,
+                        Value = ConvertFieldValue(field, entry.Value),
+                        DefaultValue = field.DefaultValue,
+                        MinValue = field.MinValue,
+                        MaxValue = field.MaxValue,
+                        PresetOptions = field.PresetOptions,
+                        Remarks = field.Remarks,
+                    };
+                    provider.ClearFieldBinding(fieldId);
+                    changed++;
+                }
+                catch (Exception ex) when (ex is ArgumentException or FormatException or InvalidCastException or OverflowException)
+                {
+                    WriteError(new ErrorRecord(ex, "InvalidEffectProviderFieldValue", ErrorCategory.InvalidArgument, entry.Value));
+                }
+            }
+            provider.Fields = fields;
+            return changed;
+        }
+
+        private static object? GetFieldValue(IEffectArgumentField field) => field switch
+        {
+            StaticEffectArgumentField staticField => staticField.Value,
+            DynamicEffectParamField dynamicField => dynamicField.StaticFallbackValue,
+            _ => field.GetGetter()(),
+        };
+
+        private static Hashtable ToHashtable<TValue>(IEnumerable<KeyValuePair<string, TValue>> values)
+        {
+            var result = new Hashtable(StringComparer.Ordinal);
+            foreach (var (key, value) in values) result[key] = value;
+            return result;
+        }
+
+        private static object ConvertFieldValue(IEffectArgumentField field, object? rawValue)
+        {
+            rawValue = EffectParamConvert.Normalize(rawValue);
+            var baseType = field.FieldType & (EffectArgumentFieldType)0xFFFF;
+            object converted = baseType switch
+            {
+                EffectArgumentFieldType.Integer when EffectParamConvert.TryConvertToInt(rawValue, out var intValue) => intValue,
+                EffectArgumentFieldType.UnsignedInteger when EffectParamConvert.TryConvertToUShort(rawValue, out var unsignedValue) => unsignedValue,
+                EffectArgumentFieldType.Numeric when EffectParamConvert.TryConvertToFloat(rawValue, out var numericValue) => numericValue,
+                EffectArgumentFieldType.Boolean when EffectParamConvert.TryConvertToBool(rawValue, out var boolValue) => boolValue,
+                EffectArgumentFieldType.Long => Convert.ToInt64(rawValue, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.UnsignedLong => Convert.ToUInt64(rawValue, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.String => rawValue?.ToString() ?? string.Empty,
+                _ when rawValue is not null => rawValue,
+                _ => throw new ArgumentException("The value cannot be null."),
+            };
+            if (field.PresetOptions is { Length: > 0 }
+                && converted is string text
+                && !field.PresetOptions.Contains(text, StringComparer.OrdinalIgnoreCase))
+                throw new ArgumentException($"Value must be one of: {string.Join(", ", field.PresetOptions)}.");
+            return converted;
         }
     }
 
@@ -186,8 +271,19 @@ namespace projectFrameCut.ScriptEngine
 
         protected override void ProcessRecordImpl()
         {
-            // IsMultiInput / SettableFields / ParametersNeeded were removed from the provider API.
-            throw new NotImplementedException("Get-ProjectEffectBundleType was disabled after the IEffectBundle removal.");
+            foreach (var (typeName, factory) in EffectServices.GetAvailableEffectProviders())
+            {
+                var provider = factory();
+                if (!string.IsNullOrWhiteSpace(Name)
+                    && !typeName.Contains(Name, StringComparison.OrdinalIgnoreCase)
+                    && !provider.Name.Contains(Name, StringComparison.OrdinalIgnoreCase)) continue;
+                if (EffectType.HasValue && provider.TypeOfEffect != EffectType.Value) continue;
+                if (Target.HasValue && !provider.Target.HasFlag(Target.Value)) continue;
+
+                var obj = NewEffectBundleObject(provider);
+                obj.Properties.Add(new PSNoteProperty("RegistrationKey", typeName));
+                WriteObject(obj);
+            }
         }
     }
 
@@ -221,8 +317,22 @@ namespace projectFrameCut.ScriptEngine
 
         protected override void ProcessRecordImpl()
         {
-            // SettableFields / NewEffectBundleObject were removed from the provider API.
-            throw new NotImplementedException("Get-ProjectClipEffectBundle was disabled after the IEffectBundle removal.");
+            if (!EnsurePageLoaded(out var page)) return;
+            var clip = ResolveClip(page!, ClipId);
+            if (clip?.EffectProviders is null) return;
+
+            var providers = clip.EffectProviders.Values.AsEnumerable();
+            if (BundleId.HasValue) providers = providers.Where(provider => provider.Id == BundleId.Value);
+            if (!string.IsNullOrWhiteSpace(TypeName))
+                providers = providers.Where(provider => provider.TypeName.Equals(TypeName, StringComparison.OrdinalIgnoreCase));
+
+            foreach (var provider in providers)
+            {
+                var obj = Detailed ? NewEffectBundleObject(provider) : NewEffectBundleSummaryObject(provider);
+                if (ShowFields && !Detailed)
+                    obj.Properties.Add(new PSNoteProperty("Fields", provider.Fields.Values.Select(NewSettableFieldObject).ToArray()));
+                WriteObject(obj);
+            }
         }
     }
 
@@ -268,8 +378,36 @@ namespace projectFrameCut.ScriptEngine
 
         protected override void ProcessRecordImpl()
         {
-            // SettableFields / HandleSettableFieldsChange / NewEffectBundleObject were removed from the provider API.
-            throw new NotImplementedException("Add-ProjectClipEffectBundle was disabled after the IEffectBundle removal.");
+            if (!EnsurePageLoaded(out var page)) return;
+            var clip = ResolveClip(page!, ClipId);
+            if (clip is null) return;
+            if (string.IsNullOrWhiteSpace(TypeName)
+                || !EffectServices.GetAvailableEffectProviders().TryGetValue(TypeName, out var factory))
+            {
+                WriteError(new ErrorRecord(new ArgumentException($"Effect provider type '{TypeName}' was not found."),
+                    "EffectProviderTypeNotFound", ErrorCategory.ObjectNotFound, TypeName));
+                return;
+            }
+
+            var provider = factory();
+            if (!EffectBindingHelper.AreTargetsCompatible(provider.Target, clip.GetEffectTarget()))
+            {
+                WriteError(new ErrorRecord(new ArgumentException($"Effect provider '{TypeName}' is not compatible with clip '{clip.DisplayName}'."),
+                    "EffectProviderTargetMismatch", ErrorCategory.InvalidArgument, TypeName));
+                return;
+            }
+            if (!string.IsNullOrWhiteSpace(Name)) provider.Name = Name;
+            provider.Enabled = !Disabled;
+            if (Fields is not null) ApplyFields(provider, Fields);
+
+            var action = $"Add effect provider '{provider.Name}' to clip '{clip.DisplayName}'";
+            if (!ShouldProcess(clip.DisplayName, action)) return;
+            clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
+            clip.EffectProviders[provider.Id] = provider;
+            EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, provider, clip.GetEffectTarget());
+            ClipInfoBuilder.RebuildAllEffects(clip);
+            page!.RefreshPropertyPanel(clip);
+            if (PassThru) WriteObject(NewEffectBundleObject(provider));
         }
     }
 
@@ -333,8 +471,57 @@ namespace projectFrameCut.ScriptEngine
 
         protected override void ProcessRecordImpl()
         {
-            // BindedInputId / BindedOutputId / SettableFields / HandleSettableFieldsChange were removed from the provider API.
-            throw new NotImplementedException("Set-ProjectClipEffectBundle was disabled after the IEffectBundle removal.");
+            if (!EnsurePageLoaded(out var page)) return;
+            var clip = ResolveClip(page!, ClipId);
+            if (clip is null) return;
+            var provider = ResolveEffectBundle(clip, BundleId);
+            if (provider is null) return;
+
+            var action = $"Update effect provider '{provider.Name}' on clip '{clip.DisplayName}'";
+            if (!ShouldProcess(clip.DisplayName, action)) return;
+
+            if (ResetToDefaults)
+            {
+                if (!EffectServices.GetAvailableEffectProviders().TryGetValue(provider.TypeName, out var factory))
+                {
+                    WriteError(new ErrorRecord(new InvalidOperationException($"Factory for effect provider '{provider.TypeName}' is unavailable."),
+                        "EffectProviderFactoryNotFound", ErrorCategory.ObjectNotFound, provider.TypeName));
+                    return;
+                }
+                provider.Fields = factory().Fields;
+                foreach (var fieldId in provider.EnumerateFieldBindings().Select(binding => binding.Key).ToArray())
+                    provider.ClearFieldBinding(fieldId);
+            }
+            if (!string.IsNullOrWhiteSpace(Name)) provider.Name = Name;
+            if (Enabled.HasValue) provider.Enabled = Enabled.Value;
+            if (Fields is not null) ApplyFields(provider, Fields);
+
+            if (BindedInputId.HasValue)
+            {
+                if (!provider.HasMainPictureInput())
+                {
+                    WriteError(new ErrorRecord(new InvalidOperationException($"Effect provider '{provider.TypeName}' has no single main picture input."),
+                        "EffectProviderHasNoMainInput", ErrorCategory.InvalidOperation, provider));
+                }
+                else
+                {
+                    provider.SetMainInputSource(BindedInputId.Value);
+                }
+            }
+            if (BindedOutputId.HasValue)
+            {
+                if (BindedOutputId.Value == IEffectProvider.OutputAnchorGUID)
+                    EffectBindingHelper.SetFinalOutput(clip.EffectProviders!, provider.Id);
+                else if (BindedOutputId.Value == IEffectProvider.NoConnectionGUID)
+                    provider.SetFinalOutputSource(false);
+                else
+                    WriteError(new ErrorRecord(new ArgumentException("BindedOutputId must be OutputAnchorGUID or NoConnectionGUID."),
+                        "InvalidEffectProviderOutputBinding", ErrorCategory.InvalidArgument, BindedOutputId));
+            }
+
+            ClipInfoBuilder.RebuildAllEffects(clip);
+            page!.RefreshPropertyPanel(clip);
+            if (PassThru) WriteObject(NewEffectBundleObject(provider));
         }
     }
 
@@ -376,6 +563,8 @@ namespace projectFrameCut.ScriptEngine
                 return;
 
             EffectBindingHelper.RemoveProvider(clip.EffectProviders, BundleId);
+            ClipInfoBuilder.RebuildAllEffects(clip);
+            page!.RefreshPropertyPanel(clip);
         }
     }
 
@@ -395,8 +584,15 @@ namespace projectFrameCut.ScriptEngine
 
         protected override void ProcessRecordImpl()
         {
-            // SettableFields were removed from the provider API.
-            throw new NotImplementedException("Get-EffectBundleField was disabled after the IEffectBundle removal.");
+            if (string.IsNullOrWhiteSpace(TypeName)
+                || !EffectServices.GetAvailableEffectProviders().TryGetValue(TypeName, out var factory))
+            {
+                WriteError(new ErrorRecord(new ArgumentException($"Effect provider type '{TypeName}' was not found."),
+                    "EffectProviderTypeNotFound", ErrorCategory.ObjectNotFound, TypeName));
+                return;
+            }
+            foreach (var field in factory().Fields.Values)
+                WriteObject(NewSettableFieldObject(field));
         }
     }
 }

@@ -1,21 +1,21 @@
-using projectFrameCut.Render.Plugin;
-using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 
-namespace projectFrameCut.Render.Effect
+namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
     /// <summary>
-    /// The shared base class of the Render-side effect providers.
+    /// A highly abstract base class for effect providers. It provides the common plumbing for field definitions, parameter serialization, and effect building.
+    /// <para />
     /// It implements <see cref="IEffectProvider"/> (core contract) WITHOUT any UI capability.
     /// The property-panel UI is provided separately by the App-layer <c>EffectProviderUI</c> wrappers.
     /// </summary>
     /// <remarks>
     /// The instance state is driven by <see cref="Fields"/> / <see cref="AnchorsBindingState"/>.
-    /// Subclasses implement <see cref="BuildEffects"/> to create the final effect(s); the stateless factory
-    /// members (<see cref="RestoreInstance(EffectImplementType, Dictionary{string, object})"/> /
+    /// Subclasses implement <see cref="BuildEffects"/> to create the final effect(s).
+    /// <para />
+    /// the stateless factory members (<see cref="RestoreInstance(EffectImplementType, Dictionary{string, object})"/> /
     /// <see cref="RestoreInstanceWithDefaultType"/>) and the stateful <see cref="Build()"/> all route into it.
     /// </remarks>
     public abstract class EffectProviderBase : IEffectProvider
@@ -57,11 +57,11 @@ namespace projectFrameCut.Render.Effect
             MetaData = new Dictionary<string, object>();
         }
 
-        #region Identity (IEffectProvider)
+        #region Identity
 
         public abstract string TypeName { get; }
 
-        public virtual string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        public abstract string FromPlugin { get; }
 
         public abstract EffectType TypeOfEffect { get; }
 
@@ -75,62 +75,7 @@ namespace projectFrameCut.Render.Effect
 
         #endregion
 
-        #region Field metadata (subclasses implement)
-
-        /// <summary>
-        /// Define the settable argument fields of the effect.
-        /// Each field maps to a parameter key in <see cref="Parameters"/>.
-        /// </summary>
-        protected abstract IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields();
-
-        /// <summary>
-        /// Define the input fields (anchors) of the effect. Defaults to a single IPicture input.
-        /// </summary>
-        protected virtual IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() 
-            => new Dictionary<string, EffectArgumentFieldDescriptor>
-            {
-                { PrimaryInputAnchorKey, Field(PrimaryInputAnchorKey, EffectArgumentFieldType.IPicture, "", remarks: "The primary input for the effect to process. This is a mandatory input.") }
-            };
-
-        /// <summary>
-        /// Define the output field (anchor) of the effect. Defaults to an IPicture output.
-        /// </summary>
-        protected virtual EffectArgumentFieldDescriptor DefineOutField() => Field(OutputAnchorKey, EffectArgumentFieldType.IPicture, "", remarks: "The output of the effect. This is a mandatory output.");
-
-        /// <summary>
-        /// A compact helper for subclasses to declare a settable argument field.
-        /// </summary>
-        protected EffectArgumentFieldDescriptor Field(
-            string id,
-            EffectArgumentFieldType fieldType,
-            string defaultValue,
-            string? min = null,
-            string? max = null,
-            string[]? presetOptions = null,
-            string? remarks = null,
-            string? typeName = null)
-        {
-            var ft = fieldType;
-            if (min is not null) ft |= EffectArgumentFieldType.HasMinValue;
-            if (max is not null) ft |= EffectArgumentFieldType.HasMaxValue;
-
-            return new EffectArgumentFieldDescriptor
-            {
-                Id = id,
-                TypeName = typeName ?? EffectProviderContractMapping.FieldTypeToParamType(fieldType),
-                FromPlugin = FromPlugin,
-                FieldType = ft,
-                DefaultValue = defaultValue,
-                MinValue = min ?? "",
-                MaxValue = max ?? "",
-                PresetOptions = presetOptions,
-                Remarks = remarks,
-            };
-        }
-
-        #endregion
-
-        #region IEffectProvider
+        #region Anchors definition
 
         public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> InFields => DefineInFields();
 
@@ -242,7 +187,58 @@ namespace projectFrameCut.Render.Effect
 
         #endregion
 
-        #region Anchor synchronization
+        #region Field metadata (subclasses implement)
+
+        /// <summary>
+        /// Define the settable argument fields of the effect.
+        /// Each field maps to a parameter key in <see cref="Parameters"/>.
+        /// </summary>
+        protected abstract IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields();
+
+        /// <summary>
+        /// Define the input fields (anchors) of the effect. Defaults to a single IPicture input.
+        /// </summary>
+        protected virtual IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() 
+            => new Dictionary<string, EffectArgumentFieldDescriptor>
+            {
+                { PrimaryInputAnchorKey, Field(PrimaryInputAnchorKey, EffectArgumentFieldType.IPicture, "", remarks: "The primary input for the effect to process. This is a mandatory input.") }
+            };
+
+        /// <summary>
+        /// Define the output field (anchor) of the effect. Defaults to an IPicture output.
+        /// </summary>
+        protected virtual EffectArgumentFieldDescriptor DefineOutField() => Field(OutputAnchorKey, EffectArgumentFieldType.IPicture, "", remarks: "The output of the effect. This is a mandatory output.");
+
+        /// <summary>
+        /// A compact helper for subclasses to declare a settable argument field.
+        /// </summary>
+        protected EffectArgumentFieldDescriptor Field(
+            string id,
+            EffectArgumentFieldType fieldType,
+            string defaultValue,
+            string? min = null,
+            string? max = null,
+            string[]? presetOptions = null,
+            string? remarks = null,
+            string? typeName = null)
+        {
+            var ft = fieldType;
+            if (min is not null) ft |= EffectArgumentFieldType.HasMinValue;
+            if (max is not null) ft |= EffectArgumentFieldType.HasMaxValue;
+
+            return new EffectArgumentFieldDescriptor
+            {
+                Id = id,
+                TypeName = typeName ?? EffectProviderContractMapping.FieldTypeToParamType(fieldType),
+                FromPlugin = FromPlugin,
+                FieldType = ft,
+                DefaultValue = defaultValue,
+                MinValue = min ?? "",
+                MaxValue = max ?? "",
+                PresetOptions = presetOptions,
+                Remarks = remarks,
+            };
+        }
 
         #endregion
 

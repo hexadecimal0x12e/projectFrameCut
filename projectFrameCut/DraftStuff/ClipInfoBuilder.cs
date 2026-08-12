@@ -16,7 +16,6 @@ using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
@@ -2471,7 +2470,7 @@ namespace projectFrameCut.DraftStuff
 
                 // 测量新样式的自然尺寸
                 var newEntries = newProvider.BuildEntries();
-                var newRect = TextMeasureHelper.MeasureBounds(newEntries, 1920, 1080);
+                var newRect = TextServices.MeasureBounds(newEntries, 1920, 1080);
                 var newW = Math.Max(1, (int)Math.Ceiling(newRect.Width));
                 var newH = Math.Max(1, (int)Math.Ceiling(newRect.Height));
 
@@ -2502,7 +2501,7 @@ namespace projectFrameCut.DraftStuff
 
                 // 重新测量文本的自然宽高
                 var resetEntries = styleProvider.BuildEntries();
-                var resetRect = TextMeasureHelper.MeasureBounds(resetEntries, 1920, 1080);
+                var resetRect = TextServices.MeasureBounds(resetEntries, 1920, 1080);
                 var resetW = Math.Max(1, (int)Math.Ceiling(resetRect.Width));
                 var resetH = Math.Max(1, (int)Math.Ceiling(resetRect.Height));
 
@@ -2816,11 +2815,12 @@ namespace projectFrameCut.DraftStuff
                 {
                     var bindView = new DraftEffectBindingView();
                     bindView.LoadClip(clip, page, showAllEffect);
-                    // Sync effect changes back to the property panel in real time
+                    // Sync the completed graph rebuild to the draft preview.
                     bindView.EffectBundlesChanged += () =>
                     {
-                        RebuildAllEffects(clip, false);
-                        handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                        // DraftEffectBindingView has already rebuilt the provider graph. Do not build it a
+                        // second time or rebuild the entire property/timeline UI for a single connection.
+                        handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("__EFFECT_BINDING_CHANGED__", clip, null));
                     };
                     if (page.UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
                     {
@@ -2904,7 +2904,17 @@ namespace projectFrameCut.DraftStuff
                 {
                     var bundleId = bundleKvp.Key;
                     var bundleInstance = bundleKvp.Value;
-                    var locedName = EffectServices.GetLocalizedEffectProviderNames()[bundleInstance.TypeName];
+                    var locedName = EffectServices.GetLocalizedEffectProviderNames("", false).GetValueOrDefault(bundleInstance.TypeName, bundleInstance.TypeName);
+                    var locedType = bundleInstance.TypeOfEffect switch
+                    {
+                        Shared.EffectType.ContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
+                        Shared.EffectType.AudioContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
+                        Shared.EffectType.BindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
+                        Shared.EffectType.AudioBindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
+                        Shared.EffectType.TextEffect => PPLocalizedResources.Effect_TextEffect,
+                        Shared.EffectType.ContinuousTextEffect => PPLocalizedResources.Effect_ContinuousTextEffect,
+                        _ => PPLocalizedResources.Effect_GeneralEffect,
+                    };
                     if (string.IsNullOrWhiteSpace(bundleInstance.Name)) bundleInstance.Name = locedName;
 
                     string GetInputAnchorSelection(string id)
@@ -2937,7 +2947,7 @@ namespace projectFrameCut.DraftStuff
 
                         var bundlePpb = bundleUI.CreateUI(bundleInstance);
 
-                        ppb.AddText(new TitleAndDescriptionLineLabel(bundleInstance.Name ?? bundleInstance.TypeName, bundleInstance.TypeName));
+                        ppb.AddText(new TitleAndDescriptionLineLabel(locedName, locedType));
                         var providerDiagnostics = bindingDiagnostics.Where(d => d.ProviderId == bundleId).ToList();
                         if (providerDiagnostics.Count > 0)
                         {
@@ -2950,7 +2960,7 @@ namespace projectFrameCut.DraftStuff
                             });
                         }
                         ppb.AddCheckbox($"Provider|{bundleId}|Enabled", PPLocalizedResources._Enabled, bundleInstance.Enabled);
-                        ppb.AddEntry($"Provider|{bundleId}|Name", "Name", bundleInstance.Name ?? locedName, locedName);
+                        ppb.AddEntry($"Provider|{bundleId}|Name", Localized.VectorContentEditorView_Name, bundleInstance.Name ?? locedName, locedName);
 
                         if (!bundleInstance.Target.HasFlag(EffectTarget.IsKeyFramed))
                         {

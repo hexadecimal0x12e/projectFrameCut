@@ -1,5 +1,4 @@
 using projectFrameCut.ApplicationAPIBase.Effect;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Asset;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.DraftStuff;
@@ -29,87 +28,28 @@ namespace projectFrameCut.DraftStuff
         private const string SolidColorOutputWidthKey = "SolidColorOutputWidth";
         private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
         private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
-        private const string FailedEffectsMetaKey = ClipInitializationFailure.FailedEffectsKey;
-        private const string FailedEffectProvidersMetaKey = ClipInitializationFailure.FailedEffectProvidersKey;
-
-        private static Dictionary<string, IEffect> RestoreEffectsSafely(ClipDraftDTO dto, int relativeWidth, int relativeHeight, Dictionary<string, object> extraData)
+        private static void InitializeEffects(ClipElementUI element, ClipDraftDTO dto, int relativeWidth, int relativeHeight)
         {
-            var structures = new List<EffectAndMixtureJSONStructure>(dto.Effects ?? []);
-            structures.AddRange(ReadStoredArray<EffectAndMixtureJSONStructure>(extraData, FailedEffectsMetaKey));
-            var restored = new Dictionary<string, IEffect>();
-            var failed = new List<EffectAndMixtureJSONStructure>();
-
-            foreach (var structure in structures)
-            {
-                try
-                {
-                    var key = string.IsNullOrWhiteSpace(structure.Name) ? $"Effect-{Guid.NewGuid()}" : structure.Name;
-                    restored[key] = PluginManager.CreateEffect(structure, relativeWidth, relativeHeight);
-                }
-                catch (Exception ex)
-                {
-                    failed.Add(structure);
-                    ClipInitializationFailure.Mark(extraData, $"ResolveEffect ({structure.Name ?? structure.TypeName})", ex);
-                    Log(ex, $"Restore effect {structure.Name}/{structure.TypeName}; keeping it for repair", nameof(DraftImportAndExportHelper));
-                }
-            }
-
-            if (failed.Count > 0) extraData[FailedEffectsMetaKey] = failed;
-            else extraData.Remove(FailedEffectsMetaKey);
-            return restored;
-        }
-
-        private static Dictionary<Guid, IEffectProvider> RestoreEffectProvidersSafely(ClipDraftDTO dto, Dictionary<string, object> extraData)
-        {
-            var providers = (dto.EffectProviders ?? []).Concat(ReadStoredArray<EffectProviderJSONStructure>(extraData, FailedEffectProvidersMetaKey)).ToArray();
             try
             {
-                var restored = EffectBindingHelper.MigrateToEffectProviders(providers, dto.EffectBundles);
-                extraData.Remove(FailedEffectProvidersMetaKey);
-                return restored;
+                element.Effects = dto.Effects?.ToDictionary(
+                    effect => string.IsNullOrWhiteSpace(effect.Name) ? $"Effect-{Guid.NewGuid()}" : effect.Name,
+                    effect => PluginManager.CreateEffect(effect, relativeWidth, relativeHeight))
+                    ?? new Dictionary<string, IEffect>();
+                element.EffectProviders = EffectBindingHelper.MigrateToEffectProviders(dto.EffectProviders, dto.EffectBundles);
+                ClipInfoBuilder.RebuildAllEffects(element);
             }
             catch (Exception ex)
             {
-                extraData[FailedEffectProvidersMetaKey] = providers;
-                ClipInitializationFailure.Mark(extraData, "Effect provider initialization", ex);
-                Log(ex, "Restore effect providers; keeping them for repair", nameof(DraftImportAndExportHelper));
-                return new Dictionary<Guid, IEffectProvider>();
+                ClipInitializationFailure.Mark(element.ExtraData, "Effect initialization", ex);
+                Log(ex, $"Initialize effects for clip {element.DisplayName}; using fallback", nameof(DraftImportAndExportHelper));
             }
-        }
-
-        private static T[] ReadStoredArray<T>(Dictionary<string, object> data, string key)
-        {
-            if (!data.TryGetValue(key, out var raw) || raw is null) return [];
-            try
-            {
-                return raw switch
-                {
-                    T[] array => array,
-                    IEnumerable<T> items => items.ToArray(),
-                    JsonElement element => element.Deserialize<T[]>(DraftPage.DraftJSONOption) ?? [],
-                    string json => JsonSerializer.Deserialize<T[]>(json, DraftPage.DraftJSONOption) ?? [],
-                    _ => []
-                };
-            }
-            catch
-            {
-                return [];
-            }
-        }
-
-        internal static void RestoreFailedInitializationData(ClipDraftDTO clip)
-        {
-            var metadata = clip.MetaData ?? new Dictionary<string, object>();
-            var failedEffects = ReadStoredArray<EffectAndMixtureJSONStructure>(metadata, FailedEffectsMetaKey);
-            if (failedEffects.Length > 0)
-                clip.Effects = (clip.Effects ?? []).Concat(failedEffects).ToArray();
-            var failedProviders = ReadStoredArray<EffectProviderJSONStructure>(metadata, FailedEffectProvidersMetaKey);
-            if (failedProviders.Length > 0)
-                clip.EffectProviders = (clip.EffectProviders ?? []).Concat(failedProviders).ToArray();
         }
 
         private static void RebuildEffectsForExport(ClipElementUI element)
         {
+            if (ClipInitializationFailure.IsMarked(element.ExtraData)) return;
+
             try
             {
                 ClipInfoBuilder.RebuildAllEffects(element);
@@ -120,15 +60,6 @@ namespace projectFrameCut.DraftStuff
                 element.ApplyInitializationFailureIndicator();
                 Log(ex, $"Rebuild effects for clip {element.DisplayName} during export; preserving fallback state", nameof(DraftImportAndExportHelper));
             }
-        }
-
-        private static void ClearResolvedEffectFailure(Dictionary<string, object> extraData)
-        {
-            if (!ClipInitializationFailure.IsMarked(extraData)
-                || extraData.ContainsKey(FailedEffectsMetaKey)
-                || extraData.ContainsKey(FailedEffectProvidersMetaKey)) return;
-            if (ClipInitializationFailure.GetDescription(extraData).StartsWith("Effect", StringComparison.OrdinalIgnoreCase))
-                ClipInitializationFailure.Clear(extraData);
         }
 
         [return: NotNullIfNotNull(nameof(page))]
@@ -150,7 +81,12 @@ namespace projectFrameCut.DraftStuff
             return CreateClipDraftDTO(page, border, element, (uint)trackIndex, wrapSoundtrackAsClip);
         }
 
-        public static DraftStructureJSON ExportFromDraftPage(projectFrameCut.DraftPage page, bool wrapSoundtrackAsClip = false, bool includeUiOnlyClips = true, bool fixOverlap = false)
+        public static DraftStructureJSON ExportFromDraftPage(
+            projectFrameCut.DraftPage page,
+            bool wrapSoundtrackAsClip = false,
+            bool includeUiOnlyClips = true,
+            bool fixOverlap = false,
+            bool rebuildEffects = true)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
 
@@ -167,7 +103,8 @@ namespace projectFrameCut.DraftStuff
                     if (child is Microsoft.Maui.Controls.Border border)
                     {
                         if (border.BindingContext is not ClipElementUI elem) continue;
-                        RebuildEffectsForExport(elem);
+                        if (rebuildEffects)
+                            RebuildEffectsForExport(elem);
 
                         // Ghost/Shadow check: Guid-based IDs cannot use string prefix matching.
                         if (!includeUiOnlyClips && elem.ClipType == ClipMode.MarkingClip) continue;
@@ -362,7 +299,7 @@ namespace projectFrameCut.DraftStuff
                     }
                     if (entries is { Count: > 0 })
                     {
-                        var bounds = TextMeasureHelper.MeasureBounds(entries, 1920, 1080);
+                        var bounds = TextServices.MeasureBounds(entries, 1920, 1080);
                         if (bounds.Width > 0 && bounds.Height > 0)
                         {
                             exportTargetWidth = Math.Max(1, (int)Math.Ceiling(bounds.Width));
@@ -525,8 +462,6 @@ namespace projectFrameCut.DraftStuff
                 {
                     continue;
                 }
-
-                RestoreFailedInitializationData(clip);
 
                 var clipJson = JsonSerializer.SerializeToElement(clip);
                 var clipInstance = PluginManager.CreateClip(clipJson) ?? throw new NullReferenceException($"PluginManager.CreateClip(clip) failed to create clip for the specific clip.\r\n({JsonSerializer.Serialize(clip, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping })})");
@@ -922,25 +857,7 @@ namespace projectFrameCut.DraftStuff
                 element.StartingY = dto.StartingY;
                 element.TypeName = dto.TypeName;
                 element.FromPlugin = dto.FromPlugin;
-                element.Effects = RestoreEffectsSafely(dto, proj.RelativeWidth, proj.RelativeHeight, element.ExtraData);
-                element.EffectProviders = RestoreEffectProvidersSafely(dto, element.ExtraData);
-
-                if (element.Effects is null)
-                {
-                    element.Effects = new Dictionary<string, IEffect>();
-                }
-
-                // Rebuild generated effects from bundles before applying UI width from speed ratio.
-                try
-                {
-                    ClipInfoBuilder.RebuildAllEffects(element);
-                    ClearResolvedEffectFailure(element.ExtraData);
-                }
-                catch (Exception ex)
-                {
-                    ClipInitializationFailure.Mark(element.ExtraData, "Effect graph initialization", ex);
-                    Log(ex, $"Rebuild effects for clip {element.DisplayName}; using fallback", nameof(DraftImportAndExportHelper));
-                }
+                InitializeEffects(element, dto, proj.RelativeWidth, proj.RelativeHeight);
                 element.ApplySpeedRatio();
                 element.ApplyInitializationFailureIndicator();
 
@@ -1162,25 +1079,9 @@ namespace projectFrameCut.DraftStuff
             element.TypeName = clip.TypeName;
             element.FromPlugin = clip.FromPlugin;
 
-            // Reconstruct Effects
-            element.Effects = RestoreEffectsSafely(clip, 1, 1, element.ExtraData);
+            InitializeEffects(element, clip, 1, 1);
 
-            // Reconstruct Effect Providers
-            element.EffectProviders = RestoreEffectProvidersSafely(clip, element.ExtraData);
-
-            // Rebuild generated effects from bundles before applying UI width from speed ratio.
-            try
-            {
-                ClipInfoBuilder.RebuildAllEffects(element);
-                ClearResolvedEffectFailure(element.ExtraData);
-            }
-            catch (Exception ex)
-            {
-                ClipInitializationFailure.Mark(element.ExtraData, "Effect graph initialization", ex);
-                Log(ex, $"Rebuild effects for clip {element.DisplayName}; using fallback", nameof(DraftImportAndExportHelper));
-            }
-
-            // Apply visual properties after speed/effects are fully restored.
+            // Apply visual properties after effect initialization has been attempted.
             element.ApplySpeedRatio();
             element.ApplyClipColor();
             element.ApplyInitializationFailureIndicator();

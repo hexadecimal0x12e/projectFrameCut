@@ -87,6 +87,8 @@ namespace projectFrameCut.Render.Effect
 
         public override EffectTarget Target => EffectTarget.Video;
 
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => Array.Empty<EffectArgumentFieldDescriptor>();
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];

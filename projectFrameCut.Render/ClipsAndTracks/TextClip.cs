@@ -167,7 +167,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public TextClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+           EffectHelper.ResolveClipEffects(this);
         }
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
@@ -175,7 +175,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             ClearFrameCache();
             if (!string.IsNullOrWhiteSpace(FontPath))
                 TextClipFontRegistry.AddFont(FontPath);
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+           EffectHelper.ResolveClipEffects(this);
         }
 
         public void Dispose()

@@ -34,8 +34,10 @@ namespace projectFrameCut.DraftStuff
         {
             var sources = new List<ValueBindingSource>
             {
-                new(ValueProviderFrameContext.BuiltInFrameProviderId, "Frame Index"),
-                new(ValueProviderFrameContext.BuiltInProgressProviderId, "Clip Progress"),
+                new(ValueProviderFrameContext.BuiltInFrameProviderId,
+                    LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_FrameIndex),
+                new(ValueProviderFrameContext.BuiltInProgressProviderId,
+                    LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_Progress),
             };
             if (_clip.EffectProviders is { } bundles)
             {
@@ -105,31 +107,15 @@ namespace projectFrameCut.DraftStuff
                 options.Add(display);
             }
 
-            AddOption(string.Empty, "Unbind / Static");
+            AddOption(string.Empty, LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_Disconnect);
             foreach (var s in GetBindingSources())
             {
                 var suffix = s.OutputAnchorName is { Length: > 0 } ? $" ({s.OutputAnchorName})" : string.Empty;
                 AddOption(s.Id, $"{s.DisplayName}{suffix}");
             }
 
-            const string addProviderLabel = "➕ Add Value Provider…";
-            options.Add(addProviderLabel);
-
             var pick = await _page.DisplayActionSheetAsync($"Bind {fieldId}", "Cancel", null, options.ToArray());
             if (string.IsNullOrEmpty(pick) || pick == "Cancel") return;
-
-            if (pick == addProviderLabel)
-            {
-                var providerTypes = EffectServices.GetAvailableEffectProviders()
-                    .Where(kv => kv.Value().Target.HasFlag(EffectTarget.ValueProvider))
-                    .Select(kv => kv.Key)
-                    .ToList();
-                if (providerTypes.Count == 0) return;
-                var typePick = await _page.DisplayActionSheetAsync("Add Value Provider", "Cancel", null, providerTypes.ToArray());
-                if (string.IsNullOrEmpty(typePick) || typePick == "Cancel") return;
-                if (AddValueProvider(typePick) is { } newId) ApplyBinding(fieldId, newId);
-                return;
-            }
 
             if (sourceByOption.TryGetValue(pick, out var chosen))
             {

@@ -5,6 +5,13 @@ using System.Linq;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
+    /// <summary>
+    /// A system that let fields drive the parameters dynamically or statically, and rendering priority of the effect.
+    /// </summary>
+    /// <remarks>
+    /// The IEffectProvider can replace every <see cref="IBindableArgumentEffect"/> and <see cref="EffectFactory"/>,
+    /// with <see cref="IValueProviderEffect"/> allows dynamic value binding.
+    /// </remarks>
     public interface IEffectProvider
     {
         /// <summary>
@@ -70,6 +77,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// All input fields of the effect provider, which is used to determine what kind of input data the effect can accept.
         /// The key is the field id, and the value is the field descriptor.
         /// </summary>
+        /// <remarks>
+        /// None of the input fields except the <c>__Input__</c> field can be act as a picture source. 
+        /// The <c>__Input__</c> field is the primary input for the effect, and it is used to determine the input picture for the effect.
+        /// </remarks>
         public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> InFields { get; }
 
         /// <summary>

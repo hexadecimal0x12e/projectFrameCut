@@ -1,3 +1,4 @@
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -141,6 +142,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 },
                 _ => throw new NotSupportedException($"Unsupported track type {TrackType}."),
             };
+
+           EffectHelper.ResolveClipEffects(this);
         }
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)

@@ -1,4 +1,5 @@
 ﻿
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -23,6 +24,166 @@ namespace projectFrameCut.Render.Effect
         public static EffectImplementType? ForcePreferToType = null;
 
         public static Dictionary<string, EffectImplementType> DefaultImplementsType = new();
+
+        public static void ResolveClipEffects(IClip target)
+        {
+            ArgumentNullException.ThrowIfNull(target);
+
+            target.EffectProvidersInstances = [];
+            target.EffectsInstances = [];
+            target.SpeedVarianceProviderInstance = null;
+            target.MixtureInstance = null;
+            target.AlternativeSource = null;
+
+            if (target.EffectProviders is not { Length: > 0 } providersJson)
+            {
+                try
+                {
+                    var existingEffects = CreateExistingEffects(target.Effects);
+                    ApplyResolvedEffects(target, existingEffects.Values);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    ClipInitializationFailure.Mark(target, "ResolveEffect", ex);
+                    throw;
+                }
+            }
+            else
+            {
+
+            }
+
+            Dictionary<Guid, IEffectProvider> providers;
+            IReadOnlyList<EffectBindingHelper.BindingDiagnostic> restoreDiagnostics;
+            try
+            {
+                providers = EffectBindingHelper.MigrateToEffectProviders(
+                    providersJson,
+                    null,
+                    out restoreDiagnostics);
+                target.EffectProvidersInstances = providers.Values.ToArray();
+            }
+            catch (Exception ex)
+            {
+                ClipInitializationFailure.Mark(target, "ResolveEffectProvider", ex);
+                throw;
+            }
+
+            EffectBindingHelper.BindingDiagnostic[] bindingDiagnostics;
+            try
+            {
+                bindingDiagnostics = restoreDiagnostics
+                    .Concat(EffectBindingHelper.ValidateBindings(providers))
+                    .Distinct()
+                    .ToArray();
+            }
+            catch (Exception ex)
+            {
+                ClipInitializationFailure.Mark(target, "ResolveBinding", ex);
+                throw;
+            }
+            if (bindingDiagnostics.Length > 0)
+            {
+                var exception = new InvalidOperationException(
+                    $"Invalid effect binding graph:{Environment.NewLine}" +
+                    string.Join(Environment.NewLine, bindingDiagnostics.Select(d => $"- [{d.Code}] {d.Message}")));
+                ClipInitializationFailure.Mark(target, "ResolveBinding", exception);
+                throw exception;
+            }
+
+            Dictionary<string, IEffect> existingProviderEffects;
+            try
+            {
+                existingProviderEffects = CreateExistingEffects(target.Effects);
+            }
+            catch (Exception ex)
+            {
+                ClipInitializationFailure.Mark(target, "ResolveEffect", ex);
+                throw;
+            }
+
+            Dictionary<string, IEffect> rebuiltEffects;
+            try
+            {
+                rebuiltEffects = EffectBindingHelper.RebuildAllEffects(providers, existingProviderEffects)
+                    ?? new Dictionary<string, IEffect>();
+            }
+            catch (Exception ex)
+            {
+                ClipInitializationFailure.Mark(target, "ResolveBinding", ex);
+                throw;
+            }
+
+            try
+            {
+                ApplyResolvedEffects(target, rebuiltEffects.Values);
+            }
+            catch (Exception ex)
+            {
+                ClipInitializationFailure.Mark(target, "ResolveEffect", ex);
+                throw;
+            }
+        }
+
+        private static Dictionary<string, IEffect> CreateExistingEffects(
+            EffectAndMixtureJSONStructure[]? structures)
+        {
+            var result = new Dictionary<string, IEffect>();
+            if (structures is null) return result;
+
+            foreach (var structure in structures)
+            {
+                var implementType = ForcePreferToType
+                    ?? (structure.ImplementType == EffectImplementType.NotSpecified
+                        ? DefaultImplementsType.GetValueOrDefault(
+                            $"{structure.FromPlugin}.{structure.TypeName}",
+                            EffectImplementType.NotSpecified)
+                        : structure.ImplementType);
+                var effect = PluginManager.CreateEffect(structure, implementType);
+                result[structure.Name ?? effect.Id] = effect;
+            }
+
+            return result;
+        }
+
+        private static void ApplyResolvedEffects(IClip target, IEnumerable<IEffect> resolvedEffects)
+        {
+            var effects = new List<IEffect>();
+            foreach (var effect in resolvedEffects.OrderBy(e => e.Index))
+            {
+                switch (effect)
+                {
+                    case IValueProviderEffect:
+                        continue;
+                    case ISpeedVarianceProvider speedVariance:
+                        if (target.SpeedVarianceProviderInstance is not null)
+                            throw new InvalidOperationException("Multiple SpeedVarianceProvider effects found.");
+                        target.SpeedVarianceProviderInstance = speedVariance;
+                        break;
+                    case IMixture mixture:
+                        if (target.MixtureInstance is not null)
+                            throw new InvalidOperationException("Multiple MixtureProvider effects found.");
+                        target.MixtureInstance = mixture;
+                        break;
+                    case ISourceReplacementEffect alternativeSource:
+                        if (target.AlternativeSource is not null)
+                            throw new InvalidOperationException("Multiple SourceReplacement effects found.");
+                        target.AlternativeSource = alternativeSource;
+                        break;
+                    default:
+                        effects.Add(effect);
+                        break;
+                }
+            }
+
+            foreach (var effect in effects)
+            {
+                if (!string.IsNullOrWhiteSpace(effect.BindedEffectProvidingSystemID))
+                    effect.Initialize();
+            }
+            target.EffectsInstances = effects.ToArray();
+        }
 
         public static (IEffect[] Effects, ISpeedVarianceProvider? SpeedVarianceProvider) GetEffectsInstancesAndSpeedVariance(EffectAndMixtureJSONStructure[]? Effects)
         {
@@ -117,6 +278,16 @@ namespace projectFrameCut.Render.Effect
         public static IEffect[] GetClipEffectsInstances(IClip clip, bool syncClipState = true)
         {
             ArgumentNullException.ThrowIfNull(clip);
+
+            if (syncClipState)
+            {
+                var target = clip;
+                ResolveClipEffects(target);
+                return (target.EffectsInstances ?? [])
+                    .Where(effect => effect.Enabled)
+                    .OrderBy(effect => effect.Index)
+                    .ToArray();
+            }
 
             if (clip.EffectProviders is not { Length: > 0 })
                 return BuildFromStaticEffects(clip, syncClipState);

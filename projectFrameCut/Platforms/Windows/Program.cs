@@ -7,6 +7,7 @@ using Microsoft.Win32;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.ScriptEngine;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
@@ -243,6 +244,35 @@ namespace projectFrameCut.WinUI
                 {
                     var userDataPath = args.First(c => c.StartsWith("--userData")).Split('=', 2)[1];
                     UserDataPathOverride = userDataPath;
+                }
+                if (args.FirstOrDefault(c => c.StartsWith("--scripting")) == "--scripting=enableWithHostingPipe")
+                {
+                    Console.WriteLine($"WARNNING: Enable scripting with hosting pipe is a dangerous option, it it allows arbitrary code execution from a remote process.");
+                    Console.WriteLine($"Only use this option if you know what you are doing, and you trust everything on this computer.");
+                    Console.WriteLine($"Press Y to continue:");
+                    if (Console.ReadKey().Key != ConsoleKey.Y)
+                    {
+                        Console.WriteLine($"Aborted.");
+                        return 1;
+                    }
+                    Environment.SetEnvironmentVariable(
+                        "POWERSHELL_DISABLE_NAMED_PIPE",
+                        "false",
+                        EnvironmentVariableTarget.Process
+                    );
+                    Console.WriteLine($"Connect to the hosting pipe by using the PowerShell command: Enter-PSHostProcess -Id {Environment.ProcessId}");
+                }
+                else
+                {
+                    if (args.FirstOrDefault(c => c.StartsWith("--scripting")) == "--scripting=disable")
+                    {
+                        ScriptCore.Enabled = false;
+                    }
+                    Environment.SetEnvironmentVariable(
+                        "POWERSHELL_DISABLE_NAMED_PIPE",
+                        "true",
+                        EnvironmentVariableTarget.Process
+                    );
                 }
                 MauiProgram.CmdlineArgs = args;
             }

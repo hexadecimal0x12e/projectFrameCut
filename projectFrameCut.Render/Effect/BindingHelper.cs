@@ -17,8 +17,21 @@ namespace projectFrameCut.Render.Effect
         public static Dictionary<Guid, IEffectProvider> MigrateToEffectProviders(
             EffectProviderJSONStructure[]? effectProviders,
             EffectBundleJSONStructure[]? effectBundles)
+            => MigrateToEffectProviders(effectProviders, effectBundles, out _);
+
+        /// <summary>
+        /// Restores provider instances and reports recoverable problems which used to be silently
+        /// ignored (for example an unavailable provider type or a duplicated provider id).
+        /// Binding normalization diagnostics are returned as well so callers can decide whether a
+        /// repaired graph is acceptable during initialization.
+        /// </summary>
+        public static Dictionary<Guid, IEffectProvider> MigrateToEffectProviders(
+            EffectProviderJSONStructure[]? effectProviders,
+            EffectBundleJSONStructure[]? effectBundles,
+            out IReadOnlyList<BindingDiagnostic> diagnostics)
         {
             var result = new Dictionary<Guid, IEffectProvider>();
+            var foundProblems = new List<BindingDiagnostic>();
             var factories = EffectHelper.EffectsProviderEnum;
 
             if (effectProviders is { Length: > 0 })
@@ -27,26 +40,42 @@ namespace projectFrameCut.Render.Effect
                 {
                     if (!factories.TryGetValue(p.TypeName, out var factory))
                     {
+                        foundProblems.Add(new(p.Id, "UnknownProviderType",
+                            $"Effect provider type '{p.TypeName}' from plugin '{p.FromPlugin}' is unavailable."));
                         continue;
                     }
 
-                    var instance = factory();
-                    instance.Id = p.Id;
-                    instance.Enabled = p.Enabled;
-                    instance.Name = p.Name;
-                    instance.AnchorsBindingState = p.AnchorsBindingState ?? new Dictionary<string, string>();
-                    instance.MetaData = p.MetaData ?? new Dictionary<string, object>();
-                    RestoreStaticFields(instance, p.StaticFields);
-                    result[instance.Id] = instance;
+                    try
+                    {
+                        var instance = factory();
+                        instance.Id = p.Id;
+                        instance.Enabled = p.Enabled;
+                        instance.Name = p.Name;
+                        instance.AnchorsBindingState = p.AnchorsBindingState ?? new Dictionary<string, string>();
+                        instance.MetaData = p.MetaData ?? new Dictionary<string, object>();
+                        RestoreStaticFields(instance, p.StaticFields);
+                        if (!result.TryAdd(instance.Id, instance))
+                        {
+                            foundProblems.Add(new(instance.Id, "DuplicateProviderId",
+                                $"Multiple effect providers use id {instance.Id}."));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        foundProblems.Add(new(p.Id, "ProviderRestoreFailed",
+                            $"Effect provider '{p.TypeName}' ({p.Id}) could not be restored: {ex.Message}"));
+                    }
                 }
 
-                NormalizeStoredBindings(result);
+                foundProblems.AddRange(NormalizeStoredBindings(result));
                 MaterializeFields(result.Values);
+                diagnostics = foundProblems;
                 return result;
             }
 
             if (effectBundles is null)
             {
+                diagnostics = foundProblems;
                 return result;
             }
 
@@ -54,32 +83,47 @@ namespace projectFrameCut.Render.Effect
             {
                 if (!factories.TryGetValue(b.BundleTypeName, out var factory))
                 {
+                    foundProblems.Add(new(b.Id, "UnknownProviderType",
+                        $"Legacy effect provider type '{b.BundleTypeName}' from plugin '{b.FromPlugin}' is unavailable."));
                     continue;
                 }
 
-                var instance = factory();
-                instance.Id = b.Id;
-                instance.Enabled = b.Enabled;
-                instance.Name = b.Name;
-                instance.MetaData = new Dictionary<string, object>();
-                if (instance.HasMainPictureInput())
-                    instance.SetMainInputSource(b.BindedInputId);
-                else
-                    instance.DisconnectMainInput();
-                instance.SetFinalOutputSource(
-                    instance.OutField.FieldType.HasFlag(EffectArgumentFieldType.IPicture)
-                    && b.BindedOutputId == IEffectProvider.OutputAnchorGUID);
-                var legacyFields = new Dictionary<string, IEffectArgumentField>();
-                foreach (var kvp in b.Parameters ?? new Dictionary<string, object>())
+                try
                 {
-                    legacyFields[kvp.Key] = new StaticEffectArgumentField(kvp.Value, EffectArgumentFieldType.Unknown);
+                    var instance = factory();
+                    instance.Id = b.Id;
+                    instance.Enabled = b.Enabled;
+                    instance.Name = b.Name;
+                    instance.MetaData = new Dictionary<string, object>();
+                    if (instance.HasMainPictureInput())
+                        instance.SetMainInputSource(b.BindedInputId);
+                    else
+                        instance.DisconnectMainInput();
+                    instance.SetFinalOutputSource(
+                        instance.OutField.FieldType.HasFlag(EffectArgumentFieldType.IPicture)
+                        && b.BindedOutputId == IEffectProvider.OutputAnchorGUID);
+                    var legacyFields = new Dictionary<string, IEffectArgumentField>();
+                    foreach (var kvp in b.Parameters ?? new Dictionary<string, object>())
+                    {
+                        legacyFields[kvp.Key] = new StaticEffectArgumentField(kvp.Value, EffectArgumentFieldType.Unknown);
+                    }
+                    instance.Fields = legacyFields;
+                    if (!result.TryAdd(instance.Id, instance))
+                    {
+                        foundProblems.Add(new(instance.Id, "DuplicateProviderId",
+                            $"Multiple effect providers use id {instance.Id}."));
+                    }
                 }
-                instance.Fields = legacyFields;
-                result[instance.Id] = instance;
+                catch (Exception ex)
+                {
+                    foundProblems.Add(new(b.Id, "ProviderRestoreFailed",
+                        $"Legacy effect provider '{b.BundleTypeName}' ({b.Id}) could not be restored: {ex.Message}"));
+                }
             }
 
-            NormalizeStoredBindings(result);
+            foundProblems.AddRange(NormalizeStoredBindings(result));
             MaterializeFields(result.Values);
+            diagnostics = foundProblems;
             return result;
         }
 

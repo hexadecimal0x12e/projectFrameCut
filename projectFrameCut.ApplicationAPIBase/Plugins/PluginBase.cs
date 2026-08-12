@@ -12,7 +12,6 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
@@ -31,7 +30,7 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// <summary>
         /// Get the current Application-level plugin API version.
         /// </summary>
-        public static int CurrentAppLevelPluginAPIVersion => 6;
+        public static int CurrentAppLevelPluginAPIVersion => 7;
 
         /// <summary>
         /// The root of app's data.
@@ -59,6 +58,14 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         public Dictionary<string, Func<IEffectProvider, IEffectProviderUIProvider>> EffectProviderUIProvider { get; }
 
         /// <summary>
+        /// Gets the default UI provider for a given effect provider, if this effect provider type has a default UI provider registered. 
+        /// Returns null if no default UI provider is registered for this effect provider type.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        public IEffectProviderUIProvider? GetDefaultEffectProviderUIProvider(IEffectProvider source);
+
+        /// <summary>
         /// Gets a dictionary that maps text style provider names to their corresponding provider creation functions.
         /// </summary>
         public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider { get; }
@@ -67,16 +74,6 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// Gets a dictionary that maps vector component type names to their corresponding handler creation functions.
         /// </summary>
         public Dictionary<string, Func<IVectorComponentHandler>> VectorComponentHandlerProvider { get; }
-
-        /// <summary>
-        /// Get a helper for dynamic preview generation. The key of the dictionary is the type name of the clip or effect that the provider can generate preview for. The value is the provider itself.
-        /// </summary>
-        public Dictionary<string, IClipDynamicPreviewProvider> ClipDynamicPreviewProvider { get; }
-        /// <summary>
-        /// Get a helper for dynamic preview generation for effects. The key of the dictionary is the type name of the effect that the provider can generate preview for. The value is the provider itself.
-        /// </summary>
-        public Dictionary<string, IEffectDynamicPreviewProvider> EffectDynamicPreviewProvider { get; }
-
 
         /// <summary>
         /// Create the setting page for the plugin.
@@ -161,26 +158,6 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
                 foreach (var item in pluginBase.VectorComponentHandlerProvider)
                 {
                     sb.AppendLine($"- {item.Key}");
-                }
-            }
-
-            // ----- Clip Dynamic Previews -----
-            if (pluginBase.ClipDynamicPreviewProvider.Any())
-            {
-                sb.AppendLine("ClipDynamicPreviewProvider:");
-                foreach (var item in pluginBase.ClipDynamicPreviewProvider)
-                {
-                    sb.AppendLine($"- {item.Key}: {item.Value.GetType().Name}");
-                }
-            }
-
-            // ----- Effect Dynamic Previews -----
-            if (pluginBase.EffectDynamicPreviewProvider.Any())
-            {
-                sb.AppendLine("EffectDynamicPreviewProvider:");
-                foreach (var item in pluginBase.EffectDynamicPreviewProvider)
-                {
-                    sb.AppendLine($"- {item.Key}: {item.Value.GetType().Name}");
                 }
             }
 

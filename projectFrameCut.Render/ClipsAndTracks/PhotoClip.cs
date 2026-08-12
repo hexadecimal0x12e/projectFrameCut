@@ -57,7 +57,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public PhotoClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+           EffectHelper.ResolveClipEffects(this);
         }
         public IPicture GetContent(int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
         {
@@ -104,7 +104,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
                 }
             };
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+           EffectHelper.ResolveClipEffects(this);
 
         }
 

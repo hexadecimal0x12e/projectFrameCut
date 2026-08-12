@@ -4,7 +4,6 @@ using CommunityToolkit.Maui.Views;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Drawing.Text.Typology;
@@ -109,7 +108,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 {
                     if (!_parameters.ContainsKey(WrappingWidthKey) || string.IsNullOrWhiteSpace(_parameters[WrappingWidthKey]))
                     {
-                        var measured = TextMeasureHelper.MeasureBounds(BuildEntries(), 1920, 1080);
+                        var measured = TextServices.MeasureBounds(BuildEntries(), 1920, 1080);
                         _parameters[WrappingWidthKey] = Math.Max(100, (int)Math.Ceiling(measured.Width)).ToString(CultureInfo.InvariantCulture);
                     }
                 }
@@ -117,7 +116,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 {
                     if (!_parameters.ContainsKey(FixedHeightValueKey) || string.IsNullOrWhiteSpace(_parameters[FixedHeightValueKey]))
                     {
-                        var measured = TextMeasureHelper.MeasureBounds(BuildEntries(), 1920, 1080);
+                        var measured = TextServices.MeasureBounds(BuildEntries(), 1920, 1080);
                         _parameters[FixedHeightValueKey] = Math.Max(20, (int)Math.Ceiling(measured.Height)).ToString(CultureInfo.InvariantCulture);
                     }
                 }
@@ -389,7 +388,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                     _parameters[KeepNonCJKTextAsHorizontalKey] = ParseBool(args.Value, false).ToString();
                     break;
             }
-            var rect = TextMeasureHelper.MeasureBounds(BuildEntries(), 1920, 1080);
+            var rect = TextServices.MeasureBounds(BuildEntries(), 1920, 1080);
             var measuredW = Math.Max(1, (int)Math.Ceiling(rect.Width));
             var measuredH = Math.Max(1, (int)Math.Ceiling(rect.Height));
 
@@ -475,7 +474,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             {
                 // Entries are in project-pixel space. Measure them with the
                 // single canonical pipeline against the requested canvas.
-                var rect = TextMeasureHelper.MeasureBounds(entries, canvasWidth, canvasHeight);
+                var rect = TextServices.MeasureBounds(entries, canvasWidth, canvasHeight);
 
                 if (LayoutMode == TextClipLayoutMode.FixedWidth)
                 {
@@ -534,7 +533,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             try
             {
                 var entries = BuildEntries();
-                var rect = TextMeasureHelper.MeasureBounds(entries, 1920, 1080);
+                var rect = TextServices.MeasureBounds(entries, 1920, 1080);
                 return ((float)rect.Width, (float)rect.Height);
             }
             finally
@@ -551,7 +550,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             try
             {
                 var entries = BuildEntries();
-                var rect = TextMeasureHelper.MeasureBounds(entries, 1920, 1080);
+                var rect = TextServices.MeasureBounds(entries, 1920, 1080);
                 return (float)rect.Height;
             }
             finally

@@ -118,10 +118,11 @@ namespace projectFrameCut
             var stylePath = Path.Combine(MauiProgram.DataPath, "style.xaml");
             var colorPath = Path.Combine(MauiProgram.DataPath, "color.xaml");
             string styleXAML = "", colorXAML = "";
-            if (!File.Exists(stylePath))
+            try
             {
-                try
+                if (!File.Exists(stylePath))
                 {
+
                     string fileName = $"Styles.{DeviceInfo.Current.Platform}{DeviceInfo.Current.Idiom}.xaml";
                     if ((stylePath = FileSystemService.GetAppPackageFileSync("Styles", fileName)) != null && File.Exists(stylePath))
                     {
@@ -131,25 +132,34 @@ namespace projectFrameCut
                     {
                         styleXAML = "";
                     }
+
                 }
-                catch
+                else
                 {
-                    styleXAML = "";
+                    styleXAML = File.ReadAllText(stylePath);
                 }
             }
-            else
+            catch (Exception ex)
             {
-                styleXAML = File.ReadAllText(stylePath);
+                Log(ex, "Extract style XAML", this);
+                styleXAML = "";
             }
 
-            if (!File.Exists(colorPath))
+            try
             {
-                colorPath = FileSystemService.GetAppPackageFileSync("Styles", "Colors.xaml");
-                colorXAML = File.ReadAllText(colorPath);
+                if (!File.Exists(colorPath))
+                {
+                    colorPath = FileSystemService.GetAppPackageFileSync("Styles", "Colors.xaml");
+                    colorXAML = File.ReadAllText(colorPath);
+                }
+                else
+                {
+                    colorXAML = File.ReadAllText(colorPath);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                colorXAML = File.ReadAllText(colorPath);
+                Log(ex, "Extract color XAML", this);
             }
 
             try

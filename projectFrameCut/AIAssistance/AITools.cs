@@ -10,6 +10,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 #if !DISABLE_POWERSHELL_SDK
@@ -21,6 +22,7 @@ using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 #if !DISABLE_POWERSHELL_SDK
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
@@ -101,9 +103,9 @@ namespace projectFrameCut.AIAssistance
                 AIFunctionFactory.Create(async (string clipId, string typeName) =>
                 {
                     if (currentPage is null) return null;
-                    var pageBundle = PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectProviderProvider).FirstOrDefault(c => c.Key == typeName).Value?.Invoke();
-                    if (pageBundle is null) return null;
-                    var added = TimelineMcpLiveService.AddEffectBundle(currentPage, clipId, pageBundle);
+                    if (!EffectServices.GetAvailableEffectProviders().TryGetValue(typeName, out var factory)) return null;
+                    var provider = factory();
+                    var added = TimelineMcpLiveService.AddEffectBundle(currentPage, clipId, provider);
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                     return new { added.Id, added.Name, added.TypeName };
                 }, "add_effect_bundle_to_clip","Add an effect bundle on the selected clip."),
@@ -114,13 +116,22 @@ namespace projectFrameCut.AIAssistance
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                     return removed;
                 }, "remove_effect_bundle_from_clip","Remove an effect bundle from a clip by id."),
-                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectProviderProvider).FirstOrDefault(c => c.Key == Type).Value?.Invoke() is { } p ? new { p.TypeName, p.Name, p.FromPlugin, p.TypeOfEffect, p.Target } : null, "get_effect_bundle_info","Get a specific effect bundle's information."),
-                AIFunctionFactory.Create((string effectType) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectProviderProvider).FirstOrDefault(c => c.Key == effectType).Value?.Invoke()?.Fields?.Keys?.ToArray(), "get_effect_bundle_settable_fields","Get a specific kind of effect bundle's settable field ids."),
+                AIFunctionFactory.Create((string Type) => EffectServices.GetAvailableEffectProviders().TryGetValue(Type, out var factory) ? DescribeEffectProvider(factory()) : null, "get_effect_bundle_info","Get a specific effect provider's information, including its configurable fields."),
+                AIFunctionFactory.Create((string effectType) => EffectServices.GetAvailableEffectProviders().TryGetValue(effectType, out var factory) ? factory().Fields.Keys.ToArray() : null, "get_effect_bundle_settable_fields","Get a specific kind of effect provider's settable field ids."),
                 AIFunctionFactory.Create((string clipId, Guid bundleId, Dictionary<string, object> fields) =>
                 {
-                    // SettableFields / HandleSettableFieldsChange were removed from the provider API.
-                    throw new NotImplementedException("set_effect_bundle_fields was disabled after the IEffectBundle removal.");
-                }, "set_effect_bundle_fields","Update an existing effect bundle on a clip using its SettableFields. Provide the clip id, bundle id, and a dictionary of field id -> value. Use get_draft_info to find bundle ids and get_effect_bundle_info to discover effect types."),
+                    if (currentPage is null) return new[] { "No project is loaded." };
+                    if (!Guid.TryParse(clipId, out var id) || !currentPage.Clips.TryGetValue(id, out var clip))
+                        return new[] { $"Clip '{clipId}' was not found." };
+                    if (clip.EffectProviders is null || !clip.EffectProviders.TryGetValue(bundleId, out var provider))
+                        return new[] { $"Effect provider '{bundleId}' was not found on clip '{clipId}'." };
+
+                    var feedback = ApplyEffectProviderFields(provider, fields);
+                    ClipInfoBuilder.RebuildAllEffects(clip);
+                    currentPage.RefreshPropertyPanel(clip);
+                    handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                    return feedback;
+                }, "set_effect_bundle_fields","Update an existing effect provider on a clip using its Fields. Provide the clip id, provider id, and a dictionary of field id -> value. Use get_draft_info to find provider ids and get_effect_bundle_info to discover effect types."),
                 AIFunctionFactory.Create(GenerateImage, "create_an_AIGC_image","Add an AI generated image to the draft. Use param Prompt to define how the picture looks like and NegativePrompt to define what not in the picture. Use param Style to define the style of this image. Use param Width and Height to define the image size (default: 1024x1024)."),
                 AIFunctionFactory.Create(GenerateVideo, "create_an_AIGC_video","Add an AI generated video to the draft. Use param Prompt to define how the video looks like and NegativePrompt to define what not in the video. Use param Style to define the style of this video."),
 
@@ -235,7 +246,7 @@ namespace projectFrameCut.AIAssistance
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableEffects(), "environment_get_effects","Get all effects available in the user environment.", serializerOptions),
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailablePlugins(), "environment_get_plugins","Get all plugins loaded in the user environment.", serializerOptions),
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableTextStyles(), "environment_get_textstyles","Get all Text clip style providers loaded in the user environment, including their settable fields.", serializerOptions),
-                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectProviderProvider).FirstOrDefault(c => c.Key == Type).Value?.Invoke() is { } p ? new { p.TypeName, p.Name, p.FromPlugin, p.TypeOfEffect, p.Target } : null, "get_effect_bundle_info","Get a specific effect bundle's information."),
+                AIFunctionFactory.Create((string Type) => EffectServices.GetAvailableEffectProviders().TryGetValue(Type, out var factory) ? DescribeEffectProvider(factory()) : null, "get_effect_bundle_info","Get a specific effect provider's information, including its configurable fields."),
                 AIFunctionFactory.Create(async (string url, int maximumCharacters = 30000) =>
                     await (WebBrowsingService.Current?.BrowseAsync(url, maximumCharacters)
                         ?? Task.FromResult("Error: webpage browsing is not available in the current chat view.")),
@@ -300,6 +311,101 @@ namespace projectFrameCut.AIAssistance
             }
 
             return new(() => toolCalls);
+        }
+
+        private static object DescribeEffectProvider(IEffectProvider provider)
+        {
+            return new
+            {
+                provider.TypeName,
+                provider.Name,
+                provider.FromPlugin,
+                provider.TypeOfEffect,
+                provider.Target,
+                Fields = provider.Fields.Values.Select(field => new
+                {
+                    field.Id,
+                    FieldType = field.FieldType.ToString(),
+                    CurrentValue = GetEffectProviderFieldValue(field),
+                    BindingSource = field is DynamicEffectParamField dynamicField ? dynamicField.BoundProviderId : null,
+                    field.DefaultValue,
+                    field.MinValue,
+                    field.MaxValue,
+                    field.PresetOptions,
+                    field.Remarks,
+                }).ToArray(),
+            };
+        }
+
+        private static string[] ApplyEffectProviderFields(IEffectProvider provider, IReadOnlyDictionary<string, object> values)
+        {
+            var fields = provider.Fields;
+            var feedback = new List<string>();
+            foreach (var (fieldId, rawValue) in values)
+            {
+                if (!fields.TryGetValue(fieldId, out var field))
+                {
+                    feedback.Add($"Unknown field '{fieldId}' for effect provider '{provider.TypeName}'.");
+                    continue;
+                }
+
+                try
+                {
+                    fields[fieldId] = new StaticEffectArgumentField
+                    {
+                        Id = fieldId,
+                        FieldType = field.FieldType,
+                        Value = ConvertEffectProviderFieldValue(field, rawValue),
+                        DefaultValue = field.DefaultValue,
+                        MinValue = field.MinValue,
+                        MaxValue = field.MaxValue,
+                        PresetOptions = field.PresetOptions,
+                        Remarks = field.Remarks,
+                    };
+                    provider.ClearFieldBinding(fieldId);
+                    feedback.Add($"Field '{fieldId}' updated.");
+                }
+                catch (Exception ex) when (ex is ArgumentException or FormatException or InvalidCastException or OverflowException)
+                {
+                    feedback.Add($"Field '{fieldId}' was not changed: {ex.Message}");
+                }
+            }
+
+            provider.Fields = fields;
+            return feedback.Count > 0 ? feedback.ToArray() : ["No fields were supplied."];
+        }
+
+        private static object? GetEffectProviderFieldValue(IEffectArgumentField field) => field switch
+        {
+            StaticEffectArgumentField staticField => staticField.Value,
+            DynamicEffectParamField dynamicField => dynamicField.StaticFallbackValue,
+            _ => field.GetGetter()(),
+        };
+
+        private static object ConvertEffectProviderFieldValue(IEffectArgumentField field, object? rawValue)
+        {
+            rawValue = EffectParamConvert.Normalize(rawValue);
+            var baseType = field.FieldType & (EffectArgumentFieldType)0xFFFF;
+            object converted = baseType switch
+            {
+                EffectArgumentFieldType.Integer when EffectParamConvert.TryConvertToInt(rawValue, out var intValue) => intValue,
+                EffectArgumentFieldType.UnsignedInteger when EffectParamConvert.TryConvertToUShort(rawValue, out var unsignedValue) => unsignedValue,
+                EffectArgumentFieldType.Numeric when EffectParamConvert.TryConvertToFloat(rawValue, out var numericValue) => numericValue,
+                EffectArgumentFieldType.Boolean when EffectParamConvert.TryConvertToBool(rawValue, out var boolValue) => boolValue,
+                EffectArgumentFieldType.Long => Convert.ToInt64(rawValue, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.UnsignedLong => Convert.ToUInt64(rawValue, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.String => rawValue?.ToString() ?? string.Empty,
+                _ when rawValue is not null => rawValue,
+                _ => throw new ArgumentException("The value cannot be null."),
+            };
+
+            if (field.PresetOptions is { Length: > 0 }
+                && converted is string text
+                && !field.PresetOptions.Contains(text, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException($"Value must be one of: {string.Join(", ", field.PresetOptions)}.");
+            }
+            return converted;
         }
 
 #if !DISABLE_POWERSHELL_SDK

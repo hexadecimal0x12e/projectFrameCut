@@ -246,8 +246,20 @@ public partial class ClipPlaceConfiguratorView : ContentView
             return;
         }
 
-        view.SyncUiFromProperties();
-        view.ValidateAndNotify();
+        try
+        {
+            view.SyncUiFromProperties();
+            view.ValidateAndNotify();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "ClipPlaceConfiguratorView.OnAnyBindablePropertyChanged", view);
+            view.Dispatcher.Dispatch(() =>
+            {
+                view.SummaryLabel.TextColor = Colors.Red;
+                view.SummaryLabel.Text = Localized._ExceptionTemplate(ex);
+            });
+        }
     }
 
     private void InitGestureRecognizers()

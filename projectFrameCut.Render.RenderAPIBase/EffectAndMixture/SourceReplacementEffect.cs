@@ -36,12 +36,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// You'll need to manually handle all kind of clips in your implementation, including video clips, image clips, and audio clips. The input clip may have different properties, such as duration, frame rate, and pixel format. 
         /// </remarks>
         /// <param name="input">The input clip to be processed.</param>
+        /// <param name="source">The original source picture of the input clip </param> 
+        /// <param name="computer">The computer instance that can be used to perform additional computations or effects. This may be null if no additional computations are needed.</param>
         /// <param name="targetWidth">The target width of the output picture.</param>
         /// <param name="targetHeight">The target height of the output picture.</param>
-        /// <param name="targetFrame">The target frame number to compute.</param>
+        /// <param name="targetFrame">The target frame number to compute, related inside the clip's timeline.</param>
         /// <param name="targetPPB">The pixel format of the output picture.</param>
         /// <returns>the processed source frame (<paramref name="targetFrame"/>) in <b>SOURCE, WITH SPECIFIC SIZE IN <paramref name="targetWidth"/> * <paramref name="targetHeight"/>.</b></returns>
-        public IPicture Compute(IClip input, IComputer? computer, int targetWidth, int targetHeight, uint targetFrame, IPicture.PicturePixelMode targetPPB);
+        public IPicture Compute(IClip input, IComputer? computer, IPicture source, int targetWidth, int targetHeight, uint targetFrame, IPicture.PicturePixelMode targetPPB);
 
         EffectType IEffect.TypeOfEffect => EffectType.SourceReplacement;
         int IEffect.RelativeWidth { get => -1; set { } }

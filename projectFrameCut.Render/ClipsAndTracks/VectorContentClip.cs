@@ -363,7 +363,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             if (FilePath is null) throw new NullReferenceException($"PhotoClip {Id}'s source path is null.");
             Picture = SVGToVectorElement.ImportFromFile(FilePath);
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+           EffectHelper.ResolveClipEffects(this);
         }
     }
 }
