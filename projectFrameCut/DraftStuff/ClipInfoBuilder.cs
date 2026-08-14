@@ -3274,12 +3274,17 @@ namespace projectFrameCut.DraftStuff
             foreach (var kvp in bundlesFactories
                                 .Select(c => (c.Value(), c))
                                 .Where(c =>
-                                    target == EffectTarget.NotSpecified
-                                    || target == EffectTarget.Text
-                                       ? (c.Item1.Target.HasFlag(EffectTarget.Video) || c.Item1.Target.HasFlag(EffectTarget.Text))
-                                       : c.Item1.Target.HasFlag(target)
-                                    && (!c.Item1.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor) || ignoreIsNotVisibleInNewEffectSelector)
-                                    && (!hideKeyFramedProviders || (!c.Item1.Target.HasFlag(EffectTarget.IsKeyFramed) && c.Item1 is not IKeyFramedEffectProvider)))
+                                {
+                                    bool targetMatches = target == EffectTarget.NotSpecified
+                                        || (target == EffectTarget.Text
+                                            ? !c.Item1.Target.HasFlag(EffectTarget.SourceReplacement)
+                                              && (c.Item1.Target.HasFlag(EffectTarget.Video) || c.Item1.Target.HasFlag(EffectTarget.Text))
+                                            : c.Item1.Target.HasFlag(target));
+
+                                    return targetMatches
+                                        && (!c.Item1.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor) || ignoreIsNotVisibleInNewEffectSelector)
+                                        && (!hideKeyFramedProviders || (!c.Item1.Target.HasFlag(EffectTarget.IsKeyFramed) && c.Item1 is not IKeyFramedEffectProvider));
+                                })
                                 .Select(c => c.c).OrderBy(k => k.Key))
             {
                 var bundleTypeName = kvp.Key;

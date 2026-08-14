@@ -111,6 +111,7 @@ public partial class PluginSettingPage : ContentPage
 #elif iDevices
 
 #endif
+                    ..MauiProgram.IntegratedPlugins,
                     ..PluginService.LoadUserPlugins((i) => pems.TryGetValue(i, out var p) ? p : throw new KeyNotFoundException()),
                 ];
 

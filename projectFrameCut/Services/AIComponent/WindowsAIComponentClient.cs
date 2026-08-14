@@ -142,6 +142,54 @@ public sealed class WindowsAIComponentClient : IAIComponentClient
         return AIComponentPayloadCodec.DecodePicture(responseDescriptor, response.Payload);
     }
 
+    public async Task<IPicture> ExecuteVideoSuperResolutionAsync(
+        IPicture picture,
+        int targetWidth,
+        int targetHeight,
+        int framesPerSecond,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(picture);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(targetWidth);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(targetHeight);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(framesPerSecond);
+
+        byte[] payload = AIComponentPayloadCodec.EncodePicture(picture, out var descriptor);
+        var requestDescriptor = new VideoSuperResolutionRequestDescriptor
+        {
+            Width = descriptor.Width,
+            Height = descriptor.Height,
+            BitDepth = descriptor.BitDepth,
+            HasAlpha = descriptor.HasAlpha,
+            TargetWidth = targetWidth,
+            TargetHeight = targetHeight,
+            FramesPerSecond = framesPerSecond
+        };
+
+        var response = await RequestAsync(
+            AIMessageKind.Request,
+            "video.super_resolution",
+            AIPayloadKind.PicturePlanes,
+            requestDescriptor,
+            payload,
+            cancellationToken).ConfigureAwait(false);
+        EnsurePayloadKind(response, AIPayloadKind.PicturePlanes);
+        var responseDescriptor = DeserializeMetadata<AIPictureDescriptor>(response.Envelope.Metadata)
+            ?? throw new AIComponentClientException("The extension returned no picture metadata.");
+        return AIComponentPayloadCodec.DecodePicture(responseDescriptor, response.Payload);
+    }
+
+    private sealed class VideoSuperResolutionRequestDescriptor
+    {
+        public int Width { get; init; }
+        public int Height { get; init; }
+        public AIPictureBitDepth BitDepth { get; init; }
+        public bool HasAlpha { get; init; }
+        public int TargetWidth { get; init; }
+        public int TargetHeight { get; init; }
+        public int FramesPerSecond { get; init; }
+    }
+
     public async Task<IAudioSamples<float>> ExecuteAudioAsync(string operation, IAudioSamples<float> audio, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(operation);

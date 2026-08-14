@@ -15,6 +15,7 @@ public interface IAIComponentClient : IAsyncDisposable
     Task DisconnectAsync();
     Task<string> ExecuteTextAsync(string operation, string text, CancellationToken cancellationToken = default);
     Task<IPicture> ExecutePictureAsync(string operation, IPicture picture, CancellationToken cancellationToken = default);
+    Task<IPicture> ExecuteVideoSuperResolutionAsync(IPicture picture, int targetWidth, int targetHeight, int framesPerSecond, CancellationToken cancellationToken = default);
     Task<IAudioSamples<float>> ExecuteAudioAsync(string operation, IAudioSamples<float> audio, CancellationToken cancellationToken = default);
 }
 
@@ -34,6 +35,9 @@ public sealed class AIComponentUnavailableClient : IAIComponentClient
 
     public Task<IPicture> ExecutePictureAsync(string operation, IPicture picture, CancellationToken cancellationToken = default)
         => Task.FromException<IPicture>(new PlatformNotSupportedException("The Windows System AI extension is only available on Windows."));
+
+    public Task<IPicture> ExecuteVideoSuperResolutionAsync(IPicture picture, int targetWidth, int targetHeight, int framesPerSecond, CancellationToken cancellationToken = default)
+        => Task.FromException<IPicture>(new PlatformNotSupportedException("Windows Video Super Resolution is only available on supported Windows devices."));
 
     public Task<IAudioSamples<float>> ExecuteAudioAsync(string operation, IAudioSamples<float> audio, CancellationToken cancellationToken = default)
         => Task.FromException<IAudioSamples<float>>(new PlatformNotSupportedException("The Windows System AI extension is only available on Windows."));

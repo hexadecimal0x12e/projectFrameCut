@@ -14,6 +14,7 @@ using projectFrameCut.Services;
 using Thread = System.Threading.Thread;
 using projectFrameCut.Render.Plugin;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using projectFrameCut.Shared;
 using projectFrameCut.Asset;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -55,6 +56,7 @@ namespace projectFrameCut
 {
     public static class MauiProgram
     {
+        internal static IReadOnlyList<IPluginBase> IntegratedPlugins { get; private set; } = [];
         public static StreamWriter LogWriter;
 
         public static string LogPath { get; private set; }
@@ -318,11 +320,6 @@ namespace projectFrameCut
                 Priority = ThreadPriority.BelowNormal
             };
 
-            Task.Run(async () =>
-            {
-                await Task.Delay(1000);
-                backgroundInitThread.Start();
-            });
 #if WINDOWS
             try
             {
@@ -432,6 +429,9 @@ namespace projectFrameCut
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
                 builder.Services.AddSingleton<projectFrameCut.Services.AIComponent.IAIComponentClient, projectFrameCut.Services.AIComponent.WindowsAIComponentClient>();
+                builder.Services.AddSingleton<projectFrameCut.Services.AIComponent.WindowsVideoSuperResolutionProcessor>();
+                builder.Services.AddSingleton<projectFrameCut.Services.AIComponent.IIntegratedAIComponent>(services =>
+                    services.GetRequiredService<projectFrameCut.Services.AIComponent.WindowsVideoSuperResolutionProcessor>());
 #elif ANDROID
                 builder.ConfigureMauiHandlers(handlers =>
                 {
@@ -519,6 +519,7 @@ namespace projectFrameCut
                     });
                 });
 #endif
+                builder.Services.AddSingleton<projectFrameCut.Services.AIComponent.IntegratedAIPlugin>();
 #if !WINDOWS
                 builder.Services.AddSingleton<projectFrameCut.Services.AIComponent.IAIComponentClient, projectFrameCut.Services.AIComponent.AIComponentUnavailableClient>();
 #endif
@@ -538,6 +539,25 @@ namespace projectFrameCut
                         }
                         TextClipFontRegistry.Initialize();
                     }
+
+                    try
+                    {
+                        var emojiPath = Path.Combine(DataPath, "emoji.ttf");
+                        if (!File.Exists(emojiPath))
+                        {
+                            emojiPath = FileSystemService.GetAppPackageFileSync("NotoColorEmoji-Regular.ttf");
+                        }
+                        if (File.Exists(emojiPath))
+                        {
+                            var emojiFont = FontFace.AutoLoad(emojiPath).FirstOrDefault();
+                            if (emojiFont is not null)
+                            {
+                                projectFrameCut.Drawing.Text.FontHelper.FontFace.EmojiFont = emojiFont;
+                                LogDiagnostic($"Using font {emojiFont.DisplayName} for emoji rendering");
+                            }
+                        }
+                    }
+                    catch { }
 
                     Microsoft.Maui.Handlers.LabelHandler.Mapper.AppendToMapping("EnableTextSelection", (handler, view) =>
                     {
@@ -594,6 +614,12 @@ namespace projectFrameCut
 
                 Log("Everything ready!");
                 var app = builder.Build();
+                IntegratedPlugins = [app.Services.GetRequiredService<projectFrameCut.Services.AIComponent.IntegratedAIPlugin>()];
+                Task.Run(async () =>
+                {
+                    await Task.Delay(1000);
+                    backgroundInitThread.Start();
+                });
                 Log("App is ready!");
                 return app;
             }
@@ -763,6 +789,7 @@ namespace projectFrameCut
 #endif
                         }
                     };
+                plugins.AddRange(IntegratedPlugins);
                 try
                 {
                     if (!AdminServices.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine") && !File.Exists(Path.Combine(BasicDataPath, "noplugin.flag")))
