@@ -596,20 +596,23 @@ public sealed class DynamicPreview : IDisposable
     {
         try
         {
-            var rendered = RenderClipPreviewSource(request.Clip, canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex, token);
-            if (rendered is null)
-            {
-                return new PreparedPreview(request.Clip.Id, null, "Failed to render preview source.", request.Clip);
-            }
-
             ImageSource source;
-            try
+            if (_previewer is not null)
             {
-                source = rendered.ToImageSource();
+                var artifactPath = _previewer.RenderClipFrame(request.Clip.Id, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token);
+                source = ImageSource.FromFile(artifactPath);
             }
-            finally
+            else
             {
-                try { rendered.Dispose(); } catch { }
+                // Compatibility fallback for isolated editor surfaces that do not own a project
+                // render session. Normal DraftPage previews always use the RPC/file path above.
+                var rendered = RenderClipPreviewSource(request.Clip, canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex, token);
+                if (rendered is null)
+                {
+                    return new PreparedPreview(request.Clip.Id, null, "Failed to render preview source.", request.Clip);
+                }
+                try { source = rendered.ToImageSource(); }
+                finally { try { rendered.Dispose(); } catch { } }
             }
 
             return new PreparedPreview(request.Clip.Id, () => new Image

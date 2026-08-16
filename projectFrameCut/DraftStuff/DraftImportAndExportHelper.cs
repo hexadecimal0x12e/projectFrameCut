@@ -109,12 +109,7 @@ namespace projectFrameCut.DraftStuff
                         // Ghost/Shadow check: Guid-based IDs cannot use string prefix matching.
                         if (!includeUiOnlyClips && elem.ClipType == ClipMode.MarkingClip) continue;
 
-                        double startPx = border.TranslationX;
-                        double widthPx = (border.WidthRequest > 0) ? border.WidthRequest : ((border.Width > 0) ? border.Width : border.WidthRequest);
-
-                        uint startFrame = (uint)Math.Round(page.PixelToFrame(startPx) / elem.SecondPerFrameRatio);
-                        uint durationFrames = (uint)Math.Round(page.PixelToFrame(widthPx) / elem.SecondPerFrameRatio);
-                        if (durationFrames == 0) durationFrames = 1;
+                        ResolveExportTiming(page, border, elem, out uint startFrame, out uint durationFrames);
 
                         string name = string.IsNullOrWhiteSpace(elem.DisplayName) ? ExtractLabelText(border) ?? elem.Id.ToString() : elem.DisplayName;
 
@@ -164,12 +159,24 @@ namespace projectFrameCut.DraftStuff
                     {
                         if (wrapSoundtrackAsClip)
                         {
-                            audMax = Math.Max(dto.StartFrame + dto.Duration, audMax);
+                            var end = (ulong)dto.StartFrame + dto.Duration;
+                            if (end > uint.MaxValue)
+                            {
+                                Log($"Ignoring overflowing audio clip end during draft export: {dto.Id}/{dto.Name}, start={dto.StartFrame}, duration={dto.Duration}.", "warn");
+                                end = (ulong)dto.StartFrame + 1;
+                            }
+                            audMax = Math.Max((long)end, audMax);
                         }
                     }
                     else
                     {
-                        max = Math.Max(dto.StartFrame + dto.Duration, max);
+                        var end = (ulong)dto.StartFrame + dto.Duration;
+                        if (end > uint.MaxValue)
+                        {
+                            Log($"Ignoring overflowing clip end during draft export: {dto.Id}/{dto.Name}, start={dto.StartFrame}, duration={dto.Duration}.", "warn");
+                            end = (ulong)dto.StartFrame + 1;
+                        }
+                        max = Math.Max((long)end, max);
                     }
                 }
 
@@ -227,12 +234,7 @@ namespace projectFrameCut.DraftStuff
 
         private static ClipDraftDTO CreateClipDraftDTO(projectFrameCut.DraftPage page, Microsoft.Maui.Controls.Border border, ClipElementUI elem, uint layerIndex, bool wrapSoundtrackAsClip)
         {
-            double startPx = border.TranslationX;
-            double widthPx = (border.WidthRequest > 0) ? border.WidthRequest : ((border.Width > 0) ? border.Width : border.WidthRequest);
-
-            uint startFrame = (uint)Math.Round(page.PixelToFrame(startPx) / elem.SecondPerFrameRatio);
-            uint durationFrames = (uint)Math.Round(page.PixelToFrame(widthPx) / elem.SecondPerFrameRatio);
-            if (durationFrames == 0) durationFrames = 1;
+            ResolveExportTiming(page, border, elem, out uint startFrame, out uint durationFrames);
 
             string name = string.IsNullOrWhiteSpace(elem.DisplayName) ? ExtractLabelText(border) ?? elem.Id.ToString() : elem.DisplayName;
 
@@ -419,6 +421,66 @@ namespace projectFrameCut.DraftStuff
                         MetaData = p.MetaData is { Count: > 0 } ? p.MetaData : null,
                     }).ToArray()
             };
+        }
+
+        private static void ResolveExportTiming(
+            projectFrameCut.DraftPage page,
+            Microsoft.Maui.Controls.Border border,
+            ClipElementUI elem,
+            out uint startFrame,
+            out uint durationFrames)
+        {
+            double ratio = elem.SecondPerFrameRatio;
+            if (!double.IsFinite(ratio) || ratio <= 0d)
+            {
+                ratio = 1d;
+            }
+
+            double startPx = border.TranslationX;
+            if (!double.IsFinite(startPx) || startPx < 0d)
+            {
+                startPx = double.IsFinite(elem.layoutX) && elem.layoutX > 0d ? elem.layoutX : 0d;
+            }
+
+            startFrame = ConvertExportFrame(page.PixelToFrame(startPx) / ratio, 0u);
+
+            double widthPx = border.WidthRequest;
+            if (!double.IsFinite(widthPx) || widthPx <= 0d)
+            {
+                widthPx = border.Width;
+            }
+            if (!double.IsFinite(widthPx) || widthPx <= 0d)
+            {
+                widthPx = elem.origLength;
+            }
+
+            uint fallbackDuration = elem.lengthInFrame is > 0 and < uint.MaxValue
+                ? elem.lengthInFrame
+                : 1u;
+            durationFrames = !double.IsFinite(widthPx) || widthPx <= 0d
+                ? fallbackDuration
+                : ConvertExportFrame(page.PixelToFrame(widthPx) / ratio, fallbackDuration);
+
+            if (durationFrames == 0 || (ulong)startFrame + durationFrames > uint.MaxValue)
+            {
+                Log($"Invalid clip timing was repaired during draft export: {elem.Id}/{elem.DisplayName}, start={startFrame}, duration={durationFrames}, width={widthPx}.", "warn");
+                durationFrames = startFrame < uint.MaxValue ? 1u : 0u;
+                if (durationFrames == 0)
+                {
+                    startFrame = uint.MaxValue - 1;
+                    durationFrames = 1u;
+                }
+            }
+        }
+
+        private static uint ConvertExportFrame(double value, uint fallback)
+        {
+            if (!double.IsFinite(value) || value < 0d || value >= uint.MaxValue)
+            {
+                return fallback;
+            }
+
+            return (uint)Math.Round(value);
         }
 
         private static Dictionary<string, object> NormalizeClipMetaData(Dictionary<string, object>? source, uint targetFrameRate)
@@ -971,6 +1033,11 @@ namespace projectFrameCut.DraftStuff
                     var cur = list[i];
                     var next = list[i + 1];
                     ulong curEnd = (ulong)cur.StartFrame + cur.Duration;
+                    if (curEnd > uint.MaxValue)
+                    {
+                        Log($"Skipping overlap repair for overflowing clip {cur.Id}/{cur.Name}: start={cur.StartFrame}, duration={cur.Duration}.", "warn");
+                        continue;
+                    }
                     if (curEnd > next.StartFrame)
                     {
                         ulong overlap = curEnd - next.StartFrame;
@@ -986,13 +1053,19 @@ namespace projectFrameCut.DraftStuff
             ulong max = 0, audMax = 0;
             foreach (var dto in dtos)
             {
+                var end = (ulong)dto.StartFrame + dto.Duration;
+                if (end > uint.MaxValue)
+                {
+                    Log($"Ignoring overflowing clip end while fixing overlaps: {dto.Id}/{dto.Name}, start={dto.StartFrame}, duration={dto.Duration}.", "warn");
+                    end = (ulong)dto.StartFrame + 1;
+                }
                 if (dto.ClipType == ClipMode.AudioClip)
                 {
-                    audMax = Math.Max(audMax, (ulong)dto.StartFrame + dto.Duration);
+                    audMax = Math.Max(audMax, end);
                 }
                 else
                 {
-                    max = Math.Max(max, (ulong)dto.StartFrame + dto.Duration);
+                    max = Math.Max(max, end);
                 }
             }
 

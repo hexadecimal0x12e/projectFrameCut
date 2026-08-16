@@ -33,6 +33,7 @@ using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.RenderAPIBase.Context;
 using projectFrameCut.Render.Benchmark;
+using projectFrameCut.Render.Contracts;
 
 
 
@@ -88,6 +89,8 @@ public partial class RenderPage : ContentPage
 #endif
 
     private CancellationTokenSource _cts = new CancellationTokenSource();
+    private Guid _renderRpcSessionId = Guid.NewGuid();
+    private Guid? _activeRenderRpcJobId;
     private CancellationTokenSource? _countdownCts;
 
     public RenderPage()
@@ -494,6 +497,28 @@ public partial class RenderPage : ContentPage
                     { "copyright", $"Made by {Localized.AppBrand}" }
                 };
 
+                // The first RPC render path intentionally targets the common SDR/H.264 case.
+                // HDR, diagnostic/blackhole writers and specialized render settings retain the
+                // legacy in-process compatibility path until those options are represented by the protocol.
+                if (!ProjectUsesHDR
+                    && vm.BitDepth == "8bit"
+                    && string.Equals(enc, "libx264", StringComparison.OrdinalIgnoreCase)
+                    && Math.Abs(double.Parse(vm.Framerate) - Math.Round(double.Parse(vm.Framerate))) <= 0.001)
+                {
+                    await RenderProjectViaRpcAsync(vm, resultPath, enc, fmt);
+#if ANDROID
+                    var savedPath = await MediaStoreSaver.SaveMediaFileAsync(resultPath, Path.GetFileName(resultPath), "video/mp4", subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
+                    if (!string.IsNullOrWhiteSpace(savedPath) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+                    {
+                        try { File.Delete(resultPath); } catch { }
+                    }
+#elif WINDOWS
+                    await FileSystemService.ShowFileInFolderAsync(resultPath);
+#endif
+                    DeviceDisplay.Current.KeepScreenOn = false;
+                    return;
+                }
+
                 try
                 {
                     await ComposeAudio(vm, audOutputPath);
@@ -621,6 +646,74 @@ public partial class RenderPage : ContentPage
             await CleanupUIForRenderDone();
         }
 
+    }
+
+    private async Task RenderProjectViaRpcAsync(RenderPageViewModel vm, string resultPath, string encoder, string pixelFormat)
+    {
+        SetSubProg("PrepareDraft");
+        var openRequest = new OpenProjectRequest
+        {
+            SessionId = _renderRpcSessionId,
+            ProjectRoot = _workingPath,
+            ProjectJson = JsonSerializer.Serialize(_project, DraftPage.DraftJSONOption),
+            TimelineJson = JsonSerializer.Serialize(_draft, DraftPage.DraftJSONOption),
+            ProjectWidth = Math.Max(1, _project.RelativeWidth),
+            ProjectHeight = Math.Max(1, _project.RelativeHeight),
+            FrameRate = Math.Max(1, (int)_project.TargetFrameRate),
+            ProxyRoot = Path.Combine(_workingPath, "proxy"),
+            Assets = Asset.AssetDatabase.Assets.Select(static item => new AssetPathEntry
+            {
+                AssetId = item.Key,
+                Path = item.Value.Path ?? string.Empty,
+            }).Where(static item => !string.IsNullOrWhiteSpace(item.Path)).ToList(),
+        };
+        await RenderRpcBootstrap.Client.OpenProjectAsync(openRequest, _cts.Token);
+
+        SetSubProg("Render");
+        var job = await RenderRpcBootstrap.Client.RenderProjectAsync(new RenderProjectRequest
+        {
+            SessionId = _renderRpcSessionId,
+            Width = int.Parse(vm.Width),
+            Height = int.Parse(vm.Height),
+            FrameRate = (int)Math.Round(double.Parse(vm.Framerate)),
+            Encoder = encoder,
+            PixelFormat = pixelFormat,
+            IncludeAudio = true,
+            OutputFileName = Path.GetFileName(resultPath),
+        }, _cts.Token);
+        _activeRenderRpcJobId = job.JobId;
+
+        try
+        {
+            while (job.State is RenderJobState.Queued or RenderJobState.Running)
+            {
+                _cts.Token.ThrowIfCancellationRequested();
+                await SubProgress.ProgressTo(job.Progress, 100, Easing.Linear);
+                var eta = TimeSpan.FromTicks(Math.Max(0, job.EstimatedRemainingTicks));
+                SubProgLabel.Text = $"{_currentSubProgText} ({job.Progress:P1}, ETA {eta:hh\\:mm\\:ss})";
+                await Task.Delay(150, _cts.Token);
+                job = await RenderRpcBootstrap.Client.GetJobStatusAsync(job.JobId, _cts.Token);
+            }
+
+            if (job.State == RenderJobState.Canceled) throw new OperationCanceledException(_cts.Token);
+            if (job.State != RenderJobState.Completed || job.Artifact is null)
+                throw new InvalidOperationException(job.Error?.Message ?? $"Render job ended in state {job.State}.");
+
+            var artifactPath = RenderRpcBootstrap.ResolveArtifactPath(_workingPath, job.Artifact);
+            Directory.CreateDirectory(Path.GetDirectoryName(resultPath) ?? throw new InvalidOperationException("Output path has no parent directory."));
+            File.Copy(artifactPath, resultPath, overwrite: true);
+            await SubProgress.ProgressTo(1, 100, Easing.Linear);
+        }
+        catch (OperationCanceledException)
+        {
+            try { await RenderRpcBootstrap.Client.CancelJobAsync(job.JobId); } catch { }
+            throw;
+        }
+        finally
+        {
+            _activeRenderRpcJobId = null;
+            try { await RenderRpcBootstrap.Client.CloseProjectAsync(_renderRpcSessionId); } catch { }
+        }
     }
 
     private async void RenderToVoidButton_Clicked(object sender, EventArgs e)
@@ -1302,6 +1395,10 @@ public partial class RenderPage : ContentPage
         var sure = await DisplayAlertAsync(Localized._Warn, Localized.RenderPage_CancelRender_Warn, Localized._OK, Localized._Cancel);
         if (sure)
         {
+            if (_activeRenderRpcJobId is Guid rpcJobId)
+            {
+                try { await RenderRpcBootstrap.Client.CancelJobAsync(rpcJobId); } catch { }
+            }
             builder?.Interrupt();
             _cts.Cancel();
             _logUpdateTimer?.Stop();

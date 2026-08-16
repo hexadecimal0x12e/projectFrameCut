@@ -62,7 +62,7 @@ namespace projectFrameCut.WinUI
                     MyLoggerExtensions.LoggingDiagnosticInfo = true;
                 }
                 string processName = Process.GetCurrentProcess().ProcessName.ToLowerInvariant();
-                if (processName == "pjfc-cli" || processName == "pjfc-cli.exe" || processName == "dotnet.exe")
+                if (processName != "projectframecut" && processName != "projectframecut.exe")
                 {
                     if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
                     {
@@ -74,26 +74,21 @@ namespace projectFrameCut.WinUI
                         Console.WriteLine($"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut"} {Assembly.GetExecutingAssembly().GetName().Version}");
                         Console.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
                     }
-                    if (args.Contains("--elevated") && !AdminServices.IsRunningAsAdministrator())
+                    switch (args.First())
                     {
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = "pjfc-cli.exe",
-                            Arguments = args.Aggregate("", (a, s) => $"{a} \"{s}\""),
-                            UseShellExecute = true,
-                            Verb = "runas"
-                        });
-                        return 0;
+                        case "gui":
+                            args = args.Skip(1).ToArray();
+                            Console.WriteLine($"Launching GUI with parameters: '{string.Join(" ", args)}'");
+                            break;
+
+                        case "rpc_server":
+                            return CLIProgram.Main(args);
+
+                        default:
+                            return CLIProgram.Main(args);
+
                     }
-                    if (args.First() != "gui")
-                    {
-                        return CLIProgram.Main(args);
-                    }
-                    else
-                    {
-                        args = args.Skip(1).ToArray();
-                        Console.WriteLine($"Launching GUI with parameters: '{string.Join(" ", args)}'");
-                    }
+
                 }
             }
             catch { }
@@ -290,6 +285,7 @@ namespace projectFrameCut.WinUI
                     SynchronizationContext.SetSynchronizationContext(context);
                     new App();
                 });
+                RenderRpcBootstrap.DisposeAsync().AsTask().GetAwaiter().GetResult();
                 Helper.CrashHandler.Handler?.Kill(true);
                 _ = SettingsManager.FlushAndStopAsync();
                 Helper.HelperProgram.Cleanup();

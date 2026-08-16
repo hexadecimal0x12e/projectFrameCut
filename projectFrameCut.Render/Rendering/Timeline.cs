@@ -27,6 +27,7 @@ namespace projectFrameCut.Render.Rendering
     {
         //public static ConcurrentDictionary<string, IComputer> ComputerCache = new();
         public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture16bpp.GenerateSolidColor(w, h, 0, 0, 0, null);
+        private static readonly ConcurrentDictionary<Guid, object> FrameHashLocks = new();
 
         public static IEnumerable<OneFrame> GetFramesInOneFrame(
             IClip[] video,
@@ -148,7 +149,7 @@ namespace projectFrameCut.Render.Rendering
                         continue; //keep same behavior in Renderer
                         //throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
-                    result.Add(new OneFrame(targetFrame, clip, null!));
+                    result.Add(CreateHashFrame(targetFrame, clip));
                 }
             }
 
@@ -165,6 +166,76 @@ namespace projectFrameCut.Render.Rendering
                 return "__error__";
             }
 
+        }
+
+        /// <summary>
+        /// Returns the cache identity of one clip at one timeline frame. Unlike the
+        /// project hash this deliberately excludes unrelated clips, while including
+        /// transform inputs so a dependent preview cannot become stale.
+        /// </summary>
+        public static string GetClipFrameHash(IClip[] video, IClip clip, uint targetFrame)
+        {
+            try
+            {
+                var visited = new HashSet<Guid>();
+                var dependencies = CollectHashDependencies(video, clip, visited)
+                    .Select(item => CreateHashFrame(targetFrame, item))
+                    .ToArray();
+                var payload = new ClipFrameHashPayload
+                {
+                    Frame = CreateHashFrame(targetFrame, clip),
+                    Dependencies = dependencies,
+                };
+                var json = JsonSerializer.Serialize(payload, FrameHashSerializerOptions);
+                return ComputeHash(json);
+            }
+            catch
+            {
+                Log($"[Timeline] WARN: Failed to serialize clip frame {clip.Id} at frame {targetFrame} for hash computation.");
+                return "__error__";
+            }
+        }
+
+        private static IReadOnlyList<IClip> CollectHashDependencies(IClip[] video, IClip clip, HashSet<Guid> visited)
+        {
+            var result = new List<IClip>();
+            Guid[] dependencyIds;
+            lock (FrameHashLocks.GetOrAdd(clip.Id, static _ => new object()))
+            {
+                if (clip is not TransformContainer transform || transform.Transform is null)
+                    return result;
+                dependencyIds = [transform.Transform.BindedLeftClip, transform.Transform.BindedRightClip];
+            }
+
+            if (dependencyIds.Length == 0)
+                return result;
+
+            foreach (var dependencyId in dependencyIds)
+            {
+                if (!visited.Add(dependencyId)) continue;
+                var dependency = video.FirstOrDefault(item => item.Id == dependencyId);
+                if (dependency is null) continue;
+                result.Add(dependency);
+                result.AddRange(CollectHashDependencies(video, dependency, visited));
+            }
+            return result;
+        }
+
+        private static string ComputeHash(string value)
+            => SHA256.HashData(Encoding.UTF8.GetBytes(value)).Aggregate("0x", (b, c) => b + c.ToString("x2"));
+
+        private static OneFrame CreateHashFrame(uint targetFrame, IClip clip)
+        {
+            lock (FrameHashLocks.GetOrAdd(clip.Id, static _ => new object()))
+            {
+                return new OneFrame(targetFrame, clip, null!);
+            }
+        }
+
+        private sealed class ClipFrameHashPayload
+        {
+            public required OneFrame Frame { get; init; }
+            public required OneFrame[] Dependencies { get; init; }
         }
 
 

@@ -121,7 +121,8 @@ namespace projectFrameCut.InteractableEditor
         private View? BuildVideoPreview()
         {
             var clipId = clip.Id;
-            var thumbDir = Path.Combine(page.WorkingPath, "thumbs", "perClip", clipId.ToString());
+            var legacyThumbDir = Path.Combine(page.WorkingPath, "thumbs", "perClip", clipId.ToString());
+            var thumbDir = Path.Combine(legacyThumbDir, "timeline");
             if (clip.SourcePath?.StartsWith('$') ?? false)
             {
                 var assetId = clip.SourcePath[1..];
@@ -131,25 +132,19 @@ namespace projectFrameCut.InteractableEditor
                 }
             }
 
-            if (!Directory.Exists(thumbDir))
-                return null;
-
-            var pngs = Directory.GetFiles(thumbDir, "*.png");
-            if (pngs.Length == 0)
-                return null;
-
-            var availableFrames = new List<int>();
-            foreach (var png in pngs)
+            var pngs = GetNumericFrameFiles(thumbDir);
+            if (pngs.Count == 0 && !string.Equals(thumbDir, legacyThumbDir, StringComparison.OrdinalIgnoreCase))
             {
-                var name = Path.GetFileNameWithoutExtension(png);
-                if (int.TryParse(name, out var frame))
-                    availableFrames.Add(frame);
+                // Compatibility with projects created before timeline/dynamic caches
+                // were separated. Dynamic_* files are deliberately filtered out.
+                thumbDir = legacyThumbDir;
+                pngs = GetNumericFrameFiles(thumbDir);
             }
-            if (availableFrames.Count == 0)
+            if (pngs.Count == 0)
                 return null;
-            availableFrames = availableFrames.Order().ToList();
+            var availableFrames = pngs.Keys.Order().ToList();
 
-            (var origWidth, var origHeight) = new Picture8bpp(pngs[0]).GetDimensions();
+            (var origWidth, var origHeight) = new Picture8bpp(pngs.Values.First()).GetDimensions();
 
             var rawClipHeight = clip.Clip.HeightRequest > 0
                 ? clip.Clip.HeightRequest
@@ -220,6 +215,19 @@ namespace projectFrameCut.InteractableEditor
                     }
                 }
             };
+        }
+
+        private static Dictionary<int, string> GetNumericFrameFiles(string directory)
+        {
+            if (!Directory.Exists(directory)) return [];
+
+            var result = new Dictionary<int, string>();
+            foreach (var path in Directory.EnumerateFiles(directory, "*.png", SearchOption.TopDirectoryOnly))
+            {
+                if (int.TryParse(Path.GetFileNameWithoutExtension(path), out var frame))
+                    result[frame] = path;
+            }
+            return result;
         }
 
         private void UpdateVideoVisibleFrames(double scrollX, double viewportWidth)

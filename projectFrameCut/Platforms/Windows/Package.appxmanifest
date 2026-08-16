@@ -105,7 +105,7 @@
 		</Application>
 		
 		<Application Id="CLI" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
-			<uap:VisualElements DisplayName="projectFrameCut CLI (this should be hidden)" Description="the entrypoint for the projectFrameCut CLI, this should be hidden" AppListEntry="none" 
+			<uap:VisualElements DisplayName="projectFrameCut CLI" Description="the entrypoint for the projectFrameCut CLI, this should be hidden" AppListEntry="none" 
 													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
 			<Extensions>
 				<uap3:Extension Category="windows.appExecutionAlias" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
@@ -115,6 +115,19 @@
 				</uap3:Extension>
 			</Extensions>
 		</Application>
+		
+		<Application Id="CLIVersionSpecificAlias" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
+			<uap:VisualElements DisplayName="projectFrameCut (DO NOT DISABLE THIS ALIAS, OR YOU WILL BREAK THE APPLICATION)" Description="the entrypoint for the projectFrameCut CLI (version-specific alias), this should be hidden" AppListEntry="none" 
+													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
+			<Extensions>
+				<uap3:Extension Category="windows.appExecutionAlias" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
+					<uap3:AppExecutionAlias>
+						<desktop:ExecutionAlias Alias="projectFrameCutCLI_hexadecimal0x12e.projectFrameCut_1.6.0.0.exe" />
+					</uap3:AppExecutionAlias>
+				</uap3:Extension>
+			</Extensions>
+		</Application>
+
 	</Applications>
 
 	<Capabilities>

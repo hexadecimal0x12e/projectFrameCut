@@ -102,10 +102,12 @@ public partial class DraftPage : ContentPage, IDraftPage
         "assets",
         "proxy",
 #if WINDOWS
-        "thumbs\\perClip",
+        "thumbs\\perClip\\timeline",
+        "thumbs\\perClip\\dynamic",
         "thumbs\\clipLocalFallback",
 #else
-        "thumbs/perClip",
+        "thumbs/perClip/timeline",
+        "thumbs/perClip/dynamic",
         "thumbs/clipLocalFallback",
 #endif
     ];
@@ -632,6 +634,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         previewHeight = ProjectInfo.RelativeHeight;
         previewer.ProjectRelativeWidth = ProjectInfo.RelativeWidth;
         previewer.ProjectRelativeHeight = ProjectInfo.RelativeHeight;
+        previewer.targetFrameRate = Math.Max(1, (int)ProjectInfo.TargetFrameRate);
+        previewer.ProjectJson = JsonSerializer.Serialize(ProjectInfo, savingOpts);
         previewer.TempPath = Path.Combine(WorkingPath, "thumbs");
         DynamicPreviewProvider.SetLivePreviewer(ref previewer!);
         ClipEditor.UpdateVideoResolution(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
@@ -1617,9 +1621,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         Log($"Start generating the per-clip preview for clip {clip.Id} - {clip.DisplayName}");
 
         var clipId = clip.Id;
-        var outDir = Path.Combine(WorkingPath, "thumbs", "perClip", clipId.ToString());
+        var outDir = Path.Combine(WorkingPath, "thumbs", "perClip", clipId.ToString(), "timeline");
 
-        if (Directory.Exists(outDir) && Directory.GetFiles(outDir, "*.png").Length > 0)
+        if (Directory.Exists(outDir)
+            && Directory.EnumerateFiles(outDir, "*.png", SearchOption.TopDirectoryOnly)
+                .Any(path => int.TryParse(Path.GetFileNameWithoutExtension(path), out _)))
             return;
 
         if (_perClipThumbCts.TryRemove(clipId, out var existingCts))
@@ -1632,6 +1638,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         var sourcePath = clip.SourcePath;
         var totalFrames = clip.maxFrameCount > 0 ? (int)clip.maxFrameCount : (int)clip.lengthInFrame;
+        var completed = false;
 
         _ = Task.Run(async () =>
         {
@@ -1668,6 +1675,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         Log(ex, $"thumb gen clip={clipId} frame={f}", this);
                     }
                 }
+                completed = true;
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -1676,8 +1684,20 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
             finally
             {
-                _perClipThumbCts.TryRemove(clipId, out _);
+                if (_perClipThumbCts.TryGetValue(clipId, out var registeredCts)
+                    && ReferenceEquals(registeredCts, cts))
+                {
+                    _perClipThumbCts.TryRemove(clipId, out _);
+                }
                 cts.Dispose();
+                if (completed)
+                {
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        if (Clips.TryGetValue(clipId, out var currentClip))
+                            ApplyClipPreview(currentClip);
+                    });
+                }
             }
         }, cts.Token);
     }
@@ -7086,7 +7106,21 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     #region compute stuff
     [DebuggerNonUserCode()]
-    public uint PixelToFrame(double px) => (uint)(px * FramePerPixel * tracksZoomOffest);
+    public uint PixelToFrame(double px)
+    {
+        double frame = px * FramePerPixel * tracksZoomOffest;
+        if (!double.IsFinite(frame) || frame <= 0d)
+        {
+            return 0;
+        }
+
+        if (frame >= uint.MaxValue)
+        {
+            return uint.MaxValue;
+        }
+
+        return (uint)frame;
+    }
     [DebuggerNonUserCode()]
     public double FrameToPixel(uint f) => f / (FramePerPixel * tracksZoomOffest);
 
@@ -9270,9 +9304,44 @@ public partial class DraftPage : ContentPage, IDraftPage
         SetStateBusy();
         try
         {
-            foreach (var item in Directory.GetFiles(Path.Combine(WorkingPath, "thumbs")))
+            isPlaying = false;
+            CancelDynamicPreview();
+            try { _playbackCts?.Cancel(); } catch { }
+            foreach (var cts in _perClipThumbCts.Values)
             {
-                File.Delete(item);
+                try { cts.Cancel(); } catch { }
+            }
+
+            await Dispatcher.DispatchAsync(() =>
+            {
+                try
+                {
+                    LivePreviewPlayer.Stop();
+                    DynamicPreviewAudioProvider.Stop();
+                    LivePreviewPlayer.Source = null;
+                    DynamicPreviewAudioProvider.Source = null;
+                    ClipEditor.ApplyPreparedPreviews([]);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "detach previews before cache cleanup", this);
+                }
+            });
+
+            var thumbsRoot = Path.Combine(WorkingPath, "thumbs");
+            if (Directory.Exists(thumbsRoot))
+            {
+                foreach (var item in Directory.EnumerateFiles(thumbsRoot, "*", SearchOption.AllDirectories).ToArray())
+                {
+                    try { File.Delete(item); } catch (FileNotFoundException) { }
+                }
+            }
+
+            // Re-seed timeline thumbnail generation after the cleanup. Previously only
+            // top-level thumbs were deleted, and no producer was restarted for new Clips.
+            foreach (var clip in Clips.Values)
+            {
+                StartPerClipThumbGeneration(clip);
             }
         }
         catch (Exception ex)
@@ -10141,6 +10210,14 @@ public partial class DraftPage : ContentPage, IDraftPage
         try
         {
             if (!ExitNoSave) await Save(true);
+            try
+            {
+                await RenderRpcBootstrap.Client.CloseProjectAsync(previewer.RenderSessionId);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Close render RPC project session", this);
+            }
             App.Current?.Windows?[0]?.Title = Localized.AppBrand;
             TouchProjectFolder();
             base.OnNavigatingFrom(e);

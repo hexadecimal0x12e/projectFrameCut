@@ -2,6 +2,7 @@ using Microsoft.Maui.ApplicationModel;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.IntegratedAPIServer;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using System.Linq;
@@ -76,8 +77,11 @@ internal sealed class IntegratedApiBackend(DraftPage page) : IIntegratedApiBacke
                 result = GetLayers();
                 break;
             case IntegratedApiOperation.ListAvailableEffects:
-                result = new { effects = TimelineMcpLiveService.GetAllAvailableEffects().Cast<object>().ToList() };
+            {
+                var catalog = await RenderRpcBootstrap.Client.GetAvailableEffectsAsync(_page.previewer.RenderSessionId, cancellationToken);
+                result = new { effects = catalog.Effects };
                 break;
+            }
             case IntegratedApiOperation.GetEffectInfo:
                 result = GetEffectInfo(GetRequiredString(arguments, "effectType"));
                 break;
@@ -95,15 +99,18 @@ internal sealed class IntegratedApiBackend(DraftPage page) : IIntegratedApiBacke
                 };
                 break;
             case IntegratedApiOperation.GetClientEnvironment:
+            {
                 EnsureIntegratedClient(arguments);
+                var catalog = await RenderRpcBootstrap.Client.GetAvailableEffectsAsync(_page.previewer.RenderSessionId, cancellationToken);
                 result = new
                 {
                     clientId = IntegratedClientId,
-                    effects = TimelineMcpLiveService.GetAllAvailableEffects().Cast<object>().ToList(),
-                    plugins = TimelineMcpLiveService.GetAllAvailablePlugins().Cast<object>().ToList(),
+                    effects = catalog.Effects,
+                    plugins = catalog.Plugins,
                     textStyles = TimelineMcpLiveService.GetAllAvailableTextStyles().Cast<object>().ToList(),
                 };
                 break;
+            }
             case IntegratedApiOperation.RenderClientPreview:
                 EnsureIntegratedClient(arguments);
                 result = RenderPreview(arguments);
@@ -312,12 +319,14 @@ internal sealed class IntegratedApiBackend(DraftPage page) : IIntegratedApiBacke
         int width = TryGetInt(arguments, "width") ?? _page.ProjectInfo.RelativeWidth;
         int height = TryGetInt(arguments, "height") ?? _page.ProjectInfo.RelativeHeight;
         string imagePath = _page.previewer.RenderFrame(frame, width, height);
+        string projectRelativePath = Path.GetRelativePath(_page.WorkingPath, imagePath).Replace(Path.DirectorySeparatorChar, '/');
         return new
         {
             frame,
             width,
             height,
             mimeType = "image/png",
+            artifactPath = projectRelativePath,
             imageBase64 = Convert.ToBase64String(File.ReadAllBytes(imagePath)),
         };
     }

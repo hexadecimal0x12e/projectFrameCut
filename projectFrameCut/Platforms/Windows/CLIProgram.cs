@@ -1,6 +1,10 @@
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.Rendering;
+using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Shared;
 using System;
 using System.Reflection;
@@ -34,6 +38,8 @@ namespace projectFrameCut.WinUI
 
             switch (args[0].ToLowerInvariant())
             {
+                case "rpc_server":
+                    return RunRpcServer(args.Skip(1).ToArray());
                 case "about":
                     WriteAbout();
                     return 0;
@@ -46,6 +52,12 @@ namespace projectFrameCut.WinUI
 
         private static int WriteCommandHelp(string command)
         {
+            if (command.Equals("rpc_server", StringComparison.OrdinalIgnoreCase))
+            {
+                WriteRpcServerHelp();
+                return SuccessExitCode;
+            }
+
             if (command.Equals("gui", StringComparison.OrdinalIgnoreCase))
             {
                 WriteGuiHelp();
@@ -74,7 +86,7 @@ Usage:
 
 Commands:
   gui       Launch the projectFrameCut graphical interface.
-  tui       Start the projectFrameCut text-based interface (TUI) in the console.
+  headless  Start the projectFrameCut headless mode for rendering and automation.
   help      Show general help or detailed help for a command.
   reset     Reset the application to its default state by clearing settings.
   about     Show version and build information.
@@ -89,6 +101,94 @@ Global options:
 Help options:
   -h, --help, /?    Show this help text.
 ");
+        }
+
+        private static void WriteRpcServerHelp()
+        {
+            Console.WriteLine(
+@"Start the projectFrameCut Render RPC server
+This is internal command used by the GUI to start the Render RPC server. It is not intended to be run directly by users.
+
+Usage:
+  pjfc-cli rpc_server --pipe=<pipe-name> --token=<token> --dataRoot=<path> [--parentPid=<pid>] [--quiet]
+
+The command is normally started by the graphical application.
+");
+        }
+
+        private static int RunRpcServer(string[] args)
+        {
+            try
+            {
+                if (args.Any(IsHelpOption))
+                {
+                    WriteRpcServerHelp();
+                    return SuccessExitCode;
+                }
+                var pipe = GetOption(args, "pipe") ?? string.Empty;
+                var token = GetOption(args, "token") ?? string.Empty;
+                var parentPid = GetOption(args, "parentPid", required: false);
+                var dataRoot = GetOption(args, "dataRoot");
+                if (string.IsNullOrWhiteSpace(pipe) || string.IsNullOrWhiteSpace(token))
+                {
+                    Console.Error.WriteLine("rpc_server requires --pipe=<pipe-name> and --token=<token> and --dataRoot=<path>.");
+                    WriteRpcServerHelp();
+                    return InvalidCommandExitCode;
+                }
+
+                using var cancellation = new CancellationTokenSource();
+                Console.CancelKeyPress += (_, e) =>
+                {
+                    e.Cancel = true;
+                    cancellation.Cancel();
+                };
+                return RunRpcServerAsync(pipe, token, parentPid, dataRoot, cancellation.Token).GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+                return SuccessExitCode;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Render RPC server failed: {ex}");
+                return 1;
+            }
+        }
+
+        private static async Task<int> RunRpcServerAsync(string pipe, string token, string? parentPid, string dataRoot, CancellationToken cancellationToken)
+        {
+            InitializeRenderRuntime(dataRoot);
+            await using var service = new RenderBackendService();
+            await new NamedPipeRenderServer(service).RunAsync(pipe, token, parentPid, cancellationToken).ConfigureAwait(false);
+            return SuccessExitCode;
+        }
+
+        private static void InitializeRenderRuntime(string dataRoot)
+        {
+            if (!PluginManager.Inited)
+            {
+                try { GlobalPluginHelper.PluginsDataRootPath = dataRoot; PluginManager.InitGlobalGetter(); } catch (InvalidOperationException) { }
+                PluginManager.Init(
+                [
+                    new InternalPluginBase(),
+                    new projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin(),
+                ]);
+            }
+
+            FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
+            FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+            FFmpeg.AutoGen.ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
+            if (!FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
+                throw new InvalidOperationException($"FFmpeg initialization failed at '{FFmpeg.AutoGen.ffmpeg.RootPath}'.");
+            FFmpegHelper.SetupFFmpegLogging(FFmpeg.AutoGen.ffmpeg.AV_LOG_WARNING);
+        }
+
+        private static string? GetOption(string[] args, string name, bool required = true)
+        {
+            var prefix = $"--{name}=";
+            var value = args.FirstOrDefault(x => x.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))?.Substring(prefix.Length);
+            if (required && string.IsNullOrWhiteSpace(value)) throw new ArgumentException($"Missing --{name}=... option.");
+            return value;
         }
 
         private static void WriteGuiHelp()

@@ -8,6 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\projectFrameCut.AIComponentContracts\projectFrameCut.AIComponentContracts.csproj" />
+    <ProjectReference Include="..\projectFrameCut.Render.Contracts\projectFrameCut.Render.Contracts.csproj" />
   </ItemGroup>
 </Project>

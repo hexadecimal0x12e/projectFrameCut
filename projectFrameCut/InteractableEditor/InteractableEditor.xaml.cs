@@ -428,6 +428,15 @@ namespace projectFrameCut.InteractableEditor
             public PanGestureRecognizer BlPan { get; }
             public PanGestureRecognizer BrPan { get; }
 
+            // Preview frames are streamed much faster than the surrounding layout
+            // needs to change. Keep two fixed Image instances so a new source is
+            // assigned only to the inactive buffer; the image currently being
+            // presented is never mutated in place.
+            private Grid? _imageBufferHost;
+            private Image? _imageBufferA;
+            private Image? _imageBufferB;
+            private Image? _activeImageBuffer;
+
             private static BoxView CreateHandle()
             {
                 return new BoxView
@@ -632,6 +641,17 @@ namespace projectFrameCut.InteractableEditor
                     return;
                 }
 
+                if (view is null)
+                {
+                    ResetImageBuffers();
+                }
+
+                if (view is Image incomingImage && TrySetBufferedImage(incomingImage))
+                {
+                    UpdatePreviewHostVisibility();
+                    return;
+                }
+
                 if (view is not null
                     && PreviewHost.Content is View existingPreview
                     && !ReferenceEquals(existingPreview, view)
@@ -643,13 +663,114 @@ namespace projectFrameCut.InteractableEditor
 
                 if (!ReferenceEquals(PreviewHost.Content, view))
                 {
-                    _ = MainThread.InvokeOnMainThreadAsync(() =>
+                    if (!_owner.Dispatcher.IsDispatchRequired)
                     {
                         PreviewHost.Content = view;
-                    });
+                    }
+                    else
+                    {
+                        _ = MainThread.InvokeOnMainThreadAsync(() =>
+                        {
+                            PreviewHost.Content = view;
+                        });
+                    }
                 }
 
                 UpdatePreviewHostVisibility();
+            }
+
+            private void ResetImageBuffers()
+            {
+                _imageBufferHost = null;
+                _imageBufferA = null;
+                _imageBufferB = null;
+                _activeImageBuffer = null;
+            }
+
+            private bool TrySetBufferedImage(Image incoming)
+            {
+                if (incoming.Source is null)
+                {
+                    return false;
+                }
+
+                EnsureImageBuffers();
+                if (_imageBufferA is null || _imageBufferB is null || _activeImageBuffer is null)
+                {
+                    return false;
+                }
+
+                var inactive = ReferenceEquals(_activeImageBuffer, _imageBufferA)
+                    ? _imageBufferB
+                    : _imageBufferA;
+
+                // Copy only non-source presentation state. Source is assigned last,
+                // while the target buffer is hidden and therefore does not participate
+                // in the currently visible layout pass.
+                ApplySharedViewState(inactive, incoming);
+                inactive.Aspect = incoming.Aspect;
+                inactive.IsVisible = false;
+                inactive.Source = incoming.Source;
+
+                var previous = _activeImageBuffer;
+                inactive.IsVisible = true;
+                previous.IsVisible = false;
+                _activeImageBuffer = inactive;
+                return true;
+            }
+
+            private void EnsureImageBuffers()
+            {
+                if (_imageBufferHost is not null
+                    && _imageBufferA is not null
+                    && _imageBufferB is not null
+                    && _activeImageBuffer is not null)
+                {
+                    return;
+                }
+
+                var existingImage = PreviewHost.Content as Image;
+                _imageBufferA = CreateImageBuffer();
+                _imageBufferB = CreateImageBuffer();
+
+                if (existingImage is not null)
+                {
+                    // Do not re-parent the currently attached Image into the new
+                    // Grid. Copy its state to an unattached buffer instead.
+                    ApplySharedViewState(_imageBufferA, existingImage);
+                    _imageBufferA.Aspect = existingImage.Aspect;
+                    _imageBufferA.Source = existingImage.Source;
+                }
+
+                _imageBufferA.IsVisible = true;
+                _imageBufferB.IsVisible = false;
+
+                _imageBufferHost = new Grid
+                {
+                    BackgroundColor = Colors.Transparent,
+                    InputTransparent = true,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Fill
+                };
+                _imageBufferHost.Children.Add(_imageBufferA);
+                _imageBufferHost.Children.Add(_imageBufferB);
+                _activeImageBuffer = _imageBufferA;
+
+                // This method is called from the UI-thread apply path. Replacing the
+                // host once is safe; subsequent frames only touch the two buffers.
+                PreviewHost.Content = _imageBufferHost;
+            }
+
+            private static Image CreateImageBuffer()
+            {
+                return new Image
+                {
+                    Aspect = Aspect.Fill,
+                    InputTransparent = true,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Fill,
+                    IsVisible = false
+                };
             }
 
             private static bool TryUpdatePreviewTreeInPlace(View existing, View incoming)
@@ -2005,7 +2126,10 @@ namespace projectFrameCut.InteractableEditor
                         hasPreviewView |= state.HasPreviewView;
                     }
 
-                    UpdateVisuals();
+                    foreach (var state in _clipStates.Values)
+                    {
+                        state.RefreshPreviewVisibility();
+                    }
                     return hasPreviewView;
                 }
                 else
@@ -2017,7 +2141,10 @@ namespace projectFrameCut.InteractableEditor
 
                     _previewSourceClips.Clear();
 
-                    UpdateVisuals();
+                    foreach (var state in _clipStates.Values)
+                    {
+                        state.RefreshPreviewVisibility();
+                    }
                     return false;
                 }
             }
@@ -2091,7 +2218,13 @@ namespace projectFrameCut.InteractableEditor
                 }
             }
 
-            UpdateVisuals();
+            // Applying a new frame must not invalidate every overlay layout. Layout
+            // is updated by the geometry/selection paths; the streaming path only
+            // refreshes visibility after changing the buffered image.
+            foreach (var state in _clipStates.Values)
+            {
+                state.RefreshPreviewVisibility();
+            }
             return hasVisiblePreview;
         }
 
