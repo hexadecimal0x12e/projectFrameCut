@@ -156,8 +156,8 @@ Logging and diagnostics:
 
 
 Integration options:
-  --mcpServer=<address>            Supply the MCP server address associated with
-                                   the project being opened.
+  --mcp=<http[s]://host:port>     Start the integrated MCP HTTP server for the
+                                   project being opened. The MCP endpoint is /mcp.
 
 Protocol URI:
   pjfc:file:///C:/path/to/project.pjfc[?option[&option...]]
@@ -178,7 +178,7 @@ Examples:
 
 Notes:
   * Most GUI options are case-sensitive; use the spelling shown above.
-    --continue and --mcpServer are accepted case-insensitively.
+    --continue and --mcp are accepted case-insensitively.
   * Options that take a value require the --name=value form.
   * When several non-option arguments are supplied, the longest one is selected
     as the launch target. Supplying one target is recommended.

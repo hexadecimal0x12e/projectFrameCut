@@ -7418,6 +7418,17 @@ public partial class DraftPage : ContentPage, IDraftPage
         });
     }
 
+    internal bool DeleteClipForService(Guid clipId)
+    {
+        if (!Clips.TryGetValue(clipId, out var clip))
+        {
+            return false;
+        }
+
+        DeleteAClip(clip);
+        return true;
+    }
+
     private void OnClipInitializationRecovered(Guid clipId)
     {
         Dispatcher.Dispatch(() =>

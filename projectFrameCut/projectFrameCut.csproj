@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 		<PropertyGroup>
-			<TargetFrameworks>net10.0-android;net11.0-ios;net11.0-maccatalyst</TargetFrameworks>
+			<TargetFrameworks>net10.0-android;net11.0-ios</TargetFrameworks>
 			<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
 
 			<!-- Note for MacCatalyst:
@@ -173,6 +173,7 @@
 		<ItemGroup>
 			<ProjectReference Include="..\projectFrameCut.ApplicationAPIBase\projectFrameCut.ApplicationAPIBase.csproj" />
 			<ProjectReference Include="..\projectFrameCut.AIComponentContracts\projectFrameCut.AIComponentContracts.csproj" />
+			<ProjectReference Include="..\projectFrameCut.IntegratedAPIServer\projectFrameCut.IntegratedAPIServer.csproj" />
 			<ProjectReference Include="..\projectFrameCut.Render.HwAccelEngine\projectFrameCut.Render.HwAccelEngine.csproj" />
 			<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
 			<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />

@@ -8,6 +8,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.InteractableEditor;
+using projectFrameCut.IntegratedAPIServer;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -46,7 +47,6 @@ using Microsoft.Win32;
 
 
 
-
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 using Windows.ApplicationModel.UserActivities;
@@ -61,7 +61,11 @@ namespace projectFrameCut;
 public partial class HomePage : ContentPage
 {
     private readonly ProjectsListViewModel _viewModel;
-    private string? _pendingMcpServerAddress;
+#if WINDOWS
+    private string? _pendingIntegratedMcpAddress;
+    private IntegratedApiServer? _integratedApiServer;
+    private IntegratedApiBackend? _integratedApiBackend;
+#endif
 
     private const string CreateButtonName = "!!CreateButton!!";
 
@@ -219,11 +223,13 @@ public partial class HomePage : ContentPage
             string path = "";
 
             var args = argsOverride ?? MauiProgram.CmdlineArgs.ToArray();
-            var mcpServerArg = args.FirstOrDefault(c => c.StartsWith("--mcpServer=", StringComparison.OrdinalIgnoreCase));
-            if (!string.IsNullOrWhiteSpace(mcpServerArg))
+#if WINDOWS
+            var integratedMcpArg = args.FirstOrDefault(c => c.StartsWith("--mcp=", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(integratedMcpArg))
             {
-                _pendingMcpServerAddress = mcpServerArg.Split('=', 2)[1];
+                _pendingIntegratedMcpAddress = integratedMcpArg.Split('=', 2)[1];
             }
+#endif
 
             if (string.IsNullOrWhiteSpace(path) && args.ArrayAny())
             {
@@ -365,44 +371,6 @@ public partial class HomePage : ContentPage
             });
         }
     }
-
-    //private static bool TryParseMcpLaunchUri(string raw, out string draftPath, out string serverAddress)
-    //{
-    //    draftPath = string.Empty;
-    //    serverAddress = string.Empty;
-    //    if (string.IsNullOrWhiteSpace(raw))
-    //    {
-    //        return false;
-    //    }
-
-    //    if (!raw.StartsWith("pjfc:mcp?", StringComparison.OrdinalIgnoreCase))
-    //    {
-    //        return false;
-    //    }
-
-    //    var query = raw["pjfc:mcp?".Length..];
-    //    foreach (var segment in query.Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-    //    {
-    //        var idx = segment.IndexOf('=');
-    //        if (idx <= 0)
-    //        {
-    //            continue;
-    //        }
-
-    //        var key = Uri.UnescapeDataString(segment[..idx].Replace('+', ' '));
-    //        var value = Uri.UnescapeDataString(segment[(idx + 1)..].Replace('+', ' '));
-    //        if (string.Equals(key, "draft", StringComparison.OrdinalIgnoreCase))
-    //        {
-    //            draftPath = value;
-    //        }
-    //        else if (string.Equals(key, "server", StringComparison.OrdinalIgnoreCase))
-    //        {
-    //            serverAddress = value;
-    //        }
-    //    }
-
-    //    return !string.IsNullOrWhiteSpace(draftPath) && !string.IsNullOrWhiteSpace(serverAddress);
-    //}
 
     private async void CollectionView_SelectionChanged(object? sender, Microsoft.Maui.Controls.SelectionChangedEventArgs e)
     {
@@ -1189,23 +1157,26 @@ public partial class HomePage : ContentPage
                         Shell.SetNavBarIsVisible(page, true);
                         lastPage = page;
                         await Navigation.PushAsync(page);
-                        if (!string.IsNullOrWhiteSpace(_pendingMcpServerAddress))
+#if WINDOWS
+                        if (!string.IsNullOrWhiteSpace(_pendingIntegratedMcpAddress))
                         {
+                            string address = _pendingIntegratedMcpAddress;
+                            _pendingIntegratedMcpAddress = null;
                             try
                             {
-                                await McpClientLinkService.Shared.ConnectAsync(page, draftSourcePath, _pendingMcpServerAddress);
-                                page.SetStatusText($"MCP linked: {_pendingMcpServerAddress}");
+                                await StartIntegratedMcpServerAsync(page, address);
+                                page.SetStatusText($"Integrated MCP server: {address.TrimEnd('/')}/mcp");
                             }
-                            catch (Exception linkEx)
+                            catch (Exception serverEx)
                             {
-                                Log(linkEx, "connect mcp client link", this);
-                                await DisplayAlertAsync(Localized._Warn, $"Failed to connect MCP server.\r\n{linkEx.Message}", Localized._OK);
-                            }
-                            finally
-                            {
-                                _pendingMcpServerAddress = null;
+                                Log(serverEx, "start integrated mcp server", this);
+                                await DisplayAlertAsync(
+                                    Localized._Warn,
+                                    $"Failed to start the integrated MCP server.\r\n{serverEx.Message}",
+                                    Localized._OK);
                             }
                         }
+#endif
                     }
                     catch (Exception ex)
                     {
@@ -1244,6 +1215,72 @@ public partial class HomePage : ContentPage
 #endif
 
 #if WINDOWS
+    private async Task StartIntegratedMcpServerAsync(DraftPage page, string address)
+    {
+        if (!Uri.TryCreate(address, UriKind.Absolute, out var listenUri))
+        {
+            throw new ArgumentException("--mcp must contain an absolute HTTP or HTTPS URL.", nameof(address));
+        }
+
+        await StopIntegratedMcpServerAsync();
+
+        var backend = new IntegratedApiBackend(page);
+        var server = new IntegratedApiServer();
+        string? transportWarning = null;
+        try
+        {
+            await server.StartAsync(
+                new IntegratedApiServerOptions
+                {
+                    ListenUri = listenUri,
+                    WarningSink = warning =>
+                    {
+                        transportWarning = warning;
+                        Log(warning, "warn");
+                    },
+                },
+                backend);
+        }
+        catch
+        {
+            await server.DisposeAsync();
+            await backend.DisposeAsync();
+            throw;
+        }
+
+        _integratedApiBackend = backend;
+        _integratedApiServer = server;
+        if (!string.IsNullOrWhiteSpace(transportWarning))
+        {
+            await DisplayAlertAsync(Localized._Warn, transportWarning, Localized._OK);
+        }
+    }
+
+    private async Task StopIntegratedMcpServerAsync()
+    {
+        var server = _integratedApiServer;
+        var backend = _integratedApiBackend;
+        _integratedApiServer = null;
+        _integratedApiBackend = null;
+
+        if (server is not null)
+        {
+            try
+            {
+                await server.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "stop integrated mcp server", this);
+            }
+        }
+
+        if (backend is not null)
+        {
+            await backend.DisposeAsync();
+        }
+    }
+
     UserActivitySession? _previousSession;
 #endif
 
@@ -1252,7 +1289,9 @@ public partial class HomePage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        _ = McpClientLinkService.Shared.DisconnectAsync();
+#if WINDOWS
+        await StopIntegratedMcpServerAsync();
+#endif
         try
         {
             Environment.CurrentDirectory = MauiProgram.DataPath;

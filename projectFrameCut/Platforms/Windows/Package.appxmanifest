@@ -103,8 +103,9 @@
 				</uap:Extension>
 			</Extensions>
 		</Application>
-		<Application Id="projectFrameCut.Cli" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
-			<uap:VisualElements DisplayName="projectFrameCut CLI" Description="projectFrameCut CLI (this should be hidden)" AppListEntry="none" 
+		
+		<Application Id="CLI" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
+			<uap:VisualElements DisplayName="projectFrameCut CLI (this should be hidden)" Description="the entrypoint for the projectFrameCut CLI, this should be hidden" AppListEntry="none" 
 													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
 			<Extensions>
 				<uap3:Extension Category="windows.appExecutionAlias" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">

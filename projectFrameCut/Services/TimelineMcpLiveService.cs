@@ -397,7 +397,7 @@ public static class TimelineMcpLiveService
         return resultLog;
     }
 
-    public static ClipElementUI MoveClip(DraftPage page, string clipId, uint layerIndex, uint startFrame)
+    public static ClipElementUI MoveClip(DraftPage page, string clipId, uint layerIndex, uint startFrame, uint? subLayerIndex = null)
     {
         if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip))
         {
@@ -416,7 +416,7 @@ public static class TimelineMcpLiveService
         }
 
         clip.origTrack = targetTrack;
-        clip.SubLayerIndex = targetTrack;
+        clip.SubLayerIndex = checked((int)(subLayerIndex ?? layerIndex));
         clip.Clip.TranslationX = page.FrameToPixel(startFrame);
         clip.origX = clip.Clip.TranslationX;
         page.Dispatcher.Dispatch(() =>
@@ -506,9 +506,15 @@ public static class TimelineMcpLiveService
             throw new InvalidOperationException($"Failed to create effect '{effect.TypeName}'.");
         }
 
+        if (effect.Parameters is { Count: > 0 })
+        {
+            created = created.WithParameters(effect.Parameters);
+        }
         created.Name = string.IsNullOrWhiteSpace(effect.Name) ? effect.TypeName : effect.Name;
         created.Enabled = effect.Enabled;
         created.Index = effect.Index;
+        created.RelativeWidth = effect.RelativeWidth;
+        created.RelativeHeight = effect.RelativeHeight;
 
         if (clip.Effects.ContainsKey(created.Name))
         {
@@ -570,6 +576,9 @@ public static class TimelineMcpLiveService
 
         return removed;
     }
+
+    public static bool DeleteClip(DraftPage page, Guid clipId)
+        => page.DeleteClipForService(clipId);
 
     private static void UpsertClipElement(DraftPage page, ClipElementUI element)
     {
