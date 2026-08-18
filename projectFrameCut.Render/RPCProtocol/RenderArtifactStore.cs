@@ -11,6 +11,7 @@ public interface IRenderArtifactStore
     void CommitTemporaryFile(string temporaryPath, string finalPath);
     RenderArtifact Register(Guid sessionId, string projectRoot, string projectRelativePath, string mediaType, bool cacheHit, bool isPreview, int width = 0, int height = 0, double frameRate = 0);
     bool Release(Guid sessionId, Guid artifactId);
+    bool TryGetPath(Guid sessionId, Guid artifactId, out string fullPath);
 }
 
 public sealed class RenderArtifactStore : IRenderArtifactStore
@@ -115,6 +116,18 @@ public sealed class RenderArtifactStore : IRenderArtifactStore
             try { File.Delete(registration.FullPath); } catch { }
         }
         return true;
+    }
+
+    public bool TryGetPath(Guid sessionId, Guid artifactId, out string fullPath)
+    {
+        if (_artifacts.TryGetValue(artifactId, out var registration) && registration.SessionId == sessionId && File.Exists(registration.FullPath))
+        {
+            fullPath = registration.FullPath;
+            return true;
+        }
+
+        fullPath = string.Empty;
+        return false;
     }
 
     private static string ComputeHash(string path)

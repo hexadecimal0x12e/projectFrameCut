@@ -61,6 +61,14 @@ namespace projectFrameCut.WinUI
                 {
                     MyLoggerExtensions.LoggingDiagnosticInfo = true;
                 }
+                if (args.Contains("--waitDebugger"))
+                {
+                    Console.WriteLine("Waiting for debugger to attach...");
+                    while (!Debugger.IsAttached)
+                    {
+                        Thread.Sleep(100);
+                    }
+                }
                 string processName = Process.GetCurrentProcess().ProcessName.ToLowerInvariant();
                 if (processName != "projectframecut" && processName != "projectframecut.exe")
                 {
@@ -74,19 +82,15 @@ namespace projectFrameCut.WinUI
                         Console.WriteLine($"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut"} {Assembly.GetExecutingAssembly().GetName().Version}");
                         Console.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
                     }
-                    switch (args.First())
+
+                    if (args.Any() && args.First() == "gui")
                     {
-                        case "gui":
-                            args = args.Skip(1).ToArray();
-                            Console.WriteLine($"Launching GUI with parameters: '{string.Join(" ", args)}'");
-                            break;
-
-                        case "rpc_server":
-                            return CLIProgram.Main(args);
-
-                        default:
-                            return CLIProgram.Main(args);
-
+                        args = args.Skip(1).ToArray();
+                        Console.WriteLine($"Launching GUI with parameters: '{string.Join(" ", args)}', press Ctrl+C to exit.");
+                    }
+                    else
+                    {
+                        return CLIProgram.Main(args);
                     }
 
                 }
@@ -435,20 +439,11 @@ namespace projectFrameCut.WinUI
             }
 #endif
 
-            try
+
+            string innerExceptionInfo = "None";
+            if (ex.InnerException != null)
             {
-                if (!Helper.CrashHandler.Handler?.HasExited ?? false) //let handler handle it
-                {
-                    Environment.Exit(ex.HResult);
-                }
-            }
-            catch { }
-            finally
-            {
-                string innerExceptionInfo = "None";
-                if (ex.InnerException != null)
-                {
-                    innerExceptionInfo =
+                innerExceptionInfo =
 $"""
 ClipType: {ex.InnerException.GetType().Name}                        
 Message: {ex.InnerException.Message}
@@ -456,27 +451,27 @@ StackTrace:
 {ex.InnerException.StackTrace}
 
 """;
-                }
+            }
 
-                string header =
+            string header =
 """
 Sorry, the application has encountered an unhandled exception and needs to close now.
 Your works have been saved automatically when you make any change on the UI, so you won't lose your work.
 If you want to help the development of this application, please consider to submit an issue or send this report to me.
 """;
-                try
-                {
-                    if (Localized is not null) header = Localized.AppCrashed;
-                }
-                catch { }
-                string appInfo = $"Application: {Assembly.GetExecutingAssembly().GetName().FullName}";
-                try
-                {
-                    appInfo = Setting.SettingPages.DiagnosticSettingPage.GetAppInfo(false, false);
-                }
-                catch
-                {
-                    appInfo =
+            try
+            {
+                if (Localized is not null) header = Localized.AppCrashed;
+            }
+            catch { }
+            string appInfo = $"Application: {Assembly.GetExecutingAssembly().GetName().FullName}";
+            try
+            {
+                appInfo = Setting.SettingPages.DiagnosticSettingPage.GetAppInfo(false, false);
+            }
+            catch
+            {
+                appInfo =
 $"""
 {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "unknown"}: {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config"}@{new string((Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Skip(6).ToArray())}  
 Assembly: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} Packaged:{WinUI.App.IsPackaged()}
@@ -487,8 +482,8 @@ CLR Version:{Environment.Version}
 Command line: {Environment.CommandLine}
 Current directory: {Environment.CurrentDirectory}
 """;
-                }
-                var content =
+            }
+            var content =
 $"""
 Exception type: {ex.GetType().Name}
 Message: {ex.Message}
@@ -507,59 +502,78 @@ Environment:
 
 (report ended here)
 """;
-                string logPath, logMessage;
+            string logPath, logMessage;
 
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "Crashlogs"));
+                logPath = Path.Combine(MauiProgram.DataPath, "Crashlogs", $"Crashlog-{DateTime.Now:yyyy-MM-dd-hh-mm-ss}.log");
+                logMessage = $"{header}\r\nthis log is in: {logPath}\r\n\r\n{content}";
+                File.WriteAllText(logPath, logMessage);
+            }
+            catch (Exception)
+            {
+                logPath = Path.Combine(Directory.CreateTempSubdirectory("projectFrameCut_").FullName, "crash.log");
+                logMessage = $"{header}\r\nthis log is in: {logPath}\r\n\r\n{content}";
+                File.WriteAllText(logPath, logMessage);
+            }
+            Thread.Sleep(100);
+
+            try
+            {
+                if (!Helper.CrashHandler.Handler?.HasExited ?? false) //let handler handle it
+                {
+                    Environment.Exit(ex.HResult);
+                }
+                string processName = Process.GetCurrentProcess().ProcessName.ToLowerInvariant();
+                if (processName != "projectframecut" && processName != "projectframecut.exe")
+                {
+                    Console.Error.WriteLine("********************");
+                    Console.Error.WriteLine("*** FATAL: CRASH ***");
+                    Console.Error.WriteLine("********************");
+                    Console.Error.WriteLine();
+                    Console.Error.WriteLine(logMessage);
+                    Environment.Exit(ex.HResult);
+                }
+            }
+            catch { }
+
+            if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.dll")))
+            {
                 try
                 {
-                    Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "Crashlogs"));
-                    logPath = Path.Combine(MauiProgram.DataPath, "Crashlogs", $"Crashlog-{DateTime.Now:yyyy-MM-dd-hh-mm-ss}.log");
-                    logMessage = $"{header}\r\nthis log is in: {logPath}\r\n\r\n{content}";
-                    File.WriteAllText(logPath, logMessage);
-                }
-                catch (Exception)
-                {
-                    logPath = Path.Combine(Directory.CreateTempSubdirectory("projectFrameCut_").FullName, "crash.log");
-                    logMessage = $"{header}\r\nthis log is in: {logPath}\r\n\r\n{content}";
-                    File.WriteAllText(logPath, logMessage);
-                }
-                Thread.Sleep(100);
 
-                if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.dll")))
-                {
-                    try
+                    string bootArgs = $"\"{Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.dll")}\" crashForm \"{logPath}\" \"{MauiProgram.LogPath}\"";
+                    Log($"CrashForm boot args: {bootArgs}", "fatal");
+                    var p = Process.Start(new ProcessStartInfo
                     {
-
-                        string bootArgs = $"\"{Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.dll")}\" crashForm \"{logPath}\" \"{MauiProgram.LogPath}\"";
-                        Log($"CrashForm boot args: {bootArgs}", "fatal");
-                        var p = Process.Start(new ProcessStartInfo
-                        {
-                            FileName = "dotnet.exe",
-                            Arguments = bootArgs,
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        });
-                        p.WaitForExit(5000);
-                        if (p.HasExited && p.ExitCode != 0)
-                        {
-                            Process.Start(new ProcessStartInfo { FileName = logPath, UseShellExecute = true });
-                        }
-                    }
-                    catch (Exception)
+                        FileName = "dotnet.exe",
+                        Arguments = bootArgs,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    });
+                    p.WaitForExit(5000);
+                    if (p.HasExited && p.ExitCode != 0)
                     {
                         Process.Start(new ProcessStartInfo { FileName = logPath, UseShellExecute = true });
                     }
                 }
-                else
+                catch (Exception)
                 {
                     Process.Start(new ProcessStartInfo { FileName = logPath, UseShellExecute = true });
                 }
-
-                MauiProgram.LogWriter?.Flush();
-                Helper.HelperProgram.Cleanup();
-
-                Environment.FailFast(logMessage, ex);
-                Environment.Exit(ex.HResult);
             }
+            else
+            {
+                Process.Start(new ProcessStartInfo { FileName = logPath, UseShellExecute = true });
+            }
+
+            MauiProgram.LogWriter?.Flush();
+            Helper.HelperProgram.Cleanup();
+
+            Environment.FailFast(logMessage, ex);
+            Environment.Exit(ex.HResult);
+
         }
 
         public static void RebootApp()

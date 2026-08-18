@@ -16,6 +16,7 @@ public sealed class RenderProtocolTests
             ProjectWidth = 1920,
             ProjectHeight = 1080,
             FrameRate = 60,
+            CacheNamespace = "headless-revision",
             Assets = [new AssetPathEntry { AssetId = "asset-1", Path = "assets/video.mp4" }],
         };
 
@@ -24,6 +25,7 @@ public sealed class RenderProtocolTests
         Assert.AreEqual(source.SessionId, clone.SessionId);
         Assert.AreEqual(1920, clone.ProjectWidth);
         Assert.AreEqual("asset-1", clone.Assets.Single().AssetId);
+        Assert.AreEqual("headless-revision", clone.CacheNamespace);
     }
 
     [TestMethod]
@@ -76,6 +78,43 @@ public sealed class RenderProtocolTests
         Assert.AreEqual(RenderErrorCode.Unsupported, exception.Error.Code);
     }
 
+    [TestMethod]
+    public void HeadlessSnapshotRoundTripsRevisionAndRenderSession()
+    {
+        var source = new HeadlessProjectSnapshot
+        {
+            SessionId = Guid.NewGuid(),
+            ProjectRoot = "project",
+            Revision = 42,
+            SnapshotHash = "ABC123",
+            ProjectJson = "{}",
+            TimelineJson = "{\"clips\":[]}",
+            AssetsJson = "[]",
+            RenderSession = new RenderSession { SessionId = Guid.NewGuid(), SnapshotHash = "render" },
+        };
+
+        var clone = RenderRpcSerializer.Clone(source);
+
+        Assert.AreEqual(42, clone.Revision);
+        Assert.AreEqual("ABC123", clone.SnapshotHash);
+        Assert.AreEqual(source.RenderSession.SessionId, clone.RenderSession.SessionId);
+    }
+
+    [TestMethod]
+    public async Task StronglyTypedHeadlessClientUsesHeadlessOperation()
+    {
+        var service = new HeadlessCapabilityService();
+        await using var client = new RenderClient(new DirectRenderTransport(service), "headless-test");
+
+        HeadlessProjectSnapshot snapshot = await client.OpenHeadlessProjectAsync(new OpenHeadlessProjectRequest
+        {
+            ProjectRoot = "project",
+        });
+
+        Assert.AreEqual(RenderOperation.OpenHeadlessProject, service.LastOperation);
+        Assert.AreEqual(1, snapshot.Revision);
+    }
+
     private sealed class CapabilityService : IRenderService
     {
         public ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
@@ -98,5 +137,20 @@ public sealed class RenderProtocolTests
                 RequestId = request.RequestId,
                 Error = new RenderError { Code = RenderErrorCode.Unsupported, Message = "unsupported" },
             });
+    }
+
+    private sealed class HeadlessCapabilityService : IRenderService
+    {
+        public RenderOperation LastOperation { get; private set; }
+
+        public ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
+        {
+            LastOperation = request.Operation;
+            return ValueTask.FromResult(new RenderResponseEnvelope
+            {
+                RequestId = request.RequestId,
+                Payload = RenderRpcSerializer.Serialize(new HeadlessProjectSnapshot { Revision = 1 }),
+            });
+        }
     }
 }

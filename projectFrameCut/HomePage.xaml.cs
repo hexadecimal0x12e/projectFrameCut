@@ -46,14 +46,11 @@ using Microsoft.Win32;
 
 
 
-
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 using Windows.ApplicationModel.UserActivities;
 using Microsoft.UI.Xaml.Media;
 using winui = Microsoft.UI.Xaml.Controls;
-
-
 #endif
 
 namespace projectFrameCut;
@@ -61,11 +58,9 @@ namespace projectFrameCut;
 public partial class HomePage : ContentPage
 {
     private readonly ProjectsListViewModel _viewModel;
-#if WINDOWS
     private string? _pendingIntegratedMcpAddress;
     private IntegratedApiServer? _integratedApiServer;
     private IntegratedApiBackend? _integratedApiBackend;
-#endif
 
     private const string CreateButtonName = "!!CreateButton!!";
 
@@ -198,7 +193,7 @@ public partial class HomePage : ContentPage
     {
         App.Current?.Dispatcher?.Dispatch(async () =>
         {
-            if(Application.Current.Windows?[0]?.Page is HomePage p)
+            if (Application.Current.Windows?[0]?.Page is HomePage p)
             {
                 await p.LaunchFromFile([appAction.Id]);
             }
@@ -230,6 +225,45 @@ public partial class HomePage : ContentPage
                 _pendingIntegratedMcpAddress = integratedMcpArg.Split('=', 2)[1];
             }
 #endif
+
+            var remoteArg = args.FirstOrDefault(c => c.StartsWith("--remote=", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(remoteArg))
+            {
+                string remoteValue = remoteArg[(remoteArg.IndexOf('=') + 1)..];
+                if (!Uri.TryCreate(remoteValue, UriKind.Absolute, out var remoteUri))
+                {
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
+                        await DisplayAlertAsync(Localized._Info, "--remote must contain an absolute HTTP or HTTPS RPC server URL.", Localized._OK);
+                    });
+                    return;
+                }
+
+                string token = GetCommandLineOption(args, "--remoteToken")
+                    ?? GetRemoteUriValue(remoteUri, "token")
+                    ?? SettingsManager.GetSetting("RemoteRpcToken", string.Empty);
+                remoteUri = RemoveRemoteCredentials(remoteUri);
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
+                        token = await DisplayPromptAsync(Localized._Info, "Input the RPC token below:", Localized._OK, Localized._Cancel);
+                    });
+                    if (string.IsNullOrWhiteSpace(token)) return;
+                }
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - Remoting @ {remoteUri.Host}";
+                    var page = await DraftPage.OpenRemoteAsync(remoteUri, token);
+                    await page.PostInit();
+                    AppShell.instance?.HideNavView();
+                    Shell.SetTabBarIsVisible(page, false);
+                    Shell.SetNavBarIsVisible(page, true);
+                    lastPage = page;
+                    await Navigation.PushAsync(page);
+                });
+                return;
+            }
 
             if (string.IsNullOrWhiteSpace(path) && args.ArrayAny())
             {
@@ -875,65 +909,65 @@ public partial class HomePage : ContentPage
                         notfounds.Add(item.Value?.AssetId ?? Guid.NewGuid().ToString(), item.Value);
                     }
                 }
-//                if (notfounds.Any())
-//                {
-//                    var notFoundStr = notfounds.Select(kv => $"- {kv.Value.Name} ({kv.Value.Path})").Aggregate((a, b) => $"{a}{Environment.NewLine}{b}");
-//                    await Dispatcher.DispatchAsync(async () =>
-//                    {
-//                        int result = 0;
-//#if WINDOWS
-//                        Microsoft.UI.Xaml.Controls.ContentDialog diag = new Microsoft.UI.Xaml.Controls.ContentDialog
-//                        {
-//                            Title = Localized.HomePage_SourceNotFound_Title,
-//                            Content = $"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}",
-//                            CloseButtonText = Localized._Cancel,
-//                            PrimaryButtonText = Localized.HomePage_SourceNotFound_Continue,
-//                            SecondaryButtonText = Localized.HomePage_SourceNotFound_RemoveThem
-//                        };
+                //                if (notfounds.Any())
+                //                {
+                //                    var notFoundStr = notfounds.Select(kv => $"- {kv.Value.Name} ({kv.Value.Path})").Aggregate((a, b) => $"{a}{Environment.NewLine}{b}");
+                //                    await Dispatcher.DispatchAsync(async () =>
+                //                    {
+                //                        int result = 0;
+                //#if WINDOWS
+                //                        Microsoft.UI.Xaml.Controls.ContentDialog diag = new Microsoft.UI.Xaml.Controls.ContentDialog
+                //                        {
+                //                            Title = Localized.HomePage_SourceNotFound_Title,
+                //                            Content = $"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}",
+                //                            CloseButtonText = Localized._Cancel,
+                //                            PrimaryButtonText = Localized.HomePage_SourceNotFound_Continue,
+                //                            SecondaryButtonText = Localized.HomePage_SourceNotFound_RemoveThem
+                //                        };
 
-//                        var services = Application.Current?.Handler?.MauiContext?.Services;
-//                        var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
-//                        if (dialogueHelper != null)
-//                        {
-//                            var r = await dialogueHelper.ShowContentDialogue(diag);
-//                            result = (int)r;
-//                        }
-//#else
-//                        string[] opts = [Localized.HomePage_SourceNotFound_RemoveThem, Localized.HomePage_SourceNotFound_Continue];
+                //                        var services = Application.Current?.Handler?.MauiContext?.Services;
+                //                        var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
+                //                        if (dialogueHelper != null)
+                //                        {
+                //                            var r = await dialogueHelper.ShowContentDialogue(diag);
+                //                            result = (int)r;
+                //                        }
+                //#else
+                //                        string[] opts = [Localized.HomePage_SourceNotFound_RemoveThem, Localized.HomePage_SourceNotFound_Continue];
 
-//                        var select = await DisplayActionSheetAsync($"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}", null, Localized._Cancel, opts);
-//                        if (select == Localized.HomePage_SourceNotFound_RemoveThem) result = 2;
-//                        else if (select == Localized.HomePage_SourceNotFound_Continue) result = 1;
-//                        else result = 0;
-//#endif
+                //                        var select = await DisplayActionSheetAsync($"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}", null, Localized._Cancel, opts);
+                //                        if (select == Localized.HomePage_SourceNotFound_RemoveThem) result = 2;
+                //                        else if (select == Localized.HomePage_SourceNotFound_Continue) result = 1;
+                //                        else result = 0;
+                //#endif
 
 
-//                        switch (result)
-//                        {
-//                            case 0:
-//                                {
-//                                    page = null;
-//                                    return;
-//                                }
-//                            case 1:
-//                                {
-//                                    break;
-//                                }
-//                            case 2:
-//                                {
-//                                    var input = await DisplayPromptAsync(Localized._Warn, Localized.HomePage_SourceNotFound_RemoveThem_Conf, Localized._OK, Localized._Cancel, "no", -1, null, null);
-//                                    if (input != "yes") return;
-//                                    foreach (var item in notfounds)
-//                                    {
-//                                        dict = new(dict.RemoveRange(dict.Where(c => c.Value.SourcePath == item.Value.Path)));
-//                                        assetDict = new(assetDict.RemoveRange(assetDict.Where(c => c.Key == item.Key)));
-//                                    }
+                //                        switch (result)
+                //                        {
+                //                            case 0:
+                //                                {
+                //                                    page = null;
+                //                                    return;
+                //                                }
+                //                            case 1:
+                //                                {
+                //                                    break;
+                //                                }
+                //                            case 2:
+                //                                {
+                //                                    var input = await DisplayPromptAsync(Localized._Warn, Localized.HomePage_SourceNotFound_RemoveThem_Conf, Localized._OK, Localized._Cancel, "no", -1, null, null);
+                //                                    if (input != "yes") return;
+                //                                    foreach (var item in notfounds)
+                //                                    {
+                //                                        dict = new(dict.RemoveRange(dict.Where(c => c.Value.SourcePath == item.Value.Path)));
+                //                                        assetDict = new(assetDict.RemoveRange(assetDict.Where(c => c.Key == item.Key)));
+                //                                    }
 
-//                                    break;
-//                                }
-//                        }
-//                    });
-//                }
+                //                                    break;
+                //                                }
+                //                        }
+                //                    });
+                //                }
                 if (!SettingsManager.IsSettingExists("Edit_PreferredPopupMode"))
                 {
                     SettingsManager.WriteSetting("Edit_PreferredPopupMode", "bottom");
@@ -1214,7 +1248,6 @@ public partial class HomePage : ContentPage
     }
 #endif
 
-#if WINDOWS
     private async Task StartIntegratedMcpServerAsync(DraftPage page, string address)
     {
         if (!Uri.TryCreate(address, UriKind.Absolute, out var listenUri))
@@ -1256,6 +1289,42 @@ public partial class HomePage : ContentPage
         }
     }
 
+    private static string? GetCommandLineOption(IEnumerable<string> args, string optionName)
+    {
+        string prefix = optionName + "=";
+        string? value = args.FirstOrDefault(arg => arg.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+        return value is null ? null : value[prefix.Length..];
+    }
+
+    private static string? GetRemoteUriValue(Uri uri, string key)
+    {
+        foreach (string part in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string[] pair = part.Split('=', 2);
+            if (pair.Length == 2 && pair[0].Equals(key, StringComparison.OrdinalIgnoreCase))
+                return Uri.UnescapeDataString(pair[1].Replace('+', ' '));
+        }
+
+        return string.IsNullOrWhiteSpace(uri.UserInfo)
+            ? null
+            : Uri.UnescapeDataString(uri.UserInfo);
+    }
+
+    private static Uri RemoveRemoteCredentials(Uri uri)
+    {
+        var builder = new UriBuilder(uri)
+        {
+            UserName = string.Empty,
+            Password = string.Empty,
+        };
+        var query = uri.Query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Where(part => !part.StartsWith("token=", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        builder.Query = string.Join('&', query);
+        return builder.Uri;
+    }
+
     private async Task StopIntegratedMcpServerAsync()
     {
         var server = _integratedApiServer;
@@ -1280,10 +1349,9 @@ public partial class HomePage : ContentPage
             await backend.DisposeAsync();
         }
     }
-
+#if WINDOWS
     UserActivitySession? _previousSession;
 #endif
-
     DraftPage? lastPage = null;
 
     protected override async void OnAppearing()
@@ -1292,6 +1360,8 @@ public partial class HomePage : ContentPage
 #if WINDOWS
         await StopIntegratedMcpServerAsync();
 #endif
+        App.Current?.Windows?[0]?.Title = Localized.AppBrand;
+
         try
         {
             Environment.CurrentDirectory = MauiProgram.DataPath;

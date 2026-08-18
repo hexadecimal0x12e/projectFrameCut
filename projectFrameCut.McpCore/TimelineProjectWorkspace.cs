@@ -108,8 +108,14 @@ public sealed class TimelineProjectWorkspace
 
     public void ReplaceDraft(DraftStructureJSON draft)
     {
-        Draft = draft;
+        Draft = draft ?? throw new ArgumentNullException(nameof(draft));
     }
+
+    public void ReplaceProjectInfo(ProjectJSONStructure projectInfo)
+        => ProjectInfo = projectInfo ?? throw new ArgumentNullException(nameof(projectInfo));
+
+    public void ReplaceAssets(List<AssetItem> assets)
+        => Assets = assets ?? throw new ArgumentNullException(nameof(assets));
 
     private static DraftStructureJSON? LoadLatestDraftFromSlots(string root)
     {

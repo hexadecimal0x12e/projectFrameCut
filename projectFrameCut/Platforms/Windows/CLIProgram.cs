@@ -1,4 +1,5 @@
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.IntegratedAPIServer;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.Contracts;
@@ -20,6 +21,7 @@ namespace projectFrameCut.WinUI
     {
         private const int SuccessExitCode = 0;
         private const int InvalidCommandExitCode = 2;
+        private static string AppDataPath => App.IsPackaged() ? Windows.Storage.ApplicationData.Current.LocalFolder.Path : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "projectFrameCut");
 
         public static int Main(string[] args)
         {
@@ -38,6 +40,8 @@ namespace projectFrameCut.WinUI
 
             switch (args[0].ToLowerInvariant())
             {
+                case "headless":
+                    return RunBackend(args.Skip(1).ToArray());
                 case "rpc_server":
                     return RunRpcServer(args.Skip(1).ToArray());
                 case "about":
@@ -55,6 +59,12 @@ namespace projectFrameCut.WinUI
             if (command.Equals("rpc_server", StringComparison.OrdinalIgnoreCase))
             {
                 WriteRpcServerHelp();
+                return SuccessExitCode;
+            }
+
+            if (command.Equals("headless", StringComparison.OrdinalIgnoreCase))
+            {
+                WriteBackendHelp();
                 return SuccessExitCode;
             }
 
@@ -85,29 +95,125 @@ Usage:
   pjfc-cli help [command]
 
 Commands:
-  gui       Launch the projectFrameCut graphical interface.
-  headless  Start the projectFrameCut headless mode for rendering and automation.
-  help      Show general help or detailed help for a command.
-  reset     Reset the application to its default state by clearing settings.
-  about     Show version and build information.
+  gui        Launch the projectFrameCut graphical interface.
+  headless   Start the headless backend for remote access and automation.
+  help        Show general help or detailed help for a command.
+  reset      Reset the application to its default state by clearing settings.
+  about      Show version and build information.
 
 Global options:
-  --elevated  Launch the CLI with elevated privileges (admin rights).
-              Note that the main application will cannot be run with 
-              elevated even if the GUI is launched from the CLI with this option.
-  --quiet     Suppress the pjfc-cli version banner and copyright notice. 
-              This option does not affect the GUI or other commands.
+  --quiet            Suppress the pjfc-cli version banner and copyright notice.
+
+  --consoleLog       Write application logs to the console.
+
+  --logDiagnostic    Include diagnostic-level log messages.
 
 Help options:
   -h, --help, /?    Show this help text.
 ");
         }
 
+        private static void WriteBackendHelp()
+        {
+            Console.WriteLine(
+@"Start the projectFrameCut headless backend
+
+Usage:
+  pjfc-cli backend --listen=<http[s]://host:port> --token=<token> --projectRoot=<path> [--dataRoot=<path>]
+
+Options:
+  --listen      HTTP or HTTPS listen address.
+  --token       Bearer token used by RPC clients. It must contain at least 32
+                non-whitespace characters.
+  --projectRoot Project directory to load before the RPC server starts.
+  --dataRoot    projectFrameCut's User Data directory. If not specified, default to the path defined in
+                <App Data>\OverrideUserDataPath.txt's path or %USERPROFILE%\Documents\projectFrameCut by default.
+
+The backend loads the project before accepting RPC requests and keeps running until Ctrl+C or process termination.
+Use ASP.NET's Environment variables to configure the HTTP server option (except application URL), such as ASPNETCORE_Kestrel__Certificates__Default__Path, and ASPNETCORE_Kestrel__Certificates__Default__Password.
+");
+        }
+
+        private static int RunBackend(string[] args)
+        {
+            try
+            {
+                if (args.Any(IsHelpOption))
+                {
+                    WriteBackendHelp();
+                    return SuccessExitCode;
+                }
+
+                string listen = GetOption(args, "listen") ?? string.Empty;
+                string token = GetOption(args, "token") ?? string.Empty;
+                string projectRoot = GetOption(args, "projectRoot") ?? string.Empty;
+                string? dataRoot = GetOption(args, "dataRoot", required: false);
+                if (string.IsNullOrWhiteSpace(dataRoot))
+                {
+                    var overridePathFile = Path.Combine(AppDataPath, "OverrideUserDataPath.txt");
+                    if (File.Exists(overridePathFile))
+                    {
+                        dataRoot = File.ReadAllText(overridePathFile).Trim();
+                    }
+                    else
+                    {
+                        dataRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
+                    }
+                }
+                Console.WriteLine($"Using user data dir for assets and cache: {dataRoot}");
+                if (!Uri.TryCreate(listen, UriKind.Absolute, out var listenUri))
+                    throw new ArgumentException("backend requires an absolute --listen=<http[s]://host:port> address.");
+
+                using var cancellation = new CancellationTokenSource();
+                Console.CancelKeyPress += (_, e) =>
+                {
+                    e.Cancel = true;
+                    cancellation.Cancel();
+                };
+                return RunBackendAsync(listenUri, token, projectRoot, dataRoot, cancellation.Token).GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+                return SuccessExitCode;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Headless backend failed: {ex}");
+                return 1;
+            }
+        }
+
+        private static async Task<int> RunBackendAsync(
+            Uri listenUri,
+            string token,
+            string projectRoot,
+            string dataRoot,
+            CancellationToken cancellationToken)
+        {
+            InitializeRenderRuntime(dataRoot);
+            await using var server = new IntegratedApiServer();
+            await server.StartHeadlessAsync(new IntegratedApiServerOptions
+            {
+                ListenUri = listenUri,
+                RpcToken = token,
+                ProjectRoot = projectRoot,
+                GlobalAssetsDatabasePath = Path.Combine(dataRoot, "My Assets", ".database", "database.json"),
+                EnableMcp = false,
+                WarningSink = warning => Console.Error.WriteLine($"Warning: {warning}"),
+            }, cancellationToken).ConfigureAwait(false);
+
+            Console.WriteLine($"projectFrameCut backend listening at {listenUri.AbsoluteUri.TrimEnd('/')}/rpc");
+            Console.WriteLine("Press Ctrl+C to stop.");
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+            return SuccessExitCode;
+        }
+
         private static void WriteRpcServerHelp()
         {
             Console.WriteLine(
 @"Start the projectFrameCut Render RPC server
-This is internal command used by the GUI to start the Render RPC server. It is not intended to be run directly by users.
+This is internal command used by the GUI to start the Render RPC server.
+It is not intended to be run directly by users.
 
 Usage:
   pjfc-cli rpc_server --pipe=<pipe-name> --token=<token> --dataRoot=<path> [--parentPid=<pid>] [--quiet]
@@ -187,7 +293,11 @@ The command is normally started by the graphical application.
         {
             var prefix = $"--{name}=";
             var value = args.FirstOrDefault(x => x.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))?.Substring(prefix.Length);
-            if (required && string.IsNullOrWhiteSpace(value)) throw new ArgumentException($"Missing --{name}=... option.");
+            if (required && string.IsNullOrWhiteSpace(value))
+            {
+                Console.Error.WriteLine($"ERROR: Missing --{name}=... option.");
+                Environment.Exit(InvalidCommandExitCode);
+            }
             return value;
         }
 
@@ -250,14 +360,19 @@ Launch options:
                                    the scripting engine is always disabled and this argument has no effect.
 
 Logging and diagnostics:
-  --consoleLog                     Write application log messages to the console.
   --log                            Open the dedicated log window.
-  --logDiagnostic                  Include diagnostic-level log messages.
-
 
 Integration options:
   --mcp=<http[s]://host:port>     Start the integrated MCP HTTP server for the
                                    project being opened. The MCP endpoint is /mcp.
+
+  --remote=<address>?token=<RPC_TOKEN>
+  --remote=<address> --remoteToken=<RPC_TOKEN>
+                                  Connect to the specified RPC Server.
+                                  You can either provide the token in the remote url,
+                                  or provide it separately.
+
+                                  In this case, --continue and target will be ignored.
 
 Protocol URI:
   pjfc:file:///C:/path/to/project.pjfc[?option[&option...]]

@@ -50,6 +50,21 @@ public sealed class IntegratedApiServerOptions
 {
     public required Uri ListenUri { get; init; }
 
+    public string? RpcToken { get; init; }
+
+    /// <summary>
+    /// Project to load before a headless RPC server starts accepting requests.
+    /// </summary>
+    public string? ProjectRoot { get; init; }
+
+    /// <summary>
+    /// Optional global asset database used to resolve timeline references that
+    /// are not stored in the project's own assets.json file.
+    /// </summary>
+    public string? GlobalAssetsDatabasePath { get; init; }
+
+    public bool EnableMcp { get; init; } = true;
+
     public Action<string>? WarningSink { get; init; }
 }
 

@@ -33,10 +33,15 @@ namespace projectFrameCut.LivePreview
         public string TempPath = string.Empty;
         public string? ProxyRoot;
         public string ProjectJson { get; set; } = string.Empty;
+        public IRenderClient? RpcClient { get; set; }
+        public Func<RenderArtifact, CancellationToken, Task<string>>? ArtifactResolver { get; set; }
+        public string? RenderProjectRoot { get; set; }
+        public string? RenderProxyRoot { get; set; }
+        public IReadOnlyList<AssetPathEntry>? RemoteAssets { get; set; }
         public int ProjectRelativeWidth { get; set; }
         public int ProjectRelativeHeight { get; set; }
         public event Action<double, TimeSpan>? OnProgressChanged;
-        public Guid RenderSessionId { get; } = Guid.NewGuid();
+        public Guid RenderSessionId { get; set; } = Guid.NewGuid();
         public FrameHashIndex HashIndex { get; private set; } = new();
         private IReadOnlyDictionary<uint, string> FrameHashLookup { get; set; } = new Dictionary<uint, string>();
         private IReadOnlyDictionary<Guid, IReadOnlyDictionary<uint, string>> ClipHashLookup { get; set; }
@@ -61,14 +66,14 @@ namespace projectFrameCut.LivePreview
                 var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash) ? indexedHash : "nullframe";
                 var cachedPath = Path.Combine(ProjectRoot, "thumbs", $"projectFrameCut_Render_{StaticFrameCacheVersion}_{frameHash}_{targetWidth}x{targetHeight}.png");
                 if (File.Exists(cachedPath)) return cachedPath;
-                var artifact = RenderRpcBootstrap.Client.RenderTimelineFrameAsync(new TimelineFrameRequest
+                var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineFrameAsync(new TimelineFrameRequest
                 {
                     SessionId = RenderSessionId,
                     FrameIndex = frameIndex,
                     Width = targetWidth,
                     Height = targetHeight,
                 }).AsTask().GetAwaiter().GetResult();
-                return RenderRpcBootstrap.ResolveArtifactPath(ProjectRoot, artifact);
+                return ResolveArtifactPath(artifact, CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -130,7 +135,16 @@ namespace projectFrameCut.LivePreview
                         if (clipInstance.FilePath.StartsWith('$'))
                         {
                             var assetId = clipInstance.FilePath.Substring(1);
-                            if (AssetDatabase.Assets.TryGetValue(assetId, out var asset) && asset is not null && !string.IsNullOrWhiteSpace(asset.Path))
+                            var remoteAsset = RemoteAssets?.LastOrDefault(item =>
+                                string.Equals(item.AssetId, assetId, StringComparison.Ordinal));
+                            if (remoteAsset is not null && !string.IsNullOrWhiteSpace(remoteAsset.Path))
+                            {
+                                // A remote path is only useful to the render server. Keep it on the
+                                // metadata clip so geometry/timing can still drive dynamic overlays;
+                                // RenderClipFrame performs the actual source rendering remotely.
+                                clipInstance.FilePath = remoteAsset.Path;
+                            }
+                            else if (AssetDatabase.Assets.TryGetValue(assetId, out var asset) && asset is not null && !string.IsNullOrWhiteSpace(asset.Path))
                             {
                                 clipInstance.FilePath = asset.Path;
                                 var proxyPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".proxy", $"{asset.AssetId}.mp4");
@@ -166,18 +180,26 @@ namespace projectFrameCut.LivePreview
                     }
                     try
                     {
-                        clipInstance.ReInit(8);
-                        if (!ClipInitializationFailure.HasDeferredFailures(clipInstance.ExtraData))
-                            ClipInitializationFailure.Clear(clipInstance);
-                        lock (clipsList)
+                        if (RpcClient is null)
                         {
-                            clipsList.Add(clipInstance);
+                            clipInstance.ReInit(8);
+                            if (!ClipInitializationFailure.HasDeferredFailures(clipInstance.ExtraData))
+                                ClipInitializationFailure.Clear(clipInstance);
                         }
                     }
                     catch (Exception ex)
                     {
                         ClipInitializationFailure.Mark(clipInstance, "Source or ResolveEffect", ex);
                         Log(ex, $"Initialize live-preview clip {clipInstance.Name} ({clipInstance.Id}); using checkerboard fallback", this);
+                    }
+                    finally
+                    {
+                        // Remote media normally cannot be opened on the UI device. The clip is still
+                        // required for ContainsFrame/layout calculations; its bitmap comes from RPC.
+                        lock (clipsList)
+                        {
+                            clipsList.Add(clipInstance);
+                        }
                     }
                 }));
             }
@@ -205,14 +227,14 @@ namespace projectFrameCut.LivePreview
             var request = new OpenProjectRequest
             {
                 SessionId = RenderSessionId,
-                ProjectRoot = ProjectRoot,
+                ProjectRoot = RenderProjectRoot ?? ProjectRoot,
                 ProjectJson = ProjectJson,
                 TimelineJson = JsonSerializer.Serialize(json),
-                ProxyRoot = ProxyRoot ?? string.Empty,
+                ProxyRoot = RenderProxyRoot ?? ProxyRoot ?? string.Empty,
                 ProjectWidth = Math.Max(1, ProjectRelativeWidth),
                 ProjectHeight = Math.Max(1, ProjectRelativeHeight),
                 FrameRate = Math.Max(1, targetFrameRate),
-                Assets = AssetDatabase.Assets.Select(static item => new AssetPathEntry
+                Assets = RemoteAssets?.ToList() ?? AssetDatabase.Assets.Select(static item => new AssetPathEntry
                 {
                     AssetId = item.Key,
                     Path = item.Value.Path ?? string.Empty,
@@ -221,8 +243,8 @@ namespace projectFrameCut.LivePreview
             // Start the Render backend only after a concrete project has been loaded.
             // This keeps application startup and the home page independent from the
             // Windows CLI RPC process.
-            RenderRpcBootstrap.Initialize();
-            var session = await RenderRpcBootstrap.Client.OpenProjectAsync(request).ConfigureAwait(false);
+            if (RpcClient is null) RenderRpcBootstrap.Initialize();
+            var session = await (RpcClient ?? RenderRpcBootstrap.Client).OpenProjectAsync(request).ConfigureAwait(false);
             HashIndex = session.HashIndex ?? new();
             FrameHashLookup = HashIndex.FrameHashes
                 .GroupBy(entry => entry.FrameIndex)
@@ -251,7 +273,7 @@ namespace projectFrameCut.LivePreview
                     $"dynamic_{ClipPreviewCacheVersion}_{clipHash}_{Math.Max(1, projectWidth)}x{Math.Max(1, projectHeight)}_{Math.Max(1, canvasWidth)}x{Math.Max(1, canvasHeight)}.png");
                 if (File.Exists(cachedPath)) return cachedPath;
             }
-            var artifact = RenderRpcBootstrap.Client.RenderClipPreviewAsync(new ClipPreviewRequest
+            var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
             {
                 SessionId = RenderSessionId,
                 ClipId = clipId,
@@ -261,7 +283,7 @@ namespace projectFrameCut.LivePreview
                 ProjectWidth = projectWidth,
                 ProjectHeight = projectHeight,
             }, token).AsTask().GetAwaiter().GetResult();
-            return RenderRpcBootstrap.ResolveArtifactPath(ProjectRoot, artifact);
+            return ResolveArtifactPath(artifact, token);
         }
 
         public bool HasAudioSources()
@@ -273,6 +295,14 @@ namespace projectFrameCut.LivePreview
 
         public async Task ResetAudioPlaybackSources(int ppb = 8)
         {
+            // Remote source paths belong to the render server and cannot be reopened by the UI
+            // process. The remote OpenProject call already initialized these sources; playback
+            // below consumes the WAV/MP4 artifacts downloaded from that server.
+            if (RpcClient is not null)
+            {
+                return;
+            }
+
             if (Clips is not null)
             {
                 foreach (var clip in Clips.Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip))
@@ -296,7 +326,7 @@ namespace projectFrameCut.LivePreview
             {
                 return null;
             }
-            var artifact = await RenderRpcBootstrap.Client.RenderAudioSegmentAsync(new AudioSegmentRequest
+            var artifact = await (RpcClient ?? RenderRpcBootstrap.Client).RenderAudioSegmentAsync(new AudioSegmentRequest
             {
                 SessionId = RenderSessionId,
                 StartFrame = checked((uint)startIndex),
@@ -305,13 +335,13 @@ namespace projectFrameCut.LivePreview
                 SampleRate = sampleRate,
                 Channels = channels,
             }, token).ConfigureAwait(false);
-            return RenderRpcBootstrap.ResolveArtifactPath(ProjectRoot, artifact);
+            return await ResolveArtifactPathAsync(artifact, token).ConfigureAwait(false);
         }
 
         public async Task<string> RenderSomeFrames(int startIndex, int length, int targetWidth, int targetFramerate, int targetHeight, CancellationToken token, bool includeAudio = true)
         {
             (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
-            var artifact = await RenderRpcBootstrap.Client.RenderTimelineSegmentAsync(new TimelineSegmentRequest
+            var artifact = await (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineSegmentAsync(new TimelineSegmentRequest
             {
                 SessionId = RenderSessionId,
                 StartFrame = checked((uint)startIndex),
@@ -322,8 +352,16 @@ namespace projectFrameCut.LivePreview
                 IncludeAudio = includeAudio,
             }, token).ConfigureAwait(false);
             OnProgressChanged?.Invoke(1, TimeSpan.Zero);
-            return RenderRpcBootstrap.ResolveArtifactPath(ProjectRoot, artifact);
+            return await ResolveArtifactPathAsync(artifact, token).ConfigureAwait(false);
         }
+
+        private string ResolveArtifactPath(RenderArtifact artifact, CancellationToken cancellationToken)
+            => ResolveArtifactPathAsync(artifact, cancellationToken).GetAwaiter().GetResult();
+
+        private Task<string> ResolveArtifactPathAsync(RenderArtifact artifact, CancellationToken cancellationToken)
+            => ArtifactResolver is not null
+                ? ArtifactResolver(artifact, cancellationToken)
+                : Task.FromResult(RenderRpcBootstrap.ResolveArtifactPath(ProjectRoot, artifact));
 
         private static (int width, int height) NormalizeTargetSize(int width, int height, bool requireEven)
         {

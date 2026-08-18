@@ -4503,6 +4503,24 @@
         "DontTranslate": false
       },
       {
+        "Id": "HomePage_Continue",
+        "Value": "\u7EE7\u7EED\u5728\u9879\u76EE\u300C{name}\u300D\u4E0A\u5DE5\u4F5C",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
         "Id": "HomePage_CreateAProject",
         "Value": "\u521B\u5EFA\u4E00\u4E2A\u9879\u76EE",
         "Mode": "ConstString",
@@ -8947,24 +8965,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "HomePage_Continue",
-        "Value": "\u7EE7\u7EED\u5728\u9879\u76EE\u300C{name}\u300D\u4E0A\u5DE5\u4F5C",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
         "DontTranslate": false
       }
     ],
@@ -18579,6 +18579,126 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "About App Data",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "Copyright ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "Project Homepage",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": "Powered by .NET 10 and .NET MAUI",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "Continue working on project {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "Some features used in your project have been deprecated and will be removed in the next major version of {AppBrand}. Please refer to the documentation to learn how to upgrade your project.\r\rThese features will be removed in API V{nextAPIVer}:\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "This project contains an older data structure that {AppBrand} cannot open.\r\rPlease consider opening it with the previous major version of {AppBrand}, where you can usually upgrade your project directly.\r\rAlternatively, {AppBrand} can apply an irreversible **destructive change** to your project. This will affect one or more features and prevent older versions of the application from opening it directly.\r\rAfter the change, the following features will be unavailable:\r{features}\r\rType \u0022yes\u0022 and click \u0022{_Confirm}\u0022 to continue, or click \u0022{_Cancel}\u0022 to cancel.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "This project contains older data structures that need to be upgraded before {AppBrand} can open it.\r\rThe upgrade requires {AppBrand} to make an irreversible change to your project, preventing older versions of the application from opening it directly. Your project will typically remain unaffected.\r\rThe following data will be upgraded:\r{features}\r\rClick \u0022{_Confirm}\u0022 to continue, or click \u0022{_Cancel}\u0022 to cancel.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "DontTranslate": false
       }
@@ -28212,6 +28332,126 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "\u7E7C\u7E8C\u5728\u5C08\u6848\u300C{name}\u300D\u4E0A\u5DE5\u4F5C",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "\u95DC\u65BC\u61C9\u7528\u7A0B\u5F0F\u8CC7\u6599",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "\u7248\u6B0A\u6240\u6709 ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": "\u7531 .NET 10 \u8207 .NET MAUI \u9A45\u52D5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "\u5C08\u6848\u9996\u9801",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "\u60A8\u7684\u5C08\u6848\u4E2D\u4F7F\u7528\u7684\u90E8\u5206\u529F\u80FD\u5DF2\u68C4\u7528\uFF0C\u4E26\u5C07\u5728 {AppBrand} \u7684\u4E0B\u4E00\u500B\u4E3B\u8981\u7248\u672C\u4E2D\u79FB\u9664\u3002\u8ACB\u53C3\u95B1\u6587\u4EF6\uFF0C\u4E86\u89E3\u5982\u4F55\u5347\u7D1A\u60A8\u7684\u5C08\u6848\u3002\r\r\u9019\u4E9B\u529F\u80FD\u5C07\u5728 API V{nextAPIVer} \u4E2D\u79FB\u9664\uFF1A\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "\u6B64\u5C08\u6848\u5305\u542B\u4E86\u8F03\u820A\u7684\u8CC7\u6599\u7D50\u69CB\uFF0C\u9700\u8981\u5148\u5347\u7D1A\uFF0C{AppBrand} \u624D\u80FD\u958B\u555F\u5B83\u3002\r\r\u5347\u7D1A\u6642\uFF0C{AppBrand} \u9700\u8981\u5C0D\u60A8\u7684\u5C08\u6848\u9032\u884C\u4E0D\u53EF\u9006\u7684\u8B8A\u66F4\uFF0C\u9019\u6703\u5C0E\u81F4\u820A\u7248\u61C9\u7528\u7A0B\u5F0F\u7121\u6CD5\u518D\u76F4\u63A5\u958B\u555F\u6B64\u5C08\u6848\u3002\u60A8\u7684\u5C08\u6848\u901A\u5E38\u4E0D\u6703\u53D7\u5230\u5F71\u97FF\u3002\r\r\u4EE5\u4E0B\u8CC7\u6599\u5C07\u6703\u5347\u7D1A\uFF1A\r{features}\r\r\u9EDE\u64CA\u300C{_Confirm}\u300D\u7E7C\u7E8C\uFF0C\u6216\u9EDE\u64CA\u300C{_Cancel}\u300D\u53D6\u6D88\u64CD\u4F5C\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "\u6B64\u5C08\u6848\u5305\u542B\u820A\u7248\u8CC7\u6599\u7D50\u69CB\uFF0C{AppBrand} \u7121\u6CD5\u958B\u555F\u3002\r\r\u8ACB\u8003\u616E\u4F7F\u7528\u4E0A\u4E00\u500B\u4E3B\u8981\u7248\u672C\u7684 {AppBrand} \u958B\u555F\uFF0C\u901A\u5E38\u60A8\u53EF\u4EE5\u5728\u8A72\u7248\u672C\u4E2D\u76F4\u63A5\u5347\u7D1A\u5C08\u6848\u3002\r\r{AppBrand} \u4E5F\u53EF\u4EE5\u5C0D\u60A8\u7684\u5C08\u6848\u9032\u884C\u4E0D\u53EF\u5FA9\u539F\u7684 **\u7834\u58DE\u6027\u8B8A\u66F4**\uFF0C\u9019\u6703\u5F71\u97FF\u5C08\u6848\u4E2D\u7684\u4E00\u9805\u6216\u591A\u9805\u529F\u80FD\uFF0C\u4E26\u5C0E\u81F4\u820A\u7248\u61C9\u7528\u7A0B\u5F0F\u7121\u6CD5\u76F4\u63A5\u958B\u555F\u6B64\u5C08\u6848\u3002\r\r\u8B8A\u66F4\u5F8C\uFF0C\u4EE5\u4E0B\u529F\u80FD\u5C07\u7121\u6CD5\u4F7F\u7528\uFF1A\r{features}\r\r\u8F38\u5165\u300Cyes\u300D\u4E26\u9EDE\u64CA\u300C{_Confirm}\u300D\u4EE5\u7E7C\u7E8C\uFF0C\u6216\u9EDE\u64CA\u300C{_Cancel}\u300D\u53D6\u6D88\u64CD\u4F5C\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "DontTranslate": false
       }
@@ -37854,6 +38094,126 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "\u30A2\u30D7\u30EA\u30C7\u30FC\u30BF\u306B\u3064\u3044\u3066",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "\u8457\u4F5C\u6A29 ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": ".NET 10 \u3068 .NET MAUI \u3067\u52D5\u4F5C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "\u300C{name}\u300D\u306E\u4F5C\u696D\u3092\u7D9A\u884C",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3067\u4F7F\u7528\u3057\u3066\u3044\u308B\u4E00\u90E8\u306E\u6A5F\u80FD\u306F\u975E\u63A8\u5968\u3068\u306A\u308A\u3001{AppBrand} \u306E\u6B21\u306E\u4E3B\u8981\u30D0\u30FC\u30B8\u30E7\u30F3\u3067\u524A\u9664\u3055\u308C\u307E\u3059\u3002\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306E\u66F4\u65B0\u65B9\u6CD5\u306F\u8CC7\u6599\u3092\u53C2\u7167\u3057\u3066\u304F\u3060\u3055\u3044\u3002\r\r\u3053\u308C\u3089\u306E\u6A5F\u80FD\u306F API V{nextAPIVer} \u3067\u524A\u9664\u3055\u308C\u307E\u3059\uFF1A\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u30DB\u30FC\u30E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "\u3053\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306B\u306F\u65E7\u30C7\u30FC\u30BF\u69CB\u9020\u304C\u542B\u307E\u308C\u308B\u305F\u3081\u3001{AppBrand} \u3067\u306F\u958B\u3051\u307E\u305B\u3093\u3002\r\r\u524D\u306E\u30D0\u30FC\u30B8\u30E7\u30F3\u306E {AppBrand} \u3067\u958B\u304D\u3001\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u66F4\u65B0\u3057\u3066\u304F\u3060\u3055\u3044\u3002\r\r{AppBrand} \u3067\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306B\u4E0D\u53EF\u9006\u7684\u306A**\u7834\u58CA\u7684\u5909\u66F4**\u3092\u52A0\u3048\u308B\u3053\u3068\u3082\u3067\u304D\u307E\u3059\u3002\u3053\u308C\u306B\u3088\u308A\u4E00\u90E8\u306E\u6A5F\u80FD\u304C\u5F71\u97FF\u3092\u53D7\u3051\u3001\u65E7\u30D0\u30FC\u30B8\u30E7\u30F3\u306E\u30A2\u30D7\u30EA\u3067\u306F\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u958B\u3051\u306A\u304F\u306A\u308A\u307E\u3059\u3002\r\r\u5909\u66F4\u5F8C\u3001\u4EE5\u4E0B\u306E\u6A5F\u80FD\u304C\u4F7F\u7528\u4E0D\u53EF\u306B\u306A\u308A\u307E\u3059\uFF1A\r{features}\r\r\u7D9A\u884C\u3059\u308B\u5834\u5408\u306F\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u300C{_Confirm}\u300D\u3092\u3001\u30AD\u30E3\u30F3\u30BB\u30EB\u3059\u308B\u5834\u5408\u306F\u300C{_Cancel}\u300D\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "\u3053\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306B\u306F\u65E7\u3044\u30C7\u30FC\u30BF\u69CB\u9020\u304C\u542B\u307E\u308C\u308B\u305F\u3081\u3001{AppBrand} \u3067\u958B\u304F\u306B\u306F\u66F4\u65B0\u304C\u5FC5\u8981\u3067\u3059\u3002\r\r\u66F4\u65B0\u6642\u3001{AppBrand} \u306F\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306B\u5FA9\u5143\u3067\u304D\u306A\u3044\u5909\u66F4\u3092\u52A0\u3048\u307E\u3059\u3002\u3053\u308C\u306B\u3088\u308A\u3001\u65E7\u30D0\u30FC\u30B8\u30E7\u30F3\u306E\u30A2\u30D7\u30EA\u3067\u306F\u3053\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u76F4\u63A5\u958B\u3051\u306A\u304F\u306A\u308A\u307E\u3059\u304C\u3001\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u81EA\u4F53\u306B\u5F71\u97FF\u306F\u3042\u308A\u307E\u305B\u3093\u3002\r\r\u6B21\u306E\u30C7\u30FC\u30BF\u304C\u66F4\u65B0\u3055\u308C\u307E\u3059:\r{features}\r\r\u300C{_Confirm}\u300D\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u7D9A\u884C\u3059\u308B\u304B\u3001\u300C{_Cancel}\u300D\u3067\u53D6\u308A\u6D88\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -47478,6 +47838,126 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "\uC571 \uB370\uC774\uD130 \uC815\uBCF4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": ".NET 10 \uBC0F .NET MAUI\uB85C \uAD6C\uB3D9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "\u0027{name}\u0027 \uD504\uB85C\uC81D\uD2B8\uC5D0\uC11C \uC791\uC5C5 \uACC4\uC18D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "\uC800\uC791\uAD8C ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "\uC774 \uD504\uB85C\uC81D\uD2B8\uC5D0\uB294 \uC774\uC804 \uBC84\uC804\uC758 \uB370\uC774\uD130 \uAD6C\uC870\uAC00 \uD3EC\uD568\uB418\uC5B4 \uC788\uC5B4 {AppBrand}\uC5D0\uC11C \uC5F4\uAE30 \uC804\uC5D0 \uBA3C\uC800 \uC5C5\uADF8\uB808\uC774\uB4DC\uD574\uC57C \uD569\uB2C8\uB2E4.\r\r\uC5C5\uADF8\uB808\uC774\uB4DC \uC2DC {AppBrand}\uC5D0\uC11C \uD504\uB85C\uC81D\uD2B8\uC5D0 \uB418\uB3CC\uB9B4 \uC218 \uC5C6\uB294 \uBCC0\uACBD \uC0AC\uD56D\uC744 \uC801\uC6A9\uD574\uC57C \uD558\uBBC0\uB85C, \uC774\uC804 \uBC84\uC804\uC758 \uC751\uC6A9 \uD504\uB85C\uADF8\uB7A8\uC5D0\uC11C\uB294 \uC774 \uD504\uB85C\uC81D\uD2B8\uB97C \uB354 \uC774\uC0C1 \uC9C1\uC811 \uC5F4 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uD504\uB85C\uC81D\uD2B8 \uC790\uCCB4\uB294 \uC77C\uBC18\uC801\uC73C\uB85C \uC601\uD5A5\uC744 \uBC1B\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.\r\r\uB2E4\uC74C \uB370\uC774\uD130\uAC00 \uC5C5\uADF8\uB808\uC774\uB4DC\uB429\uB2C8\uB2E4:\r{features}\r\r\uACC4\uC18D\uD558\uB824\uBA74 \u0027{_Confirm}\u0027\uC744 \uD074\uB9AD\uD558\uACE0, \uC791\uC5C5\uC744 \uCDE8\uC18C\uD558\uB824\uBA74 \u0027{_Cancel}\u0027\uC744 \uD074\uB9AD\uD558\uC138\uC694.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "\uD504\uB85C\uC81D\uD2B8\uC5D0\uC11C \uC0AC\uC6A9 \uC911\uC778 \uC77C\uBD80 \uAE30\uB2A5\uC740 \uB354 \uC774\uC0C1 \uC0AC\uC6A9\uB418\uC9C0 \uC54A\uC73C\uBA70, {AppBrand}\uC758 \uB2E4\uC74C \uC8FC\uC694 \uBC84\uC804\uC5D0\uC11C \uC81C\uAC70\uB420 \uC608\uC815\uC785\uB2C8\uB2E4. \uD504\uB85C\uC81D\uD2B8 \uC5C5\uADF8\uB808\uC774\uB4DC \uBC29\uBC95\uC740 \uBB38\uC11C\uB97C \uCC38\uC870\uD558\uC2ED\uC2DC\uC624.\r\r\uC774\uB7EC\uD55C \uAE30\uB2A5\uC740 API V{nextAPIVer}\uC5D0\uC11C \uC81C\uAC70\uB429\uB2C8\uB2E4:\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "\uD504\uB85C\uC81D\uD2B8 \uD648\uD398\uC774\uC9C0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "\uC774 \uD504\uB85C\uC81D\uD2B8\uC5D0\uB294 \uC774\uC804 \uB370\uC774\uD130 \uAD6C\uC870\uAC00 \uD3EC\uD568\uB418\uC5B4 \uC788\uC5B4 {AppBrand}\uC5D0\uC11C \uC5F4 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.\r\r\uC774\uC804 \uC8FC\uC694 \uBC84\uC804\uC758 {AppBrand}\uB85C \uC5F4\uC5B4\uBCF4\uC2DC\uAE30 \uBC14\uB78D\uB2C8\uB2E4. \uC77C\uBC18\uC801\uC73C\uB85C \uD574\uB2F9 \uBC84\uC804\uC5D0\uC11C \uD504\uB85C\uC81D\uD2B8\uB97C \uC9C1\uC811 \uC5C5\uADF8\uB808\uC774\uB4DC\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r\r\uB610\uB294 {AppBrand}\uC5D0\uC11C \uD504\uB85C\uC81D\uD2B8\uC5D0 \uB418\uB3CC\uB9B4 \uC218 \uC5C6\uB294 **\uD30C\uAD34\uC801 \uBCC0\uACBD**\uC744 \uC218\uD589\uD560 \uC218\uB3C4 \uC788\uC2B5\uB2C8\uB2E4. \uC774 \uACBD\uC6B0 \uD504\uB85C\uC81D\uD2B8\uC758 \uD558\uB098 \uC774\uC0C1\uC758 \uAE30\uB2A5\uC5D0 \uC601\uD5A5\uC744 \uBBF8\uCE58\uBA70, \uC774\uC804 \uBC84\uC804\uC758 \uC571\uC5D0\uC11C\uB294 \uC774 \uD504\uB85C\uC81D\uD2B8\uB97C \uB354 \uC774\uC0C1 \uC9C1\uC811 \uC5F4 \uC218 \uC5C6\uAC8C \uB429\uB2C8\uB2E4.\r\r\uBCC0\uACBD \uD6C4 \uB2E4\uC74C \uAE30\uB2A5\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4:\r{features}\r\r\uACC4\uC18D\uD558\uB824\uBA74 \u0027yes\u0027\uB97C \uC785\uB825\uD558\uACE0 \u0027{_Confirm}\u0027\uC744 \uD074\uB9AD\uD558\uAC70\uB098, \uC791\uC5C5\uC744 \uCDE8\uC18C\uD558\uB824\uBA74 \u0027{_Cancel}\u0027\uC744 \uD074\uB9AD\uD558\uC138\uC694.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -57095,6 +57575,126 @@
       {
         "Id": "BenchmarkPage_OutputMode_None",
         "Value": "D\u00E9sactiver l\u0027\u00E9criture",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "Tous droits r\u00E9serv\u00E9s ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "Page d\u0027accueil du projet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": "Propuls\u00E9 par .NET 10 et .NET MAUI",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "Certaines fonctionnalit\u00E9s utilis\u00E9es dans votre projet sont d\u00E9pr\u00E9ci\u00E9es et seront supprim\u00E9es dans la prochaine version majeure de {AppBrand}. Veuillez consulter la documentation pour savoir comment mettre \u00E0 niveau votre projet.\r\rCes fonctionnalit\u00E9s seront supprim\u00E9es dans l\u0027API V{nextAPIVer} :\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "Continuer \u00E0 travailler sur le projet \u00AB {name} \u00BB",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "Ce projet contient une structure de donn\u00E9es obsol\u00E8te que {AppBrand} ne peut pas ouvrir.\r\rVeuillez envisager de l\u0027ouvrir avec la version majeure pr\u00E9c\u00E9dente de {AppBrand}, o\u00F9 vous pourrez g\u00E9n\u00E9ralement mettre \u00E0 niveau votre projet directement.\r\r{AppBrand} peut \u00E9galement effectuer une **modification destructrice** irr\u00E9versible sur votre projet, ce qui affectera une ou plusieurs fonctionnalit\u00E9s et emp\u00EAchera les anciennes versions de l\u0027application d\u0027ouvrir directement ce projet.\r\rApr\u00E8s la modification, les fonctionnalit\u00E9s suivantes ne seront plus disponibles :\r{features}\r\rSaisissez \u00AB yes \u00BB et cliquez sur \u00AB {_Confirm} \u00BB pour continuer, ou cliquez sur \u00AB {_Cancel} \u00BB pour annuler.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "Ce projet contient une structure de donn\u00E9es ancienne et doit \u00EAtre mis \u00E0 niveau avant que {AppBrand} ne puisse l\u0027ouvrir.\r\rLors de la mise \u00E0 niveau, {AppBrand} devra apporter une modification irr\u00E9versible \u00E0 votre projet, ce qui emp\u00EAchera les anciennes versions de l\u0027application de l\u0027ouvrir directement. Votre projet ne sera g\u00E9n\u00E9ralement pas affect\u00E9.\r\rLes donn\u00E9es suivantes seront mises \u00E0 niveau :\r{features}\r\rCliquez sur \u00AB {_Confirm} \u00BB pour continuer, ou sur \u00AB {_Cancel} \u00BB pour annuler l\u0027op\u00E9ration.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "\u00C0 propos des donn\u00E9es de l\u0027application",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -66737,6 +67337,126 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "\u8BBA\u7A0B\u5F0F\u6863\u518C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "\u7248\u6743\u5747\u5F52 ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "\u541B\u4E4B\u5DE5\u7A0B\uFF0C\u6240\u7528\u8BF8\u6CD5\uFF0C\u4ECA\u5DF2\u89C1\u5F03\uFF0C\u53CA {AppBrand} \u4E0B\u6B21\u5927\u7248\uFF0C\u5FC5\u5F53\u829F\u9664\u3002\u5B9C\u9605\u6587\u518C\uFF0C\u4EE5\u6089\u9F0E\u65B0\u4E4B\u9053\u3002\r\r\u6B64\u7B49\u529F\u7528\uFF0C\u81F3 API V{nextAPIVer} \u6089\u7686\u5220\u524A\uFF1A\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "\u672C\u4E1A\u5377\u9996",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "\u7EED\u7406\u300C{name}\u300D\u4E4B\u52A1",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": "\u8D56 .NET 10 \u4E0E .NET MAUI \u4EE5\u8FD0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "\u6B64\u5377\u85CF\u65E7\u5236\uFF0C{AppBrand} \u5F17\u80FD\u542F\u4E4B\u3002\r\r\u5B9C\u4EE5\u5148\u4EE3 {AppBrand} \u542F\u4E4B\uFF0C\u5EB6\u53EF\u5F84\u5347\u5176\u7EA7\u3002\r\r{AppBrand} \u4EA6\u53EF\u65BD**\u8986\u6C34\u96BE\u6536\u4E4B\u6BC1\u6539**\uFF0C\u81F4\u8BF8\u9879\u673A\u80FD\u53D7\u7D2F\uFF0C\u4E14\u4EE4\u65E7\u7248\u7A0B\u5F0F\u5F17\u80FD\u590D\u542F\u6B64\u5377\u3002\r\r\u65E2\u6539\u4E4B\u540E\uFF0C\u4E0B\u5217\u673A\u80FD\u7686\u5E9F\uFF1A\r{features}\r\r\u952E\u5165\u201Cyes\u201D\u5E76\u51FB\u201C{_Confirm}\u201D\u4EE5\u884C\uFF0C\u6216\u51FB\u201C{_Cancel}\u201D\u4EE5\u7F62\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "\u6B64\u6848\u8574\u6709\u65E7\u5F0F\u7EB2\u76EE\uFF0C\u987B\u5148\u9769\u65B0\uFF0C{AppBrand} \u65B9\u53EF\u542F\u4E4B\u3002\r\r\u9769\u65B0\u4E4B\u9645\uFF0C{AppBrand} \u987B\u65BD\u65E0\u4ECE\u64A4\u56DE\u4E4B\u66F4\u6613\u4E8E\u6B64\u6848\uFF0C\u81F4\u4F7F\u65E7\u7248\u7A0B\u5F0F\u4E0D\u590D\u80FD\u76F4\u542F\u4E4B\u3002\u7136\u6B64\u6848\u5927\u62B5\u65E0\u865E\u3002\r\r\u5F53\u66F4\u4E4B\u76EE\u5982\u4E0B\uFF1A\r{features}\r\r\u51FB\u201C{_Confirm}\u201D\u4EE5\u884C\uFF0C\u6216\u51FB\u201C{_Cancel}\u201D\u4EE5\u7F62\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -76366,6 +77086,126 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "\u062D\u0648\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u0637\u0628\u064A\u0642",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "\u0627\u0644\u0635\u0641\u062D\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 \u0644\u0644\u0645\u0634\u0631\u0648\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "\u062A\u0645 \u0625\u0647\u0645\u0627\u0644 \u0628\u0639\u0636 \u0627\u0644\u0645\u064A\u0632\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0629 \u0641\u064A \u0645\u0634\u0631\u0648\u0639\u0643\u060C \u0648\u0633\u064A\u062A\u0645 \u0625\u0632\u0627\u0644\u062A\u0647\u0627 \u0641\u064A \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u0631\u0626\u064A\u0633\u064A \u0627\u0644\u062A\u0627\u0644\u064A \u0645\u0646 {AppBrand}. \u064A\u064F\u0631\u062C\u0649 \u0627\u0644\u0631\u062C\u0648\u0639 \u0625\u0644\u0649 \u0627\u0644\u0645\u0633\u062A\u0646\u062F\u0627\u062A \u0644\u0645\u0639\u0631\u0641\u0629 \u0643\u064A\u0641\u064A\u0629 \u062A\u0631\u0642\u064A\u0629 \u0645\u0634\u0631\u0648\u0639\u0643.\r\r\u0633\u064A\u062A\u0645 \u0625\u0632\u0627\u0644\u0629 \u0647\u0630\u0647 \u0627\u0644\u0645\u064A\u0632\u0627\u062A \u0641\u064A API V{nextAPIVer}:\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": "\u0645\u062F\u0639\u0648\u0645 \u0628\u0648\u0627\u0633\u0637\u0629 .NET 10 \u0648 .NET MAUI",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0642\u0648\u0642 \u0645\u062D\u0641\u0648\u0638\u0629 ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "\u064A\u062D\u062A\u0648\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0634\u0631\u0648\u0639 \u0639\u0644\u0649 \u0628\u0646\u064A\u0629 \u0628\u064A\u0627\u0646\u0627\u062A \u0642\u062F\u064A\u0645\u0629\u060C \u0648\u0644\u0627 \u064A\u0645\u0643\u0646 \u0644\u0640 {AppBrand} \u0641\u062A\u062D\u0647.\r\r\u064A\u064F\u0631\u062C\u0649 \u0627\u0644\u062A\u0641\u0643\u064A\u0631 \u0641\u064A \u0641\u062A\u062D\u0647 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u0631\u0626\u064A\u0633\u064A \u0627\u0644\u0633\u0627\u0628\u0642 \u0645\u0646 {AppBrand}\u060C \u062D\u064A\u062B \u064A\u0645\u0643\u0646\u0643 \u0639\u0627\u062F\u0629\u064B \u062A\u0631\u0642\u064A\u0629 \u0645\u0634\u0631\u0648\u0639\u0643 \u0645\u0628\u0627\u0634\u0631\u0629 \u0645\u0646 \u0647\u0646\u0627\u0643.\r\r\u064A\u0645\u0643\u0646 \u0644\u0640 {AppBrand} \u0623\u064A\u0636\u0627\u064B \u0625\u062C\u0631\u0627\u0621 **\u062A\u063A\u064A\u064A\u0631\u0627\u062A \u0645\u062F\u0645\u0631\u0629 \u0644\u0627 \u0631\u062C\u0639\u0629 \u0641\u064A\u0647\u0627** \u0639\u0644\u0649 \u0645\u0634\u0631\u0648\u0639\u0643\u060C \u0645\u0645\u0627 \u0642\u062F \u064A\u0624\u062B\u0631 \u0639\u0644\u0649 \u0645\u064A\u0632\u0629 \u0648\u0627\u062D\u062F\u0629 \u0623\u0648 \u0623\u0643\u062B\u0631\u060C \u0648\u064A\u062C\u0639\u0644 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0642\u062F\u064A\u0645\u0629 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u063A\u064A\u0631 \u0642\u0627\u062F\u0631\u0629 \u0639\u0644\u0649 \u0641\u062A\u062D \u0647\u0630\u0627 \u0627\u0644\u0645\u0634\u0631\u0648\u0639 \u0645\u0628\u0627\u0634\u0631\u0629.\r\r\u0628\u0639\u062F \u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u060C \u0644\u0646 \u062A\u062A\u0648\u0641\u0631 \u0627\u0644\u0645\u064A\u0632\u0627\u062A \u0627\u0644\u062A\u0627\u0644\u064A\u0629:\r{features}\r\r\u0627\u0643\u062A\u0628 \u0022yes\u0022 \u0648\u0627\u0646\u0642\u0631 \u0641\u0648\u0642 \u0022{_Confirm}\u0022 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u060C \u0623\u0648 \u0627\u0646\u0642\u0631 \u0641\u0648\u0642 \u0022{_Cancel}\u0022 \u0644\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0639\u0645\u0644\u064A\u0629.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "\u064A\u062D\u062A\u0648\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0634\u0631\u0648\u0639 \u0639\u0644\u0649 \u0647\u064A\u0627\u0643\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0642\u062F\u064A\u0645\u0629 \u0646\u0633\u0628\u064A\u0627\u064B\u060C \u0648\u064A\u062C\u0628 \u062A\u0631\u0642\u064A\u062A\u0647\u0627 \u0623\u0648\u0644\u0627\u064B \u062D\u062A\u0649 \u064A\u062A\u0645\u0643\u0646 {AppBrand} \u0645\u0646 \u0641\u062A\u062D\u0647.\r\r\u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062A\u0631\u0642\u064A\u0629\u060C \u0633\u064A\u0642\u0648\u0645 {AppBrand} \u0628\u0625\u062C\u0631\u0627\u0621 \u062A\u063A\u064A\u064A\u0631 \u0644\u0627 \u0631\u062C\u0639\u0629 \u0641\u064A\u0647 \u0639\u0644\u0649 \u0645\u0634\u0631\u0648\u0639\u0643\u060C \u0645\u0645\u0627 \u064A\u0645\u0646\u0639 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0623\u0642\u062F\u0645 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u0646 \u0641\u062A\u062D \u0647\u0630\u0627 \u0627\u0644\u0645\u0634\u0631\u0648\u0639 \u0645\u0628\u0627\u0634\u0631\u0629\u064B. \u0648\u0644\u0646 \u064A\u062A\u0623\u062B\u0631 \u0645\u0634\u0631\u0648\u0639\u0643 \u0641\u064A \u0627\u0644\u0639\u0627\u062F\u0629.\r\r\u0633\u062A\u062A\u0645 \u062A\u0631\u0642\u064A\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u0627\u0644\u064A\u0629:\r{features}\r\r\u0627\u0646\u0642\u0631 \u0641\u0648\u0642 \u0022{_Confirm}\u0022 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u060C \u0623\u0648 \u0627\u0646\u0642\u0631 \u0641\u0648\u0642 \u0022{_Cancel}\u0022 \u0644\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0639\u0645\u0644\u064A\u0629.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "\u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0639\u0645\u0644 \u0639\u0644\u0649 \u0627\u0644\u0645\u0634\u0631\u0648\u0639 \u0022{name}\u0022",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "DontTranslate": false
       }
@@ -85998,6 +86838,126 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "Copyright ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "Projekt-Homepage",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": "Unterst\u00FCtzt von .NET 10 und .NET MAUI",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "Arbeit am Projekt \u201E{name}\u201C fortsetzen",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "Einige in Ihrem Projekt verwendete Funktionen sind veraltet und werden in der n\u00E4chsten Hauptversion von {AppBrand} entfernt. Weitere Informationen zur Aktualisierung Ihres Projekts finden Sie in der Dokumentation.\r\rDiese Funktionen werden in API V{nextAPIVer} entfernt:\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "Dieses Projekt enth\u00E4lt eine veraltete Datenstruktur und kann von {AppBrand} nicht ge\u00F6ffnet werden.\r\rBitte \u00F6ffnen Sie das Projekt mit der vorherigen Hauptversion von {AppBrand}. Dort k\u00F6nnen Sie Ihr Projekt in der Regel direkt aktualisieren.\r\rAlternativ kann {AppBrand} eine unwiderrufliche **destruktive \u00C4nderung** an Ihrem Projekt vornehmen. Dies beeintr\u00E4chtigt eine oder mehrere Funktionen des Projekts und verhindert, dass \u00E4ltere Versionen der Anwendung dieses Projekt direkt \u00F6ffnen k\u00F6nnen.\r\rNach der \u00C4nderung sind folgende Funktionen nicht mehr verf\u00FCgbar:\r{features}\r\rGeben Sie \u0022yes\u0022 ein und klicken Sie auf \u0022{_Confirm}\u0022, um fortzufahren, oder klicken Sie auf \u0022{_Cancel}\u0022, um den Vorgang abzubrechen.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "Dieses Projekt enth\u00E4lt eine \u00E4ltere Datenstruktur und muss zun\u00E4chst aktualisiert werden, bevor {AppBrand} es \u00F6ffnen kann.\r\rW\u00E4hrend der Aktualisierung muss {AppBrand} eine unwiderrufliche \u00C4nderung an Ihrem Projekt vornehmen, wodurch \u00E4ltere Versionen der Anwendung dieses Projekt nicht mehr direkt \u00F6ffnen k\u00F6nnen. Ihr Projekt ist davon in der Regel nicht betroffen.\r\rDie folgenden Daten werden aktualisiert:\r{features}\r\rKlicken Sie auf \u0022{_Confirm}\u0022, um fortzufahren, oder auf \u0022{_Cancel}\u0022, um den Vorgang abzubrechen.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "\u00DCber App-Daten",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -95622,6 +96582,126 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "P\u00E1gina principal del proyecto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "Acerca de los datos de la aplicaci\u00F3n",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": "Impulsado por .NET 10 y .NET MAUI",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "Todos los derechos reservados ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "Continuar trabajando en el proyecto \u00AB{name}\u00BB",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "Algunas de las funciones que utilizas en tu proyecto han quedado obsoletas y se eliminar\u00E1n en la pr\u00F3xima versi\u00F3n principal de {AppBrand}. Consulta la documentaci\u00F3n para saber c\u00F3mo actualizar tu proyecto.\r\rEstas funciones se eliminar\u00E1n en la API V{nextAPIVer}:\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "Este proyecto contiene una estructura de datos antigua que {AppBrand} no puede abrir.\r\rLe recomendamos abrirlo con la versi\u00F3n principal anterior de {AppBrand}, donde normalmente podr\u00E1 actualizar el proyecto directamente.\r\rAlternativamente, {AppBrand} puede aplicar un **cambio destructivo irreversible** a su proyecto. Esto afectar\u00E1 a una o m\u00E1s funciones y har\u00E1 que las versiones anteriores de la aplicaci\u00F3n ya no puedan abrir este proyecto directamente.\r\rTras el cambio, las siguientes funciones dejar\u00E1n de estar disponibles:\r{features}\r\rEscriba \u0022yes\u0022 y haga clic en \u0022{_Confirm}\u0022 para continuar, o haga clic en \u0022{_Cancel}\u0022 para cancelar.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "Este proyecto contiene una estructura de datos antigua que debe actualizarse antes de que {AppBrand} pueda abrirlo.\r\rDurante la actualizaci\u00F3n, {AppBrand} realizar\u00E1 un cambio irreversible en tu proyecto, lo que impedir\u00E1 que las versiones anteriores de la aplicaci\u00F3n puedan abrirlo directamente. Por lo general, tu proyecto no se ver\u00E1 afectado.\r\rSe actualizar\u00E1n los siguientes datos:\r{features}\r\rHaz clic en \u0022{_Confirm}\u0022 para continuar o en \u0022{_Cancel}\u0022 para cancelar la operaci\u00F3n.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "DontTranslate": false
       }
@@ -105255,6 +106335,126 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "Informazioni sui dati dell\u0027app",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "Copyright ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "Homepage del progetto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "Continua a lavorare al progetto \u0022{name}\u0022",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": "Basato su .NET 10 e .NET MAUI",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "Questo progetto contiene una struttura dati obsoleta e {AppBrand} non \u00E8 in grado di aprirlo.\r\rTi consigliamo di aprirlo con una versione precedente di {AppBrand}, dove potrai aggiornare direttamente il progetto.\r\rIn alternativa, {AppBrand} pu\u00F2 applicare una **modifica distruttiva** irreversibile al progetto. Ci\u00F2 comprometter\u00E0 una o pi\u00F9 funzionalit\u00E0 e impedir\u00E0 alle versioni precedenti dell\u0027applicazione di aprire direttamente il progetto.\r\rDopo la modifica, le seguenti funzionalit\u00E0 non saranno pi\u00F9 disponibili:\r{features}\r\rDigita \u0022yes\u0022 e fai clic su \u0022{_Confirm}\u0022 per continuare, oppure fai clic su \u0022{_Cancel}\u0022 per annullare.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "Alcune funzionalit\u00E0 utilizzate nel tuo progetto sono state deprecate e verranno rimosse nella prossima versione principale di {AppBrand}. Consulta la documentazione per scoprire come aggiornare il tuo progetto.\r\rQueste funzionalit\u00E0 verranno rimosse nell\u0027API V{nextAPIVer}:\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "Questo progetto contiene una struttura dati obsoleta e necessita di un aggiornamento prima che {AppBrand} possa aprirlo.\r\rDurante l\u0027aggiornamento, {AppBrand} apporter\u00E0 una modifica irreversibile al tuo progetto, il che impedir\u00E0 alle versioni precedenti dell\u0027applicazione di aprirlo direttamente. Di norma, il tuo progetto non subir\u00E0 alcuna alterazione.\r\rVerranno aggiornati i seguenti dati:\r{features}\r\rFai clic su \u0022{_Confirm}\u0022 per continuare o su \u0022{_Cancel}\u0022 per annullare l\u0027operazione.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -114878,6 +116078,126 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "O danych aplikacji",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "Prawa autorskie ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "Strona g\u0142\u00F3wna projektu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "Kontynuuj prac\u0119 nad projektem \u201E{name}\u201D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "Niekt\u00F3re funkcje u\u017Cywane w Twoim projekcie s\u0105 przestarza\u0142e i zostan\u0105 usuni\u0119te w nast\u0119pnej g\u0142\u00F3wnej wersji {AppBrand}. Zapoznaj si\u0119 z dokumentacj\u0105, aby dowiedzie\u0107 si\u0119, jak zaktualizowa\u0107 sw\u00F3j projekt.\r\rTe funkcje zostan\u0105 usuni\u0119te w API V{nextAPIVer}:\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "Ten projekt zawiera starsz\u0105 struktur\u0119 danych, dlatego {AppBrand} nie mo\u017Ce go otworzy\u0107.\r\rRozwa\u017C otwarcie go w poprzedniej g\u0142\u00F3wnej wersji {AppBrand}, gdzie zazwyczaj mo\u017Cna bezpo\u015Brednio zaktualizowa\u0107 projekt.\r\r{AppBrand} mo\u017Ce r\u00F3wnie\u017C wprowadzi\u0107 w projekcie nieodwracaln\u0105 **destrukcyjn\u0105 zmian\u0119**, kt\u00F3ra wp\u0142ynie na jedn\u0105 lub wi\u0119cej funkcji i sprawi, \u017Ce starsze wersje aplikacji nie b\u0119d\u0105 mog\u0142y bezpo\u015Brednio otworzy\u0107 tego projektu.\r\rPo tej zmianie nast\u0119puj\u0105ce funkcje b\u0119d\u0105 niedost\u0119pne:\r{features}\r\rWpisz \u0022yes\u0022 i kliknij \u0022{_Confirm}\u0022, aby kontynuowa\u0107, lub kliknij \u0022{_Cancel}\u0022, aby anulowa\u0107.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": "Obs\u0142ugiwane przez .NET 10 i .NET MAUI",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "Ten projekt zawiera starsze struktury danych i wymaga aktualizacji, aby {AppBrand} m\u00F3g\u0142 go otworzy\u0107.\r\rPodczas aktualizacji {AppBrand} wprowadzi w projekcie nieodwracalne zmiany, przez co starsze wersje aplikacji nie b\u0119d\u0105 mog\u0142y go ju\u017C bezpo\u015Brednio otwiera\u0107. Zazwyczaj nie ma to negatywnego wp\u0142ywu na sam projekt.\r\rZaktualizowane zostan\u0105 nast\u0119puj\u0105ce dane:\r{features}\r\rKliknij \u201E{_Confirm}\u201D, aby kontynuowa\u0107, lub \u201E{_Cancel}\u201D, aby anulowa\u0107.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "DontTranslate": false
       }
@@ -124504,6 +125824,126 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "Sobre os dados do aplicativo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "Todos os direitos reservados ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "P\u00E1gina inicial do projeto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "Continuar trabalhando no projeto \u0022{name}\u0022",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": "Desenvolvido com .NET 10 e .NET MAUI",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "Alguns recursos utilizados em seu projeto foram descontinuados e ser\u00E3o removidos na pr\u00F3xima vers\u00E3o principal do {AppBrand}. Consulte a documenta\u00E7\u00E3o para saber como atualizar seu projeto.\r\rEsses recursos ser\u00E3o removidos na API V{nextAPIVer}:\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "Este projeto cont\u00E9m estruturas de dados desatualizadas que precisam ser atualizadas para que o {AppBrand} possa abri-lo.\r\n\r\nDurante a atualiza\u00E7\u00E3o, o {AppBrand} far\u00E1 uma altera\u00E7\u00E3o irrevers\u00EDvel no seu projeto, o que impedir\u00E1 que vers\u00F5es anteriores do aplicativo abram este projeto diretamente. Seu projeto normalmente n\u00E3o ser\u00E1 afetado.\r\n\r\nOs seguintes dados ser\u00E3o atualizados:\r\n{features}\r\n\r\nClique em \u0022{_Confirm}\u0022 para continuar ou em \u0022{_Cancel}\u0022 para cancelar a opera\u00E7\u00E3o.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "Este projeto cont\u00E9m estruturas de dados desatualizadas, e o {AppBrand} n\u00E3o pode abri-lo.\r\rConsidere abri-lo na vers\u00E3o principal anterior do {AppBrand}. Normalmente, voc\u00EA pode atualizar o projeto diretamente por l\u00E1.\r\rO {AppBrand} tamb\u00E9m pode aplicar uma **altera\u00E7\u00E3o destrutiva** irrevers\u00EDvel ao seu projeto. Isso afetar\u00E1 um ou mais recursos e impedir\u00E1 que vers\u00F5es anteriores do aplicativo abram este projeto diretamente.\r\rAp\u00F3s a altera\u00E7\u00E3o, os seguintes recursos ficar\u00E3o indispon\u00EDveis:\r{features}\r\rDigite \u0022yes\u0022 e clique em \u0022{_Confirm}\u0022 para continuar, ou clique em \u0022{_Cancel}\u0022 para cancelar.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "DontTranslate": false
       }
@@ -134136,6 +135576,126 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "\u041E \u0434\u0430\u043D\u043D\u044B\u0445 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u044F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "\u0412\u0441\u0435 \u043F\u0440\u0430\u0432\u0430 \u0437\u0430\u0449\u0438\u0449\u0435\u043D\u044B ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "\u0414\u043E\u043C\u0430\u0448\u043D\u044F\u044F \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0430 \u043F\u0440\u043E\u0435\u043A\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u0443 \u043D\u0430\u0434 \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u043C \u00AB{name}\u00BB",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": "\u0420\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u043D\u0430 \u0431\u0430\u0437\u0435 .NET 10 \u0438 .NET MAUI",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "\u041D\u0435\u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0444\u0443\u043D\u043A\u0446\u0438\u0438, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u043C\u044B\u0435 \u0432 \u0432\u0430\u0448\u0435\u043C \u043F\u0440\u043E\u0435\u043A\u0442\u0435, \u043E\u0431\u044A\u044F\u0432\u043B\u0435\u043D\u044B \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0438\u043C\u0438 \u0438 \u0431\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043B\u0435\u043D\u044B \u0432 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0439 \u043E\u0441\u043D\u043E\u0432\u043D\u043E\u0439 \u0432\u0435\u0440\u0441\u0438\u0438 {AppBrand}. \u041E\u0431\u0440\u0430\u0442\u0438\u0442\u0435\u0441\u044C \u043A \u0434\u043E\u043A\u0443\u043C\u0435\u043D\u0442\u0430\u0446\u0438\u0438, \u0447\u0442\u043E\u0431\u044B \u0443\u0437\u043D\u0430\u0442\u044C, \u043A\u0430\u043A \u043E\u0431\u043D\u043E\u0432\u0438\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442.\r\r\u042D\u0442\u0438 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u0431\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043B\u0435\u043D\u044B \u0432 API V{nextAPIVer}:\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "\u042D\u0442\u043E\u0442 \u043F\u0440\u043E\u0435\u043A\u0442 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u0442 \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0443\u044E \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0443 \u0434\u0430\u043D\u043D\u044B\u0445, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 {AppBrand} \u043D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0435\u0433\u043E \u043E\u0442\u043A\u0440\u044B\u0442\u044C.\r\r\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043E\u0442\u043A\u0440\u044B\u0442\u044C \u0435\u0433\u043E \u0432 \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0435\u0439 \u043E\u0441\u043D\u043E\u0432\u043D\u043E\u0439 \u0432\u0435\u0440\u0441\u0438\u0438 {AppBrand} \u2014 \u043A\u0430\u043A \u043F\u0440\u0430\u0432\u0438\u043B\u043E, \u0432\u044B \u043C\u043E\u0436\u0435\u0442\u0435 \u043E\u0431\u043D\u043E\u0432\u0438\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442 \u043F\u0440\u044F\u043C\u043E \u0442\u0430\u043C.\r\r{AppBrand} \u0442\u0430\u043A\u0436\u0435 \u043C\u043E\u0436\u0435\u0442 \u0432\u043D\u0435\u0441\u0442\u0438 \u043D\u0435\u043E\u0431\u0440\u0430\u0442\u0438\u043C\u044B\u0435 **\u0434\u0435\u0441\u0442\u0440\u0443\u043A\u0442\u0438\u0432\u043D\u044B\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F** \u0432 \u0432\u0430\u0448 \u043F\u0440\u043E\u0435\u043A\u0442. \u042D\u0442\u043E \u0437\u0430\u0442\u0440\u043E\u043D\u0435\u0442 \u043E\u0434\u043D\u0443 \u0438\u043B\u0438 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0444\u0443\u043D\u043A\u0446\u0438\u0439 \u0438 \u043B\u0438\u0448\u0438\u0442 \u0441\u0442\u0430\u0440\u044B\u0435 \u0432\u0435\u0440\u0441\u0438\u0438 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u044F \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0438 \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0442\u044C \u044D\u0442\u043E\u0442 \u043F\u0440\u043E\u0435\u043A\u0442.\r\r\u041F\u043E\u0441\u043B\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u0444\u0443\u043D\u043A\u0446\u0438\u0438 \u0441\u0442\u0430\u043D\u0443\u0442 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B:\r{features}\r\r\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u00AByes\u00BB \u0438 \u043D\u0430\u0436\u043C\u0438\u0442\u0435 \u00AB{_Confirm}\u00BB, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C, \u0438\u043B\u0438 \u043D\u0430\u0436\u043C\u0438\u0442\u0435 \u00AB{_Cancel}\u00BB \u0434\u043B\u044F \u043E\u0442\u043C\u0435\u043D\u044B.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "\u042D\u0442\u043E\u0442 \u043F\u0440\u043E\u0435\u043A\u0442 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442 \u0443\u0441\u0442\u0430\u0440\u0435\u0432\u0448\u0443\u044E \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0443 \u0434\u0430\u043D\u043D\u044B\u0445. \u0427\u0442\u043E\u0431\u044B {AppBrand} \u0441\u043C\u043E\u0433 \u0435\u0433\u043E \u043E\u0442\u043A\u0440\u044B\u0442\u044C, \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u043E \u0432\u044B\u043F\u043E\u043B\u043D\u0438\u0442\u044C \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435.\r\r\u0412 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u0435 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F {AppBrand} \u0432\u043D\u0435\u0441\u0435\u0442 \u0432 \u043F\u0440\u043E\u0435\u043A\u0442 \u043D\u0435\u043E\u0431\u0440\u0430\u0442\u0438\u043C\u044B\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F, \u043F\u043E\u0441\u043B\u0435 \u0447\u0435\u0433\u043E \u0435\u0433\u043E \u043D\u0435\u043B\u044C\u0437\u044F \u0431\u0443\u0434\u0435\u0442 \u043E\u0442\u043A\u0440\u044B\u0442\u044C \u0432 \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0445 \u0432\u0435\u0440\u0441\u0438\u044F\u0445 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u044F. \u041D\u0430 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435 \u043F\u0440\u043E\u0435\u043A\u0442\u0430 \u044D\u0442\u043E \u043D\u0435 \u043F\u043E\u0432\u043B\u0438\u044F\u0435\u0442.\r\r\u0411\u0443\u0434\u0443\u0442 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u044B \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0435 \u0434\u0430\u043D\u043D\u044B\u0435:\r{features}\r\r\u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u00AB{_Confirm}\u00BB, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C, \u0438\u043B\u0438 \u00AB{_Cancel}\u00BB \u0434\u043B\u044F \u043E\u0442\u043C\u0435\u043D\u044B.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -143756,6 +145316,126 @@
       {
         "Id": "BenchmarkPage_OutputMode_None",
         "Value": "Yazma i\u015Flevini devre d\u0131\u015F\u0131 b\u0131rak",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutAppData",
+        "Value": "Uygulama Verileri Hakk\u0131nda",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_PoweredBy",
+        "Value": ".NET 10 ve .NET MAUI ile g\u00FC\u00E7lendirilmi\u015Ftir",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_Continue",
+        "Value": "{name} projesinde \u00E7al\u0131\u015Fmaya devam et",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DeprecatedFeatureWarn",
+        "Value": "Projenizde kulland\u0131\u011F\u0131n\u0131z baz\u0131 \u00F6zellikler kullan\u0131mdan kald\u0131r\u0131lm\u0131\u015Ft\u0131r ve {AppBrand}\u0027in bir sonraki ana s\u00FCr\u00FCm\u00FCnde tamamen kald\u0131r\u0131lacakt\u0131r. Projenizi nas\u0131l y\u00FCkseltece\u011Finizi \u00F6\u011Frenmek i\u00E7in l\u00FCtfen belgelere ba\u015Fvurun.\r\rBu \u00F6zellikler API V{nextAPIVer} s\u00FCr\u00FCm\u00FCnde kald\u0131r\u0131lacakt\u0131r:\r{features}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "nextAPIVer"
+          },
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "nextAPIVer",
+            "Value": ""
+          },
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayDestructiveUpdateWarn",
+        "Value": "Bu proje eski veri yap\u0131lar\u0131 i\u00E7eriyor ve {AppBrand} bunu a\u00E7am\u0131yor.\r\rL\u00FCtfen bu projeyi {AppBrand} uygulamas\u0131n\u0131n bir \u00F6nceki ana s\u00FCr\u00FCm\u00FCyle a\u00E7may\u0131 d\u00FC\u015F\u00FCn\u00FCn; genellikle projenizi do\u011Frudan orada y\u00FCkseltebilirsiniz.\r\r{AppBrand}, projenizde geri al\u0131namaz **y\u0131k\u0131c\u0131 de\u011Fi\u015Fiklikler** de yapabilir. Bu i\u015Flem, projedeki bir veya birden fazla \u00F6zelli\u011Fi etkileyecek ve eski uygulama s\u00FCr\u00FCmlerinin bu projeyi do\u011Frudan a\u00E7mas\u0131n\u0131 engelleyecektir.\r\rDe\u011Fi\u015Fiklikten sonra a\u015Fa\u011F\u0131daki \u00F6zellikler kullan\u0131lamayacakt\u0131r:\r{features}\r\rDevam etmek i\u00E7in \u0022yes\u0022 yaz\u0131p \u0022{_Confirm}\u0022 d\u00FC\u011Fmesine t\u0131klay\u0131n veya i\u015Flemi iptal etmek i\u00E7in \u0022{_Cancel}\u0022 d\u00FC\u011Fmesine t\u0131klay\u0131n.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_OneWayUpdateWarn",
+        "Value": "Bu proje eski bir veri yap\u0131s\u0131 i\u00E7eriyor ve {AppBrand} taraf\u0131ndan a\u00E7\u0131labilmesi i\u00E7in \u00F6nce y\u00FCkseltilmesi gerekiyor.\r\rY\u00FCkseltme s\u0131ras\u0131nda {AppBrand}, projenizde geri al\u0131namaz bir de\u011Fi\u015Fiklik yapacakt\u0131r ve bu, uygulaman\u0131n eski s\u00FCr\u00FCmlerinin bu projeyi do\u011Frudan a\u00E7mas\u0131n\u0131 engelleyecektir. Projeniz genellikle etkilenmeyecektir.\r\rA\u015Fa\u011F\u0131daki veriler y\u00FCkseltilecektir:\r{features}\r\rDevam etmek i\u00E7in \u0022{_Confirm}\u0022 d\u00FC\u011Fmesine, i\u015Flemi iptal etmek i\u00E7in \u0022{_Cancel}\u0022 d\u00FC\u011Fmesine t\u0131klay\u0131n.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "features"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "features",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_Copyrignt",
+        "Value": "Telif Hakk\u0131 ",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "AboutPage_HomePage",
+        "Value": "Proje Ana Sayfas\u0131",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

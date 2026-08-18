@@ -4,7 +4,7 @@ namespace projectFrameCut.Render.Contracts;
 
 public static class RenderProtocol
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
     public const int MinimumSupportedVersion = 1;
     public const int PipeProtocolVersion = 1;
     public const int MaxPipeFrameBytes = 256 * 1024 * 1024;
@@ -41,6 +41,21 @@ public enum RenderOperation
     [ProtoEnum] CancelJob = 14,
     [ProtoEnum] ReleaseArtifact = 15,
     [ProtoEnum] RenderAudioSegment = 16,
+    [ProtoEnum] OpenHeadlessProject = 100,
+    [ProtoEnum] GetHeadlessProjectSnapshot = 101,
+    [ProtoEnum] ReloadHeadlessProject = 102,
+    [ProtoEnum] ApplyHeadlessProjectSnapshot = 103,
+    [ProtoEnum] ListHeadlessClips = 104,
+    [ProtoEnum] GetHeadlessClip = 105,
+    [ProtoEnum] UpsertHeadlessClip = 106,
+    [ProtoEnum] MoveHeadlessClip = 107,
+    [ProtoEnum] PatchHeadlessClip = 108,
+    [ProtoEnum] DeleteHeadlessClip = 109,
+    [ProtoEnum] AddOrReplaceHeadlessEffect = 110,
+    [ProtoEnum] RemoveHeadlessEffect = 111,
+    [ProtoEnum] AddOrReplaceHeadlessEffectBundle = 112,
+    [ProtoEnum] RemoveHeadlessEffectBundle = 113,
+    [ProtoEnum] SaveHeadlessProject = 114,
 }
 
 [ProtoContract]
@@ -66,6 +81,10 @@ public enum RenderErrorCode
     [ProtoEnum] Unsupported = 6,
     [ProtoEnum] Canceled = 7,
     [ProtoEnum] BackendFailure = 8,
+    [ProtoEnum] Unauthorized = 9,
+    [ProtoEnum] ProjectNotFound = 10,
+    [ProtoEnum] VersionConflict = 11,
+    [ProtoEnum] HeadlessUnsupported = 12,
 }
 
 [ProtoContract]
@@ -137,6 +156,7 @@ public sealed class OpenProjectRequest
     [ProtoMember(7)] public int ProjectWidth { get; set; }
     [ProtoMember(8)] public int ProjectHeight { get; set; }
     [ProtoMember(9)] public int FrameRate { get; set; }
+    [ProtoMember(10)] public string CacheNamespace { get; set; } = string.Empty;
 }
 
 [ProtoContract]
@@ -376,4 +396,104 @@ public sealed class PluginDescriptor
     [ProtoMember(1)] public string PluginId { get; set; } = string.Empty;
     [ProtoMember(2)] public string Name { get; set; } = string.Empty;
     [ProtoMember(3)] public string Version { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public sealed class OpenHeadlessProjectRequest
+{
+    [ProtoMember(1)] public string ProjectRoot { get; set; } = string.Empty;
+    [ProtoMember(2)] public Guid SessionId { get; set; }
+}
+
+[ProtoContract]
+public sealed class HeadlessSessionRequest
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+}
+
+[ProtoContract]
+public sealed class HeadlessMutationPrecondition
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public long BaseRevision { get; set; }
+    [ProtoMember(3)] public string BaseSnapshotHash { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public sealed class HeadlessProjectSnapshot
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public string ProjectRoot { get; set; } = string.Empty;
+    [ProtoMember(3)] public long Revision { get; set; }
+    [ProtoMember(4)] public string SnapshotHash { get; set; } = string.Empty;
+    [ProtoMember(5)] public string ProjectJson { get; set; } = string.Empty;
+    [ProtoMember(6)] public string TimelineJson { get; set; } = string.Empty;
+    [ProtoMember(7)] public string AssetsJson { get; set; } = string.Empty;
+    [ProtoMember(8)] public RenderSession RenderSession { get; set; } = new();
+}
+
+[ProtoContract]
+public sealed class ApplyHeadlessProjectSnapshotRequest
+{
+    [ProtoMember(1)] public HeadlessMutationPrecondition Precondition { get; set; } = new();
+    [ProtoMember(2)] public string ProjectJson { get; set; } = string.Empty;
+    [ProtoMember(3)] public string TimelineJson { get; set; } = string.Empty;
+    [ProtoMember(4)] public string AssetsJson { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public sealed class HeadlessClipRequest
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public string ClipId { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public sealed class HeadlessClipMutationRequest
+{
+    [ProtoMember(1)] public HeadlessMutationPrecondition Precondition { get; set; } = new();
+    [ProtoMember(2)] public string ClipId { get; set; } = string.Empty;
+    [ProtoMember(3)] public string Json { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public sealed class MoveHeadlessClipRequest
+{
+    [ProtoMember(1)] public HeadlessMutationPrecondition Precondition { get; set; } = new();
+    [ProtoMember(2)] public string ClipId { get; set; } = string.Empty;
+    [ProtoMember(3)] public uint LayerIndex { get; set; }
+    [ProtoMember(4)] public uint StartFrame { get; set; }
+    [ProtoMember(5)] public uint SubLayerIndex { get; set; }
+    [ProtoMember(6)] public bool HasSubLayerIndex { get; set; }
+}
+
+[ProtoContract]
+public sealed class RemoveHeadlessEffectRequest
+{
+    [ProtoMember(1)] public HeadlessMutationPrecondition Precondition { get; set; } = new();
+    [ProtoMember(2)] public string ClipId { get; set; } = string.Empty;
+    [ProtoMember(3)] public string EffectKey { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public sealed class RemoveHeadlessEffectBundleRequest
+{
+    [ProtoMember(1)] public HeadlessMutationPrecondition Precondition { get; set; } = new();
+    [ProtoMember(2)] public string ClipId { get; set; } = string.Empty;
+    [ProtoMember(3)] public Guid BundleId { get; set; }
+}
+
+[ProtoContract]
+public sealed class HeadlessSaveProjectRequest
+{
+    [ProtoMember(1)] public HeadlessMutationPrecondition Precondition { get; set; } = new();
+    [ProtoMember(2)] public string ChangeReason { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public sealed class HeadlessJsonResponse
+{
+    [ProtoMember(1)] public HeadlessProjectSnapshot Snapshot { get; set; } = new();
+    [ProtoMember(2)] public string Json { get; set; } = string.Empty;
+    [ProtoMember(3)] public bool Changed { get; set; }
 }

@@ -1,0 +1,164 @@
+using System.Text.Json;
+using System.Security.Cryptography;
+using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RPCProtocol;
+
+namespace projectFrameCut.Services;
+
+/// <summary>
+/// Owns a headless project session on a remote projectFrameCut device.
+/// The UI edits its normal in-memory model and commits a complete snapshot when
+/// the page is saved, while the server provides optimistic concurrency checks.
+/// </summary>
+internal sealed class RemoteProjectSession : IAsyncDisposable
+{
+    private readonly IRenderClient _client;
+    private readonly HttpRenderClientTransport _transport;
+    private bool _closed;
+
+    private RemoteProjectSession(IRenderClient client, HttpRenderClientTransport transport, HeadlessProjectSnapshot snapshot)
+    {
+        _client = client;
+        _transport = transport;
+        Snapshot = snapshot;
+    }
+
+    public IRenderClient Client => _client;
+    public HeadlessProjectSnapshot Snapshot { get; private set; }
+    public string ProjectRoot => Snapshot.ProjectRoot;
+    public ProjectJSONStructure Project => Deserialize<ProjectJSONStructure>(Snapshot.ProjectJson);
+    public DraftStructureJSON Draft => Deserialize<DraftStructureJSON>(Snapshot.TimelineJson);
+    public List<AssetItem> Assets => Deserialize<List<AssetItem>>(Snapshot.AssetsJson);
+
+    public static async Task<RemoteProjectSession> OpenAsync(
+        Uri serverUri,
+        string token,
+        string? clientId = null,
+        CancellationToken cancellationToken = default)
+    {
+        string effectiveClientId = string.IsNullOrWhiteSpace(clientId) ? $"remote-editor-{Guid.NewGuid():N}" : clientId;
+        var transport = new HttpRenderClientTransport(serverUri, token, effectiveClientId);
+        var client = new RenderClient(transport, effectiveClientId);
+        try
+        {
+            // The headless server owns the project lifecycle. An empty session ID
+            // asks it for the project loaded during RPC server startup.
+            HeadlessProjectSnapshot snapshot = await client.GetHeadlessProjectSnapshotAsync(
+                Guid.Empty, cancellationToken).ConfigureAwait(false);
+            return new RemoteProjectSession(client, transport, snapshot);
+        }
+        catch
+        {
+            await client.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    public async Task<string> MaterializeArtifactAsync(
+        RenderArtifact artifact,
+        string localProjectRoot,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfClosed();
+        string localPath = RenderRpcBootstrap.ResolveArtifactPath(localProjectRoot, artifact);
+        string? directory = Path.GetDirectoryName(localPath);
+        if (directory is null) throw new InvalidDataException("The remote artifact path has no parent directory.");
+        Directory.CreateDirectory(directory);
+
+        if (File.Exists(localPath) && await MatchesArtifactAsync(localPath, artifact, cancellationToken).ConfigureAwait(false))
+            return localPath;
+
+        byte[] content = await _transport.DownloadArtifactAsync(
+            new ArtifactRequest { SessionId = artifact.SessionId, ArtifactId = artifact.ArtifactId },
+            cancellationToken).ConfigureAwait(false);
+        if (artifact.Size >= 0 && content.LongLength != artifact.Size)
+            throw new InvalidDataException($"Remote artifact size mismatch for '{artifact.ProjectRelativePath}'.");
+        if (!string.IsNullOrWhiteSpace(artifact.ContentHash) &&
+            !string.Equals(Convert.ToHexString(SHA256.HashData(content)), artifact.ContentHash, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException($"Remote artifact hash mismatch for '{artifact.ProjectRelativePath}'.");
+
+        string temporaryPath = Path.Combine(directory, $".{Path.GetFileName(localPath)}.download-{Guid.NewGuid():N}");
+        try
+        {
+            await File.WriteAllBytesAsync(temporaryPath, content, cancellationToken).ConfigureAwait(false);
+            File.Move(temporaryPath, localPath, overwrite: true);
+        }
+        finally
+        {
+            try { if (File.Exists(temporaryPath)) File.Delete(temporaryPath); } catch { }
+        }
+
+        return localPath;
+    }
+
+    public async Task ApplyAndSaveAsync(
+        ProjectJSONStructure project,
+        DraftStructureJSON draft,
+        IEnumerable<AssetItem> assets,
+        string changeReason,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfClosed();
+        var precondition = CreatePrecondition();
+        Snapshot = await _client.ApplyHeadlessProjectSnapshotAsync(new ApplyHeadlessProjectSnapshotRequest
+        {
+            Precondition = precondition,
+            ProjectJson = Serialize(project),
+            TimelineJson = Serialize(draft),
+            AssetsJson = Serialize(assets.ToList()),
+        }, cancellationToken).ConfigureAwait(false);
+
+        Snapshot = await _client.SaveHeadlessProjectAsync(new HeadlessSaveProjectRequest
+        {
+            Precondition = CreatePrecondition(),
+            ChangeReason = changeReason ?? string.Empty,
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task CloseAsync(CancellationToken cancellationToken = default)
+    {
+        if (_closed) return;
+        _closed = true;
+        try
+        {
+            await _client.CloseProjectAsync(Snapshot.SessionId, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            await _client.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    public async ValueTask DisposeAsync() => await CloseAsync().ConfigureAwait(false);
+
+    private HeadlessMutationPrecondition CreatePrecondition() => new()
+    {
+        SessionId = Snapshot.SessionId,
+        BaseRevision = Snapshot.Revision,
+        BaseSnapshotHash = Snapshot.SnapshotHash,
+    };
+
+    private void ThrowIfClosed()
+    {
+        if (_closed) throw new ObjectDisposedException(nameof(RemoteProjectSession));
+    }
+
+    private static async Task<bool> MatchesArtifactAsync(
+        string path,
+        RenderArtifact artifact,
+        CancellationToken cancellationToken)
+    {
+        if (artifact.Size >= 0 && new FileInfo(path).Length != artifact.Size) return false;
+        if (string.IsNullOrWhiteSpace(artifact.ContentHash)) return true;
+        await using var stream = File.OpenRead(path);
+        byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+        return string.Equals(Convert.ToHexString(hash), artifact.ContentHash, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static T Deserialize<T>(string json)
+        => JsonSerializer.Deserialize<T>(json, DraftPage.DraftJSONOption)
+            ?? throw new InvalidDataException($"Remote project returned invalid {typeof(T).Name} JSON.");
+
+    private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, DraftPage.DraftJSONOption);
+}

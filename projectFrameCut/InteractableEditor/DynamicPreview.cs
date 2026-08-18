@@ -600,7 +600,12 @@ public sealed class DynamicPreview : IDisposable
             if (_previewer is not null)
             {
                 var artifactPath = _previewer.RenderClipFrame(request.Clip.Id, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token);
-                source = ImageSource.FromFile(artifactPath);
+                // FileImageSource/BitmapImage.UriSource can silently fail for absolute files under a
+                // packaged WinUI app's LocalCache (the remote-artifact location). A stream source is
+                // decoded through the app's already-authorized file handle and works for local paths too.
+                source = _previewer.ArtifactResolver is not null
+                    ? CreateFileStreamImageSource(artifactPath)
+                    : ImageSource.FromFile(artifactPath);
             }
             else
             {
@@ -730,6 +735,12 @@ public sealed class DynamicPreview : IDisposable
             try { frame.Dispose(); } catch { }
             throw;
         }
+    }
+
+    private static ImageSource CreateFileStreamImageSource(string path)
+    {
+        byte[] content = File.ReadAllBytes(path);
+        return ImageSource.FromStream(() => new MemoryStream(content, writable: false));
     }
 
     private IPicture? ReadTransformPreviewSource(TransformContainer transformClip, int width, int height, uint frameIndex, IPicture.PicturePixelMode pixelMode)

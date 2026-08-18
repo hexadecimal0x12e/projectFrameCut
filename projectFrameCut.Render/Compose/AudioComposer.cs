@@ -194,6 +194,7 @@ namespace projectFrameCut.Render.Compose
                     Clip = clip,
                     SoundTrack = bindedTrack,
                     Source = source,
+                    SourceSampleRate = Math.Max(1, source.SamplePerSecond),
                     TimelineStartSample = overlapStartSample - renderStartSample,
                     TimelineEndSample = overlapEndSample - renderStartSample,
                     SourceStartSample = sourceStartSample,
@@ -220,19 +221,15 @@ namespace projectFrameCut.Render.Compose
                         continue;
                     }
 
-                    IAudioSource? source;
-                    try
+                    // Soundtracks are initialized by the project loader. Reuse that
+                    // validated source instead of opening a second decoder here. Apart
+                    // from being wasteful, the old path silently converted any second
+                    // open/read failure into an all-zero preview WAV.
+                    int sourceSampleRate = track.SamplePerSecond;
+                    if (sourceSampleRate <= 0)
                     {
-                        source = PluginManager.CreateAudioSource(track.FilePath);
-                    }
-                    catch
-                    {
-                        source = null;
-                    }
-
-                    if (source is null)
-                    {
-                        continue;
+                        throw new InvalidOperationException(
+                            $"Soundtrack '{track.Name}' ({track.Id}) has no initialized audio source.");
                     }
 
                     float ratio = track.Ratio <= 0f ? 1f : track.Ratio;
@@ -241,11 +238,10 @@ namespace projectFrameCut.Render.Compose
                     int trackDurationSamples = FrameToSample(durationFrames, videoFramerate, outputSampleRate);
                     if (trackDurationSamples <= 0)
                     {
-                        source.Dispose();
                         continue;
                     }
 
-                    int sourceStartSample = FrameToSample(track.RelativeStartFrame, videoFramerate, Math.Max(1, source.SamplePerSecond));
+                    int sourceStartSample = FrameToSample(track.RelativeStartFrame, videoFramerate, sourceSampleRate);
                     IEffect[] effects = (track.EffectsInstances ?? Array.Empty<IEffect>())
                         .Where(e => e.Enabled)
                         .OrderBy(e => e.Index)
@@ -256,7 +252,6 @@ namespace projectFrameCut.Render.Compose
                     int overlapEndSample = Math.Min(trackEndSample, renderEndSample);
                     if (overlapEndSample <= overlapStartSample)
                     {
-                        source.Dispose();
                         continue;
                     }
 
@@ -265,7 +260,9 @@ namespace projectFrameCut.Render.Compose
                     {
                         Clip = null,
                         SoundTrack = track,
-                        Source = source,
+                        Source = null,
+                        SourceSampleRate = sourceSampleRate,
+                        OwnsSource = false,
                         TimelineStartSample = overlapStartSample - renderStartSample,
                         TimelineEndSample = overlapEndSample - renderStartSample,
                         SourceStartSample = sourceStartSample,
@@ -328,7 +325,7 @@ namespace projectFrameCut.Render.Compose
             int outputSampleRate,
             int outputChannels)
         {
-            int sourceRate = Math.Max(1, context.Source.SamplePerSecond);
+            int sourceRate = Math.Max(1, context.SourceSampleRate);
             float ratio = context.Ratio <= 0f ? 1f : context.Ratio;
 
             double sourceStep = sourceRate / (double)(outputSampleRate * ratio);
@@ -339,20 +336,10 @@ namespace projectFrameCut.Render.Compose
             int sourceReadStart = Math.Max(0, context.SourceStartSample + sourceIntStart);
             int sourceReadCount = Math.Max(2, (int)Math.Ceiling(sourceStartFrac + (outputCount - 1) * sourceStep) + 2);
 
-            IAudioSamples raw;
-            try
-            {
-                raw = context.Source.GetSample((uint)sourceReadStart, sourceReadCount);
-            }
-            catch
-            {
-                return new FloatAudioSamples
-                {
-                    Channels = CreateZeroChannels(outputChannels, outputCount),
-                    SampleCount = outputCount,
-                    SamplePerSecond = outputSampleRate
-                };
-            }
+            IAudioSamples raw = context.Clip is null && context.SoundTrack is not null
+                ? context.SoundTrack.GetAudioSamplesRelatedToStartPointOfSource((uint)sourceReadStart, sourceReadCount)
+                : context.Source?.GetSample((uint)sourceReadStart, sourceReadCount)
+                    ?? throw new InvalidOperationException("Audio composition context has no source.");
 
             float[][] sourceChannels = ToFloatChannels(raw);
             int sourceChannelCount = Math.Max(1, raw.channelCount);
@@ -663,7 +650,7 @@ namespace projectFrameCut.Render.Compose
             {
                 try
                 {
-                    context.Source.Dispose();
+                    if (context.OwnsSource) context.Source?.Dispose();
                 }
                 catch
                 {
@@ -675,7 +662,9 @@ namespace projectFrameCut.Render.Compose
         {
             public IClip? Clip { get; init; }
             public ISoundTrack? SoundTrack { get; init; }
-            public IAudioSource Source { get; init; } = null!;
+            public IAudioSource? Source { get; init; }
+            public int SourceSampleRate { get; init; }
+            public bool OwnsSource { get; init; } = true;
             public int TimelineStartSample { get; init; }
             public int TimelineEndSample { get; init; }
             public int SourceStartSample { get; init; }

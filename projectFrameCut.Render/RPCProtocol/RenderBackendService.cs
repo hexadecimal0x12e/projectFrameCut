@@ -19,6 +19,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
 {
     private const string TimelineFrameCacheVersion = "v2-target-layout";
     private const string ClipPreviewCacheVersion = "v2-frame-content";
+    private const string TimelineSegmentCacheVersion = "v2-audio-source";
+    private const string AudioSegmentCacheVersion = "v2-track-source";
     private const string FrameHashIndexVersion = "v1-sparse-frame-clip";
     private readonly IRenderArtifactStore _artifacts = artifactStore ?? new RenderArtifactStore();
     private readonly ConcurrentDictionary<Guid, BackendSession> _sessions = new();
@@ -83,7 +85,10 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         ProtocolVersion = RenderProtocol.CurrentVersion,
         MinimumProtocolVersion = RenderProtocol.MinimumSupportedVersion,
         BackendVersion = typeof(Renderer).Assembly.GetName().Version?.ToString() ?? "unknown",
-        Operations = Enum.GetNames<RenderOperation>().Where(static name => name != nameof(RenderOperation.Unknown)).ToList(),
+        Operations = Enum.GetValues<RenderOperation>()
+            .Where(static operation => operation != RenderOperation.Unknown && (int)operation < 100)
+            .Select(static operation => operation.ToString())
+            .ToList(),
         Encoders = ["libx264"],
         Features = ["direct-transport", "named-pipe", "timeline-preview", "clip-preview-without-layout", "thumbs-cache", "render-jobs", "artifact-files"],
     };
@@ -101,10 +106,13 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         var assets = request.Assets
             .Where(static item => !string.IsNullOrWhiteSpace(item.AssetId))
             .GroupBy(static item => item.AssetId, StringComparer.Ordinal)
-            .ToDictionary(static group => group.Key, static group => group.Last().Path, StringComparer.Ordinal);
+            .ToDictionary(
+                static group => group.Key,
+                group => ResolveProjectSourcePath(root, group.Last().Path) ?? string.Empty,
+                StringComparer.Ordinal);
 
-        var clips = await Task.Run(() => CreateClips(draft, assets, request.ProxyRoot, cancellationToken), cancellationToken).ConfigureAwait(false);
-        var soundTracks = await Task.Run(() => CreateSoundTracks(draft, assets, cancellationToken), cancellationToken).ConfigureAwait(false);
+        var clips = await Task.Run(() => CreateClips(draft, assets, request.ProxyRoot, root, cancellationToken), cancellationToken).ConfigureAwait(false);
+        var soundTracks = await Task.Run(() => CreateSoundTracks(draft, assets, root, cancellationToken), cancellationToken).ConfigureAwait(false);
         // Project duration is a timeline property. Do not derive it from runtime
         // GetEffectiveDuration(): speed providers and open-ended sources may deliberately
         // report UInt32.MaxValue even though the clip has a finite UI/timeline duration.
@@ -113,7 +121,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             ? null
             : JsonSerializer.Deserialize<ProjectJSONStructure>(request.ProjectJson, _jsonOptions);
 
-        var snapshotHash = ComputeTextHash(request.TimelineJson);
+        var snapshotHash = ComputeTextHash($"{request.ProjectJson}\n{request.TimelineJson}");
         FrameHashIndex hashIndex;
         try
         {
@@ -126,6 +134,9 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             throw;
         }
 
+        var cacheNamespace = string.IsNullOrWhiteSpace(request.CacheNamespace)
+            ? string.Empty
+            : ComputeTextHash(request.CacheNamespace);
         var backendSession = new BackendSession(
             sessionId,
             root,
@@ -140,7 +151,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             soundTracks,
             assets,
             snapshotHash,
-            hashIndex);
+            hashIndex,
+            cacheNamespace);
 
         if (_sessions.TryGetValue(sessionId, out var previous))
         {
@@ -314,7 +326,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         try
         {
             var frameHash = session.GetFrameHash(request.FrameIndex);
-            var cacheKey = $"{TimelineFrameCacheVersion}_{frameHash}_{width}x{height}";
+            var namespacePrefix = string.IsNullOrEmpty(session.CacheNamespace) ? string.Empty : $"{session.CacheNamespace}_";
+            var cacheKey = $"{TimelineFrameCacheVersion}_{namespacePrefix}{frameHash}_{width}x{height}";
             var relativePath = $"thumbs/projectFrameCut_Render_{cacheKey}.png";
             var finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
             var cacheHit = File.Exists(finalPath);
@@ -369,7 +382,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             // important for transform clips whose output depends on bound clips
             // outside the requested clip itself.
             var clipHash = session.GetClipFrameHash(clip.Id, request.FrameIndex);
-            var relativePath = $"thumbs/perClip/{clip.Id}/dynamic/dynamic_{ClipPreviewCacheVersion}_{clipHash}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}.png";
+            var namespacePrefix = string.IsNullOrEmpty(session.CacheNamespace) ? string.Empty : $"{session.CacheNamespace}_";
+            var relativePath = $"thumbs/perClip/{clip.Id}/dynamic/dynamic_{ClipPreviewCacheVersion}_{namespacePrefix}{clipHash}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}.png";
             var finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
             var cacheHit = File.Exists(finalPath);
             if (!cacheHit)
@@ -421,7 +435,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private async ValueTask<RenderArtifact> RenderTimelineSegmentAsync(TimelineSegmentRequest request, CancellationToken cancellationToken)
     {
         var session = GetSession(request.SessionId);
-        var keySource = $"{session.SnapshotHash}|{request.StartFrame}|{request.Length}|{request.Width}|{request.Height}|{request.FrameRate}|{request.IncludeAudio}";
+        var keySource = $"{TimelineSegmentCacheVersion}|{session.CacheNamespace}|{session.SnapshotHash}|{request.StartFrame}|{request.Length}|{request.Width}|{request.Height}|{request.FrameRate}|{request.IncludeAudio}";
         var relativePath = $"thumbs/projectFrameCut_Render_segment_{ComputeTextHash(keySource)}.mp4";
         return await RenderSegmentInternalAsync(session, request, relativePath, isPreview: true, cancellationToken).ConfigureAwait(false);
     }
@@ -434,7 +448,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         var channels = Math.Clamp(request.Channels, 1, 8);
         var frameRate = Math.Max(1, request.FrameRate);
         var length = request.Length > 0 ? request.Length : session.Duration;
-        var key = ComputeTextHash($"{session.SnapshotHash}|audio|{request.StartFrame}|{length}|{frameRate}|{sampleRate}|{channels}");
+        var key = ComputeTextHash($"{AudioSegmentCacheVersion}|{session.CacheNamespace}|{session.SnapshotHash}|audio|{request.StartFrame}|{length}|{frameRate}|{sampleRate}|{channels}");
         var relativePath = $"thumbs/projectFrameCut_Render_audio_{key}.wav";
         var finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
         var cacheHit = File.Exists(finalPath);
@@ -641,10 +655,18 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         return new();
     }
 
+    public (byte[] Content, string Path) ReadArtifact(ArtifactRequest request)
+    {
+        _ = GetSession(request.SessionId);
+        if (!_artifacts.TryGetPath(request.SessionId, request.ArtifactId, out var path))
+            throw new FileNotFoundException($"Artifact '{request.ArtifactId}' was not found for this session.");
+        return (File.ReadAllBytes(path), path);
+    }
+
     private BackendSession GetSession(Guid sessionId)
         => _sessions.TryGetValue(sessionId, out var session) ? session : throw new KeyNotFoundException($"Render session '{sessionId}' was not found.");
 
-    private IClip[] CreateClips(DraftStructureJSON draft, IReadOnlyDictionary<string, string> assets, string proxyRoot, CancellationToken cancellationToken)
+    private IClip[] CreateClips(DraftStructureJSON draft, IReadOnlyDictionary<string, string> assets, string proxyRoot, string projectRoot, CancellationToken cancellationToken)
     {
         var clips = new List<IClip>();
         foreach (var dto in draft.Clips)
@@ -652,7 +674,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             cancellationToken.ThrowIfCancellationRequested();
             if (dto.ClipType == ClipMode.MarkingClip) continue;
             var clip = PluginManager.CreateClip(JsonSerializer.SerializeToElement(dto, _jsonOptions));
-            ResolveSourcePath(clip, dto.FilePath, assets, proxyRoot);
+            ResolveSourcePath(clip, dto.FilePath, assets, proxyRoot, projectRoot);
             try
             {
                 clip.ReInit(IPicture.PicturePixelMode.BytePicture);
@@ -668,7 +690,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         return clips.ToArray();
     }
 
-    private ISoundTrack[] CreateSoundTracks(DraftStructureJSON draft, IReadOnlyDictionary<string, string> assets, CancellationToken cancellationToken)
+    private ISoundTrack[] CreateSoundTracks(DraftStructureJSON draft, IReadOnlyDictionary<string, string> assets, string projectRoot, CancellationToken cancellationToken)
     {
         var tracks = new List<ISoundTrack>();
         foreach (var dto in draft.SoundTracks)
@@ -676,17 +698,33 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             cancellationToken.ThrowIfCancellationRequested();
             var track = PluginManager.CreateSoundTrack(JsonSerializer.SerializeToElement(dto, _jsonOptions));
             track.ExtraData = dto.MetaData ?? new();
-            ResolveSourcePath(track, dto.FilePath, assets, string.Empty);
-            try { track.ReInit(); } catch (Exception ex) { Log(ex, $"Initialize soundtrack {track.Name}", this); }
+            if (track.ExtraData.TryGetValue("Volume", out object? volumeValue))
+            {
+                track.Volume = volumeValue switch
+                {
+                    double value => (float)value,
+                    float value => value,
+                    JsonElement value when value.TryGetDouble(out double parsedDouble) => (float)parsedDouble,
+                    _ when float.TryParse(
+                        volumeValue?.ToString(),
+                        System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out float parsedFloat) => parsedFloat,
+                    _ => 1f,
+                };
+            }
+            ResolveSourcePath(track, dto.FilePath, assets, projectRoot);
+            track.ReInit();
             tracks.Add(track);
         }
         return tracks.ToArray();
     }
 
-    private static void ResolveSourcePath(IClip clip, string? dtoPath, IReadOnlyDictionary<string, string> assets, string proxyRoot)
+    private static void ResolveSourcePath(IClip clip, string? dtoPath, IReadOnlyDictionary<string, string> assets, string proxyRoot, string projectRoot)
     {
         var path = clip.FilePath ?? dtoPath;
         if (path?.StartsWith('$') == true && assets.TryGetValue(path[1..], out var assetPath)) path = assetPath;
+        path = ResolveProjectSourcePath(projectRoot, path);
         if (!string.IsNullOrWhiteSpace(path) && !string.IsNullOrWhiteSpace(proxyRoot))
         {
             var proxy = Path.Combine(proxyRoot, $"{Path.GetFileNameWithoutExtension(path)}.proxy.mp4");
@@ -698,14 +736,27 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         }
     }
 
-    private static void ResolveSourcePath(ISoundTrack track, string? dtoPath, IReadOnlyDictionary<string, string> assets, string _)
+    private static void ResolveSourcePath(ISoundTrack track, string? dtoPath, IReadOnlyDictionary<string, string> assets, string projectRoot)
     {
         var path = track.FilePath ?? dtoPath;
         if (path?.StartsWith('$') == true && assets.TryGetValue(path[1..], out var assetPath)) path = assetPath;
+        if (path?.StartsWith('$') == true)
+        {
+            throw new FileNotFoundException(
+                $"Soundtrack '{track.Name}' references asset '{path[1..]}', but that asset was not supplied to the render backend.",
+                path);
+        }
+        path = ResolveProjectSourcePath(projectRoot, path);
         if (!string.IsNullOrWhiteSpace(path))
         {
             try { track.FilePath = path; } catch (InvalidOperationException) { }
         }
+    }
+
+    private static string? ResolveProjectSourcePath(string projectRoot, string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || path.StartsWith('$')) return path;
+        return Path.IsPathRooted(path) ? Path.GetFullPath(path) : Path.GetFullPath(Path.Combine(projectRoot, path));
     }
 
     private static uint ResolveDuration(DraftStructureJSON draft)
@@ -789,7 +840,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private sealed class BackendSession(
         Guid id, string projectRoot, string projectJson, string timelineJson, string projectName,
         int width, int height, int frameRate, uint duration, IClip[] clips, ISoundTrack[] soundTracks,
-        IReadOnlyDictionary<string, string> assets, string snapshotHash, FrameHashIndex hashIndex) : IAsyncDisposable
+        IReadOnlyDictionary<string, string> assets, string snapshotHash, FrameHashIndex hashIndex,
+        string cacheNamespace) : IAsyncDisposable
     {
         public Guid Id { get; } = id;
         public string ProjectRoot { get; } = projectRoot;
@@ -805,6 +857,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         public IReadOnlyDictionary<string, string> Assets { get; } = assets;
         public string SnapshotHash { get; } = snapshotHash;
         public FrameHashIndex HashIndex { get; } = hashIndex;
+        public string CacheNamespace { get; } = cacheNamespace;
         public SemaphoreSlim RenderGate { get; } = new(1, 1);
         private readonly IReadOnlyDictionary<uint, string> _frameHashLookup = hashIndex.FrameHashes
             .GroupBy(entry => entry.FrameIndex)

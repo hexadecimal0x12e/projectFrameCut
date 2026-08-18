@@ -6,7 +6,8 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
 	xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-	xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3">
+	xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+	xmlns:uap4="http://schemas.microsoft.com/appx/manifest/uap/windows10/4">
 
 	<!--wtf, why the pfn is not hexadecimal0x12e.projectFrameCut in ms store-->
 	<Identity Name="hexadecimal0x12e.projectFrameCut" Publisher="CN=0AD263CD-E10E-4A8B-A187-25C0A41C69D7" Version="1.6.0.0" />
@@ -52,9 +53,21 @@
         BackgroundColor="transparent">
 				<uap:DefaultTile Square71x71Logo="$placeholder$.png" Wide310x150Logo="$placeholder$.png" Square310x310Logo="$placeholder$.png" />
 				<uap:SplashScreen Image="$placeholder$.png" />
+				
 			</uap:VisualElements>
 			<Extensions>
-				<uap:Extension Category="windows.fileTypeAssociation">
+				<desktop:Extension Category="windows.toastNotificationActivation">
+					<desktop:ToastNotificationActivation ToastActivatorCLSID="6e919706-2634-4d97-a93c-2213b2acc334" />
+				</desktop:Extension>
+				<com:Extension Category="windows.comServer">
+					<com:ComServer>
+						<com:ExeServer Executable="projectFrameCut.exe" DisplayName="$targetnametoken$" Arguments="----AppNotificationActivated:">
+							<com:Class Id="6e919706-2634-4d97-a93c-2213b2acc334" />
+						</com:ExeServer>
+					</com:ComServer>
+				</com:Extension>
+				<!-- File associations will be handled by launch manager -->
+				<!--			<uap:Extension Category="windows.fileTypeAssociation">
 					<uap:FileTypeAssociation Name="projectframecut_draft_bundle">
 						<uap:SupportedFileTypes>
 							<uap:FileType>.pjfc</uap:FileType>
@@ -69,16 +82,6 @@
 						<uap:EditFlags AlwaysUnsafe="true"/>
 					</uap:FileTypeAssociation>
 				</uap:Extension>
-				<desktop:Extension Category="windows.toastNotificationActivation">
-					<desktop:ToastNotificationActivation ToastActivatorCLSID="6e919706-2634-4d97-a93c-2213b2acc334" />
-				</desktop:Extension>
-				<com:Extension Category="windows.comServer">
-					<com:ComServer>
-						<com:ExeServer Executable="projectFrameCut.exe" DisplayName="$targetnametoken$" Arguments="----AppNotificationActivated:">
-							<com:Class Id="6e919706-2634-4d97-a93c-2213b2acc334" />
-						</com:ExeServer>
-					</com:ComServer>
-				</com:Extension>
 				<uap:Extension Category="windows.protocol">
 					<uap:Protocol Name="pjfc">
 						<uap:DisplayName>projectFrameCut URI Protool</uap:DisplayName>
@@ -89,23 +92,23 @@
 						<uap:DisplayName>projectFrameCut URI Protool-Windows (APPX)</uap:DisplayName>
 					</uap:Protocol>
 				</uap:Extension>
-				<!--	<uap3:Extension Category="windows.appUriHandler">
+					<uap3:Extension Category="windows.appUriHandler">
 					<uap3:AppUriHandler>
 						<uap3:Host Name="pjfc.hexadecimal0x12e.com" />
 					</uap3:AppUriHandler>
-				</uap3:Extension> -->
+				</uap3:Extension> 
 				<uap:Extension Category="windows.fileTypeAssociation">
 					<uap:FileTypeAssociation Name="projectframecut_drafttemplate">
 						<uap:SupportedFileTypes>
 							<uap:FileType>.pjfcTemplate</uap:FileType>
 						</uap:SupportedFileTypes>
 					</uap:FileTypeAssociation>
-				</uap:Extension>
+				</uap:Extension>-->
 			</Extensions>
 		</Application>
-		
+
 		<Application Id="CLI" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
-			<uap:VisualElements DisplayName="projectFrameCut CLI" Description="the entrypoint for the projectFrameCut CLI, this should be hidden" AppListEntry="none" 
+			<uap:VisualElements DisplayName="projectFrameCut" Description="the entrypoint for the projectFrameCut CLI, this should be hidden" AppListEntry="none"
 													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
 			<Extensions>
 				<uap3:Extension Category="windows.appExecutionAlias" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
@@ -115,14 +118,14 @@
 				</uap3:Extension>
 			</Extensions>
 		</Application>
-		
+
 		<Application Id="CLIVersionSpecificAlias" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
 			<uap:VisualElements DisplayName="projectFrameCut (DO NOT DISABLE THIS ALIAS, OR YOU WILL BREAK THE APPLICATION)" Description="the entrypoint for the projectFrameCut CLI (version-specific alias), this should be hidden" AppListEntry="none" 
 													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
 			<Extensions>
 				<uap3:Extension Category="windows.appExecutionAlias" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
 					<uap3:AppExecutionAlias>
-						<desktop:ExecutionAlias Alias="projectFrameCutCLI_hexadecimal0x12e.projectFrameCut_1.6.0.0.exe" />
+						<desktop:ExecutionAlias Alias="projectFrameCutCompatible_hexadecimal0x12e.projectFrameCut_1.6.0.0.exe" />
 					</uap3:AppExecutionAlias>
 				</uap3:Extension>
 			</Extensions>

@@ -44,6 +44,7 @@ using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System.Reflection;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.Contracts;
 using System.Runtime.InteropServices;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
@@ -204,6 +205,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     private bool _hasResolvedInitialPreviewFrame = false;
 
     private IHistoryGraphProvider? _activeHistoryProvider;
+    private RemoteProjectSession? _remoteProjectSession;
 
 
     DateTime lastSyncTime = DateTime.MinValue;
@@ -320,6 +322,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public int MaximumSaveSlot { get; set; } = 8;
     public Guid CurrentSnapshotID { get; set; } = Guid.Empty;
     public bool IsReadonly { get; set; } = false;
+    public bool IsRemoteProject => _remoteProjectSession is not null;
     public string PreferredPopupMode { get; set; } = "bottom";
     public TimeSpan SyncCooldown { get; set; } = TimeSpan.FromMilliseconds(500);
     public bool AlwaysShowToolbarBtns { get; set; }
@@ -453,6 +456,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         Clips = clips;
         Assets = assets ?? new();
+        // The fluent editor setup above runs before the constructor assigns the loaded asset map.
+        // Rebind it here so remote assets participate in aspect/layout calculations as well.
+        ClipEditor.SetAssets(Assets);
         Tracks = new ConcurrentDictionary<int, AbsoluteLayout>();
         trackCount = initialTrackCount;
         ProjectInfo.ProjectName ??= title;
@@ -628,7 +634,15 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         ApplyClipEditorPreviewOverlayMode();
 
-        DynamicPreview.DiskCacheRoot = Path.Combine(WorkingPath, "thumbs", "clipLocalFallback");
+        string dynamicPreviewCacheRoot = IsRemoteProject
+            ? Path.Combine(FileSystem.CacheDirectory, "remoteConnection", ProjectInfo.ProjectUniqueId.ToString("N"))
+            : Path.Combine(WorkingPath, "thumbs", "clipLocalFallback");
+        if (IsRemoteProject)
+        {
+            Directory.CreateDirectory(dynamicPreviewCacheRoot);
+            Directory.CreateDirectory(Path.Combine(dynamicPreviewCacheRoot, "thumbs"));
+        }
+        DynamicPreview.DiskCacheRoot = dynamicPreviewCacheRoot;
 
         previewWidth = ProjectInfo.RelativeWidth;
         previewHeight = ProjectInfo.RelativeHeight;
@@ -636,7 +650,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         previewer.ProjectRelativeHeight = ProjectInfo.RelativeHeight;
         previewer.targetFrameRate = Math.Max(1, (int)ProjectInfo.TargetFrameRate);
         previewer.ProjectJson = JsonSerializer.Serialize(ProjectInfo, savingOpts);
-        previewer.TempPath = Path.Combine(WorkingPath, "thumbs");
+        previewer.TempPath = IsRemoteProject
+            ? Path.Combine(FileSystem.CacheDirectory, "remoteConnection", ProjectInfo.ProjectUniqueId.ToString("N"), "thumbs")
+            : Path.Combine(WorkingPath, "thumbs");
         DynamicPreviewProvider.SetLivePreviewer(ref previewer!);
         ClipEditor.UpdateVideoResolution(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
 
@@ -655,7 +671,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         };
 
 
-        if (!string.IsNullOrWhiteSpace(WorkingPath))
+        if (!IsRemoteProject && !string.IsNullOrWhiteSpace(WorkingPath))
         {
             foreach (var item in DirectoriesNeeded)
             {
@@ -7121,6 +7137,60 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         return (uint)frame;
     }
+
+    /// <summary>
+    /// Opens a project stored on a headless projectFrameCut device. The returned
+    /// page uses the same editor controls as a local project; Save commits the
+    /// current page snapshot through the remote protobuf RPC session.
+    /// </summary>
+    public static async Task<DraftPage> OpenRemoteAsync(
+        Uri serverUri,
+        string token,
+        string? clientId = null,
+        CancellationToken cancellationToken = default)
+    {
+        RemoteProjectSession session = await RemoteProjectSession.OpenAsync(
+            serverUri, token, clientId, cancellationToken);
+        try
+        {
+            ProjectJSONStructure project = session.Project;
+            DraftStructureJSON draft = session.Draft;
+            (ConcurrentDictionary<Guid, ClipElementUI> clips, int trackCount) =
+                DraftImportAndExportHelper.ImportFromJSON(draft, project);
+            var assets = new ConcurrentDictionary<string, AssetItem>(
+                session.Assets.Where(static asset => !string.IsNullOrWhiteSpace(asset.AssetId))
+                    .ToDictionary(asset => asset.AssetId!, asset => asset));
+
+            var page = new DraftPage(
+                project,
+                clips,
+                assets,
+                trackCount,
+                session.ProjectRoot,
+                project.ProjectName ?? "Remote project",
+                isReadonly: false);
+            page._remoteProjectSession = session;
+            page.previewer.RpcClient = session.Client;
+            page.previewer.RenderSessionId = session.Snapshot.RenderSession.SessionId == Guid.Empty
+                ? session.Snapshot.SessionId
+                : session.Snapshot.RenderSession.SessionId;
+            page.previewer.RenderProjectRoot = session.ProjectRoot;
+            page.previewer.RenderProxyRoot = Path.Combine(session.ProjectRoot, "proxy");
+            page.previewer.RemoteAssets = session.Assets
+                .Where(static asset => !string.IsNullOrWhiteSpace(asset.AssetId) && !string.IsNullOrWhiteSpace(asset.Path))
+                .Select(static asset => new AssetPathEntry { AssetId = asset.AssetId!, Path = asset.Path! })
+                .ToList();
+            page.previewer.ArtifactResolver = (artifact, ct) =>
+                session.MaterializeArtifactAsync(artifact, page.previewer.ProjectRoot, ct);
+            page.ProjectName = project.ProjectName ?? "Remote project";
+            return page;
+        }
+        catch
+        {
+            await session.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
     [DebuggerNonUserCode()]
     public double FrameToPixel(uint f) => f / (FramePerPixel * tracksZoomOffest);
 
@@ -7676,7 +7746,20 @@ public partial class DraftPage : ContentPage, IDraftPage
                     }
 
                     token.ThrowIfCancellationRequested();
-                    await ClipEditor.StaticPreviewOverlayImage.ForceLoadPNGToAImage(path);
+                    if (IsRemoteProject)
+                    {
+                        // WinUI may accept a file:// LocalCache URI without throwing and then fail the
+                        // asynchronous decode, leaving the Image empty. Read the downloaded artifact
+                        // through an authorized stream instead.
+                        byte[] content = await File.ReadAllBytesAsync(path, token);
+                        await Dispatcher.DispatchAsync(() =>
+                            ClipEditor.StaticPreviewOverlayImage.Source = ImageSource.FromStream(
+                                () => new MemoryStream(content, writable: false)));
+                    }
+                    else
+                    {
+                        await ClipEditor.StaticPreviewOverlayImage.ForceLoadPNGToAImage(path);
+                    }
                     token.ThrowIfCancellationRequested();
                     displayedTier = tier;
                     await Dispatcher.DispatchAsync(() => ClipEditor.SetStaticPreviewVisible(true));
@@ -7903,6 +7986,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             _playbackStartFrame = _currentFrame;
             _nextPlaybackPath = null;
             await previewer.ResetAudioPlaybackSources();
+            var continuousAudioReady = false;
 
             // Render all remaining audio as one continuous WAV to eliminate block-switching gaps
             int totalFrames = (int)Math.Max(previewer.TotalDuration, ProjectDuration);
@@ -7917,23 +8001,65 @@ public partial class DraftPage : ContentPage, IDraftPage
                 if (_fullContinuousAudioPath != null && File.Exists(_fullContinuousAudioPath))
                 {
                     _continuousAudioStartFrame = _currentFrame;
+                    var audioOpened = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Dispatcher.DispatchAsync(() =>
                     {
+                        try
+                        {
+                            DynamicPreviewAudioProvider.Stop();
+                            DynamicPreviewAudioProvider.Source = null;
+                            ComputeView.Children.Remove(DynamicPreviewAudioProvider);
+                        }
+                        catch { }
+
                         DynamicPreviewAudioProvider = new MediaElement
                         {
-                            Source = MediaSource.FromFile(_fullContinuousAudioPath),
                             ShouldAutoPlay = false,
                             ShouldKeepScreenOn = false,
                             ShouldLoopPlayback = false,
                             ShouldShowPlaybackControls = false,
+                            InputTransparent = true,
+                            WidthRequest = 1,
+                            HeightRequest = 1,
+                            Opacity = 0.01,
+                        };
+                        DynamicPreviewAudioProvider.MediaOpened += (_, _) => audioOpened.TrySetResult(true);
+                        DynamicPreviewAudioProvider.MediaFailed += (_, args) =>
+                        {
+                            Log($"Failed to open the live-preview audio source: {args.ErrorMessage}", "warn");
+                            audioOpened.TrySetResult(false);
                         };
                         DynamicPreviewAudioProvider.MediaEnded += (s, e) =>
                         {
-                            try { ComputeView.Children.Remove(DynamicPreviewAudioProvider); }
+                            try
+                            {
+                                if (s is MediaElement endedPlayer)
+                                {
+                                    ComputeView.Children.Remove(endedPlayer);
+                                }
+                            }
                             catch { }
                         };
                         ComputeView.Add(DynamicPreviewAudioProvider);
+                        // Set Source only after the handlers are attached and the native control is
+                        // part of the visual tree, otherwise an immediate Play() can be lost before
+                        // WinUI finishes opening the WAV.
+                        DynamicPreviewAudioProvider.Source = MediaSource.FromFile(_fullContinuousAudioPath);
                     });
+
+                    try
+                    {
+                        continuousAudioReady = await audioOpened.Task.WaitAsync(TimeSpan.FromSeconds(15), token);
+                    }
+                    catch (TimeoutException)
+                    {
+                        Log("Timed out waiting for the live-preview audio source to open.", "warn");
+                    }
+
+                    if (!continuousAudioReady)
+                    {
+                        Log("The live-preview audio source could not be opened; video preview will continue without audio.", "warn");
+                    }
                 }
             }
 
@@ -7948,14 +8074,14 @@ public partial class DraftPage : ContentPage, IDraftPage
                     LivePreviewPlayer.IsVisible = false;
                 });
 
-                _continuousAudioStopwatch = Stopwatch.StartNew();
-                if (_fullContinuousAudioPath is not null)
+                await Dispatcher.DispatchAsync(() =>
                 {
-                    Dispatcher.Dispatch(() =>
+                    if (continuousAudioReady)
                     {
                         DynamicPreviewAudioProvider.Play();
-                    });
-                }
+                    }
+                    _continuousAudioStopwatch = Stopwatch.StartNew();
+                });
 
                 await RenderSomeFramesDynamicSynced((int)_currentFrame, token);
                 return;
@@ -7983,7 +8109,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     LivePreviewPlayer.Source = MediaSource.FromFile(path);
                     LivePreviewPlayer.Play();
                     _continuousAudioStopwatch = Stopwatch.StartNew();
-                    if (_fullContinuousAudioPath is not null)
+                    if (continuousAudioReady)
                         DynamicPreviewAudioProvider.Play();
                 });
                 StartContinuousPlayheadSyncLoop(currentStartFrame);
@@ -8830,6 +8956,24 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: true);
             var assets = Assets.Values.ToList();
+
+            if (_remoteProjectSession is not null)
+            {
+                ProjectInfo.LastChanged = DateTime.Now;
+                ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
+                ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
+                ProjectInfo.LastOpenAppName = MauiProgram.AssemblyName;
+                ProjectInfo.ProjectName ??= ProjectName;
+                ProjectDuration = draft.Duration;
+                await _remoteProjectSession.ApplyAndSaveAsync(
+                    ProjectInfo,
+                    draft,
+                    assets,
+                    args?.ToString() ?? (noSlot ? "Auto-save" : "Save"));
+                SetStateOK(Localized.DraftPage_EverythingFine);
+                return;
+            }
+
             var snapshotId = Guid.NewGuid();
             string slot = ".";
             if (noSlot)
@@ -10210,13 +10354,20 @@ public partial class DraftPage : ContentPage, IDraftPage
         try
         {
             if (!ExitNoSave) await Save(true);
-            try
+            if (_remoteProjectSession is not null)
             {
-                await RenderRpcBootstrap.Client.CloseProjectAsync(previewer.RenderSessionId);
+                await _remoteProjectSession.CloseAsync();
             }
-            catch (Exception ex)
+            else
             {
-                Log(ex, "Close render RPC project session", this);
+                try
+                {
+                    await RenderRpcBootstrap.Client.CloseProjectAsync(previewer.RenderSessionId);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Close render RPC project session", this);
+                }
             }
             App.Current?.Windows?[0]?.Title = Localized.AppBrand;
             TouchProjectFolder();

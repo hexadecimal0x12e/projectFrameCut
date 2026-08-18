@@ -32,6 +32,21 @@ public interface IRenderClient : IAsyncDisposable
     ValueTask<RenderJob> GetJobStatusAsync(Guid jobId, CancellationToken cancellationToken = default);
     ValueTask<RenderJob> CancelJobAsync(Guid jobId, CancellationToken cancellationToken = default);
     ValueTask ReleaseArtifactAsync(ArtifactRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessProjectSnapshot> OpenHeadlessProjectAsync(OpenHeadlessProjectRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessProjectSnapshot> GetHeadlessProjectSnapshotAsync(Guid sessionId, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessProjectSnapshot> ReloadHeadlessProjectAsync(HeadlessMutationPrecondition request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessProjectSnapshot> ApplyHeadlessProjectSnapshotAsync(ApplyHeadlessProjectSnapshotRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessJsonResponse> ListHeadlessClipsAsync(Guid sessionId, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessJsonResponse> GetHeadlessClipAsync(HeadlessClipRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessJsonResponse> UpsertHeadlessClipAsync(HeadlessClipMutationRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessJsonResponse> MoveHeadlessClipAsync(MoveHeadlessClipRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessJsonResponse> PatchHeadlessClipAsync(HeadlessClipMutationRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessJsonResponse> DeleteHeadlessClipAsync(HeadlessClipMutationRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessJsonResponse> AddOrReplaceHeadlessEffectAsync(HeadlessClipMutationRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessJsonResponse> RemoveHeadlessEffectAsync(RemoveHeadlessEffectRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessJsonResponse> AddOrReplaceHeadlessEffectBundleAsync(HeadlessClipMutationRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessJsonResponse> RemoveHeadlessEffectBundleAsync(RemoveHeadlessEffectBundleRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessProjectSnapshot> SaveHeadlessProjectAsync(HeadlessSaveProjectRequest request, CancellationToken cancellationToken = default);
 }
 
 public sealed class DirectRenderTransport(IRenderService service) : IRenderTransport
@@ -40,16 +55,8 @@ public sealed class DirectRenderTransport(IRenderService service) : IRenderTrans
 
     public async ValueTask<RenderResponseEnvelope> SendAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
     {
-        // Serialize at the direct boundary as well. This prevents accidental sharing of backend
-        // object references and keeps direct and future network transports behaviorally equivalent.
         var isolatedRequest = RenderRpcSerializer.Clone(request);
-        // The direct server must not inherit the UI caller's synchronization context. A future
-        // network transport naturally has this boundary; Task.Run gives the in-process host the
-        // same scheduling behavior and keeps decode/render work away from the UI thread.
-        var response = await Task.Run(
-            async () => 
-            await _service.DispatchAsync(isolatedRequest, cancellationToken).ConfigureAwait(false),
-            cancellationToken).ConfigureAwait(false);
+        var response = await Task.Run(async () => await _service.DispatchAsync(isolatedRequest, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         return RenderRpcSerializer.Clone(response);
     }
 
@@ -63,10 +70,7 @@ public sealed class RenderClient(IRenderTransport transport, string? clientId = 
 
     public ValueTask<RenderCapabilities> GetCapabilitiesAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, RenderCapabilities>(RenderOperation.GetCapabilities, new(), ct);
     public ValueTask<RenderSession> OpenProjectAsync(OpenProjectRequest request, CancellationToken ct = default) => SendAsync<OpenProjectRequest, RenderSession>(RenderOperation.OpenProject, request, ct);
-    public async ValueTask CloseProjectAsync(Guid sessionId, CancellationToken ct = default)
-    {
-        _ = await SendAsync<SessionRequest, EmptyResponse>(RenderOperation.CloseProject, new() { SessionId = sessionId }, ct).ConfigureAwait(false);
-    }
+    public async ValueTask CloseProjectAsync(Guid sessionId, CancellationToken ct = default) { _ = await SendAsync<SessionRequest, EmptyResponse>(RenderOperation.CloseProject, new() { SessionId = sessionId }, ct).ConfigureAwait(false); }
     public ValueTask<ProjectSnapshot> GetProjectSnapshotAsync(Guid sessionId, CancellationToken ct = default) => SendAsync<SessionRequest, ProjectSnapshot>(RenderOperation.GetProjectSnapshot, new() { SessionId = sessionId }, ct);
     public ValueTask<TimelineSnapshot> GetTimelineAsync(Guid sessionId, CancellationToken ct = default) => SendAsync<SessionRequest, TimelineSnapshot>(RenderOperation.GetTimeline, new() { SessionId = sessionId }, ct);
     public ValueTask<AssetMetadata> GetAssetMetadataAsync(AssetMetadataRequest request, CancellationToken ct = default) => SendAsync<AssetMetadataRequest, AssetMetadata>(RenderOperation.GetAssetMetadata, request, ct);
@@ -79,32 +83,31 @@ public sealed class RenderClient(IRenderTransport transport, string? clientId = 
     public ValueTask<RenderJob> RenderProjectAsync(RenderProjectRequest request, CancellationToken ct = default) => SendAsync<RenderProjectRequest, RenderJob>(RenderOperation.RenderProject, request, ct);
     public ValueTask<RenderJob> GetJobStatusAsync(Guid jobId, CancellationToken ct = default) => SendAsync<JobRequest, RenderJob>(RenderOperation.GetJobStatus, new() { JobId = jobId }, ct);
     public ValueTask<RenderJob> CancelJobAsync(Guid jobId, CancellationToken ct = default) => SendAsync<JobRequest, RenderJob>(RenderOperation.CancelJob, new() { JobId = jobId }, ct);
-    public async ValueTask ReleaseArtifactAsync(ArtifactRequest request, CancellationToken ct = default)
-    {
-        _ = await SendAsync<ArtifactRequest, EmptyResponse>(RenderOperation.ReleaseArtifact, request, ct).ConfigureAwait(false);
-    }
+    public async ValueTask ReleaseArtifactAsync(ArtifactRequest request, CancellationToken ct = default) { _ = await SendAsync<ArtifactRequest, EmptyResponse>(RenderOperation.ReleaseArtifact, request, ct).ConfigureAwait(false); }
+    public ValueTask<HeadlessProjectSnapshot> OpenHeadlessProjectAsync(OpenHeadlessProjectRequest request, CancellationToken ct = default) => SendAsync<OpenHeadlessProjectRequest, HeadlessProjectSnapshot>(RenderOperation.OpenHeadlessProject, request, ct);
+    public ValueTask<HeadlessProjectSnapshot> GetHeadlessProjectSnapshotAsync(Guid sessionId, CancellationToken ct = default) => SendAsync<HeadlessSessionRequest, HeadlessProjectSnapshot>(RenderOperation.GetHeadlessProjectSnapshot, new() { SessionId = sessionId }, ct);
+    public ValueTask<HeadlessProjectSnapshot> ReloadHeadlessProjectAsync(HeadlessMutationPrecondition request, CancellationToken ct = default) => SendAsync<HeadlessMutationPrecondition, HeadlessProjectSnapshot>(RenderOperation.ReloadHeadlessProject, request, ct);
+    public ValueTask<HeadlessProjectSnapshot> ApplyHeadlessProjectSnapshotAsync(ApplyHeadlessProjectSnapshotRequest request, CancellationToken ct = default) => SendAsync<ApplyHeadlessProjectSnapshotRequest, HeadlessProjectSnapshot>(RenderOperation.ApplyHeadlessProjectSnapshot, request, ct);
+    public ValueTask<HeadlessJsonResponse> ListHeadlessClipsAsync(Guid sessionId, CancellationToken ct = default) => SendAsync<HeadlessSessionRequest, HeadlessJsonResponse>(RenderOperation.ListHeadlessClips, new() { SessionId = sessionId }, ct);
+    public ValueTask<HeadlessJsonResponse> GetHeadlessClipAsync(HeadlessClipRequest request, CancellationToken ct = default) => SendAsync<HeadlessClipRequest, HeadlessJsonResponse>(RenderOperation.GetHeadlessClip, request, ct);
+    public ValueTask<HeadlessJsonResponse> UpsertHeadlessClipAsync(HeadlessClipMutationRequest request, CancellationToken ct = default) => SendAsync<HeadlessClipMutationRequest, HeadlessJsonResponse>(RenderOperation.UpsertHeadlessClip, request, ct);
+    public ValueTask<HeadlessJsonResponse> MoveHeadlessClipAsync(MoveHeadlessClipRequest request, CancellationToken ct = default) => SendAsync<MoveHeadlessClipRequest, HeadlessJsonResponse>(RenderOperation.MoveHeadlessClip, request, ct);
+    public ValueTask<HeadlessJsonResponse> PatchHeadlessClipAsync(HeadlessClipMutationRequest request, CancellationToken ct = default) => SendAsync<HeadlessClipMutationRequest, HeadlessJsonResponse>(RenderOperation.PatchHeadlessClip, request, ct);
+    public ValueTask<HeadlessJsonResponse> DeleteHeadlessClipAsync(HeadlessClipMutationRequest request, CancellationToken ct = default) => SendAsync<HeadlessClipMutationRequest, HeadlessJsonResponse>(RenderOperation.DeleteHeadlessClip, request, ct);
+    public ValueTask<HeadlessJsonResponse> AddOrReplaceHeadlessEffectAsync(HeadlessClipMutationRequest request, CancellationToken ct = default) => SendAsync<HeadlessClipMutationRequest, HeadlessJsonResponse>(RenderOperation.AddOrReplaceHeadlessEffect, request, ct);
+    public ValueTask<HeadlessJsonResponse> RemoveHeadlessEffectAsync(RemoveHeadlessEffectRequest request, CancellationToken ct = default) => SendAsync<RemoveHeadlessEffectRequest, HeadlessJsonResponse>(RenderOperation.RemoveHeadlessEffect, request, ct);
+    public ValueTask<HeadlessJsonResponse> AddOrReplaceHeadlessEffectBundleAsync(HeadlessClipMutationRequest request, CancellationToken ct = default) => SendAsync<HeadlessClipMutationRequest, HeadlessJsonResponse>(RenderOperation.AddOrReplaceHeadlessEffectBundle, request, ct);
+    public ValueTask<HeadlessJsonResponse> RemoveHeadlessEffectBundleAsync(RemoveHeadlessEffectBundleRequest request, CancellationToken ct = default) => SendAsync<RemoveHeadlessEffectBundleRequest, HeadlessJsonResponse>(RenderOperation.RemoveHeadlessEffectBundle, request, ct);
+    public ValueTask<HeadlessProjectSnapshot> SaveHeadlessProjectAsync(HeadlessSaveProjectRequest request, CancellationToken ct = default) => SendAsync<HeadlessSaveProjectRequest, HeadlessProjectSnapshot>(RenderOperation.SaveHeadlessProject, request, ct);
 
     private async ValueTask<TResponse> SendAsync<TRequest, TResponse>(RenderOperation operation, TRequest request, CancellationToken cancellationToken)
     {
         var requestId = Guid.NewGuid();
-        var response = await _transport.SendAsync(new RenderRequestEnvelope
-        {
-            RequestId = requestId,
-            ClientId = ClientId,
-            Operation = operation,
-            Payload = RenderRpcSerializer.Serialize(request),
-        }, cancellationToken).ConfigureAwait(false);
-
-        if (response.RequestId != requestId)
-        {
+        var response = await _transport.SendAsync(new RenderRequestEnvelope { RequestId = requestId, ClientId = ClientId, Operation = operation, Payload = RenderRpcSerializer.Serialize(request) }, cancellationToken).ConfigureAwait(false);
+        bool unauthenticatedHttpResponse = response.RequestId == Guid.Empty && response.Error?.Code == RenderErrorCode.Unauthorized;
+        if (response.RequestId != requestId && !unauthenticatedHttpResponse)
             throw new RenderRpcException(new RenderError { Code = RenderErrorCode.BackendFailure, Message = "Render RPC response request ID mismatch." });
-        }
-
-        if (response.Error is not null)
-        {
-            throw new RenderRpcException(response.Error);
-        }
-
+        if (response.Error is not null) throw new RenderRpcException(response.Error);
         return RenderRpcSerializer.Deserialize<TResponse>(response.Payload);
     }
 
@@ -113,15 +116,8 @@ public sealed class RenderClient(IRenderTransport transport, string? clientId = 
 
 public sealed class RenderRpcException : Exception
 {
-    public RenderRpcException(RenderError error)
-        : base(string.IsNullOrWhiteSpace(error.Details) ? error.Message : $"{error.Message}{Environment.NewLine}{error.Details}")
-    {
-        Error = error;
-        Data[nameof(RenderError.Code)] = error.Code;
-        Data[nameof(RenderError.Retryable)] = error.Retryable;
-        if (!string.IsNullOrWhiteSpace(error.Details)) Data[nameof(RenderError.Details)] = error.Details;
-    }
-
+    public RenderRpcException(RenderError error) : base(string.IsNullOrWhiteSpace(error.Details) ? error.Message : $"{error.Message}{Environment.NewLine}{error.Details}")
+    { Error = error; Data[nameof(RenderError.Code)] = error.Code; Data[nameof(RenderError.Retryable)] = error.Retryable; if (!string.IsNullOrWhiteSpace(error.Details)) Data[nameof(RenderError.Details)] = error.Details; }
     public RenderError Error { get; }
 }
 
@@ -134,18 +130,7 @@ public sealed class RenderPipeException : IOException
 [DebuggerNonUserCode]
 public static class RenderRpcSerializer
 {
-    public static byte[] Serialize<T>(T value)
-    {
-        using var stream = new MemoryStream();
-        Serializer.Serialize(stream, value);
-        return stream.ToArray();
-    }
-
-    public static T Deserialize<T>(byte[] payload)
-    {
-        using var stream = new MemoryStream(payload, writable: false);
-        return Serializer.Deserialize<T>(stream);
-    }
-
+    public static byte[] Serialize<T>(T value) { using var stream = new MemoryStream(); Serializer.Serialize(stream, value); return stream.ToArray(); }
+    public static T Deserialize<T>(byte[] payload) { using var stream = new MemoryStream(payload, writable: false); return Serializer.Deserialize<T>(stream); }
     public static T Clone<T>(T value) => Deserialize<T>(Serialize(value));
 }

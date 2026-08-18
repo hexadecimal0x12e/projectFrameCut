@@ -4,8 +4,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using projectFrameCut.IntegratedAPIServer.Headless;
 using projectFrameCut.IntegratedAPIServer.MCP;
+using projectFrameCut.Render.Contracts;
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace projectFrameCut.IntegratedAPIServer;
 
@@ -22,10 +26,26 @@ public sealed class IntegratedApiServer : IAsyncDisposable
         IntegratedApiServerOptions options,
         IIntegratedApiBackend backend,
         CancellationToken cancellationToken = default)
+        => await StartCoreAsync(options, backend, cancellationToken).ConfigureAwait(false);
+
+    public async Task StartHeadlessAsync(
+        IntegratedApiServerOptions options,
+        CancellationToken cancellationToken = default)
+        => await StartCoreAsync(options, backend: null, cancellationToken).ConfigureAwait(false);
+
+    private async Task StartCoreAsync(
+        IntegratedApiServerOptions options,
+        IIntegratedApiBackend? backend,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(backend);
         ValidateListenUri(options.ListenUri);
+        bool enableRpc = !string.IsNullOrEmpty(options.RpcToken);
+        if (backend is null && !enableRpc)
+            throw new ArgumentException("Headless mode requires an RPC token.", nameof(options));
+        if (backend is null && string.IsNullOrWhiteSpace(options.ProjectRoot))
+            throw new ArgumentException("Headless mode requires a project root.", nameof(options));
+        if (enableRpc) ValidateRpcToken(options.RpcToken!);
 
         await _lifecycleLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -39,7 +59,7 @@ public sealed class IntegratedApiServer : IAsyncDisposable
                 !IsLoopbackHost(options.ListenUri.Host))
             {
                 options.WarningSink?.Invoke(
-                    "The MCP server is listening on an unencrypted LAN HTTP endpoint. Authorization decisions and project data are not protected in transit.");
+                    "The integrated API server is listening on an unencrypted LAN HTTP endpoint. Credentials and project data are not protected in transit.");
             }
 
             var webOptions = new WebApplicationOptions
@@ -52,30 +72,42 @@ public sealed class IntegratedApiServer : IAsyncDisposable
 
             var httpContextAccessor = new HttpContextAccessor();
             var authorization = new EndpointAuthorizationManager();
-            var tools = IntegratedApiToolCatalog.Create(backend, authorization, httpContextAccessor);
+            HeadlessProjectService? headlessService = enableRpc
+                ? new HeadlessProjectService(options.GlobalAssetsDatabasePath)
+                : null;
 
-            builder.Services.AddSingleton(backend);
             builder.Services.AddSingleton<IHttpContextAccessor>(httpContextAccessor);
-            builder.Services.AddSingleton(authorization);
-            builder.Services
-                .AddMcpServer(serverOptions =>
-                {
-                    serverOptions.ServerInfo = new Implementation
+            if (backend is not null && options.EnableMcp)
+            {
+                var tools = IntegratedApiToolCatalog.Create(backend, authorization, httpContextAccessor);
+                builder.Services.AddSingleton(backend);
+                builder.Services.AddSingleton(authorization);
+                builder.Services
+                    .AddMcpServer(serverOptions =>
                     {
-                        Name = "projectFrameCut.IntegratedAPIServer",
-                        Version = "1.0.0",
-                    };
-                    serverOptions.ToolCollection = [.. tools];
-                })
-                .WithHttpTransport(transportOptions =>
-                {
-                    transportOptions.Stateless = false;
-                });
+                        serverOptions.ServerInfo = new Implementation
+                        {
+                            Name = "projectFrameCut.IntegratedAPIServer",
+                            Version = "1.0.0",
+                        };
+                        serverOptions.ToolCollection = [.. tools];
+                    })
+                    .WithHttpTransport(transportOptions =>
+                    {
+                        transportOptions.Stateless = false;
+                    });
+            }
+
+            if (headlessService is not null)
+            {
+                builder.Services.AddSingleton(headlessService);
+            }
 
             var app = builder.Build();
             app.MapGet("/health", () => Results.Json(
                 new HealthResponse("ok", true),
                 IntegratedApiJsonContext.Default.HealthResponse));
+#if DEBUG
             app.MapGet("/echo", (HttpRequest request) =>
             {
                 string message = request.Query["message"].ToString();
@@ -88,10 +120,108 @@ public sealed class IntegratedApiServer : IAsyncDisposable
                     new EchoResponse(message),
                     IntegratedApiJsonContext.Default.EchoResponse);
             });
-            app.MapMcp("/mcp");
+#endif
+            if (backend is not null && options.EnableMcp)
+            {
+                app.MapMcp("/mcp");
+            }
+            if (headlessService is not null)
+            {
+                byte[] expectedTokenHash = SHA256.HashData(Encoding.UTF8.GetBytes(options.RpcToken!));
+                app.MapPost("/rpc", async (HttpRequest httpRequest, CancellationToken requestAborted) =>
+                {
+                    string authorizationHeader = httpRequest.Headers.Authorization.ToString();
+                    string suppliedToken = authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                        ? authorizationHeader["Bearer ".Length..]
+                        : string.Empty;
+                    byte[] suppliedHash = SHA256.HashData(Encoding.UTF8.GetBytes(suppliedToken));
+
+                    if (!CryptographicOperations.FixedTimeEquals(expectedTokenHash, suppliedHash))
+                    {
+                        return ProtobufResult(new RenderResponseEnvelope
+                        {
+                            Error = new RenderError
+                            {
+                                Code = RenderErrorCode.Unauthorized,
+                                Message = "A valid bearer token is required.",
+                            },
+                        }, StatusCodes.Status401Unauthorized);
+                    }
+
+                    if (!string.Equals(httpRequest.ContentType, "application/x-protobuf", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return ProtobufResult(new RenderResponseEnvelope
+                        {
+                            Error = new RenderError
+                            {
+                                Code = RenderErrorCode.InvalidRequest,
+                                Message = "RPC requests must use Content-Type application/x-protobuf.",
+                            },
+                        }, StatusCodes.Status415UnsupportedMediaType);
+                    }
+
+                    RenderRequestEnvelope rpcRequest;
+                    try
+                    {
+                        using var requestBuffer = new MemoryStream();
+                        await httpRequest.Body.CopyToAsync(requestBuffer, requestAborted).ConfigureAwait(false);
+                        if (requestBuffer.Length == 0 || requestBuffer.Length > RenderProtocol.MaxPipeFrameBytes)
+                            throw new InvalidDataException("The protobuf RPC request body has an invalid length.");
+                        rpcRequest = RenderRpcSerializer.Deserialize<RenderRequestEnvelope>(requestBuffer.ToArray());
+                    }
+                    catch (Exception ex)
+                    {
+                        return ProtobufResult(new RenderResponseEnvelope
+                        {
+                            Error = new RenderError
+                            {
+                                Code = RenderErrorCode.InvalidRequest,
+                                Message = "The request body is not a valid protobuf RPC envelope.",
+                                Details = ex.Message,
+                            },
+                        }, StatusCodes.Status400BadRequest);
+                    }
+
+                    RenderResponseEnvelope rpcResponse = await headlessService.DispatchAsync(rpcRequest, requestAborted).ConfigureAwait(false);
+                    return ProtobufResult(rpcResponse, StatusCodes.Status200OK);
+                });
+
+                app.MapGet("/artifact/{sessionId:guid}/{artifactId:guid}", async (
+                    Guid sessionId,
+                    Guid artifactId,
+                    HttpRequest httpRequest,
+                    CancellationToken requestAborted) =>
+                {
+                    string authorizationHeader = httpRequest.Headers.Authorization.ToString();
+                    string suppliedToken = authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                        ? authorizationHeader["Bearer ".Length..]
+                        : string.Empty;
+                    byte[] suppliedHash = SHA256.HashData(Encoding.UTF8.GetBytes(suppliedToken));
+                    if (!CryptographicOperations.FixedTimeEquals(expectedTokenHash, suppliedHash))
+                        return Results.Unauthorized();
+
+                    try
+                    {
+                        var artifact = await headlessService.ReadArtifactAsync(sessionId, artifactId, requestAborted).ConfigureAwait(false);
+                        return Results.File(artifact.Content, artifact.ContentType, enableRangeProcessing: true);
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        return Results.NotFound();
+                    }
+                    catch (DirectoryNotFoundException)
+                    {
+                        return Results.NotFound();
+                    }
+                });
+            }
 
             try
             {
+                if (headlessService is not null)
+                {
+                    await headlessService.InitializeAsync(options.ProjectRoot!, cancellationToken).ConfigureAwait(false);
+                }
                 await app.StartAsync(cancellationToken).ConfigureAwait(false);
             }
             catch
@@ -167,6 +297,26 @@ public sealed class IntegratedApiServer : IAsyncDisposable
             host.Contains('+', StringComparison.Ordinal))
         {
             throw new ArgumentException("Wildcard MCP listen addresses are not allowed; use a concrete host or IP address.", nameof(uri));
+        }
+    }
+
+    public static void ValidateRpcToken(string token)
+    {
+        if (string.IsNullOrEmpty(token) || token.Length < 32 || token.Any(char.IsWhiteSpace))
+            throw new ArgumentException("The RPC token must contain at least 32 non-whitespace characters.", nameof(token));
+    }
+
+    private static IResult ProtobufResult(RenderResponseEnvelope response, int statusCode)
+        => new ProtobufHttpResult(RenderRpcSerializer.Serialize(response), statusCode);
+
+    private sealed class ProtobufHttpResult(byte[] payload, int statusCode) : IResult
+    {
+        public async Task ExecuteAsync(HttpContext httpContext)
+        {
+            httpContext.Response.StatusCode = statusCode;
+            httpContext.Response.ContentType = "application/x-protobuf";
+            httpContext.Response.ContentLength = payload.Length;
+            await httpContext.Response.Body.WriteAsync(payload, httpContext.RequestAborted).ConfigureAwait(false);
         }
     }
 
