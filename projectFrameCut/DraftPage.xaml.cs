@@ -206,6 +206,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private IHistoryGraphProvider? _activeHistoryProvider;
     private RemoteProjectSession? _remoteProjectSession;
+    private bool _remoteSessionDetached;
+    // Set while navigating to the export page so OnNavigatingFrom can tell a
+    // same-project navigation apart from actually closing the project. The value
+    // is captured synchronously at the start of OnNavigatingFrom before any await.
+    private bool _navigatingToRenderPage;
 
 
     DateTime lastSyncTime = DateTime.MinValue;
@@ -7153,42 +7158,87 @@ public partial class DraftPage : ContentPage, IDraftPage
             serverUri, token, clientId, cancellationToken);
         try
         {
-            ProjectJSONStructure project = session.Project;
-            DraftStructureJSON draft = session.Draft;
-            (ConcurrentDictionary<Guid, ClipElementUI> clips, int trackCount) =
-                DraftImportAndExportHelper.ImportFromJSON(draft, project);
-            var assets = new ConcurrentDictionary<string, AssetItem>(
-                session.Assets.Where(static asset => !string.IsNullOrWhiteSpace(asset.AssetId))
-                    .ToDictionary(asset => asset.AssetId!, asset => asset));
-
-            var page = new DraftPage(
-                project,
-                clips,
-                assets,
-                trackCount,
-                session.ProjectRoot,
-                project.ProjectName ?? "Remote project",
-                isReadonly: false);
-            page._remoteProjectSession = session;
-            page.previewer.RpcClient = session.Client;
-            page.previewer.RenderSessionId = session.Snapshot.RenderSession.SessionId == Guid.Empty
-                ? session.Snapshot.SessionId
-                : session.Snapshot.RenderSession.SessionId;
-            page.previewer.RenderProjectRoot = session.ProjectRoot;
-            page.previewer.RenderProxyRoot = Path.Combine(session.ProjectRoot, "proxy");
-            page.previewer.RemoteAssets = session.Assets
-                .Where(static asset => !string.IsNullOrWhiteSpace(asset.AssetId) && !string.IsNullOrWhiteSpace(asset.Path))
-                .Select(static asset => new AssetPathEntry { AssetId = asset.AssetId!, Path = asset.Path! })
-                .ToList();
-            page.previewer.ArtifactResolver = (artifact, ct) =>
-                session.MaterializeArtifactAsync(artifact, page.previewer.ProjectRoot, ct);
-            page.ProjectName = project.ProjectName ?? "Remote project";
-            return page;
+            return CreateFromRemoteSession(session);
         }
         catch
         {
             await session.DisposeAsync().ConfigureAwait(false);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Builds an editor page over an already-open remote session. The returned
+    /// page takes ownership of the session and closes it when the page exits.
+    /// </summary>
+    private static DraftPage CreateFromRemoteSession(RemoteProjectSession session)
+    {
+        ProjectJSONStructure project = session.Project;
+        DraftStructureJSON draft = session.Draft;
+        (ConcurrentDictionary<Guid, ClipElementUI> clips, int trackCount) =
+            DraftImportAndExportHelper.ImportFromJSON(draft, project);
+        var assets = new ConcurrentDictionary<string, AssetItem>(
+            session.Assets.Where(static asset => !string.IsNullOrWhiteSpace(asset.AssetId))
+                .ToDictionary(asset => asset.AssetId!, asset => asset));
+
+        var page = new DraftPage(
+            project,
+            clips,
+            assets,
+            trackCount,
+            session.ProjectRoot,
+            project.ProjectName ?? "Remote project",
+            isReadonly: false);
+        page._remoteProjectSession = session;
+        page.previewer.RpcClient = session.Client;
+        page.previewer.RenderSessionId = session.Snapshot.RenderSession.SessionId == Guid.Empty
+            ? session.Snapshot.SessionId
+            : session.Snapshot.RenderSession.SessionId;
+        page.previewer.RenderProjectRoot = session.ProjectRoot;
+        page.previewer.RenderProxyRoot = Path.Combine(session.ProjectRoot, "proxy");
+        page.previewer.RemoteAssets = session.Assets
+            .Where(static asset => !string.IsNullOrWhiteSpace(asset.AssetId) && !string.IsNullOrWhiteSpace(asset.Path))
+            .Select(static asset => new AssetPathEntry { AssetId = asset.AssetId!, Path = asset.Path! })
+            .ToList();
+        page.previewer.ArtifactResolver = (artifact, ct) =>
+            session.MaterializeArtifactAsync(artifact, page.previewer.ProjectRoot, ct);
+        page.ProjectName = project.ProjectName ?? "Remote project";
+        return page;
+    }
+
+    /// <summary>
+    /// Discards the local unsaved edits and reloads the editor from the latest
+    /// server-side snapshot, keeping the same remote session alive. The current
+    /// page is replaced in the navigation stack by a freshly built one.
+    /// </summary>
+    private async Task SyncRemoteProjectFromServerAsync()
+    {
+        var session = _remoteProjectSession;
+        if (session is null) return;
+        SetStateBusy();
+        try
+        {
+            await session.SyncFromServerAsync();
+            var replacement = CreateFromRemoteSession(session);
+            string? title = App.Current?.Windows?[0]?.Title;
+
+            // Hand the session over to the replacement page: while leaving the
+            // navigation stack, this page must neither save nor close anything.
+            _remoteProjectSession = null;
+            _remoteSessionDetached = true;
+            ExitNoSave = true;
+
+            Navigation.InsertPageBefore(replacement, this);
+            Shell.SetTabBarIsVisible(replacement, false);
+            Shell.SetNavBarIsVisible(replacement, true);
+            await replacement.PostInit();
+            Navigation.RemovePage(this);
+            if (!string.IsNullOrEmpty(title) && App.Current?.Windows?[0] is { } window) window.Title = title;
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Sync remote project from server", this);
+            SetStateFail(Localized.DraftPage_RemoteProject_SyncFailed);
         }
     }
     [DebuggerNonUserCode()]
@@ -8965,11 +9015,29 @@ public partial class DraftPage : ContentPage, IDraftPage
                 ProjectInfo.LastOpenAppName = MauiProgram.AssemblyName;
                 ProjectInfo.ProjectName ??= ProjectName;
                 ProjectDuration = draft.Duration;
-                await _remoteProjectSession.ApplyAndSaveAsync(
-                    ProjectInfo,
-                    draft,
-                    assets,
-                    args?.ToString() ?? (noSlot ? "Auto-save" : "Save"));
+                try
+                {
+                    await _remoteProjectSession.ApplyAndSaveAsync(
+                        ProjectInfo,
+                        draft,
+                        assets,
+                        args?.ToString() ?? (noSlot ? "Auto-save" : "Save"));
+                }
+                catch (RenderRpcException ex) when (ex.Error.Code == RenderErrorCode.VersionConflict)
+                {
+                    Log("Remote project was modified by another client; local changes conflict with the server.", "warn");
+                    SetStateFail(Localized.DraftPage_RemoteProject_ModifiedOnServer);
+                    if (!noSlot)
+                    {
+                        bool sync = await DisplayAlertAsync(
+                            Localized._Info,
+                            Localized.DraftPage_RemoteProject_ModifiedOnServer,
+                            Localized.DraftPage_RemoteProject_SyncFromServer,
+                            Localized._Cancel);
+                        if (sync) await SyncRemoteProjectFromServerAsync();
+                    }
+                    return;
+                }
                 SetStateOK(Localized.DraftPage_EverythingFine);
                 return;
             }
@@ -9849,12 +9917,24 @@ public partial class DraftPage : ContentPage, IDraftPage
         await Save(true);
         var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, true, false);
         var page = new RenderPage(WorkingPath, ProjectDuration, ProjectInfo, draft);
-        await Dispatcher.DispatchAsync(async () =>
+        // The export page belongs to the same project: mark the navigation so
+        // OnNavigatingFrom does not tear down this project's render backend.
+        _navigatingToRenderPage = true;
+        try
         {
-            Shell.SetTabBarIsVisible(page, false);
-            Shell.SetNavBarIsVisible(page, true);
-            await Navigation.PushAsync(page);
-        });
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                Shell.SetTabBarIsVisible(page, false);
+                Shell.SetNavBarIsVisible(page, true);
+                await Navigation.PushAsync(page);
+            });
+        }
+        finally
+        {
+            // OnNavigatingFrom captured the flag synchronously before any await,
+            // so clearing it here cannot race the project-close decision.
+            _navigatingToRenderPage = false;
+        }
 
     }
 
@@ -10274,6 +10354,10 @@ public partial class DraftPage : ContentPage, IDraftPage
             base.OnNavigatingFrom(e);
             return;
         }
+        // Capture before any await: the flag is only meaningful at the moment the
+        // navigation begins. True when leaving for the export page (same project);
+        // false when the project is actually being closed (back to HomePage/exit).
+        bool leavingProject = !_navigatingToRenderPage;
         AlreadyDisappeared = true;
         CancelPendingClipPlacement();
         foreach (var (_, cts) in _perClipThumbCts)
@@ -10358,7 +10442,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 await _remoteProjectSession.CloseAsync();
             }
-            else
+            else if (!_remoteSessionDetached)
             {
                 try
                 {
@@ -10368,6 +10452,14 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     Log(ex, "Close render RPC project session", this);
                 }
+            }
+            // The project is closing: tear down the dedicated render backend so
+            // its render process cannot leak memory across projects. Navigation to
+            // the export page (leavingProject == false) keeps it alive.
+            if (leavingProject)
+            {
+                try { await RenderRpcBootstrap.DisposeAsync(); }
+                catch (Exception ex) { Log(ex, "Dispose render RPC backend", this); }
             }
             App.Current?.Windows?[0]?.Title = Localized.AppBrand;
             TouchProjectFolder();

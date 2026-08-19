@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RPCProtocol;
+using projectFrameCut.Setting.SettingManager;
 
 namespace projectFrameCut.Services;
 
@@ -44,8 +45,23 @@ internal sealed class RemoteProjectSession : IAsyncDisposable
         {
             // The headless server owns the project lifecycle. An empty session ID
             // asks it for the project loaded during RPC server startup.
-            HeadlessProjectSnapshot snapshot = await client.GetHeadlessProjectSnapshotAsync(
-                Guid.Empty, cancellationToken).ConfigureAwait(false);
+            HeadlessProjectSnapshot snapshot;
+            try
+            {
+                snapshot = await client.GetHeadlessProjectSnapshotAsync(
+                    Guid.Empty, cancellationToken).ConfigureAwait(false);
+            }
+            catch (RenderRpcException ex) when (ex.Error.Code == RenderErrorCode.SessionNotFound)
+            {
+                // The server may have started without a preloaded project (for
+                // example when the GUI launches rpc_server with --http but no
+                // --projectRoot). The caller needs to open one explicitly first.
+                string? message = null;
+                try { message = SettingsManager.SettingLocalizedResources.Remote_RpcServer_NoDefaultProject; } catch { }
+                throw new InvalidOperationException(
+                    message ?? "The remote RPC server has no project loaded. Open a project on the remote device first (or start it with --projectRoot), then try again.",
+                    ex);
+            }
             return new RemoteProjectSession(client, transport, snapshot);
         }
         catch
@@ -114,6 +130,22 @@ internal sealed class RemoteProjectSession : IAsyncDisposable
             Precondition = CreatePrecondition(),
             ChangeReason = changeReason ?? string.Empty,
         }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Pulls the latest project snapshot from the server and replaces the cached
+    /// one. Returns true when the server-side project was modified by someone
+    /// else since the last snapshot this session saw.
+    /// </summary>
+    public async Task<bool> SyncFromServerAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfClosed();
+        HeadlessProjectSnapshot latest = await _client.GetHeadlessProjectSnapshotAsync(
+            Snapshot.SessionId, cancellationToken).ConfigureAwait(false);
+        bool changed = latest.Revision != Snapshot.Revision ||
+            !string.Equals(latest.SnapshotHash, Snapshot.SnapshotHash, StringComparison.Ordinal);
+        Snapshot = latest;
+        return changed;
     }
 
     public async Task CloseAsync(CancellationToken cancellationToken = default)

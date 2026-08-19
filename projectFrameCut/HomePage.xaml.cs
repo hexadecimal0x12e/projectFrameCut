@@ -1186,7 +1186,7 @@ public partial class HomePage : ContentPage
                     try
                     {
                         App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {project.ProjectName}";
-                        AppShell.instance.HideNavView();
+                        AppShell.instance?.HideNavView();
                         Shell.SetTabBarIsVisible(page, false);
                         Shell.SetNavBarIsVisible(page, true);
                         lastPage = page;

@@ -1,17 +1,19 @@
+using FFmpeg.AutoGen;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.IntegratedAPIServer;
-using projectFrameCut.Render.RenderAPIBase.Plugins;
-using projectFrameCut.Render.Rendering;
+using projectFrameCut.IntegratedAPIServer.Headless;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Shared;
 using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace projectFrameCut.WinUI
+namespace projectFrameCut
 {
     /// <summary>
     /// Entry point for commands exposed by pjfc-cli.
@@ -21,10 +23,21 @@ namespace projectFrameCut.WinUI
     {
         private const int SuccessExitCode = 0;
         private const int InvalidCommandExitCode = 2;
-        private static string AppDataPath => App.IsPackaged() ? Windows.Storage.ApplicationData.Current.LocalFolder.Path : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "projectFrameCut");
+        private static string AppDataPath =>
+#if WINDOWS
+            WinUI.App.IsPackaged() ? Windows.Storage.ApplicationData.Current.LocalFolder.Path : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "hexadecimal0x12e", "hexadecimal0x12e.projectFrameCut");
+#elif LINUX
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".projectFrameCut", "AppData");
+#elif MACOS
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "Library", "Application Support", "projectFrameCut");
+#else
+            MauiProgram.BasicDataPath;
+#endif
 
-        public static int Main(string[] args)
+        public static int CLIMain(string[] args)
         {
+            FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false; //avoid ready check exploding FFmpeg.AutoGen library before we set the root path
+
             args ??= Array.Empty<string>();
 
             if (args.Length == 0 || IsHelpOption(args[0]))
@@ -36,6 +49,30 @@ namespace projectFrameCut.WinUI
 
                 WriteGeneralHelp();
                 return SuccessExitCode;
+            }
+
+            if (args.FirstOrDefault(c => c.StartsWith("--ffmpegRoot=")) is string ffPath)
+            {
+                var ffmpegRoot = ffPath.Substring("--ffmpegRoot=".Length);
+                if (!string.IsNullOrWhiteSpace(ffmpegRoot) && Directory.Exists(ffmpegRoot))
+                {
+                    FFmpeg.AutoGen.ffmpeg.RootPath = ffmpegRoot;
+                    Log($"FFmpeg library root path: {ffmpeg.RootPath}");
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+
+                    try
+                    {
+                        FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize(true, true);
+                        FFmpegHelper.SetupFFmpegLogging();
+                        Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"Failed to initialize FFmpeg from '{ffmpegRoot}': {ex.Message}");
+                        return 1;
+                    }
+                }
             }
 
             switch (args[0].ToLowerInvariant())
@@ -84,55 +121,6 @@ namespace projectFrameCut.WinUI
             value.Equals("--help", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("-h", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("/?", StringComparison.OrdinalIgnoreCase);
-
-        private static void WriteGeneralHelp()
-        {
-            Console.WriteLine(
-@"projectFrameCut command-line interface
-
-Usage:
-  pjfc-cli <command> [arguments] [options]
-  pjfc-cli help [command]
-
-Commands:
-  gui        Launch the projectFrameCut graphical interface.
-  headless   Start the headless backend for remote access and automation.
-  help        Show general help or detailed help for a command.
-  reset      Reset the application to its default state by clearing settings.
-  about      Show version and build information.
-
-Global options:
-  --quiet            Suppress the pjfc-cli version banner and copyright notice.
-
-  --consoleLog       Write application logs to the console.
-
-  --logDiagnostic    Include diagnostic-level log messages.
-
-Help options:
-  -h, --help, /?    Show this help text.
-");
-        }
-
-        private static void WriteBackendHelp()
-        {
-            Console.WriteLine(
-@"Start the projectFrameCut headless backend
-
-Usage:
-  pjfc-cli backend --listen=<http[s]://host:port> --token=<token> --projectRoot=<path> [--dataRoot=<path>]
-
-Options:
-  --listen      HTTP or HTTPS listen address.
-  --token       Bearer token used by RPC clients. It must contain at least 32
-                non-whitespace characters.
-  --projectRoot Project directory to load before the RPC server starts.
-  --dataRoot    projectFrameCut's User Data directory. If not specified, default to the path defined in
-                <App Data>\OverrideUserDataPath.txt's path or %USERPROFILE%\Documents\projectFrameCut by default.
-
-The backend loads the project before accepting RPC requests and keeps running until Ctrl+C or process termination.
-Use ASP.NET's Environment variables to configure the HTTP server option (except application URL), such as ASPNETCORE_Kestrel__Certificates__Default__Path, and ASPNETCORE_Kestrel__Certificates__Default__Password.
-");
-        }
 
         private static int RunBackend(string[] args)
         {
@@ -208,20 +196,6 @@ Use ASP.NET's Environment variables to configure the HTTP server option (except 
             return SuccessExitCode;
         }
 
-        private static void WriteRpcServerHelp()
-        {
-            Console.WriteLine(
-@"Start the projectFrameCut Render RPC server
-This is internal command used by the GUI to start the Render RPC server.
-It is not intended to be run directly by users.
-
-Usage:
-  pjfc-cli rpc_server --pipe=<pipe-name> --token=<token> --dataRoot=<path> [--parentPid=<pid>] [--quiet]
-
-The command is normally started by the graphical application.
-");
-        }
-
         private static int RunRpcServer(string[] args)
         {
             try
@@ -242,13 +216,45 @@ The command is normally started by the graphical application.
                     return InvalidCommandExitCode;
                 }
 
+                Uri? httpListenUri = null;
+                string? httpToken = null;
+                // --projectRoot is accepted regardless of --http. Only the optional
+                // HTTP RPC server consumes it: it preloads the project so clients do
+                // not hit a "server has no project" error. Without it the HTTP server
+                // starts with no preloaded project and clients open projects on demand.
+                string? httpProjectRoot = GetOption(args, "projectRoot", required: false);
+                var httpListen = GetOption(args, "http", required: false);
+                if (!string.IsNullOrWhiteSpace(httpListen))
+                {
+                    if (!Uri.TryCreate(httpListen, UriKind.Absolute, out httpListenUri))
+                    {
+                        Console.Error.WriteLine("rpc_server --http requires an absolute <http[s]://host:port> listen address.");
+                        WriteRpcServerHelp();
+                        return InvalidCommandExitCode;
+                    }
+
+                    httpToken = GetOption(args, "httpToken", required: false);
+                    if (string.IsNullOrWhiteSpace(httpToken)) httpToken = token;
+                    try
+                    {
+                        IntegratedApiServer.ValidateRpcToken(httpToken);
+                    }
+                    catch (ArgumentException)
+                    {
+                        Console.Error.WriteLine("rpc_server --http requires an RPC token with at least 32 non-whitespace characters; supply a longer --token or a separate --httpToken=<token>.");
+                        return InvalidCommandExitCode;
+                    }
+                }
+
                 using var cancellation = new CancellationTokenSource();
+#if !iDevices
                 Console.CancelKeyPress += (_, e) =>
                 {
                     e.Cancel = true;
                     cancellation.Cancel();
                 };
-                return RunRpcServerAsync(pipe, token, parentPid, dataRoot, cancellation.Token).GetAwaiter().GetResult();
+#endif
+                return RunRpcServerAsync(pipe, token, parentPid, dataRoot, httpListenUri, httpToken, httpProjectRoot, cancellation.Token).GetAwaiter().GetResult();
             }
             catch (OperationCanceledException)
             {
@@ -261,12 +267,72 @@ The command is normally started by the graphical application.
             }
         }
 
-        private static async Task<int> RunRpcServerAsync(string pipe, string token, string? parentPid, string dataRoot, CancellationToken cancellationToken)
+        private static async Task<int> RunRpcServerAsync(
+            string pipe,
+            string token,
+            string? parentPid,
+            string dataRoot,
+            Uri? httpListenUri,
+            string? httpToken,
+            string? httpProjectRoot,
+            CancellationToken cancellationToken)
         {
             InitializeRenderRuntime(dataRoot);
+            // The named-pipe server and the optional HTTP RPC endpoint share this
+            // render backend, so sessions opened through either channel are
+            // visible to clients of the other one.
             await using var service = new RenderBackendService();
+            await using var httpHost = httpListenUri is null
+                ? null
+                : await StartHttpRpcServerAsync(service, httpListenUri, httpToken!, httpProjectRoot, dataRoot, cancellationToken).ConfigureAwait(false);
             await new NamedPipeRenderServer(service).RunAsync(pipe, token, parentPid, cancellationToken).ConfigureAwait(false);
             return SuccessExitCode;
+        }
+
+        private static async Task<IAsyncDisposable> StartHttpRpcServerAsync(
+            RenderBackendService renderService,
+            Uri listenUri,
+            string token,
+            string? projectRoot,
+            string dataRoot,
+            CancellationToken cancellationToken)
+        {
+            var headlessService = new HeadlessProjectService(
+                renderService,
+                Path.Combine(dataRoot, "My Assets", ".database", "database.json"));
+            var server = new IntegratedApiServer();
+            try
+            {
+                await server.StartHeadlessAsync(new IntegratedApiServerOptions
+                {
+                    ListenUri = listenUri,
+                    RpcToken = token,
+                    ProjectRoot = projectRoot,
+                    EnableMcp = false,
+                    WarningSink = warning => Console.Error.WriteLine($"Warning: {warning}"),
+                }, headlessService, cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                await server.DisposeAsync().ConfigureAwait(false);
+                await headlessService.DisposeAsync().ConfigureAwait(false);
+                throw;
+            }
+            Console.WriteLine($"projectFrameCut HTTP RPC server listening at {listenUri.AbsoluteUri.TrimEnd('/')}/rpc");
+            return new HttpRpcServerHost(server, headlessService);
+        }
+
+        /// <summary>
+        /// Owns the HTTP RPC server and its headless project service. The shared
+        /// render backend is deliberately left alive; the caller disposes it.
+        /// </summary>
+        private sealed class HttpRpcServerHost(IntegratedApiServer server, HeadlessProjectService headlessService) : IAsyncDisposable
+        {
+            public async ValueTask DisposeAsync()
+            {
+                await server.DisposeAsync().ConfigureAwait(false);
+                await headlessService.DisposeAsync().ConfigureAwait(false);
+            }
         }
 
         private static void InitializeRenderRuntime(string dataRoot)
@@ -280,13 +346,14 @@ The command is normally started by the graphical application.
                     new projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin(),
                 ]);
             }
-
-            FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
-            FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
-            FFmpeg.AutoGen.ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
-            if (!FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
-                throw new InvalidOperationException($"FFmpeg initialization failed at '{FFmpeg.AutoGen.ffmpeg.RootPath}'.");
-            FFmpegHelper.SetupFFmpegLogging(FFmpeg.AutoGen.ffmpeg.AV_LOG_WARNING);
+            if (!ffmpeg.Ready)
+            {
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+                FFmpeg.AutoGen.ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
+                if (!FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
+                    throw new InvalidOperationException($"FFmpeg initialization failed at '{FFmpeg.AutoGen.ffmpeg.RootPath}'.");
+                FFmpegHelper.SetupFFmpegLogging(FFmpeg.AutoGen.ffmpeg.AV_LOG_WARNING);
+            }
         }
 
         private static string? GetOption(string[] args, string name, bool required = true)
@@ -430,20 +497,107 @@ Notes:
             catch { renderHash = "unknown"; }
             Console.WriteLine(
 $"""
-{ProgramConfig}@{ProgramCommit} build on {programDate}
+{ProgramConfig}@{ProgramCommit} build {programDate}
 https://github.com/hexadecimal0x12e/projectFrameCut
 
 .NET CoreCLR version: {Environment.Version}
 .NET MAUI version:    {typeof(View).Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "10.0.?"}
 IPluginBase API:      v{IPluginBase.CurrentPluginAPIVersion} 
-IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
-{renderType.GetName().Name}: v{renderType.GetName().Version} {renderHash}
+IApplicationPluginBase API:   v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+{renderType.GetName().Name}:  v{renderType.GetName().Version} {renderHash}
 {drawingType.GetName().Name}: v{drawingType.GetName().Version} ({drawingCommit})
-Package: {WinUI.App.GetPackageFullName() ?? "N/A (Portable)"} 
 
 This project is licensed under the Apache License, Version 2.0 for personal/educational and non-commercial use ONLY.
 See the LICENSE and license.md file in the project root for more information.
 """);
+        }
+
+        private static void WriteGeneralHelp()
+        {
+            Console.WriteLine(
+@"projectFrameCut command-line interface
+
+Usage:
+  pjfc-cli <command> [arguments] [options]
+  pjfc-cli help [command]
+
+Commands:
+  gui        Launch the projectFrameCut graphical interface.
+  headless   Start the headless backend for remote access and automation.
+  help        Show general help or detailed help for a command.
+  reset      Reset the application to its default state by clearing settings.
+  about      Show version and build information.
+
+Global options:
+  --quiet            Suppress the pjfc-cli version banner and copyright notice.
+
+  --consoleLog       Write application logs to the console.
+
+  --logDiagnostic    Include diagnostic-level log messages.
+  
+  --ffmpegRoot       Sets the root path for FFmpeg binaries. 
+                     If not specified, defaults to the internal FFmpeg path,
+                     or the user configured path/plugin in the GUI settings.
+
+Help options:
+  -h, --help, /?    Show this help text.
+");
+        }
+
+        private static void WriteBackendHelp()
+        {
+            Console.WriteLine(
+@"Start the projectFrameCut headless backend
+
+Usage:
+  pjfc-cli backend --listen=<http[s]://host:port> --token=<token> --projectRoot=<path> [--dataRoot=<path>]
+
+Options:
+  --listen      HTTP or HTTPS listen address.
+  --token       Bearer token used by RPC clients. It must contain at least 32
+                non-whitespace characters.
+  --projectRoot Project directory to load before the RPC server starts.
+  --dataRoot    projectFrameCut's User Data directory. If not specified, default to the path defined in
+                <App Data>\OverrideUserDataPath.txt's path or %USERPROFILE%\Documents\projectFrameCut by default.
+
+The backend loads the project before accepting RPC requests and keeps running until Ctrl+C or process termination.
+Use ASP.NET's Environment variables to configure the HTTP server option (except application URL), such as ASPNETCORE_Kestrel__Certificates__Default__Path, and ASPNETCORE_Kestrel__Certificates__Default__Password.
+");
+        }
+
+        private static void WriteRpcServerHelp()
+        {
+            Console.WriteLine(
+@"Start the projectFrameCut Render RPC server
+This is internal command used by the GUI to start the Render RPC server.
+It is not intended to be run directly by users.
+
+Usage:
+  pjfc-cli rpc_server --pipe=<pipe-name> --token=<token> --dataRoot=<path> [--parentPid=<pid>] [--quiet]
+
+Optional integrated HTTP RPC server:
+  --http=<http[s]://host:port>
+                       Additionally start the headless HTTP protobuf RPC server
+                       provided by projectFrameCut.IntegratedAPIServer alongside
+                       the named-pipe server, for remote control and
+                       cross-module communication. Both channels share the same
+                       render backend, so render sessions are visible across
+                       them. The HTTP endpoint serves /rpc and /artifact.
+                       If the HTTP server cannot be started, the command fails.
+
+  --projectRoot=<path> Project directory the server is started for. It is
+                       normally supplied by the GUI when it starts a backend for
+                       a project. With --http, the HTTP RPC server preloads this
+                       project so clients do not hit a server-has-no-project
+                       error; without it the HTTP server starts without a
+                       preloaded project and clients open projects on demand.
+
+  --httpToken=<token>  Bearer token for the HTTP RPC endpoint. If omitted, the
+                       pipe --token value is reused, which must then contain at
+                       least 32 non-whitespace characters.
+
+The command is normally started by the graphical application.
+");
         }
     }
 }

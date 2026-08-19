@@ -704,7 +704,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                     okButton.Clicked += async (_, _) => { ApplyColor(picker.SelectedColor); await pickerPopup.CloseAsync(); };
                     cancelButton.Clicked += async (_, _) => await pickerPopup.CloseAsync();
 
-                    if (Shell.Current.CurrentPage is DraftPage d)
+                    if (App.GetCurrentPage() is DraftPage d)
                         await d.ShowAPopup(picker, null, null, "dialog");
                 }
             }

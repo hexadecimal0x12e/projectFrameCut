@@ -68,7 +68,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 try
                 {
-                    if (Shell.Current?.CurrentPage is not DraftPage draftPage)
+                    if (App.GetCurrentPage() is not DraftPage draftPage)
                         return;
 
                     var currentList = GetCropList();

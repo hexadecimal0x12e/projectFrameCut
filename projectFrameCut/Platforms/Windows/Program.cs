@@ -68,6 +68,7 @@ namespace projectFrameCut.WinUI
                     {
                         Thread.Sleep(100);
                     }
+                    Debugger.Break();
                 }
                 string processName = Process.GetCurrentProcess().ProcessName.ToLowerInvariant();
                 if (processName != "projectframecut" && processName != "projectframecut.exe")
@@ -90,7 +91,7 @@ namespace projectFrameCut.WinUI
                     }
                     else
                     {
-                        return CLIProgram.Main(args);
+                        return CLIProgram.CLIMain(args);
                     }
 
                 }

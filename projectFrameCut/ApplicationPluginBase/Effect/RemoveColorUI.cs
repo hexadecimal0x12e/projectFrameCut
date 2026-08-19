@@ -69,7 +69,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                     swatch.GestureRecognizers.Add(new TapGestureRecognizer());
                     ((TapGestureRecognizer)swatch.GestureRecognizers[0]).Tapped += async (s, args) =>
                     {
-                        if (AppShell.instance.CurrentPage is not DraftPage draftPage)
+                        if (App.GetCurrentPage() is not DraftPage draftPage)
                             return;
 
                         var picker = new ColorPicker { SelectedColor = currentColor };

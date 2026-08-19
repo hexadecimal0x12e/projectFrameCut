@@ -104,7 +104,7 @@ public partial class AssetsLibraryPage : ContentPage
         catch (Exception ex)
         {
             Log(ex, "Add a asset", this);
-            AppShell.instance?.CurrentPage?.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            App.GetCurrentPage()?.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }
 

@@ -6,6 +6,8 @@ using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Controls;
 using ResourceDictionary = Microsoft.Maui.Controls.ResourceDictionary;
 using Application = Microsoft.Maui.Controls.Application;
+using Page = Microsoft.Maui.Controls.Page;
+
 
 
 
@@ -86,10 +88,41 @@ namespace projectFrameCut
             {
                 HomePage.HasAlreadyLaunchedFromFile = false;
                 Preferences.Set("LaunchedPJFCUri", uri.ToString());
-                await Windows[0].Page!.Navigation.PopToRootAsync();
+                if (GetCurrentPage()?.Navigation is { } navigation)
+                    await navigation.PopToRootAsync();
 
             });
 
+        }
+
+        /// <summary>
+        /// Returns the page currently presented by the active root container.
+        /// </summary>
+        public static Page? GetCurrentPage()
+        {
+            Page? page = Current?.Windows.FirstOrDefault()?.Page;
+
+            if (page?.Navigation.ModalStack.LastOrDefault() is Page modalPage)
+                page = modalPage;
+
+            while (page is not null)
+            {
+                Page? nextPage = page switch
+                {
+                    Shell shell => shell.CurrentPage,
+                    TabbedPage tabbedPage => tabbedPage.CurrentPage,
+                    NavigationPage navigationPage => navigationPage.CurrentPage,
+                    FlyoutPage flyoutPage => flyoutPage.Detail,
+                    _ => null
+                };
+
+                if (nextPage is null || ReferenceEquals(nextPage, page))
+                    return page;
+
+                page = nextPage;
+            }
+
+            return null;
         }
 
 #if WINDOWS
@@ -222,15 +255,16 @@ namespace projectFrameCut
                     return mauiWindow;
                 }
 
-#else
-#if IOS
+#elif IOS
                 return new Microsoft.Maui.Controls.Window(new iOSAppShell());
 #elif MACCATALYST
                 return new Microsoft.Maui.Controls.Window(new MacAppShell());
 #elif ANDROID
                 return new Microsoft.Maui.Controls.Window(new AndroidAppShell());
+#elif LINUX
+                return new Microsoft.Maui.Controls.Window(new LinuxAppTabbedPage());
 #else //general fallback
-                var shell = new Shell(false);
+                var shell = new Shell();
                 var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
 
                 shell.Items.Add(new ShellContent { Content = new HomePage(), Title = Localized.AppShell_ProjectsTab, Icon = ImageHelper.LoadFromAsset("icon_project"), Route = "home" });
@@ -239,7 +273,6 @@ namespace projectFrameCut
                 shell.Items.Add(new ShellContent { Content = new TemplateViewPage(), Title = Localized.AppShell_TemplateTab, Icon = ImageHelper.LoadFromAsset("icon_template"), Route = "template" });
                 shell.Items.Add(new ShellContent { Content = new MainSettingsPage(), Title = Localized._Settings, Icon = ImageHelper.LoadFromAsset("icon_setting"), Route = "options" });
                 return mauiWindow;
-#endif
 #endif
             }
             catch (Exception ex)

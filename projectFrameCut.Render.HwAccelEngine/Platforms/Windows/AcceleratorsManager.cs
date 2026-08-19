@@ -57,7 +57,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Windows
         /// </summary>
         public static void InitializeAccelerators()
         {
-#if WINDOWS
+#if WINDOWS || LINUX
             var dataPath = HwAccelEnginePlugin.dataRootPath is not null
                 ? Path.Combine(HwAccelEnginePlugin.dataRootPath, "accels.json")
                 : null;
@@ -139,7 +139,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Windows
         /// <param name="enableMultiAccel">Whether to use multiple accelerators during rendering.</param>
         public static void ApplyConfiguration(string mainDeviceName, string[] renderingDeviceNames, bool enableMultiAccel)
         {
-#if WINDOWS
+#if WINDOWS || LINUX
             if (HwAccelEnginePlugin.dataRootPath is null) return;
 
             var dataPath = Path.Combine(HwAccelEnginePlugin.dataRootPath, "accels.json");

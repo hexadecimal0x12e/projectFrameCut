@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net10.0-android</TargetFrameworks>
+		<TargetFrameworks>net10.0-android;net10.0_linux</TargetFrameworks>
 		<TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
 		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
 
@@ -31,13 +31,26 @@
 		<PackageReference Include="Silk.NET.Shaderc" Version="2.23.0" />
 		<PackageReference Include="Silk.NET.Vulkan" Version="2.23.0" />
 	</ItemGroup>
-	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows' or '$(TargetFramework)' == 'net10.0_linux'">
 		<PackageReference Include="ILGPU" Version="1.5.3" />
 		<PackageReference Include="ILGPU.Algorithms" Version="1.5.3" />
 	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Platforms\MacCatalyst\" />
-	</ItemGroup>
+
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
+		<TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
+		<TargetFrameworkVersion>v10.0</TargetFrameworkVersion>
+		<TargetFrameworkMoniker>.NETCoreApp,Version=v10.0</TargetFrameworkMoniker>
+		<DefineConstants>$(DefineConstants);LINUX</DefineConstants>
+	</PropertyGroup>
+
+	<Target Name="RestorePlatformCompileItems" BeforeTargets="CoreCompile">
+		<ItemGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
+			<Compile Include="Platforms\Windows\**\*.cs" />
+		</ItemGroup>
+		<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+			<Compile Include="Platforms\iOS\**\*.cs" />
+		</ItemGroup>
+	</Target>
 	<!-- <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
 		<Compile Include="Platforms\iOS\**\*.*" Link="Platforms\MacCatalyst\%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup> -->

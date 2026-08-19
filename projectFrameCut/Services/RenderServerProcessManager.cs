@@ -1,16 +1,22 @@
 using System.Diagnostics;
 using System.Reflection;
+using FFmpeg.AutoGen;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RPCProtocol;
+using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut.Services;
 
 internal sealed class RenderServerProcessManager : IAsyncDisposable
 {
+    private const int DefaultHttpRpcPort = 39485;
+
     private readonly string _clientId;
     private readonly string _pipeName = $"projectFrameCut-render-{Guid.NewGuid():N}";
     private readonly string _token = Convert.ToHexString(Guid.NewGuid().ToByteArray());
+    private string? _projectRoot;
     private Process? _process;
     private IRenderTransport? _transport;
     private IRenderClient? _client;
@@ -23,21 +29,33 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
 
     public IRenderClient Client => _client ?? throw new InvalidOperationException("Render RPC server has not been started.");
 
-    public void Start()
+    /// <summary>
+    /// The project directory this backend was started for, or null when started
+    /// without one. Used to keep each project bound to its own backend process.
+    /// </summary>
+    public string? ProjectRoot => _projectRoot;
+
+    /// <param name="projectRoot">
+    /// Project directory to hand to the server process. The optional HTTP RPC
+    /// server preloads it so clients do not hit a "server has no project" error.
+    /// </param>
+    public void Start(string? projectRoot = null)
     {
         if (_client is not null) return;
+        _projectRoot = string.IsNullOrWhiteSpace(projectRoot) ? null : Path.GetFullPath(projectRoot);
 
-        if (!OperatingSystem.IsWindows())
+        if (!OperatingSystem.IsWindows() || SettingsManager.IsBoolSettingTrue("render_ForceDirectRenderTransport"))
         {
             _directHost = new RenderServiceHost(_clientId);
             _client = _directHost.Client;
             return;
         }
+        var enableHttp = SettingsManager.IsBoolSettingTrue("render_RpcServerEnableHttp");
 #if WINDOWS
         Exception? ex1 = null, ex2 = null;
         try
         {
-            StartProcess(Path.Combine(AppContext.BaseDirectory, $"pjfc-cli.exe"));
+            StartProcess(Path.Combine(AppContext.BaseDirectory, $"pjfc-cli.exe"), enableHttp);
             return;
         }
         catch (Exception ex)
@@ -46,7 +64,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         }
         try
         {
-            StartProcess($"projectFrameCutCLI_{AppInfo.PackageName}_{Assembly.GetExecutingAssembly().GetName().Version}.exe");
+            StartProcess($"projectFrameCutCompatible_{AppInfo.PackageName}_{Assembly.GetExecutingAssembly().GetName().Version}.exe", enableHttp);
             return;
         }
         catch (Exception ex)
@@ -55,11 +73,13 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         }
 
         throw new InvalidOperationException("Unable to start RPC server. Please ensure that the longer App alias is enabled in the Settings->Apps->Advanced->App execution alias.", new AggregateException(ex1, ex2));
-#elif iDevices
-        StartProcess(Path.Combine(Foundation.NSBundle.MainBundle.BundlePath, "Contents", "MacOS", "projectFrameCut_cli"));
+#elif MACOS
+        StartProcess(Path.Combine(Foundation.NSBundle.MainBundle.BundlePath, "Contents", "MacOS", "projectFrameCut_cli"), enableHttp);
+#elif LINUX
+        StartProcess(Path.Combine(AppContext.BaseDirectory, "projectFrameCut"), enableHttp);
 #endif
 
-        void StartProcess(string execPath)
+        void StartProcess(string execPath, bool withHttp)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -74,7 +94,30 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             startInfo.ArgumentList.Add($"--token={_token}");
             startInfo.ArgumentList.Add($"--parentPid={Environment.ProcessId}");
             startInfo.ArgumentList.Add($"--dataRoot={GlobalPluginHelper.PluginsDataRootPath}");
+            if (_projectRoot is not null)
+            {
+                startInfo.ArgumentList.Add($"--projectRoot={_projectRoot}");
+            }
+            startInfo.ArgumentList.Add($"--ffmpegRoot={ffmpeg.RootPath}");
             startInfo.ArgumentList.Add("--quiet");
+            
+            if (withHttp)
+            {
+                var portSetting = SettingsManager.GetSetting("render_RpcServerHttpPort", "");
+                var port = int.TryParse(portSetting, out var parsedPort) && parsedPort > 0 && parsedPort < 65536
+                    ? parsedPort
+                    : DefaultHttpRpcPort;
+                var httpToken = Convert.ToHexString(Guid.NewGuid().ToByteArray());
+                startInfo.ArgumentList.Add($"--http=http://127.0.0.1:{port}");
+                startInfo.ArgumentList.Add($"--httpToken={httpToken}");
+                Log($"Starting RPC server with HTTP endpoint on port {port} (token: {httpToken})");
+            }
+
+            startInfo.ArgumentList.Add("--consoleLog");
+            if (MyLoggerExtensions.LoggingDiagnosticInfo)
+            {
+                startInfo.ArgumentList.Add("--logDiagnostic");
+            }
 
             try
             {
@@ -83,12 +126,12 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 _process.ErrorDataReceived += (_, e) =>
                 {
                     if (!string.IsNullOrWhiteSpace(e.Data))
-                        Debug.WriteLine($"[RenderRPC] {e.Data}");
+                        Log(e.Data, "RPCWorker Stderr");
                 };
                 _process.OutputDataReceived += (_, e) =>
                 {
                     if (!string.IsNullOrWhiteSpace(e.Data))
-                        Debug.WriteLine($"[RenderRPC:stdout] {e.Data}");
+                        Log(e.Data, "RPCWorker Stdout");
                 };
                 _process.BeginErrorReadLine();
                 _process.BeginOutputReadLine();
@@ -99,7 +142,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 _client = client;
                 WaitForServer(client, _process);
             }
-            catch
+            catch (Exception ex)
             {
                 try { _client?.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
                 try { _process?.Kill(entireProcessTree: true); } catch { }
@@ -107,6 +150,14 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 _process = null;
                 _client = null;
                 _transport = null;
+                if (withHttp)
+                {
+                    // A failing optional HTTP endpoint (for example the port is
+                    // already taken) must not take down the named-pipe backend.
+                    Debug.WriteLine($"[RenderRPC] Starting the RPC server with the HTTP endpoint failed ({ex.Message}); retrying without --http.");
+                    StartProcess(execPath, false);
+                    return;
+                }
                 throw;
             }
         }
@@ -164,5 +215,6 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             _process.Dispose();
             _process = null;
         }
+        _projectRoot = null;
     }
 }

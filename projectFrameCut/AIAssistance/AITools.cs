@@ -419,7 +419,7 @@ namespace projectFrameCut.AIAssistance
             {
                 // 创建临时 CommandFilter 并设置项目路径
                 var filter = new CommandFilter();
-                if (AppShell.instance.CurrentPage is DraftPage dp)
+                if (App.GetCurrentPage() is DraftPage dp)
                     filter.WorkingPath = dp.WorkingPath;
 
                 // 预分析：检查混淆
@@ -436,7 +436,7 @@ namespace projectFrameCut.AIAssistance
 
                 // 提取命令参数并注入 AsyncLocal
                 var cmdParams = filter.AnalyzeCommands(Command);
-                var currentPageDraft = AppShell.instance.CurrentPage as DraftPage;
+                var currentPageDraft = App.GetCurrentPage() as DraftPage;
                 ScriptCore.PendingCommandParameters.Value = cmdParams;
 
                 try

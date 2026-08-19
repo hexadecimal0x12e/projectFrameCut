@@ -242,8 +242,9 @@ namespace projectFrameCut.LivePreview
             };
             // Start the Render backend only after a concrete project has been loaded.
             // This keeps application startup and the home page independent from the
-            // Windows CLI RPC process.
-            if (RpcClient is null) RenderRpcBootstrap.Initialize();
+            // Windows CLI RPC process. The project root is passed so each open
+            // project gets a dedicated backend bound to it.
+            if (RpcClient is null) RenderRpcBootstrap.Initialize(request.ProjectRoot);
             var session = await (RpcClient ?? RenderRpcBootstrap.Client).OpenProjectAsync(request).ConfigureAwait(false);
             HashIndex = session.HashIndex ?? new();
             FrameHashLookup = HashIndex.FrameHashes

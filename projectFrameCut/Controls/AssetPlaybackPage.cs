@@ -93,9 +93,9 @@ public partial class AssetPlaybackPage : ContentPage
             catch (Exception ex)
             {
                 Log(ex, "open file in system viewer", this);
-                if (AppShell.instance?.CurrentPage is not null)
+                if (App.GetCurrentPage() is { } currentPage)
                 {
-                    await AppShell.instance?.CurrentPage?.DisplayAlertAsync("Error", $"Failed to open file: {ex.Message}", "OK");
+                    await currentPage.DisplayAlertAsync("Error", $"Failed to open file: {ex.Message}", "OK");
                 }
             }
         };

@@ -415,6 +415,17 @@ public partial class RenderPage : ContentPage
     }
 
 
+    protected override void OnNavigatingFrom(NavigatingFromEventArgs e)
+    {
+        base.OnNavigatingFrom(e);
+        // The export page always returns to HomePage, which closes the project.
+        // Tear down this project's render backend so the render process cannot
+        // leak memory after the project is gone.
+        try { _cts.Cancel(); } catch { }
+        try { RenderRpcBootstrap.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+        catch (Exception ex) { Log(ex, "Dispose render backend", this); }
+    }
+
     protected override bool OnBackButtonPressed()
     {
         StopScreenSaverTimer();
@@ -651,6 +662,9 @@ public partial class RenderPage : ContentPage
     private async Task RenderProjectViaRpcAsync(RenderPageViewModel vm, string resultPath, string encoder, string pixelFormat)
     {
         SetSubProg("PrepareDraft");
+        // The export page owns the project's render backend for this run; make
+        // sure it is bound to this project root before opening the session.
+        RenderRpcBootstrap.Initialize(_workingPath);
         var openRequest = new OpenProjectRequest
         {
             SessionId = _renderRpcSessionId,
@@ -1626,6 +1640,7 @@ public partial class RenderPage : ContentPage
     {
         running = true;
         Shell.SetNavBarIsVisible(this, false);
+        NavigationPage.SetHasNavigationBar(this, false);
         RenderOptionPanel.IsVisible = false;
         PreviewLayout.IsVisible = true;
         ProgressBox.IsVisible = true;
@@ -1678,6 +1693,7 @@ public partial class RenderPage : ContentPage
 
         StopScreenSaverTimer();
         Shell.SetNavBarIsVisible(this, true);
+        NavigationPage.SetHasNavigationBar(this, true);
         DeviceDisplay.Current.KeepScreenOn = false;
         await PerformPostRenderAction();
     }

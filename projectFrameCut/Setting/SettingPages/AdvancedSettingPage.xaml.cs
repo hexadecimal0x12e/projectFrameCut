@@ -141,6 +141,9 @@ public partial class AdvancedSettingPage : ContentPage
         .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
         .AddSwitch("edit_IgnoreEffectsTargetInEffectTab", SettingLocalizedResources.Edit_IgnoreEffectsTargetInEffectTab, SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab"), null)
         .AddSwitch("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer", SettingLocalizedResources.Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer, SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer"), null)
+        .AddSwitch("render_ForceDirectRenderTransport", SettingLocalizedResources.Render_ForceDirectRenderTransport, SettingsManager.IsBoolSettingTrue("render_ForceDirectRenderTransport"), null)
+        .AddSwitch("render_RpcServerEnableHttp", SettingLocalizedResources.Render_RpcServerEnableHttp, SettingsManager.IsBoolSettingTrue("render_RpcServerEnableHttp"), null)
+        .AddEntry("render_RpcServerHttpPort", SettingLocalizedResources.Render_RpcServerHttpPort, GetSetting("render_RpcServerHttpPort", ""), "39485")
         .AddSeparator()
 
         .AddText("IPicture", fontSize: 20)

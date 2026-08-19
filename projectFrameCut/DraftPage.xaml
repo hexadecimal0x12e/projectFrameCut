@@ -307,7 +307,12 @@
 
 
 
-            <Grid Margin="0,8,0,8" x:Name="MainControlGrid" ZIndex="1">
+            <Grid Margin="0,8,0,8"
+                  x:Name="MainControlGrid"
+                  ZIndex="1"
+                  HeightRequest="44"
+                  MaximumHeightRequest="44"
+                  VerticalOptions="Start">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>

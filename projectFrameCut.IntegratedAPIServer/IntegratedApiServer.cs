@@ -26,26 +26,45 @@ public sealed class IntegratedApiServer : IAsyncDisposable
         IntegratedApiServerOptions options,
         IIntegratedApiBackend backend,
         CancellationToken cancellationToken = default)
-        => await StartCoreAsync(options, backend, cancellationToken).ConfigureAwait(false);
+        => await StartCoreAsync(options, backend, headlessServiceOverride: null, cancellationToken).ConfigureAwait(false);
 
     public async Task StartHeadlessAsync(
         IntegratedApiServerOptions options,
         CancellationToken cancellationToken = default)
-        => await StartCoreAsync(options, backend: null, cancellationToken).ConfigureAwait(false);
+        => await StartCoreAsync(options, backend: null, headlessServiceOverride: null, cancellationToken).ConfigureAwait(false);
+
+    /// <summary>
+    /// Starts the headless RPC endpoint over a caller-supplied
+    /// <see cref="HeadlessProjectService"/>. The service stays owned by the caller
+    /// and is not disposed when this server stops. <see cref="IntegratedApiServerOptions.ProjectRoot"/>
+    /// may be omitted when the service is already initialized, or to start without a
+    /// preloaded project (clients then open projects on demand over RPC).
+    /// </summary>
+    public async Task StartHeadlessAsync(
+        IntegratedApiServerOptions options,
+        HeadlessProjectService headlessService,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(headlessService);
+        await StartCoreAsync(options, backend: null, headlessService, cancellationToken).ConfigureAwait(false);
+    }
 
     private async Task StartCoreAsync(
         IntegratedApiServerOptions options,
         IIntegratedApiBackend? backend,
+        HeadlessProjectService? headlessServiceOverride,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(options);
         ValidateListenUri(options.ListenUri);
-        bool enableRpc = !string.IsNullOrEmpty(options.RpcToken);
-        if (backend is null && !enableRpc)
+        bool enableRpc = !string.IsNullOrEmpty(options.RpcToken) || headlessServiceOverride is not null;
+        if (backend is null && string.IsNullOrEmpty(options.RpcToken))
             throw new ArgumentException("Headless mode requires an RPC token.", nameof(options));
-        if (backend is null && string.IsNullOrWhiteSpace(options.ProjectRoot))
+        if (backend is null &&
+            headlessServiceOverride is null &&
+            string.IsNullOrWhiteSpace(options.ProjectRoot))
             throw new ArgumentException("Headless mode requires a project root.", nameof(options));
-        if (enableRpc) ValidateRpcToken(options.RpcToken!);
+        if (!string.IsNullOrEmpty(options.RpcToken)) ValidateRpcToken(options.RpcToken);
 
         await _lifecycleLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -72,9 +91,9 @@ public sealed class IntegratedApiServer : IAsyncDisposable
 
             var httpContextAccessor = new HttpContextAccessor();
             var authorization = new EndpointAuthorizationManager();
-            HeadlessProjectService? headlessService = enableRpc
+            HeadlessProjectService? headlessService = headlessServiceOverride ?? (enableRpc
                 ? new HeadlessProjectService(options.GlobalAssetsDatabasePath)
-                : null;
+                : null);
 
             builder.Services.AddSingleton<IHttpContextAccessor>(httpContextAccessor);
             if (backend is not null && options.EnableMcp)
@@ -218,9 +237,9 @@ public sealed class IntegratedApiServer : IAsyncDisposable
 
             try
             {
-                if (headlessService is not null)
+                if (headlessService is not null && !headlessService.IsInitialized && !string.IsNullOrWhiteSpace(options.ProjectRoot))
                 {
-                    await headlessService.InitializeAsync(options.ProjectRoot!, cancellationToken).ConfigureAwait(false);
+                    await headlessService.InitializeAsync(options.ProjectRoot, cancellationToken).ConfigureAwait(false);
                 }
                 await app.StartAsync(cancellationToken).ConfigureAwait(false);
             }

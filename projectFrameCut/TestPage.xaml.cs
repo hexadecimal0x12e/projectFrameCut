@@ -1746,11 +1746,11 @@ public partial class TestPage : ContentPage
     {
         if (isNavPaneVisible)
         {
-            AppShell.instance.HideNavView();
+            AppShell.instance?.HideNavView();
         }
         else
         {
-            AppShell.instance.ShowNavView();
+            AppShell.instance?.ShowNavView();
         }
         isNavPaneVisible = !isNavPaneVisible;
     }

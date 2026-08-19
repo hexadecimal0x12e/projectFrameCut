@@ -327,9 +327,13 @@ public partial class FontPicker : ContentView
             if (item.PreviewImageSource != null || string.IsNullOrWhiteSpace(item.FontName))
                 continue;
 
-            var cachePath = Path.Combine(FileSystem.CacheDirectory, "FontCache", $"{item.FontName.Replace(':', '_')}.png");
-            if (File.Exists(cachePath))
-                updates.Add((item, cachePath));
+            try
+            {
+                var cachePath = Path.Combine(FileSystem.CacheDirectory, "FontCache", $"{item.FontName.Replace(':', '_')}.png");
+                if (File.Exists(cachePath))
+                    updates.Add((item, cachePath));
+            }
+            catch { }
         }
 
         if (updates.Count == 0)

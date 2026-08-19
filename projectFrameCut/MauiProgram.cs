@@ -1,42 +1,40 @@
 #pragma warning disable CS8974 //log a exception will cause this
-using System;
-using System.Diagnostics;
-using FFmpeg.AutoGen;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using Exception = System.Exception;
-using System.Text;
-using System.Text.Json;
-using System.Globalization;
 using CommunityToolkit.Maui;
-using projectFrameCut.Render.RenderAPIBase.Plugins;
-using projectFrameCut.Services;
-using Thread = System.Threading.Thread;
-using projectFrameCut.Render.Plugin;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
-using projectFrameCut.Shared;
-using projectFrameCut.Asset;
-using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.ApplicationPluginBase;
-using LocalizedResources;
-using projectFrameCut.ApplicationAPIBase.Plugins;
-using projectFrameCut.Render.Effect;
-using Microsoft.Maui.LifecycleEvents;
 using CommunityToolkit.Maui.Core;
+using FFmpeg.AutoGen;
+using FFmpeg.AutoGen.Native;
+using LocalizedResources;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Maui.LifecycleEvents;
 using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
-using projectFrameCut.Render.TemplateSystem;
-using projectFrameCut.Template;
-using projectFrameCut.Render.EncodeAndDecode;
-using FFmpeg.AutoGen.Native;
+using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
+using projectFrameCut.ApplicationPluginBase;
+using projectFrameCut.Asset;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Render.ClipsAndTracks.Text;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
-
-
+using projectFrameCut.Render.TemplateSystem;
+using projectFrameCut.Services;
+using projectFrameCut.Shared;
+using projectFrameCut.Template;
+using System;
+using System.Diagnostics;
+using System.Globalization;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.Json;
+using Exception = System.Exception;
+using Thread = System.Threading.Thread;
 
 #if ANDROID
 using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
@@ -48,9 +46,21 @@ using Java.Lang;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
-
 #endif
 
+#if LINUX
+using projectFrameCut.Platforms.Linux;
+using Microsoft.Maui.Platforms.Linux.Gtk4.Essentials.Hosting;
+using Microsoft.Maui.Platforms.Linux.Gtk4.Hosting;
+#endif
+
+#if IOS
+using projectFrameCut.Platforms.iOS;
+#endif
+
+#if MACOS
+using projectFrameCut.Platforms.MacOS;
+#endif
 
 namespace projectFrameCut
 {
@@ -106,9 +116,12 @@ namespace projectFrameCut
             string loggingDir = "";
             try
             {
+#if !LINUX
                 loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging");
                 DataPath = FileSystem.AppDataDirectory;
                 BasicDataPath = FileSystem.AppDataDirectory;
+#endif
+
 #if ANDROID
                 try
                 {
@@ -182,7 +195,28 @@ namespace projectFrameCut
 
 #elif MACCATALYST
                 DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
+#elif LINUX
+                var homePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                Directory.CreateDirectory(Path.Combine(homePath, ".projectFrameCut"));
+                BasicDataPath = Path.Combine(homePath, ".projectFrameCut", "AppData");
+                DataPath = Path.Combine(homePath, ".projectFrameCut");
+                loggingDir = Path.Combine(homePath, ".projectFrameCut", "Logs");
+                Directory.CreateDirectory(BasicDataPath);
+
+                if (Program.UserDataPathOverride != null || Program.BasicDataPathOverride != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(Program.BasicDataPathOverride))
+                    {
+                        BasicDataPath = Program.BasicDataPathOverride;
+                    }
+                    if (!string.IsNullOrWhiteSpace(Program.UserDataPathOverride))
+                    {
+                        DataPath = Program.UserDataPathOverride;
+                    }
+                    loggingDir = System.IO.Path.Combine(BasicDataPath, "logging");
+                }
 #endif
+
 #if !iDevices
                 Directory.CreateDirectory(loggingDir);
 #endif
@@ -217,6 +251,7 @@ namespace projectFrameCut
                 AssemblyName = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut";
             }
             catch { }
+#if MAUISDK
             Log($"""
                 projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} 
                                   {ProgramConfig}@{ProgramCommit},
@@ -225,6 +260,16 @@ namespace projectFrameCut
                                   clr version {Environment.Version},
                                   cmdline: {Environment.CommandLine}
                 """);
+#else
+            Log($"""
+                projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} 
+                                  {ProgramConfig}@{ProgramCommit},
+                                  in cpu arch {RuntimeInformation.ProcessArchitecture},
+                                  os version {Environment.OSVersion},
+                                  clr version {Environment.Version},
+                                  cmdline: {Environment.CommandLine}
+                """);
+#endif
             Log("Copyright (c) hexadecimal0x12e 2025-2026, and thanks to other open-source code's authors.");
             Log($"BasicDataPath:{BasicDataPath}, DataPath:{DataPath}");
             try
@@ -375,31 +420,46 @@ namespace projectFrameCut
             {
                 var builder = MauiApp.CreateBuilder();
 #pragma warning disable CA1416  //let VS shut up here
-                builder.UseMauiApp<App>()
+                builder
+#if MAUISDK
+                       .UseMauiApp<App>()
+#elif LINUX
+                       .UseMauiAppLinuxGtk4<App>()
+                       .AddLinuxGtk4Essentials()
+#endif
                        .UseMauiCommunityToolkit(options =>
                        {
                            options.SetShouldEnableSnackbarOnWindows(false);
-                       })
-#if ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER || IOS15_0_OR_GREATER
-                       .UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
+                       });
+#if MAUISDK && (ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER || IOS15_0_OR_GREATER)
+                       builder.UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
                        {
                            options.SetDefaultAndroidViewType(AndroidViewType.TextureView);
-                       })
+                       });
 #endif
-                       .ConfigureEssentials(essentials =>
+#if MAUISDK
+                       builder.ConfigureEssentials(essentials =>
                        {
                            essentials.UseVersionTracking();
                        });
+#endif
+
 #pragma warning restore CA1416
-                var lastPath = SettingsManager.GetSetting("General_LastOpenedProject","");
+                var lastPath = SettingsManager.GetSetting("General_LastOpenedProject", "");
                 if (!string.IsNullOrWhiteSpace(lastPath) && Directory.Exists(lastPath))
                 {
-                    var dirName = Path.GetFileName(Path.GetDirectoryName(lastPath).TrimEnd(Path.DirectorySeparatorChar));
-                    builder = builder.ConfigureEssentials(essentials =>
-                              {
-                                essentials.AddAppAction("--continue", Localized.HomePage_Continue(dirName?.Split('\\')?.Last() ?? "Project"), icon: "icon_project")
-                                          .OnAppAction(HomePage.HandleAppActionLaunch);
-                              });
+#if MAUISDK
+                    try
+                    {
+                        var dirName = Path.GetFileName(Path.GetDirectoryName(lastPath).TrimEnd(Path.DirectorySeparatorChar));
+                        builder = builder.ConfigureEssentials(essentials =>
+                        {
+                            essentials.AddAppAction("--continue", Localized.HomePage_Continue(dirName?.Split('\\')?.Last() ?? "Project"), icon: "icon_project")
+                                      .OnAppAction(HomePage.HandleAppActionLaunch);
+                        });
+                    }
+                    catch { }
+#endif
                 }
                 try
                 {
@@ -576,6 +636,15 @@ namespace projectFrameCut
 #endif
                         }
                     });
+
+#if LINUX
+                    builder.ConfigureMauiHandlers(handlers =>
+                    {
+                        handlers.AddHandler<
+                            Border,
+                            projectFrameCut.Platforms.Linux.LinuxBorderHandler>();
+                    });
+#endif
 
                 }
                 catch
@@ -779,17 +848,17 @@ namespace projectFrameCut
                 var internalBase = new InternalApplicationPluginBase();
                 internalBase.locateId = SettingsManager.GetSetting("locate", "default");
                 (internalBase as IApplicationPluginBase).OnApplicationPluginLoaded();
-                List<IPluginBase> plugins = new()
-                    {
+                List<IPluginBase> plugins =
+                    [
                         internalBase,
                         new Render.HwAccelEngine.HwAccelEnginePlugin()
                         {
 #if ANDROID
                             DefaultComputeBackend = SettingsManager.GetSetting("render_AndroidHWAccelType", "vulkan")
 #endif
-                        }
-                    };
-                plugins.AddRange(IntegratedPlugins);
+                        },
+                        .. IntegratedPlugins,
+                    ];
                 try
                 {
                     if (!AdminServices.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine") && !File.Exists(Path.Combine(BasicDataPath, "noplugin.flag")))
@@ -839,7 +908,16 @@ namespace projectFrameCut
 
                 try
                 {
-                    if (SettingsManager.IsBoolSettingTrue("PluginProvidedFFmpeg_Enable"))
+                    if (Environment.GetCommandLineArgs().FirstOrDefault(c => c.StartsWith("--ffmpegRoot=")) is string ffPath)
+                    {
+                        var ffmpegRoot = ffPath.Substring("--ffmpegRoot=".Length);
+                        if (!string.IsNullOrWhiteSpace(ffmpegRoot) && Directory.Exists(ffmpegRoot))
+                        {
+                            ffmpeg.RootPath = ffmpegRoot;
+                            Log($"Using FFmpeg libraries from command line argument, path:{ffmpegRoot}");
+                        }
+                    }
+                    else if (SettingsManager.IsBoolSettingTrue("PluginProvidedFFmpeg_Enable"))
                     {
 #if WINDOWS
                         string? nativeLibDirOverride = null;
@@ -903,6 +981,8 @@ namespace projectFrameCut
                 try
                 {
                     FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize(OperatingSystem.IsWindows() || OperatingSystem.IsLinux(), true);
+                    FFmpegHelper.SetupFFmpegLogging();
+                    Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}");
                 }
                 catch (Exception ex)
                 {
@@ -1082,11 +1162,9 @@ namespace projectFrameCut
             Log("FATAL: unhandled exception happened.", "fatal");
             Log(ex, "Global crash");
             throw ex; //let Fishnet handle it
-#elif IOS
-            projectFrameCut.Platforms.iOS.Program.Crash(ex);
-#elif MACCATALYST
-            projectFrameCut.Platforms.MacCatalyst.Program.Crash(ex);
-#endif  
+#elif IOS || MACOS || LINUX
+            Program.Crash(ex);
+#endif
         }
 
         public static ITemplateStructure? LoadPjfcTemplateSync(string packagePath)

@@ -14,17 +14,39 @@ namespace projectFrameCut.IntegratedAPIServer.Headless;
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Project JSON types and their plugin extension data are preserved by the application render runtime.")]
 public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
 {
-    private readonly RenderBackendService _renderService = new();
+    private readonly RenderBackendService _renderService;
+    private readonly bool _ownsRenderService;
     private readonly ConcurrentDictionary<Guid, HeadlessSession> _sessions = new();
     private readonly string? _globalAssetsDatabasePath;
     private Guid _defaultSessionId;
 
     public HeadlessProjectService(string? globalAssetsDatabasePath = null)
+        : this(new RenderBackendService(), globalAssetsDatabasePath, ownsRenderService: true)
     {
+    }
+
+    /// <summary>
+    /// Creates a headless project service over an externally owned render backend.
+    /// The supplied <paramref name="renderService"/> is shared with its owner (for
+    /// example a named-pipe render server), so sessions opened through either
+    /// channel are visible to both; it is NOT disposed together with this service.
+    /// </summary>
+    public HeadlessProjectService(RenderBackendService renderService, string? globalAssetsDatabasePath = null)
+        : this(renderService ?? throw new ArgumentNullException(nameof(renderService)), globalAssetsDatabasePath, ownsRenderService: false)
+    {
+    }
+
+    private HeadlessProjectService(RenderBackendService renderService, string? globalAssetsDatabasePath, bool ownsRenderService)
+    {
+        _renderService = renderService;
+        _ownsRenderService = ownsRenderService;
         _globalAssetsDatabasePath = string.IsNullOrWhiteSpace(globalAssetsDatabasePath)
             ? null
             : Path.GetFullPath(globalAssetsDatabasePath);
     }
+
+    /// <summary>Whether a startup project has already been loaded into this service.</summary>
+    public bool IsInitialized => _defaultSessionId != Guid.Empty;
 
     public async ValueTask InitializeAsync(string projectRoot, CancellationToken cancellationToken = default)
     {
@@ -596,7 +618,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
         foreach (var session in _sessions.Values) session.Dispose();
         _sessions.Clear();
         _defaultSessionId = Guid.Empty;
-        await _renderService.DisposeAsync().ConfigureAwait(false);
+        if (_ownsRenderService) await _renderService.DisposeAsync().ConfigureAwait(false);
     }
 
     private sealed class HeadlessSession(Guid id, TimelineProjectWorkspace workspace) : IDisposable
