@@ -1,17 +1,49 @@
 using FFmpeg.AutoGen;
+using projectFrameCut.Asset;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.DraftStuff;
 using projectFrameCut.IntegratedAPIServer;
 using projectFrameCut.IntegratedAPIServer.Headless;
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.RPCProtocol;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Runtime;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using static projectFrameCut.Shared.Logger;
+using IPicture = projectFrameCut.Drawing.Base.IPicture;
+using projectFrameCut.Render.HwAccelEngine;
+
+
+#if WINDOWS
+using projectFrameCut.Render.WindowsRender;
+using ILGPU;
+
+#elif ANDROID
+
+#elif iDevices
+
+#elif LINUX
+using ILGPU;
+
+#endif
+
 
 namespace projectFrameCut
 {
@@ -21,6 +53,7 @@ namespace projectFrameCut
     /// </summary>
     public static class CLIProgram
     {
+        #region init
         private const int SuccessExitCode = 0;
         private const int InvalidCommandExitCode = 2;
         private static string AppDataPath =>
@@ -50,6 +83,35 @@ namespace projectFrameCut
                 WriteGeneralHelp();
                 return SuccessExitCode;
             }
+
+#if ANDROID
+            try
+            {
+                MyLoggerExtensions.OnLog += [DebuggerNonUserCode()] (msg, level) =>
+                {
+                    switch (level.ToLower())
+                    {
+                        case "info":
+                            Android.Util.Log.Info("projectFrameCut", msg);
+                            break;
+                        case "warning":
+                        case "warn":
+                            Android.Util.Log.Warn("projectFrameCut", msg);
+                            break;
+                        case "error":
+                            Android.Util.Log.Error("projectFrameCut", msg);
+                            break;
+                        case "critical":
+                            Android.Util.Log.Wtf("projectFrameCut", msg);
+                            break;
+                        default:
+                            Android.Util.Log.Info($"projectFrameCut/{level}", msg);
+                            break;
+                    }
+                };
+            }
+            catch { }
+#endif
 
             if (args.FirstOrDefault(c => c.StartsWith("--ffmpegRoot=")) is string ffPath)
             {
@@ -81,6 +143,8 @@ namespace projectFrameCut
                     return RunBackend(args.Skip(1).ToArray());
                 case "rpc_server":
                     return RunRpcServer(args.Skip(1).ToArray());
+                case "render":
+                    return RunRender(args.Skip(1).ToArray());
                 case "about":
                     WriteAbout();
                     return 0;
@@ -93,9 +157,17 @@ namespace projectFrameCut
 
         private static int WriteCommandHelp(string command)
         {
+#if !ANDROID && !iDevices
             if (command.Equals("rpc_server", StringComparison.OrdinalIgnoreCase))
             {
                 WriteRpcServerHelp();
+                return SuccessExitCode;
+            }
+#endif
+
+            if (command.Equals("render", StringComparison.OrdinalIgnoreCase))
+            {
+                WriteRenderHelp();
                 return SuccessExitCode;
             }
 
@@ -121,6 +193,9 @@ namespace projectFrameCut
             value.Equals("--help", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("-h", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("/?", StringComparison.OrdinalIgnoreCase);
+        #endregion
+
+        #region backend
 
         private static int RunBackend(string[] args)
         {
@@ -180,20 +255,27 @@ namespace projectFrameCut
         {
             InitializeRenderRuntime(dataRoot);
             await using var server = new IntegratedApiServer();
-            await server.StartHeadlessAsync(new IntegratedApiServerOptions
-            {
-                ListenUri = listenUri,
-                RpcToken = token,
-                ProjectRoot = projectRoot,
-                GlobalAssetsDatabasePath = Path.Combine(dataRoot, "My Assets", ".database", "database.json"),
-                EnableMcp = false,
-                WarningSink = warning => Console.Error.WriteLine($"Warning: {warning}"),
-            }, cancellationToken).ConfigureAwait(false);
-
             Console.WriteLine($"projectFrameCut backend listening at {listenUri.AbsoluteUri.TrimEnd('/')}/rpc");
             Console.WriteLine("Press Ctrl+C to stop.");
-            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
-            return SuccessExitCode;
+            try
+            {
+                await server.StartHeadlessAsync(new IntegratedApiServerOptions
+                {
+                    ListenUri = listenUri,
+                    RpcToken = token,
+                    ProjectRoot = projectRoot,
+                    GlobalAssetsDatabasePath = Path.Combine(dataRoot, "My Assets", ".database", "database.json"),
+                    EnableMcp = false,
+                    WarningSink = warning => Console.Error.WriteLine($"Warning: {warning}"),
+                }, cancellationToken).ConfigureAwait(false);
+
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+                return SuccessExitCode;
+            }
+            finally
+            {
+                await server.StopAsync().ConfigureAwait(false);
+            }
         }
 
         private static int RunRpcServer(string[] args)
@@ -281,7 +363,9 @@ namespace projectFrameCut
             // The named-pipe server and the optional HTTP RPC endpoint share this
             // render backend, so sessions opened through either channel are
             // visible to clients of the other one.
-            await using var service = new RenderBackendService();
+            await using var service = new RenderBackendService(
+                stateRoot: dataRoot,
+                completionSink: RenderCompletionNotifier.Notify);
             await using var httpHost = httpListenUri is null
                 ? null
                 : await StartHttpRpcServerAsync(service, httpListenUri, httpToken!, httpProjectRoot, dataRoot, cancellationToken).ConfigureAwait(false);
@@ -335,7 +419,431 @@ namespace projectFrameCut
             }
         }
 
-        private static void InitializeRenderRuntime(string dataRoot)
+        #endregion
+
+        #region render
+
+        private static int RunRender(string[] args)
+        {
+            try
+            {
+                if (args.Length == 0 || args.Any(IsHelpOption))
+                {
+                    WriteRenderHelp();
+                    return SuccessExitCode;
+                }
+
+                var switches = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var arg in args)
+                {
+                    var pair = arg.Split('=', 2);
+                    if (pair.Length == 2) switches[pair[0].TrimStart('-', '/')] = pair[1];
+                }
+
+                var dataRoot = switches.TryGetValue("assetDbFile", out var db)
+                    ? Path.GetFullPath(Path.Combine(Path.GetDirectoryName(db) ?? Environment.CurrentDirectory, "..", ".."))
+                    : AppDataPath;
+                if (TryGetRenderRpcOptions(switches, out var rpcOptions))
+                    return RunRpcRenderAsync(switches, dataRoot, rpcOptions).GetAwaiter().GetResult();
+
+                InitializeCliRenderRuntime(dataRoot, switches.GetValueOrDefault("FFmpegLibraryPath", string.Empty));
+                return RunRenderPipelineAsync(switches, cancellationToken: default).GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException) { return 255; }
+            catch (Exception ex)
+            {
+                Log(ex, "CLI render failed");
+                return 1;
+            }
+        }
+
+        private static void InitializeCliRenderRuntime(string dataRoot, string ffmpegRoot = "")
+        {
+            InitializeRenderRuntime(dataRoot, ffmpegRoot);
+#if WINDOWS || LINUX
+            AcceleratorsManager.IsRendering = true;
+            if (!AcceleratorsManager.Accelerators.Any())
+                throw new InvalidOperationException("No valid rendering accelerator is available.");
+#endif
+        }
+
+        private static async Task<int> RunRenderPipelineAsync(
+            ConcurrentDictionary<string, string> switches,
+            CancellationToken cancellationToken,
+            Action<double, TimeSpan>? progress = null)
+        {
+            if (!switches.TryGetValue("project", out var projectRoot) || !Directory.Exists(projectRoot))
+                throw new DirectoryNotFoundException("-project must point to a project directory.");
+            if (!switches.TryGetValue("output", out var outputPath) || string.IsNullOrWhiteSpace(outputPath))
+                throw new ArgumentException("-output is required.");
+            if (!switches.TryGetValue("output_options", out var outputSpec))
+                throw new ArgumentException("-output_options is required.");
+            if (!switches.TryGetValue("temp_path", out var tempPath))
+                tempPath = Path.GetTempPath();
+
+            var output = outputSpec.Split(',', StringSplitOptions.TrimEntries);
+            if (output.Length != 5 || !int.TryParse(output[0], out var width) || !int.TryParse(output[1], out var height) || !int.TryParse(output[2], out var fps))
+                throw new ArgumentException("-output_options must be width,height,fps,pixel format,encoder.");
+            if (!Enum.TryParse(output[3], true, out AVPixelFormat pixelFormat) || pixelFormat == AVPixelFormat.AV_PIX_FMT_NONE)
+                throw new ArgumentException($"Unknown pixel format '{output[3]}'.");
+
+            outputPath = outputPath.Replace("{CurrentTime}", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+            var bpp = FFmpegHelper.GetAVPixelFormatBitsPerPixel(pixelFormat) > 8
+                ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
+            var jsonOptions = new JsonSerializerOptions { NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
+            var projectFile = File.Exists(Path.Combine(projectRoot, "project.pjfc")) ? "project.pjfc" : "project.json";
+            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(projectRoot, projectFile)), jsonOptions) ?? new();
+            var timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(projectRoot, "timeline.json")), jsonOptions) ?? new();
+
+            var assets = new ConcurrentDictionary<string, AssetItem>();
+            if (switches.TryGetValue("assetDbFile", out var assetDb) && File.Exists(assetDb))
+                assets = JsonSerializer.Deserialize<ConcurrentDictionary<string, AssetItem>>(File.ReadAllText(assetDb), jsonOptions) ?? assets;
+            if (File.Exists(Path.Combine(projectRoot, "assets.json")))
+            {
+                var localAssets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(projectRoot, "assets.json")), jsonOptions) ?? [];
+                foreach (var asset in localAssets.Where(a => !string.IsNullOrWhiteSpace(a.AssetId))) assets[asset.AssetId!] = asset;
+            }
+            AssetDatabase.Assets = assets;
+            DecoderContextPJFCProject.GlobalAssetGetter = new(() => assets);
+            Environment.CurrentDirectory = projectRoot;
+
+            var target = switches.GetValueOrDefault("target", "all").ToLowerInvariant();
+            var gcOption = int.TryParse(switches.GetValueOrDefault("GCOptions", "0"), out var gc) ? Math.Clamp(gc, 0, 2) : 0;
+            if (gcOption == 2) GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            var serial = bool.TryParse(switches.GetValueOrDefault("oneByOneRender", "false"), out var one) && one;
+            var renderByLayers = bool.TryParse(switches.GetValueOrDefault("renderByLayer", "false"), out var layers) && layers;
+            var prepareInWorkers = bool.TryParse(switches.GetValueOrDefault("prepareInWorker", "false"), out var prepare) && prepare;
+            var affinity = bool.TryParse(switches.GetValueOrDefault("enableThreadAffinity", "true"), out var threadAffinity) && threadAffinity;
+            var maxThreads = int.TryParse(switches.GetValueOrDefault("maxParallelThreads", Environment.ProcessorCount.ToString()), out var mt) ? Math.Max(1, mt) : Environment.ProcessorCount;
+            var duration = Math.Max(timeline.Duration, timeline.AudioDuration);
+            using var consoleCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            Console.CancelKeyPress += (_, e) => { e.Cancel = true; consoleCancellation.Cancel(); };
+
+            async Task RenderVideo(string path)
+            {
+                var clips = DraftImportAndExportHelper.JSONToIClips(timeline, false, bpp).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
+                if (clips.Length == 0) throw new InvalidOperationException("No video clips in the project.");
+                foreach (var clip in clips) clip.ReInit(bpp);
+                Directory.CreateDirectory(Path.GetDirectoryName(path) ?? Environment.CurrentDirectory);
+                var builder = new VideoBuilder(path, width, height, fps, output[4], pixelFormat.ToString())
+                {
+                    EnablePreview = true,
+                    Duration = duration,
+                    BlockWrite = serial,
+                    DoGCAfterEachWrite = gcOption > 0,
+                    DisposeFrameAfterEachWrite = true
+                };
+                var renderer = new Renderer
+                {
+                    builder = builder,
+                    Clips = clips,
+                    TargetWidth = width,
+                    TargetHeight = height,
+                    Duration = duration,
+                    Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
+                    GCOption = gcOption,
+                    MaxThreads = maxThreads,
+                    OneByOneRender = serial,
+                    RenderByLayers = renderByLayers,
+                    PrepareInWorkerThreads = prepareInWorkers,
+                    EnableThreadAffinity = affinity,
+                    MinSchedulePreparedFrames = 1
+                };
+                renderer.OnProgressChanged += (value, eta) =>
+                {
+                    progress?.Invoke(target == "all" ? value * 0.9 : value, eta);
+                    //Console.Write($"Rendering {value:P1}, ETA {eta:hh\\:mm\\:ss}, FPS {renderer.CurrentFps:N2}       \r");
+                };
+                builder.Build()?.Start();
+                renderer.PrepareRender(consoleCancellation.Token);
+                await renderer.GoRender(consoleCancellation.Token).ConfigureAwait(false);
+                if (serial) builder.Writer?.Finish();
+                else builder.Finish(i => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), duration, (_, _) => { });
+                foreach (var clip in clips) clip.Dispose();
+                renderer.builder = null;
+                Console.WriteLine();
+            }
+
+            void RenderAudio(string path)
+            {
+                var clips = DraftImportAndExportHelper.JSONToIClips(timeline, false, IPicture.PicturePixelMode.BytePicture).Where(c => c.ClipType is ClipMode.AudioClip or ClipMode.VideoClip).ToArray();
+                var tracks = DraftImportAndExportHelper.JSONToISoundTracks(timeline).ToArray();
+                if (clips.Length == 0 && tracks.Length == 0) return;
+                foreach (var clip in clips) clip.ReInit(IPicture.PicturePixelMode.BytePicture);
+                foreach (var track in tracks) track.ReInit();
+                using var writer = new AudioWriter(path, 96000, 2, "pcm_s16le");
+                new AudioComposer<float> { Clips = clips, SoundTracks = tracks, Writer = writer }.Compose(fps, 96000, 2, 4096, consoleCancellation.Token);
+                writer.Finish();
+                foreach (var clip in clips) clip.Dispose();
+                foreach (var track in tracks) track.Dispose();
+            }
+
+            switch (target)
+            {
+                case "video": await RenderVideo(outputPath); break;
+                case "audio": RenderAudio(outputPath); break;
+                case "all":
+                    var video = Path.Combine(tempPath, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}{Path.GetExtension(outputPath)}");
+                    var audio = Path.Combine(tempPath, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+                    await RenderVideo(video);
+                    progress?.Invoke(0.92, TimeSpan.Zero);
+                    RenderAudio(audio);
+                    progress?.Invoke(0.97, TimeSpan.Zero);
+                    if (File.Exists(audio))
+                        VideoAudioMuxer.MuxFromFiles(video, audio, outputPath, true);
+                    else
+                        File.Move(video, outputPath, overwrite: true);
+                    File.Delete(video);
+                    File.Delete(audio);
+                    break;
+                default: throw new ArgumentException($"Unknown target '{target}'.");
+            }
+            Environment.SetEnvironmentVariable("projectFrameCut_LastOutput", outputPath, EnvironmentVariableTarget.Process);
+            Environment.SetEnvironmentVariable("projectFrameCut_RenderFinished", "1", EnvironmentVariableTarget.Process);
+            return 0;
+        }
+
+        private static bool TryGetRenderRpcOptions(
+            ConcurrentDictionary<string, string> switches,
+            out CliRenderRpcOptions options)
+        {
+            options = default;
+            var transport = "named-pipe";
+            if (!switches.TryGetValue("rpcPipe", out var endpoint) || string.IsNullOrWhiteSpace(endpoint))
+            {
+                if (!switches.TryGetValue("rpcSocket", out endpoint) || string.IsNullOrWhiteSpace(endpoint)) return false;
+                transport = "unix-socket";
+            }
+            if (!switches.TryGetValue("rpcToken", out var token) || string.IsNullOrWhiteSpace(token)) return false;
+            if (!switches.TryGetValue("jobId", out var jobText) || !Guid.TryParse(jobText, out var jobId)) return false;
+            options = new CliRenderRpcOptions(endpoint, token, jobId, transport);
+            return true;
+        }
+
+        private static async Task<int> RunRpcRenderAsync(
+            ConcurrentDictionary<string, string> switches,
+            string dataRoot,
+            CliRenderRpcOptions options)
+        {
+            var projectRoot = switches.GetValueOrDefault("project", string.Empty);
+            var outputPath = switches.GetValueOrDefault("output", string.Empty);
+            var projectName = switches.GetValueOrDefault("projectName", Path.GetFileName(projectRoot));
+            var background = bool.TryParse(switches.GetValueOrDefault("background", "false"), out var parsedBackground) && parsedBackground;
+            using var renderCancellation = new CancellationTokenSource();
+            using var serverCancellation = new CancellationTokenSource();
+            var service = new CliRenderJobRpcService(
+                options.JobId, projectRoot, projectName, outputPath, background,
+                dataRoot, renderCancellation, serverCancellation);
+            var serverTask = options.Transport == "unix-socket"
+                ? new UnixSocketRenderServer(service).RunAsync(options.Endpoint, options.Token, serverCancellation.Token)
+                : new NamedPipeRenderServer(service).RunAsync(options.Endpoint, options.Token, cancellationToken: serverCancellation.Token);
+
+            var exitCode = await service.RunAsync(async (progress, cancellationToken) =>
+            {
+                InitializeCliRenderRuntime(dataRoot, switches.GetValueOrDefault("FFmpegLibraryPath", string.Empty));
+                return await RunRenderPipelineAsync(switches, cancellationToken, progress).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+
+            // Give the GUI enough time to observe the terminal state. A foreground
+            // client asks the service to stop immediately after receiving it; a
+            // detached background render exits on its own after the grace period.
+            try { await Task.Delay(TimeSpan.FromSeconds(30), serverCancellation.Token).ConfigureAwait(false); }
+            catch (OperationCanceledException) { }
+            serverCancellation.Cancel();
+            try { await serverTask.ConfigureAwait(false); } catch (OperationCanceledException) { }
+            return exitCode;
+        }
+
+        private readonly record struct CliRenderRpcOptions(string Endpoint, string Token, Guid JobId, string Transport);
+
+        private sealed class CliRenderJobRpcService : IRenderService
+        {
+            private readonly object _gate = new();
+            private readonly string _statePath;
+            private readonly CancellationTokenSource _renderCancellation;
+            private readonly CancellationTokenSource _serverCancellation;
+            private RenderJob _job;
+
+            public CliRenderJobRpcService(
+                Guid jobId, string projectRoot, string projectName, string outputPath,
+                bool background, string dataRoot, CancellationTokenSource renderCancellation,
+                CancellationTokenSource serverCancellation)
+            {
+                _renderCancellation = renderCancellation;
+                _serverCancellation = serverCancellation;
+                _statePath = Path.Combine(dataRoot, "RenderJobs", $"cli-{jobId:N}.json");
+                _job = new RenderJob
+                {
+                    JobId = jobId,
+                    State = RenderJobState.Queued,
+                    ProjectRoot = projectRoot,
+                    ProjectName = projectName,
+                    OutputPath = outputPath,
+                    Background = background,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    UpdatedAtUtc = DateTime.UtcNow,
+                };
+                Persist();
+            }
+
+            public async Task<int> RunAsync(Func<Action<double, TimeSpan>, CancellationToken, Task<int>> render)
+            {
+                Update(job => job.State = RenderJobState.Running);
+                try
+                {
+                    var result = await render((progress, eta) => Update(job =>
+                    {
+                        job.Progress = Math.Clamp(progress, 0, 1);
+                        job.EstimatedRemainingTicks = Math.Max(0, eta.Ticks);
+                    }), _renderCancellation.Token).ConfigureAwait(false);
+                    if (result != 0) throw new InvalidOperationException($"CLI renderer exited with code {result}.");
+                    Update(job =>
+                    {
+                        job.State = RenderJobState.Completed;
+                        job.Progress = 1;
+                        job.EstimatedRemainingTicks = 0;
+                    });
+                    NotifyCompletion();
+                    return 0;
+                }
+                catch (OperationCanceledException)
+                {
+                    Update(job => job.State = RenderJobState.Canceled);
+                    NotifyCompletion();
+                    return 255;
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"CLI render job {_job.JobId}");
+                    Update(job =>
+                    {
+                        job.State = RenderJobState.Failed;
+                        job.Error = new RenderError
+                        {
+                            Code = RenderErrorCode.BackendFailure,
+                            Message = ex.Message,
+                            Details = ex.ToString(),
+                        };
+                    });
+                    NotifyCompletion();
+                    return 1;
+                }
+            }
+
+            public ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
+            {
+                if (request.ProtocolVersion < RenderProtocol.MinimumSupportedVersion || request.ProtocolVersion > RenderProtocol.CurrentVersion)
+                    return ValueTask.FromResult(Failure(request, RenderErrorCode.ProtocolMismatch, $"Unsupported render protocol version {request.ProtocolVersion}."));
+
+                try
+                {
+                    var response = request.Operation switch
+                    {
+                        RenderOperation.GetCapabilities => Success(request, new RenderCapabilities
+                        {
+                            ProtocolVersion = RenderProtocol.CurrentVersion,
+                            MinimumProtocolVersion = RenderProtocol.MinimumSupportedVersion,
+                            BackendVersion = typeof(CLIProgram).Assembly.GetName().Version?.ToString() ?? "unknown",
+                            Operations = [nameof(RenderOperation.GetCapabilities), nameof(RenderOperation.GetJobStatus), nameof(RenderOperation.CancelJob), nameof(RenderOperation.ListRenderJobs), nameof(RenderOperation.CloseProject)],
+                            Features = ["cli-render", "named-pipe", "render-jobs"],
+                        }),
+                        RenderOperation.GetJobStatus => GetJobResponse(request),
+                        RenderOperation.CancelJob => CancelJobResponse(request),
+                        RenderOperation.ListRenderJobs => Success(request, new List<RenderJob> { Snapshot() }),
+                        RenderOperation.CloseProject => CloseResponse(request),
+                        _ => Failure(request, RenderErrorCode.Unsupported, $"Operation '{request.Operation}' is not supported by a CLI render worker."),
+                    };
+                    return ValueTask.FromResult(response);
+                }
+                catch (Exception ex)
+                {
+                    return ValueTask.FromResult(Failure(request, RenderErrorCode.BackendFailure, ex.Message, ex.ToString()));
+                }
+            }
+
+            private RenderResponseEnvelope GetJobResponse(RenderRequestEnvelope request)
+            {
+                var requested = RenderRpcSerializer.Deserialize<JobRequest>(request.Payload);
+                return requested.JobId == _job.JobId
+                    ? Success(request, Snapshot())
+                    : Failure(request, RenderErrorCode.SessionNotFound, $"Render job '{requested.JobId}' was not found.");
+            }
+
+            private RenderResponseEnvelope CancelJobResponse(RenderRequestEnvelope request)
+            {
+                var requested = RenderRpcSerializer.Deserialize<JobRequest>(request.Payload);
+                if (requested.JobId != _job.JobId)
+                    return Failure(request, RenderErrorCode.SessionNotFound, $"Render job '{requested.JobId}' was not found.");
+                _renderCancellation.Cancel();
+                return Success(request, Snapshot());
+            }
+
+            private RenderResponseEnvelope CloseResponse(RenderRequestEnvelope request)
+            {
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(100).ConfigureAwait(false);
+                    _serverCancellation.Cancel();
+                });
+                return Success(request, new EmptyResponse());
+            }
+
+            private void Update(Action<RenderJob> update)
+            {
+                lock (_gate)
+                {
+                    update(_job);
+                    _job.UpdatedAtUtc = DateTime.UtcNow;
+                    PersistCore();
+                }
+            }
+
+            private RenderJob Snapshot()
+            {
+                lock (_gate) return RenderRpcSerializer.Clone(_job);
+            }
+
+            private void Persist()
+            {
+                lock (_gate) PersistCore();
+            }
+
+            private void PersistCore()
+            {
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(_statePath)!);
+                    var temp = _statePath + ".tmp";
+                    File.WriteAllText(temp, JsonSerializer.Serialize(_job));
+                    File.Move(temp, _statePath, overwrite: true);
+                }
+                catch (Exception ex) { Log(ex, "Persist CLI render job"); }
+            }
+
+            private void NotifyCompletion()
+            {
+                try { RenderCompletionNotifier.Notify(Snapshot()); }
+                catch (Exception ex) { Log(ex, "CLI render completion notification"); }
+            }
+
+            private static RenderResponseEnvelope Success<T>(RenderRequestEnvelope request, T payload) => new()
+            {
+                RequestId = request.RequestId,
+                Payload = RenderRpcSerializer.Serialize(payload),
+            };
+
+            private static RenderResponseEnvelope Failure(RenderRequestEnvelope request, RenderErrorCode code, string message, string details = "") => new()
+            {
+                RequestId = request.RequestId,
+                Error = new RenderError { Code = code, Message = message, Details = details },
+            };
+        }
+
+        #endregion
+
+        #region misc
+
+        internal static void InitializeRenderRuntime(string dataRoot, string ffmpegRoot = "")
         {
             if (!PluginManager.Inited)
             {
@@ -348,11 +856,96 @@ namespace projectFrameCut
             }
             if (!ffmpeg.Ready)
             {
-                FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
-                FFmpeg.AutoGen.ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
-                if (!FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
-                    throw new InvalidOperationException($"FFmpeg initialization failed at '{FFmpeg.AutoGen.ffmpeg.RootPath}'.");
-                FFmpegHelper.SetupFFmpegLogging(FFmpeg.AutoGen.ffmpeg.AV_LOG_WARNING);
+                try
+                {
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
+
+                    try
+                    {
+                        if (!string.IsNullOrWhiteSpace(ffmpegRoot) && Directory.Exists(ffmpegRoot))
+                        {
+                            ffmpeg.RootPath = ffmpegRoot;
+                            Log($"Using FFmpeg libraries from command line argument, path:{ffmpegRoot}");
+                        }
+                        if (SettingsManager.Settings?.Any() ?? false && SettingsManager.IsBoolSettingTrue("PluginProvidedFFmpeg_Enable"))
+                        {
+
+#if WINDOWS
+                            string? nativeLibDirOverride = null;
+                            var pluginId = SettingsManager.GetSetting("PluginProvidedFFmpeg_PluginID", "");
+                            if (pluginId == "external")
+                            {
+                                var ffmpegPath = SettingsManager.GetSetting("PluginProvidedFFmpeg_LibPath", "");
+                                if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
+                                {
+                                    Log($"Using external FFmpeg libraries, path:{ffmpegPath}");
+                                    nativeLibDirOverride = ffmpegPath;
+                                }
+                                else
+                                {
+                                    Log($"PluginProvidedFFmpeg_Enable is true, but invalid path provided:{ffmpegPath}");
+                                }
+                            }
+                            else if (!PluginManager.LoadedPlugins.TryGetValue(pluginId, out var value))
+                            {
+                                Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} is not loaded.");
+                            }
+                            else
+                            {
+                                var ffmpegPath = Path.Combine(AppDataPath, "Plugins", value.PluginID, "FFmpeg", "windows");
+                                if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
+                                {
+                                    Log($"Using FFmpeg libraries provided by plugin {pluginId}, path:{ffmpegPath}");
+                                    nativeLibDirOverride = ffmpegPath;
+                                }
+                                else
+                                {
+                                    Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} provided invalid path:{ffmpegPath}");
+                                }
+                            }
+                            if (!string.IsNullOrWhiteSpace(nativeLibDirOverride) && Directory.Exists(nativeLibDirOverride))
+                            {
+                                ffmpeg.RootPath = nativeLibDirOverride;
+                            }
+                            else
+                            {
+                                ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
+                            }
+#elif ANDROID
+                            ffmpeg.RootPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+#endif
+                        }
+                        else
+                        {
+                            if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+                            {
+                                ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
+                            }
+                            //in Android, iOS and macOS, ffmpeg bundle path will be configured automatically by the loader
+                        }
+                    }
+                    catch { }
+                    Log($"FFmpeg library root path: {ffmpeg.RootPath}");
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+
+                    try
+                    {
+                        FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize(OperatingSystem.IsWindows() || OperatingSystem.IsLinux(), true);
+                        FFmpegHelper.SetupFFmpegLogging();
+                        Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "Load internal FFmpeg library");
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "init ffmpeg");
+                }
+
             }
         }
 
@@ -367,6 +960,10 @@ namespace projectFrameCut
             }
             return value;
         }
+
+        #endregion
+
+        #region help
 
         private static void WriteGuiHelp()
         {
@@ -523,8 +1120,9 @@ Usage:
 
 Commands:
   gui        Launch the projectFrameCut graphical interface.
+  render     Run the built-in renderer.
   headless   Start the headless backend for remote access and automation.
-  help        Show general help or detailed help for a command.
+  help       Show general help or detailed help for a command.
   reset      Reset the application to its default state by clearing settings.
   about      Show version and build information.
 
@@ -534,7 +1132,9 @@ Global options:
   --consoleLog       Write application logs to the console.
 
   --logDiagnostic    Include diagnostic-level log messages.
-  
+
+  --loadPlugins      Load all enabled User-level plugin(s) which has been enabled.
+
   --ffmpegRoot       Sets the root path for FFmpeg binaries. 
                      If not specified, defaults to the internal FFmpeg path,
                      or the user configured path/plugin in the GUI settings.
@@ -562,6 +1162,28 @@ Options:
 
 The backend loads the project before accepting RPC requests and keeps running until Ctrl+C or process termination.
 Use ASP.NET's Environment variables to configure the HTTP server option (except application URL), such as ASPNETCORE_Kestrel__Certificates__Default__Path, and ASPNETCORE_Kestrel__Certificates__Default__Password.
+");
+        }
+
+        private static void WriteRenderHelp()
+        {
+            Console.WriteLine(
+@"Render a project
+
+Usage:
+  pjfc-cli render -project=<project directory> -output=<file>
+                  -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
+                  [-target=video|audio|all] [-assetDbFile=<database.json>]
+                  [-maxParallelThreads=<number>] [-oneByOneRender=true|false]
+                  [-renderByLayer=true|false] [-prepareInWorker=true|false]
+                  [-enableThreadAffinity=true|false] [-GCOptions=0|1|2]
+
+This command provide a simple way to render a project in the command line.
+For full functionality of out-of-process rendering, use StandaloneRender.
+
+The render command is executed in-process and uses the same Renderer,
+VideoBuilder, audio composer, plugin manager, and accelerator manager as the GUI.
+For the usage of params, refer to the StandaloneRender's documentation.
 ");
         }
 
@@ -599,5 +1221,7 @@ Optional integrated HTTP RPC server:
 The command is normally started by the graphical application.
 ");
         }
+
+        #endregion
     }
 }

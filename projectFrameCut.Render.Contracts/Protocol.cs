@@ -4,8 +4,8 @@ namespace projectFrameCut.Render.Contracts;
 
 public static class RenderProtocol
 {
-    public const int CurrentVersion = 2;
-    public const int MinimumSupportedVersion = 1;
+    public const int CurrentVersion = 3;
+    public const int MinimumSupportedVersion = 2;
     public const int PipeProtocolVersion = 1;
     public const int MaxPipeFrameBytes = 256 * 1024 * 1024;
 }
@@ -41,6 +41,7 @@ public enum RenderOperation
     [ProtoEnum] CancelJob = 14,
     [ProtoEnum] ReleaseArtifact = 15,
     [ProtoEnum] RenderAudioSegment = 16,
+    [ProtoEnum] ListRenderJobs = 17,
     [ProtoEnum] OpenHeadlessProject = 100,
     [ProtoEnum] GetHeadlessProjectSnapshot = 101,
     [ProtoEnum] ReloadHeadlessProject = 102,
@@ -317,6 +318,10 @@ public sealed class RenderProjectRequest
     [ProtoMember(6)] public string PixelFormat { get; set; } = "AV_PIX_FMT_YUV420P";
     [ProtoMember(7)] public bool IncludeAudio { get; set; } = true;
     [ProtoMember(8)] public string OutputFileName { get; set; } = "render.mp4";
+    [ProtoMember(9)] public string ProjectRoot { get; set; } = string.Empty;
+    [ProtoMember(10)] public string ProjectName { get; set; } = string.Empty;
+    [ProtoMember(11)] public string OutputPath { get; set; } = string.Empty;
+    [ProtoMember(12)] public bool Background { get; set; }
 }
 
 [ProtoContract]
@@ -331,6 +336,17 @@ public sealed class RenderJob
     [ProtoMember(7)] public RenderError? Error { get; set; }
     [ProtoMember(8)] public DateTime CreatedAtUtc { get; set; }
     [ProtoMember(9)] public DateTime UpdatedAtUtc { get; set; }
+    [ProtoMember(10)] public string ProjectRoot { get; set; } = string.Empty;
+    [ProtoMember(11)] public string ProjectName { get; set; } = string.Empty;
+    [ProtoMember(12)] public string OutputPath { get; set; } = string.Empty;
+    [ProtoMember(13)] public bool Background { get; set; }
+}
+
+[ProtoContract]
+public sealed class ListRenderJobsRequest
+{
+    [ProtoMember(1)] public string ProjectRoot { get; set; } = string.Empty;
+    [ProtoMember(2)] public bool IncludeCompleted { get; set; } = true;
 }
 
 [ProtoContract]

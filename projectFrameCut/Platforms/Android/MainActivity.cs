@@ -89,7 +89,7 @@ namespace projectFrameCut.Platforms.Android
             Platform.OnResume(this);
         }
 
-        protected override void OnNewIntent(Android.Content.Intent intent)
+        protected override void OnNewIntent(Intent intent)
         {
             base.OnNewIntent(intent);
 

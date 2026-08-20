@@ -121,7 +121,7 @@
                     <Label x:Name="MaxParallelThreadsCountLabel"  Margin="0,8,0,0" Text="RenderPage_MaxParallelThreadsCount" />
                     <Slider x:Name="MaxParallelThreadsCount" Minimum="1" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
                     <Label x:Name="HDRHintLabel" Text="{l:Localized Key=RenderPage_HDREnabledNotAvailable}" FontSize="12" TextColor="Gray" IsVisible="False"/>
-                    <Button Margin="0,8,0,8"  x:Name="StartRender" Text="{l:Localized Key=RenderPage_StartRender}" Clicked="StartRender_Clicked" />
+                            <Button Margin="0,8,0,8"  x:Name="StartRender" Text="{l:Localized Key=RenderPage_StartRender}" Clicked="StartRender_Clicked" />
                     <Border x:Name="DebugView" Padding="4">
                         <VerticalStackLayout>
                             <Label Text="DEBUG Options" />

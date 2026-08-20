@@ -12,6 +12,7 @@ using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.WindowsRender;
+using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Shared;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -24,7 +25,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using static projectFrameCut.Shared.Logger;
 using projectFrameCut.Render.Effect;
-using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
+
 using projectFrameCut.Drawing.Base.Picture;
 
 
@@ -35,13 +36,13 @@ using Microsoft.DiagnosticsHub;
 
 namespace projectFrameCut.StandaloneRender
 {
-    internal class Program
+    public class Program
     {
         const int PluginAPIVersion = 1;
 
         static readonly JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
-        static async Task<int> Main(string[] args)
+        public static async Task<int> Main(string[] args)
         {
             if (!args.Contains("--nolog"))
             {

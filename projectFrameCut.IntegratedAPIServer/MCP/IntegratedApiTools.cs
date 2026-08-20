@@ -1,14 +1,37 @@
 using System.Buffers;
 using System.Collections.Concurrent;
-using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace projectFrameCut.IntegratedAPIServer.MCP;
+
+internal sealed class IntegratedApiRequestContextAccessor
+{
+    private readonly AsyncLocal<IntegratedApiRequestContext?> _current = new();
+
+    public IntegratedApiRequestContext? Current
+    {
+        get => _current.Value;
+        set => _current.Value = value;
+    }
+
+    public IDisposable Push(string? remoteAddress)
+    {
+        var previous = Current;
+        Current = new IntegratedApiRequestContext(remoteAddress);
+        return new Scope(this, previous);
+    }
+
+    private sealed class Scope(IntegratedApiRequestContextAccessor owner, IntegratedApiRequestContext? previous) : IDisposable
+    {
+        public void Dispose() => owner.Current = previous;
+    }
+}
+
+internal sealed record IntegratedApiRequestContext(string? RemoteAddress);
 
 internal sealed class EndpointAuthorizationManager
 {
@@ -76,10 +99,10 @@ internal static class IntegratedApiToolCatalog
     public static IReadOnlyList<McpServerTool> Create(
         IIntegratedApiBackend backend,
         EndpointAuthorizationManager authorization,
-        IHttpContextAccessor httpContextAccessor)
+        IntegratedApiRequestContextAccessor requestContextAccessor)
         =>
         [
-            new AuthorizationTool(backend, authorization, httpContextAccessor),
+            new AuthorizationTool(backend, authorization, requestContextAccessor),
             Tool("get_timeline_info", "Get timeline metadata: frame rate, resolution, total frames, layer count.", EmptySchema, IntegratedApiOperation.GetTimelineInfo),
             Tool("list_layers", "List all layers/tracks in the timeline with their properties.", EmptySchema, IntegratedApiOperation.ListLayers),
             Tool("list_available_effects", "List all available effect types with their parameters and defaults.", EmptySchema, IntegratedApiOperation.ListAvailableEffects),
@@ -159,8 +182,8 @@ internal static class IntegratedApiToolCatalog
             ArgumentNullException.ThrowIfNull(request);
             var services = request.Services ?? throw new InvalidOperationException("MCP request services are unavailable.");
             var authorization = services.GetRequiredService<EndpointAuthorizationManager>();
-            var httpContextAccessor = services.GetRequiredService<IHttpContextAccessor>();
-            if (!authorization.IsAuthorized(request.Server, GetRemoteEndpoint(httpContextAccessor)))
+            var requestContextAccessor = services.GetRequiredService<IntegratedApiRequestContextAccessor>();
+            if (!authorization.IsAuthorized(request.Server, GetRemoteEndpoint(requestContextAccessor)))
             {
                 return Error("This client endpoint is not authorized. Call authorize_client first.");
             }
@@ -195,12 +218,12 @@ internal static class IntegratedApiToolCatalog
     {
         private readonly IIntegratedApiBackend _backend;
         private readonly EndpointAuthorizationManager _authorization;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IntegratedApiRequestContextAccessor _requestContextAccessor;
 
         public AuthorizationTool(
             IIntegratedApiBackend backend,
             EndpointAuthorizationManager authorization,
-            IHttpContextAccessor httpContextAccessor)
+            IntegratedApiRequestContextAccessor requestContextAccessor)
             : base(
                 "authorize_client",
                 "Ask the projectFrameCut user to authorize this client endpoint before accessing project resources.",
@@ -208,7 +231,7 @@ internal static class IntegratedApiToolCatalog
         {
             _backend = backend;
             _authorization = authorization;
-            _httpContextAccessor = httpContextAccessor;
+            _requestContextAccessor = requestContextAccessor;
         }
 
         public override async ValueTask<CallToolResult> InvokeAsync(
@@ -218,7 +241,7 @@ internal static class IntegratedApiToolCatalog
             ArgumentNullException.ThrowIfNull(request);
             string reason = TryGetString(request.Params?.Arguments, "reason") ?? "No reason was provided.";
             var client = request.Server.ServerOptions.KnownClientInfo;
-            string? endpoint = GetRemoteEndpoint(_httpContextAccessor);
+            string? endpoint = GetRemoteEndpoint(_requestContextAccessor);
             string remote = endpoint ?? "unknown";
 
             bool approved;
@@ -251,21 +274,8 @@ internal static class IntegratedApiToolCatalog
         }
     }
 
-    private static string? GetRemoteEndpoint(IHttpContextAccessor httpContextAccessor)
-    {
-        IPAddress? address = httpContextAccessor.HttpContext?.Connection.RemoteIpAddress;
-        if (address is null)
-        {
-            return null;
-        }
-
-        if (address.IsIPv4MappedToIPv6)
-        {
-            address = address.MapToIPv4();
-        }
-
-        return address.ToString();
-    }
+    private static string? GetRemoteEndpoint(IntegratedApiRequestContextAccessor accessor)
+        => accessor.Current?.RemoteAddress;
 
     private abstract class ExplicitTool : McpServerTool
     {

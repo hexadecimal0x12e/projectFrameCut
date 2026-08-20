@@ -2,7 +2,7 @@
 using ILGPU.Algorithms;
 using ILGPU.Runtime;
 using projectFrameCut.Drawing.Base.Picture;
-using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
+
 using projectFrameCut.Render.WindowsRender;
 using projectFrameCut.Shared;
 using System.Diagnostics;

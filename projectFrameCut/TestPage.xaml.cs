@@ -74,13 +74,13 @@ public partial class TestPage : ContentPage
 
 #if WINDOWS
         MultiWindowItem.ContextMenuProviderGetter = new(() => new WindowsContextMenuBuilder());
-
+#endif
+#if WINDOWS || LINUX
         // AcceleratorsManager was initialized during plugin load.
-        if (projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DefaultAccelerator is null)
+        if (projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.DefaultAccelerator is null)
         {
             Log("WARNING: No ILGPU accelerator found on this device. GPU-accelerated operations will fall back to software.");
         }
-
 #endif
     }
 

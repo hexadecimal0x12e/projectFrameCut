@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Security.Cryptography.X509Certificates;
 
 namespace projectFrameCut.IntegratedAPIServer;
 
@@ -66,6 +67,15 @@ public sealed class IntegratedApiServerOptions
     public bool EnableMcp { get; init; } = true;
 
     public Action<string>? WarningSink { get; init; }
+
+    /// <summary>Optional certificate used by the lightweight HTTPS listener.</summary>
+    public X509Certificate2? SslCertificate { get; init; }
+
+    /// <summary>Optional PFX file used when <see cref="SslCertificate"/> is not supplied.</summary>
+    public string? SslCertificateFile { get; init; }
+
+    /// <summary>Password for <see cref="SslCertificateFile"/>.</summary>
+    public string? SslCertificatePassword { get; init; }
 }
 
 

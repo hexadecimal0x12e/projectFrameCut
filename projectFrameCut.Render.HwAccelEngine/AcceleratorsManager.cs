@@ -1,10 +1,11 @@
-﻿using ILGPU;
+﻿#if WINDOWS || LINUX
+using ILGPU;
 using ILGPU.Runtime;
 using projectFrameCut.Shared;
 using System.Text.Json;
 using projectFrameCut.Render.HwAccelEngine;
 
-namespace projectFrameCut.Render.HwAccelEngine.Platforms.Windows
+namespace projectFrameCut.Render.HwAccelEngine
 {
     public static class AcceleratorsManager
     {
@@ -181,3 +182,4 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Windows
         public string Type { get; set; } = "";
     }
 }
+#endif

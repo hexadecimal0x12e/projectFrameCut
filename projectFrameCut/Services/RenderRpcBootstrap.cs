@@ -15,6 +15,15 @@ internal static class RenderRpcBootstrap
     private static readonly object Gate = new();
     private static RenderServerProcessManager? _manager;
 
+    public static bool SupportsCliRenderProcess => RenderServerProcessManager.SupportsCliRenderProcess;
+    public static Guid? ActiveCliRenderJobId
+    {
+        get
+        {
+            lock (Gate) return _manager?.JobId;
+        }
+    }
+
     /// <summary>
     /// The render RPC client of the backend currently bound to an open project,
     /// or of a fallback backend started on demand. Call <see cref="Initialize(string?)"/>
@@ -39,17 +48,20 @@ internal static class RenderRpcBootstrap
 
     /// <summary>
     /// Ensures the render RPC backend for <paramref name="projectRoot"/> is running.
+    /// Normal workers are parent-bound; independent workers are reserved for an
+    /// explicitly requested background render.
     /// Opening a different project tears down the previous backend first, so each
     /// project owns a dedicated render process that is stopped when the project
     /// closes (see <see cref="DisposeAsync"/>).
     /// </summary>
-    public static void Initialize(string? projectRoot = null)
+    public static void Initialize(string? projectRoot = null, bool independentWorker = false)
     {
         lock (Gate)
         {
             if (_manager is not null)
             {
-                if (SameProjectRoot(_manager.ProjectRoot, projectRoot)) return;
+                if (SameProjectRoot(_manager.ProjectRoot, projectRoot)
+                    && _manager.IsIndependentWorker == independentWorker) return;
                 // 项目根变化：结束旧后端，避免旧项目资源长期驻留在渲染进程中。
                 var old = _manager;
                 _manager = null;
@@ -63,8 +75,51 @@ internal static class RenderRpcBootstrap
                 }
             }
             _manager = new RenderServerProcessManager("projectFrameCut-integrated-editor");
-            _manager.Start(projectRoot);
+            _manager.Start(projectRoot, independentWorker);
         }
+    }
+
+    public static Guid StartCliRender(CliRenderProcessOptions options)
+    {
+        lock (Gate)
+        {
+            DisposeManagerCore();
+            _manager = new RenderServerProcessManager("projectFrameCut-render-page");
+            _manager.StartCliRender(options);
+            return _manager.JobId ?? throw new InvalidOperationException("The CLI renderer did not create a job ID.");
+        }
+    }
+
+    public static bool TryReconnectCliRender(string projectRoot, out Guid jobId)
+    {
+        lock (Gate)
+        {
+            if (_manager?.JobId is Guid active && SameProjectRoot(_manager.ProjectRoot, projectRoot))
+            {
+                jobId = active;
+                return true;
+            }
+            DisposeManagerCore();
+            var manager = new RenderServerProcessManager("projectFrameCut-render-page");
+            if (!manager.TryReconnectCliRender(projectRoot))
+            {
+                manager.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                jobId = Guid.Empty;
+                return false;
+            }
+            _manager = manager;
+            jobId = manager.JobId!.Value;
+            return true;
+        }
+    }
+
+    private static void DisposeManagerCore()
+    {
+        if (_manager is null) return;
+        var old = _manager;
+        _manager = null;
+        try { old.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+        catch (Exception ex) { Log(ex, "Dispose the previous render process"); }
     }
 
     public static async ValueTask DisposeAsync()

@@ -9,9 +9,8 @@ using System.Text.Json;
 
 
 
-#if WINDOWS
+#if WINDOWS || LINUX
 using projectFrameCut.Render.WindowsRender;
-using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
 using ILGPU;
 using ILGPU.Runtime;
 #elif ANDROID
@@ -52,7 +51,7 @@ namespace projectFrameCut.Render.HwAccelEngine
 
         };
 
-#if WINDOWS
+#if WINDOWS || LINUX
         static bool? forceSync = null;
         internal static bool disableWin2DRasterizer = false;
 
@@ -231,7 +230,7 @@ namespace projectFrameCut.Render.HwAccelEngine
         {
             throw new NotImplementedException();
         }
-#if WINDOWS
+#if WINDOWS || LINUX
 
         bool IPluginBase.OnLoaded(out string FailedReason)
         {

@@ -39,8 +39,9 @@ public partial class SetupPage : ContentPage
                 Log(ex, "Create desktop shortcut.", this);
             }
         }
-
-        var devices = projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DiscoverDevices();
+#endif
+#if WINDOWS || LINUX
+        var devices = projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.DiscoverDevices();
         if (!devices.Any(c => c.Type != "CPU"))
         {
             await DisplayAlertAsync(Localized._Warn, Localized.WelocmePage_NoAccel, Localized._OK);
@@ -55,7 +56,7 @@ public partial class SetupPage : ContentPage
         if (best is not null)
         {
             var nonCpuDevices = devices.Where(c => c.Type != "CPU").ToList();
-            projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.SetDefaultAccelerator(best.Name);
+            projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.SetDefaultAccelerator(best.Name);
             Log($"Auto-selected accelerator: {best.Name} ({best.Type}).");
         }
 

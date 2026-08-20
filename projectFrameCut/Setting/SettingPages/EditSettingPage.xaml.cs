@@ -45,14 +45,14 @@ public partial class EditSettingPage : ContentPage
 
     public EditSettingPage()
     {
-#if WINDOWS
+#if WINDOWS || LINUX
         try
         {
             if (!IsBoolSettingTrue("Edit_NoLoadTextTemplatePreview"))
             {
                 // AcceleratorsManager was initialized during plugin load.
                 // Any available non-CPU accelerator is sufficient for text preview.
-                LoadTextPreview = projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DefaultAccelerator is not null;
+                LoadTextPreview = projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.DefaultAccelerator is not null;
             }
         }
         catch { LoadTextPreview = false; }

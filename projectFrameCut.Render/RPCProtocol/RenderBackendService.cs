@@ -15,7 +15,7 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.RPCProtocol;
 
-public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = null) : IRenderService, IAsyncDisposable
+public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = null, string? stateRoot = null, Action<RenderJob>? completionSink = null) : IRenderService, IAsyncDisposable
 {
     private const string TimelineFrameCacheVersion = "v2-target-layout";
     private const string ClipPreviewCacheVersion = "v2-frame-content";
@@ -23,8 +23,11 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private const string AudioSegmentCacheVersion = "v2-track-source";
     private const string FrameHashIndexVersion = "v1-sparse-frame-clip";
     private readonly IRenderArtifactStore _artifacts = artifactStore ?? new RenderArtifactStore();
+    private readonly string? _stateRoot = string.IsNullOrWhiteSpace(stateRoot) ? null : Path.GetFullPath(stateRoot);
+    private readonly Action<RenderJob>? _completionSink = completionSink;
     private readonly ConcurrentDictionary<Guid, BackendSession> _sessions = new();
     private readonly ConcurrentDictionary<Guid, JobEntry> _jobs = new();
+    private readonly object _persistGate = new();
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -57,6 +60,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 RenderOperation.RenderProject => Success(request, StartRenderProject(Read<RenderProjectRequest>(request))),
                 RenderOperation.GetJobStatus => Success(request, GetJob(Read<JobRequest>(request).JobId)),
                 RenderOperation.CancelJob => Success(request, CancelJob(Read<JobRequest>(request).JobId)),
+                RenderOperation.ListRenderJobs => Success(request, ListJobs(Read<ListRenderJobsRequest>(request))),
                 RenderOperation.ReleaseArtifact => Success(request, ReleaseArtifact(Read<ArtifactRequest>(request))),
                 _ => Failure(request, RenderErrorCode.Unsupported, $"Render operation '{request.Operation}' is not supported."),
             };
@@ -90,7 +94,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             .Select(static operation => operation.ToString())
             .ToList(),
         Encoders = ["libx264"],
-        Features = ["direct-transport", "named-pipe", "timeline-preview", "clip-preview-without-layout", "thumbs-cache", "render-jobs", "artifact-files"],
+        Features = ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "thumbs-cache", "render-jobs", "persistent-render-jobs", "artifact-files"],
     };
 
     private async ValueTask<RenderSession> OpenProjectAsync(OpenProjectRequest request, CancellationToken cancellationToken)
@@ -125,7 +129,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         FrameHashIndex hashIndex;
         try
         {
-            hashIndex = await BuildFrameHashIndexAsync(clips, duration, snapshotHash, cancellationToken).ConfigureAwait(false);
+            hashIndex = await BuildFrameHashIndexAsync(GetVisualClips(clips), duration, snapshotHash, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
@@ -337,12 +341,13 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 IPicture? picture = null;
                 try
                 {
-                    foreach (var clip in session.Clips)
+                    var visualClips = GetVisualClips(session.Clips);
+                    foreach (var clip in visualClips)
                     {
                         try { clip.ReInit(IPicture.PicturePixelMode.BytePicture); }
                         catch (Exception ex) { ClipInitializationFailure.Mark(clip, "Source or ResolveEffect", ex); }
                     }
-                    var layers = Timeline.GetFramesInOneFrame(session.Clips, request.FrameIndex, width, height, projectRelativeWidth: session.Width, projectRelativeHeight: session.Height);
+                    var layers = Timeline.GetFramesInOneFrame(visualClips, request.FrameIndex, width, height, projectRelativeWidth: session.Width, projectRelativeHeight: session.Height);
                     picture = Timeline.MixtureLayers(layers, request.FrameIndex, width, height, autoCenterImplicitClip: true, projectRelativeWidth: session.Width, projectRelativeHeight: session.Height);
                     picture.ToBitPerPixel(8).SaveToPng(temporaryPath);
                     _artifacts.CommitTemporaryFile(temporaryPath, finalPath);
@@ -370,6 +375,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         var session = GetSession(request.SessionId);
         var clip = session.Clips.FirstOrDefault(candidate => candidate.Id == request.ClipId)
             ?? throw new KeyNotFoundException($"Clip '{request.ClipId}' was not found in render session '{request.SessionId}'.");
+        if (clip.ClipType == ClipMode.AudioClip)
+            throw new NotSupportedException($"Clip '{request.ClipId}' is an audio clip and cannot produce a picture preview.");
         var canvasWidth = Math.Max(1, request.CanvasWidth);
         var canvasHeight = Math.Max(1, request.CanvasHeight);
         var projectWidth = Math.Max(1, request.ProjectWidth > 0 ? request.ProjectWidth : session.Width);
@@ -392,7 +399,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 IPicture? picture = null;
                 try
                 {
-                    picture = ClipPreviewRenderer.Render(clip, session.Clips, canvasWidth, canvasHeight, projectWidth, projectHeight, request.FrameIndex, cancellationToken)
+                    picture = ClipPreviewRenderer.Render(clip, GetVisualClips(session.Clips), canvasWidth, canvasHeight, projectWidth, projectHeight, request.FrameIndex, cancellationToken)
                         ?? throw new InvalidOperationException($"Clip '{clip.Id}' did not produce a preview frame.");
                     picture.ToBitPerPixel(8).SaveToPng(temporaryPath);
                     _artifacts.CommitTemporaryFile(temporaryPath, finalPath);
@@ -502,8 +509,13 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             State = RenderJobState.Queued,
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = DateTime.UtcNow,
-        });
+            ProjectRoot = session.ProjectRoot,
+            ProjectName = string.IsNullOrWhiteSpace(request.ProjectName) ? session.ProjectName : request.ProjectName,
+            OutputPath = request.OutputPath,
+            Background = request.Background,
+        }, PersistJobs);
         _jobs[jobId] = entry;
+        PersistJobs();
         _ = Task.Run(() => RunProjectJobAsync(entry, request));
         return entry.Snapshot();
     }
@@ -552,6 +564,15 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 job.Error = new RenderError { Code = RenderErrorCode.BackendFailure, Message = ex.Message, Details = ex.ToString() };
             });
         }
+        finally
+        {
+            PersistJobs();
+            var snapshot = entry.Snapshot();
+            if (snapshot.State is RenderJobState.Completed or RenderJobState.Failed or RenderJobState.Canceled)
+            {
+                try { _completionSink?.Invoke(snapshot); } catch (Exception ex) { Log(ex, "Render completion notification", this); }
+            }
+        }
     }
 
     private async ValueTask<RenderArtifact> RenderSegmentInternalAsync(BackendSession session, TimelineSegmentRequest request, string relativePath, bool isPreview, CancellationToken cancellationToken, Action<double, TimeSpan>? progress = null, string encoder = "libx264", string pixelFormat = "AV_PIX_FMT_YUV420P")
@@ -585,7 +606,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                     StartFrame = request.StartFrame,
                     Duration = length,
                     builder = builder,
-                    Clips = session.Clips,
+                    Clips = GetVisualClips(session.Clips),
                     Use16Bit = false,
                     AutoCenterImplicitClip = true,
                     MaxThreads = 1,
@@ -645,7 +666,68 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     {
         if (!_jobs.TryGetValue(jobId, out var entry)) throw new KeyNotFoundException($"Render job '{jobId}' was not found.");
         entry.Cancellation.Cancel();
+        PersistJobs();
         return entry.Snapshot();
+    }
+
+    private List<RenderJob> ListJobs(ListRenderJobsRequest request)
+    {
+        LoadPersistedJobs();
+        var jobs = _jobs.Values.Select(static entry => entry.Snapshot());
+        if (!string.IsNullOrWhiteSpace(request.ProjectRoot))
+        {
+            var root = Path.GetFullPath(request.ProjectRoot);
+            jobs = jobs.Where(job => string.Equals(Path.GetFullPath(job.ProjectRoot), root,
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
+        }
+        if (!request.IncludeCompleted)
+            jobs = jobs.Where(static job => job.State is RenderJobState.Queued or RenderJobState.Running);
+        return jobs.OrderByDescending(static job => job.UpdatedAtUtc).ToList();
+    }
+
+    private int _loadedPersistedJobs;
+    private void LoadPersistedJobs()
+    {
+        if (_loadedPersistedJobs != 0) return;
+        _loadedPersistedJobs = 1;
+        var path = JobsStatePath;
+        if (path is null || !File.Exists(path)) return;
+        try
+        {
+            var jobs = JsonSerializer.Deserialize<List<RenderJob>>(File.ReadAllText(path), _jsonOptions) ?? [];
+            foreach (var job in jobs)
+            {
+                if (job.State is RenderJobState.Queued or RenderJobState.Running)
+                {
+                    job.State = RenderJobState.Failed;
+                    job.Error = new RenderError { Code = RenderErrorCode.BackendFailure, Message = "The render worker was restarted before this job completed." };
+                }
+                _jobs.TryAdd(job.JobId, new JobEntry(job, PersistJobs));
+            }
+        }
+        catch (Exception ex) { Log(ex, "Load persisted render jobs", this); }
+    }
+
+    private string? JobsStatePath => _stateRoot is null ? null : Path.Combine(_stateRoot, "RenderJobs", "jobs.json");
+
+    private void PersistJobs()
+    {
+        var path = JobsStatePath;
+        if (path is null) return;
+        try
+        {
+            lock (_persistGate)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                var temp = path + ".tmp";
+                File.WriteAllText(temp, JsonSerializer.Serialize(_jobs.Values.Select(static entry => entry.Snapshot()).ToList(), _jsonOptions));
+                File.Move(temp, path, overwrite: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Persist render jobs", this);
+        }
     }
 
     private EmptyResponse ReleaseArtifact(ArtifactRequest request)
@@ -795,6 +877,9 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private static bool HasAudio(BackendSession session)
         => session.SoundTracks.Length > 0 || session.Clips.Any(static clip => clip.ClipType is ClipMode.AudioClip or ClipMode.VideoClip);
 
+    private static IClip[] GetVisualClips(IEnumerable<IClip> clips)
+        => clips.Where(static clip => clip.ClipType != ClipMode.AudioClip).ToArray();
+
     private string ResolveAssetPath(BackendSession session, AssetMetadataRequest request)
     {
         if (!string.IsNullOrWhiteSpace(request.AssetId) && session.Assets.TryGetValue(request.AssetId, out var assetPath)) return Path.GetFullPath(assetPath);
@@ -835,6 +920,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         foreach (var job in _jobs.Values) job.Cancellation.Cancel();
         foreach (var session in _sessions.Values) await session.DisposeAsync().ConfigureAwait(false);
         _sessions.Clear();
+        PersistJobs();
     }
 
     private sealed class BackendSession(
@@ -898,11 +984,12 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     {
         private readonly object _gate = new();
         private readonly RenderJob _job;
-        public JobEntry(RenderJob job) { _job = job; Cancellation = new CancellationTokenSource(); }
+        private readonly Action _changed;
+        public JobEntry(RenderJob job, Action? changed = null) { _job = job; _changed = changed ?? new Action(() => { }); Cancellation = new CancellationTokenSource(); }
         public Guid JobId => _job.JobId;
         public Guid SessionId => _job.SessionId;
         public CancellationTokenSource Cancellation { get; }
-        public void Update(Action<RenderJob> update) { lock (_gate) { update(_job); _job.UpdatedAtUtc = DateTime.UtcNow; } }
+        public void Update(Action<RenderJob> update) { lock (_gate) { update(_job); _job.UpdatedAtUtc = DateTime.UtcNow; } _changed(); }
         public RenderJob Snapshot() { lock (_gate) return RenderRpcSerializer.Clone(_job); }
     }
 }

@@ -105,6 +105,18 @@ namespace projectFrameCut
 
         public static MauiApp CreateMauiApp()
         {
+#if ANDROID
+            if (projectFrameCut.Platforms.Android.MainApplication.IsRenderWorkerProcess
+                || global::Android.App.Application.ProcessName?.EndsWith(":renderworker", StringComparison.Ordinal) == true)
+            {
+                DataPath = FileSystem.AppDataDirectory;
+                BasicDataPath = Path.Combine(FileSystem.AppDataDirectory, "AppData");
+                Directory.CreateDirectory(BasicDataPath);
+                return MauiApp.CreateBuilder()
+                    .UseMauiApp<projectFrameCut.Platforms.Android.RenderWorkerMauiApplication>()
+                    .Build();
+            }
+#endif
             if (CmdlineArgs is null || CmdlineArgs.Length == 0)
             {
                 try

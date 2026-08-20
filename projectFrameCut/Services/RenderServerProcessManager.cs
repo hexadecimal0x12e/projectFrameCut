@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Reflection;
 using FFmpeg.AutoGen;
 using projectFrameCut.Render.Contracts;
@@ -6,6 +7,9 @@ using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
+#if ANDROID
+using projectFrameCut.Platforms.Android;
+#endif
 
 namespace projectFrameCut.Services;
 
@@ -14,13 +18,18 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     private const int DefaultHttpRpcPort = 39485;
 
     private readonly string _clientId;
-    private readonly string _pipeName = $"projectFrameCut-render-{Guid.NewGuid():N}";
-    private readonly string _token = Convert.ToHexString(Guid.NewGuid().ToByteArray());
+    private string _pipeName = $"projectFrameCut-render-{Guid.NewGuid():N}";
+    private string _token = Convert.ToHexString(Guid.NewGuid().ToByteArray());
     private string? _projectRoot;
+    private bool _independentWorker;
     private Process? _process;
     private IRenderTransport? _transport;
     private IRenderClient? _client;
     private RenderServiceHost? _directHost;
+    private Guid? _jobId;
+#if ANDROID
+    private AndroidRenderWorkerController? _androidWorker;
+#endif
 
     public RenderServerProcessManager(string clientId)
     {
@@ -34,22 +43,42 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     /// without one. Used to keep each project bound to its own backend process.
     /// </summary>
     public string? ProjectRoot => _projectRoot;
+    public bool IsIndependentWorker => _independentWorker;
+    public Guid? JobId => _jobId;
+
+    public static bool SupportsCliRenderProcess
+    {
+        get
+        {
+#if WINDOWS || LINUX || MACOS || ANDROID
+            return !SettingsManager.IsBoolSettingTrue("render_ForceDirectRenderTransport");
+#else
+            return false;
+#endif
+        }
+    }
 
     /// <param name="projectRoot">
     /// Project directory to hand to the server process. The optional HTTP RPC
     /// server preloads it so clients do not hit a "server has no project" error.
     /// </param>
-    public void Start(string? projectRoot = null)
+    public void Start(string? projectRoot = null, bool independentWorker = false)
     {
         if (_client is not null) return;
         _projectRoot = string.IsNullOrWhiteSpace(projectRoot) ? null : Path.GetFullPath(projectRoot);
+        _independentWorker = independentWorker;
 
-        if (!OperatingSystem.IsWindows() || SettingsManager.IsBoolSettingTrue("render_ForceDirectRenderTransport"))
+        if (!SupportsCliRenderProcess)
         {
             _directHost = new RenderServiceHost(_clientId);
             _client = _directHost.Client;
             return;
         }
+
+#if ANDROID
+        StartAndroidEditorWorker();
+#else
+        if (_independentWorker && TryConnectRegisteredWorker()) return;
         var enableHttp = SettingsManager.IsBoolSettingTrue("render_RpcServerEnableHttp");
 #if WINDOWS
         Exception? ex1 = null, ex2 = null;
@@ -77,6 +106,8 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         StartProcess(Path.Combine(Foundation.NSBundle.MainBundle.BundlePath, "Contents", "MacOS", "projectFrameCut_cli"), enableHttp);
 #elif LINUX
         StartProcess(Path.Combine(AppContext.BaseDirectory, "projectFrameCut"), enableHttp);
+#else
+        throw new PlatformNotSupportedException("The projectFrameCut Render RPC server is not supported on this platform. Use In-Process RPC Backend mode.");
 #endif
 
         void StartProcess(string execPath, bool withHttp)
@@ -92,7 +123,10 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             startInfo.ArgumentList.Add("rpc_server");
             startInfo.ArgumentList.Add($"--pipe={_pipeName}");
             startInfo.ArgumentList.Add($"--token={_token}");
-            startInfo.ArgumentList.Add($"--parentPid={Environment.ProcessId}");
+            if (!_independentWorker)
+            {
+                startInfo.ArgumentList.Add($"--parentPid={Environment.ProcessId}");
+            }
             startInfo.ArgumentList.Add($"--dataRoot={GlobalPluginHelper.PluginsDataRootPath}");
             if (_projectRoot is not null)
             {
@@ -141,6 +175,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 _transport = transport;
                 _client = client;
                 WaitForServer(client, _process);
+                if (_independentWorker) SaveRegistration();
             }
             catch (Exception ex)
             {
@@ -161,15 +196,336 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 throw;
             }
         }
+#endif
     }
 
-    private static void WaitForServer(IRenderClient client, Process serverProcess)
+    public void StartCliRender(CliRenderProcessOptions options)
+    {
+        if (_client is not null) return;
+        if (!SupportsCliRenderProcess)
+            throw new PlatformNotSupportedException("An external CLI render process is not available on this platform or has been disabled in settings.");
+
+        _projectRoot = Path.GetFullPath(options.ProjectRoot);
+        _independentWorker = true;
+        _jobId = options.JobId == Guid.Empty ? Guid.NewGuid() : options.JobId;
+#if ANDROID
+        StartAndroidRenderTask(options with { JobId = _jobId.Value });
+#else
+        StartCliProcess(options with { JobId = _jobId.Value });
+#endif
+    }
+
+    public bool TryReconnectCliRender(string projectRoot)
+    {
+        if (_client is not null || !SupportsCliRenderProcess) return false;
+#if ANDROID
+        return TryReconnectAndroidRenderTask(projectRoot);
+#else
+        try
+        {
+            if (!File.Exists(RegistrationPath)) return false;
+            var registration = System.Text.Json.JsonSerializer.Deserialize<WorkerRegistration>(File.ReadAllText(RegistrationPath));
+            if (registration is null || !string.Equals(registration.Kind, "cli-render", StringComparison.Ordinal)) return false;
+            if (registration.JobId == Guid.Empty || string.IsNullOrWhiteSpace(registration.ProjectRoot)) return false;
+            if (!SamePath(registration.ProjectRoot, projectRoot)) return false;
+            using var process = Process.GetProcessById(registration.ProcessId);
+            if (process.HasExited) return false;
+
+            _projectRoot = Path.GetFullPath(projectRoot);
+            _independentWorker = true;
+            _jobId = registration.JobId;
+            _pipeName = registration.PipeName;
+            _token = registration.Token;
+            var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId);
+            var client = new RenderClient(transport, _clientId);
+            _transport = transport;
+            _client = client;
+            WaitForServer(client, null);
+            return true;
+        }
+        catch
+        {
+            try { _client?.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
+            _client = null;
+            _transport = null;
+            _jobId = null;
+            return false;
+        }
+#endif
+    }
+
+#if ANDROID
+    private void StartAndroidEditorWorker()
+    {
+        _pipeName = AndroidRenderWorkerController.CreateSocketPath();
+        var dataRoot = GlobalPluginHelper.PluginsDataRootPath ?? MauiProgram.BasicDataPath;
+        try
+        {
+            _androidWorker = AndroidRenderWorkerController.StartEditorWorker(
+                _pipeName,
+                _token,
+                dataRoot,
+                _projectRoot,
+                ffmpeg.RootPath);
+            ConnectAndroidTransport();
+        }
+        catch
+        {
+            try { _client?.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
+            try { _androidWorker?.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
+            _androidWorker = null;
+            _client = null;
+            _transport = null;
+            throw;
+        }
+    }
+
+    private void StartAndroidRenderTask(CliRenderProcessOptions options)
+    {
+        _pipeName = AndroidRenderWorkerController.CreateSocketPath();
+        var dataRoot = GlobalPluginHelper.PluginsDataRootPath ?? MauiProgram.BasicDataPath;
+        try
+        {
+            _androidWorker = AndroidRenderWorkerController.StartRenderTask(
+                _pipeName,
+                _token,
+                dataRoot,
+                options);
+            ConnectAndroidTransport();
+        }
+        catch
+        {
+            try { _client?.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
+            _androidWorker = null;
+            _client = null;
+            _transport = null;
+            _jobId = null;
+            throw;
+        }
+    }
+
+    private bool TryReconnectAndroidRenderTask(string projectRoot)
+    {
+        try
+        {
+            if (!File.Exists(RegistrationPath)) return false;
+            var registration = System.Text.Json.JsonSerializer.Deserialize<WorkerRegistration>(File.ReadAllText(RegistrationPath));
+            if (registration is null || !string.Equals(registration.Kind, "android-render", StringComparison.Ordinal)) return false;
+            if (registration.JobId == Guid.Empty || string.IsNullOrWhiteSpace(registration.ProjectRoot)) return false;
+            if (string.IsNullOrWhiteSpace(registration.PipeName) || string.IsNullOrWhiteSpace(registration.Token)) return false;
+            if (!File.Exists(registration.PipeName)) return false;
+            if (!SamePath(registration.ProjectRoot, projectRoot)) return false;
+
+            _projectRoot = Path.GetFullPath(projectRoot);
+            _independentWorker = true;
+            _jobId = registration.JobId;
+            _pipeName = registration.PipeName;
+            _token = registration.Token;
+            ConnectAndroidTransport();
+            return true;
+        }
+        catch
+        {
+            try { _client?.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
+            _client = null;
+            _transport = null;
+            _jobId = null;
+            return false;
+        }
+    }
+
+    private void ConnectAndroidTransport()
+    {
+        var transport = new UnixSocketRenderClientTransport(_pipeName, _token, _clientId);
+        var client = new RenderClient(transport, _clientId);
+        _transport = transport;
+        _client = client;
+        WaitForServer(client, null);
+    }
+
+#endif
+
+    private void StartCliProcess(CliRenderProcessOptions options)
+    {
+        Exception? firstError = null;
+        foreach (var executable in GetCliExecutableCandidates())
+        {
+            try
+            {
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = executable,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                };
+                startInfo.ArgumentList.Add("render");
+                Add("project", options.ProjectRoot);
+                Add("output", options.OutputPath);
+                Add("output_options", $"{options.Width},{options.Height},{options.FrameRate},{options.PixelFormat},{options.Encoder}");
+                Add("target", "all");
+                Add("assetDbFile", options.AssetDatabasePath);
+                Add("FFmpegLibraryPath", options.FFmpegLibraryPath);
+                Add("maxParallelThreads", Math.Max(1, options.MaxParallelThreads).ToString());
+                Add("oneByOneRender", options.OneByOneRender.ToString());
+                Add("GCOptions", Math.Clamp(options.GcOption, 0, 2).ToString());
+                Add("enableThreadAffinity", options.EnableThreadAffinity.ToString());
+                Add("prepareInWorker", options.PrepareInWorker.ToString());
+                Add("renderByLayer", options.RenderByLayer.ToString());
+                Add("rpcPipe", _pipeName);
+                Add("rpcToken", _token);
+                Add("jobId", options.JobId.ToString("D"));
+                Add("projectName", options.ProjectName);
+                Add("background", options.Background.ToString());
+                Add("temp_path", options.TempPath.ToString());
+                startInfo.ArgumentList.Add("--consoleLog");
+                if (MyLoggerExtensions.LoggingDiagnosticInfo) startInfo.ArgumentList.Add("--logDiagnostic");
+
+                _process = Process.Start(startInfo) ?? throw new InvalidOperationException("Unable to start the CLI renderer.");
+                AttachProcessLogging(_process);
+                var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId);
+                var client = new RenderClient(transport, _clientId);
+                _transport = transport;
+                _client = client;
+                WaitForServer(client, _process);
+                SaveRegistration("cli-render", options);
+                return;
+
+                void Add(string name, string value) => startInfo.ArgumentList.Add($"--{name}={value}");
+            }
+            catch (Exception ex)
+            {
+                firstError ??= ex;
+                try { _client?.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
+                try { _process?.Kill(entireProcessTree: true); } catch { }
+                _process?.Dispose();
+                _process = null;
+                _client = null;
+                _transport = null;
+            }
+        }
+        throw new InvalidOperationException("Unable to start pjfc-cli in render mode.", firstError);
+    }
+
+    private static IEnumerable<string> GetCliExecutableCandidates()
+    {
+#if WINDOWS
+        yield return Path.Combine(AppContext.BaseDirectory, "pjfc-cli.exe");
+        yield return $"projectFrameCutCompatible_{AppInfo.PackageName}_{Assembly.GetExecutingAssembly().GetName().Version}.exe";
+#elif MACOS
+        yield return Path.Combine(Foundation.NSBundle.MainBundle.BundlePath, "Contents", "MacOS", "projectFrameCut_cli");
+#elif LINUX
+        yield return Path.Combine(AppContext.BaseDirectory, "projectFrameCut");
+#else
+        yield break;
+#endif
+    }
+
+    private static void AttachProcessLogging(Process process)
+    {
+        process.ErrorDataReceived += (_, e) =>
+        {
+            if (!string.IsNullOrWhiteSpace(e.Data)) Log(e.Data, "CLI Renderer Stderr");
+        };
+        process.OutputDataReceived += (_, e) =>
+        {
+            if (!string.IsNullOrWhiteSpace(e.Data)) Log(e.Data, "CLI Renderer Stdout");
+        };
+        process.BeginErrorReadLine();
+        process.BeginOutputReadLine();
+    }
+
+    private string RegistrationPath => Path.Combine(GlobalPluginHelper.PluginsDataRootPath ?? AppContext.BaseDirectory, "RenderJobs", "worker.json");
+
+    private bool TryConnectRegisteredWorker()
+    {
+        try
+        {
+            if (!File.Exists(RegistrationPath)) return false;
+            var registration = System.Text.Json.JsonSerializer.Deserialize<WorkerRegistration>(File.ReadAllText(RegistrationPath));
+            if (registration is null || string.IsNullOrWhiteSpace(registration.PipeName) || string.IsNullOrWhiteSpace(registration.Token)) return false;
+            if (!string.IsNullOrWhiteSpace(registration.Kind) && !string.Equals(registration.Kind, "rpc-server", StringComparison.Ordinal)) return false;
+            if (registration.ProcessId > 0)
+            {
+                using var process = Process.GetProcessById(registration.ProcessId);
+                if (process.HasExited) return false;
+            }
+            _pipeName = registration.PipeName;
+            _token = registration.Token;
+            var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId);
+            var client = new RenderClient(transport, _clientId);
+            _transport = transport;
+            _client = client;
+            WaitForServer(client, null);
+            return true;
+        }
+        catch
+        {
+            try { _client?.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
+            _client = null;
+            _transport = null;
+            return false;
+        }
+    }
+
+    private void SaveRegistration()
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(RegistrationPath)!);
+            var registration = new WorkerRegistration
+            {
+                Kind = "rpc-server",
+                PipeName = _pipeName,
+                Token = _token,
+                ProcessId = _process?.Id ?? 0,
+                ProtocolVersion = RenderProtocol.PipeProtocolVersion,
+                UpdatedAtUtc = DateTime.UtcNow,
+            };
+            File.WriteAllText(RegistrationPath, System.Text.Json.JsonSerializer.Serialize(registration));
+        }
+        catch (Exception ex) { Log(ex, "Save render worker registration"); }
+    }
+
+    private void SaveRegistration(string kind, CliRenderProcessOptions options)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(RegistrationPath)!);
+            var registration = new WorkerRegistration
+            {
+                Kind = kind,
+                PipeName = _pipeName,
+                Token = _token,
+                ProcessId = _process?.Id ?? 0,
+                ProtocolVersion = RenderProtocol.PipeProtocolVersion,
+                UpdatedAtUtc = DateTime.UtcNow,
+                JobId = options.JobId,
+                ProjectRoot = Path.GetFullPath(options.ProjectRoot),
+                OutputPath = options.OutputPath,
+            };
+            File.WriteAllText(RegistrationPath, System.Text.Json.JsonSerializer.Serialize(registration));
+        }
+        catch (Exception ex) { Log(ex, "Save CLI render worker registration"); }
+    }
+
+    private static bool SamePath(string left, string right)
+    {
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        return string.Equals(
+            Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            comparison);
+    }
+
+    private static void WaitForServer(IRenderClient client, Process? serverProcess)
     {
         var deadline = Stopwatch.GetTimestamp() + (long)(Stopwatch.Frequency * 20);
         Exception? lastError = null;
         while (Stopwatch.GetTimestamp() < deadline)
         {
-            if (serverProcess.HasExited)
+            if (serverProcess?.HasExited == true)
                 throw new InvalidOperationException($"The projectFrameCut Render RPC server exited before connecting (exit code {serverProcess.ExitCode}). See log.", lastError);
 
             try
@@ -177,7 +533,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 _ = client.GetCapabilitiesAsync().AsTask().GetAwaiter().GetResult();
                 return;
             }
-            catch (Exception ex) when (ex is IOException or TimeoutException or OperationCanceledException)
+            catch (Exception ex) when (ex is IOException or SocketException or TimeoutException or OperationCanceledException)
             {
                 lastError = ex;
                 Thread.Sleep(50);
@@ -202,19 +558,66 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             _directHost = null;
         }
 
+#if ANDROID
+        if (_androidWorker is not null)
+        {
+            await _androidWorker.DisposeAsync().ConfigureAwait(false);
+            _androidWorker = null;
+        }
+#endif
+
         if (_process is not null)
         {
-            try
+            if (!_independentWorker)
             {
-                if (!_process.HasExited)
+                try
                 {
-                    if (!_process.WaitForExit(2000)) _process.Kill(entireProcessTree: true);
+                    if (!_process.HasExited && !_process.WaitForExit(2000))
+                        _process.Kill(entireProcessTree: true);
                 }
+                catch { }
             }
-            catch { }
             _process.Dispose();
             _process = null;
         }
         _projectRoot = null;
+        _independentWorker = false;
+        _jobId = null;
     }
+
+    private sealed class WorkerRegistration
+    {
+        public string Kind { get; set; } = string.Empty;
+        public string PipeName { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
+        public int ProcessId { get; set; }
+        public int ProtocolVersion { get; set; }
+        public DateTime UpdatedAtUtc { get; set; }
+        public Guid JobId { get; set; }
+        public string ProjectRoot { get; set; } = string.Empty;
+        public string OutputPath { get; set; } = string.Empty;
+    }
+}
+
+internal sealed record CliRenderProcessOptions
+{
+    public Guid JobId { get; init; } = Guid.NewGuid();
+    public required string ProjectRoot { get; init; }
+    public required string ProjectName { get; init; }
+    public required string OutputPath { get; init; }
+    public required string AssetDatabasePath { get; init; }
+    public required string FFmpegLibraryPath { get; init; }
+    public required int Width { get; init; }
+    public required int Height { get; init; }
+    public required int FrameRate { get; init; }
+    public required string PixelFormat { get; init; }
+    public required string Encoder { get; init; }
+    public int MaxParallelThreads { get; init; } = Environment.ProcessorCount;
+    public bool OneByOneRender { get; init; }
+    public int GcOption { get; init; }
+    public bool EnableThreadAffinity { get; init; } = true;
+    public bool PrepareInWorker { get; init; } = true;
+    public bool RenderByLayer { get; init; } = true;
+    public bool Background { get; init; }
+    public required string TempPath { get; init; }
 }

@@ -44,7 +44,7 @@ using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
 using projectFrameCut.Platforms.Android;
 
 #elif WINDOWS
-using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
+
 using Woohoo.Platform.Windows.Taskbar;
 
 #endif
@@ -91,6 +91,9 @@ public partial class RenderPage : ContentPage
     private CancellationTokenSource _cts = new CancellationTokenSource();
     private Guid _renderRpcSessionId = Guid.NewGuid();
     private Guid? _activeRenderRpcJobId;
+    private bool _backgroundRenderRequested;
+    private bool _keepRenderInBackground;
+    private bool _renderDetached;
     private CancellationTokenSource? _countdownCts;
 
     public RenderPage()
@@ -174,7 +177,6 @@ public partial class RenderPage : ContentPage
         InitializeLogTimer();
         InitializeLogPanel();
         InitializeScreenSaverTimer();
-
     }
     private void InitializeLogTimer()
     {
@@ -421,7 +423,11 @@ public partial class RenderPage : ContentPage
         // The export page always returns to HomePage, which closes the project.
         // Tear down this project's render backend so the render process cannot
         // leak memory after the project is gone.
-        try { _cts.Cancel(); } catch { }
+        _keepRenderInBackground = _backgroundRenderRequested && _activeRenderRpcJobId.HasValue;
+        if (!_keepRenderInBackground)
+        {
+            try { _cts.Cancel(); } catch { }
+        }
         try { RenderRpcBootstrap.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
         catch (Exception ex) { Log(ex, "Dispose render backend", this); }
     }
@@ -439,7 +445,10 @@ public partial class RenderPage : ContentPage
         if (string.IsNullOrWhiteSpace(_workingPath))
         {
             await DisplayAlertAsync(Localized._Info, Localized.RenderPage_NoDraft, Localized._OK);
+            return;
         }
+        if (RenderRpcBootstrap.SupportsCliRenderProcess)
+            await RestoreRenderJobAsync();
     }
     #region rendering
     [DebuggerNonUserCode]
@@ -468,17 +477,19 @@ public partial class RenderPage : ContentPage
                     "12bit" => "AV_PIX_FMT_YUV420P10LE",
                     _ => "AV_PIX_FMT_GBRP16LE"
                 };
-                var enc = vm.BitDepth switch
+                var enc = (ProjectUsesHDR ? "h265" : vm.Encoding) switch
                 {
-                    "8bit" => "libx264",
-                    "10bit" => "libx265",
-                    "12bit" => "libx265",
-                    _ => "ffv1"
+                    "h264" or "libx264" => "h264",
+                    "h265" or "hevc" or "h265/hevc" or "libx265" => "h265",
+                    "av1" => "av1",
+                    "ffv1" => "ffv1",
+                    _ => "h264"
                 };
                 var ext = enc switch
                 {
-                    "libx264" => ".mp4",
-                    "libx265" => ".mp4",
+                    "h264" => ".mp4",
+                    "h265" => ".mp4",
+                    "av1" => ".mkv",
                     "ffv1" => ".mkv",
                     _ => ".mp4"
                 };
@@ -508,15 +519,10 @@ public partial class RenderPage : ContentPage
                     { "copyright", $"Made by {Localized.AppBrand}" }
                 };
 
-                // The first RPC render path intentionally targets the common SDR/H.264 case.
-                // HDR, diagnostic/blackhole writers and specialized render settings retain the
-                // legacy in-process compatibility path until those options are represented by the protocol.
-                if (!ProjectUsesHDR
-                    && vm.BitDepth == "8bit"
-                    && string.Equals(enc, "libx264", StringComparison.OrdinalIgnoreCase)
-                    && Math.Abs(double.Parse(vm.Framerate) - Math.Round(double.Parse(vm.Framerate))) <= 0.001)
+                if (RenderRpcBootstrap.SupportsCliRenderProcess && !string.IsNullOrWhiteSpace(_workingPath))
                 {
-                    await RenderProjectViaRpcAsync(vm, resultPath, enc, fmt);
+                    var detached = await RenderProjectViaCliAsync(vm, resultPath, enc, fmt);
+                    if (detached) return;
 #if ANDROID
                     var savedPath = await MediaStoreSaver.SaveMediaFileAsync(resultPath, Path.GetFileName(resultPath), "video/mp4", subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
                     if (!string.IsNullOrWhiteSpace(savedPath) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
@@ -654,48 +660,50 @@ public partial class RenderPage : ContentPage
         }
         finally
         {
-            await CleanupUIForRenderDone();
+            if (_renderDetached)
+                CleanupUIAfterDetach();
+            else
+                await CleanupUIForRenderDone();
+            _backgroundRenderRequested = false;
         }
 
     }
 
-    private async Task RenderProjectViaRpcAsync(RenderPageViewModel vm, string resultPath, string encoder, string pixelFormat)
+    private async Task<bool> RenderProjectViaCliAsync(RenderPageViewModel vm, string resultPath, string encoder, string pixelFormat)
     {
         SetSubProg("PrepareDraft");
-        // The export page owns the project's render backend for this run; make
-        // sure it is bound to this project root before opening the session.
-        RenderRpcBootstrap.Initialize(_workingPath);
-        var openRequest = new OpenProjectRequest
+        var jobId = RenderRpcBootstrap.StartCliRender(new CliRenderProcessOptions
         {
-            SessionId = _renderRpcSessionId,
             ProjectRoot = _workingPath,
-            ProjectJson = JsonSerializer.Serialize(_project, DraftPage.DraftJSONOption),
-            TimelineJson = JsonSerializer.Serialize(_draft, DraftPage.DraftJSONOption),
-            ProjectWidth = Math.Max(1, _project.RelativeWidth),
-            ProjectHeight = Math.Max(1, _project.RelativeHeight),
-            FrameRate = Math.Max(1, (int)_project.TargetFrameRate),
-            ProxyRoot = Path.Combine(_workingPath, "proxy"),
-            Assets = Asset.AssetDatabase.Assets.Select(static item => new AssetPathEntry
-            {
-                AssetId = item.Key,
-                Path = item.Value.Path ?? string.Empty,
-            }).Where(static item => !string.IsNullOrWhiteSpace(item.Path)).ToList(),
-        };
-        await RenderRpcBootstrap.Client.OpenProjectAsync(openRequest, _cts.Token);
-
-        SetSubProg("Render");
-        var job = await RenderRpcBootstrap.Client.RenderProjectAsync(new RenderProjectRequest
-        {
-            SessionId = _renderRpcSessionId,
+            ProjectName = _project.ProjectName ?? Path.GetFileName(_workingPath),
+            OutputPath = resultPath,
+            AssetDatabasePath = Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"),
+            FFmpegLibraryPath = FFmpeg.AutoGen.ffmpeg.RootPath,
             Width = int.Parse(vm.Width),
             Height = int.Parse(vm.Height),
             FrameRate = (int)Math.Round(double.Parse(vm.Framerate)),
             Encoder = encoder,
             PixelFormat = pixelFormat,
-            IncludeAudio = true,
-            OutputFileName = Path.GetFileName(resultPath),
-        }, _cts.Token);
-        _activeRenderRpcJobId = job.JobId;
+            MaxParallelThreads = Math.Max(1, (int)Math.Round(MaxParallelThreadsCount.Value)),
+            OneByOneRender = SettingsManager.IsBoolSettingTrue("render_BlockWrite"),
+            GcOption = int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var gcOption) ? gcOption : 0,
+            EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true),
+            PrepareInWorker = SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorker", true),
+            RenderByLayer = SettingsManager.IsBoolSettingTrueOrDefault("render_RenderByLayer", true),
+            Background = _backgroundRenderRequested,
+            TempPath = Path.Combine(MauiProgram.DataPath, "RenderCache")
+        });
+        _activeRenderRpcJobId = jobId;
+        SetSubProg("Render");
+
+        var job = await RenderRpcBootstrap.Client.GetJobStatusAsync(jobId, _cts.Token);
+        if (_backgroundRenderRequested)
+        {
+            _keepRenderInBackground = true;
+            _renderDetached = true;
+            await Navigation.PopToRootAsync();
+            return true;
+        }
 
         try
         {
@@ -710,24 +718,88 @@ public partial class RenderPage : ContentPage
             }
 
             if (job.State == RenderJobState.Canceled) throw new OperationCanceledException(_cts.Token);
-            if (job.State != RenderJobState.Completed || job.Artifact is null)
+            if (job.State != RenderJobState.Completed)
                 throw new InvalidOperationException(job.Error?.Message ?? $"Render job ended in state {job.State}.");
-
-            var artifactPath = RenderRpcBootstrap.ResolveArtifactPath(_workingPath, job.Artifact);
-            Directory.CreateDirectory(Path.GetDirectoryName(resultPath) ?? throw new InvalidOperationException("Output path has no parent directory."));
-            File.Copy(artifactPath, resultPath, overwrite: true);
+            if (!File.Exists(resultPath))
+                throw new FileNotFoundException("The CLI renderer completed without producing the requested output file.", resultPath);
             await SubProgress.ProgressTo(1, 100, Easing.Linear);
+            try { await RenderRpcBootstrap.Client.CloseProjectAsync(Guid.Empty); } catch { }
+            return false;
         }
         catch (OperationCanceledException)
         {
-            try { await RenderRpcBootstrap.Client.CancelJobAsync(job.JobId); } catch { }
+            if (!_keepRenderInBackground)
+            {
+                try { await RenderRpcBootstrap.Client.CancelJobAsync(job.JobId); } catch { }
+            }
             throw;
         }
         finally
         {
-            _activeRenderRpcJobId = null;
-            try { await RenderRpcBootstrap.Client.CloseProjectAsync(_renderRpcSessionId); } catch { }
+            if (!_keepRenderInBackground) _activeRenderRpcJobId = null;
         }
+    }
+
+    private async Task RestoreRenderJobAsync()
+    {
+        try
+        {
+            if (!RenderRpcBootstrap.TryReconnectCliRender(_workingPath, out var jobId)) return;
+            var job = await RenderRpcBootstrap.Client.GetJobStatusAsync(jobId);
+
+            _activeRenderRpcJobId = job.JobId;
+            _backgroundRenderRequested = job.Background;
+            _keepRenderInBackground = job.Background && job.State is (RenderJobState.Queued or RenderJobState.Running);
+            await PrepareUIForRender();
+            await ApplyRenderJobStatusAsync(job);
+            if (job.State is RenderJobState.Queued or RenderJobState.Running)
+                await WaitForRenderJobAsync(job);
+            else
+            {
+                try { await RenderRpcBootstrap.Client.CloseProjectAsync(Guid.Empty); } catch { }
+                _activeRenderRpcJobId = null;
+                await CleanupUIForRenderDone();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Restore render job", this);
+        }
+    }
+
+    private void CleanupUIAfterDetach()
+    {
+        _logUpdateTimer?.Stop();
+        _screenSaverTimer?.Stop();
+        StopScreenSaverTimer();
+        MyLoggerExtensions.OnLog -= _WriteToLogBox;
+        DeviceDisplay.Current.KeepScreenOn = false;
+        running = false;
+    }
+
+    private async Task WaitForRenderJobAsync(RenderJob job)
+    {
+        while (job.State is RenderJobState.Queued or RenderJobState.Running)
+        {
+            await Task.Delay(250);
+            job = await RenderRpcBootstrap.Client.GetJobStatusAsync(job.JobId);
+            await ApplyRenderJobStatusAsync(job);
+        }
+        try { await RenderRpcBootstrap.Client.CloseProjectAsync(Guid.Empty); } catch { }
+        _activeRenderRpcJobId = null;
+        await CleanupUIForRenderDone();
+    }
+
+    private async Task ApplyRenderJobStatusAsync(RenderJob job)
+    {
+        await Dispatcher.DispatchAsync(async () =>
+        {
+            await SubProgress.ProgressTo(Math.Clamp(job.Progress, 0, 1), 100, Easing.Linear);
+            var eta = TimeSpan.FromTicks(Math.Max(0, job.EstimatedRemainingTicks));
+            SubProgLabel.Text = $"Render ({job.Progress:P1}, ETA {eta:hh\\:mm\\:ss})";
+            if (job.State == RenderJobState.Failed && job.Error is not null)
+                LoggingBox.Text = job.Error.Message;
+        });
     }
 
     private async void RenderToVoidButton_Clicked(object sender, EventArgs e)
@@ -1514,7 +1586,10 @@ public partial class RenderPage : ContentPage
 #endif
         try
         {
-            await ComposeAudio(vm, resultPath);
+            if (RenderRpcBootstrap.SupportsCliRenderProcess)
+                await RenderAudioViaRpcAsync(vm, resultPath);
+            else
+                await ComposeAudio(vm, resultPath);
         }
         catch (Exception ex)
         {
@@ -1538,6 +1613,42 @@ public partial class RenderPage : ContentPage
             catch { }
         }
 #endif
+    }
+
+    private async Task RenderAudioViaRpcAsync(RenderPageViewModel vm, string resultPath)
+    {
+        RenderRpcBootstrap.Initialize(_workingPath);
+        await RenderRpcBootstrap.Client.OpenProjectAsync(new OpenProjectRequest
+        {
+            SessionId = _renderRpcSessionId,
+            ProjectRoot = _workingPath,
+            ProjectJson = JsonSerializer.Serialize(_project, DraftPage.DraftJSONOption),
+            TimelineJson = JsonSerializer.Serialize(_draft, DraftPage.DraftJSONOption),
+            ProjectWidth = Math.Max(1, _project.RelativeWidth),
+            ProjectHeight = Math.Max(1, _project.RelativeHeight),
+            FrameRate = Math.Max(1, (int)_project.TargetFrameRate),
+            ProxyRoot = Path.Combine(_workingPath, "proxy"),
+            Assets = Asset.AssetDatabase.Assets.Select(static item => new AssetPathEntry { AssetId = item.Key, Path = item.Value.Path ?? string.Empty }).Where(static item => !string.IsNullOrWhiteSpace(item.Path)).ToList(),
+        }, _cts.Token);
+        try
+        {
+            var artifact = await RenderRpcBootstrap.Client.RenderAudioSegmentAsync(new AudioSegmentRequest
+            {
+                SessionId = _renderRpcSessionId,
+                StartFrame = 0,
+                Length = _duration,
+                FrameRate = Math.Max(1, (int)Math.Round(double.Parse(vm.Framerate, CultureInfo.InvariantCulture))),
+                SampleRate = 96000,
+                Channels = 2,
+            }, _cts.Token);
+            var source = RenderRpcBootstrap.ResolveArtifactPath(_workingPath, artifact);
+            Directory.CreateDirectory(Path.GetDirectoryName(resultPath)!);
+            File.Copy(source, resultPath, overwrite: true);
+        }
+        finally
+        {
+            try { await RenderRpcBootstrap.Client.CloseProjectAsync(_renderRpcSessionId); } catch { }
+        }
     }
 
     private async void ExportVideoOnly_Clicked(object sender, EventArgs e)

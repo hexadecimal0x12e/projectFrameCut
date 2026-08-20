@@ -1,6 +1,10 @@
 # projectFrameCut.IntegratedAPIServer
 
-An in-process ASP.NET Core MCP server for the project currently open in projectFrameCut.
+An in-process cross-platform MCP and protobuf HTTP server for the project currently open in projectFrameCut.
+
+The server uses Watson.Lite for its TCP-based HTTP listener and the ModelContextProtocol
+core transport directly. It does not reference ASP.NET Core or Kestrel, which keeps the
+library usable from the Android and iOS application targets.
 
 On Windows, open a project with an explicit listen address:
 
@@ -15,6 +19,10 @@ Endpoints:
 - Echo: `http://127.0.0.1:32123/echo?message=hello`
 
 Before calling project tools, an MCP client must call `authorize_client`. projectFrameCut displays the client identity, remote address, and stated reason. The decision is cached by remote client IP for the lifetime of the current server instance, so reconnecting from the same endpoint does not prompt again. If the remote IP is unavailable, authorization safely falls back to the current MCP session.
+
+The HTTP MCP implementation preserves stateful Streamable HTTP sessions and supports
+`POST /mcp`, `GET /mcp`, and `DELETE /mcp`. Legacy `/sse` and `/message` endpoints are
+not exposed.
 
 The library is referenced by every application TFM. Only the Windows application currently starts the server; other platform startup integrations are intentionally left for later.
 

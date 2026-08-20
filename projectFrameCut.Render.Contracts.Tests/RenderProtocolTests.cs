@@ -29,6 +29,28 @@ public sealed class RenderProtocolTests
     }
 
     [TestMethod]
+    public void BackgroundRenderJobRoundTripsThroughProtobuf()
+    {
+        var source = new RenderJob
+        {
+            JobId = Guid.NewGuid(),
+            State = RenderJobState.Running,
+            ProjectRoot = "C:/projects/demo",
+            ProjectName = "demo",
+            OutputPath = "C:/exports/demo.mp4",
+            Background = true,
+            Progress = 0.42,
+        };
+
+        var clone = RenderRpcSerializer.Clone(source);
+
+        Assert.AreEqual(source.JobId, clone.JobId);
+        Assert.AreEqual(source.ProjectRoot, clone.ProjectRoot);
+        Assert.IsTrue(clone.Background);
+        Assert.AreEqual(0.42, clone.Progress, 0.0001);
+    }
+
+    [TestMethod]
     public void RenderSessionRoundTripsFrameHashIndexThroughProtobuf()
     {
         var source = new RenderSession

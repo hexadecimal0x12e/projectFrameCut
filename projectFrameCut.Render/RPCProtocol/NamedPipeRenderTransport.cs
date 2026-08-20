@@ -148,57 +148,66 @@ public sealed class NamedPipeRenderServer(IRenderService service)
         if (string.IsNullOrWhiteSpace(pipeName)) throw new ArgumentException("Pipe name is required.", nameof(pipeName));
         if (string.IsNullOrWhiteSpace(token)) throw new ArgumentException("Pipe token is required.", nameof(token));
 
-        await using var pipe = new NamedPipeServerStream(
-            pipeName,
-            PipeDirection.InOut,
-            1,
-            PipeTransmissionMode.Byte,
-            PipeOptions.Asynchronous);
-        await pipe.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
-
-        var handshakeBytes = await RenderPipeFrame.ReadAsync(pipe, cancellationToken).ConfigureAwait(false)
-            ?? throw new RenderPipeException("Render client closed the pipe during handshake.");
-        var handshake = RenderRpcSerializer.Deserialize<RenderPipeHandshake>(handshakeBytes);
-        var accepted = handshake.ProtocolVersion == RenderProtocol.PipeProtocolVersion
-            && string.Equals(handshake.Token, token, StringComparison.Ordinal)
-            && !string.IsNullOrWhiteSpace(handshake.ClientId);
-        var handshakeResponse = new RenderPipeHandshake
-        {
-            ProtocolVersion = RenderProtocol.PipeProtocolVersion,
-            ClientId = handshake.ClientId,
-            Accepted = accepted,
-            Error = accepted ? string.Empty : "Render pipe handshake was rejected.",
-            Capabilities = accepted ? new RenderCapabilities
-            {
-                ProtocolVersion = RenderProtocol.CurrentVersion,
-                MinimumProtocolVersion = RenderProtocol.MinimumSupportedVersion,
-            } : null,
-        };
-        await RenderPipeFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(handshakeResponse), cancellationToken).ConfigureAwait(false);
-        if (!accepted) return;
-
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var parentMonitor = StartParentMonitor(expectedParentPid, linked);
-        var writeGate = new SemaphoreSlim(1, 1);
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var parentMonitor = StartParentMonitor(expectedParentPid, lifetime);
         try
         {
-            var requests = new List<Task>();
-            while (pipe.IsConnected && !linked.IsCancellationRequested)
+            while (!lifetime.IsCancellationRequested)
             {
-                var bytes = await RenderPipeFrame.ReadAsync(pipe, linked.Token).ConfigureAwait(false);
-                if (bytes is null) break;
-                var request = RenderRpcSerializer.Deserialize<RenderRequestEnvelope>(bytes);
-                requests.Add(DispatchAndWriteAsync(pipe, writeGate, request, linked.Token));
-                requests.RemoveAll(static task => task.IsCompleted);
+                await using var pipe = new NamedPipeServerStream(
+                    pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                await pipe.WaitForConnectionAsync(lifetime.Token).ConfigureAwait(false);
+
+                try
+                {
+                    var handshakeBytes = await RenderPipeFrame.ReadAsync(pipe, lifetime.Token).ConfigureAwait(false)
+                        ?? throw new RenderPipeException("Render client closed the pipe during handshake.");
+                    var handshake = RenderRpcSerializer.Deserialize<RenderPipeHandshake>(handshakeBytes);
+                    var accepted = handshake.ProtocolVersion == RenderProtocol.PipeProtocolVersion
+                        && string.Equals(handshake.Token, token, StringComparison.Ordinal)
+                        && !string.IsNullOrWhiteSpace(handshake.ClientId);
+                    var handshakeResponse = new RenderPipeHandshake
+                    {
+                        ProtocolVersion = RenderProtocol.PipeProtocolVersion,
+                        ClientId = handshake.ClientId,
+                        Accepted = accepted,
+                        Error = accepted ? string.Empty : "Render pipe handshake was rejected.",
+                        Capabilities = accepted ? new RenderCapabilities
+                        {
+                            ProtocolVersion = RenderProtocol.CurrentVersion,
+                            MinimumProtocolVersion = RenderProtocol.MinimumSupportedVersion,
+                        } : null,
+                    };
+                    await RenderPipeFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(handshakeResponse), lifetime.Token).ConfigureAwait(false);
+                    if (!accepted) continue;
+
+                    using var connectionCancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+                    var writeGate = new SemaphoreSlim(1, 1);
+                    try
+                    {
+                        var requests = new List<Task>();
+                        while (pipe.IsConnected && !connectionCancellation.IsCancellationRequested)
+                        {
+                            var bytes = await RenderPipeFrame.ReadAsync(pipe, connectionCancellation.Token).ConfigureAwait(false);
+                            if (bytes is null) break;
+                            var request = RenderRpcSerializer.Deserialize<RenderRequestEnvelope>(bytes);
+                            requests.Add(DispatchAndWriteAsync(pipe, writeGate, request, connectionCancellation.Token));
+                            requests.RemoveAll(static task => task.IsCompleted);
+                        }
+                        connectionCancellation.Cancel();
+                        try { await Task.WhenAll(requests).ConfigureAwait(false); } catch (OperationCanceledException) { }
+                    }
+                    finally { writeGate.Dispose(); }
+                }
+                catch (EndOfStreamException) { }
+                catch (IOException) { }
+                catch (OperationCanceledException) when (!lifetime.IsCancellationRequested) { }
             }
-            linked.Cancel();
-            try { await Task.WhenAll(requests).ConfigureAwait(false); } catch (OperationCanceledException) { }
         }
         finally
         {
-            linked.Cancel();
+            lifetime.Cancel();
             try { await parentMonitor.ConfigureAwait(false); } catch { }
-            writeGate.Dispose();
         }
     }
 

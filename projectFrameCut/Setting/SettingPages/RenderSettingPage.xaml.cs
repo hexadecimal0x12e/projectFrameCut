@@ -1,5 +1,6 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Rendering;
@@ -9,11 +10,6 @@ using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
-#if WINDOWS
-using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
-
-#endif
 
 namespace projectFrameCut.Setting.SettingPages;
 
@@ -25,7 +21,7 @@ public partial class RenderSettingPage : ContentPage
     bool showMoreOpts = false;
     Dictionary<int, string> GCOptionMapping = new();
     ConcurrentDictionary<string, EffectImplementType> effectImplementTypes = new();
-#if WINDOWS
+#if WINDOWS || LINUX
     AcceleratorDeviceInfo[] AcceleratorDevices = Array.Empty<AcceleratorDeviceInfo>();
 #endif
 
@@ -83,7 +79,7 @@ public partial class RenderSettingPage : ContentPage
         {
             {0, SettingLocalizedResources.Render_GCOption_LetCLRDoGC },
             {1, SettingLocalizedResources.Render_GCOption_DoNormalCollection },
-#if WINDOWS
+#if WINDOWS || LINUX
             {2, SettingLocalizedResources.Render_GCOption_DoLOHCompression }
 #endif
         };
@@ -109,7 +105,7 @@ public partial class RenderSettingPage : ContentPage
     {
         base.OnAppearing();
 
-#if WINDOWS
+#if WINDOWS || LINUX
         if (AcceleratorDevices.Length == 0)
         {
             Task t = new(() =>
@@ -164,7 +160,7 @@ public partial class RenderSettingPage : ContentPage
             .AppendWhen(IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", false), c => c.AddEntry("render_MaxDiskBufferCount", SettingLocalizedResources.Render_MaxDiskBufferCount, GetSetting("render_MaxDiskBufferCount", "500"), SettingLocalizedResources.Render_MaxPendingWriteFrames_Desc, c => c.Keyboard = Keyboard.Numeric))
             .AddSeparator();
 
-#if WINDOWS
+#if WINDOWS || LINUX
         var devices = AcceleratorDevices;
         string[] accelDisplayNames = devices.Length > 0
             ? devices.Select(a => $"{a.Name} ({a.Type})").ToArray()
@@ -248,7 +244,7 @@ public partial class RenderSettingPage : ContentPage
         {
             switch (args.Id)
             {
-#if WINDOWS
+#if WINDOWS || LINUX
                 case "accel_DeviceId":
                     if (args.Value is string str && AcceleratorDevices.Length > 0)
                     {

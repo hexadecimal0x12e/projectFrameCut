@@ -31,6 +31,7 @@ public interface IRenderClient : IAsyncDisposable
     ValueTask<RenderJob> RenderProjectAsync(RenderProjectRequest request, CancellationToken cancellationToken = default);
     ValueTask<RenderJob> GetJobStatusAsync(Guid jobId, CancellationToken cancellationToken = default);
     ValueTask<RenderJob> CancelJobAsync(Guid jobId, CancellationToken cancellationToken = default);
+    ValueTask<List<RenderJob>> ListRenderJobsAsync(ListRenderJobsRequest request, CancellationToken cancellationToken = default);
     ValueTask ReleaseArtifactAsync(ArtifactRequest request, CancellationToken cancellationToken = default);
     ValueTask<HeadlessProjectSnapshot> OpenHeadlessProjectAsync(OpenHeadlessProjectRequest request, CancellationToken cancellationToken = default);
     ValueTask<HeadlessProjectSnapshot> GetHeadlessProjectSnapshotAsync(Guid sessionId, CancellationToken cancellationToken = default);
@@ -83,6 +84,7 @@ public sealed class RenderClient(IRenderTransport transport, string? clientId = 
     public ValueTask<RenderJob> RenderProjectAsync(RenderProjectRequest request, CancellationToken ct = default) => SendAsync<RenderProjectRequest, RenderJob>(RenderOperation.RenderProject, request, ct);
     public ValueTask<RenderJob> GetJobStatusAsync(Guid jobId, CancellationToken ct = default) => SendAsync<JobRequest, RenderJob>(RenderOperation.GetJobStatus, new() { JobId = jobId }, ct);
     public ValueTask<RenderJob> CancelJobAsync(Guid jobId, CancellationToken ct = default) => SendAsync<JobRequest, RenderJob>(RenderOperation.CancelJob, new() { JobId = jobId }, ct);
+    public ValueTask<List<RenderJob>> ListRenderJobsAsync(ListRenderJobsRequest request, CancellationToken ct = default) => SendAsync<ListRenderJobsRequest, List<RenderJob>>(RenderOperation.ListRenderJobs, request, ct);
     public async ValueTask ReleaseArtifactAsync(ArtifactRequest request, CancellationToken ct = default) { _ = await SendAsync<ArtifactRequest, EmptyResponse>(RenderOperation.ReleaseArtifact, request, ct).ConfigureAwait(false); }
     public ValueTask<HeadlessProjectSnapshot> OpenHeadlessProjectAsync(OpenHeadlessProjectRequest request, CancellationToken ct = default) => SendAsync<OpenHeadlessProjectRequest, HeadlessProjectSnapshot>(RenderOperation.OpenHeadlessProject, request, ct);
     public ValueTask<HeadlessProjectSnapshot> GetHeadlessProjectSnapshotAsync(Guid sessionId, CancellationToken ct = default) => SendAsync<HeadlessSessionRequest, HeadlessProjectSnapshot>(RenderOperation.GetHeadlessProjectSnapshot, new() { SessionId = sessionId }, ct);

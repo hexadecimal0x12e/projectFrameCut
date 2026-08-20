@@ -696,9 +696,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         ComputerHelper.Init();
 #elif IOS
         MetalComputerHelper.RegisterComputerBridge();
-#elif WINDOWS
+#elif WINDOWS || LINUX
         // AcceleratorsManager was initialized during plugin load.
-        if (projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DefaultAccelerator is null)
+        if (projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.DefaultAccelerator is null)
             throw new InvalidDataException("No valid ILGPU accelerator found.");
 #endif
 
