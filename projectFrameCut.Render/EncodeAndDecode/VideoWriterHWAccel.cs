@@ -196,7 +196,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _videoStream->time_base = _codecCtx->time_base;
             _codecCtx->framerate = new AVRational { num = FramePerSecond, den = 1 };
             _codecCtx->gop_size = Math.Max(FramePerSecond * 3, 30);
-            _codecCtx->max_b_frames = 1;        // 减少B帧重排序缓冲,降低硬件编码器参考帧损坏概率
+            // Android MediaCodec encoders generally do not support/output B-frames.
+            // Keep the generic HW path conservative as well, since MediaCodec is
+            // selected from this context before avcodec_open2() is called.
+            _codecCtx->max_b_frames = _resolvedEncoderName?.Contains("mediacodec", StringComparison.OrdinalIgnoreCase) == true ? 0 : 1;
             _codecCtx->bit_rate = _bitRate;
             _codecCtx->rc_max_rate = _bitRate * 2;
             _codecCtx->rc_buffer_size = _bitRate > int.MaxValue / 2 ? int.MaxValue / 2 : (int)(_bitRate * 2);
@@ -254,7 +257,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         _videoStream->time_base = _codecCtx->time_base;
                         _codecCtx->framerate = new AVRational { num = FramePerSecond, den = 1 };
                         _codecCtx->gop_size = Math.Max(FramePerSecond * 3, 30);
-                        _codecCtx->max_b_frames = 1;
+                        _codecCtx->max_b_frames = nextHwName.Contains("mediacodec", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
                         _codecCtx->bit_rate = _bitRate;
                         _codecCtx->rc_max_rate = _bitRate * 2;
                         _codecCtx->rc_buffer_size = _bitRate > int.MaxValue / 2 ? int.MaxValue / 2 : (int)(_bitRate * 2);
@@ -1081,9 +1084,13 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
             else if (name.Contains("mediacodec"))
             {
-                ffmpeg.av_dict_set(opts, "bitrate_mode", "cq", 0);  // constant quality
-                ffmpeg.av_dict_set(opts, "quality", "8", 0);        // high quality (1–10)
-                ffmpeg.av_dict_set(opts, "priority", "realtime", 0);
+                // Prefer the Java MediaCodec backend on Android. FFmpeg may
+                // otherwise select the NDK backend when it cannot see the JVM;
+                // that path is unreliable from embedded runtimes, especially on
+                // newer Android versions. The common AVCodecContext bitrate is
+                // sufficient, so avoid optional device-dependent rate-control
+                // and quality options here.
+                ffmpeg.av_dict_set(opts, "ndk_codec", "0", 0);
             }
         }
 

@@ -47,6 +47,7 @@ namespace projectFrameCut.LivePreview
         private IReadOnlyDictionary<Guid, IReadOnlyDictionary<uint, string>> ClipHashLookup { get; set; }
             = new Dictionary<Guid, IReadOnlyDictionary<uint, string>>();
         public string ProjectRoot => string.IsNullOrWhiteSpace(TempPath) ? string.Empty : Directory.GetParent(Path.GetFullPath(TempPath))?.FullName ?? string.Empty;
+        public string ProjectName { get; set; } = "Untitled Project";
 
         public bool IsFrameRendered(uint frameIndex)
         {
@@ -244,7 +245,7 @@ namespace projectFrameCut.LivePreview
             // This keeps application startup and the home page independent from the
             // Windows CLI RPC process. The project root is passed so each open
             // project gets a dedicated backend bound to it.
-            if (RpcClient is null) RenderRpcBootstrap.Initialize(request.ProjectRoot);
+            if (RpcClient is null) RenderRpcBootstrap.Initialize(request.ProjectRoot, projectName: ProjectName);
             var session = await (RpcClient ?? RenderRpcBootstrap.Client).OpenProjectAsync(request).ConfigureAwait(false);
             HashIndex = session.HashIndex ?? new();
             FrameHashLookup = HashIndex.FrameHashes

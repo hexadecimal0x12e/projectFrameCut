@@ -658,6 +658,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         previewer.TempPath = IsRemoteProject
             ? Path.Combine(FileSystem.CacheDirectory, "remoteConnection", ProjectInfo.ProjectUniqueId.ToString("N"), "thumbs")
             : Path.Combine(WorkingPath, "thumbs");
+        previewer.ProjectName = ProjectName;
         DynamicPreviewProvider.SetLivePreviewer(ref previewer!);
         ClipEditor.UpdateVideoResolution(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
 
@@ -9023,7 +9024,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         assets,
                         args?.ToString() ?? (noSlot ? "Auto-save" : "Save"));
                 }
-                catch (RenderRpcException ex) when (ex.Error.Code == RenderErrorCode.VersionConflict)
+                catch (RemoteRenderException ex) when (ex.ErrorCode == RenderErrorCode.VersionConflict)
                 {
                     Log("Remote project was modified by another client; local changes conflict with the server.", "warn");
                     SetStateFail(Localized.DraftPage_RemoteProject_ModifiedOnServer);

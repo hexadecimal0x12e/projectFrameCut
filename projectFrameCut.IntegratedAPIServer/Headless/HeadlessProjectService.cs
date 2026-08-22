@@ -100,43 +100,47 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
         }
         catch (HeadlessVersionConflictException ex)
         {
-            return Failure(request, RenderErrorCode.VersionConflict, ex.Message, ex.Details);
+            return Failure(request, RenderErrorCode.VersionConflict, ex, customDetails: ex.Details);
         }
         catch (HeadlessSessionNotFoundException ex)
         {
-            return Failure(request, RenderErrorCode.SessionNotFound, ex.Message);
+            return Failure(request, RenderErrorCode.SessionNotFound, ex);
         }
         catch (RenderRpcException ex)
         {
             return Failure(request, ex.Error.Code, ex.Error.Message, ex.Error.Details);
         }
+        catch (Exception ex) when (ex.Data[nameof(RemoteError.Code)] is RenderErrorCode code)
+        {
+            return Failure(request, code, ex, customDetails: ex.Data[nameof(RemoteError.Details)] as string);
+        }
         catch (FileNotFoundException ex)
         {
-            return Failure(request, RenderErrorCode.ProjectNotFound, ex.Message, ex.FileName ?? string.Empty);
+            return Failure(request, RenderErrorCode.ProjectNotFound, ex, customDetails: ex.FileName ?? string.Empty);
         }
         catch (DirectoryNotFoundException ex)
         {
-            return Failure(request, RenderErrorCode.ProjectNotFound, ex.Message);
+            return Failure(request, RenderErrorCode.ProjectNotFound, ex);
         }
         catch (KeyNotFoundException ex)
         {
-            return Failure(request, RenderErrorCode.ClipNotFound, ex.Message);
+            return Failure(request, RenderErrorCode.ClipNotFound, ex);
         }
         catch (ArgumentException ex)
         {
-            return Failure(request, RenderErrorCode.InvalidRequest, ex.Message, ex.ToString());
+            return Failure(request, RenderErrorCode.InvalidRequest, ex);
         }
         catch (FormatException ex)
         {
-            return Failure(request, RenderErrorCode.InvalidRequest, ex.Message, ex.ToString());
+            return Failure(request, RenderErrorCode.InvalidRequest, ex);
         }
         catch (OverflowException ex)
         {
-            return Failure(request, RenderErrorCode.InvalidRequest, ex.Message, ex.ToString());
+            return Failure(request, RenderErrorCode.InvalidRequest, ex);
         }
         catch (JsonException ex)
         {
-            return Failure(request, RenderErrorCode.InvalidRequest, ex.Message, ex.ToString());
+            return Failure(request, RenderErrorCode.InvalidRequest, ex);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -144,7 +148,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            return Failure(request, RenderErrorCode.BackendFailure, ex.Message, ex.ToString());
+            return Failure(request, RenderErrorCode.BackendFailure, ex);
         }
     }
 
@@ -153,7 +157,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
         CancellationToken cancellationToken)
     {
         RenderResponseEnvelope response = await _renderService.DispatchAsync(request, cancellationToken).ConfigureAwait(false);
-        if (response.Error is not null) throw new RenderRpcException(response.Error);
+        if (response.Error is not null) response.Error.ThrowAsException();
         RenderCapabilities capabilities = RenderRpcSerializer.Deserialize<RenderCapabilities>(response.Payload);
         foreach (string feature in new[] { "http-protobuf", "headless-project", "optimistic-concurrency", "project-editing" })
         {
@@ -192,7 +196,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
             Payload = RenderRpcSerializer.Serialize(request),
         };
         RenderResponseEnvelope response = await _renderService.DispatchAsync(innerRequest, cancellationToken).ConfigureAwait(false);
-        if (response.Error is not null) throw new RenderRpcException(response.Error);
+        if (response.Error is not null) response.Error.ThrowAsException();
         return RenderRpcSerializer.Deserialize<RenderSession>(response.Payload);
     }
 
@@ -247,7 +251,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
             try
             {
                 RenderResponseEnvelope renderResponse = await _renderService.DispatchAsync(originalRequest, cancellationToken).ConfigureAwait(false);
-                if (renderResponse.Error is not null) throw new RenderRpcException(renderResponse.Error);
+                if (renderResponse.Error is not null) renderResponse.Error.ThrowAsException();
             }
             finally
             {
@@ -258,7 +262,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
         }
 
         RenderResponseEnvelope response = await _renderService.DispatchAsync(originalRequest, cancellationToken).ConfigureAwait(false);
-        if (response.Error is not null) throw new RenderRpcException(response.Error);
+        if (response.Error is not null) response.Error.ThrowAsException();
         return RenderRpcSerializer.Deserialize<EmptyResponse>(response.Payload);
     }
 
@@ -416,7 +420,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
             }),
         }, cancellationToken).ConfigureAwait(false);
 
-        if (response.Error is not null) throw new RenderRpcException(response.Error);
+        if (response.Error is not null) response.Error.ThrowAsException();
         session.RenderSession = RenderRpcSerializer.Deserialize<RenderSession>(response.Payload);
         session.SnapshotHash = ComputeSnapshotHash(projectJson, timelineJson, Serialize(session.Workspace.Assets));
     }
@@ -610,7 +614,13 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
     private static RenderResponseEnvelope Failure(RenderRequestEnvelope request, RenderErrorCode code, string message, string details = "") => new()
     {
         RequestId = request.RequestId,
-        Error = new RenderError { Code = code, Message = message, Details = details },
+        Error = new RemoteError { Code = code, Message = message, Details = details },
+    };
+
+    private static RenderResponseEnvelope Failure(RenderRequestEnvelope request, RenderErrorCode code, Exception exception, string? customMessage = null, string? customDetails = null) => new()
+    {
+        RequestId = request.RequestId,
+        Error = new RemoteError(exception, code, customMessage: customMessage, customDetails: customDetails),
     };
 
     public async ValueTask DisposeAsync()

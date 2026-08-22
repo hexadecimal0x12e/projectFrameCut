@@ -148,7 +148,7 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider =>
         new Dictionary<string, (Func<bool>, Func<string, IVideoWriter>)>
         {
-            { "VideoWriterHWAccel", (HWAccelEncodeOptionGetter, new((_) => new VideoWriterHWAccel())) },
+            { "VideoWriterHWAccel", ((() => HWAccelEncodeOptionGetter() && !(OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())), new((_) => new VideoWriterHWAccel())) },
             { "VideoWriter", (AlwaysTrue, new((_) => new VideoWriter())) },
             { "HDRVideoWriter", (AlwaysTrue, new((_) => new HDRVideoWriter())) },
             { "BlackHoleWriter", (AlwaysTrue, new((_) => new BlackholeVideoWriter())) }

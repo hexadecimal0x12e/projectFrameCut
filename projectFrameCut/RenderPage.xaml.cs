@@ -34,6 +34,10 @@ using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.RenderAPIBase.Context;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Contracts;
+using PictureExtensions = projectFrameCut.Drawing.Base.PictureExtensions;
+
+
+
 
 
 
@@ -91,6 +95,8 @@ public partial class RenderPage : ContentPage
     private CancellationTokenSource _cts = new CancellationTokenSource();
     private Guid _renderRpcSessionId = Guid.NewGuid();
     private Guid? _activeRenderRpcJobId;
+    private string? _activeCliPreviewPath;
+    private DateTime _lastCliPreviewWriteUtc;
     private bool _backgroundRenderRequested;
     private bool _keepRenderInBackground;
     private bool _renderDetached;
@@ -423,13 +429,21 @@ public partial class RenderPage : ContentPage
         // The export page always returns to HomePage, which closes the project.
         // Tear down this project's render backend so the render process cannot
         // leak memory after the project is gone.
-        _keepRenderInBackground = _backgroundRenderRequested && _activeRenderRpcJobId.HasValue;
+        _keepRenderInBackground = _activeRenderRpcJobId.HasValue && RenderRpcBootstrap.SupportsCliRenderProcess;
         if (!_keepRenderInBackground)
         {
             try { _cts.Cancel(); } catch { }
         }
-        try { RenderRpcBootstrap.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
-        catch (Exception ex) { Log(ex, "Dispose render backend", this); }
+        else
+        {
+            _renderDetached = true;
+            RenderRpcBootstrap.DetachActiveCliRender();
+        }
+        if (!_keepRenderInBackground)
+        {
+            try { RenderRpcBootstrap.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+            catch (Exception ex) { Log(ex, "Dispose render backend", this); }
+        }
     }
 
     protected override bool OnBackButtonPressed()
@@ -669,9 +683,11 @@ public partial class RenderPage : ContentPage
 
     }
 
-    private async Task<bool> RenderProjectViaCliAsync(RenderPageViewModel vm, string resultPath, string encoder, string pixelFormat)
+    private async Task<bool> RenderProjectViaCliAsync(RenderPageViewModel vm, string resultPath, string encoder, string pixelFormat, bool writeToVoid = false)
     {
         SetSubProg("PrepareDraft");
+        _activeCliPreviewPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"render-preview-{Guid.NewGuid():N}.vfd");
+        _lastCliPreviewWriteUtc = default;
         var jobId = RenderRpcBootstrap.StartCliRender(new CliRenderProcessOptions
         {
             ProjectRoot = _workingPath,
@@ -691,7 +707,11 @@ public partial class RenderPage : ContentPage
             PrepareInWorker = SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorker", true),
             RenderByLayer = SettingsManager.IsBoolSettingTrueOrDefault("render_RenderByLayer", true),
             Background = _backgroundRenderRequested,
-            TempPath = Path.Combine(MauiProgram.DataPath, "RenderCache")
+            TempPath = Path.Combine(MauiProgram.DataPath, "RenderCache"),
+            PreviewPath = _activeCliPreviewPath,
+            UseHwAccelDecoder = SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelDecoding", true),
+            UseHwAccelEncoder = SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelEncoding", true),
+            WriteToVoid = writeToVoid
         });
         _activeRenderRpcJobId = jobId;
         SetSubProg("Render");
@@ -711,16 +731,21 @@ public partial class RenderPage : ContentPage
             {
                 _cts.Token.ThrowIfCancellationRequested();
                 await SubProgress.ProgressTo(job.Progress, 100, Easing.Linear);
+                await RefreshCliPreviewAsync();
                 var eta = TimeSpan.FromTicks(Math.Max(0, job.EstimatedRemainingTicks));
-                SubProgLabel.Text = $"{_currentSubProgText} ({job.Progress:P1}, ETA {eta:hh\\:mm\\:ss})";
+                var fpsText = job.CurrentFps > 0 ? $", {job.CurrentFps:N2} FPS" : string.Empty;
+                SubProgLabel.Text = $"{_currentSubProgText} ({job.Progress:P1}, ETA {eta:hh\\:mm\\:ss}{fpsText})";
                 await Task.Delay(150, _cts.Token);
                 job = await RenderRpcBootstrap.Client.GetJobStatusAsync(job.JobId, _cts.Token);
             }
 
             if (job.State == RenderJobState.Canceled) throw new OperationCanceledException(_cts.Token);
             if (job.State != RenderJobState.Completed)
-                throw new InvalidOperationException(job.Error?.Message ?? $"Render job ended in state {job.State}.");
-            if (!File.Exists(resultPath))
+            {
+                if (job.Error is not null) job.Error.ThrowAsException();
+                throw new InvalidOperationException($"Render job ended in state {job.State}.");
+            }
+            if (!writeToVoid && !File.Exists(resultPath))
                 throw new FileNotFoundException("The CLI renderer completed without producing the requested output file.", resultPath);
             await SubProgress.ProgressTo(1, 100, Easing.Linear);
             try { await RenderRpcBootstrap.Client.CloseProjectAsync(Guid.Empty); } catch { }
@@ -737,7 +762,30 @@ public partial class RenderPage : ContentPage
         finally
         {
             if (!_keepRenderInBackground) _activeRenderRpcJobId = null;
+            if (!_keepRenderInBackground && _activeCliPreviewPath is string previewPath)
+            {
+                try { File.Delete(previewPath); } catch { }
+                _activeCliPreviewPath = null;
+            }
         }
+    }
+
+    private async Task RefreshCliPreviewAsync()
+    {
+        var path = _activeCliPreviewPath;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+
+        DateTime writeTime;
+        try { writeTime = File.GetLastWriteTimeUtc(path); } catch { return; }
+        if (writeTime <= _lastCliPreviewWriteUtc) return;
+
+        await using var stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        if (!PictureExtensions.SharedVfdPictureDecoder.TryLoad(stream, out IPicture? picture) || picture is null) return;
+        _lastCliPreviewWriteUtc = writeTime;
+        var source = picture.ToImageSource();
+        picture.Dispose();
+        if (source is not null)
+            await Dispatcher.DispatchAsync(() => PreviewImage.Source = source);
     }
 
     private async Task RestoreRenderJobAsync()
@@ -748,9 +796,13 @@ public partial class RenderPage : ContentPage
             var job = await RenderRpcBootstrap.Client.GetJobStatusAsync(jobId);
 
             _activeRenderRpcJobId = job.JobId;
+            _activeCliPreviewPath = RenderRpcBootstrap.ActiveCliPreviewPath;
+            _lastCliPreviewWriteUtc = default;
             _backgroundRenderRequested = job.Background;
             _keepRenderInBackground = job.Background && job.State is (RenderJobState.Queued or RenderJobState.Running);
             await PrepareUIForRender();
+            SetSubProg("Render");
+            await RefreshCliPreviewAsync();
             await ApplyRenderJobStatusAsync(job);
             if (job.State is RenderJobState.Queued or RenderJobState.Running)
                 await WaitForRenderJobAsync(job);
@@ -783,6 +835,7 @@ public partial class RenderPage : ContentPage
         {
             await Task.Delay(250);
             job = await RenderRpcBootstrap.Client.GetJobStatusAsync(job.JobId);
+            await RefreshCliPreviewAsync();
             await ApplyRenderJobStatusAsync(job);
         }
         try { await RenderRpcBootstrap.Client.CloseProjectAsync(Guid.Empty); } catch { }
@@ -796,7 +849,8 @@ public partial class RenderPage : ContentPage
         {
             await SubProgress.ProgressTo(Math.Clamp(job.Progress, 0, 1), 100, Easing.Linear);
             var eta = TimeSpan.FromTicks(Math.Max(0, job.EstimatedRemainingTicks));
-            SubProgLabel.Text = $"Render ({job.Progress:P1}, ETA {eta:hh\\:mm\\:ss})";
+            var fpsText = job.CurrentFps > 0 ? $", {job.CurrentFps:N2} FPS" : string.Empty;
+            SubProgLabel.Text = $"{_currentSubProgText} ({job.Progress:P1}, ETA {eta:hh\\:mm\\:ss}{fpsText})";
             if (job.State == RenderJobState.Failed && job.Error is not null)
                 LoggingBox.Text = job.Error.Message;
         });
@@ -812,6 +866,29 @@ public partial class RenderPage : ContentPage
             {
                 running = true;
                 DeviceDisplay.Current.KeepScreenOn = true;
+
+                if (RenderRpcBootstrap.SupportsCliRenderProcess && !string.IsNullOrWhiteSpace(_workingPath))
+                {
+                    var fmt = vm.BitDepth switch
+                    {
+                        "8bit" => "AV_PIX_FMT_YUV420P",
+                        "10bit" => "AV_PIX_FMT_YUV420P10LE",
+                        "12bit" => "AV_PIX_FMT_YUV420P10LE",
+                        _ => "AV_PIX_FMT_GBRP16LE"
+                    };
+                    var enc = (ProjectUsesHDR ? "h265" : vm.Encoding) switch
+                    {
+                        "h264" or "libx264" => "h264",
+                        "h265" or "hevc" or "h265/hevc" or "libx265" => "h265",
+                        "av1" => "av1",
+                        "ffv1" => "ffv1",
+                        _ => "h264"
+                    };
+                    var voidOutputPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"render-void-{Guid.NewGuid():N}.tmp");
+                    await RenderProjectViaCliAsync(vm, voidOutputPath, enc, fmt, writeToVoid: true);
+                    DeviceDisplay.Current.KeepScreenOn = false;
+                    return;
+                }
 
                 try
                 {
@@ -1483,7 +1560,7 @@ public partial class RenderPage : ContentPage
         {
             if (_activeRenderRpcJobId is Guid rpcJobId)
             {
-                try { await RenderRpcBootstrap.Client.CancelJobAsync(rpcJobId); } catch { }
+                try { await RenderRpcBootstrap.CancelCliRenderAsync(rpcJobId); } catch { }
             }
             builder?.Interrupt();
             _cts.Cancel();
@@ -1617,7 +1694,7 @@ public partial class RenderPage : ContentPage
 
     private async Task RenderAudioViaRpcAsync(RenderPageViewModel vm, string resultPath)
     {
-        RenderRpcBootstrap.Initialize(_workingPath);
+        RenderRpcBootstrap.Initialize(_workingPath, projectName: _project.ProjectName);
         await RenderRpcBootstrap.Client.OpenProjectAsync(new OpenProjectRequest
         {
             SessionId = _renderRpcSessionId,

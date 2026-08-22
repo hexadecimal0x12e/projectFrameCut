@@ -273,6 +273,7 @@ namespace projectFrameCut.Render.Rendering
 
             if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview && lastPreviewFrame < index)
             {
+                SavePreview(frame);
                 OnPreviewGenerated?.Invoke(this, frame.Clone());
                 countSinceLastPreview = 0;
                 lastPreviewFrame = index;
@@ -715,11 +716,31 @@ namespace projectFrameCut.Render.Rendering
             // Preview handling
             if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
             {
+                SavePreview(frame);
                 OnPreviewGenerated?.Invoke(this, frame.Clone());
                 countSinceLastPreview = 0;
             }
 
             return true;
+        }
+
+        private void SavePreview(IPicture frame)
+        {
+            if (string.IsNullOrWhiteSpace(PreviewPath)) return;
+
+            try
+            {
+                var directory = Path.GetDirectoryName(PreviewPath);
+                if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+                var temporaryPath = PreviewPath + ".tmp";
+                using (var stream = File.Create(temporaryPath))
+                    frame.Save(stream, Drawing.Base.PictureExtensions.SharedVfdPictureEncoder);
+                File.Move(temporaryPath, PreviewPath, overwrite: true);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Save render preview");
+            }
         }
 
 

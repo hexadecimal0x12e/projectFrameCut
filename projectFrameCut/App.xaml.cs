@@ -300,6 +300,7 @@ namespace projectFrameCut
 
                 nativeWindow.Closed += async (s, e) =>
                 {
+                    RenderRpcBootstrap.DetachActiveCliRender();
                     if (AppShell.instance.CurrentPage is DraftPage pg)
                     {
                         try

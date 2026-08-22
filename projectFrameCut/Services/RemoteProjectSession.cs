@@ -51,7 +51,7 @@ internal sealed class RemoteProjectSession : IAsyncDisposable
                 snapshot = await client.GetHeadlessProjectSnapshotAsync(
                     Guid.Empty, cancellationToken).ConfigureAwait(false);
             }
-            catch (RenderRpcException ex) when (ex.Error.Code == RenderErrorCode.SessionNotFound)
+            catch (RemoteRenderException ex) when (ex.ErrorCode == RenderErrorCode.SessionNotFound)
             {
                 // The server may have started without a preloaded project (for
                 // example when the GUI launches rpc_server with --http but no

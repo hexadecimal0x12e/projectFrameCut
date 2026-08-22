@@ -1,8 +1,8 @@
-#if ANDROID
 using Android.Content;
 using Android.OS;
 using projectFrameCut.Services;
 using System.Text.Json;
+
 
 namespace projectFrameCut.Platforms.Android;
 
@@ -15,8 +15,10 @@ internal sealed class AndroidRenderWorkerController : Java.Lang.Object, IService
     internal const string ExtraDataRoot = "dataRoot";
     internal const string ExtraProjectRoot = "projectRoot";
     internal const string ExtraFfmpegRoot = "ffmpegRoot";
+    internal const string ExtraLocale = "locale";
     internal const string ExtraIndependent = "independent";
     internal const string ExtraRenderOptions = "renderOptions";
+    internal const string ProjectNameOption = "projectName";
 
     private readonly Context _context;
     private readonly string _socketPath;
@@ -42,11 +44,12 @@ internal sealed class AndroidRenderWorkerController : Java.Lang.Object, IService
         string token,
         string dataRoot,
         string? projectRoot,
+        string projectName,
         string ffmpegRoot)
     {
         var context = global::Android.App.Application.Context;
         var controller = new AndroidRenderWorkerController(context, socketPath, stopOnDispose: true);
-        var intent = CreateIntent(context, socketPath, token, dataRoot, projectRoot, ffmpegRoot, independent: false, options: null);
+        var intent = CreateIntent(context, socketPath, token, dataRoot, projectRoot, ffmpegRoot, independent: false, projectName, options: null, locale: Localized._LocaleId_);
         context.StartForegroundService(intent);
         controller._bound = context.BindService(intent, controller, Bind.AutoCreate);
         if (!controller._bound)
@@ -62,11 +65,12 @@ internal sealed class AndroidRenderWorkerController : Java.Lang.Object, IService
         string socketPath,
         string token,
         string dataRoot,
+        string projectName,
         CliRenderProcessOptions options)
     {
         var context = global::Android.App.Application.Context;
         var controller = new AndroidRenderWorkerController(context, socketPath, stopOnDispose: false);
-        var intent = CreateIntent(context, socketPath, token, dataRoot, options.ProjectRoot, options.FFmpegLibraryPath, independent: true, options);
+        var intent = CreateIntent(context, socketPath, token, dataRoot, options.ProjectRoot, options.FFmpegLibraryPath, independent: true, projectName, options, locale: Localized._LocaleId_);
         context.StartForegroundService(intent);
         return controller;
     }
@@ -79,7 +83,9 @@ internal sealed class AndroidRenderWorkerController : Java.Lang.Object, IService
         string? projectRoot,
         string ffmpegRoot,
         bool independent,
-        CliRenderProcessOptions? options)
+        string projectName,
+        CliRenderProcessOptions? options,
+        string locale)
     {
         var intent = new Intent(context, typeof(RenderWorkerService));
         intent.SetAction(ActionStartWorker);
@@ -88,7 +94,9 @@ internal sealed class AndroidRenderWorkerController : Java.Lang.Object, IService
         intent.PutExtra(ExtraDataRoot, dataRoot);
         intent.PutExtra(ExtraProjectRoot, projectRoot ?? string.Empty);
         intent.PutExtra(ExtraFfmpegRoot, ffmpegRoot ?? string.Empty);
+        intent.PutExtra(ExtraLocale, locale ?? string.Empty);
         intent.PutExtra(ExtraIndependent, independent);
+        intent.PutExtra(ProjectNameOption, projectName);
         if (options is not null) intent.PutExtra(ExtraRenderOptions, JsonSerializer.Serialize(options));
         return intent;
     }
@@ -118,4 +126,3 @@ internal sealed class AndroidRenderWorkerController : Java.Lang.Object, IService
         return ValueTask.CompletedTask;
     }
 }
-#endif

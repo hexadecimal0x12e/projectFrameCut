@@ -103,6 +103,56 @@ namespace projectFrameCut
 
         public static bool IsStoreMode { get; private set; } = true;
 
+        /// <summary>
+        /// Initializes the localization state needed by the Android render-worker
+        /// process. The worker has a deliberately minimal MAUI bootstrap and does
+        /// not execute the normal application initialization path, so it must
+        /// receive the already-selected locale through its start Intent.
+        /// </summary>
+        public static void InitializeWorkerLocalization(string? locate)
+        {
+            locate = string.IsNullOrWhiteSpace(locate) ? "en-US" : locate;
+            try
+            {
+                Localized = SimpleLocalizer.Init(locate);
+            }
+            catch
+            {
+                SimpleLocalizer.IsFallbackMatched = true;
+                Localized = ISimpleLocalizerBase.GetMapping().First().Value;
+            }
+
+            SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping()
+                .TryGetValue(Localized._LocaleId_, out var settingsLocalized)
+                ? settingsLocalized
+                : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+            SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping()
+                .TryGetValue(Localized._LocaleId_, out var propertyPanelLocalized)
+                ? propertyPanelLocalized
+                : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+            projectFrameCut.ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping()
+                .TryGetValue(Localized._LocaleId_, out var apiLocalized)
+                ? apiLocalized
+                : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+            PluginManager.CurrentLocale = Localized._LocaleId_;
+            PluginManager.ExtenedLocalizationGetter = key =>
+                Localized.IsItemExist(key) ? Localized.DynamicLookup(key, key) : null;
+
+            try
+            {
+                var cultureName = locate == "文言文" ? "zh-HK" : Localized._LocaleId_;
+                var culture = CultureInfo.CreateSpecificCulture(cultureName);
+                Thread.CurrentThread.CurrentCulture = culture;
+                Thread.CurrentThread.CurrentUICulture = culture;
+                CultureInfo.DefaultThreadCurrentCulture = culture;
+                CultureInfo.DefaultThreadCurrentUICulture = culture;
+            }
+            catch
+            {
+                // Localization must not prevent the worker service from starting.
+            }
+        }
+
         public static MauiApp CreateMauiApp()
         {
 #if ANDROID
@@ -444,16 +494,16 @@ namespace projectFrameCut
                            options.SetShouldEnableSnackbarOnWindows(false);
                        });
 #if MAUISDK && (ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER || IOS15_0_OR_GREATER)
-                       builder.UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
-                       {
-                           options.SetDefaultAndroidViewType(AndroidViewType.TextureView);
-                       });
+                builder.UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
+                {
+                    options.SetDefaultAndroidViewType(AndroidViewType.TextureView);
+                });
 #endif
 #if MAUISDK
-                       builder.ConfigureEssentials(essentials =>
-                       {
-                           essentials.UseVersionTracking();
-                       });
+                builder.ConfigureEssentials(essentials =>
+                {
+                    essentials.UseVersionTracking();
+                });
 #endif
 
 #pragma warning restore CA1416

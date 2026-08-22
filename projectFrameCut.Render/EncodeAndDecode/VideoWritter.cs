@@ -186,6 +186,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
             AVCodec* codec = ffmpeg.avcodec_find_encoder_by_name(CodecName);
             if (codec == null) throw new EntryPointNotFoundException($"Could not found the encoder '{CodecName}'. Try install codec extension-pack, or reinstall projectFrameCut.");
 
+            if (codec->id == AVCodecID.AV_CODEC_ID_MJPEG
+                && _pixelFormat == AVPixelFormat.AV_PIX_FMT_YUV420P)
+            {
+                _pixelFormat = AVPixelFormat.AV_PIX_FMT_YUVJ420P;
+            }
+
             _videoStream = ffmpeg.avformat_new_stream(_fmtCtx, codec);
             if (_videoStream == null) throw new InvalidOperationException("Failed to create a stream to write video.");
 

@@ -92,12 +92,12 @@ public sealed class RenderProtocolTests
     {
         await using var client = new RenderClient(new DirectRenderTransport(new FailingService()), "test-client");
 
-        var exception = await Assert.ThrowsAsync<RenderRpcException>(async () =>
+        var exception = await Assert.ThrowsAsync<RemoteRenderException>(async () =>
         {
             _ = await client.GetCapabilitiesAsync();
         });
 
-        Assert.AreEqual(RenderErrorCode.Unsupported, exception.Error.Code);
+        Assert.AreEqual(RenderErrorCode.Unsupported, exception.ErrorCode);
     }
 
     [TestMethod]
@@ -157,7 +157,7 @@ public sealed class RenderProtocolTests
             => ValueTask.FromResult(new RenderResponseEnvelope
             {
                 RequestId = request.RequestId,
-                Error = new RenderError { Code = RenderErrorCode.Unsupported, Message = "unsupported" },
+                Error = new RemoteError { Code = RenderErrorCode.Unsupported, Message = "unsupported" },
             });
     }
 

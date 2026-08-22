@@ -29,6 +29,9 @@ using System.Text.Json.Serialization;
 using static projectFrameCut.Shared.Logger;
 using IPicture = projectFrameCut.Drawing.Base.IPicture;
 using projectFrameCut.Render.HwAccelEngine;
+using LocalizedResources;
+using System.Diagnostics.CodeAnalysis;
+
 
 
 #if WINDOWS
@@ -56,7 +59,7 @@ namespace projectFrameCut
         #region init
         private const int SuccessExitCode = 0;
         private const int InvalidCommandExitCode = 2;
-        private static string AppDataPath =>
+        public static string AppDataPath =>
 #if WINDOWS
             WinUI.App.IsPackaged() ? Windows.Storage.ApplicationData.Current.LocalFolder.Path : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "hexadecimal0x12e", "hexadecimal0x12e.projectFrameCut");
 #elif LINUX
@@ -136,6 +139,19 @@ namespace projectFrameCut
                     }
                 }
             }
+
+            Localized = SimpleLocalizer.Init(args.FirstOrDefault(c => c.StartsWith("--locale="))?.Substring("--locale=".Length));
+            SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+            SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+            projectFrameCut.ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(Localized._LocaleId_, out var apiloc) ? apiloc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+#if WINDOWS
+            SimpleLocalizerBaseGeneratedHelper.Localized = ISimpleLocalizerBase_Helper.GetMapping().TryGetValue(Localized._LocaleId_, out var hloc) ? hloc : ISimpleLocalizerBase_Helper.GetMapping().First().Value;
+#endif
+            PluginManager.CurrentLocale = Localized._LocaleId_;
+            PluginManager.ExtenedLocalizationGetter = new((k) =>
+            {
+                return Localized.IsItemExist(k) ? Localized.DynamicLookup(k, k) : null;
+            });
 
             switch (args[0].ToLowerInvariant())
             {
@@ -228,11 +244,13 @@ namespace projectFrameCut
                     throw new ArgumentException("backend requires an absolute --listen=<http[s]://host:port> address.");
 
                 using var cancellation = new CancellationTokenSource();
+#if WINDOWS || LINUX
                 Console.CancelKeyPress += (_, e) =>
                 {
                     e.Cancel = true;
                     cancellation.Cancel();
                 };
+#endif
                 return RunBackendAsync(listenUri, token, projectRoot, dataRoot, cancellation.Token).GetAwaiter().GetResult();
             }
             catch (OperationCanceledException)
@@ -291,7 +309,7 @@ namespace projectFrameCut
                 var token = GetOption(args, "token") ?? string.Empty;
                 var parentPid = GetOption(args, "parentPid", required: false);
                 var dataRoot = GetOption(args, "dataRoot");
-                if (string.IsNullOrWhiteSpace(pipe) || string.IsNullOrWhiteSpace(token))
+                if (string.IsNullOrWhiteSpace(pipe) || string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(dataRoot))
                 {
                     Console.Error.WriteLine("rpc_server requires --pipe=<pipe-name> and --token=<token> and --dataRoot=<path>.");
                     WriteRpcServerHelp();
@@ -329,7 +347,7 @@ namespace projectFrameCut
                 }
 
                 using var cancellation = new CancellationTokenSource();
-#if !iDevices
+#if WINDOWS || LINUX
                 Console.CancelKeyPress += (_, e) =>
                 {
                     e.Cancel = true;
@@ -365,7 +383,8 @@ namespace projectFrameCut
             // visible to clients of the other one.
             await using var service = new RenderBackendService(
                 stateRoot: dataRoot,
-                completionSink: RenderCompletionNotifier.Notify);
+                completionSink: RenderCompletionNotifier.Notify,
+                progressSink: RenderCompletionNotifier.NotifyProgress);
             await using var httpHost = httpListenUri is null
                 ? null
                 : await StartHttpRpcServerAsync(service, httpListenUri, httpToken!, httpProjectRoot, dataRoot, cancellationToken).ConfigureAwait(false);
@@ -446,6 +465,7 @@ namespace projectFrameCut
                 if (TryGetRenderRpcOptions(switches, out var rpcOptions))
                     return RunRpcRenderAsync(switches, dataRoot, rpcOptions).GetAwaiter().GetResult();
 
+                ConfigureHardwareAcceleration(switches);
                 InitializeCliRenderRuntime(dataRoot, switches.GetValueOrDefault("FFmpegLibraryPath", string.Empty));
                 return RunRenderPipelineAsync(switches, cancellationToken: default).GetAwaiter().GetResult();
             }
@@ -470,7 +490,7 @@ namespace projectFrameCut
         private static async Task<int> RunRenderPipelineAsync(
             ConcurrentDictionary<string, string> switches,
             CancellationToken cancellationToken,
-            Action<double, TimeSpan>? progress = null)
+            Action<double, TimeSpan, double>? progress = null)
         {
             if (!switches.TryGetValue("project", out var projectRoot) || !Directory.Exists(projectRoot))
                 throw new DirectoryNotFoundException("-project must point to a project directory.");
@@ -517,17 +537,22 @@ namespace projectFrameCut
             var maxThreads = int.TryParse(switches.GetValueOrDefault("maxParallelThreads", Environment.ProcessorCount.ToString()), out var mt) ? Math.Max(1, mt) : Environment.ProcessorCount;
             var duration = Math.Max(timeline.Duration, timeline.AudioDuration);
             using var consoleCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+#if WINDOWS || LINUX
             Console.CancelKeyPress += (_, e) => { e.Cancel = true; consoleCancellation.Cancel(); };
-
-            async Task RenderVideo(string path)
+#endif
+            async Task RenderVideo(string path, bool writeToVoid = false)
             {
                 var clips = DraftImportAndExportHelper.JSONToIClips(timeline, false, bpp).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
                 if (clips.Length == 0) throw new InvalidOperationException("No video clips in the project.");
                 foreach (var clip in clips) clip.ReInit(bpp);
-                Directory.CreateDirectory(Path.GetDirectoryName(path) ?? Environment.CurrentDirectory);
-                var builder = new VideoBuilder(path, width, height, fps, output[4], pixelFormat.ToString())
+                if (!writeToVoid)
+                    Directory.CreateDirectory(Path.GetDirectoryName(path) ?? Environment.CurrentDirectory);
+                var builder = writeToVoid
+                    ? null
+                    : new VideoBuilder(path, width, height, fps, output[4], pixelFormat.ToString())
                 {
                     EnablePreview = true,
+                    PreviewPath = switches.GetValueOrDefault("preview_path"),
                     Duration = duration,
                     BlockWrite = serial,
                     DoGCAfterEachWrite = gcOption > 0,
@@ -551,7 +576,7 @@ namespace projectFrameCut
                 };
                 renderer.OnProgressChanged += (value, eta) =>
                 {
-                    progress?.Invoke(target == "all" ? value * 0.9 : value, eta);
+                    progress?.Invoke(target == "all" ? value * 0.9 : value, eta, renderer.CurrentFps);
                     //Console.Write($"Rendering {value:P1}, ETA {eta:hh\\:mm\\:ss}, FPS {renderer.CurrentFps:N2}       \r");
                 };
                 builder.Build()?.Start();
@@ -581,14 +606,15 @@ namespace projectFrameCut
             switch (target)
             {
                 case "video": await RenderVideo(outputPath); break;
+                case "void": await RenderVideo(outputPath, writeToVoid: true); break;
                 case "audio": RenderAudio(outputPath); break;
                 case "all":
                     var video = Path.Combine(tempPath, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}{Path.GetExtension(outputPath)}");
                     var audio = Path.Combine(tempPath, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
                     await RenderVideo(video);
-                    progress?.Invoke(0.92, TimeSpan.Zero);
+                    progress?.Invoke(0.92, TimeSpan.Zero, 0);
                     RenderAudio(audio);
-                    progress?.Invoke(0.97, TimeSpan.Zero);
+                    progress?.Invoke(0.97, TimeSpan.Zero, 0);
                     if (File.Exists(audio))
                         VideoAudioMuxer.MuxFromFiles(video, audio, outputPath, true);
                     else
@@ -601,6 +627,22 @@ namespace projectFrameCut
             Environment.SetEnvironmentVariable("projectFrameCut_LastOutput", outputPath, EnvironmentVariableTarget.Process);
             Environment.SetEnvironmentVariable("projectFrameCut_RenderFinished", "1", EnvironmentVariableTarget.Process);
             return 0;
+        }
+
+        private static void ConfigureHardwareAcceleration(ConcurrentDictionary<string, string> switches)
+        {
+            bool hwAccelDecode = bool.TryParse(
+                switches.GetValueOrDefault("preferHwAccelDecoder", "false"),
+                out var hwAccelDecodeValue) && hwAccelDecodeValue;
+            bool hwAccelEncode = bool.TryParse(
+                switches.GetValueOrDefault("preferHwAccelEncoder", "false"),
+                out var hwAccelEncodeValue)
+                && hwAccelEncodeValue
+                && !OperatingSystem.IsAndroid()
+                && !OperatingSystem.IsIOS();
+
+            InternalPluginBase.HWAccelDecodeOptionGetter = new(() => hwAccelDecode);
+            InternalPluginBase.HWAccelEncodeOptionGetter = new(() => hwAccelEncode);
         }
 
         private static bool TryGetRenderRpcOptions(
@@ -625,6 +667,7 @@ namespace projectFrameCut
             string dataRoot,
             CliRenderRpcOptions options)
         {
+            ConfigureHardwareAcceleration(switches);
             var projectRoot = switches.GetValueOrDefault("project", string.Empty);
             var outputPath = switches.GetValueOrDefault("output", string.Empty);
             var projectName = switches.GetValueOrDefault("projectName", Path.GetFileName(projectRoot));
@@ -686,16 +729,22 @@ namespace projectFrameCut
                 Persist();
             }
 
-            public async Task<int> RunAsync(Func<Action<double, TimeSpan>, CancellationToken, Task<int>> render)
+            public async Task<int> RunAsync(Func<Action<double, TimeSpan, double>, CancellationToken, Task<int>> render)
             {
                 Update(job => job.State = RenderJobState.Running);
+                NotifyProgress();
                 try
                 {
-                    var result = await render((progress, eta) => Update(job =>
+                    var result = await render((progress, eta, fps) =>
                     {
-                        job.Progress = Math.Clamp(progress, 0, 1);
-                        job.EstimatedRemainingTicks = Math.Max(0, eta.Ticks);
-                    }), _renderCancellation.Token).ConfigureAwait(false);
+                        Update(job =>
+                        {
+                            job.Progress = Math.Clamp(progress, 0, 1);
+                            job.EstimatedRemainingTicks = Math.Max(0, eta.Ticks);
+                            job.CurrentFps = Math.Max(0, fps);
+                        });
+                        NotifyProgress();
+                    }, _renderCancellation.Token).ConfigureAwait(false);
                     if (result != 0) throw new InvalidOperationException($"CLI renderer exited with code {result}.");
                     Update(job =>
                     {
@@ -718,12 +767,7 @@ namespace projectFrameCut
                     Update(job =>
                     {
                         job.State = RenderJobState.Failed;
-                        job.Error = new RenderError
-                        {
-                            Code = RenderErrorCode.BackendFailure,
-                            Message = ex.Message,
-                            Details = ex.ToString(),
-                        };
+                        job.Error = new RemoteError(ex);
                     });
                     NotifyCompletion();
                     return 1;
@@ -757,7 +801,7 @@ namespace projectFrameCut
                 }
                 catch (Exception ex)
                 {
-                    return ValueTask.FromResult(Failure(request, RenderErrorCode.BackendFailure, ex.Message, ex.ToString()));
+                    return ValueTask.FromResult(Failure(request, RenderErrorCode.BackendFailure, ex));
                 }
             }
 
@@ -820,6 +864,12 @@ namespace projectFrameCut
                 catch (Exception ex) { Log(ex, "Persist CLI render job"); }
             }
 
+            private void NotifyProgress()
+            {
+                try { RenderCompletionNotifier.NotifyProgress(Snapshot()); }
+                catch (Exception ex) { Log(ex, "CLI render progress notification"); }
+            }
+
             private void NotifyCompletion()
             {
                 try { RenderCompletionNotifier.Notify(Snapshot()); }
@@ -835,7 +885,13 @@ namespace projectFrameCut
             private static RenderResponseEnvelope Failure(RenderRequestEnvelope request, RenderErrorCode code, string message, string details = "") => new()
             {
                 RequestId = request.RequestId,
-                Error = new RenderError { Code = code, Message = message, Details = details },
+                Error = new RemoteError { Code = code, Message = message, Details = details },
+            };
+
+            private static RenderResponseEnvelope Failure(RenderRequestEnvelope request, RenderErrorCode code, Exception exception) => new()
+            {
+                RequestId = request.RequestId,
+                Error = new RemoteError(exception, code),
             };
         }
 
@@ -1173,7 +1229,7 @@ Use ASP.NET's Environment variables to configure the HTTP server option (except 
 Usage:
   pjfc-cli render -project=<project directory> -output=<file>
                   -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
-                  [-target=video|audio|all] [-assetDbFile=<database.json>]
+                  [-target=video|audio|all|void] [-assetDbFile=<database.json>]
                   [-maxParallelThreads=<number>] [-oneByOneRender=true|false]
                   [-renderByLayer=true|false] [-prepareInWorker=true|false]
                   [-enableThreadAffinity=true|false] [-GCOptions=0|1|2]

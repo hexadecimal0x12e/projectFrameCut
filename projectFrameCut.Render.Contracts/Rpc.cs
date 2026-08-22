@@ -108,8 +108,8 @@ public sealed class RenderClient(IRenderTransport transport, string? clientId = 
         var response = await _transport.SendAsync(new RenderRequestEnvelope { RequestId = requestId, ClientId = ClientId, Operation = operation, Payload = RenderRpcSerializer.Serialize(request) }, cancellationToken).ConfigureAwait(false);
         bool unauthenticatedHttpResponse = response.RequestId == Guid.Empty && response.Error?.Code == RenderErrorCode.Unauthorized;
         if (response.RequestId != requestId && !unauthenticatedHttpResponse)
-            throw new RenderRpcException(new RenderError { Code = RenderErrorCode.BackendFailure, Message = "Render RPC response request ID mismatch." });
-        if (response.Error is not null) throw new RenderRpcException(response.Error);
+            throw new RenderRpcException(new RemoteError { Code = RenderErrorCode.BackendFailure, Message = "Render RPC response request ID mismatch." });
+        if (response.Error is not null) response.Error.ThrowAsException();
         return RenderRpcSerializer.Deserialize<TResponse>(response.Payload);
     }
 
@@ -118,9 +118,9 @@ public sealed class RenderClient(IRenderTransport transport, string? clientId = 
 
 public sealed class RenderRpcException : Exception
 {
-    public RenderRpcException(RenderError error) : base(string.IsNullOrWhiteSpace(error.Details) ? error.Message : $"{error.Message}{Environment.NewLine}{error.Details}")
-    { Error = error; Data[nameof(RenderError.Code)] = error.Code; Data[nameof(RenderError.Retryable)] = error.Retryable; if (!string.IsNullOrWhiteSpace(error.Details)) Data[nameof(RenderError.Details)] = error.Details; }
-    public RenderError Error { get; }
+    public RenderRpcException(RemoteError error) : base(string.IsNullOrWhiteSpace(error.Details) ? error.Message : $"{error.Message}{Environment.NewLine}{error.Details}")
+    { Error = error; Data[nameof(RemoteError.Code)] = error.Code; Data[nameof(RemoteError.Retryable)] = error.Retryable; if (!string.IsNullOrWhiteSpace(error.Details)) Data[nameof(RemoteError.Details)] = error.Details; }
+    public RemoteError Error { get; }
 }
 
 public sealed class RenderPipeException : IOException

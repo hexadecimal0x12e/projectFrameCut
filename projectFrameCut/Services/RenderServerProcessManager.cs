@@ -16,12 +16,14 @@ namespace projectFrameCut.Services;
 internal sealed class RenderServerProcessManager : IAsyncDisposable
 {
     private const int DefaultHttpRpcPort = 39485;
+    private static readonly TimeSpan WorkerShutdownTimeout = TimeSpan.FromSeconds(30);
 
     private readonly string _clientId;
     private string _pipeName = $"projectFrameCut-render-{Guid.NewGuid():N}";
     private string _token = Convert.ToHexString(Guid.NewGuid().ToByteArray());
     private string? _projectRoot;
     private bool _independentWorker;
+    private string _projectName = "UnnamedProject";
     private Process? _process;
     private IRenderTransport? _transport;
     private IRenderClient? _client;
@@ -45,6 +47,36 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     public string? ProjectRoot => _projectRoot;
     public bool IsIndependentWorker => _independentWorker;
     public Guid? JobId => _jobId;
+    public string? CliPreviewPath { get; private set; }
+
+    /// <summary>
+    /// Requests a CLI render worker to stop and gives it a bounded grace period
+    /// to release encoders, GPU resources and temporary files. The owner process
+    /// remains responsible for the final cleanup when the worker is stuck.
+    /// </summary>
+    public async Task CancelCliRenderAsync(Guid jobId)
+    {
+        if (_client is null || _jobId != jobId) return;
+        var deadline = DateTime.UtcNow + WorkerShutdownTimeout;
+
+        try
+        {
+            await _client.CancelJobAsync(jobId).AsTask().WaitAsync(RemainingShutdownTime(deadline, TimeSpan.FromSeconds(5))).ConfigureAwait(false);
+        }
+        catch { }
+
+        if (_process is null) return;
+
+        try
+        {
+            // Closing the RPC session tells the worker to stop its server loop
+            // once the render pipeline has observed cancellation.
+            await _client.CloseProjectAsync(Guid.Empty).AsTask().WaitAsync(RemainingShutdownTime(deadline, TimeSpan.FromSeconds(5))).ConfigureAwait(false);
+        }
+        catch { }
+
+        await WaitForWorkerExitOrKillAsync(_process, RemainingShutdownTime(deadline, TimeSpan.Zero)).ConfigureAwait(false);
+    }
 
     public static bool SupportsCliRenderProcess
     {
@@ -62,11 +94,15 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     /// Project directory to hand to the server process. The optional HTTP RPC
     /// server preloads it so clients do not hit a "server has no project" error.
     /// </param>
-    public void Start(string? projectRoot = null, bool independentWorker = false)
+    /// <param name="projectName">
+    /// The name of the project. This is used to identify the project in the UI.
+    /// </param>
+    public void Start(string? projectRoot = null, bool independentWorker = false, string? projectName = null)
     {
         if (_client is not null) return;
         _projectRoot = string.IsNullOrWhiteSpace(projectRoot) ? null : Path.GetFullPath(projectRoot);
         _independentWorker = independentWorker;
+        _projectName = string.IsNullOrWhiteSpace(projectName) ? Localized._Unknown : projectName;
 
         if (!SupportsCliRenderProcess)
         {
@@ -133,8 +169,11 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 startInfo.ArgumentList.Add($"--projectRoot={_projectRoot}");
             }
             startInfo.ArgumentList.Add($"--ffmpegRoot={ffmpeg.RootPath}");
+            startInfo.ArgumentList.Add($"--locale={Localized._LocaleId_}");
+            startInfo.ArgumentList.Add($"--preferHwAccelDecoder={SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelDecoding", true)}");
+            startInfo.ArgumentList.Add($"--preferHwAccelEncoder={SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelEncoding", true)}");
             startInfo.ArgumentList.Add("--quiet");
-            
+
             if (withHttp)
             {
                 var portSetting = SettingsManager.GetSetting("render_RpcServerHttpPort", "");
@@ -208,6 +247,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         _projectRoot = Path.GetFullPath(options.ProjectRoot);
         _independentWorker = true;
         _jobId = options.JobId == Guid.Empty ? Guid.NewGuid() : options.JobId;
+        CliPreviewPath = options.PreviewPath;
 #if ANDROID
         StartAndroidRenderTask(options with { JobId = _jobId.Value });
 #else
@@ -234,6 +274,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             _projectRoot = Path.GetFullPath(projectRoot);
             _independentWorker = true;
             _jobId = registration.JobId;
+            CliPreviewPath = registration.PreviewPath;
             _pipeName = registration.PipeName;
             _token = registration.Token;
             var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId);
@@ -266,6 +307,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 _token,
                 dataRoot,
                 _projectRoot,
+                _projectName,
                 ffmpeg.RootPath);
             ConnectAndroidTransport();
         }
@@ -290,6 +332,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 _pipeName,
                 _token,
                 dataRoot,
+                _projectName,
                 options);
             ConnectAndroidTransport();
         }
@@ -364,7 +407,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("project", options.ProjectRoot);
                 Add("output", options.OutputPath);
                 Add("output_options", $"{options.Width},{options.Height},{options.FrameRate},{options.PixelFormat},{options.Encoder}");
-                Add("target", "all");
+                Add("target", options.WriteToVoid ? "void" : "all");
                 Add("assetDbFile", options.AssetDatabasePath);
                 Add("FFmpegLibraryPath", options.FFmpegLibraryPath);
                 Add("maxParallelThreads", Math.Max(1, options.MaxParallelThreads).ToString());
@@ -379,6 +422,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("projectName", options.ProjectName);
                 Add("background", options.Background.ToString());
                 Add("temp_path", options.TempPath.ToString());
+                if (!string.IsNullOrWhiteSpace(options.PreviewPath)) Add("preview_path", options.PreviewPath);
                 startInfo.ArgumentList.Add("--consoleLog");
                 if (MyLoggerExtensions.LoggingDiagnosticInfo) startInfo.ArgumentList.Add("--logDiagnostic");
 
@@ -446,6 +490,12 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             var registration = System.Text.Json.JsonSerializer.Deserialize<WorkerRegistration>(File.ReadAllText(RegistrationPath));
             if (registration is null || string.IsNullOrWhiteSpace(registration.PipeName) || string.IsNullOrWhiteSpace(registration.Token)) return false;
             if (!string.IsNullOrWhiteSpace(registration.Kind) && !string.Equals(registration.Kind, "rpc-server", StringComparison.Ordinal)) return false;
+            // An independent backend is project-scoped. Never attach to a
+            // live worker that belongs to another project: doing so makes
+            // preview requests resolve against the wrong timeline/assets.
+            if (_projectRoot is not null
+                && (string.IsNullOrWhiteSpace(registration.ProjectRoot)
+                    || !SamePath(registration.ProjectRoot, _projectRoot))) return false;
             if (registration.ProcessId > 0)
             {
                 using var process = Process.GetProcessById(registration.ProcessId);
@@ -482,6 +532,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 ProcessId = _process?.Id ?? 0,
                 ProtocolVersion = RenderProtocol.PipeProtocolVersion,
                 UpdatedAtUtc = DateTime.UtcNow,
+                ProjectRoot = _projectRoot ?? string.Empty,
             };
             File.WriteAllText(RegistrationPath, System.Text.Json.JsonSerializer.Serialize(registration));
         }
@@ -504,6 +555,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 JobId = options.JobId,
                 ProjectRoot = Path.GetFullPath(options.ProjectRoot),
                 OutputPath = options.OutputPath,
+                PreviewPath = options.PreviewPath ?? string.Empty,
             };
             File.WriteAllText(RegistrationPath, System.Text.Json.JsonSerializer.Serialize(registration));
         }
@@ -545,6 +597,11 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        if (_independentWorker && _jobId is Guid jobId && _process is not null)
+        {
+            try { await CancelCliRenderAsync(jobId).ConfigureAwait(false); } catch { }
+        }
+
         if (_client is not null)
         {
             try { await _client.DisposeAsync().ConfigureAwait(false); } catch { }
@@ -585,6 +642,24 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         _jobId = null;
     }
 
+    private static async Task WaitForWorkerExitOrKillAsync(Process process, TimeSpan timeout)
+    {
+        try
+        {
+            if (process.HasExited) return;
+            await process.WaitForExitAsync().WaitAsync(timeout).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            try
+            {
+                if (!process.HasExited) process.Kill(entireProcessTree: true);
+            }
+            catch { }
+        }
+        catch { }
+    }
+
     private sealed class WorkerRegistration
     {
         public string Kind { get; set; } = string.Empty;
@@ -596,6 +671,14 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         public Guid JobId { get; set; }
         public string ProjectRoot { get; set; } = string.Empty;
         public string OutputPath { get; set; } = string.Empty;
+        public string PreviewPath { get; set; } = string.Empty;
+    }
+
+    private static TimeSpan RemainingShutdownTime(DateTime deadline, TimeSpan cap)
+    {
+        var remaining = deadline - DateTime.UtcNow;
+        var bounded = cap == TimeSpan.Zero ? remaining : (remaining < cap ? remaining : cap);
+        return bounded > TimeSpan.Zero ? bounded : TimeSpan.FromMilliseconds(1);
     }
 }
 
@@ -620,4 +703,8 @@ internal sealed record CliRenderProcessOptions
     public bool RenderByLayer { get; init; } = true;
     public bool Background { get; init; }
     public required string TempPath { get; init; }
+    public string? PreviewPath { get; init; }
+    public bool UseHwAccelDecoder { get; init; } = true;
+    public bool UseHwAccelEncoder { get; init; } = true;
+    public bool WriteToVoid { get; init; }
 }

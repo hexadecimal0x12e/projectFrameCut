@@ -18,8 +18,15 @@ public sealed class RenderWorkerService : Service
 {
     private const string NotificationChannelId = "projectframecut-render-worker";
     private const int ForegroundNotificationId = 4100;
+    internal const string ActionNotificationCancelRequest = "com.hexadecimal0x12e.projectframecut.action.NOTIFICATION_CANCEL_REQUEST";
+    internal const string ActionNotificationCancelConfirm = "com.hexadecimal0x12e.projectframecut.action.NOTIFICATION_CANCEL_CONFIRM";
+    internal const string ActionNotificationCancelDismiss = "com.hexadecimal0x12e.projectframecut.action.NOTIFICATION_CANCEL_DISMISS";
+    internal const string ExtraJobId = "jobId";
     private readonly ConcurrentDictionary<string, WorkerHost> _workers = new(StringComparer.Ordinal);
     private readonly Binder _binder = new();
+
+    private static string _workingProjectName = string.Empty;
+    private bool _localizationInitialized;
 
     public override void OnCreate()
     {
@@ -42,8 +49,20 @@ public sealed class RenderWorkerService : Service
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
     {
-        StartForeground(ForegroundNotificationId, BuildNotification("Render worker is running"));
+        if (!_localizationInitialized)
+        {
+            MauiProgram.InitializeWorkerLocalization(
+                intent?.GetStringExtra(AndroidRenderWorkerController.ExtraLocale));
+            _localizationInitialized = true;
+        }
+        StartForeground(ForegroundNotificationId, BuildNotification(Localized.DraftPage_RenderWorkerWorking(_workingProjectName ?? "Unknown")));
         if (intent is null) return StartCommandResult.RedeliverIntent;
+
+        if (intent.Action is ActionNotificationCancelRequest or ActionNotificationCancelConfirm or ActionNotificationCancelDismiss)
+        {
+            _ = HandleNotificationActionAsync(intent);
+            return StartCommandResult.NotSticky;
+        }
 
         if (string.Equals(intent.Action, AndroidRenderWorkerController.ActionStopWorker, StringComparison.Ordinal))
         {
@@ -69,12 +88,13 @@ public sealed class RenderWorkerService : Service
         var ffmpegRoot = intent.GetStringExtra(AndroidRenderWorkerController.ExtraFfmpegRoot) ?? string.Empty;
         var independent = intent.GetBooleanExtra(AndroidRenderWorkerController.ExtraIndependent, false);
         var optionsJson = intent.GetStringExtra(AndroidRenderWorkerController.ExtraRenderOptions);
+        var projectName = intent.GetStringExtra(AndroidRenderWorkerController.ProjectNameOption) ?? string.Empty;
 
-        var host = new WorkerHost(socketPath, independent);
+        var host = new WorkerHost(socketPath, independent, token);
         if (!_workers.TryAdd(socketPath, host)) return;
         host.Task = independent && !string.IsNullOrWhiteSpace(optionsJson)
             ? Task.Run(() => RunRenderTaskAsync(host, token, dataRoot, optionsJson))
-            : Task.Run(() => RunEditorWorkerAsync(host, token, dataRoot, ffmpegRoot));
+            : Task.Run(() => RunEditorWorkerAsync(host, token, dataRoot, ffmpegRoot, projectName));
         _ = host.Task.ContinueWith(
             _ => WorkerFinished(socketPath),
             CancellationToken.None,
@@ -82,12 +102,14 @@ public sealed class RenderWorkerService : Service
             TaskScheduler.Default);
     }
 
-    private static async Task RunEditorWorkerAsync(WorkerHost host, string token, string dataRoot, string ffmpegRoot)
+    private static async Task RunEditorWorkerAsync(WorkerHost host, string token, string dataRoot, string ffmpegRoot, string projectName)
     {
+        _workingProjectName = projectName;
         CLIProgram.InitializeRenderRuntime(dataRoot, ffmpegRoot);
         await using var backend = new RenderBackendService(
             stateRoot: dataRoot,
-            completionSink: RenderCompletionNotifier.Notify);
+            completionSink: RenderCompletionNotifier.Notify,
+            progressSink: RenderCompletionNotifier.NotifyProgress);
         await new UnixSocketRenderServer(backend)
             .RunAsync(host.SocketPath, token, host.Cancellation.Token)
             .ConfigureAwait(false);
@@ -104,7 +126,7 @@ public sealed class RenderWorkerService : Service
             $"--project={options.ProjectRoot}",
             $"--output={options.OutputPath}",
             $"--output_options={options.Width},{options.Height},{options.FrameRate},{options.PixelFormat},{options.Encoder}",
-            "--target=all",
+            $"--target={(options.WriteToVoid ? "void" : "all")}",
             $"--assetDbFile={options.AssetDatabasePath}",
             $"--FFmpegLibraryPath={options.FFmpegLibraryPath}",
             $"--temp_path={options.TempPath}",
@@ -119,7 +141,14 @@ public sealed class RenderWorkerService : Service
             $"--jobId={options.JobId:D}",
             $"--projectName={options.ProjectName}",
             $"--background={options.Background}",
-            "--consoleLog",
+            $"--preferHwAccelDecoder={options.UseHwAccelDecoder}",
+            // MediaCodec encoding is currently disabled on Android. Do not pass
+            // the persisted/user preference through to CLIProgram, otherwise it
+            // replaces InternalPluginBase.HWAccelEncodeOptionGetter and can
+            // re-enable VideoWriterHWAccel inside the worker process.
+            "--preferHwAccelEncoder=false",
+            $"--locale={Localized._LocaleId_}",
+            $"--consoleLog",
         };
         var renderDataRoot = Path.GetFullPath(Path.Combine(
             Path.GetDirectoryName(options.AssetDatabasePath) ?? dataRoot,
@@ -185,6 +214,43 @@ public sealed class RenderWorkerService : Service
         catch (Exception ex) { Log(ex, "Persist Android render worker registration"); }
     }
 
+    private async Task HandleNotificationActionAsync(Intent intent)
+    {
+        if (!Guid.TryParse(intent.GetStringExtra(ExtraJobId), out var jobId)) return;
+
+        foreach (var host in _workers.Values)
+        {
+            var job = await host.GetJobAsync(jobId).ConfigureAwait(false);
+            if (job is null) continue;
+
+            switch (intent.Action)
+            {
+                case ActionNotificationCancelRequest:
+                    if (job.State is RenderJobState.Completed or RenderJobState.Failed or RenderJobState.Canceled)
+                        RenderCompletionNotifier.Notify(job);
+                    else
+                        RenderCompletionNotifier.NotifyCancelConfirmation(job);
+                    return;
+                case ActionNotificationCancelConfirm:
+                    var canceled = await host.CancelJobAsync(jobId).ConfigureAwait(false);
+                    if (canceled is not null)
+                    {
+                        if (canceled.State is RenderJobState.Completed or RenderJobState.Failed or RenderJobState.Canceled)
+                            RenderCompletionNotifier.Notify(canceled);
+                        else
+                            RenderCompletionNotifier.NotifyProgress(canceled, force: true);
+                    }
+                    return;
+                case ActionNotificationCancelDismiss:
+                    if (job.State is RenderJobState.Completed or RenderJobState.Failed or RenderJobState.Canceled)
+                        RenderCompletionNotifier.Notify(job);
+                    else
+                        RenderCompletionNotifier.NotifyProgress(job, force: true);
+                    return;
+            }
+        }
+    }
+
     private void StopWorker(string? socketPath)
     {
         if (string.IsNullOrWhiteSpace(socketPath)) return;
@@ -239,12 +305,36 @@ public sealed class RenderWorkerService : Service
             .Build();
     }
 
-    private sealed class WorkerHost(string socketPath, bool independent) : IDisposable
+    private sealed class WorkerHost(string socketPath, bool independent, string token) : IDisposable
     {
         public string SocketPath { get; } = socketPath;
+        public string Token { get; } = token;
         public bool Independent { get; } = independent;
         public CancellationTokenSource Cancellation { get; } = new();
         public Task? Task { get; set; }
+
+        public async Task<RenderJob?> GetJobAsync(Guid jobId)
+        {
+            try
+            {
+                await using var client = CreateClient();
+                return await client.GetJobStatusAsync(jobId).ConfigureAwait(false);
+            }
+            catch { return null; }
+        }
+
+        public async Task<RenderJob?> CancelJobAsync(Guid jobId)
+        {
+            try
+            {
+                await using var client = CreateClient();
+                return await client.CancelJobAsync(jobId).ConfigureAwait(false);
+            }
+            catch { return null; }
+        }
+
+        private RenderClient CreateClient()
+            => new(new UnixSocketRenderClientTransport(SocketPath, Token, $"notification-{Guid.NewGuid():N}"));
 
         public void Dispose()
         {

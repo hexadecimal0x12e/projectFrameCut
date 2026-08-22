@@ -218,12 +218,12 @@ public sealed class NamedPipeRenderServer(IRenderService service)
         {
             response = await _service.DispatchAsync(request, cancellationToken).ConfigureAwait(false);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             response = new RenderResponseEnvelope
             {
                 RequestId = request.RequestId,
-                Error = new RenderError { Code = RenderErrorCode.Canceled, Message = "Render request was canceled." },
+                Error = new RemoteError(ex, RenderErrorCode.Canceled, customMessage: "Render request was canceled."),
             };
         }
         catch (Exception ex)
@@ -231,7 +231,7 @@ public sealed class NamedPipeRenderServer(IRenderService service)
             response = new RenderResponseEnvelope
             {
                 RequestId = request.RequestId,
-                Error = new RenderError { Code = RenderErrorCode.BackendFailure, Message = ex.Message, Details = ex.ToString() },
+                Error = new RemoteError(ex),
             };
         }
 

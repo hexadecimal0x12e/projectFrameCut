@@ -8,6 +8,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using projectFrameCut.Platforms.Windows;
+using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
 using System.Diagnostics;
 using System.Runtime.InteropServices;

@@ -1,4 +1,6 @@
 using ProtoBuf;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 
 namespace projectFrameCut.Render.Contracts;
 
@@ -89,6 +91,64 @@ public enum RenderErrorCode
 }
 
 [ProtoContract]
+public sealed class RemoteError
+{
+    [ProtoMember(1)] public RenderErrorCode Code { get; set; }
+    [ProtoMember(2)] public string Message { get; set; } = string.Empty;
+    [ProtoMember(3)] public string Details { get; set; } = string.Empty;
+    [ProtoMember(4)] public bool Retryable { get; set; }
+    [ProtoMember(5)] public bool HasException { get; set; }
+    [ProtoMember(6)] public string ExceptionTypeFullName { get; set; } = string.Empty;
+    [ProtoMember(7)] public string ExceptionMessage { get; set; } = string.Empty;
+    [ProtoMember(8)] public string ExceptionStackTrace { get; set; } = string.Empty;
+
+    public Exception AsException()
+    {
+        if (!JsonSerializer.IsReflectionEnabledByDefault || !HasException) return new RemoteRenderException(this);
+
+        var type = Type.GetType(ExceptionTypeFullName);
+        if (type != null)
+        {
+            var exception = (Exception?)Activator.CreateInstance(type, ExceptionMessage);
+            if (exception != null)
+            {
+                exception.Data["OriginStackTrace"] = ExceptionStackTrace;
+                exception.Data["RenderErrorCode"] = Code;
+                exception.Data[nameof(Code)] = Code;
+                exception.Data["RenderErrorDetails"] = Details;
+                exception.Data[nameof(Details)] = Details;
+                exception.Data["RemoteErrorInfo"] = Message;
+                return exception;
+            }
+        }
+
+        return new RemoteRenderException(this);
+    }
+
+    [DoesNotReturn]
+    public void ThrowAsException()
+    {
+        throw AsException();
+    }
+
+    public RemoteError(Exception ex, RenderErrorCode code = RenderErrorCode.BackendFailure, bool retryable = false, string? customMessage = null, string? customDetails = null)
+    {
+        Code = code;
+        Message = customMessage ?? ex.Message;
+        Details = customDetails ?? ex.ToString();
+        Retryable = retryable;
+        HasException = true;
+        ExceptionTypeFullName = ex.GetType().FullName ?? string.Empty;
+        ExceptionMessage = ex.Message;
+        ExceptionStackTrace = ex.StackTrace ?? string.Empty;
+    }
+
+    public RemoteError()
+    {
+    }
+}
+
+[ProtoContract]
 public sealed class RenderRequestEnvelope
 {
     [ProtoMember(1)] public int ProtocolVersion { get; set; } = RenderProtocol.CurrentVersion;
@@ -104,16 +164,7 @@ public sealed class RenderResponseEnvelope
     [ProtoMember(1)] public int ProtocolVersion { get; set; } = RenderProtocol.CurrentVersion;
     [ProtoMember(2)] public Guid RequestId { get; set; }
     [ProtoMember(3)] public byte[] Payload { get; set; } = [];
-    [ProtoMember(4)] public RenderError? Error { get; set; }
-}
-
-[ProtoContract]
-public sealed class RenderError
-{
-    [ProtoMember(1)] public RenderErrorCode Code { get; set; }
-    [ProtoMember(2)] public string Message { get; set; } = string.Empty;
-    [ProtoMember(3)] public string Details { get; set; } = string.Empty;
-    [ProtoMember(4)] public bool Retryable { get; set; }
+    [ProtoMember(4)] public RemoteError? Error { get; set; }
 }
 
 [ProtoContract]
@@ -279,7 +330,7 @@ public sealed class ClipPreviewBatchRequest
 public sealed class ClipPreviewBatchResponse
 {
     [ProtoMember(1)] public List<RenderArtifact> Artifacts { get; set; } = [];
-    [ProtoMember(2)] public List<RenderError> Errors { get; set; } = [];
+    [ProtoMember(2)] public List<RemoteError> Errors { get; set; } = [];
 }
 
 [ProtoContract]
@@ -333,13 +384,14 @@ public sealed class RenderJob
     [ProtoMember(4)] public double Progress { get; set; }
     [ProtoMember(5)] public long EstimatedRemainingTicks { get; set; }
     [ProtoMember(6)] public RenderArtifact? Artifact { get; set; }
-    [ProtoMember(7)] public RenderError? Error { get; set; }
+    [ProtoMember(7)] public RemoteError? Error { get; set; }
     [ProtoMember(8)] public DateTime CreatedAtUtc { get; set; }
     [ProtoMember(9)] public DateTime UpdatedAtUtc { get; set; }
     [ProtoMember(10)] public string ProjectRoot { get; set; } = string.Empty;
     [ProtoMember(11)] public string ProjectName { get; set; } = string.Empty;
     [ProtoMember(12)] public string OutputPath { get; set; } = string.Empty;
     [ProtoMember(13)] public bool Background { get; set; }
+    [ProtoMember(14)] public double CurrentFps { get; set; }
 }
 
 [ProtoContract]
@@ -512,4 +564,22 @@ public sealed class HeadlessJsonResponse
     [ProtoMember(1)] public HeadlessProjectSnapshot Snapshot { get; set; } = new();
     [ProtoMember(2)] public string Json { get; set; } = string.Empty;
     [ProtoMember(3)] public bool Changed { get; set; }
+}
+
+
+public class RemoteRenderException : Exception
+{
+    public RemoteRenderException(RemoteError error) : base(error.Message)
+    {
+        ErrorCode = error.Code;
+        Details = error.Details;
+        Data["RenderErrorCode"] = error.Code;
+        Data[nameof(RemoteError.Code)] = error.Code;
+        Data["RenderErrorDetails"] = error.Details;
+        Data[nameof(RemoteError.Details)] = error.Details;
+        Data[nameof(RemoteError.Retryable)] = error.Retryable;
+    }
+
+    public RenderErrorCode ErrorCode { get; }
+    public string Details { get; }
 }

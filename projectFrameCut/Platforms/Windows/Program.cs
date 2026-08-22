@@ -100,6 +100,9 @@ namespace projectFrameCut.WinUI
 
             try
             {
+                if (args.Any(c => c.StartsWith("----AppNotificationActivated:")) && TryOpenLastCompletedRenderOutput())
+                    return 0;
+
                 try
                 {
                     SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
@@ -290,6 +293,7 @@ namespace projectFrameCut.WinUI
                     SynchronizationContext.SetSynchronizationContext(context);
                     new App();
                 });
+                RenderRpcBootstrap.DetachActiveCliRender();
                 RenderRpcBootstrap.DisposeAsync().AsTask().GetAwaiter().GetResult();
                 Helper.CrashHandler.Handler?.Kill(true);
                 _ = SettingsManager.FlushAndStopAsync();
@@ -321,6 +325,31 @@ namespace projectFrameCut.WinUI
             }
 
             return -1;
+        }
+
+        private static bool TryOpenLastCompletedRenderOutput()
+        {
+            try
+            {
+                var path = File.Exists(RenderCompletionNotifier.LastCompletedOutputPathFile)
+                    ? File.ReadAllText(RenderCompletionNotifier.LastCompletedOutputPathFile).Trim()
+                    : null;
+                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return false;
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{Path.GetFullPath(path)}\"",
+                    UseShellExecute = true,
+                });
+                File.Delete(RenderCompletionNotifier.LastCompletedOutputPathFile);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Unable to locate the last completed render output: {ex}");
+                return false;
+            }
         }
 
         private static string[] ParseProtocolArgs(string[] args)

@@ -291,8 +291,8 @@ public sealed class IntegratedApiServer : IAsyncDisposable
         return start >= 0 && start < length && end >= start && end < length;
     }
 
-    private static RenderResponseEnvelope UnauthorizedResponse() => new() { Error = new RenderError { Code = RenderErrorCode.Unauthorized, Message = "A valid bearer token is required." } };
-    private static RenderResponseEnvelope InvalidRequestResponse(string message, string details = "") => new() { Error = new RenderError { Code = RenderErrorCode.InvalidRequest, Message = message, Details = details } };
+    private static RenderResponseEnvelope UnauthorizedResponse() => new() { Error = new RemoteError { Code = RenderErrorCode.Unauthorized, Message = "A valid bearer token is required." } };
+    private static RenderResponseEnvelope InvalidRequestResponse(string message, string details = "") => new() { Error = new RemoteError { Code = RenderErrorCode.InvalidRequest, Message = message, Details = details } };
 
     private static async Task SendJsonAsync<T>(HttpContextBase context, T value, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> typeInfo)
     { context.Response.ContentType = "application/json"; await SendBytesAsync(context, JsonSerializer.SerializeToUtf8Bytes(value, typeInfo)).ConfigureAwait(false); }

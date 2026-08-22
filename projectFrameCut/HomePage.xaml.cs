@@ -33,6 +33,7 @@ using Application = Microsoft.Maui.Controls.Application;
 using IPicture = projectFrameCut.Drawing.Base.IPicture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Drawing.Vector.ImportExport;
@@ -1353,6 +1354,7 @@ public partial class HomePage : ContentPage
     UserActivitySession? _previousSession;
 #endif
     DraftPage? lastPage = null;
+    private bool _renderRecoveryAttempted;
 
     protected override async void OnAppearing()
     {
@@ -1394,6 +1396,7 @@ public partial class HomePage : ContentPage
                     await DisplayAlertAsync(Localized._Info, Localized.HomePage_DraftLoadFailed(), Localized._OK);
 
                 }
+                await TryRestoreActiveRenderAsync();
             }
         }
         catch (Exception ex)
@@ -1427,6 +1430,34 @@ public partial class HomePage : ContentPage
             Log(ex, "set DiskCache root", this);
         }
 
+    }
+
+    private async Task TryRestoreActiveRenderAsync()
+    {
+        if (_renderRecoveryAttempted || !RenderRpcBootstrap.SupportsCliRenderProcess) return;
+        _renderRecoveryAttempted = true;
+
+        foreach (var project in _viewModel.Projects.ToArray())
+        {
+            try
+            {
+                if (!RenderRpcBootstrap.TryReconnectCliRender(project._projectPath, out var jobId)) continue;
+                var job = await RenderRpcBootstrap.Client.GetJobStatusAsync(jobId);
+                if (job.State is RenderJobState.Queued or RenderJobState.Running)
+                {
+                    await GoRender(project);
+                    return;
+                }
+
+                try { await RenderRpcBootstrap.Client.CloseProjectAsync(Guid.Empty); } catch { }
+                await RenderRpcBootstrap.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Restore background render after application restart", this);
+                try { await RenderRpcBootstrap.DisposeAsync(); } catch { }
+            }
+        }
     }
 
     protected override void OnNavigatedTo(NavigatedToEventArgs args)

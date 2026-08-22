@@ -416,6 +416,12 @@ public partial class GeneralSettingPage : ContentPage
                     }
                     needReboot = true;
                     goto done;
+                case "codec_PreferredHWAccelDecoding":
+                case "codec_PreferredHWAccelEncoding":
+                    WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                    needReboot = true;
+                    break;
+
                 case "codec_EnableDiskCache":
                 case "codec_defaultResizeProvider":
                     WriteSetting(args.Id, args.Value?.ToString() ?? "");

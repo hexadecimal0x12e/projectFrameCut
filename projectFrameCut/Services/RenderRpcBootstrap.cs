@@ -2,6 +2,7 @@ using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Shared;
 
+
 namespace projectFrameCut.Services;
 
 /// <summary>
@@ -24,10 +25,18 @@ internal static class RenderRpcBootstrap
         }
     }
 
+    public static string? ActiveCliPreviewPath
+    {
+        get
+        {
+            lock (Gate) return _manager?.CliPreviewPath;
+        }
+    }
+
     /// <summary>
-    /// The render RPC client of the backend currently bound to an open project,
-    /// or of a fallback backend started on demand. Call <see cref="Initialize(string?)"/>
-    /// first so the backend is bound to the project root you operate on.
+    /// The render RPC client of the backend currently bound to an open project.
+    /// Call <see cref="Initialize(string?)"/> first so the backend is bound to
+    /// the project root you operate on.
     /// </summary>
     public static IRenderClient Client
     {
@@ -35,14 +44,10 @@ internal static class RenderRpcBootstrap
         {
             lock (Gate)
             {
-                if (_manager is null)
-                {
-                    // 兜底：没有任何绑定项目的后端时，启动一个默认后端。
-                    _manager = new RenderServerProcessManager("projectFrameCut-integrated-editor");
-                    _manager.Start();
-                }
+                return _manager?.Client
+                    ?? throw new InvalidOperationException(
+                        "The render RPC backend has not been initialized. Open a project or start a render first.");
             }
-            return _manager!.Client;
         }
     }
 
@@ -54,7 +59,7 @@ internal static class RenderRpcBootstrap
     /// project owns a dedicated render process that is stopped when the project
     /// closes (see <see cref="DisposeAsync"/>).
     /// </summary>
-    public static void Initialize(string? projectRoot = null, bool independentWorker = false)
+    public static void Initialize(string? projectRoot = null, bool independentWorker = false, string? projectName = null)
     {
         lock (Gate)
         {
@@ -75,7 +80,7 @@ internal static class RenderRpcBootstrap
                 }
             }
             _manager = new RenderServerProcessManager("projectFrameCut-integrated-editor");
-            _manager.Start(projectRoot, independentWorker);
+            _manager.Start(projectRoot, independentWorker, projectName);
         }
     }
 
@@ -87,6 +92,28 @@ internal static class RenderRpcBootstrap
             _manager = new RenderServerProcessManager("projectFrameCut-render-page");
             _manager.StartCliRender(options);
             return _manager.JobId ?? throw new InvalidOperationException("The CLI renderer did not create a job ID.");
+        }
+    }
+
+    public static async Task CancelCliRenderAsync(Guid jobId)
+    {
+        RenderServerProcessManager? manager;
+        lock (Gate) manager = _manager;
+        if (manager is null) return;
+
+        await manager.CancelCliRenderAsync(jobId).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Detaches the UI from an independent CLI worker without cancelling it.
+    /// The worker remains available for the next application instance.
+    /// </summary>
+    public static void DetachActiveCliRender()
+    {
+        lock (Gate)
+        {
+            if (_manager?.JobId is not Guid) return;
+            _manager = null;
         }
     }
 
@@ -131,6 +158,43 @@ internal static class RenderRpcBootstrap
             _manager = null;
         }
         if (manager is not null) await manager.DisposeAsync().ConfigureAwait(false);
+    }
+
+    internal static async Task<RenderJob?> TryGetJobForNotificationAsync(Guid jobId, string? projectRoot)
+    {
+        var client = TryGetNotificationClient(projectRoot);
+        if (client is null) return null;
+        try { return await client.GetJobStatusAsync(jobId).ConfigureAwait(false); }
+        catch { return null; }
+    }
+
+    internal static async Task<RenderJob?> TryCancelJobFromNotificationAsync(Guid jobId, string? projectRoot)
+    {
+        var client = TryGetNotificationClient(projectRoot);
+        if (client is null) return null;
+        try { return await client.CancelJobAsync(jobId).ConfigureAwait(false); }
+        catch { return null; }
+    }
+
+    private static IRenderClient? TryGetNotificationClient(string? projectRoot)
+    {
+        lock (Gate)
+        {
+            if (_manager is null && !string.IsNullOrWhiteSpace(projectRoot))
+            {
+                var manager = new RenderServerProcessManager("projectFrameCut-notification");
+                if (manager.TryReconnectCliRender(projectRoot))
+                {
+                    _manager = manager;
+                }
+                else
+                {
+                    try { manager.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
+                    return null;
+                }
+            }
+            return _manager?.Client;
+        }
     }
 
     private static bool SameProjectRoot(string? current, string? requested)

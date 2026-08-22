@@ -15,7 +15,7 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.RPCProtocol;
 
-public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = null, string? stateRoot = null, Action<RenderJob>? completionSink = null) : IRenderService, IAsyncDisposable
+public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = null, string? stateRoot = null, Action<RenderJob>? completionSink = null, Action<RenderJob>? progressSink = null) : IRenderService, IAsyncDisposable
 {
     private const string TimelineFrameCacheVersion = "v2-target-layout";
     private const string ClipPreviewCacheVersion = "v2-frame-content";
@@ -25,6 +25,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private readonly IRenderArtifactStore _artifacts = artifactStore ?? new RenderArtifactStore();
     private readonly string? _stateRoot = string.IsNullOrWhiteSpace(stateRoot) ? null : Path.GetFullPath(stateRoot);
     private readonly Action<RenderJob>? _completionSink = completionSink;
+    private readonly Action<RenderJob>? _progressSink = progressSink;
     private readonly ConcurrentDictionary<Guid, BackendSession> _sessions = new();
     private readonly ConcurrentDictionary<Guid, JobEntry> _jobs = new();
     private readonly object _persistGate = new();
@@ -71,16 +72,16 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         }
         catch (KeyNotFoundException ex)
         {
-            return Failure(request, RenderErrorCode.SessionNotFound, ex.Message);
+            return Failure(request, RenderErrorCode.SessionNotFound, ex);
         }
         catch (ArgumentException ex)
         {
-            return Failure(request, RenderErrorCode.InvalidRequest, ex.Message, ex.ToString());
+            return Failure(request, RenderErrorCode.InvalidRequest, ex);
         }
         catch (Exception ex)
         {
             Log(ex, $"Render RPC {request.Operation}", this);
-            return Failure(request, RenderErrorCode.BackendFailure, ex.Message, ex.ToString(), retryable: false);
+            return Failure(request, RenderErrorCode.BackendFailure, ex, retryable: false);
         }
     }
 
@@ -433,7 +434,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                response.Errors.Add(new RenderError { Code = RenderErrorCode.BackendFailure, Message = ex.Message, Details = ex.ToString() });
+                response.Errors.Add(new RemoteError(ex));
             }
         }
         return response;
@@ -526,6 +527,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         {
             var session = GetSession(request.SessionId);
             entry.Update(job => job.State = RenderJobState.Running);
+            ReportProgress(entry);
             var safeName = SanitizeFileName(request.OutputFileName, "render.mp4");
             var relativePath = $"cache/render/{entry.JobId:N}/{safeName}";
             var segment = new TimelineSegmentRequest
@@ -539,11 +541,15 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 IncludeAudio = request.IncludeAudio,
             };
             var artifact = await RenderSegmentInternalAsync(session, segment, relativePath, isPreview: false, entry.Cancellation.Token,
-                (progress, eta) => entry.Update(job =>
+                (progress, eta) =>
                 {
-                    job.Progress = progress;
-                    job.EstimatedRemainingTicks = eta.Ticks;
-                }), request.Encoder, request.PixelFormat).ConfigureAwait(false);
+                    entry.Update(job =>
+                    {
+                        job.Progress = progress;
+                        job.EstimatedRemainingTicks = eta.Ticks;
+                    });
+                    ReportProgress(entry);
+                }, request.Encoder, request.PixelFormat).ConfigureAwait(false);
             entry.Update(job =>
             {
                 job.State = RenderJobState.Completed;
@@ -561,7 +567,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             entry.Update(job =>
             {
                 job.State = RenderJobState.Failed;
-                job.Error = new RenderError { Code = RenderErrorCode.BackendFailure, Message = ex.Message, Details = ex.ToString() };
+                job.Error = new RemoteError(ex);
             });
         }
         finally
@@ -659,6 +665,12 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         }
     }
 
+    private void ReportProgress(JobEntry entry)
+    {
+        try { _progressSink?.Invoke(entry.Snapshot()); }
+        catch (Exception ex) { Log(ex, "Render progress notification", this); }
+    }
+
     private RenderJob GetJob(Guid jobId)
         => _jobs.TryGetValue(jobId, out var entry) ? entry.Snapshot() : throw new KeyNotFoundException($"Render job '{jobId}' was not found.");
 
@@ -700,7 +712,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 if (job.State is RenderJobState.Queued or RenderJobState.Running)
                 {
                     job.State = RenderJobState.Failed;
-                    job.Error = new RenderError { Code = RenderErrorCode.BackendFailure, Message = "The render worker was restarted before this job completed." };
+                    job.Error = new RemoteError { Code = RenderErrorCode.BackendFailure, Message = "The render worker was restarted before this job completed." };
                 }
                 _jobs.TryAdd(job.JobId, new JobEntry(job, PersistJobs));
             }
@@ -912,7 +924,13 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private static RenderResponseEnvelope Failure(RenderRequestEnvelope request, RenderErrorCode code, string message, string details = "", bool retryable = false) => new()
     {
         RequestId = request.RequestId,
-        Error = new RenderError { Code = code, Message = message, Details = details, Retryable = retryable },
+        Error = new RemoteError { Code = code, Message = message, Details = details, Retryable = retryable },
+    };
+
+    private static RenderResponseEnvelope Failure(RenderRequestEnvelope request, RenderErrorCode code, Exception exception, bool retryable = false, string? customMessage = null, string? customDetails = null) => new()
+    {
+        RequestId = request.RequestId,
+        Error = new RemoteError(exception, code, retryable, customMessage, customDetails),
     };
 
     public async ValueTask DisposeAsync()
