@@ -1,4 +1,4 @@
-﻿#if WINDOWS || LINUX
+﻿#if WINDOWS || LINUX || WINNETCORE
 using ILGPU;
 using ILGPU.Runtime;
 using projectFrameCut.Shared;

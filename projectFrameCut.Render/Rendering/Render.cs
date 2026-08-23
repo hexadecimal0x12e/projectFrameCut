@@ -24,6 +24,15 @@ using System.Threading.Tasks;
 
 namespace projectFrameCut.Render.Rendering
 {
+    public readonly record struct ChunkRenderProgress(
+        int ChunkIndex,
+        int ChunkCount,
+        int FinishedFrames,
+        uint ChunkFrames,
+        double ChunkProgress,
+        double GlobalProgress,
+        TimeSpan EstimatedRemaining);
+
     public class Renderer : IRenderContext
     {
         #region opts
@@ -32,6 +41,22 @@ namespace projectFrameCut.Render.Rendering
         public required IClip[] Clips { get; set; }
         public uint Duration;
         public uint StartFrame = 0;
+        /// <summary>
+        /// Zero-based chunk ordinal when this renderer is used by a chunked render job.
+        /// </summary>
+        public int ChunkIndex { get; set; }
+        /// <summary>
+        /// Number of chunks in the owning render job. A value of one represents a normal render.
+        /// </summary>
+        public int ChunkCount { get; set; } = 1;
+        /// <summary>
+        /// Frames completed by earlier chunks. Used only for reporting global chunk progress.
+        /// </summary>
+        public uint CompletedFramesBeforeChunk { get; set; }
+        /// <summary>
+        /// Total frame count of the owning project. Defaults to this renderer's duration.
+        /// </summary>
+        public uint TotalProjectFrames { get; set; }
         public VideoBuilder? builder;
 
         public bool LogRenderState = false;
@@ -78,6 +103,7 @@ namespace projectFrameCut.Render.Rendering
         Dictionary<Guid, bool> IsClipGeneratedByAI = new();
 
         public event Action<double, TimeSpan>? OnProgressChanged;
+        public event Action<ChunkRenderProgress>? OnChunkProgressChanged;
         private Stopwatch _renderTotalStopwatch = new();
         private double _currentFps = 0;
 
@@ -171,6 +197,7 @@ namespace projectFrameCut.Render.Rendering
         public void PrepareRender(CancellationToken token)
         {
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
+            if (AutoSetupRenderContext) IRenderContext.Current = this;
             Log($"[Preparer] Calculating clip visibility for {Duration} frames...");
             var clipsForFrame = new List<IClip>(Clips.Length);
             for (uint idx = StartFrame; idx < StartFrame + Duration; idx++)
@@ -425,7 +452,7 @@ namespace projectFrameCut.Render.Rendering
         {
 
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
-            if (ClipNeedForFrame.IsEmpty || Duration <= 0)
+            if ((ClipNeedForFrame.IsEmpty && BlankFrames.IsEmpty) || Duration <= 0)
             {
                 throw new InvalidOperationException("Either the project is empty, Duration is not set, or PrepareRender is not called yet. Please ensure that the project has clips and call PrepareRender before rendering.");
             }
@@ -574,6 +601,7 @@ namespace projectFrameCut.Render.Rendering
 
             Thread preparer = new(() =>
             {
+                if (AutoSetupRenderContext) IRenderContext.Current = this;
                 IRenderContext.SetWorkerState(0, RenderWorkerStage.PreparingSource, "Preparer");
                 if (EnableThreadAffinity)
                 {
@@ -601,6 +629,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     PreparerFinished = true;
                     IRenderContext.ClearWorkerState();
+                    if (AutoSetupRenderContext) IRenderContext.Current = null;
                 }
             })
             {
@@ -629,6 +658,7 @@ namespace projectFrameCut.Render.Rendering
             [MethodImpl(MethodImplOptions.AggressiveOptimization)]
             void worker(uint targetFrame)
             {
+                if (AutoSetupRenderContext) IRenderContext.Current = this;
                 IRenderContext.SetWorkerState(targetFrame, RenderWorkerStage.Compositing, $"Render worker #{targetFrame}");
                 try
                 {
@@ -649,6 +679,7 @@ namespace projectFrameCut.Render.Rendering
                 finally
                 {
                     IRenderContext.ClearWorkerState();
+                    if (AutoSetupRenderContext) IRenderContext.Current = null;
                     Interlocked.Decrement(ref ThreadWorking);
                     try
                     {
@@ -663,7 +694,7 @@ namespace projectFrameCut.Render.Rendering
                 Log("Throttling disabled for both preparer and render workers. This may lead to high memory usage and potential deadlocks if the preparer is slower than the render workers.");
 
 
-                Parallel.For(StartFrame, Duration, new ParallelOptions { MaxDegreeOfParallelism = MaxThreads, CancellationToken = token }, i =>
+                Parallel.For(StartFrame, checked(StartFrame + Duration), new ParallelOptions { MaxDegreeOfParallelism = MaxThreads, CancellationToken = token }, i =>
                 {
                     Interlocked.Increment(ref ThreadWorking);
                     StartWorkerThread($"Render worker #{i}", () => worker((uint)i), workerThreadAffinity.Mask);
@@ -848,6 +879,7 @@ namespace projectFrameCut.Render.Rendering
             [MethodImpl(MethodImplOptions.AggressiveOptimization)]
             void worker(uint targetFrame)
             {
+                if (AutoSetupRenderContext) IRenderContext.Current = this;
                 IRenderContext.SetWorkerState(targetFrame, RenderWorkerStage.PreparingSource, $"Worker-Decode render #{targetFrame}");
                 try
                 {
@@ -920,6 +952,7 @@ namespace projectFrameCut.Render.Rendering
                 finally
                 {
                     IRenderContext.ClearWorkerState();
+                    if (AutoSetupRenderContext) IRenderContext.Current = null;
                     Interlocked.Decrement(ref ThreadWorking);
                     try
                     {
@@ -932,7 +965,7 @@ namespace projectFrameCut.Render.Rendering
             if (DisableAllThrottleOptions)
             {
                 Log("Throttling disabled for worker-decoded render. This may lead to high memory usage and potential deadlocks if the preparer is slower than the render workers.");
-                Parallel.For(StartFrame, Duration, new ParallelOptions { MaxDegreeOfParallelism = MaxThreads, CancellationToken = token }, i =>
+                Parallel.For(StartFrame, checked(StartFrame + Duration), new ParallelOptions { MaxDegreeOfParallelism = MaxThreads, CancellationToken = token }, i =>
                 {
                     Interlocked.Increment(ref ThreadWorking);
                     StartWorkerThread($"Worker-Decode render #{i}", () => worker((uint)i), workerAffinityMask);
@@ -1151,6 +1184,7 @@ namespace projectFrameCut.Render.Rendering
 
             Thread preparer = new(() =>
             {
+                if (AutoSetupRenderContext) IRenderContext.Current = this;
                 IRenderContext.SetWorkerState(0, RenderWorkerStage.PreparingSource, "Layer-Preparer");
                 try
                 {
@@ -1165,6 +1199,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     PreparerFinished = true;
                     IRenderContext.ClearWorkerState();
+                    if (AutoSetupRenderContext) IRenderContext.Current = null;
                 }
             })
             {
@@ -1313,6 +1348,7 @@ namespace projectFrameCut.Render.Rendering
                             [MethodImpl(MethodImplOptions.AggressiveOptimization)]
                             void worker()
                             {
+                                if (AutoSetupRenderContext) IRenderContext.Current = this;
                                 IRenderContext.SetWorkerState(capturedFrame, RenderWorkerStage.Compositing, $"Layer worker #{capturedFrame}.{capturedLayerIdx}");
                                 try
                                 {
@@ -1327,6 +1363,7 @@ namespace projectFrameCut.Render.Rendering
                                 finally
                                 {
                                     IRenderContext.ClearWorkerState();
+                                    if (AutoSetupRenderContext) IRenderContext.Current = null;
                                     Interlocked.Decrement(ref ThreadWorking);
                                     try
                                     {
@@ -2618,6 +2655,18 @@ namespace projectFrameCut.Render.Rendering
             double fps = elapsed.TotalSeconds > 0 ? Volatile.Read(ref Finished) / elapsed.TotalSeconds : 0;
             Interlocked.Exchange(ref _currentFps, fps);
             OnProgressChanged?.Invoke(prog, GetEstimated(prog));
+            uint projectFrames = TotalProjectFrames > 0 ? TotalProjectFrames : Duration;
+            double globalProgress = projectFrames > 0
+                ? Math.Clamp((CompletedFramesBeforeChunk + Volatile.Read(ref Finished)) / (double)projectFrames, 0, 1)
+                : prog;
+            OnChunkProgressChanged?.Invoke(new ChunkRenderProgress(
+                ChunkIndex,
+                Math.Max(1, ChunkCount),
+                Volatile.Read(ref Finished),
+                Duration,
+                prog,
+                globalProgress,
+                GetEstimated(prog)));
         }
 
         private TimeSpan GetEstimated(double prog)

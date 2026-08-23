@@ -136,6 +136,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public IPicture.PicturePixelMode? TargetPPB => _colorDepth;
 
+        public bool PreferToSpeed { get; set; }
+
         // ────────────────────────── Codec detection ──────────────────────────
 
         public static bool DetectCodec(string codec)
@@ -1048,7 +1050,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         /// <summary>
         /// Configure encoder options specific to the hardware encoder.
         /// </summary>
-        private static void ConfigureHardwareEncoderOptions(AVCodec* codec, AVDictionary** opts)
+        private void ConfigureHardwareEncoderOptions(AVCodec* codec, AVDictionary** opts)
         {
             if (codec == null || codec->name == null) return;
 
@@ -1056,27 +1058,28 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             if (name.Contains("nvenc"))
             {
-                ffmpeg.av_dict_set(opts, "preset", "p5", 0);       // p5 = 质量/速度最佳平衡 (p1最快-p7最慢)
-                ffmpeg.av_dict_set(opts, "tune", "hq", 0);          // hq = 高质量 (非低延迟模式)
+                ffmpeg.av_dict_set(opts, "preset", PreferToSpeed ? "p2" : "p5", 0);
+                ffmpeg.av_dict_set(opts, "tune", PreferToSpeed ? "ll" : "hq", 0);
                 ffmpeg.av_dict_set(opts, "rc", "vbr", 0);           // VBR 速率控制 (旧版 vbr_hq 已弃用)
-                ffmpeg.av_dict_set(opts, "multipass", "qres", 0);   // 质量分辨率多遍编码 (qres=quality resolution)
-                ffmpeg.av_dict_set(opts, "rc_lookahead", "16", 0);  // 16帧预分析 (原32帧,减少内部队列深度避免参考帧损坏)
+                if (!PreferToSpeed)
+                    ffmpeg.av_dict_set(opts, "multipass", "qres", 0);
+                ffmpeg.av_dict_set(opts, "rc_lookahead", PreferToSpeed ? "0" : "16", 0);
                 // b_ref_mode 不使用 middle (驱动默认 disabled),避免B帧引用链过深
             }
             else if (name.Contains("amf"))
             {
-                ffmpeg.av_dict_set(opts, "quality", "quality", 0);     // 质量模式 (非 speed)
+                ffmpeg.av_dict_set(opts, "quality", PreferToSpeed ? "speed" : "quality", 0);
                 ffmpeg.av_dict_set(opts, "usage", "transcoding", 0);   // 转码模式 (平衡延迟和质量)
-                ffmpeg.av_dict_set(opts, "preanalysis", "1", 0);       // 启用预分析
+                ffmpeg.av_dict_set(opts, "preanalysis", PreferToSpeed ? "0" : "1", 0);
             }
             else if (name.Contains("qsv"))
             {
-                ffmpeg.av_dict_set(opts, "preset", "medium", 0);    // 平衡预设 (veryfast>fast>medium>slow)
-                ffmpeg.av_dict_set(opts, "async_depth", "6", 0);    // 适度异步深度
+                ffmpeg.av_dict_set(opts, "preset", PreferToSpeed ? "veryfast" : "medium", 0);
+                ffmpeg.av_dict_set(opts, "async_depth", PreferToSpeed ? "3" : "6", 0);
             }
             else if (name.Contains("vaapi"))
             {
-                ffmpeg.av_dict_set(opts, "compression_level", "4", 0); // 平衡 (1最快-7最慢)
+                ffmpeg.av_dict_set(opts, "compression_level", PreferToSpeed ? "1" : "4", 0);
             }
             else if (name.Contains("videotoolbox"))
             {

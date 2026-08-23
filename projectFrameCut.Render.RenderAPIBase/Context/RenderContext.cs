@@ -14,7 +14,13 @@ namespace projectFrameCut.Render.RenderAPIBase.Context
         /// <summary>
         /// A static property that holds the current render context. This property is used to access the current rendering state and settings.
         /// </summary>
-        public static IRenderContext? Current = null;
+        private static readonly AsyncLocal<IRenderContext?> _current = new();
+
+        public static IRenderContext? Current
+        {
+            get => _current.Value;
+            set => _current.Value = value;
+        }
 
         /// <summary>
         /// Gets the progress of the rendering operation as a double value between 0.0 and 1.0, where 0.0 represents no progress and 1.0 represents completion.

@@ -416,6 +416,14 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("enableThreadAffinity", options.EnableThreadAffinity.ToString());
                 Add("prepareInWorker", options.PrepareInWorker.ToString());
                 Add("renderByLayer", options.RenderByLayer.ToString());
+                Add("preferHwAccelDecoder", options.UseHwAccelDecoder.ToString());
+                Add("preferHwAccelEncoder", options.UseHwAccelEncoder.ToString());
+                Add("chunkRender", options.ChunkRender.ToString());
+                if (options.ChunkFrames is uint chunkFrames) Add("chunkFrames", chunkFrames.ToString());
+                if (options.ChunkSeconds is double chunkSeconds) Add("chunkSeconds", chunkSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                Add("chunkParallelism", Math.Max(1, options.ChunkParallelism).ToString());
+                Add("chunkResume", options.ChunkResume.ToString());
+                Add("chunkKeepFiles", options.ChunkKeepFiles.ToString());
                 Add("rpcPipe", _pipeName);
                 Add("rpcToken", _token);
                 Add("jobId", options.JobId.ToString("D"));
@@ -642,6 +650,34 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         _jobId = null;
     }
 
+    /// <summary>
+    /// Immediately terminates an external backend process or Android RPC
+    /// service, then releases the transports and in-process resources owned by
+    /// this manager.
+    /// </summary>
+    public async ValueTask ForceStopAsync()
+    {
+        if (_process is not null)
+        {
+            try
+            {
+                if (!_process.HasExited)
+                    _process.Kill(entireProcessTree: true);
+            }
+            catch { }
+        }
+
+#if ANDROID
+        if (_androidWorker is not null)
+        {
+            try { await _androidWorker.ForceStopAsync().ConfigureAwait(false); } catch { }
+            _androidWorker = null;
+        }
+#endif
+
+        await DisposeAsync().ConfigureAwait(false);
+    }
+
     private static async Task WaitForWorkerExitOrKillAsync(Process process, TimeSpan timeout)
     {
         try
@@ -701,6 +737,12 @@ internal sealed record CliRenderProcessOptions
     public bool EnableThreadAffinity { get; init; } = true;
     public bool PrepareInWorker { get; init; } = true;
     public bool RenderByLayer { get; init; } = true;
+    public bool ChunkRender { get; init; }
+    public uint? ChunkFrames { get; init; }
+    public double? ChunkSeconds { get; init; }
+    public int ChunkParallelism { get; init; } = 1;
+    public bool ChunkResume { get; init; } = true;
+    public bool ChunkKeepFiles { get; init; }
     public bool Background { get; init; }
     public required string TempPath { get; init; }
     public string? PreviewPath { get; init; }

@@ -30,6 +30,17 @@ public sealed class RenderWorkerService : Service
 
     public override void OnCreate()
     {
+        AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
+        {
+            if (e.ExceptionObject is Exception ex) Log(ex, "Unhandled exception in RenderWorkerService");
+        };
+
+        // Handle Android runtime (Java/Managed interop) layer exceptions
+        global::Android.Runtime.AndroidEnvironment.UnhandledExceptionRaiser += (sender, e) =>
+        {
+            Log(e.Exception, "Unhandled Android runtime exception in RenderWorkerService");
+        };
+
         base.OnCreate();
         EnsureNotificationChannel();
     }
@@ -142,11 +153,7 @@ public sealed class RenderWorkerService : Service
             $"--projectName={options.ProjectName}",
             $"--background={options.Background}",
             $"--preferHwAccelDecoder={options.UseHwAccelDecoder}",
-            // MediaCodec encoding is currently disabled on Android. Do not pass
-            // the persisted/user preference through to CLIProgram, otherwise it
-            // replaces InternalPluginBase.HWAccelEncodeOptionGetter and can
-            // re-enable VideoWriterHWAccel inside the worker process.
-            "--preferHwAccelEncoder=false",
+            $"--preferHwAccelEncoder=false",
             $"--locale={Localized._LocaleId_}",
             $"--consoleLog",
         };

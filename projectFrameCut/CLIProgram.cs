@@ -490,7 +490,8 @@ namespace projectFrameCut
         private static async Task<int> RunRenderPipelineAsync(
             ConcurrentDictionary<string, string> switches,
             CancellationToken cancellationToken,
-            Action<double, TimeSpan, double>? progress = null)
+            Action<double, TimeSpan, double>? progress = null,
+            Action<string>? stageChanged = null)
         {
             if (!switches.TryGetValue("project", out var projectRoot) || !Directory.Exists(projectRoot))
                 throw new DirectoryNotFoundException("-project must point to a project directory.");
@@ -536,11 +537,51 @@ namespace projectFrameCut
             var affinity = bool.TryParse(switches.GetValueOrDefault("enableThreadAffinity", "true"), out var threadAffinity) && threadAffinity;
             var maxThreads = int.TryParse(switches.GetValueOrDefault("maxParallelThreads", Environment.ProcessorCount.ToString()), out var mt) ? Math.Max(1, mt) : Environment.ProcessorCount;
             var duration = Math.Max(timeline.Duration, timeline.AudioDuration);
+            var chunkOptions = ParseChunkRenderOptions(switches, fps);
+            long? requestedBitRate = switches.TryGetValue("bitRate", out var bitRateText)
+                && long.TryParse(bitRateText, out var parsedBitRate) && parsedBitRate > 0
+                    ? parsedBitRate
+                    : null;
             using var consoleCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 #if WINDOWS || LINUX
             Console.CancelKeyPress += (_, e) => { e.Cancel = true; consoleCancellation.Cancel(); };
 #endif
-            async Task RenderVideo(string path, bool writeToVoid = false)
+            IVideoWriter CreateConfiguredWriter(string path, bool intermediateChunk)
+            {
+                IVideoWriter writer = PluginManager.CreateVideoWriter(output[4]);
+                writer.Width = width;
+                writer.Height = height;
+                writer.FramePerSecond = fps;
+                writer.PixelFormat = pixelFormat.ToString();
+                writer.OutputPath = path;
+                if (string.IsNullOrWhiteSpace(writer.CodecName)) writer.CodecName = output[4];
+                if (requestedBitRate.HasValue) writer.BitRate = requestedBitRate.Value;
+                if (intermediateChunk)
+                {
+                    writer.BitRate = Math.Max(writer.BitRate, CalculateIntermediateBitRate(width, height, fps, bpp));
+                    writer.PreferToSpeed = true;
+                }
+                return writer;
+            }
+
+            IVideoSource CreateChunkVideoSource(string path)
+            {
+                if (HDRDecoderContext.IsHdrVideo(path)) return new HDRDecoderContext(path);
+                return bpp == IPicture.PicturePixelMode.UShortPicture
+                    ? new DecoderContext16Bit(path)
+                    : new DecoderContext8Bit(path);
+            }
+
+            async Task RenderVideoRange(
+                string path,
+                uint startFrame,
+                uint frameCount,
+                int renderThreads,
+                Action<double, TimeSpan, double>? rangeProgress = null,
+                bool writeToVoid = false,
+                int chunkIndex = 0,
+                int chunkCount = 1,
+                bool intermediateChunk = false)
             {
                 var clips = DraftImportAndExportHelper.JSONToIClips(timeline, false, bpp).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
                 if (clips.Length == 0) throw new InvalidOperationException("No video clips in the project.");
@@ -549,25 +590,32 @@ namespace projectFrameCut
                     Directory.CreateDirectory(Path.GetDirectoryName(path) ?? Environment.CurrentDirectory);
                 var builder = writeToVoid
                     ? null
-                    : new VideoBuilder(path, width, height, fps, output[4], pixelFormat.ToString())
-                {
-                    EnablePreview = true,
-                    PreviewPath = switches.GetValueOrDefault("preview_path"),
-                    Duration = duration,
-                    BlockWrite = serial,
-                    DoGCAfterEachWrite = gcOption > 0,
-                    DisposeFrameAfterEachWrite = true
-                };
+                    : new VideoBuilder(CreateConfiguredWriter(path, intermediateChunk))
+                    {
+                        EnablePreview = !chunkOptions.Enabled || chunkOptions.Parallelism == 1,
+                        minFrameCountToGeneratePreview = 60,
+                        PreviewPath = switches.GetValueOrDefault("preview_path"),
+                        StartFrame = startFrame,
+                        Duration = frameCount,
+                        BlockWrite = serial,
+                        DoGCAfterEachWrite = gcOption > 0,
+                        DisposeFrameAfterEachWrite = true
+                    };
                 var renderer = new Renderer
                 {
                     builder = builder,
                     Clips = clips,
                     TargetWidth = width,
                     TargetHeight = height,
-                    Duration = duration,
+                    StartFrame = startFrame,
+                    Duration = frameCount,
+                    ChunkIndex = chunkIndex,
+                    ChunkCount = Math.Max(1, chunkCount),
+                    CompletedFramesBeforeChunk = startFrame,
+                    TotalProjectFrames = duration,
                     Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
                     GCOption = gcOption,
-                    MaxThreads = maxThreads,
+                    MaxThreads = Math.Max(1, renderThreads),
                     OneByOneRender = serial,
                     RenderByLayers = renderByLayers,
                     PrepareInWorkerThreads = prepareInWorkers,
@@ -576,17 +624,85 @@ namespace projectFrameCut
                 };
                 renderer.OnProgressChanged += (value, eta) =>
                 {
-                    progress?.Invoke(target == "all" ? value * 0.9 : value, eta, renderer.CurrentFps);
-                    //Console.Write($"Rendering {value:P1}, ETA {eta:hh\\:mm\\:ss}, FPS {renderer.CurrentFps:N2}       \r");
+                    rangeProgress?.Invoke(value, eta, renderer.CurrentFps);
                 };
-                builder.Build()?.Start();
-                renderer.PrepareRender(consoleCancellation.Token);
-                await renderer.GoRender(consoleCancellation.Token).ConfigureAwait(false);
-                if (serial) builder.Writer?.Finish();
-                else builder.Finish(i => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), duration, (_, _) => { });
-                foreach (var clip in clips) clip.Dispose();
-                renderer.builder = null;
-                Console.WriteLine();
+                try
+                {
+                    builder?.Build()?.Start();
+                    renderer.PrepareRender(consoleCancellation.Token);
+                    await renderer.GoRender(consoleCancellation.Token).ConfigureAwait(false);
+                    consoleCancellation.Token.ThrowIfCancellationRequested();
+                    if (builder is not null)
+                    {
+                        if (serial)
+                        {
+                            builder.Writer?.Finish();
+                            builder.Dispose();
+                        }
+                        else builder.Finish(
+                            i => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height),
+                            checked(startFrame + frameCount),
+                            (_, _) => { });
+                    }
+                }
+                catch
+                {
+                    if (builder is { Disposed: false }) builder.Interrupt();
+                    throw;
+                }
+                finally
+                {
+                    foreach (var clip in clips) clip.Dispose();
+                    renderer.builder = null;
+                    Console.WriteLine();
+                }
+            }
+
+            async Task<ChunkRenderCoordinator?> RenderVideo(string path, bool publishChunkedResult = true, bool writeToVoid = false)
+            {
+                if (!chunkOptions.Enabled || writeToVoid)
+                {
+                    await RenderVideoRange(path, 0, duration, maxThreads,
+                        (value, eta, currentFps) => progress?.Invoke(target == "all" ? value * 0.9 : value, eta, currentFps),
+                        writeToVoid).ConfigureAwait(false);
+                    return null;
+                }
+                int lastChunkCount = 0;
+                var coordinator = new ChunkRenderCoordinator(
+                    projectRoot,
+                    duration,
+                    fps,
+                    Path.GetExtension(path),
+                    $"{width}x{height}|{fps}|{pixelFormat}|{output[4]}|bpp={bpp}|bitrate={requestedBitRate}|serial={serial}|layers={renderByLayers}|prepare={prepareInWorkers}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}",
+                    maxThreads,
+                    chunkOptions);
+                await coordinator.InitializeAsync(consoleCancellation.Token).ConfigureAwait(false);
+                await coordinator.RenderPendingChunksAsync(
+                    (segment, chunkPath, chunkThreads, report, token) =>
+                        RenderVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads, report, chunkIndex: segment.Index, chunkCount: coordinator.ChunkCount, intermediateChunk: true),
+                    state =>
+                    {
+                        double value = state.GlobalProgress * (target == "all" ? 0.8 : 0.85);
+                        progress?.Invoke(value, state.EstimatedRemaining, state.FramesPerSecond);
+                        if (lastChunkCount != state.ChunkCount)
+                        {
+                            lastChunkCount = state.ChunkCount;
+                            Console.WriteLine($"Rendering finished {state.ChunkCount} chunk(s).");
+                        }
+                    },
+                    consoleCancellation.Token).ConfigureAwait(false);
+                stageChanged?.Invoke("MergeChunks");
+                string merged = await coordinator.MergeAsync(
+                    path => CreateConfiguredWriter(path, intermediateChunk: false),
+                    CreateChunkVideoSource,
+                    (mergeProgress, mergeEta) => progress?.Invoke(
+                        (target == "all" ? 0.8 : 0.85) + mergeProgress * (target == "all" ? 0.1 : 0.15),
+                        mergeEta,
+                        0),
+                    consoleCancellation.Token).ConfigureAwait(false);
+                if (publishChunkedResult)
+                    await ChunkRenderCoordinator.PublishAsync(merged, path, consoleCancellation.Token).ConfigureAwait(false);
+                return coordinator;
             }
 
             void RenderAudio(string path)
@@ -605,28 +721,112 @@ namespace projectFrameCut
 
             switch (target)
             {
-                case "video": await RenderVideo(outputPath); break;
+                case "video":
+                    {
+                        var chunkJob = await RenderVideo(outputPath);
+                        if (chunkJob is not null && !chunkOptions.KeepChunkFiles) chunkJob.Cleanup();
+                        break;
+                    }
                 case "void": await RenderVideo(outputPath, writeToVoid: true); break;
                 case "audio": RenderAudio(outputPath); break;
                 case "all":
                     var video = Path.Combine(tempPath, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}{Path.GetExtension(outputPath)}");
                     var audio = Path.Combine(tempPath, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
-                    await RenderVideo(video);
+                    var allChunkJob = await RenderVideo(video, publishChunkedResult: !chunkOptions.Enabled);
+                    if (allChunkJob is not null) video = allChunkJob.MergedPath;
                     progress?.Invoke(0.92, TimeSpan.Zero, 0);
+                    stageChanged?.Invoke("ComposeAudio");
                     RenderAudio(audio);
                     progress?.Invoke(0.97, TimeSpan.Zero, 0);
+                    stageChanged?.Invoke("FinalEncoding");
                     if (File.Exists(audio))
-                        VideoAudioMuxer.MuxFromFiles(video, audio, outputPath, true);
+                    {
+                        if (allChunkJob is null)
+                        {
+                            VideoAudioMuxer.MuxFromFiles(video, audio, outputPath, true);
+                        }
+                        else
+                        {
+                            string outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath)) ?? Environment.CurrentDirectory;
+                            string atomicOutput = Path.Combine(outputDirectory, $".{Path.GetFileNameWithoutExtension(outputPath)}.{Guid.NewGuid():N}{Path.GetExtension(outputPath)}");
+                            try
+                            {
+                                VideoAudioMuxer.MuxFromFiles(video, audio, atomicOutput, true);
+                                File.Move(atomicOutput, outputPath, overwrite: true);
+                            }
+                            finally
+                            {
+                                if (File.Exists(atomicOutput)) File.Delete(atomicOutput);
+                            }
+                        }
+                    }
                     else
-                        File.Move(video, outputPath, overwrite: true);
-                    File.Delete(video);
+                        await ChunkRenderCoordinator.PublishAsync(video, outputPath, consoleCancellation.Token).ConfigureAwait(false);
+                    if (allChunkJob is null) File.Delete(video);
                     File.Delete(audio);
+                    if (allChunkJob is not null && !chunkOptions.KeepChunkFiles) allChunkJob.Cleanup();
                     break;
                 default: throw new ArgumentException($"Unknown target '{target}'.");
             }
             Environment.SetEnvironmentVariable("projectFrameCut_LastOutput", outputPath, EnvironmentVariableTarget.Process);
             Environment.SetEnvironmentVariable("projectFrameCut_RenderFinished", "1", EnvironmentVariableTarget.Process);
             return 0;
+        }
+
+        private static ChunkRenderOptions ParseChunkRenderOptions(ConcurrentDictionary<string, string> switches, int frameRate)
+        {
+            bool enabled = bool.TryParse(switches.GetValueOrDefault("chunkRender", "false"), out var chunkRender) && chunkRender;
+            bool resume = !bool.TryParse(switches.GetValueOrDefault("chunkResume", "true"), out var chunkResume) || chunkResume;
+            bool keepFiles = bool.TryParse(switches.GetValueOrDefault("chunkKeepFiles", "false"), out var chunkKeepFiles) && chunkKeepFiles;
+            int parallelism = int.TryParse(switches.GetValueOrDefault("chunkParallelism", "1"), out var parsedParallelism)
+                ? Math.Max(1, parsedParallelism)
+                : 1;
+            uint? frames = null;
+            double? seconds = null;
+            if (switches.TryGetValue("chunkFrames", out var chunkFramesText))
+            {
+                if (!uint.TryParse(chunkFramesText, out var parsedFrames) || parsedFrames == 0)
+                    throw new ArgumentException("-chunkFrames must be a positive integer.");
+                frames = parsedFrames;
+            }
+            if (switches.TryGetValue("chunkSeconds", out var chunkSecondsText))
+            {
+                if (!double.TryParse(chunkSecondsText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsedSeconds)
+                    || parsedSeconds <= 0 || double.IsNaN(parsedSeconds) || double.IsInfinity(parsedSeconds))
+                    throw new ArgumentException("-chunkSeconds must be a positive finite number.");
+                seconds = parsedSeconds;
+            }
+            if (frames.HasValue && seconds.HasValue)
+                throw new ArgumentException("Specify only one of -chunkFrames and -chunkSeconds.");
+            if (enabled && !frames.HasValue && !seconds.HasValue)
+                frames = checked((uint)Math.Max(1, frameRate) * 60u);
+            return new ChunkRenderOptions
+            {
+                Enabled = enabled,
+                ChunkFrames = frames,
+                ChunkSeconds = seconds,
+                Parallelism = parallelism,
+                Resume = resume,
+                KeepChunkFiles = keepFiles
+            };
+        }
+
+        private static long CalculateIntermediateBitRate(
+            int width,
+            int height,
+            int frameRate,
+            IPicture.PicturePixelMode pixelMode)
+        {
+            double bitsPerPixel = pixelMode == IPicture.PicturePixelMode.UShortPicture ? 0.5 : 0.3;
+            double estimate = (double)width * height * frameRate * bitsPerPixel;
+            return (long)Math.Clamp(estimate, 12_000_000d, 300_000_000d);
+        }
+
+        private static string GetFileFingerprintPart(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return string.Empty;
+            var info = new FileInfo(path);
+            return $"{Path.GetFullPath(path)}|{info.Length}|{info.LastWriteTimeUtc.Ticks}";
         }
 
         private static void ConfigureHardwareAcceleration(ConcurrentDictionary<string, string> switches)
@@ -681,10 +881,10 @@ namespace projectFrameCut
                 ? new UnixSocketRenderServer(service).RunAsync(options.Endpoint, options.Token, serverCancellation.Token)
                 : new NamedPipeRenderServer(service).RunAsync(options.Endpoint, options.Token, cancellationToken: serverCancellation.Token);
 
-            var exitCode = await service.RunAsync(async (progress, cancellationToken) =>
+            var exitCode = await service.RunAsync(async (progress, stageChanged, cancellationToken) =>
             {
                 InitializeCliRenderRuntime(dataRoot, switches.GetValueOrDefault("FFmpegLibraryPath", string.Empty));
-                return await RunRenderPipelineAsync(switches, cancellationToken, progress).ConfigureAwait(false);
+                return await RunRenderPipelineAsync(switches, cancellationToken, progress, stageChanged).ConfigureAwait(false);
             }).ConfigureAwait(false);
 
             // Give the GUI enough time to observe the terminal state. A foreground
@@ -701,11 +901,17 @@ namespace projectFrameCut
 
         private sealed class CliRenderJobRpcService : IRenderService
         {
+            private static readonly long ProgressPublishIntervalTicks = Math.Max(1, Stopwatch.Frequency / 4);
             private readonly object _gate = new();
+            private readonly object _persistGate = new();
             private readonly string _statePath;
             private readonly CancellationTokenSource _renderCancellation;
             private readonly CancellationTokenSource _serverCancellation;
             private RenderJob _job;
+            private long _nextProgressPublishTimestamp;
+            private long _jobRevision;
+            private long _lastPersistedRevision;
+            private int _progressPublishInProgress;
 
             public CliRenderJobRpcService(
                 Guid jobId, string projectRoot, string projectName, string outputPath,
@@ -723,28 +929,26 @@ namespace projectFrameCut
                     ProjectName = projectName,
                     OutputPath = outputPath,
                     Background = background,
+                    Stage = "Render",
                     CreatedAtUtc = DateTime.UtcNow,
                     UpdatedAtUtc = DateTime.UtcNow,
                 };
-                Persist();
+                _jobRevision = 1;
+                Persist(CaptureForPersistence());
             }
 
-            public async Task<int> RunAsync(Func<Action<double, TimeSpan, double>, CancellationToken, Task<int>> render)
+            public async Task<int> RunAsync(Func<Action<double, TimeSpan, double>, Action<string>, CancellationToken, Task<int>> render)
             {
                 Update(job => job.State = RenderJobState.Running);
-                NotifyProgress();
+                PublishProgress(force: true);
                 try
                 {
                     var result = await render((progress, eta, fps) =>
                     {
-                        Update(job =>
-                        {
-                            job.Progress = Math.Clamp(progress, 0, 1);
-                            job.EstimatedRemainingTicks = Math.Max(0, eta.Ticks);
-                            job.CurrentFps = Math.Max(0, fps);
-                        });
-                        NotifyProgress();
-                    }, _renderCancellation.Token).ConfigureAwait(false);
+                        if (!TryReserveProgressPublish()) return;
+                        if (!UpdateProgress(progress, eta, fps)) return;
+                        QueueProgressPublish();
+                    }, UpdateStage, _renderCancellation.Token).ConfigureAwait(false);
                     if (result != 0) throw new InvalidOperationException($"CLI renderer exited with code {result}.");
                     Update(job =>
                     {
@@ -752,13 +956,13 @@ namespace projectFrameCut
                         job.Progress = 1;
                         job.EstimatedRemainingTicks = 0;
                     });
-                    NotifyCompletion();
+                    PublishCompletion();
                     return 0;
                 }
                 catch (OperationCanceledException)
                 {
                     Update(job => job.State = RenderJobState.Canceled);
-                    NotifyCompletion();
+                    PublishCompletion();
                     return 255;
                 }
                 catch (Exception ex)
@@ -769,7 +973,7 @@ namespace projectFrameCut
                         job.State = RenderJobState.Failed;
                         job.Error = new RemoteError(ex);
                     });
-                    NotifyCompletion();
+                    PublishCompletion();
                     return 1;
                 }
             }
@@ -838,8 +1042,28 @@ namespace projectFrameCut
                 {
                     update(_job);
                     _job.UpdatedAtUtc = DateTime.UtcNow;
-                    PersistCore();
+                    _jobRevision++;
                 }
+            }
+
+            private bool UpdateProgress(double progress, TimeSpan eta, double fps)
+            {
+                lock (_gate)
+                {
+                    if (_job.State != RenderJobState.Running) return false;
+                    _job.Progress = Math.Clamp(progress, 0, 1);
+                    _job.EstimatedRemainingTicks = Math.Max(0, eta.Ticks);
+                    _job.CurrentFps = Math.Max(0, fps);
+                    _job.UpdatedAtUtc = DateTime.UtcNow;
+                    _jobRevision++;
+                    return true;
+                }
+            }
+
+            private void UpdateStage(string stage)
+            {
+                Update(job => job.Stage = stage);
+                PublishProgress(force: true);
             }
 
             private RenderJob Snapshot()
@@ -847,34 +1071,69 @@ namespace projectFrameCut
                 lock (_gate) return RenderRpcSerializer.Clone(_job);
             }
 
-            private void Persist()
+            private PersistedJobSnapshot CaptureForPersistence()
             {
-                lock (_gate) PersistCore();
+                lock (_gate) return new(RenderRpcSerializer.Clone(_job), _jobRevision);
             }
 
-            private void PersistCore()
+            private bool TryReserveProgressPublish()
             {
-                try
+                var now = Stopwatch.GetTimestamp();
+                var next = Volatile.Read(ref _nextProgressPublishTimestamp);
+                if (now < next) return false;
+                return Interlocked.CompareExchange(
+                    ref _nextProgressPublishTimestamp,
+                    now + ProgressPublishIntervalTicks,
+                    next) == next;
+            }
+
+            private void Persist(PersistedJobSnapshot snapshot)
+            {
+                lock (_persistGate)
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(_statePath)!);
-                    var temp = _statePath + ".tmp";
-                    File.WriteAllText(temp, JsonSerializer.Serialize(_job));
-                    File.Move(temp, _statePath, overwrite: true);
+                    // A slower, older write must never overwrite a newer terminal
+                    // state when progress callbacks overlap on render workers.
+                    if (snapshot.Revision < _lastPersistedRevision) return;
+                    try
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(_statePath)!);
+                        var temp = _statePath + ".tmp";
+                        File.WriteAllText(temp, JsonSerializer.Serialize(snapshot.Job));
+                        File.Move(temp, _statePath, overwrite: true);
+                        _lastPersistedRevision = snapshot.Revision;
+                    }
+                    catch (Exception ex) { Log(ex, "Persist CLI render job"); }
                 }
-                catch (Exception ex) { Log(ex, "Persist CLI render job"); }
             }
 
-            private void NotifyProgress()
+            private void PublishProgress(bool force)
             {
-                try { RenderCompletionNotifier.NotifyProgress(Snapshot()); }
+                var snapshot = CaptureForPersistence();
+                Persist(snapshot);
+                try { RenderCompletionNotifier.NotifyProgress(snapshot.Job, force); }
                 catch (Exception ex) { Log(ex, "CLI render progress notification"); }
             }
 
-            private void NotifyCompletion()
+            private void QueueProgressPublish()
             {
-                try { RenderCompletionNotifier.Notify(Snapshot()); }
+                if (Interlocked.CompareExchange(ref _progressPublishInProgress, 1, 0) != 0) return;
+                _ = Task.Run(() =>
+                {
+                    try { PublishProgress(force: false); }
+                    catch (Exception ex) { Log(ex, "Publish CLI render progress"); }
+                    finally { Volatile.Write(ref _progressPublishInProgress, 0); }
+                });
+            }
+
+            private void PublishCompletion()
+            {
+                var snapshot = CaptureForPersistence();
+                Persist(snapshot);
+                try { RenderCompletionNotifier.Notify(snapshot.Job); }
                 catch (Exception ex) { Log(ex, "CLI render completion notification"); }
             }
+
+            private readonly record struct PersistedJobSnapshot(RenderJob Job, long Revision);
 
             private static RenderResponseEnvelope Success<T>(RenderRequestEnvelope request, T payload) => new()
             {
@@ -1233,6 +1492,9 @@ Usage:
                   [-maxParallelThreads=<number>] [-oneByOneRender=true|false]
                   [-renderByLayer=true|false] [-prepareInWorker=true|false]
                   [-enableThreadAffinity=true|false] [-GCOptions=0|1|2]
+                  [-chunkRender=true|false] [-chunkFrames=<number>|-chunkSeconds=<number>]
+                  [-chunkParallelism=<number>] [-chunkResume=true|false]
+                  [-chunkKeepFiles=true|false]
 
 This command provide a simple way to render a project in the command line.
 For full functionality of out-of-process rendering, use StandaloneRender.

@@ -70,7 +70,6 @@
 		<AppxPackageDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\AppPackages\</AppxPackageDir>
 
 		<PwshSDKVersion>7.6.5</PwshSDKVersion>
-		<MauiVersion>10.0.90</MauiVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
@@ -197,7 +196,6 @@
 		<PackageReference Include="PowerShellStandard.Library" Version="5.1.1" />
 		<PackageReference Include="Woohoo.Platform.Windows" Version="0.1.0" />
 		<PackageReference Include="System.Management" Version="*" /> <!-- pwsh SDK relys on this library so we don't fix the version -->
-		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
 		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
 		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<MauiAsset Include="Platforms\Windows\pjfc-cli.exe" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />

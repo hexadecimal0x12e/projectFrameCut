@@ -16,7 +16,24 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// Set before calling <see cref="Initialize"/>; changes after initialization are ignored.
         /// </summary>
         public long BitRate { get; set; }
+
+        /// <summary>
+        /// Indicates whether the encoder should prioritize encoding speed over compression efficiency.
+        /// </summary>
+        public bool PreferToSpeed { get; set; }
+
+        /// <summary>
+        /// Metadata key-value pairs to write into the output container.
+        /// Set before calling <see cref="Initialize"/>; changes after initialization may be ignored.
+        /// </summary>
+        Dictionary<string, string>? Metadata { get; set; }
+
+        /// <summary>
+        /// Gets the total duration of video written so far, in frames.
+        /// </summary>
         public uint DurationWritten { get; }
+
+
         public IPicture.PicturePixelMode? TargetPPB { get; }
 
         public void Initialize();
@@ -33,11 +50,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
                 return false;
             }
         }
-        /// <summary>
-        /// Metadata key-value pairs to write into the output container.
-        /// Set before calling <see cref="Initialize"/>; changes after initialization may be ignored.
-        /// </summary>
-        Dictionary<string, string>? Metadata { get; set; }
+
 
         public bool SupportCodec(string codecName);
         public void Finish();

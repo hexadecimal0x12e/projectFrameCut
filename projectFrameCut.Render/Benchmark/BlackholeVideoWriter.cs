@@ -25,6 +25,7 @@ namespace projectFrameCut.Render.Benchmark
 
         public IPicture.PicturePixelMode? TargetPPB => null;
         public Dictionary<string, string>? Metadata { get; set; }
+        public bool PreferToSpeed { get; set; }
 
         public event EventHandler<IPicture>? OnFrameWrite;
 

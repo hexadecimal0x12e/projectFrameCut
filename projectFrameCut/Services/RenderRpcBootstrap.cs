@@ -84,6 +84,60 @@ internal static class RenderRpcBootstrap
         }
     }
 
+    /// <summary>
+    /// Force-stops the backend currently owned by the editor and starts a fresh
+    /// one for the same project. The caller must reopen its project session after
+    /// this method returns.
+    /// </summary>
+    public static void Restart(string? projectRoot = null, string? projectName = null)
+    {
+        lock (Gate)
+        {
+            var old = _manager;
+            _manager = null;
+            if (old is not null)
+            {
+                try
+                {
+                    old.ForceStopAsync().AsTask().GetAwaiter().GetResult();
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Force-stop the render RPC backend");
+                }
+            }
+
+            var manager = new RenderServerProcessManager("projectFrameCut-integrated-editor");
+            try
+            {
+                manager.Start(projectRoot, projectName: projectName);
+                _manager = manager;
+            }
+            catch
+            {
+                try { manager.ForceStopAsync().AsTask().GetAwaiter().GetResult(); } catch { }
+                throw;
+            }
+        }
+    }
+
+    public static bool TryGetClient(out IRenderClient? client)
+    {
+        lock (Gate)
+        {
+            try
+            {
+                client = _manager?.Client;
+                return client is not null;
+            }
+            catch
+            {
+                client = null;
+                return false;
+            }
+        }
+    }
+
     public static Guid StartCliRender(CliRenderProcessOptions options)
     {
         lock (Gate)

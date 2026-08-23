@@ -96,7 +96,8 @@ public partial class RenderPage : ContentPage
     private Guid _renderRpcSessionId = Guid.NewGuid();
     private Guid? _activeRenderRpcJobId;
     private string? _activeCliPreviewPath;
-    private DateTime _lastCliPreviewWriteUtc;
+    private string? _activeCliPreviewStateToken;
+    private bool _cliStatusRequestTimedOut;
     private bool _backgroundRenderRequested;
     private bool _keepRenderInBackground;
     private bool _renderDetached;
@@ -559,6 +560,7 @@ public partial class RenderPage : ContentPage
                 {
 
                     Log(ex, "compose audio", this);
+                    if (cancelled) return;
                     await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
                     if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
                     return;
@@ -572,6 +574,7 @@ public partial class RenderPage : ContentPage
                 catch (Exception ex)
                 {
                     Log(ex, "render frames", this);
+                    if (cancelled) return;
                     await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
                     if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
                     return;
@@ -668,6 +671,7 @@ public partial class RenderPage : ContentPage
         catch (Exception ex)
         {
             Log(ex, "render", this);
+            if (cancelled) return;
             await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
             if (Debugger.IsAttached && await DisplayAlertAsync(Localized._Info, "Throw?", Localized._OK, Localized._Cancel)) throw;
             return;
@@ -686,8 +690,11 @@ public partial class RenderPage : ContentPage
     private async Task<bool> RenderProjectViaCliAsync(RenderPageViewModel vm, string resultPath, string encoder, string pixelFormat, bool writeToVoid = false)
     {
         SetSubProg("PrepareDraft");
-        _activeCliPreviewPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"render-preview-{Guid.NewGuid():N}.vfd");
-        _lastCliPreviewWriteUtc = default;
+        _currentCliRenderStage = string.Empty;
+        var chunkOptions = GetConfiguredChunkRenderOptions((int)Math.Round(double.Parse(vm.Framerate, CultureInfo.InvariantCulture)));
+        _activeCliPreviewPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"render-preview-{Guid.NewGuid():N}");
+        _activeCliPreviewStateToken = null;
+        _cliStatusRequestTimedOut = false;
         var jobId = RenderRpcBootstrap.StartCliRender(new CliRenderProcessOptions
         {
             ProjectRoot = _workingPath,
@@ -706,6 +713,12 @@ public partial class RenderPage : ContentPage
             EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true),
             PrepareInWorker = SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorker", true),
             RenderByLayer = SettingsManager.IsBoolSettingTrueOrDefault("render_RenderByLayer", true),
+            ChunkRender = chunkOptions.Enabled && !writeToVoid,
+            ChunkFrames = chunkOptions.ChunkFrames,
+            ChunkSeconds = chunkOptions.ChunkSeconds,
+            ChunkParallelism = chunkOptions.Parallelism,
+            ChunkResume = chunkOptions.Resume,
+            ChunkKeepFiles = chunkOptions.KeepChunkFiles,
             Background = _backgroundRenderRequested,
             TempPath = Path.Combine(MauiProgram.DataPath, "RenderCache"),
             PreviewPath = _activeCliPreviewPath,
@@ -716,7 +729,8 @@ public partial class RenderPage : ContentPage
         _activeRenderRpcJobId = jobId;
         SetSubProg("Render");
 
-        var job = await RenderRpcBootstrap.Client.GetJobStatusAsync(jobId, _cts.Token);
+        var job = await TryGetCliRenderJobStatusAsync(jobId, _cts.Token)
+            ?? new RenderJob { JobId = jobId, State = RenderJobState.Queued };
         if (_backgroundRenderRequested)
         {
             _keepRenderInBackground = true;
@@ -730,13 +744,14 @@ public partial class RenderPage : ContentPage
             while (job.State is RenderJobState.Queued or RenderJobState.Running)
             {
                 _cts.Token.ThrowIfCancellationRequested();
+                ApplyCliRenderStage(job);
                 await SubProgress.ProgressTo(job.Progress, 100, Easing.Linear);
                 await RefreshCliPreviewAsync();
                 var eta = TimeSpan.FromTicks(Math.Max(0, job.EstimatedRemainingTicks));
                 var fpsText = job.CurrentFps > 0 ? $", {job.CurrentFps:N2} FPS" : string.Empty;
                 SubProgLabel.Text = $"{_currentSubProgText} ({job.Progress:P1}, ETA {eta:hh\\:mm\\:ss}{fpsText})";
-                await Task.Delay(150, _cts.Token);
-                job = await RenderRpcBootstrap.Client.GetJobStatusAsync(job.JobId, _cts.Token);
+                await Task.Delay(500, _cts.Token);
+                job = await TryGetCliRenderJobStatusAsync(job.JobId, _cts.Token) ?? job;
             }
 
             if (job.State == RenderJobState.Canceled) throw new OperationCanceledException(_cts.Token);
@@ -764,7 +779,18 @@ public partial class RenderPage : ContentPage
             if (!_keepRenderInBackground) _activeRenderRpcJobId = null;
             if (!_keepRenderInBackground && _activeCliPreviewPath is string previewPath)
             {
-                try { File.Delete(previewPath); } catch { }
+                foreach (var path in new[]
+                {
+                    VideoBuilder.GetPreviewStatePath(previewPath),
+                    VideoBuilder.GetPreviewSlotPath(previewPath, 'A'),
+                    VideoBuilder.GetPreviewSlotPath(previewPath, 'B'),
+                    VideoBuilder.GetPreviewSlotPath(previewPath, 'A') + ".tmp",
+                    VideoBuilder.GetPreviewSlotPath(previewPath, 'B') + ".tmp",
+                    VideoBuilder.GetPreviewStatePath(previewPath) + ".tmp"
+                })
+                {
+                    try { File.Delete(path); } catch { }
+                }
                 _activeCliPreviewPath = null;
             }
         }
@@ -773,19 +799,61 @@ public partial class RenderPage : ContentPage
     private async Task RefreshCliPreviewAsync()
     {
         var path = _activeCliPreviewPath;
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+        if (string.IsNullOrWhiteSpace(path)) return;
 
-        DateTime writeTime;
-        try { writeTime = File.GetLastWriteTimeUtc(path); } catch { return; }
-        if (writeTime <= _lastCliPreviewWriteUtc) return;
+        var statePath = VideoBuilder.GetPreviewStatePath(path);
+        var stateToken = VideoBuilder.ReadPreviewStateToken(statePath);
+        if (stateToken.Length == 0 || stateToken == _activeCliPreviewStateToken) return;
+        var slot = stateToken[0];
 
-        await using var stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        if (!PictureExtensions.SharedVfdPictureDecoder.TryLoad(stream, out IPicture? picture) || picture is null) return;
-        _lastCliPreviewWriteUtc = writeTime;
-        var source = picture.ToImageSource();
-        picture.Dispose();
-        if (source is not null)
-            await Dispatcher.DispatchAsync(() => PreviewImage.Source = source);
+        var slotPath = VideoBuilder.GetPreviewSlotPath(path, slot);
+        if (!File.Exists(slotPath)) return;
+
+        byte[] bytes;
+        try
+        {
+            await using var stream = new FileStream(slotPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+            bytes = buffer.ToArray();
+        }
+        catch (IOException) { return; }
+        catch (UnauthorizedAccessException) { return; }
+
+        _activeCliPreviewStateToken = stateToken;
+        await Dispatcher.DispatchAsync(() =>
+            PreviewImage.Source = ImageSource.FromStream(() => new MemoryStream(bytes)));
+    }
+
+    private async Task<RenderJob?> TryGetCliRenderJobStatusAsync(Guid jobId, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(3));
+        try
+        {
+            var statusTask = RenderRpcBootstrap.Client.GetJobStatusAsync(jobId, timeout.Token).AsTask();
+            while (!statusTask.IsCompleted)
+            {
+                await Task.WhenAny(statusTask, Task.Delay(250, timeout.Token));
+                if (!statusTask.IsCompleted) await RefreshCliPreviewAsync();
+            }
+            var job = await statusTask;
+            if (_cliStatusRequestTimedOut)
+            {
+                _cliStatusRequestTimedOut = false;
+                Log("Render RPC status polling recovered.");
+            }
+            return job;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            if (!_cliStatusRequestTimedOut)
+            {
+                _cliStatusRequestTimedOut = true;
+                Log("Render RPC status polling timed out; preview refresh and polling will continue.", "warn");
+            }
+            return null;
+        }
     }
 
     private async Task RestoreRenderJobAsync()
@@ -793,11 +861,14 @@ public partial class RenderPage : ContentPage
         try
         {
             if (!RenderRpcBootstrap.TryReconnectCliRender(_workingPath, out var jobId)) return;
-            var job = await RenderRpcBootstrap.Client.GetJobStatusAsync(jobId);
+            _activeCliPreviewPath = RenderRpcBootstrap.ActiveCliPreviewPath;
+            _activeCliPreviewStateToken = null;
+            _cliStatusRequestTimedOut = false;
+            var job = await TryGetCliRenderJobStatusAsync(jobId, _cts.Token)
+                ?? new RenderJob { JobId = jobId, State = RenderJobState.Queued };
 
             _activeRenderRpcJobId = job.JobId;
-            _activeCliPreviewPath = RenderRpcBootstrap.ActiveCliPreviewPath;
-            _lastCliPreviewWriteUtc = default;
+            _currentCliRenderStage = string.Empty;
             _backgroundRenderRequested = job.Background;
             _keepRenderInBackground = job.Background && job.State is (RenderJobState.Queued or RenderJobState.Running);
             await PrepareUIForRender();
@@ -833,9 +904,9 @@ public partial class RenderPage : ContentPage
     {
         while (job.State is RenderJobState.Queued or RenderJobState.Running)
         {
-            await Task.Delay(250);
-            job = await RenderRpcBootstrap.Client.GetJobStatusAsync(job.JobId);
+            await Task.Delay(250, _cts.Token);
             await RefreshCliPreviewAsync();
+            job = await TryGetCliRenderJobStatusAsync(job.JobId, _cts.Token) ?? job;
             await ApplyRenderJobStatusAsync(job);
         }
         try { await RenderRpcBootstrap.Client.CloseProjectAsync(Guid.Empty); } catch { }
@@ -847,6 +918,7 @@ public partial class RenderPage : ContentPage
     {
         await Dispatcher.DispatchAsync(async () =>
         {
+            ApplyCliRenderStage(job);
             await SubProgress.ProgressTo(Math.Clamp(job.Progress, 0, 1), 100, Easing.Linear);
             var eta = TimeSpan.FromTicks(Math.Max(0, job.EstimatedRemainingTicks));
             var fpsText = job.CurrentFps > 0 ? $", {job.CurrentFps:N2} FPS" : string.Empty;
@@ -961,6 +1033,7 @@ public partial class RenderPage : ContentPage
 
     double totalProg = 0, lastProg = 0;
     string _currentSubProgText = "";
+    string _currentCliRenderStage = "";
     VideoBuilder? builder = null;
 
 
@@ -1137,7 +1210,7 @@ public partial class RenderPage : ContentPage
                         break;
                     case "null":
                         Log("writer is disabled.", "warn");
-                        builder = null; 
+                        builder = null;
                         break;
                 }
             }
@@ -1211,7 +1284,7 @@ public partial class RenderPage : ContentPage
                 });
 
 #if WINDOWS
-                TaskbarManager.Instance.SetProgressValue((int)(p * 100), 100);
+                TaskbarManager.Instance.SetProgressValue(Math.Clamp((int)(p * 100), 1, 100), 100);
 #endif
             };
 
@@ -1439,7 +1512,7 @@ public partial class RenderPage : ContentPage
 
 
 
-#endregion
+    #endregion
 
     private async Task PerformPostRenderAction()
     {
@@ -1552,12 +1625,16 @@ public partial class RenderPage : ContentPage
         DraftJSONViewer.IsVisible = true;
     }
 
+    bool cancelled = false;
+
     private async void CancelRender_Clicked(object sender, EventArgs e)
     {
         if (!running) return;
         var sure = await DisplayAlertAsync(Localized._Warn, Localized.RenderPage_CancelRender_Warn, Localized._OK, Localized._Cancel);
         if (sure)
         {
+            cancelled = true;
+            Log("Render cancelled.");
             if (_activeRenderRpcJobId is Guid rpcJobId)
             {
                 try { await RenderRpcBootstrap.CancelCliRenderAsync(rpcJobId); } catch { }
@@ -1690,6 +1767,13 @@ public partial class RenderPage : ContentPage
             catch { }
         }
 #endif
+    }
+
+    void ApplyCliRenderStage(RenderJob job)
+    {
+        if (string.IsNullOrWhiteSpace(job.Stage) || job.Stage == _currentCliRenderStage) return;
+        _currentCliRenderStage = job.Stage;
+        SetSubProg(job.Stage);
     }
 
     private async Task RenderAudioViaRpcAsync(RenderPageViewModel vm, string resultPath)
@@ -1910,6 +1994,14 @@ public partial class RenderPage : ContentPage
             args.Add($"-GCOptions={gcOption}");
         }
 
+        var chunkOptions = GetConfiguredChunkRenderOptions(fps);
+        args.Add($"-chunkRender={chunkOptions.Enabled}");
+        if (chunkOptions.ChunkFrames is uint chunkFrames) args.Add($"-chunkFrames={chunkFrames}");
+        if (chunkOptions.ChunkSeconds is double chunkSeconds) args.Add($"-chunkSeconds={chunkSeconds.ToString(CultureInfo.InvariantCulture)}");
+        args.Add($"-chunkParallelism={chunkOptions.Parallelism}");
+        args.Add($"-chunkResume={chunkOptions.Resume}");
+        args.Add($"-chunkKeepFiles={chunkOptions.KeepChunkFiles}");
+
 #if WINDOWS
         args.Add($"-multiAccelerator={AcceleratorsManager.IsMultiAccelEnabled}");
 
@@ -1927,8 +2019,31 @@ public partial class RenderPage : ContentPage
         return "render  " + string.Join(" ", args.Select(s => $"\"{s}\""));
     }
 
-
-
+    private static ChunkRenderOptions GetConfiguredChunkRenderOptions(int frameRate)
+    {
+        bool enabled = SettingsManager.IsBoolSettingTrueOrDefault("render_enableChunkRender", false);
+        string mode = SettingsManager.GetSetting("render_chunkSizeMode", "frames");
+        uint? frames = null;
+        double? seconds = null;
+        if (string.Equals(mode, "seconds", StringComparison.OrdinalIgnoreCase))
+        {
+            seconds = SettingsManager.GetSettingAs("render_chunkSeconds", 60d, 60d);
+            if (seconds <= 0 || double.IsNaN(seconds.Value) || double.IsInfinity(seconds.Value)) seconds = 60d;
+        }
+        else
+        {
+            frames = (uint)Math.Max(1, SettingsManager.GetSettingAs("render_chunkFrames", Math.Max(1, frameRate) * 60, Math.Max(1, frameRate) * 60));
+        }
+        return new ChunkRenderOptions
+        {
+            Enabled = enabled,
+            ChunkFrames = frames,
+            ChunkSeconds = seconds,
+            Parallelism = Math.Max(1, SettingsManager.GetSettingAs("render_chunkParallelism", 1, 1)),
+            Resume = SettingsManager.IsBoolSettingTrueOrDefault("render_chunkResume", true),
+            KeepChunkFiles = SettingsManager.IsBoolSettingTrue("render_chunkKeepFiles")
+        };
+    }
 }
 
 

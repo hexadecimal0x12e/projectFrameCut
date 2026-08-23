@@ -151,12 +151,21 @@ namespace projectFrameCut.Render.Rendering
         /// the minimum number of frames between generating preview images.
         /// </summary>
         public int minFrameCountToGeneratePreview { get; set; } = 10;
-        private uint countSinceLastPreview = 0, lastPreviewFrame = 0;
+        private int _framesSinceLastPreview;
+        private uint _lastPreviewFrame;
+        private int _previewGenerationInProgress;
+        private long _previewGeneration;
+        private readonly object _previewFileGate = new();
+        private char _previewActiveSlot = 'B';
 
         /// <summary>
         /// The duration (in frames) of the video to be built.
         /// </summary>
         public uint Duration { get; set; }
+        /// <summary>
+        /// Absolute timeline frame represented by the first frame written to this builder.
+        /// </summary>
+        public uint StartFrame { get; set; }
         public int Width => writer.Width;
         public int Height => writer.Height;
         public IVideoWriter Writer => writer;
@@ -175,6 +184,8 @@ namespace projectFrameCut.Render.Rendering
         public VideoBuilder(IVideoWriter writer)
         {
             this.writer = writer;
+            outputPath = writer.OutputPath;
+            index = 0;
             writer.Initialize();
             _cacheEncoder = new VfdPictureEncoder(false);
         }
@@ -216,9 +227,10 @@ namespace projectFrameCut.Render.Rendering
                     Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                 };
             if (AllowDuplicatedFrameWrite) goto write;
-            if (index > Duration)
+            ulong endExclusive = (ulong)StartFrame + Duration;
+            if (index < StartFrame || index >= endExclusive)
             {
-                Log($"[VideoBuilder] WARN: Frame #{index} is out of duration {Duration}, ignored.", "warn");
+                Log($"[VideoBuilder] WARN: Frame #{index} is outside [{StartFrame}, {endExclusive}), ignored.", "warn");
                 if (DisposeFrameAfterEachWrite) frame.Dispose();
                 return;
             }
@@ -271,13 +283,7 @@ namespace projectFrameCut.Render.Rendering
                 if (LogStat) Log($"[VideoBuilder] Frame #{index} added.");
             }
 
-            if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview && lastPreviewFrame < index)
-            {
-                SavePreview(frame);
-                OnPreviewGenerated?.Invoke(this, frame.Clone());
-                countSinceLastPreview = 0;
-                lastPreviewFrame = index;
-            }
+            TryGeneratePreview(frame, index, requireIncreasingFrame: true);
 
         }
 
@@ -304,6 +310,7 @@ namespace projectFrameCut.Render.Rendering
 
         public Thread Build(int[]? threadAffinityMask = null)
         {
+            index = StartFrame;
             if (BlockWrite)
             {
                 Log($"[VideoWriter] Working in sync-writing mode.");
@@ -713,15 +720,34 @@ namespace projectFrameCut.Render.Rendering
                 }
             }
 
-            // Preview handling
-            if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
-            {
-                SavePreview(frame);
-                OnPreviewGenerated?.Invoke(this, frame.Clone());
-                countSinceLastPreview = 0;
-            }
+            TryGeneratePreview(frame, index, requireIncreasingFrame: false);
 
             return true;
+        }
+
+        private void TryGeneratePreview(IPicture frame, uint frameIndex, bool requireIncreasingFrame)
+        {
+            if (!EnablePreview
+                || Interlocked.Increment(ref _framesSinceLastPreview) < Math.Max(1, minFrameCountToGeneratePreview)
+                || Interlocked.CompareExchange(ref _previewGenerationInProgress, 1, 0) != 0)
+                return;
+
+            try
+            {
+                Interlocked.Exchange(ref _framesSinceLastPreview, 0);
+                if (requireIncreasingFrame && frameIndex <= Volatile.Read(ref _lastPreviewFrame)) return;
+
+                SavePreview(frame);
+                if (requireIncreasingFrame) Volatile.Write(ref _lastPreviewFrame, frameIndex);
+
+                var previewGenerated = OnPreviewGenerated;
+                if (previewGenerated is not null)
+                    previewGenerated(this, frame.Clone());
+            }
+            finally
+            {
+                Volatile.Write(ref _previewGenerationInProgress, 0);
+            }
         }
 
         private void SavePreview(IPicture frame)
@@ -732,14 +758,86 @@ namespace projectFrameCut.Render.Rendering
             {
                 var directory = Path.GetDirectoryName(PreviewPath);
                 if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
-                var temporaryPath = PreviewPath + ".tmp";
-                using (var stream = File.Create(temporaryPath))
-                    frame.Save(stream, Drawing.Base.PictureExtensions.SharedVfdPictureEncoder);
-                File.Move(temporaryPath, PreviewPath, overwrite: true);
+
+                // PreviewPath is the common stem. The state file is published only
+                // after the inactive PNG slot has been completely written, so the
+                // reader never needs to open a file while it is being replaced.
+                lock (_previewFileGate)
+                {
+                    var statePath = GetPreviewStatePath(PreviewPath);
+                    _previewActiveSlot = ReadPreviewActiveSlot(statePath, _previewActiveSlot);
+                    var nextSlot = _previewActiveSlot == 'A' ? 'B' : 'A';
+                    var slotPath = GetPreviewSlotPath(PreviewPath, nextSlot);
+                    var temporaryPath = slotPath + ".tmp";
+
+                    var pngFrame = frame.BitPerPixel == IPicture.PicturePixelMode.BytePicture
+                        ? frame
+                        : frame.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
+                    try
+                    {
+                        using var stream = File.Create(temporaryPath);
+                        pngFrame.SaveToPng(stream);
+                    }
+                    finally
+                    {
+                        if (!ReferenceEquals(pngFrame, frame)) pngFrame.Dispose(force: true);
+                    }
+                    AtomicReplace(temporaryPath, slotPath);
+
+                    // A one-line state file is enough for the consumer and keeps
+                    // the commit point independent from the PNG replacement.
+                    var stateTemporaryPath = statePath + ".tmp";
+                    var generation = Interlocked.Increment(ref _previewGeneration);
+                    File.WriteAllText(stateTemporaryPath, $"{nextSlot}:{generation}");
+                    AtomicReplace(stateTemporaryPath, statePath);
+                    _previewActiveSlot = nextSlot;
+                }
             }
             catch (Exception ex)
             {
                 Log(ex, "Save render preview");
+            }
+        }
+
+        public static string GetPreviewSlotPath(string previewPath, char slot) =>
+            $"{previewPath}.{char.ToUpperInvariant(slot)}.png";
+
+        public static string GetPreviewStatePath(string previewPath) => previewPath + ".state";
+
+        public static string ReadPreviewStateToken(string statePath)
+        {
+            try
+            {
+                using var stream = new FileStream(statePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var reader = new StreamReader(stream);
+                var value = reader.ReadToEnd().Trim();
+                return value.Length > 0 && (value[0] == 'A' || value[0] == 'a' || value[0] == 'B' || value[0] == 'b')
+                    ? char.ToUpperInvariant(value[0]) + value[1..]
+                    : string.Empty;
+            }
+            catch (IOException) { return string.Empty; }
+            catch (UnauthorizedAccessException) { return string.Empty; }
+        }
+
+        public static char ReadPreviewActiveSlot(string statePath, char fallback = 'B')
+        {
+            var token = ReadPreviewStateToken(statePath);
+            return token.Length > 0 ? token[0] : fallback;
+        }
+
+        private static void AtomicReplace(string temporaryPath, string destinationPath)
+        {
+            for (var attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    File.Move(temporaryPath, destinationPath, overwrite: true);
+                    return;
+                }
+                catch (IOException) when (attempt < 3)
+                {
+                    Thread.Sleep(5 * (attempt + 1));
+                }
             }
         }
 

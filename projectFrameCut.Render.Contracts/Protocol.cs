@@ -392,6 +392,7 @@ public sealed class RenderJob
     [ProtoMember(12)] public string OutputPath { get; set; } = string.Empty;
     [ProtoMember(13)] public bool Background { get; set; }
     [ProtoMember(14)] public double CurrentFps { get; set; }
+    [ProtoMember(15)] public string Stage { get; set; } = string.Empty;
 }
 
 [ProtoContract]

@@ -133,6 +133,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public IPicture.PicturePixelMode? TargetPPB => _sourceColorDepth;
 
+        public bool PreferToSpeed { get; set; }
+
         public static bool DetectCodec(string codec)
         {
             if (FFmpegHelper.CodecUtils.GetCodecsByType(AVMediaType.AVMEDIA_TYPE_VIDEO, true).Find(c => c.Name.Equals(codec, StringComparison.OrdinalIgnoreCase)) != null)
@@ -254,6 +256,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 ffmpeg.av_dict_set(&opts, "preset", "veryfast", 0);
                 ffmpeg.av_dict_set(&opts, "tune", "zerolatency", 0);
+            }
+            else if (PreferToSpeed && _codecCtx->codec_id == AVCodecID.AV_CODEC_ID_HEVC)
+            {
+                ffmpeg.av_dict_set(&opts, "preset", "veryfast", 0);
             }
 
             if (_enableHdrSignaling)
@@ -1020,7 +1026,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 || ext.Equals(".m4v", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static uint     MakeFourCC(char c0, char c1, char c2, char c3)
+        private static uint MakeFourCC(char c0, char c1, char c2, char c3)
         {
             return (uint)c0
                 | ((uint)c1 << 8)

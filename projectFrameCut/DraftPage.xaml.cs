@@ -207,6 +207,11 @@ public partial class DraftPage : ContentPage, IDraftPage
     private IHistoryGraphProvider? _activeHistoryProvider;
     private RemoteProjectSession? _remoteProjectSession;
     private bool _remoteSessionDetached;
+    private const int RenderBackendHealthCheckIntervalMs = 5000;
+    private static readonly TimeSpan RenderBackendReconnectTimeout = TimeSpan.FromSeconds(30);
+    private readonly SemaphoreSlim _renderBackendRestartLock = new(1, 1);
+    private CancellationTokenSource? _renderBackendWatchdogCts;
+    private DateTime? _renderBackendDisconnectedSinceUtc;
     // Set while navigating to the export page so OnNavigatingFrom can tell a
     // same-project navigation apart from actually closing the project. The value
     // is captured synchronously at the start of OnNavigatingFrom before any await.
@@ -275,6 +280,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand EscapeCommand { get; private set; }
     public ICommand PlayPauseCommand { get; private set; }
     public ICommand CleanRenderCacheCommand { get; private set; }
+    public ICommand RestartBackendCommand { get; private set; }
     public ICommand ArrowRightCommand { get; private set; }
     public ICommand ArrowLeftCommand { get; private set; }
     public ICommand ArrowUpCommand { get; private set; }
@@ -532,6 +538,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ManageJobsCommand = new Command(async () => await OnManageJobsClicked());
         PlayPauseCommand = new Command(async () => PlayPauseButton_Clicked(this, EventArgs.Empty));
         CleanRenderCacheCommand = new Command(async () => await CleanRenderCache());
+        RestartBackendCommand = new Command(async () => await RestartRenderBackendAsync(showErrorDialog: true));
         ArrowLeftCommand = new Command(async () => await HandleMoveArrowAsync(-SnapGridPixels, 0));
         ArrowRightCommand = new Command(async () => await HandleMoveArrowAsync(SnapGridPixels, 0));
         ArrowUpCommand = new Command(async () => await HandleMoveArrowAsync(0, -1));
@@ -909,6 +916,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
         RestoreInteractableEditorState();
+        StartRenderBackendWatchdog();
         DraftChanged(sender, new ClipUpdateEventArgs { NoSave = true });
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
@@ -8591,6 +8599,132 @@ public partial class DraftPage : ContentPage, IDraftPage
         CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss\\.ff}";
     }
 
+    private void StartRenderBackendWatchdog()
+    {
+        if (IsRemoteProject || _renderBackendWatchdogCts is not null) return;
+
+        var cts = new CancellationTokenSource();
+        _renderBackendWatchdogCts = cts;
+        _renderBackendDisconnectedSinceUtc = DateTime.UtcNow;
+        _ = Task.Run(() => MonitorRenderBackendAsync(cts.Token));
+    }
+
+    private void StopRenderBackendWatchdog()
+    {
+        var cts = Interlocked.Exchange(ref _renderBackendWatchdogCts, null);
+        if (cts is null) return;
+        try { cts.Cancel(); } catch { }
+        cts.Dispose();
+    }
+
+    private async Task MonitorRenderBackendAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(RenderBackendHealthCheckIntervalMs, cancellationToken).ConfigureAwait(false);
+                if (AlreadyDisappeared || _renderBackendRestartLock.CurrentCount == 0) continue;
+
+                bool connected = false;
+                if (RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
+                {
+                    using var probeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    probeCts.CancelAfter(TimeSpan.FromSeconds(5));
+                    try
+                    {
+                        _ = await client.GetCapabilitiesAsync(probeCts.Token).ConfigureAwait(false);
+                        connected = true;
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+                    {
+                        Log(ex, "Probe render RPC backend connection", this);
+                    }
+                }
+
+                if (connected)
+                {
+                    _renderBackendDisconnectedSinceUtc = null;
+                    continue;
+                }
+
+                var now = DateTime.UtcNow;
+                _renderBackendDisconnectedSinceUtc ??= now;
+                if (now - _renderBackendDisconnectedSinceUtc < RenderBackendReconnectTimeout) continue;
+
+                _renderBackendDisconnectedSinceUtc = now;
+                await RestartRenderBackendAsync(showErrorDialog: false).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Monitor render RPC backend", this);
+            }
+        }
+    }
+
+    private async Task RestartRenderBackendAsync(bool showErrorDialog)
+    {
+        if (IsRemoteProject)
+        {
+            if (showErrorDialog)
+                await DisplayAlertAsync(Localized._Info, Localized.DraftPage_RestartBackend_RemoteUnavailable, Localized._OK);
+            return;
+        }
+
+        await _renderBackendRestartLock.WaitAsync();
+        try
+        {
+            if (AlreadyDisappeared) return;
+
+            await Dispatcher.DispatchAsync(() =>
+            {
+                SetStateBusy();
+                SetStatusText(Localized.DraftPage_RestartBackend_Restarting);
+            });
+
+            var draft = await MainThread.InvokeOnMainThreadAsync(() =>
+                DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false));
+
+            await Task.Run(() => RenderRpcBootstrap.Restart(WorkingPath, ProjectName));
+            previewer.RenderSessionId = Guid.NewGuid();
+            await previewer.UpdateDraft(draft).ConfigureAwait(false);
+            _renderBackendDisconnectedSinceUtc = null;
+
+            if (!AlreadyDisappeared)
+            {
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    DynamicPreviewProvider.SetClips(previewer.Clips);
+                    await RefreshPreviewFromCurrentProviderAsync();
+                    SetStateOK();
+                    SetStatusText(Localized.DraftPage_RestartBackend_Succeeded);
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _renderBackendDisconnectedSinceUtc = DateTime.UtcNow;
+            Log(ex, "Restart render RPC backend", this);
+            if (!AlreadyDisappeared)
+            {
+                await Dispatcher.DispatchAsync(() =>
+                {
+                    SetStateFail($"{Localized.DraftPage_RestartBackend_Failed} {Localized._ExceptionTemplate(ex)}");
+                });
+                if (showErrorDialog)
+                    await DisplayAlertAsync(Localized._Error, $"{Localized.DraftPage_RestartBackend_Failed} {Localized._ExceptionTemplate(ex)}", Localized._OK);
+            }
+        }
+        finally
+        {
+            _renderBackendRestartLock.Release();
+        }
+    }
+
     private async void DraftChanged(object? sender, ClipUpdateEventArgs e)
     {
         if (AlreadyDisappeared) return;
@@ -8618,16 +8752,16 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         UpdatePlayheadHeight();
         DraftStructureJSON d = null!;
-        await Dispatcher.DispatchAsync(async () => 
-        {
-            d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
-            await previewer.UpdateDraft(d);
-        });
         SetStateBusy();
         SetStatusText(Localized.DraftPage_ApplyingChanges);
 
         try
         {
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+                await previewer.UpdateDraft(d);
+            });
             ProjectDuration = Math.Max(d.Duration, d.AudioDuration);
             TryMoveToInitialPreviewFrame(d);
             await ClipEditor.UpdateClips(Clips);
@@ -10360,6 +10494,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         // false when the project is actually being closed (back to HomePage/exit).
         bool leavingProject = !_navigatingToRenderPage;
         AlreadyDisappeared = true;
+        StopRenderBackendWatchdog();
         CancelPendingClipPlacement();
         foreach (var (_, cts) in _perClipThumbCts)
         {

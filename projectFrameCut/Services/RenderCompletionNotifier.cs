@@ -28,22 +28,41 @@ internal static class RenderCompletionNotifier
 
         var progress = Math.Clamp(job.Progress, 0, 1);
         var percent = (int)Math.Round(progress * 100, MidpointRounding.AwayFromZero);
-        if (!TryReserveProgressNotification(job.JobId, percent, force, out var firstNotification)) return;
+        if (!TryReserveProgressNotification(job.JobId, percent, force, out var firstNotification, out var sequenceNumber)) return;
 
 #if WINDOWS
         try
         {
-            var xml = new Windows.Data.Xml.Dom.XmlDocument();
             var value = progress.ToString("0.###", CultureInfo.InvariantCulture);
-            var cancel = Escape(Localized.RenderPage_CancelRender);
-            xml.LoadXml($"<toast><visual><binding template='ToastGeneric'><text>{Localized.DraftPage_GoRender}</text><text>{Escape(job.ProjectName)}</text><progress value='{value}' status='{Localized.RenderPage_SubProg_Render}' valueStringOverride='{percent}%' /></binding></visual></toast>");
+            var tag = NotificationTag(job.JobId);
+            var notifier = Windows.UI.Notifications.ToastNotificationManager.CreateToastNotifier(AppAUMID);
+            var data = new Windows.UI.Notifications.NotificationData
+            {
+                SequenceNumber = sequenceNumber,
+            };
+            data.Values["progressValue"] = value;
+            data.Values["progressValueString"] = $"{percent}%";
+            data.Values["progressStatus"] = Localized.RenderPage_SubProg_Render;
+
+            if (!firstNotification
+                && notifier.Update(data, tag, NotificationGroup) == Windows.UI.Notifications.NotificationUpdateResult.Succeeded)
+            {
+                return;
+            }
+
+            // The first update creates the toast. If the user cleared it from
+            // Notification Center, Update returns NotificationNotFound and this
+            // path recreates it without showing another popup.
+            var xml = new Windows.Data.Xml.Dom.XmlDocument();
+            xml.LoadXml($"<toast><visual><binding template='ToastGeneric'><text>{Localized.DraftPage_GoRender}</text><text>{Escape(job.ProjectName)}</text><progress value='{{progressValue}}' status='{{progressStatus}}' valueStringOverride='{{progressValueString}}' /></binding></visual></toast>");
             var toast = new Windows.UI.Notifications.ToastNotification(xml)
             {
-                Tag = NotificationTag(job.JobId),
+                Tag = tag,
                 Group = NotificationGroup,
                 SuppressPopup = !firstNotification,
+                Data = data,
             };
-            Windows.UI.Notifications.ToastNotificationManager.CreateToastNotifier(AppAUMID).Show(toast);
+            notifier.Show(toast);
         }
         catch (Exception ex) { Log(ex, "Send notification"); }
 #elif ANDROID
@@ -148,7 +167,12 @@ internal static class RenderCompletionNotifier
 #endif
     }
 
-    private static bool TryReserveProgressNotification(Guid jobId, int percent, bool force, out bool firstNotification)
+    private static bool TryReserveProgressNotification(
+        Guid jobId,
+        int percent,
+        bool force,
+        out bool firstNotification,
+        out uint sequenceNumber)
     {
         var state = ProgressStates.GetOrAdd(jobId, static _ => new ProgressNotificationState());
         lock (state)
@@ -156,8 +180,13 @@ internal static class RenderCompletionNotifier
             firstNotification = state.IsFirstTime;
             state.IsFirstTime = false;
             if (!force && state.LastPercent == percent)
+            {
+                sequenceNumber = state.SequenceNumber;
                 return false;
+            }
             state.LastPercent = percent;
+            state.SequenceNumber = state.SequenceNumber == uint.MaxValue ? 1 : state.SequenceNumber + 1;
+            sequenceNumber = state.SequenceNumber;
             return true;
         }
     }
@@ -166,6 +195,7 @@ internal static class RenderCompletionNotifier
     {
         public bool IsFirstTime { get; set; } = true;
         public int LastPercent { get; set; } = -1;
+        public uint SequenceNumber { get; set; }
     }
 
 #if ANDROID

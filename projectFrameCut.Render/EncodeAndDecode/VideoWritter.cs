@@ -5,6 +5,7 @@ using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace projectFrameCut.Render.EncodeAndDecode
@@ -125,6 +126,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public IPicture.PicturePixelMode? TargetPPB => colorDepth;
 
+        public bool PreferToSpeed { get; set; }
+
         public static bool DetectCodec(string codec)
         {
             if (FFmpegHelper.CodecUtils.GetCodecsByType(AVMediaType.AVMEDIA_TYPE_VIDEO, true).Find(c => c.Name.Equals(codec, StringComparison.OrdinalIgnoreCase)) != null)
@@ -141,7 +144,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (OutputPath is null || _inited == true) return;
             if (Width <= 0 || Height <= 0 || FramePerSecond <= 0) throw new ArgumentOutOfRangeException("You set an invalid width, height or fps.");
             if (Path.GetDirectoryName(OutputPath) is not string p || !Directory.Exists(p)) throw new DirectoryNotFoundException($"The target directory '{Path.GetDirectoryName(OutputPath)}' does not exist or it's invalid.");
-            if (File.Exists(OutputPath)) throw new InvalidOperationException($"Video file {OutputPath} already exists."); 
+            if (File.Exists(OutputPath)) throw new InvalidOperationException($"Video file {OutputPath} already exists.");
             if (!Enum.TryParse(PixelFormat, out _pixelFormat) || _pixelFormat == AVPixelFormat.AV_PIX_FMT_NONE)
             {
                 throw new ArgumentException($"The pixel format '{PixelFormat}' is not found. Please check the pixel format name.");
@@ -214,11 +217,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 _codecCtx->flags |= ffmpeg.AV_CODEC_FLAG_GLOBAL_HEADER;
 
             AVDictionary* opts = null;
-            if (_codecCtx->codec_id == AVCodecID.AV_CODEC_ID_H264)
+            string encoderName = Marshal.PtrToStringAnsi((IntPtr)codec->name) ?? CodecName ?? string.Empty;
+            if (encoderName.Equals("libx264", StringComparison.OrdinalIgnoreCase))
             {
-                // 使用 medium 预设，画质/压缩率比 veryfast 更好；
-                // 去掉 zerolatency，让 B 帧和 lookahead 生效。
-                ffmpeg.av_dict_set(&opts, "preset", "medium", 0);
+                ffmpeg.av_dict_set(&opts, "preset", PreferToSpeed ? "veryfast" : "medium", 0);
+            }
+            else if (PreferToSpeed && encoderName.Equals("libx265", StringComparison.OrdinalIgnoreCase))
+            {
+                ffmpeg.av_dict_set(&opts, "preset", "veryfast", 0);
             }
 
             FFmpegHelper.Throw(ffmpeg.avcodec_open2(_codecCtx, codec, &opts), "Open target codec stream");
