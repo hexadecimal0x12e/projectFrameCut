@@ -48,6 +48,8 @@ using projectFrameCut.Render.Contracts;
 using System.Runtime.InteropServices;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
+using projectFrameCut.ApplicationAPIBase.Workspace;
+using projectFrameCut.ApplicationAPIBase.Workspace.Modules;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Base;
@@ -62,6 +64,7 @@ using projectFrameCut.ScriptEngine;
 #if WINDOWS
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
+using System.Reflection.Metadata.Ecma335;
 
 #endif
 
@@ -146,6 +149,14 @@ public partial class DraftPage : ContentPage, IDraftPage
     private Size WindowSize = new(500, 500);
     private bool _hasTriedRestoreMainMultiWindowViewState = false;
     private bool _hasAppliedDefaultMainMultiWindowLayout = false;
+    private projectFrameCut.ApplicationAPIBase.Workspace.Workspace _workspace = null!;
+    private WorkspaceWindowHost _workspaceWindowHost = null!;
+    private MultiWindowItem PreviewSubwindow = null!;
+    private MultiWindowItem PropertiesSubwindow = null!;
+    private MultiWindowItem AssisstantSubWindow = null!;
+    private MultiWindowItem HistorySubWindow = null!;
+    private MultiWindowItem TimelineSubwindow = null!;
+    private MultiWindowItem AssetSubwindow = null!;
 
 
 
@@ -235,6 +246,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ProjectAddClipView AddClipView = null!;
 
     public ProjectJSONStructure ProjectInfo { get; set; }
+    public IWorkspace Workspace => _workspace;
     public ConcurrentDictionary<Guid, ClipElementUI> Clips = new();
     public ConcurrentDictionary<int, AbsoluteLayout> Tracks = new();
     public ConcurrentDictionary<string, AssetItem> Assets = new();
@@ -279,6 +291,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand ManageJobsCommand { get; private set; }
     public ICommand EscapeCommand { get; private set; }
     public ICommand PlayPauseCommand { get; private set; }
+    public ICommand PreviousFrameCommand { get; private set; }
+    public ICommand NextFrameCommand { get; private set; }
     public ICommand CleanRenderCacheCommand { get; private set; }
     public ICommand RestartBackendCommand { get; private set; }
     public ICommand ArrowRightCommand { get; private set; }
@@ -354,7 +368,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public bool UseDynamicPreview { get; set; } = true;
     public int DynamicPreviewTimeout { get; set; } = 4096;
     public int DynamicPreviewResolutionDivisor { get => DynamicPreviewProvider?.PreviewResolutionDivisor ?? 1; set { DynamicPreviewProvider?.PreviewResolutionDivisor = value; } }
-
+    public bool ReverseScrollLockKeyBehavior { get; set; } = false;
 
     #endregion
 
@@ -397,8 +411,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         AddClipView = new ProjectAddClipView(ref page);
         ChatSessionsView.GlobalToolCallFactories = AIAssistance.AITools.BuildToolCalls(ref page, OnClipPropertiesChanged);
         AddATrack(0);
-
-
+        ProjectInfo = new ProjectJSONStructure();
+        InitializeWorkspace();
     }
 
     public DraftPage(ProjectJSONStructure info, ConcurrentDictionary<Guid, ClipElementUI> clips, ConcurrentDictionary<string, AssetItem> assets, int initialTrackCount, string workingDir, string title = "Untitled draft", bool isReadonly = false)
@@ -459,7 +473,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         ApplyClipEditorPreviewOverlayMode();
         HookPreviewSurfaceSizeSync();
 
-
         OverlayLayer.IsVisible = false;
 #if ANDROID
         OverlayLayer.InputTransparent = false;
@@ -506,6 +519,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             RegisterClip(item, true);
         }
         NormalizeLoadedClipFrameSemantics();
+        InitializeWorkspace();
 
 #if !DISABLE_POWERSHELL_SDK
         ScriptEngine.Initialize(this,
@@ -537,6 +551,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         GotoCommand = new Command(async () => await GotoButtonClicked());
         ManageJobsCommand = new Command(async () => await OnManageJobsClicked());
         PlayPauseCommand = new Command(async () => PlayPauseButton_Clicked(this, EventArgs.Empty));
+        PreviousFrameCommand = new Command(async () => await MovePlayhead(-1));
+        NextFrameCommand = new Command(async () => await MovePlayhead(1));
         CleanRenderCacheCommand = new Command(async () => await CleanRenderCache());
         RestartBackendCommand = new Command(async () => await RestartRenderBackendAsync(showErrorDialog: true));
         ArrowLeftCommand = new Command(async () => await HandleMoveArrowAsync(-SnapGridPixels, 0));
@@ -564,7 +580,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         TimelineScrollCommand = new Command<string>(async (i) =>
         {
             if (double.TryParse(i, out var offset))
-                await TimelineScrollView.ScrollToAsync(TimelineScrollView.ScrollX + offset, TimelineScrollView.ScrollY, true);
+                await HandleMoveArrowAsync(offset, 0, invertScrollLockBehavior: true);
         });
         FollowPlayheadCommand = new Command(async () => await ScrollTimelineToPlayhead());
 #if !DISABLE_POWERSHELL_SDK
@@ -643,6 +659,9 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         if (Inited) return;
         Inited = true;
+        await _workspace.StartAsync();
+        OnClipChanged += ForwardClipChangeToWorkspace;
+        SelectedClipChanged += ForwardSelectionToWorkspace;
 
         ApplyClipEditorPreviewOverlayMode();
 
@@ -736,7 +755,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         if (Debugger.IsAttached) MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog; //user don't want to see a lot of confused error message
 
-        if (UpperContent.Children[0] is Grid previewGrid && PreviewAreaHeight > 100)
+        if (UpperContent.Children[0] is Grid previewGrid && previewGrid is not MultiWindowView && PreviewAreaHeight > 100)
         {
             if (AutoSavePreviewAreaHeight)
             {
@@ -779,9 +798,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (Width < Height) RightMenuBar.IsVisible = false;
 
         RulerLayout.GestureRecognizers.Add(rulerTapGesture);
-        PanGestureRecognizer rulerPanGesture = new();
-        rulerPanGesture.PanUpdated += RulerPanUpdated;
-        RulerLayout.GestureRecognizers.Add(rulerPanGesture);
 
         PlayheadLine.HeightRequest = Tracks.Count * ClipHeight;
         Window.SizeChanged += Window_SizeChanged;
@@ -873,18 +889,18 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
         UpdateTrackHeaderLayoutForViewport();
-#if WINDOWS
-        if (TimelineScrollView.Handler?.PlatformView is Microsoft.UI.Xaml.Controls.ScrollViewer sv)
-        {
-            sv.PointerWheelChanged -= OnTimelineScrollViewPointerWheelChanged;
-            sv.PointerWheelChanged += OnTimelineScrollViewPointerWheelChanged;
-        }
-        if (SubTimelineScrollView.Handler?.PlatformView is Microsoft.UI.Xaml.Controls.ScrollViewer ssv)
-        {
-            ssv.PointerWheelChanged -= OnTimelineScrollViewPointerWheelChanged;
-            ssv.PointerWheelChanged += OnTimelineScrollViewPointerWheelChanged;
-        }
-#endif
+        //#if WINDOWS
+        //        if (TimelineScrollView.Handler?.PlatformView is Microsoft.UI.Xaml.Controls.ScrollViewer sv)
+        //        {
+        //            sv.PointerWheelChanged -= OnTimelineScrollViewPointerWheelChanged;
+        //            sv.PointerWheelChanged += OnTimelineScrollViewPointerWheelChanged;
+        //        }
+        //        if (SubTimelineScrollView.Handler?.PlatformView is Microsoft.UI.Xaml.Controls.ScrollViewer ssv)
+        //        {
+        //            ssv.PointerWheelChanged -= OnTimelineScrollViewPointerWheelChanged;
+        //            ssv.PointerWheelChanged += OnTimelineScrollViewPointerWheelChanged;
+        //        }
+        //#endif
         PreviewSubwindow.IsClosable = false;
         PropertiesSubwindow.IsClosable = false;
 
@@ -894,11 +910,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (!Tracks.Any()) AddATrack(0);
         UpdatePlayheadHeight();
 
-        AssisstantSubWindow.Content = ChatSessionsView;
-        MainMultiWindowView.CloseWindow(AssisstantSubWindow);
         RefreshHistorySubWindowContent();
-        MainMultiWindowView.CloseWindow(HistorySubWindow);
-        //TryRestoreMainMultiWindowViewState();
         ApplyDefaultMainMultiWindowLayout();
         DropGestureRecognizer fileDropGesture = new();
         fileDropGesture.AllowDrop = true;
@@ -1328,41 +1340,144 @@ public partial class DraftPage : ContentPage, IDraftPage
             return;
         }
 
-        if (UseCompactLayout ?? (DeviceInfo.Idiom == DeviceIdiom.Phone))
-        {
-            return;
-        }
-
-        if (MainMultiWindowView.Width <= 0 || MainMultiWindowView.Height <= 0)
-        {
-            return;
-        }
-
-        if (!MainMultiWindowView.Children.Contains(PreviewSubwindow) || !MainMultiWindowView.Children.Contains(PropertiesSubwindow))
-        {
-            return;
-        }
-
-        PreviewSubwindow.IsTitleBarVisible = true;
-        PreviewSubwindow.IsResizable = false;
-        PropertiesSubwindow.HorizontalOptions = LayoutOptions.Fill;
-        PropertiesSubwindow.VerticalOptions = LayoutOptions.Fill;
-
-        try
-        {
-            if (MainMultiWindowView.SnapWindow(PreviewSubwindow, WindowSnapZone.LeftHalf, bringToFront: false)
-                & MainMultiWindowView.SnapWindow(PropertiesSubwindow, WindowSnapZone.RightHalf))
-            {
-                MainMultiWindowView.BringToFront(PropertiesSubwindow);
-                _hasAppliedDefaultMainMultiWindowLayout = true;
-            }
-        }
-        catch (COMException ex)
-        {
-            Log(ex, "ApplyDefaultMainMultiWindowLayout SnapWindow", this);
-        }
+        if (UseCompactLayout ?? (DeviceInfo.Idiom == DeviceIdiom.Phone)) return;
+        if (MainMultiWindowView.Width <= 0 || MainMultiWindowView.Height <= 0) return;
+        try { _workspaceWindowHost.ApplyDefaultLayout(); _hasAppliedDefaultMainMultiWindowLayout = true; }
+        catch (COMException ex) { Log(ex, "Apply workspace default window layout", this); }
     }
 
+    #endregion
+
+    #region workspace
+    private void InitializeWorkspace()
+    {
+        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, wrapSoundtrackAsClip: true, includeUiOnlyClips: true, fixOverlap: false, rebuildEffects: false);
+        IWorkspaceStorage storage = string.IsNullOrWhiteSpace(WorkingPath) ? NullWorkspaceStorage.Instance : new FileWorkspaceStorage(WorkingPath);
+        _workspace = new projectFrameCut.ApplicationAPIBase.Workspace.Workspace(
+            ProjectInfo.ProjectUniqueId == Guid.Empty ? Guid.CreateVersion7().ToString("N") : ProjectInfo.ProjectUniqueId.ToString("N"),
+            "timeline",
+            storage: storage);
+        _workspace
+            .RegisterModule(new ProjectModule(ProjectInfo, WorkingPath, IsReadonly))
+            .RegisterModule(new TimelineModule(draft))
+            .RegisterModule(new HistoryModule(MaximumSaveSlot))
+            .RegisterModule(new AssetModule(Assets.Values))
+            .RegisterModule(new PreviewModule())
+            .RegisterModule(new PropertyModule());
+        foreach (var pluginModule in PluginManager.LoadedPlugins.Values.OfType<IWorkspaceModule>())
+            _workspace.RegisterModule(pluginModule);
+
+        WorkspaceViewPool.Remove(ClipEditorHost);
+        WorkspaceViewPool.Remove(RightContentBorder);
+        if (LowerContent.Parent is Grid timelineParent) timelineParent.Remove(LowerContent);
+
+        _workspaceWindowHost = new WorkspaceWindowHost(
+            _workspace,
+            MainMultiWindowView,
+            new WorkspaceViewContext(this),
+            new DictionaryWorkspaceLayoutStore(ProjectInfo.UserDefinedProperties));
+        _workspaceWindowHost.WindowCreationFailed += (_, ex) => Log(ex, "Create workspace module window", this);
+        var workspaceExperienceProviders = new List<IWorkspaceExperienceProvider>
+        {
+            new DraftWorkspaceExperienceProvider(PreviewModule.ModuleId,
+            [
+                new WorkspaceExperienceDefinition
+                {
+                    WindowKey = "preview.main", ModuleId = PreviewModule.ModuleId, Title = Localized.AssetPage_ShowPreview,
+                    IsClosable = false, IsNavigationVisible = false, CreateContent = () => ClipEditorHost,
+                    DefaultPlacement = new WorkspaceWindowPlacement { SnapZone = WindowSnapZone.TopLeftQuarter }
+                }
+            ]),
+            new DraftWorkspaceExperienceProvider(TimelineModule.ModuleId,
+            [
+                new WorkspaceExperienceDefinition
+                {
+                    WindowKey = "timeline.main", ModuleId = TimelineModule.ModuleId, Title = Localized.DraftPage_MenuBar_Timeline,
+                    IsClosable = false, IsNavigationVisible = false, CreateContent = () => LowerContent,
+                    DefaultPlacement = new WorkspaceWindowPlacement { SnapZone = WindowSnapZone.BottomHalf, Height = 500 }
+                }
+            ]),
+            new DraftWorkspaceExperienceProvider(PropertyModule.ModuleId,
+            [
+                new WorkspaceExperienceDefinition
+                {
+                    WindowKey = "properties.main", ModuleId = PropertyModule.ModuleId, Title = Localized.PropertyPanel,
+                    IsClosable = false, CreateContent = () => RightContentBorder,
+                    DefaultPlacement = new WorkspaceWindowPlacement { SnapZone = WindowSnapZone.TopRightQuarter }
+                }
+            ]),
+            new DraftWorkspaceExperienceProvider(AssetModule.ModuleId,
+            [
+                new WorkspaceExperienceDefinition
+                {
+                    WindowKey = "assets.browser", ModuleId = AssetModule.ModuleId, Title = Localized.DraftPage_AssetPanel_LocalAssets,
+                    IsInitiallyVisible = false, CreateContent = CreateWorkspaceAssetView,
+                    DefaultPlacement = new WorkspaceWindowPlacement { Width = 520, Height = 600, X = 24, Y = 24 }
+                }
+            ]),
+            new DraftWorkspaceExperienceProvider(HistoryModule.ModuleId,
+            [
+                new WorkspaceExperienceDefinition
+                {
+                    WindowKey = "history.main", ModuleId = HistoryModule.ModuleId, Title = Localized.DraftPage_MenuBar_Edit_History,
+                    IsInitiallyVisible = false, CreateContent = () => new DraftSettingPage(this).HistoryTabContent,
+                    DefaultPlacement = new WorkspaceWindowPlacement { Width = 400, Height = 500, X = 40, Y = 40 }
+                }
+            ]),
+            new DraftWorkspaceExperienceProvider("legacy.compatibility",
+            [
+                new WorkspaceExperienceDefinition
+                {
+                    WindowKey = "legacy.assistant", ModuleId = "legacy.compatibility", Title = "Assistant P",
+                    IsInitiallyVisible = false, CreateContent = () => ChatSessionsView,
+                    DefaultPlacement = new WorkspaceWindowPlacement { Width = 400, Height = 500, X = 56, Y = 56 }
+                }
+            ])
+        };
+        workspaceExperienceProviders.AddRange(PluginManager.LoadedPlugins.Values.OfType<IWorkspaceExperienceProvider>());
+        _workspaceWindowHost.Compose(workspaceExperienceProviders);
+        _hasAppliedDefaultMainMultiWindowLayout = _workspaceWindowHost.WasLayoutRestored;
+
+        PreviewSubwindow = _workspaceWindowHost.GetWindow("preview.main");
+        TimelineSubwindow = _workspaceWindowHost.GetWindow("timeline.main");
+        PropertiesSubwindow = _workspaceWindowHost.GetWindow("properties.main");
+        AssetSubwindow = _workspaceWindowHost.GetWindow("assets.browser");
+        HistorySubWindow = _workspaceWindowHost.GetWindow("history.main");
+        AssisstantSubWindow = _workspaceWindowHost.GetWindow("legacy.assistant");
+    }
+
+    private View CreateWorkspaceAssetView()
+    {
+        var page = this;
+        var view = new ProjectAssetView(ref page);
+        var drop = new DropGestureRecognizer { AllowDrop = true };
+        drop.DragOver += File_DragOver;
+        drop.Drop += File_Drop;
+        view.GestureRecognizers.Add(drop);
+        return view;
+    }
+
+    private void ForwardClipChangeToWorkspace(object? sender, ClipUpdateEventArgs args)
+    {
+        if (_workspace.State is WorkspaceState.Disposed or WorkspaceState.Faulted) return;
+        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, wrapSoundtrackAsClip: true, includeUiOnlyClips: true, fixOverlap: false, rebuildEffects: false);
+        _workspace.GetModule<TimelineModule>().Reset(draft.Clips);
+        _workspace.GetModule<ProjectModule>().MarkDirty(args.ToString());
+        if (!args.NoSave) _workspace.GetModule<HistoryModule>().Capture(args.ToString());
+    }
+
+    private void ForwardSelectionToWorkspace(object? sender, EventArgs args)
+    {
+        var selected = _selectedClipIds.ToHashSet();
+        if (_selected is not null) selected.Add(_selected.Id);
+        _workspace.GetModule<PropertyModule>().SetSelection(selected);
+    }
+
+    private sealed class DraftWorkspaceExperienceProvider(string moduleId, IReadOnlyCollection<WorkspaceExperienceDefinition> windows) : IWorkspaceExperienceProvider
+    {
+        public string ModuleId { get; } = moduleId;
+        public IReadOnlyCollection<WorkspaceExperienceDefinition> GetWindows(IWorkspace workspace, WorkspaceViewContext context) => windows;
+    }
     #endregion
 
     #region add stuff
@@ -3824,8 +3939,25 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private async Task HandleMoveArrowAsync(double pixelDelta, int trackDelta)
+    private async Task HandleMoveArrowAsync(
+        double pixelDelta,
+        int trackDelta,
+        bool invertScrollLockBehavior = false)
     {
+        if (trackDelta == 0)
+        {
+            bool scrollLockEnabled = IsKeyboardScrollLockEnabled();
+            bool shouldScrollTimeline = invertScrollLockBehavior
+                ? scrollLockEnabled
+                : !scrollLockEnabled;
+
+            if (shouldScrollTimeline)
+            {
+                await ScrollTimelineByAsync(pixelDelta);
+                return;
+            }
+        }
+
         if (!IsClipMoving)
         {
             if (_pendingClipPlacementFactory is not null)
@@ -3870,6 +4002,25 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         ApplyKeyboardMovePreview();
         await FollowKeyboardMoveViewportAsync();
+    }
+
+    private bool IsKeyboardScrollLockEnabled()
+    {
+#if WINDOWS
+        var state = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Scroll);
+        var locked = (state & Windows.UI.Core.CoreVirtualKeyStates.Locked) == Windows.UI.Core.CoreVirtualKeyStates.Locked;
+        return ReverseScrollLockKeyBehavior ? !locked : locked;
+#else
+        return false;
+#endif
+    }
+
+    private async Task ScrollTimelineByAsync(double pixelDelta)
+    {
+        await TimelineScrollView.ScrollToAsync(
+            Math.Max(0, TimelineScrollView.ScrollX + pixelDelta),
+            TimelineScrollView.ScrollY,
+            true);
     }
 
     private async Task FollowKeyboardMoveViewportAsync()
@@ -4781,6 +4932,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             var cid = item.AssetId;
             Log($"Added asset '{item.Path}'s info: {item.Duration} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.Duration * item.SecondPerFrame} s");
             Assets.AddOrUpdate(cid, item, (_, _) => item);
+            _workspace.GetModule<AssetModule>().Add(item);
             Dispatcher.Dispatch(async () =>
             {
                 await HidePopup();
@@ -4810,14 +4962,11 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         try
         {
-            var draftPage = this;
-            var assetView = new ProjectAssetView(ref draftPage);
-            DropGestureRecognizer fileDropGesture = new();
-            fileDropGesture.AllowDrop = true;
-            fileDropGesture.DragOver += File_DragOver;
-            fileDropGesture.Drop += File_Drop;
-            assetView.GestureRecognizers.Add(fileDropGesture);
-            await ShowAPopup(assetView);
+            // Recreate the browser so its view model reflects the latest asset collection.
+            // The provider is stable; only this window's content is refreshed.
+            AssetSubwindow.Content = CreateWorkspaceAssetView();
+            _workspaceWindowHost.OpenWindow("assets.browser");
+            await Task.CompletedTask;
         }
         catch (Exception ex)
         {
@@ -6856,31 +7005,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             MainMultiWindowView.CloseWindow(window);
         }
-        if (UpperContent.Children[0] is Grid previewGrid)
-        {
-            previewGrid.HeightRequest = 250;
-            if (previewGrid is MultiWindowView)
-            {
-                _hasAppliedDefaultMainMultiWindowLayout = false;
-                ApplyDefaultMainMultiWindowLayout();
-            }
-            else
-            {
-                previewGrid.ColumnDefinitions.Clear();
-                previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-                int colIndex = 0;
-                foreach (var child in previewGrid.Children)
-                {
-                    if (child.GetType().Name == "MultiWindowItem" && colIndex < 2)
-                    {
-                        Grid.SetColumn((BindableObject)child, colIndex);
-                        colIndex++;
-                    }
-                }
-            }
-        }
+        _workspaceWindowHost.OpenWindow("preview.main");
+        _workspaceWindowHost.OpenWindow("timeline.main");
+        _workspaceWindowHost.OpenWindow("properties.main");
+        _hasAppliedDefaultMainMultiWindowLayout = false;
+        ApplyDefaultMainMultiWindowLayout();
     }
 
     public static void ShowManageReferenceLinesPopup(InteractableEditor.InteractableEditor ClipEditor, Action<View> ShowPopupCallback, Action ClosePopupCallback)
@@ -8358,7 +8487,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         int fpsCount = 0;
         Stopwatch prepareWatch = new(), applyWatch = new();
         Task? pendingUiUpdate = null;
-        IReadOnlyList<DynamicPreview.PreparedPreview>? preparedPreviews = null!;
+        IReadOnlyList<projectFrameCut.ApplicationAPIBase.Interaction.PreparedPreview>? preparedPreviews = null!;
         var projectWidth = Math.Max(1, ProjectInfo.RelativeWidth);
         var projectHeight = Math.Max(1, ProjectInfo.RelativeHeight);
         var (canvasWidth, canvasHeight) = DynamicPreviewProvider.ResolveDimensions(projectWidth, projectHeight, ClipEditor.Width, ClipEditor.Height);
@@ -8905,27 +9034,21 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         try
         {
-            // Get tap position relative to the ruler
+            // RulerLayout and PlayheadLine are both children of LowerContent, so the ruler's
+            // local X is also the playhead's viewport X. Keep this conversion entirely in the
+            // timeline window's coordinate space: a floating MultiWindowItem may be translated
+            // relative to the page, and including that page offset would turn window movement
+            // into an apparent timeline offset.
             var p = e.GetPosition(RulerLayout);
             if (p is null) return;
 
-            // Convert to OverlayLayer coordinate space
-            Point rulerAbs = GetAbsolutePosition(RulerLayout, null);
-            Point overlayAbs = GetAbsolutePosition(OverlayLayer, null);
-            double xInOverlay = rulerAbs.X - overlayAbs.X + p.Value.X;
-
-            // Optional: snap to grid/clip edges using existing logic
-            double snappedX = SnapPixels(xInOverlay);
-
-            // Clamp to overlay bounds
-            double overlayWidth = OverlayLayer.Width > 0 ? OverlayLayer.Width : this.Width;
-            double playheadWidth = (PlayheadLine.Width > 0) ? PlayheadLine.Width : PlayheadLine.WidthRequest;
-            if (double.IsNaN(overlayWidth) || overlayWidth <= 0) overlayWidth = 0;
-            double clampedX = Math.Clamp(snappedX, 0, Math.Max(0, overlayWidth - playheadWidth));
-
-            if (clampedX - TrackHeadLayout.Width >= 0 || TimelineScrollView.ScrollX > 0)
+            double timelineX = p.Value.X - TrackHeadLayout.Width + TimelineScrollView.ScrollX;
+            if (timelineX >= 0)
             {
-                var duration = PixelToFrame(clampedX - TrackHeadLayout.Width + TimelineScrollView.ScrollX);
+                // Clip edges and the snap grid are expressed in timeline-content coordinates,
+                // not viewport/page coordinates.
+                double snappedTimelineX = SnapPixels(timelineX);
+                var duration = PixelToFrame(snappedTimelineX);
                 _currentFrame = duration;
                 SyncClipEditorCurrentFrame();
                 UpdatePlayheadPosition();
@@ -9013,6 +9136,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         SyncClipEditorCurrentFrame();
 
         UpdatePlayheadPosition();
+        CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss\\.ff}";
 
         var timeX = FrameToPixel((uint)_currentFrame);
 
@@ -9141,6 +9265,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: true);
             var assets = Assets.Values.ToList();
+            var timelineModule = _workspace.GetModule<TimelineModule>();
+            var assetModule = _workspace.GetModule<AssetModule>();
+            timelineModule.Reset(draft.Clips);
+            assetModule.Reset(assets);
 
             if (_remoteProjectSession is not null)
             {
@@ -9173,6 +9301,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     }
                     return;
                 }
+                _workspace.GetModule<ProjectModule>().MarkClean();
                 SetStateOK(Localized.DraftPage_EverythingFine);
                 return;
             }
@@ -9182,8 +9311,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (noSlot)
             {
                 ProjectInfo.NormallyExited = true;
-                await File.WriteAllTextAsync(Path.Combine(WorkingPath, "timeline.json"), JsonSerializer.Serialize(draft, savingOpts), default);
-                await File.WriteAllTextAsync(Path.Combine(WorkingPath, "assets.json"), JsonSerializer.Serialize(assets, savingOpts), default);
+                await timelineModule.SaveAsync(draft);
+                await assetModule.SaveAsync();
                 try
                 {
                     using var cts = new CancellationTokenSource();
@@ -9236,8 +9365,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                 draft.PreviousSnapshot = PreviousSnapshotID;
                 draft.SnapshotID = snapshotId;
                 Directory.CreateDirectory(Path.Combine(WorkingPath, "saveSlots", slot));
-                await File.WriteAllTextAsync(Path.Combine(WorkingPath, "saveSlots", slot, "timeline.json"), JsonSerializer.Serialize(draft, savingOpts), default);
-                await File.WriteAllTextAsync(Path.Combine(WorkingPath, "saveSlots", slot, "assets.json"), JsonSerializer.Serialize(assets, savingOpts), default);
+                await _workspace.GetModule<HistoryModule>().SaveSnapshotAsync(draft, slot);
+                await _workspace.Context.Storage.WriteTextAsync(Path.Combine("saveSlots", slot, "assets.json"), JsonSerializer.Serialize(assets, savingOpts));
                 PreviousSnapshotID = draft.SnapshotID;
                 _historyNavigatedByUndoRedo = false;
             }
@@ -9269,8 +9398,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                 ProjectInfo.Properties["InteractableEditor_EnableKeyframeRecording"] = ClipEditor.EnableKeyframeRecording.ToString();
             }
 
-            await File.WriteAllTextAsync(Path.Combine(WorkingPath, "project.pjfc"), JsonSerializer.Serialize(ProjectInfo, savingOpts), default);
-            ProjectInfo.SaveSnapshotMapping(WorkingPath, savingOpts);
+            if (!AlreadyDisappeared) _workspaceWindowHost.SaveLayout();
+            await _workspace.GetModule<ProjectModule>().SaveProjectAsync();
         }
         catch (Exception ex)
         {
@@ -10494,6 +10623,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         // false when the project is actually being closed (back to HomePage/exit).
         bool leavingProject = !_navigatingToRenderPage;
         AlreadyDisappeared = true;
+        _workspaceWindowHost.SaveLayout();
         StopRenderBackendWatchdog();
         CancelPendingClipPlacement();
         foreach (var (_, cts) in _perClipThumbCts)
@@ -10596,6 +10726,12 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 try { await RenderRpcBootstrap.DisposeAsync(); }
                 catch (Exception ex) { Log(ex, "Dispose render RPC backend", this); }
+                try
+                {
+                    await _workspaceWindowHost.DisposeAsync();
+                    await _workspace.DisposeAsync();
+                }
+                catch (Exception ex) { Log(ex, "Dispose workspace", this); }
             }
             App.Current?.Windows?[0]?.Title = Localized.AppBrand;
             TouchProjectFolder();

@@ -41,6 +41,16 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         public static readonly BindableProperty IsTitleBarVisibleProperty =
             BindableProperty.Create(nameof(IsTitleBarVisible), typeof(bool), typeof(MultiWindowItem), true, propertyChanged: OnTitleBarVisibilityChanged);
 
+        public static readonly BindableProperty MinimumWindowWidthProperty =
+            BindableProperty.Create(nameof(MinimumWindowWidth), typeof(double), typeof(MultiWindowItem), 240d,
+                validateValue: (_, value) => value is double width && double.IsFinite(width) && width > 0,
+                propertyChanged: OnMinimumWindowSizeChanged);
+
+        public static readonly BindableProperty MinimumWindowHeightProperty =
+            BindableProperty.Create(nameof(MinimumWindowHeight), typeof(double), typeof(MultiWindowItem), 120d,
+                validateValue: (_, value) => value is double height && double.IsFinite(height) && height > 0,
+                propertyChanged: OnMinimumWindowSizeChanged);
+
         public static readonly BindableProperty IsInStandaloneWindowModeProperty =
             BindableProperty.Create(nameof(IsInStandaloneWindowMode), typeof(bool), typeof(MultiWindowItem), false, BindingMode.OneWay);
 
@@ -96,6 +106,20 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             get => (bool)GetValue(IsTitleBarVisibleProperty);
             set => SetValue(IsTitleBarVisibleProperty, value);
+        }
+
+        /// <summary>Minimum width used by floating restore, layout, and resize operations.</summary>
+        public double MinimumWindowWidth
+        {
+            get => (double)GetValue(MinimumWindowWidthProperty);
+            set => SetValue(MinimumWindowWidthProperty, value);
+        }
+
+        /// <summary>Minimum height used by floating restore, layout, and resize operations.</summary>
+        public double MinimumWindowHeight
+        {
+            get => (double)GetValue(MinimumWindowHeightProperty);
+            set => SetValue(MinimumWindowHeightProperty, value);
         }
 
         private static readonly BindablePropertyKey CanGoBackPropertyKey =
@@ -186,6 +210,10 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// the absolute pointer position during drag for pointer-driven snap detection.
         /// </summary>
         private Point _grabPointerOffset;
+        private bool _hasPointerGrabOffset;
+        private bool _isTitleBarDragActive;
+        private double _dragTotalX, _dragTotalY;
+        private double _dragPointerStartX, _dragPointerStartY;
 
         /// <summary>
         /// When set, the window will restore to these bounds on the next drag start.
@@ -282,13 +310,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 // Track the pointer position on the title bar so we know the grab offset
                 // at drag start. This enables pointer-position-driven snap detection.
                 var pointerGesture = new PointerGestureRecognizer();
+                pointerGesture.PointerPressed += (s, pe) => CaptureTitleBarPointer(pe);
                 pointerGesture.PointerMoved += (s, pe) =>
                 {
-                    var pos = pe.GetPosition(this);
-                    if (pos.HasValue)
-                    {
-                        _grabPointerOffset = pos.Value;
-                    }
+                    if (!_isTitleBarDragActive)
+                        CaptureTitleBarPointer(pe);
                 };
                 _titleBarGrid.GestureRecognizers.Add(pointerGesture);
 
@@ -385,6 +411,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             UpdatedButtonVisibility();
             UpdateTitleBarVisibility();
+            if (!IsMinimized && !_isMaximized && !_isInWindowMode)
+                EnsureMinimumWindowSize();
 
             if (ContextMenuProviderGetter?.Invoke()?.CreateNewInstance() is IContextMenuBuilder ContextMenuProvider && _titleBarGrid is not null)
             {
@@ -418,6 +446,15 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             }
         }
 
+        private void CaptureTitleBarPointer(PointerEventArgs e)
+        {
+            var position = e.GetPosition(this);
+            if (!position.HasValue) return;
+
+            _grabPointerOffset = position.Value;
+            _hasPointerGrabOffset = true;
+        }
+
         private static void OnButtonVisibilityChanged(BindableObject bindable, object oldValue, object newValue)
         {
             if (bindable is MultiWindowItem item)
@@ -432,6 +469,35 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 item.UpdateTitleBarVisibility();
             }
+        }
+
+        private static void OnMinimumWindowSizeChanged(BindableObject bindable, object oldValue, object newValue)
+        {
+            if (bindable is not MultiWindowItem item) return;
+
+            item.MinimumWidthRequest = item.MinimumWindowWidth;
+            item.MinimumHeightRequest = item.IsMinimized ? 35 : item.MinimumWindowHeight;
+
+            if (!item.IsMinimized && !item._isMaximized && !item._isInWindowMode)
+                item.EnsureMinimumWindowSize();
+        }
+
+        internal double ConstrainWindowWidth(double width) => Math.Max(MinimumWindowWidth, width);
+
+        internal double ConstrainWindowHeight(double height) => Math.Max(MinimumWindowHeight, height);
+
+        private void EnsureMinimumWindowSize()
+        {
+            MinimumWidthRequest = MinimumWindowWidth;
+            MinimumHeightRequest = MinimumWindowHeight;
+
+            var width = WidthRequest > 0 ? WidthRequest : Width;
+            var height = HeightRequest > 0 ? HeightRequest : Height;
+
+            if (width > 0 && width < MinimumWindowWidth)
+                WidthRequest = MinimumWindowWidth;
+            if (height > 0 && height < MinimumWindowHeight)
+                HeightRequest = MinimumWindowHeight;
         }
 
 
@@ -990,8 +1056,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             this.VerticalOptions = LayoutOptions.Start;
             this.TranslationX = _preWindowX;
             this.TranslationY = _preWindowY;
-            this.WidthRequest = _preWindowWidth > 0 ? _preWindowWidth : 400; // Fallback
-            this.HeightRequest = _preWindowHeight > 0 ? _preWindowHeight : 300; // Fallback
+            this.WidthRequest = ConstrainWindowWidth(_preWindowWidth > 0 ? _preWindowWidth : 400);
+            this.HeightRequest = ConstrainWindowHeight(_preWindowHeight > 0 ? _preWindowHeight : 300);
 
             // Reset margin just in case
             this.Margin = new Thickness(0);
@@ -1047,7 +1113,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (IsMinimized)
             {
                 // Restore
-                this.HeightRequest = _preMinHeight;
+                this.MinimumHeightRequest = MinimumWindowHeight;
+                this.HeightRequest = ConstrainWindowHeight(_preMinHeight);
                 IsMinimized = false;
                 // Re-enable resize handles
                 _resizeGrid?.IsVisible = true;
@@ -1056,6 +1123,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 _preMinHeight = this.HeightRequest > 0 ? this.HeightRequest : this.Height;
                 // Minimize to TitleHeight approx 32 + borders
+                this.MinimumHeightRequest = 35;
                 this.HeightRequest = 35;
                 IsMinimized = true;
                 // Disable resize handles
@@ -1077,8 +1145,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 this.VerticalOptions = LayoutOptions.Start;
                 this.TranslationX = _preMaxX;
                 this.TranslationY = _preMaxY;
-                this.WidthRequest = _preMaxWidth;
-                this.HeightRequest = _preMaxHeight;
+                this.WidthRequest = ConstrainWindowWidth(_preMaxWidth);
+                this.HeightRequest = ConstrainWindowHeight(_preMaxHeight);
 
                 Grid.SetColumn(this, _preCol);
                 Grid.SetRow(this, _preRow);
@@ -1513,7 +1581,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         #endregion
 
         #region Moving
-        private WindowBoundsChangedEventArgs CreateBoundsChangedEventArgs()
+        private WindowBoundsChangedEventArgs CreateBoundsChangedEventArgs(bool isCanceled = false)
         {
             double width = Width > 0 ? Width : Math.Max(0, WidthRequest);
             double height = Height > 0 ? Height : Math.Max(0, HeightRequest);
@@ -1524,7 +1592,46 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             var pointerX = TranslationX + _grabPointerOffset.X;
             var pointerY = TranslationY + _grabPointerOffset.Y;
 
-            return new WindowBoundsChangedEventArgs(TranslationX, TranslationY, width, height, pointerX, pointerY);
+            var dragDistance = Math.Sqrt((_dragTotalX * _dragTotalX) + (_dragTotalY * _dragTotalY));
+            return new WindowBoundsChangedEventArgs(TranslationX, TranslationY, width, height, pointerX, pointerY, dragDistance, isCanceled);
+        }
+
+        private void RestoreFloatingBoundsForDrag()
+        {
+            var needsRestore = _isMaximized || PreSnapBounds.HasValue;
+            if (!needsRestore) return;
+
+            var currentWidth = Width > 0 ? Width : Math.Max(0, WidthRequest);
+            var currentHeight = Height > 0 ? Height : Math.Max(0, HeightRequest);
+            // Pointer coordinates must remain independent from the constrained window
+            // position; otherwise the pointer can never reach a snap edge once the
+            // window itself reaches the container boundary.
+            var pointerX = _dragPointerStartX + _dragTotalX;
+            var pointerY = _dragPointerStartY + _dragTotalY;
+
+            if (_isMaximized)
+                Maximize();
+
+            if (PreSnapBounds.HasValue)
+            {
+                var bounds = PreSnapBounds.Value;
+                HorizontalOptions = LayoutOptions.Start;
+                VerticalOptions = LayoutOptions.Start;
+                WidthRequest = ConstrainWindowWidth(bounds.Width);
+                HeightRequest = ConstrainWindowHeight(bounds.Height);
+                PreSnapBounds = null;
+            }
+
+            var restoredWidth = WidthRequest > 0 ? WidthRequest : (Width > 0 ? Width : currentWidth);
+            var restoredHeight = HeightRequest > 0 ? HeightRequest : (Height > 0 ? Height : currentHeight);
+            var relativeX = currentWidth > 0 ? _grabPointerOffset.X / currentWidth : 0.5;
+            var relativeY = currentHeight > 0 ? _grabPointerOffset.Y / currentHeight : 0;
+
+            _grabPointerOffset = new Point(
+                Math.Clamp(relativeX * restoredWidth, 0, restoredWidth),
+                Math.Clamp(relativeY * restoredHeight, 0, Math.Min(32, restoredHeight)));
+            TranslationX = pointerX - _grabPointerOffset.X;
+            TranslationY = pointerY - _grabPointerOffset.Y;
         }
 
         private void OnTitleBarPanUpdated(object sender, PanUpdatedEventArgs e)
@@ -1535,44 +1642,95 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             switch (e.StatusType)
             {
                 case GestureStatus.Started:
-                    // Restore from maximized state before capturing drag position
-                    if (_isMaximized)
-                        Maximize();
+                    _isTitleBarDragActive = true;
+                    _dragTotalX = 0;
+                    _dragTotalY = 0;
 
-                    // Restore from snapped state before capturing drag position
-                    if (PreSnapBounds.HasValue)
-                    {
-                        this.TranslationX = PreSnapBounds.Value.X;
-                        this.TranslationY = PreSnapBounds.Value.Y;
-                        this.WidthRequest = PreSnapBounds.Value.Width;
-                        this.HeightRequest = PreSnapBounds.Value.Height;
-                        PreSnapBounds = null;
-                    }
-
-                    // If PointerGestureRecognizer hasn't fired yet (rare edge case),
-                    // approximate the grab offset at the window's top-center.
-                    if (_grabPointerOffset == default)
+                    if (!_hasPointerGrabOffset)
                     {
                         var w = Width > 0 ? Width : Math.Max(0, WidthRequest);
-                        _grabPointerOffset = new Point(w / 2, 0);
+                        _grabPointerOffset = new Point(w / 2, 16);
                     }
+
+                    RestoreFloatingBoundsForDrag();
 
                     _startX = this.TranslationX;
                     _startY = this.TranslationY;
+                    _dragPointerStartX = TranslationX + _grabPointerOffset.X;
+                    _dragPointerStartY = TranslationY + _grabPointerOffset.Y;
                     DragStarted?.Invoke(this, CreateBoundsChangedEventArgs());
                     break;
                 case GestureStatus.Running:
-                    this.TranslationX = _startX + e.TotalX;
-                    // Clamp Y: prevent any part of the window from being dragged above
-                    // the container's top edge, which would conflict with snap targeting.
-                    this.TranslationY = Math.Max(0, _startY + e.TotalY);
+                {
+                    var deltaX = e.TotalX - _dragTotalX;
+                    var deltaY = e.TotalY - _dragTotalY;
+                    _dragTotalX = e.TotalX;
+                    _dragTotalY = e.TotalY;
+
+                    var desiredX = TranslationX + deltaX;
+                    var desiredY = TranslationY + deltaY;
+                    var constrained = ConstrainPositionToParent(desiredX, desiredY);
+                    TranslationX = constrained.X;
+                    TranslationY = constrained.Y;
                     Dragging?.Invoke(this, CreateBoundsChangedEventArgs());
                     break;
+                }
                 case GestureStatus.Completed:
-                case GestureStatus.Canceled:
+                    _dragTotalX = e.TotalX;
+                    _dragTotalY = e.TotalY;
                     DragCompleted?.Invoke(this, CreateBoundsChangedEventArgs());
+                    _isTitleBarDragActive = false;
+                    _hasPointerGrabOffset = false;
+                    break;
+                case GestureStatus.Canceled:
+                    DragCompleted?.Invoke(this, CreateBoundsChangedEventArgs(isCanceled: true));
+                    _isTitleBarDragActive = false;
+                    _hasPointerGrabOffset = false;
                     break;
             }
+        }
+
+        private Point ConstrainPositionToParent(double x, double y)
+        {
+            Rect area;
+            if (Parent is MultiWindowView multiWindowView)
+            {
+                area = multiWindowView.GetWindowMovementArea();
+            }
+            else if (Parent is VisualElement parent)
+            {
+                area = new Rect(0, 0, Math.Max(0, parent.Width), Math.Max(0, parent.Height));
+            }
+            else
+            {
+                return new Point(x, y);
+            }
+
+            if (area.Width <= 0 || area.Height <= 0)
+                return new Point(x, y);
+
+            // Prefer requests because Width/Height can still contain the old snapped
+            // size during the first layout pass after restoring to floating mode.
+            var width = WidthRequest > 0 ? WidthRequest : Math.Max(0, Width);
+            var height = HeightRequest > 0 ? HeightRequest : Math.Max(0, Height);
+
+            if (width > area.Width && area.Width >= MinimumWindowWidth)
+            {
+                width = area.Width;
+                WidthRequest = width;
+            }
+            if (height > area.Height && area.Height >= MinimumWindowHeight)
+            {
+                height = area.Height;
+                HeightRequest = height;
+            }
+
+            var maxX = area.Right - Math.Min(width, area.Width);
+            var maxY = area.Bottom - Math.Min(height, area.Height);
+
+            return new Point(
+                Math.Clamp(x, area.Left, Math.Max(area.Left, maxX)),
+                Math.Clamp(y, area.Top, Math.Max(area.Top, maxY)));
         }
         #endregion
 
@@ -1580,10 +1738,26 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         private void PrepareResize()
         {
+            PreSnapBounds = null;
+            (Parent as MultiWindowView)?.ReleaseSnapState(this);
             _startX = this.TranslationX;
             _startY = this.TranslationY;
-            _startWidth = this.Width;
-            _startHeight = this.Height;
+            _startWidth = ConstrainWindowWidth(this.Width > 0 ? this.Width : this.WidthRequest);
+            _startHeight = ConstrainWindowHeight(this.Height > 0 ? this.Height : this.HeightRequest);
+        }
+
+        private void ResizeFromLeft(double totalX)
+        {
+            var appliedDelta = Math.Min(totalX, _startWidth - MinimumWindowWidth);
+            TranslationX = _startX + appliedDelta;
+            WidthRequest = _startWidth - appliedDelta;
+        }
+
+        private void ResizeFromTop(double totalY)
+        {
+            var appliedDelta = Math.Min(totalY, _startHeight - MinimumWindowHeight);
+            TranslationY = _startY + appliedDelta;
+            HeightRequest = _startHeight - appliedDelta;
         }
 
         private void OnResizeRight(object sender, PanUpdatedEventArgs e)
@@ -1592,7 +1766,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (e.StatusType == GestureStatus.Started) PrepareResize();
             if (e.StatusType == GestureStatus.Running)
             {
-                this.WidthRequest = Math.Max(100, _startWidth + e.TotalX);
+                this.WidthRequest = Math.Max(MinimumWindowWidth, _startWidth + e.TotalX);
             }
         }
 
@@ -1602,7 +1776,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (e.StatusType == GestureStatus.Started) PrepareResize();
             if (e.StatusType == GestureStatus.Running)
             {
-                this.HeightRequest = Math.Max(100, _startHeight + e.TotalY);
+                this.HeightRequest = Math.Max(MinimumWindowHeight, _startHeight + e.TotalY);
             }
         }
 
@@ -1612,8 +1786,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (e.StatusType == GestureStatus.Started) PrepareResize();
             if (e.StatusType == GestureStatus.Running)
             {
-                this.WidthRequest = Math.Max(100, _startWidth + e.TotalX);
-                this.HeightRequest = Math.Max(100, _startHeight + e.TotalY);
+                this.WidthRequest = Math.Max(MinimumWindowWidth, _startWidth + e.TotalX);
+                this.HeightRequest = Math.Max(MinimumWindowHeight, _startHeight + e.TotalY);
             }
         }
 
@@ -1623,14 +1797,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (e.StatusType == GestureStatus.Started) PrepareResize();
             if (e.StatusType == GestureStatus.Running)
             {
-                // Moving left edge means changing X and Width
-                double newWidth = Math.Max(100, _startWidth - e.TotalX);
-                // If we hit min width, don't move X anymore
-                if (newWidth > 100)
-                {
-                    this.TranslationX = _startX + e.TotalX;
-                    this.WidthRequest = newWidth;
-                }
+                ResizeFromLeft(e.TotalX);
             }
         }
 
@@ -1640,12 +1807,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (e.StatusType == GestureStatus.Started) PrepareResize();
             if (e.StatusType == GestureStatus.Running)
             {
-                double newHeight = Math.Max(100, _startHeight - e.TotalY);
-                if (newHeight > 100)
-                {
-                    this.TranslationY = _startY + e.TotalY;
-                    this.HeightRequest = newHeight;
-                }
+                ResizeFromTop(e.TotalY);
             }
         }
 
@@ -1656,20 +1818,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (e.StatusType == GestureStatus.Started) PrepareResize();
             if (e.StatusType == GestureStatus.Running)
             {
-                // Top Logic
-                double newHeight = Math.Max(100, _startHeight - e.TotalY);
-                if (newHeight > 100)
-                {
-                    this.TranslationY = _startY + e.TotalY;
-                    this.HeightRequest = newHeight;
-                }
-                // Left Logic
-                double newWidth = Math.Max(100, _startWidth - e.TotalX);
-                if (newWidth > 100)
-                {
-                    this.TranslationX = _startX + e.TotalX;
-                    this.WidthRequest = newWidth;
-                }
+                ResizeFromTop(e.TotalY);
+                ResizeFromLeft(e.TotalX);
             }
         }
 
@@ -1679,15 +1829,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (e.StatusType == GestureStatus.Started) PrepareResize();
             if (e.StatusType == GestureStatus.Running)
             {
-                // Top Logic
-                double newHeight = Math.Max(100, _startHeight - e.TotalY);
-                if (newHeight > 100)
-                {
-                    this.TranslationY = _startY + e.TotalY;
-                    this.HeightRequest = newHeight;
-                }
+                ResizeFromTop(e.TotalY);
                 // Right Logic
-                this.WidthRequest = Math.Max(100, _startWidth + e.TotalX);
+                this.WidthRequest = Math.Max(MinimumWindowWidth, _startWidth + e.TotalX);
             }
         }
 
@@ -1698,14 +1842,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (e.StatusType == GestureStatus.Running)
             {
                 // Bottom Logic
-                this.HeightRequest = Math.Max(100, _startHeight + e.TotalY);
-                // Left Logic
-                double newWidth = Math.Max(100, _startWidth - e.TotalX);
-                if (newWidth > 100)
-                {
-                    this.TranslationX = _startX + e.TotalX;
-                    this.WidthRequest = newWidth;
-                }
+                this.HeightRequest = Math.Max(MinimumWindowHeight, _startHeight + e.TotalY);
+                ResizeFromLeft(e.TotalX);
             }
         }
         #endregion
@@ -1746,7 +1884,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
     public sealed class WindowBoundsChangedEventArgs : EventArgs
     {
-        public WindowBoundsChangedEventArgs(double x, double y, double width, double height, double pointerX = 0, double pointerY = 0)
+        public WindowBoundsChangedEventArgs(double x, double y, double width, double height, double pointerX = 0, double pointerY = 0, double dragDistance = 0, bool isCanceled = false)
         {
             X = x;
             Y = y;
@@ -1754,6 +1892,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             Height = height;
             PointerX = pointerX;
             PointerY = pointerY;
+            DragDistance = dragDistance;
+            IsCanceled = isCanceled;
         }
 
         /// <summary>Window top-left X (TranslationX).</summary>
@@ -1779,5 +1919,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// Used for pointer-position-driven snap detection (modern OS behavior).
         /// </summary>
         public double PointerY { get; }
+
+        /// <summary>Total distance travelled during the current drag.</summary>
+        public double DragDistance { get; }
+
+        /// <summary>Whether the platform canceled the gesture instead of completing it.</summary>
+        public bool IsCanceled { get; }
     }
 }

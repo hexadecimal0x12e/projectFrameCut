@@ -1,4 +1,5 @@
 using projectFrameCut.ApplicationPluginBase.Text;
+using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Text.Entry;
@@ -18,7 +19,7 @@ using System.Threading.Tasks;
 
 namespace projectFrameCut.InteractableEditor
 {
-    public partial class InteractableEditor : ContentView
+    public partial class InteractableEditor : ContentView, IInteractableEditor
     {
         #region types
 
@@ -94,11 +95,14 @@ namespace projectFrameCut.InteractableEditor
         private readonly Dictionary<Guid, ClipOverlayState> _clipStates = new();
         private readonly object _clipStatesLock = new();
         private readonly Dictionary<Guid, object> _previewSourceClips = new();
+        private readonly Dictionary<Guid, IInteractableElement> _genericElements = new();
+        private readonly Dictionary<Guid, InteractiveRect> _genericLastRects = new();
         private ClipOverlayState? _activeState;
         private Func<Task>? _previewRefreshCallback;
         private Func<Guid, Task>? _overlayClipTappedCallback;
         private Func<Guid, Task>? _overlayClipDoubleTappedCallback;
         private Func<Task>? _blankAreaTappedCallback;
+        private InteractiveElementChangedHandler? _interactiveElementChangedCallback;
         private Func<Task>? _referenceLinesChangedCallback;
         private Action<string, uint, ClipPositionTuple, ResizeHandle>? _keyframeCandidateCapturedCallback;
         private Func<ClipElementUI, IClip?>? _getClipInstanceCallback;
@@ -1000,6 +1004,87 @@ namespace projectFrameCut.InteractableEditor
             _shapeHandleProvider = provider;
             _shapeHandleDragHandler = dragHandler;
             return this;
+        }
+
+        // IInteractableEditor compatibility surface. The legacy ClipElementUI path remains the
+        // optimized timeline implementation; hosts using the common contract can progressively
+        // move to an adapter without taking a dependency on timeline types here.
+        void IInteractableEditor.SetInteractiveElements(IReadOnlyCollection<IInteractableElement> elements)
+        {
+            var clips = new ConcurrentDictionary<Guid, ClipElementUI>();
+            _genericElements.Clear();
+            _genericLastRects.Clear();
+            foreach (var element in elements)
+            {
+                _genericElements[element.Id] = element;
+                var rect = element.LogicalRect;
+                _genericLastRects[element.Id] = rect;
+                clips[element.Id] = new ClipElementUI
+                {
+                    Id = element.Id,
+                    DisplayName = element.DisplayName,
+                    ShouldDisplayInUI = element.IsVisible,
+                    TargetX = (int)Math.Round(rect.X),
+                    TargetY = (int)Math.Round(rect.Y),
+                    TargetWidth = (int)Math.Round(rect.Width),
+                    TargetHeight = (int)Math.Round(rect.Height),
+                    origTrack = element.Layer,
+                    origLength = Math.Max(rect.Width, 1_000_000_000d),
+                    Clip = new Border(),
+                    LeftHandle = new Border(),
+                    RightHandle = new Border(),
+                    IsMoveable = element.Capabilities.CanMove,
+                    IsHorizontalResizable = element.Capabilities.CanResizeHorizontally,
+                    IsVerticalResizable = element.Capabilities.CanResizeVertically,
+                    AllowFreeScaleResize = element.Capabilities.AllowFreeScale,
+                    CanSnapWhilePlacing = element.Capabilities.CanSnapWhileMoving,
+                    CanSnapWhileResizing = element.Capabilities.CanSnapWhileResizing,
+                };
+            }
+            _ = UpdateClips(clips);
+        }
+
+        void IInteractableEditor.SetSelectedElement(Guid? elementId) => SelectClip(elementId);
+        void IInteractableEditor.SetCanvasSize(double width, double height) => UpdateCanvasSize(width, height);
+        void IInteractableEditor.SetVideoSize(double width, double height) => UpdateVideoResolution(width, height);
+        void IInteractableEditor.AddReferenceLine(projectFrameCut.ApplicationAPIBase.Interaction.ReferenceLineOrientation? orientation)
+            => AddAReferenceLine(orientation is projectFrameCut.ApplicationAPIBase.Interaction.ReferenceLineOrientation.Horizontal
+                ? ReferenceLineOrientation.Horizontal
+                : ReferenceLineOrientation.Vertical);
+        void IInteractableEditor.RemoveReferenceLine(string id) => RemoveReferenceLine(id);
+        void IInteractableEditor.ClearReferenceLines() => ClearReferenceLines();
+        string IInteractableEditor.SerializeReferenceLines() => GetReferenceLinesJson();
+        void IInteractableEditor.RestoreReferenceLines(string? json) => RestoreReferenceLinesFromJson(json);
+        IInteractableEditor IInteractableEditor.ConfigurePreviewRefresh(Func<Task>? callback)
+            => ConfigurePreviewRefresh(callback);
+        IInteractableEditor IInteractableEditor.ConfigureElementClicked(InteractiveElementClickedHandler? callback)
+            => ConfigureOverlayClipTap(callback is null ? null : id => callback(id));
+        IInteractableEditor IInteractableEditor.ConfigureBlankAreaClicked(Func<Task>? callback)
+            => ConfigureBlankAreaTap(callback);
+        IInteractableEditor IInteractableEditor.ConfigureElementChanged(InteractiveElementChangedHandler? callback)
+        {
+            _interactiveElementChangedCallback = callback;
+            return this;
+        }
+        IInteractableEditor IInteractableEditor.ConfigureCustomHandles(CustomHandleProvider? provider, CustomHandleDragHandler? dragHandler)
+        {
+            if (provider is null && dragHandler is null)
+            {
+                return ConfigureCustomHandles(null, null);
+            }
+
+            ShapeHandleProvider? legacyProvider = provider is null
+                ? null
+                : id => provider(id).Select(h => new projectFrameCut.InteractableEditor.ShapeHandleDescriptor(
+                    h.Id, h.NormalizedX, h.NormalizedY, h.FillColor, h.Size, h.ViewFactory)).ToList();
+            ShapeHandleDragHandler? legacyDragHandler = dragHandler is null
+                ? null
+                : (id, handleId, args, context) => dragHandler(
+                    id,
+                    handleId,
+                    args,
+                    new CustomHandleDragContext(id, handleId, context.DisplayW, context.DisplayH, context.LogicalW, context.LogicalH));
+            return ConfigureCustomHandles(legacyProvider, legacyDragHandler);
         }
 
         protected override void OnSizeAllocated(double width, double height)
@@ -2094,7 +2179,7 @@ namespace projectFrameCut.InteractableEditor
         /// Render the preview requests from <see cref="DynamicPreview"/>.
         /// </summary>
         /// <param name="preparedPreviews">The prepared previews</param>
-        public async Task<bool> ApplyPreparedPreviewsAsync(IReadOnlyList<DynamicPreview.PreparedPreview> preparedPreviews)
+        public async Task<bool> ApplyPreparedPreviewsAsync(IReadOnlyList<PreparedPreview> preparedPreviews)
         {
             if (Dispatcher.IsDispatchRequired)
             {
@@ -2112,7 +2197,7 @@ namespace projectFrameCut.InteractableEditor
         /// </remarks>
         /// <param name="preparedPreviews">The prepared previews</param>
         [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
-        public bool ApplyPreparedPreviews(IReadOnlyList<DynamicPreview.PreparedPreview> preparedPreviews)
+        public bool ApplyPreparedPreviews(IReadOnlyList<PreparedPreview> preparedPreviews)
         {
             if (preparedPreviews.Count == 0)
             {
@@ -2227,6 +2312,9 @@ namespace projectFrameCut.InteractableEditor
             }
             return hasVisiblePreview;
         }
+
+        void IInteractableEditor.ApplyPreparedPreviews(IReadOnlyList<PreparedPreview> previews)
+            => ApplyPreparedPreviews(previews);
 
         private bool TryResolveClipRect(Guid clipId, bool ignorePosotionProvider, out double x, out double y, out double w, out double h, out ClipMode clipType, out bool isCurrentClip)
         {
@@ -2444,13 +2532,28 @@ namespace projectFrameCut.InteractableEditor
                     y = Math.Clamp(y, 0, _videoHeight - h);
                 }
 
+                bool isCurrentClip = _currentClip is not null
+                    && _currentClip.Id == clip.Id;
+
+                if (_genericElements.TryGetValue(clip.Id, out var genericElement))
+                {
+                    var nextRect = new InteractiveRect(x, y, w, h);
+                    var previousRect = _genericLastRects.GetValueOrDefault(clip.Id, nextRect);
+                    genericElement.LogicalRect = nextRect;
+                    genericElement.IsSelected = isCurrentClip;
+                    if (_interactiveElementChangedCallback is not null && previousRect != nextRect)
+                    {
+                        _genericLastRects[clip.Id] = nextRect;
+                        _ = _interactiveElementChangedCallback(new InteractiveChange(
+                            clip.Id, previousRect, nextRect, InteractiveOperation.None, InteractiveChangeKind.Changed));
+                    }
+                }
+
                 double displayX = renderRect.X + x * scale;
                 double displayY = renderRect.Y + y * scale;
                 double displayW = w * scale;
                 double displayH = h * scale;
 
-                bool isCurrentClip = _currentClip is not null
-                    && _currentClip.Id == clip.Id;
                 bool showHandles = isCurrentClip;
                 bool showSizeLabel = isCurrentClip && _isHandleResizeInProgress;
 

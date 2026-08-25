@@ -176,14 +176,14 @@ namespace projectFrameCut.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log(ex, "check UI frozen", this);
+                        //Logger.Log(ex, "check UI frozen", this);
                         await Task.Delay(_checkIntervalMs, cancellationToken);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log(ex, "check UI frozen", this);
+                //Logger.Log(ex, "check UI frozen", this);
             }
         }
 

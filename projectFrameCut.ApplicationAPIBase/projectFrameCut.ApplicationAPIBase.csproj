@@ -56,7 +56,7 @@
 		<Using Include="projectFrameCut.Shared.Logger">
 			<Static>True</Static>
 		</Using>
-		<InternalsVisibleTo Include="projectFrameCut"/>
+		<InternalsVisibleTo Include="projectFrameCut" />
 	</ItemGroup>
 
 	<ItemGroup>

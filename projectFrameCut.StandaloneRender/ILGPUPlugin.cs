@@ -102,7 +102,6 @@ namespace projectFrameCut.StandaloneRender
             {
                 var ctx = Context.Create(builder => builder.Default().EnableAlgorithms());
                 accelerators = ctx.Devices.Where(c => c.AcceleratorType != AcceleratorType.CPU).Select(c => c.CreateAccelerator(ctx)).ToArray();
-                AcceleratorsManager.InitializeAccelerators();
                 AcceleratorsManager.IsRendering = true;
                 AcceleratorsManager.AcceleratorsForRendering = accelerators;
             }

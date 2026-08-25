@@ -241,11 +241,10 @@ namespace projectFrameCut.Render.HwAccelEngine
         }
         private void ApplyConfiguration()
         {
-            AcceleratorsManager.InitializeAccelerators();
             forceSync = Configuration.TryGetValue("forceSync", out var forceSyncStr) && bool.TryParse(forceSyncStr, out var fs) ? fs : null;
             disableWin2DRasterizer = Configuration.TryGetValue("disableWin2DRasterizer", out var disableWin2DRasterizerStr) && bool.TryParse(disableWin2DRasterizerStr, out var r) && r;
 
-            Logger.Log($"[HwAccelEnginePlugin] ILGPU Main Accel:{AcceleratorsManager.DefaultAccelerator?.Name ?? "(null)"}, Rendering accel: {string.Join(", ", AcceleratorsManager.Accelerators.Select(a => a.Name))}");
+            Logger.Log("[HwAccelEnginePlugin] ILGPU accelerators will be initialized on first use.");
             Logger.Log($"[HwAccelEnginePlugin] ForceSync: {forceSync?.ToString() ?? "default"}, Disable Win2D Rasterizer: {disableWin2DRasterizer}");
         }
 #elif ANDROID

@@ -14,6 +14,7 @@ using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Codeblock;
 using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationPluginBase.VectorComponentHandler;
+using projectFrameCut.ApplicationAPIBase.Interaction;
 
 
 namespace projectFrameCut.ApplicationPluginBase
@@ -74,6 +75,8 @@ namespace projectFrameCut.ApplicationPluginBase
 
         void IApplicationPluginBase.OnApplicationPluginLoaded()
         {
+            IInteractableEditor.creator = new(() => new InteractableEditor.InteractableEditor());
+
             ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(locateId, out var loc) ? loc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
 
             Markdown2XAML.RegisterCodeBlockRenderer(new XAMLCodeblockRenderer());

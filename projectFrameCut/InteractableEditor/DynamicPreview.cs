@@ -1,5 +1,6 @@
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.Asset;
@@ -58,35 +59,6 @@ public sealed class DynamicPreview : IDisposable
     private static readonly ConcurrentDictionary<string, long> s_fallbackDiskFrameAccess = new(StringComparer.Ordinal);
     public static string DiskCacheRoot { get; set { if (Directory.Exists(value)) field = value; } } = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
 
-
-    public sealed class PreparedPreview
-    {
-        private readonly Func<View>? _viewFactory;
-        private View? _materializedView;
-
-        public PreparedPreview(Guid clipId, Func<View>? viewFactory, string? errorMessage, IClip? source)
-        {
-            ClipId = clipId;
-            _viewFactory = viewFactory;
-            ErrorMessage = errorMessage;
-            Source = source;
-        }
-
-        public Guid ClipId { get; }
-        public string? ErrorMessage { get; }
-        public IClip? Source { get; }
-
-        public View? View
-        {
-            get
-            {
-                if (_viewFactory is null) return null;
-                if (_materializedView is null)
-                    _materializedView = _viewFactory();
-                return _materializedView;
-            }
-        }
-    }
 
     private IClip[]? _clips;
     private LivePreviewer? _previewer;

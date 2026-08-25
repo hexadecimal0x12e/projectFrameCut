@@ -291,6 +291,10 @@ namespace projectFrameCut
             if (platformView is Microsoft.UI.Xaml.Window nativeWindow)
             {
                 NativeWindow = nativeWindow;
+                nativeWindow.SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop
+                {
+                    Kind = MicaKind.Base
+                };
 
                 // Idempotency: HandlerChanged can fire more than once. If we already bound a
                 // MAUI navigation wrapper to this window's root NavigationView, bail unless the
@@ -317,10 +321,6 @@ namespace projectFrameCut
                 try
                 {
                     EnsureXamlControlsResources();
-
-                    // Apply acrylic backdrop for the window background.
-                    try { nativeWindow.SystemBackdrop = new DesktopAcrylicBackdrop(); }
-                    catch { }
 
                     // Save the original MAUI content (WindowRootViewContainer) — we need
                     // it as window.Content so ModalNavigationManager can locate it.

@@ -41,11 +41,7 @@ using projectFrameCut.Drawing.Text.Typology;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
 using Microsoft.Win32;
-
-
-
-
-
+using System.Runtime;
 
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
@@ -150,9 +146,6 @@ public partial class HomePage : ContentPage
 
             }
             catch { }
-
-
-
 #endif
         };
 
@@ -1406,6 +1399,15 @@ public partial class HomePage : ContentPage
             NoContentLayout.IsVisible = true; // safe fallback
         }
 
+        try
+        {
+            DynamicPreview.DiskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "set DiskCache root", this);
+        }
+
 #if WINDOWS
         await projectFrameCut.WinUI.App.BringToForeground();
         AppShell.instance.ShowNavView();
@@ -1420,16 +1422,6 @@ public partial class HomePage : ContentPage
 #elif iDevices
 
 #endif
-
-        try
-        {
-            DynamicPreview.DiskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "set DiskCache root", this);
-        }
-
     }
 
     private async Task TryRestoreActiveRenderAsync()
@@ -2248,6 +2240,18 @@ public class ProjectsListViewModel
                 LoadFailed = true;
             }
         }
+
+#if WINDOWS || LINUX
+        var origMode = GCSettings.LargeObjectHeapCompactionMode;
+        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+        GC.WaitForPendingFinalizers();
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+        GCSettings.LargeObjectHeapCompactionMode = origMode;
+#else
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+#endif
     }
 
     public void LoadSample()

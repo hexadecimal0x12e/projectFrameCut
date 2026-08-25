@@ -103,6 +103,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         public static readonly BindableProperty IsAutoArrangeEnabledProperty =
             BindableProperty.Create(nameof(IsAutoArrangeEnabled), typeof(bool), typeof(MultiWindowView), true);
 
+        public static readonly BindableProperty AutoArrangeOnWindowMovedProperty =
+            BindableProperty.Create(nameof(AutoArrangeOnWindowMoved), typeof(bool), typeof(MultiWindowView), false);
+
         public static readonly BindableProperty AutoArrangeOnWindowAddedProperty =
             BindableProperty.Create(nameof(AutoArrangeOnWindowAdded), typeof(bool), typeof(MultiWindowView), false);
 
@@ -143,12 +146,23 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         }
 
         /// <summary>
-        /// Enable auto arrangement when overlap is detected or after a snap operation.
+        /// Enable automatic arrangement after a snap operation. Free-move overlap
+        /// arrangement is controlled separately by <see cref="AutoArrangeOnWindowMoved"/>.
         /// </summary>
         public bool IsAutoArrangeEnabled
         {
             get => (bool)GetValue(IsAutoArrangeEnabledProperty);
             set => SetValue(IsAutoArrangeEnabledProperty, value);
+        }
+
+        /// <summary>
+        /// Rearrange all windows when a freely moved window overlaps another.
+        /// Disabled by default so ordinary positioning cannot cause a global relayout.
+        /// </summary>
+        public bool AutoArrangeOnWindowMoved
+        {
+            get => (bool)GetValue(AutoArrangeOnWindowMovedProperty);
+            set => SetValue(AutoArrangeOnWindowMovedProperty, value);
         }
 
         /// <summary>
@@ -339,6 +353,42 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
                 ApplySnap(pair.Key, pair.Value, rememberState: true, bringToFront: false);
             }
+
+            ConstrainFloatingWindowsToMdiArea();
+        }
+
+        private void ConstrainFloatingWindowsToMdiArea()
+        {
+            foreach (var item in Windows)
+            {
+                if (!_snapStates.ContainsKey(item))
+                    ConstrainFloatingWindowToMdiArea(item);
+            }
+        }
+
+        private void ConstrainFloatingWindowToMdiArea(MultiWindowItem item)
+        {
+            var area = GetWindowMovementArea();
+            if (area.Width <= 0 || area.Height <= 0) return;
+
+            var width = item.WidthRequest > 0 ? item.WidthRequest : Math.Max(0, item.Width);
+            var height = item.HeightRequest > 0 ? item.HeightRequest : Math.Max(0, item.Height);
+
+            if (width > area.Width && area.Width >= item.MinimumWindowWidth)
+            {
+                width = area.Width;
+                item.WidthRequest = width;
+            }
+            if (height > area.Height && area.Height >= item.MinimumWindowHeight)
+            {
+                height = area.Height;
+                item.HeightRequest = height;
+            }
+
+            var maxX = Math.Max(area.Left, area.Right - Math.Min(width, area.Width));
+            var maxY = Math.Max(area.Top, area.Bottom - Math.Min(height, area.Height));
+            item.TranslationX = Math.Clamp(item.TranslationX, area.Left, maxX);
+            item.TranslationY = Math.Clamp(item.TranslationY, area.Top, maxY);
         }
 
         private void OnItemCloseClicked(object? sender, CloseEventArgs e)
@@ -391,7 +441,10 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 return;
             }
 
-            var zone = DetectSnapZone(e);
+            // Do not treat click jitter as an intentional edge gesture.
+            var zone = e.DragDistance >= Math.Max(6, SnapThreshold * 0.75)
+                ? DetectSnapZone(e)
+                : WindowSnapZone.None;
             _snapTarget = item;
             _pendingSnapZone = zone;
             UpdateSnapPreview(zone);
@@ -407,6 +460,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             _pendingSnapZone = WindowSnapZone.None;
             HideSnapPreview();
 
+            if (e.IsCanceled)
+                return;
+
             // TopCenter → show the layout picker instead of snapping directly
             if (zone == WindowSnapZone.TopCenter)
             {
@@ -416,7 +472,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             if (!IsWindowSnappingEnabled || zone == WindowSnapZone.None)
             {
-                if (IsAutoArrangeEnabled && ShouldAutoArrange(item))
+                if (IsAutoArrangeEnabled && AutoArrangeOnWindowMoved && ShouldAutoArrange(item))
                 {
                     ArrangeWindows(AutoArrangeMode);
                 }
@@ -641,6 +697,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (_taskbar is null) return;
             _taskbar.IsVisible = visible;
             _taskbar.HeightRequest = visible ? TaskbarHeight : 0;
+            ConstrainFloatingWindowsToMdiArea();
         }
 
         private void RestoreAllMinimizedWindows()
@@ -681,10 +738,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             return h;
         }
 
-        private Rect GetMdiArea()
+        internal Rect GetWindowMovementArea()
         {
             return new Rect(0, 0, Math.Max(0, Width), GetEffectiveMdiHeight());
         }
+
+        private Rect GetMdiArea() => GetWindowMovementArea();
 
         private void OnChildAdded(object? sender, ElementEventArgs e)
         {
@@ -907,12 +966,26 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             item.Margin = new Thickness(0);
             item.TranslationX = bounds.X;
             item.TranslationY = bounds.Y;
-            item.WidthRequest = bounds.Width;
-            item.HeightRequest = bounds.Height;
+            item.WidthRequest = item.ConstrainWindowWidth(bounds.Width);
+            item.HeightRequest = item.ConstrainWindowHeight(bounds.Height);
 
             if (clearSnapState)
             {
                 _snapStates.Remove(item);
+                item.PreSnapBounds = null;
+            }
+        }
+
+        internal void ReleaseSnapState(MultiWindowItem item)
+        {
+            _snapStates.Remove(item);
+            item.PreSnapBounds = null;
+
+            if (_snapTarget is not null && MultiWindowItem.ReferenceEquals(_snapTarget, item))
+            {
+                _snapTarget = null;
+                _pendingSnapZone = WindowSnapZone.None;
+                HideSnapPreview();
             }
         }
 
@@ -928,8 +1001,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             // window is re-snapped (e.g. content chooser), keep the original pre-snap.
             if (!item.PreSnapBounds.HasValue)
             {
-                var w = item.WidthRequest > 0 ? item.WidthRequest : Math.Max(400, bounds.Width * 0.6);
-                var h = item.HeightRequest > 0 ? item.HeightRequest : Math.Max(300, bounds.Height * 0.6);
+                var w = item.ConstrainWindowWidth(item.WidthRequest > 0 ? item.WidthRequest : Math.Max(400, bounds.Width * 0.6));
+                var h = item.ConstrainWindowHeight(item.HeightRequest > 0 ? item.HeightRequest : Math.Max(300, bounds.Height * 0.6));
                 item.PreSnapBounds = new Rect(item.TranslationX, item.TranslationY, w, h);
             }
 
@@ -1197,8 +1270,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 // Save pre-snap bounds before applying the custom layout snap
                 if (!snappedItem.PreSnapBounds.HasValue)
                 {
-                    var w = snappedItem.WidthRequest > 0 ? snappedItem.WidthRequest : Math.Max(400, primaryBounds.Width * 0.6);
-                    var h = snappedItem.HeightRequest > 0 ? snappedItem.HeightRequest : Math.Max(300, primaryBounds.Height * 0.6);
+                    var w = snappedItem.ConstrainWindowWidth(snappedItem.WidthRequest > 0 ? snappedItem.WidthRequest : Math.Max(400, primaryBounds.Width * 0.6));
+                    var h = snappedItem.ConstrainWindowHeight(snappedItem.HeightRequest > 0 ? snappedItem.HeightRequest : Math.Max(300, primaryBounds.Height * 0.6));
                     snappedItem.PreSnapBounds = new Rect(snappedItem.TranslationX, snappedItem.TranslationY, w, h);
                 }
 
@@ -1505,8 +1578,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 case WindowArrangeMode.Cascade:
                     {
-                        var windowWidth = Math.Max(220, area.Width * 0.68);
-                        var windowHeight = Math.Max(160, area.Height * 0.68);
+                        var windowWidth = Math.Max(1, Math.Min(area.Width - (gap * 2), area.Width * 0.68));
+                        var windowHeight = Math.Max(1, Math.Min(area.Height - (gap * 2), area.Height * 0.68));
                         var stepX = Math.Max(24, area.Width * 0.05);
                         var stepY = Math.Max(24, area.Height * 0.05);
                         var maxOffsetX = Math.Max(0, area.Width - windowWidth - gap);
@@ -1529,8 +1602,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                         {
                             var x = area.X + i * cellWidth + gap;
                             var y = area.Y + gap;
-                            var width = Math.Max(120, cellWidth - (gap * 2));
-                            var height = Math.Max(100, area.Height - (gap * 2));
+                            var width = Math.Max(1, cellWidth - (gap * 2));
+                            var height = Math.Max(1, area.Height - (gap * 2));
                             SetWindowBounds(windows[i], new Rect(x, y, width, height), clearSnapState: true);
                             BringToFront(windows[i]);
                         }
@@ -1544,8 +1617,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                         {
                             var x = area.X + gap;
                             var y = area.Y + i * cellHeight + gap;
-                            var width = Math.Max(120, area.Width - (gap * 2));
-                            var height = Math.Max(100, cellHeight - (gap * 2));
+                            var width = Math.Max(1, area.Width - (gap * 2));
+                            var height = Math.Max(1, cellHeight - (gap * 2));
                             SetWindowBounds(windows[i], new Rect(x, y, width, height), clearSnapState: true);
                             BringToFront(windows[i]);
                         }
@@ -1565,8 +1638,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                             var col = i % cols;
                             var x = area.X + col * cellWidth + gap;
                             var y = area.Y + row * cellHeight + gap;
-                            var width = Math.Max(140, cellWidth - (gap * 2));
-                            var height = Math.Max(110, cellHeight - (gap * 2));
+                            var width = Math.Max(1, cellWidth - (gap * 2));
+                            var height = Math.Max(1, cellHeight - (gap * 2));
 
                             SetWindowBounds(windows[i], new Rect(x, y, width, height), clearSnapState: true);
                             BringToFront(windows[i]);
