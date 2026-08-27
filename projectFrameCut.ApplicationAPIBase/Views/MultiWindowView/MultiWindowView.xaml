@@ -2,7 +2,9 @@
 <Grid xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
       x:Class="projectFrameCut.ApplicationAPIBase.Views.MultiWindowView.MultiWindowView"
-      BackgroundColor="#2D2D30"
+      x:Name="Self"
+      BackgroundColor="{DynamicResource MultiWindowViewBackgroundColor}"
+      TaskbarHeight="{DynamicResource MultiWindowViewTaskbarHeight}"
       IsClippedToBounds="False">
 
     <Grid.RowDefinitions>
@@ -18,9 +20,9 @@
             Grid.Row="0"
             IsVisible="False"
             InputTransparent="True"
-            Stroke="#80B6E0FF"
+            Stroke="{DynamicResource MultiWindowViewSnapPreviewBorderColor}"
             StrokeThickness="1"
-            BackgroundColor="#3F7FB5FF"
+            BackgroundColor="{DynamicResource MultiWindowViewSnapPreviewColor}"
             StrokeShape="RoundRectangle 8"
             Margin="0" />
 
@@ -30,12 +32,12 @@
           IsVisible="False"
           InputTransparent="False"
           ZIndex="20000"
-          BackgroundColor="#80000000">
+          BackgroundColor="{DynamicResource MultiWindowViewOverlayScrimColor}">
 
         <!-- Centered panel with layout options -->
         <Border x:Name="LayoutPickerPanel"
-                BackgroundColor="#2D2D30"
-                Stroke="#3E3E42"
+                BackgroundColor="{DynamicResource MultiWindowViewOverlayBackgroundColor}"
+                Stroke="{DynamicResource MultiWindowViewOverlayBorderColor}"
                 StrokeThickness="1"
                 StrokeShape="RoundRectangle 12"
                 VerticalOptions="Center"
@@ -52,7 +54,7 @@
                 <Label Grid.Row="0"
                        x:Name="LayoutPickerTitle"
                        Text="Select a snap layout"
-                       TextColor="White"
+                       TextColor="{DynamicResource MultiWindowViewOverlayTextColor}"
                        FontSize="16"
                        FontAttributes="Bold"
                        HorizontalOptions="Center"/>
@@ -68,8 +70,8 @@
                 <Button x:Name="LayoutPickerCancelBtn"
                         Grid.Row="2"
                         Text="Cancel"
-                        BackgroundColor="#454545"
-                        TextColor="White"
+                        BackgroundColor="{DynamicResource MultiWindowViewOverlayButtonColor}"
+                        TextColor="{DynamicResource MultiWindowViewOverlayTextColor}"
                         CornerRadius="6"
                         HeightRequest="34"
                         HorizontalOptions="Fill"
@@ -84,8 +86,8 @@
             IsVisible="False"
             InputTransparent="False"
             ZIndex="15000"
-            BackgroundColor="#CC2D2D30"
-            Stroke="#3E3E42"
+            BackgroundColor="{DynamicResource MultiWindowViewContentChooserBackgroundColor}"
+            Stroke="{DynamicResource MultiWindowViewOverlayBorderColor}"
             StrokeThickness="1"
             StrokeShape="RoundRectangle 8"
             HorizontalOptions="Start"
@@ -96,7 +98,7 @@
             <Label Grid.Row="0"
                    x:Name="ContentChooserTitle"
                    Text="Select content for this area"
-                   TextColor="White"
+                   TextColor="{DynamicResource MultiWindowViewOverlayTextColor}"
                    FontSize="13"
                    FontAttributes="Bold"
                    HorizontalOptions="Center"/>
@@ -111,8 +113,8 @@
             <Button x:Name="ContentChooserDismissBtn"
                     Grid.Row="2"
                     Text="Leave empty"
-                    BackgroundColor="#454545"
-                    TextColor="White"
+                    BackgroundColor="{DynamicResource MultiWindowViewOverlayButtonColor}"
+                    TextColor="{DynamicResource MultiWindowViewOverlayTextColor}"
                     FontSize="12"
                     CornerRadius="4"
                     HeightRequest="28"
@@ -124,8 +126,8 @@
     <!-- Taskbar -->
     <Border x:Name="Taskbar"
             Grid.Row="1"
-            BackgroundColor="#252528"
-            HeightRequest="40"
+            BackgroundColor="{DynamicResource MultiWindowViewTaskbarBackgroundColor}"
+            HeightRequest="{Binding TaskbarHeight, Source={x:Reference Self}}"
             StrokeShape="RoundRectangle 0"
             Stroke="Transparent">
         <ScrollView Orientation="Horizontal"

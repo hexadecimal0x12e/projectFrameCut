@@ -4,6 +4,7 @@ using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.Asset;
+using projectFrameCut.Controls;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
@@ -58,6 +59,8 @@ public sealed class DynamicPreview : IDisposable
     private static readonly ConcurrentDictionary<FallbackFrameCacheKey, CachedFallbackFrame> s_fallbackFrameCache = new();
     private static readonly ConcurrentDictionary<string, long> s_fallbackDiskFrameAccess = new(StringComparer.Ordinal);
     public static string DiskCacheRoot { get; set { if (Directory.Exists(value)) field = value; } } = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
+    public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Automatic;
+    public static NativePreviewCompositionMode DefaultCompositionMode { get; set; } = NativePreviewCompositionMode.SingleCanvas;
 
 
     private IClip[]? _clips;
@@ -135,6 +138,15 @@ public sealed class DynamicPreview : IDisposable
             targetWidth = Math.Max(1, targetWidth);
             targetHeight = Math.Max(1, targetHeight);
             var (projectWidth, projectHeight) = ResolveProjectDimensions(targetWidth, targetHeight);
+            if (ShouldUseSingleCanvasPreview())
+            {
+                var canvasPreview = await Task.Run(
+                    () => GenerateCanvasPreviewPrepared(frameIndex, targetWidth, targetHeight, token),
+                    token).ConfigureAwait(false);
+                var result = new[] { canvasPreview };
+                CacheOverlayPreparedPreviews(result);
+                return result;
+            }
             return await GetFinalRequests(frameIndex, projectWidth, projectHeight, prepareVersion, targetWidth, targetHeight, token, applyClipTargetLayout).ConfigureAwait(false);
         }
         finally
@@ -362,6 +374,17 @@ public sealed class DynamicPreview : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public async Task<IReadOnlyList<PreparedPreview>?> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, bool applyClipTargetLayout, bool checkVersion, long prepareVersion, CancellationToken token)
     {
+        if (ShouldUseSingleCanvasPreview())
+        {
+            var canvasPreview = await Task.Run(
+                () => GenerateCanvasPreviewPrepared(frameIndex, canvasWidth, canvasHeight, token),
+                token).ConfigureAwait(false);
+            if (checkVersion && prepareVersion != Interlocked.Read(ref _prepareVersion)) return null;
+            var result = new[] { canvasPreview };
+            CacheOverlayPreparedPreviews(result);
+            return result;
+        }
+
         if (requests.Count == 0)
         {
             return [];
@@ -447,6 +470,9 @@ public sealed class DynamicPreview : IDisposable
 
         switch (existing)
         {
+            case HdrPreviewView existingHdr when incoming is HdrPreviewView incomingHdr:
+                existingHdr.Frame = incomingHdr.Frame;
+                return true;
             case Image existingImage when incoming is Image incomingImage:
                 existingImage.Aspect = incomingImage.Aspect;
                 existingImage.Source = incomingImage.Source;
@@ -571,7 +597,21 @@ public sealed class DynamicPreview : IDisposable
             ImageSource source;
             if (_previewer is not null)
             {
-                var artifactPath = _previewer.RenderClipFrame(request.Clip.Id, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token);
+                var displayFrame = _previewer.RenderClipFrameForDisplay(request.Clip.Id, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token);
+#if WINDOWS
+                if (displayFrame.ScRgbPath is not null || displayFrame.RequireSwapChain)
+                {
+                    return new PreparedPreview(request.Clip.Id, () => new HdrPreviewView
+                    {
+                        Frame = displayFrame,
+                        HorizontalOptions = LayoutOptions.Fill,
+                        VerticalOptions = LayoutOptions.Fill,
+                        AutomationId = $"hdr-clip={request.Clip.ClipType},id={request.Clip.Id}",
+                    }, null, request.Clip);
+                }
+#endif
+                var artifactPath = displayFrame.FallbackImagePath
+                    ?? throw new InvalidOperationException("The preview did not provide a displayable frame.");
                 // FileImageSource/BitmapImage.UriSource can silently fail for absolute files under a
                 // packaged WinUI app's LocalCache (the remote-artifact location). A stream source is
                 // decoded through the app's already-authorized file handle and works for local paths too.
@@ -608,7 +648,10 @@ public sealed class DynamicPreview : IDisposable
         catch (Exception ex)
         {
             Log(ex, $"Render dynamic preview for clip {request.Clip.Name} ({request.Clip.Id})", this);
-            return new PreparedPreview(request.Clip.Id, null, ex.Message, request.Clip);
+            Func<View>? errorFactory = DefaultOutputMode == NativePreviewOutputMode.Required
+                ? () => CreateSwapChainErrorView(ex.Message)
+                : null;
+            return new PreparedPreview(request.Clip.Id, errorFactory, ex.Message, request.Clip);
         }
     }
 
@@ -708,6 +751,76 @@ public sealed class DynamicPreview : IDisposable
             throw;
         }
     }
+
+    private bool ShouldUseSingleCanvasPreview()
+        => _previewer is not null
+            && DefaultCompositionMode == NativePreviewCompositionMode.SingleCanvas
+            && DefaultOutputMode != NativePreviewOutputMode.Disabled
+            && OperatingSystem.IsWindows();
+
+    private PreparedPreview GenerateCanvasPreviewPrepared(uint frameIndex, int canvasWidth, int canvasHeight, CancellationToken token)
+    {
+        if (_previewer is null)
+            return new PreparedPreview(Guid.Empty, null, "LivePreviewer is unavailable.", null, isCanvasPreview: true);
+
+        try
+        {
+            var displayFrame = _previewer.RenderFrameForDisplay(frameIndex, canvasWidth, canvasHeight, token);
+#if WINDOWS
+            if (displayFrame.ScRgbPath is not null || displayFrame.RequireSwapChain)
+            {
+                return new PreparedPreview(Guid.Empty, () => new HdrPreviewView
+                {
+                    Frame = displayFrame,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Fill,
+                    AutomationId = "DynamicPreview.SingleCanvas",
+                }, null, null, isCanvasPreview: true);
+            }
+#endif
+            var fallbackPath = displayFrame.FallbackImagePath
+                ?? throw new InvalidOperationException("The preview did not provide a displayable frame.");
+            var source = _previewer.ArtifactResolver is not null
+                ? CreateFileStreamImageSource(fallbackPath)
+                : ImageSource.FromFile(fallbackPath);
+            return new PreparedPreview(Guid.Empty, () => new Image
+            {
+                Source = source,
+                Aspect = Aspect.AspectFit,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Fill,
+                AutomationId = "DynamicPreview.SingleCanvas",
+            }, null, null, isCanvasPreview: true);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            return new PreparedPreview(Guid.Empty, null, null, null, isCanvasPreview: true);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Render full-canvas dynamic preview frame {frameIndex}", this);
+            Func<View>? errorFactory = DefaultOutputMode == NativePreviewOutputMode.Required
+                ? () => CreateSwapChainErrorView(ex.Message)
+                : null;
+            return new PreparedPreview(Guid.Empty, errorFactory, ex.Message, null, isCanvasPreview: true);
+        }
+    }
+
+    private static View CreateSwapChainErrorView(string message)
+        => new Border
+        {
+            BackgroundColor = Colors.Black,
+            Stroke = Colors.OrangeRed,
+            StrokeThickness = 1,
+            Padding = 12,
+            Content = new Label
+            {
+                Text = $"HDR SwapChain preview failed: {message}",
+                TextColor = Colors.White,
+                HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Center,
+                VerticalTextAlignment = Microsoft.Maui.TextAlignment.Center,
+            },
+        };
 
     private static ImageSource CreateFileStreamImageSource(string path)
     {

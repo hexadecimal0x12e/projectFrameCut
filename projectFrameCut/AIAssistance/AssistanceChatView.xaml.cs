@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls.Shapes;
 using OpenAI;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Workspace;
+using projectFrameCut.ApplicationAPIBase.Workspace.Modules;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.Services;
@@ -42,6 +44,7 @@ public partial class AssistanceChatView : ContentView
     private readonly Guid _sessionId;
     private readonly string? _projectPath;
     private readonly string? _projectName;
+    private readonly IWorkspace? _workspace;
     private bool _isReplying;
     private CancellationTokenSource? _cts;
     private readonly SkillManager _skillManager;
@@ -55,6 +58,8 @@ public partial class AssistanceChatView : ContentView
 
     /// <summary>此 Agent 的唯一标识。</summary>
     public string AgentId { get; } = Guid.NewGuid().ToString("N");
+    public Guid SessionId => _sessionId;
+    public IWorkspace? Workspace => _workspace;
 
     /// <summary>父 Agent 的 ID（如果此 Agent 是子 Agent）。</summary>
     public string? ParentAgentId { get; private set; }
@@ -115,12 +120,13 @@ public partial class AssistanceChatView : ContentView
         Log("AssistanceChatView created with default constructor (no sessionId, no projectPath, no projectName)", "error");
     }
 
-    public AssistanceChatView(Guid? sessionId, Func<IEnumerable<AIFunction>>? aIFunctionsFactory = null, string? projectPath = null, string? projectName = null, bool isSubAgent = false)
+    public AssistanceChatView(Guid? sessionId, Func<IEnumerable<AIFunction>>? aIFunctionsFactory = null, string? projectPath = null, string? projectName = null, bool isSubAgent = false, IWorkspace? workspace = null)
     {
         InitializeComponent();
         _webBrowsingService = new WebBrowsingService(WebBrowserHost, AuthorizeWebDomainAsync);
         _projectPath = projectPath;
         _projectName = projectName;
+        _workspace = workspace;
         _skillManager = SkillManager.ForProject(projectPath);
         _isSubAgent = isSubAgent;
         ToolCallFactories = aIFunctionsFactory;
@@ -231,6 +237,17 @@ public partial class AssistanceChatView : ContentView
 
         context = context.Replace("!SkillText!", skillBuilder.ToString());
 
+        string workspaceContext = string.Empty;
+        if (_workspace is not null
+            && _workspace.TryGetModule<AssistanceModule>(out var assistanceModule)
+            && assistanceModule is not null
+            && _workspace.State == WorkspaceState.Running)
+        {
+            var extensionContext = await assistanceModule.GetExtensionContextAsync(_sessionId);
+            if (extensionContext.Count > 0)
+                workspaceContext = $"{Environment.NewLine}## Workspace extensions{Environment.NewLine}{string.Join(Environment.NewLine + Environment.NewLine, extensionContext)}";
+        }
+
         var final =
             $"""
             {prompt}
@@ -238,6 +255,8 @@ public partial class AssistanceChatView : ContentView
             ---
 
             {context}
+
+            {workspaceContext}
 
             {SettingsManager.GetSetting("AISettings_ExtraPrompt", "")}
             """;
@@ -2481,11 +2500,54 @@ public partial class AssistanceChatView : ContentView
     /// 处理来自另一个 Agent 的传入消息：添加到聊天历史，调用 AI 回复，返回响应文本。
     /// 通过 SemaphoreSlim 串行化，避免与用户输入或其他传入消息并发冲突。
     /// </summary>
-    internal async Task<string> ReceiveMessageAsync(string fromAgentId, string content)
+    internal Task<string> ReceiveMessageAsync(
+        string fromAgentId,
+        string content,
+        CancellationToken cancellationToken = default)
     {
-        await _messageGate.WaitAsync();
+        var shortAgentId = fromAgentId.Length > 8 ? fromAgentId[..8] : fromAgentId;
+        return ReceiveExternalMessageAsync($"Agent [{shortAgentId}]", content, cancellationToken);
+    }
+
+    internal Task<string> ReceiveWorkspaceMessageAsync(
+        WorkspaceAssistanceMessageRequest request,
+        CancellationToken cancellationToken)
+        => ReceiveExternalMessageAsync(
+            $"Workspace module [{request.SourceModuleId}]",
+            request.Message,
+            cancellationToken);
+
+    private Task<string> ReceiveExternalMessageAsync(
+        string sender,
+        string content,
+        CancellationToken cancellationToken)
+    {
+        if (!MainThread.IsMainThread)
+        {
+            return MainThread.InvokeOnMainThreadAsync(
+                () => ReceiveExternalMessageCoreAsync(sender, content, cancellationToken));
+        }
+
+        return ReceiveExternalMessageCoreAsync(sender, content, cancellationToken);
+    }
+
+    private async Task<string> ReceiveExternalMessageCoreAsync(
+        string sender,
+        string content,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(content);
+        await _messageGate.WaitAsync(cancellationToken);
         try
         {
+            if (_isReplying)
+                throw new InvalidOperationException("The assistance session is already processing another message.");
+
+            _isReplying = true;
+            SkillRegistry.IsStreaming = true;
+            AISendButton.Text = Localized.AIAssistant_ChatView_Stop;
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
             if (!_chatHistory.Any())
             {
                 _chatHistory.Add(new AIChatMessage(ChatRole.System, await BuildSystemPromptAsync()));
@@ -2494,20 +2556,28 @@ public partial class AssistanceChatView : ContentView
             // 添加传入消息到 UI
             var incomingItem = new ChatMessageItem
             {
-                Sender = $"Agent [{fromAgentId[..8]}]",
+                Sender = sender,
                 Message = content,
                 IsUser = true,
             };
-            MainThread.BeginInvokeOnMainThread(() => _messages.Add(incomingItem));
+            _messages.Add(incomingItem);
             _chatHistory.Add(new AIChatMessage(ChatRole.User, content));
 
             // 流式 AI 回复
             string response = await StreamAndCaptureResponseAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+            StartSessionTitleGeneration(incomingItem);
 
             return response;
         }
         finally
         {
+            _isReplying = false;
+            SkillRegistry.IsStreaming = false;
+            AISendButton.Text = Localized.AIAssistant_ChatView_Send;
+            AISendButton.IsEnabled = true;
+            _cts?.Dispose();
+            _cts = null;
             _messageGate.Release();
         }
     }
@@ -2550,7 +2620,8 @@ public partial class AssistanceChatView : ContentView
             aIFunctionsFactory: ToolCallFactories,
             projectPath: _projectPath,
             projectName: _projectName,
-            isSubAgent: true);
+            isSubAgent: true,
+            workspace: _workspace);
 
         childView._subagentRole = subAgentRole;
         childView.AgentTitle = title;
@@ -2814,7 +2885,8 @@ public partial class AssistanceChatView : ContentView
             aIFunctionsFactory: ToolCallFactories,
             projectPath: _projectPath,
             projectName: _projectName,
-            isSubAgent: true)
+            isSubAgent: true,
+            workspace: _workspace)
         {
             AgentTitle = item.Title,
         };
@@ -3341,14 +3413,14 @@ public partial class AssistanceChatView : ContentView
         // 导航到新 session
         if (GetHostWindow() is MultiWindowItem host)
         {
-            host.NavigateTo(new AssistanceChatView(newSession.SessionId, ToolCallFactories, _projectPath));
+            host.NavigateTo(new AssistanceChatView(newSession.SessionId, ToolCallFactories, _projectPath, _projectName, workspace: _workspace));
         }
         else if (Window?.Page?.Navigation is INavigation nav)
         {
             // In NavigationPage pop-out mode: push the forked chat onto the navigation stack
             var cp = new ContentPage
             {
-                Content = new AssistanceChatView(newSession.SessionId, ToolCallFactories, _projectPath),
+                Content = new AssistanceChatView(newSession.SessionId, ToolCallFactories, _projectPath, _projectName, workspace: _workspace),
                 Title = ""
             };
             NavigationPage.SetHasNavigationBar(cp, false);
@@ -3544,7 +3616,10 @@ public partial class AssistanceChatView : ContentView
 
         if (GetHostWindow() is MultiWindowItem host)
         {
-            host.NavigateTo(new AssistanceChatSessionsView(_projectPath, _projectName));
+            host.NavigateTo(new AssistanceChatSessionsView(_projectPath, _projectName, _workspace)
+            {
+                GlobalToolCallFactories = ToolCallFactories
+            });
         }
         else if (Window?.Page?.Navigation is INavigation nav && nav.NavigationStack.Count > 1)
         {

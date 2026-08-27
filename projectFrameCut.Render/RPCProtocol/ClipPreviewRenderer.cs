@@ -11,13 +11,11 @@ namespace projectFrameCut.Render.RPCProtocol;
 
 internal static class ClipPreviewRenderer
 {
-    public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token)
+    public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode)
     {
         token.ThrowIfCancellationRequested();
         var sourceWidth = ResolveDimension(clip.TargetWidth, projectWidth, canvasWidth);
         var sourceHeight = ResolveDimension(clip.TargetHeight, projectHeight, canvasHeight);
-        var pixelMode = IPicture.PicturePixelMode.BytePicture;
-
         if (!ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
         {
             try

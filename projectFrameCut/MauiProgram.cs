@@ -493,6 +493,19 @@ namespace projectFrameCut
                        {
                            options.SetShouldEnableSnackbarOnWindows(false);
                        });
+                builder.ConfigureMauiHandlers(handlers =>
+                {
+#if WINDOWS
+                    handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Windows.ToggleButtonHandler>();
+                    handlers.AddHandler<projectFrameCut.Controls.HdrPreviewView, projectFrameCut.Platforms.Windows.HdrPreviewViewHandler>();
+#elif ANDROID
+                    handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Android.ToggleButtonHandler>();
+#elif IOS
+                    handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.iOS.ToggleButtonHandler>();
+#elif LINUX
+                    handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Linux.ToggleButtonHandler>();
+#endif
+                });
 #if MAUISDK && (ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER || IOS15_0_OR_GREATER)
                 builder.UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
                 {

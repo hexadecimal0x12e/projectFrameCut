@@ -1,6 +1,7 @@
-using projectFrameCut.ApplicationPluginBase.Text;
 using projectFrameCut.ApplicationAPIBase.Interaction;
+using projectFrameCut.ApplicationPluginBase.Text;
 using projectFrameCut.Asset;
+using projectFrameCut.Controls;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.ClipsAndTracks;
@@ -111,6 +112,9 @@ namespace projectFrameCut.InteractableEditor
         private readonly Dictionary<string, BoxView> _referenceLineVisuals = new(StringComparer.Ordinal);
         private Action? _manageReferenceLinesRequestedCallback;
         private Action<Color>? _defaultColorPickerRequestedCallback;
+        private Func<string, Task>? _previewResolutionChangedCallback;
+        private List<string> _previewResolutionOptions = [];
+        private bool _suppressPreviewResolutionChanged;
         private long _lastPreviewRefreshTick;
         private int _isPreviewRefreshRunning;
         private int _hasPendingPreviewRefresh;
@@ -126,11 +130,19 @@ namespace projectFrameCut.InteractableEditor
         private CancellationTokenSource? _commitUpdateDebounceCts;
         private readonly object _commitUpdateDebounceLock = new();
         private bool _autoHideBottomControls;
+        private bool _isPointerOverBottomControls;
+        private bool _autoHideInfoIndicator;
+        private bool _isPointerOverInfoIndicator;
+        private string? _infoIndicatorMessage;
+        private long _infoIndicatorRevealUntilTick;
         private CancellationTokenSource? _hideBottomControlsCts;
+        private CancellationTokenSource? _hideInfoIndicatorCts;
 
         private const int PreviewRefreshThrottleMs = 180;
         private const int CommitUpdateDebounceMs = 220;
         private const int OverlayTapBlankSuppressMs = 180;
+        private const int InfoIndicatorRevealMs = 5_000;
+        private const double InfoIndicatorIdleOpacity = 0.45d;
 
         #endregion
 
@@ -264,6 +276,8 @@ namespace projectFrameCut.InteractableEditor
             set => BottomControlsHost.IsVisible = value;
         }
 
+        public IReadOnlyList<string> PreviewResolutionOptions => _previewResolutionOptions;
+
         private static bool AreColorsClose(Color a, Color b) =>
             Math.Abs(a.Red - b.Red) < 0.004 &&
             Math.Abs(a.Green - b.Green) < 0.004 &&
@@ -290,7 +304,7 @@ namespace projectFrameCut.InteractableEditor
             PreviewOverlayImage.IsVisible = isVisible;
         }
 
-        #endregion
+#endregion
 
         #region ClipOverlayState
 
@@ -487,13 +501,24 @@ namespace projectFrameCut.InteractableEditor
 
             public void UpdateLayout(double displayX, double displayY, double displayW, double displayH, double logicalW, double logicalH, bool showHandles, bool showSizeLabel, string? sizeText, bool showClipVisual, Brush? clipStroke = null)
             {
+                // The editor's clip collection can be replaced while a draft is loading or a
+                // history snapshot is being applied. Prefer the current selection as a fallback
+                // so a transient collection mismatch cannot crash overlay layout.
+                _owner.Clips.TryGetValue(ClipId, out var clip);
+                if (clip is null && _owner._currentClip?.Id == ClipId)
+                {
+                    clip = _owner._currentClip;
+                }
+
                 Root.IsVisible = true;
                 AbsoluteLayout.SetLayoutBounds(Root, new Rect(displayX, displayY, displayW, displayH));
                 AbsoluteLayout.SetLayoutBounds(ClipVisual, new Rect(0, 0, displayW, displayH));
                 ClipVisual.IsVisible = _owner.ShowAllBorders || showClipVisual;
                 if (ClipVisual.IsVisible)
                 {
-                    ClipVisual.Stroke = (_owner.Clips[ClipId].ShowDefaultBorder || _owner.ShowAllBorders) ? (clipStroke ?? Colors.Yellow) : Colors.Transparent;
+                    ClipVisual.Stroke = (clip?.ShowDefaultBorder != false || _owner.ShowAllBorders)
+                        ? (clipStroke ?? Colors.Yellow)
+                        : Colors.Transparent;
                 }
                 UpdatePreviewHostLayout(displayW, displayH, logicalW, logicalH);
                 UpdateRootInputTransparency();
@@ -504,7 +529,9 @@ namespace projectFrameCut.InteractableEditor
                 AbsoluteLayout.SetLayoutBounds(HandleBL, new Rect(-handleSize / 2, displayH - handleSize / 2, handleSize, handleSize));
                 AbsoluteLayout.SetLayoutBounds(HandleBR, new Rect(displayW - handleSize / 2, displayH - handleSize / 2, handleSize, handleSize));
 
-                bool resizeHandleVisible = showHandles && (_owner.Clips[ClipId].IsHorizontalResizable || _owner.Clips[ClipId].IsVerticalResizable);
+                bool resizeHandleVisible = showHandles
+                    && clip is not null
+                    && (clip.IsHorizontalResizable || clip.IsVerticalResizable);
                 HandleTL.IsVisible = resizeHandleVisible;
                 HandleTR.IsVisible = resizeHandleVisible;
                 HandleBL.IsVisible = resizeHandleVisible;
@@ -921,6 +948,7 @@ namespace projectFrameCut.InteractableEditor
         {
             BindingContext = this;
             InitializeComponent();
+            ThicknessEntry.Text = DefaultReferenceLineThickness.ToString("F1");
 
             var canvasTap = new TapGestureRecognizer();
             canvasTap.Tapped += OnEditorCanvasTapped;
@@ -930,6 +958,12 @@ namespace projectFrameCut.InteractableEditor
             hoverPointer.PointerEntered += OnBottomControlsHostEntered;
             hoverPointer.PointerExited += OnBottomControlsHostExited;
             BottomControlsHost.GestureRecognizers.Add(hoverPointer);
+
+            var infoHoverPointer = new PointerGestureRecognizer();
+            infoHoverPointer.PointerEntered += OnInfoIndicatorEntered;
+            infoHoverPointer.PointerExited += OnInfoIndicatorExited;
+            InfoIndicatorHost.GestureRecognizers.Add(infoHoverPointer);
+
         }
 
 
@@ -944,6 +978,76 @@ namespace projectFrameCut.InteractableEditor
         {
             _previewRefreshCallback = refreshCallback;
             return this;
+        }
+
+        public InteractableEditor ConfigureInfoIndicator(bool isVisible, string? message)
+        {
+            void ApplyConfiguration()
+            {
+                _infoIndicatorMessage = message;
+                InfoDetailsLabel.Text = message ?? string.Empty;
+                InfoIndicatorHost.IsVisible = isVisible;
+                InfoIndicatorHost.Opacity = string.IsNullOrWhiteSpace(message)
+                    ? InfoIndicatorIdleOpacity
+                    : 1d;
+                SemanticProperties.SetDescription(InfoIndicatorHost,
+                    string.IsNullOrWhiteSpace(message) ? "Information" : message);
+
+                if (!isVisible)
+                {
+                    InfoDetailsOverlay.IsVisible = false;
+                    _isPointerOverInfoIndicator = false;
+                    _infoIndicatorRevealUntilTick = 0;
+                    CancelHideInfoIndicatorDebounce();
+                }
+                else
+                {
+                    _infoIndicatorRevealUntilTick = Environment.TickCount64 + InfoIndicatorRevealMs;
+                }
+
+                Dispatcher.Dispatch(() => UpdateBottomControlsVisibility(GetRenderRect()));
+            }
+
+            if (Dispatcher.IsDispatchRequired)
+            {
+                Dispatcher.Dispatch(ApplyConfiguration);
+            }
+            else
+            {
+                ApplyConfiguration();
+            }
+
+            return this;
+        }
+
+        public InteractableEditor ConfigurePreviewResolution(
+            IEnumerable<string> options,
+            string? selectedOption,
+            Func<string, Task>? changedCallback)
+        {
+            _previewResolutionOptions = options?.ToList() ?? [];
+            _previewResolutionChangedCallback = changedCallback;
+
+            _suppressPreviewResolutionChanged = true;
+            try
+            {
+                PreviewResolutionPicker.ItemsSource = _previewResolutionOptions;
+                PreviewResolutionPicker.SelectedItem = selectedOption;
+            }
+            finally
+            {
+                _suppressPreviewResolutionChanged = false;
+            }
+
+            return this;
+        }
+
+        public void SelectPreviewResolution(string option)
+        {
+            if (_previewResolutionOptions.Contains(option, StringComparer.Ordinal))
+            {
+                PreviewResolutionPicker.SelectedItem = option;
+            }
         }
 
         public InteractableEditor ConfigureOverlayClipTap(Func<Guid, Task>? tapCallback)
@@ -1057,6 +1161,8 @@ namespace projectFrameCut.InteractableEditor
         void IInteractableEditor.RestoreReferenceLines(string? json) => RestoreReferenceLinesFromJson(json);
         IInteractableEditor IInteractableEditor.ConfigurePreviewRefresh(Func<Task>? callback)
             => ConfigurePreviewRefresh(callback);
+        IInteractableEditor IInteractableEditor.ConfigureInfoIndicator(bool isVisible, string? message)
+            => ConfigureInfoIndicator(isVisible, message);
         IInteractableEditor IInteractableEditor.ConfigureElementClicked(InteractiveElementClickedHandler? callback)
             => ConfigureOverlayClipTap(callback is null ? null : id => callback(id));
         IInteractableEditor IInteractableEditor.ConfigureBlankAreaClicked(Func<Task>? callback)
@@ -2161,11 +2267,17 @@ namespace projectFrameCut.InteractableEditor
 
             var content = state.PreviewHost.Content;
             var contentType = content?.GetType().Name ?? "null";
+            var nativeContentType = content?.Handler?.PlatformView?.GetType().Name ?? "null";
             var contentDebugTag = content?.AutomationId;
             var shortClipId = clipId.ToString().Length > 8 ? clipId.ToString()[..8] : clipId.ToString();
-            var info = $"dbg:{shortClipId} view:{state.HasPreviewView}/{state.PreviewHost.IsVisible} show:{ShouldShowPreviewHost(state)} sup:{ShouldSuppressPreviewForResize(clipId)}"
+            var info =
+                clipId.ToString()
                 + Environment.NewLine
-                + $"L:{Math.Round(logicalW)}x{Math.Round(logicalH)} D:{Math.Round(displayW)}x{Math.Round(displayH)} T:{contentType}";
+                + $"view:{state.HasPreviewView}/{state.PreviewHost.IsVisible} show:{ShouldShowPreviewHost(state)} sup:{ShouldSuppressPreviewForResize(clipId)}"
+                + Environment.NewLine
+                + $"L:{Math.Round(logicalW)}x{Math.Round(logicalH)} D:{Math.Round(displayW)}x{Math.Round(displayH)}"
+                + Environment.NewLine
+                + $"T:{contentType} N:{nativeContentType}";
 
             if (!string.IsNullOrWhiteSpace(contentDebugTag))
             {
@@ -2199,6 +2311,39 @@ namespace projectFrameCut.InteractableEditor
         [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         public bool ApplyPreparedPreviews(IReadOnlyList<PreparedPreview> preparedPreviews)
         {
+            var canvasPreview = preparedPreviews.FirstOrDefault(static preview => preview.IsCanvasPreview);
+            if (canvasPreview is not null)
+            {
+                foreach (var state in _clipStates.Values)
+                {
+                    state.SetPreviewView(null);
+                    state.RefreshPreviewVisibility();
+                }
+                _previewSourceClips.Clear();
+
+                var canvasView = canvasPreview.View;
+                if (LivePreviewerHost.Content is HdrPreviewView existingHdr && canvasView is HdrPreviewView incomingHdr)
+                {
+                    existingHdr.Frame = incomingHdr.Frame;
+                    canvasView = existingHdr;
+                }
+                else if (LivePreviewerHost.Content is Image existingImage && canvasView is Image incomingImage)
+                {
+                    existingImage.Source = incomingImage.Source;
+                    existingImage.Aspect = incomingImage.Aspect;
+                    canvasView = existingImage;
+                }
+                SetRealtimePreviewContent(canvasView);
+                LivePreviewerHost.IsVisible = canvasView is not null;
+                PreviewOverlayImage.IsVisible = false;
+                return canvasView is not null;
+            }
+
+            if (LivePreviewerHost.Content?.AutomationId == "DynamicPreview.SingleCanvas")
+            {
+                SetRealtimePreviewContent(null);
+            }
+
             if (preparedPreviews.Count == 0)
             {
                 if (IsInteractiveManipulationInProgress)
@@ -2744,7 +2889,7 @@ namespace projectFrameCut.InteractableEditor
             return _currentFrame >= clipStartFrame && _currentFrame < clipEndFrame;
         }
 
-        #endregion
+#endregion
 
         #region gesture handlers
 
@@ -3972,6 +4117,41 @@ namespace projectFrameCut.InteractableEditor
             }
         }
 
+        private void OptionsButton_Clicked(object sender, EventArgs e)
+        {
+            OptionsOverlay.IsVisible = true;
+        }
+
+        private void CloseOptionsButton_Clicked(object sender, EventArgs e)
+        {
+            OptionsOverlay.IsVisible = false;
+        }
+
+        private void OptionsOverlayBackground_Clicked(object sender, EventArgs e)
+        {
+            OptionsOverlay.IsVisible = false;
+        }
+
+        private async void PreviewResolutionPicker_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_suppressPreviewResolutionChanged
+                || PreviewResolutionPicker.SelectedItem is not string selected
+                || _previewResolutionChangedCallback is null)
+            {
+                return;
+            }
+
+            PreviewResolutionPicker.IsEnabled = false;
+            try
+            {
+                await _previewResolutionChangedCallback(selected);
+            }
+            finally
+            {
+                PreviewResolutionPicker.IsEnabled = true;
+            }
+        }
+
         private void OnDefaultColorSwatchTapped(object? sender, EventArgs e)
         {
             _defaultColorPickerRequestedCallback?.Invoke(_defaultReferenceLineColor);
@@ -4200,6 +4380,7 @@ namespace projectFrameCut.InteractableEditor
 
         private void ManageRefLineButton_Clicked(object sender, EventArgs e)
         {
+            OptionsOverlay.IsVisible = false;
             _manageReferenceLinesRequestedCallback?.Invoke();
         }
 
@@ -4224,68 +4405,189 @@ namespace projectFrameCut.InteractableEditor
         private void UpdateBottomControlsVisibility(Rect renderRect)
         {
             var bottomGap = _canvasHeight - (renderRect.Y + renderRect.Height);
-            _autoHideBottomControls = bottomGap < 35d;
+            var leftGap = renderRect.X;
+            var rightGap = _canvasWidth - (renderRect.X + renderRect.Width);
+            var controlsWidth = BottomControlsHost.Width;
+            var hasControlsHorizontalRoom = controlsWidth > 0d
+                && rightGap >= controlsWidth + BottomControlsHost.Margin.Right;
+            var infoIndicatorWidth = InfoIndicatorHost.Width > 0d
+                ? InfoIndicatorHost.Width
+                : InfoIndicatorHost.WidthRequest;
+            var infoIndicatorHeight = InfoIndicatorHost.Height > 0d
+                ? InfoIndicatorHost.Height
+                : InfoIndicatorHost.HeightRequest;
+            var hasInfoHorizontalRoom = infoIndicatorWidth > 0d
+                && leftGap >= infoIndicatorWidth + InfoIndicatorHost.Margin.Left;
+            var hasInfoVerticalRoom = infoIndicatorHeight > 0d
+                && bottomGap >= infoIndicatorHeight + InfoIndicatorHost.Margin.Bottom;
+
+            // Keep the controls visible whenever they fit beside or below the preview.
+            // Only fall back to hover-to-show when both directions would overlap it.
+            _autoHideBottomControls = bottomGap < 35d && !hasControlsHorizontalRoom;
+            _autoHideInfoIndicator = !hasInfoVerticalRoom && !hasInfoHorizontalRoom;
 
             Dispatcher.Dispatch(() =>
             {
                 if (!_autoHideBottomControls)
                 {
                     CancelHideBottomControlsDebounce();
-                    LayoutOptionsBar.IsVisible = true;
-                    RefreshButton.IsVisible = true;
-                    ManageRefLineButton.IsVisible = true;
+                    BottomControlsHost.Opacity = 1d;
                 }
-                else
+                else if (!_isPointerOverBottomControls)
                 {
-                    // 默认隐藏，鼠标进入 BottomControlsHost 区域时才显示
-                    LayoutOptionsBar.IsVisible = false;
-                    RefreshButton.IsVisible = false;
-                    ManageRefLineButton.IsVisible = false;
+                    BottomControlsHost.Opacity = 0d;
+                }
 
+                if (!InfoIndicatorHost.IsVisible)
+                {
+                    CancelHideInfoIndicatorDebounce();
+                    InfoDetailsOverlay.IsVisible = false;
+                }
+                else if (!_autoHideInfoIndicator)
+                {
+                    CancelHideInfoIndicatorDebounce();
+                    InfoIndicatorHost.Opacity = GetInfoIndicatorVisibleOpacity();
+                }
+                else if (!_isPointerOverInfoIndicator)
+                {
+                    var revealRemainingMs = _infoIndicatorRevealUntilTick - Environment.TickCount64;
+                    if (revealRemainingMs > 0)
+                    {
+                        InfoIndicatorHost.Opacity = GetInfoIndicatorVisibleOpacity();
+                        ScheduleInfoIndicatorHide((int)Math.Min(int.MaxValue, revealRemainingMs));
+                    }
+                    else
+                    {
+                        InfoIndicatorHost.Opacity = 0d;
+                    }
                 }
             });
         }
 
-        private void OnBottomControlsHostEntered(object? sender, PointerEventArgs e)
+        private void OnBottomControlsHostSizeChanged(object? sender, EventArgs e)
         {
-            if (!_autoHideBottomControls)
+            if (_videoWidth > 0d && _videoHeight > 0d && _canvasWidth > 0d && _canvasHeight > 0d)
             {
-                return;
+                UpdateBottomControlsVisibility(GetRenderRect());
             }
-
-            CancelHideBottomControlsDebounce();
-            LayoutOptionsBar.IsVisible = true;
-            RefreshButton.IsVisible = true;
-            ManageRefLineButton.IsVisible = true;
         }
 
-        private async void OnBottomControlsHostExited(object? sender, PointerEventArgs e)
+        private void OnBottomControlsHostEntered(object? sender, PointerEventArgs e)
         {
+            _isPointerOverBottomControls = true;
+            CancelHideBottomControlsDebounce();
+            BottomControlsHost.Opacity = 1d;
+        }
+
+        private void OnBottomControlsHostExited(object? sender, PointerEventArgs e)
+        {
+            _isPointerOverBottomControls = false;
             if (!_autoHideBottomControls)
             {
                 return;
             }
 
+            ScheduleBottomControlsHide(250);
+        }
+
+        private void OnInfoIndicatorEntered(object? sender, PointerEventArgs e)
+        {
+            _isPointerOverInfoIndicator = true;
+            CancelHideInfoIndicatorDebounce();
+            InfoIndicatorHost.Opacity = GetInfoIndicatorVisibleOpacity();
+            InfoDetailsOverlay.IsVisible = !string.IsNullOrWhiteSpace(_infoIndicatorMessage);
+        }
+
+        private void OnInfoIndicatorExited(object? sender, PointerEventArgs e)
+        {
+            _isPointerOverInfoIndicator = false;
+            InfoDetailsOverlay.IsVisible = false;
+            if (_autoHideInfoIndicator)
+            {
+                _infoIndicatorRevealUntilTick = 0;
+                ScheduleInfoIndicatorHide(250);
+            }
+        }
+
+        private double GetInfoIndicatorVisibleOpacity() =>
+            string.IsNullOrWhiteSpace(_infoIndicatorMessage) ? InfoIndicatorIdleOpacity : 1d;
+
+        private void ScheduleBottomControlsHide(int delayMs)
+        {
             CancelHideBottomControlsDebounce();
             var cts = new CancellationTokenSource();
             _hideBottomControlsCts = cts;
+            _ = HideBottomControlsAfterDelayAsync(delayMs, cts);
+        }
 
+        private async Task HideBottomControlsAfterDelayAsync(int delayMs, CancellationTokenSource cts)
+        {
             try
             {
-                await Task.Delay(250, cts.Token);
-                LayoutOptionsBar.IsVisible = false;
-                RefreshButton.IsVisible = false;
-                ManageRefLineButton.IsVisible = false;
+                await Task.Delay(Math.Max(0, delayMs), cts.Token);
+                if (!_isPointerOverBottomControls && _autoHideBottomControls)
+                {
+                    BottomControlsHost.Opacity = 0d;
+                }
             }
             catch (OperationCanceledException)
             {
-                // 鼠标在延迟期间重新进入，取消隐藏
+                // 鼠标在延迟期间重新进入，取消隐藏。
+            }
+            finally
+            {
+                if (ReferenceEquals(Interlocked.CompareExchange(ref _hideBottomControlsCts, null, cts), cts))
+                {
+                    cts.Dispose();
+                }
+            }
+        }
+
+        private void ScheduleInfoIndicatorHide(int delayMs)
+        {
+            CancelHideInfoIndicatorDebounce();
+            var cts = new CancellationTokenSource();
+            _hideInfoIndicatorCts = cts;
+            _ = HideInfoIndicatorAfterDelayAsync(delayMs, cts);
+        }
+
+        private async Task HideInfoIndicatorAfterDelayAsync(int delayMs, CancellationTokenSource cts)
+        {
+            try
+            {
+                await Task.Delay(Math.Max(0, delayMs), cts.Token);
+                if (!_isPointerOverInfoIndicator && _autoHideInfoIndicator)
+                {
+                    InfoIndicatorHost.Opacity = 0d;
+                    InfoDetailsOverlay.IsVisible = false;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // 鼠标在延迟期间重新进入，取消隐藏。
+            }
+            finally
+            {
+                if (ReferenceEquals(Interlocked.CompareExchange(ref _hideInfoIndicatorCts, null, cts), cts))
+                {
+                    cts.Dispose();
+                }
             }
         }
 
         private void CancelHideBottomControlsDebounce()
         {
             var cts = Interlocked.Exchange(ref _hideBottomControlsCts, null);
+            if (cts is not null)
+            {
+                cts.Cancel();
+                cts.Dispose();
+            }
+        }
+
+        private void CancelHideInfoIndicatorDebounce()
+        {
+            var cts = Interlocked.Exchange(ref _hideInfoIndicatorCts, null);
             if (cts is not null)
             {
                 cts.Cancel();

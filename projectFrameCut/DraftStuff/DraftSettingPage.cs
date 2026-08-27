@@ -441,7 +441,7 @@ public class DraftSettingPage
             };
 
             Guid targetSlot = item.SnapshotID;
-            applyButton.Clicked += (_, _) => ApplyHistorySlot(targetSlot);
+            applyButton.Clicked += async (_, _) => await ApplyHistorySlot(targetSlot);
 
             var titleRow = new Grid
             {
@@ -464,12 +464,12 @@ public class DraftSettingPage
         return new ScrollView { Content = root };
     }
 
-    private void ApplyHistorySlot(Guid snapshotId)
+    private async Task ApplyHistorySlot(Guid snapshotId)
     {
         try
         {
             parent.SetStateBusy(Localized.DraftPage_ApplyingChanges);
-            parent.ApplySlot(snapshotId);
+            await parent.ApplySlot(snapshotId);
             tabView.SelectedItem.Content = BuildHistoryGraphTab();
         }
         catch (Exception ex)

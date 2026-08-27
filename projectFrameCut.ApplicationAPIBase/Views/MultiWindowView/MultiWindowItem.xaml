@@ -4,50 +4,75 @@
              xmlns:l="clr-namespace:projectFrameCut.ApplicationAPIBase.Localize"
              xmlns:local="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView"
              x:Class="projectFrameCut.ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem" 
-             x:Name="Self">
+             x:Name="Self"
+             Title="{DynamicResource MultiWindowItemDefaultTitle}"
+             WidthRequest="{DynamicResource MultiWindowItemDefaultWidth}"
+             HeightRequest="{DynamicResource MultiWindowItemDefaultHeight}"
+             DefaultWindowWidth="{DynamicResource MultiWindowItemDefaultWidth}"
+             DefaultWindowHeight="{DynamicResource MultiWindowItemDefaultHeight}"
+             MinimumWindowWidth="{DynamicResource MultiWindowItemMinimumWidth}"
+             MinimumWindowHeight="{DynamicResource MultiWindowItemMinimumHeight}"
+             MinimizedWindowHeight="{DynamicResource MultiWindowItemMinimizedHeight}"
+             TitleBarHeight="{DynamicResource MultiWindowItemTitleBarHeight}"
+             ResizeHandleSize="{DynamicResource MultiWindowItemResizeHandleSize}"
+             WindowCornerRadius="{DynamicResource MultiWindowItemCornerRadius}">
 
 
     <ContentView.ControlTemplate>
         <ControlTemplate>
-            <Grid BackgroundColor="Transparent" Padding="5">
-                <Grid.Resources>
-                    <Style x:Key="WindowButtonStyle" TargetType="Border">
-                        <Setter Property="WidthRequest" Value="24"/>
-                        <Setter Property="HeightRequest" Value="24"/>
-                        <Setter Property="StrokeShape" Value="RoundRectangle 4"/>
-                        <Setter Property="BackgroundColor" Value="Transparent"/>
-                        <Setter Property="Stroke" Value="Transparent"/>
-                        <Setter Property="VerticalOptions" Value="Center"/>
-                    </Style>
-                </Grid.Resources>
-                
-                <!-- 
-                    The Visible Window
-                    Background is the deep teal color from the image.
-                -->
+            <Grid BackgroundColor="Transparent" Padding="{DynamicResource MultiWindowItemOuterPadding}">
                 <Border x:Name="VisualRoot"
-                        Stroke="{AppThemeBinding Dark=Black, Light=#cccccc}"
-                        StrokeThickness="1"
-                        StrokeShape="RoundRectangle 10"
-                        BackgroundColor="{AppThemeBinding Dark=#262D3D, Light=#eff4f7}"
+                        Stroke="{AppThemeBinding Light={StaticResource MultiWindowItemBorderColorLight}, Dark={StaticResource MultiWindowItemBorderColorDark}}"
+                        StrokeThickness="{DynamicResource MultiWindowItemBorderThickness}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource MultiWindowItemBackgroundColorLight}, Dark={StaticResource MultiWindowItemBackgroundColorDark}}"
                         VerticalOptions="Fill"
                         HorizontalOptions="Fill">
+                    <Border.StrokeShape>
+                        <RoundRectangle />
+                    </Border.StrokeShape>
                     
-                    <Grid RowDefinitions="32, *">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="0" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
                         
                         <!-- Title Bar Region -->
                         <!-- We add a PanGestureRecognizer in Code-behind to this Grid for moving -->
-                        <Grid x:Name="TitleBarGrid" Grid.Row="0" ColumnDefinitions="Auto, *, Auto" BackgroundColor="Transparent">
+                        <Grid x:Name="TitleBarGrid" Grid.Row="0" ColumnDefinitions="Auto, *, Auto" BackgroundColor="{DynamicResource MultiWindowItemTitleBarBackgroundColor}">
+
+                            <!--
+                                Dedicated drag surface for the non-interactive middle column.
+                                Keeping recognizers off TitleBarGrid prevents them from competing
+                                with the navigation and window-control buttons.
+                            -->
+                            <Grid x:Name="TitleBarDragRegion"
+                                  Grid.Column="1"
+                                  BackgroundColor="Transparent">
+                                <!--
+                                    Keep the title inside the drag surface. An input-transparent
+                                    sibling above the surface does not reliably fall through to
+                                    an overlapping sibling on every platform.
+                                -->
+                                <Label Style="{DynamicResource MultiWindowItemTitleStyle}"
+                                       InputTransparent="True"
+                                       Text="{TemplateBinding Title}"
+                                       ToolTipProperties.Text="{TemplateBinding Title}"
+                                       TextColor="{AppThemeBinding Light={StaticResource MultiWindowItemTitleTextColorLight}, Dark={StaticResource MultiWindowItemTitleTextColorDark}}"
+                                       Margin="{DynamicResource MultiWindowItemTitleMargin}"/>
+                            </Grid>
 
                             <!-- Navigation Controls -->
                             <HorizontalStackLayout Grid.Column="0" Spacing="2" Margin="5,0,-5,0" VerticalOptions="Center"
+                                                   InputTransparent="True"
+                                                   CascadeInputTransparent="False"
                                                    IsVisible="{TemplateBinding IsNavigationVisible}">
                                 <!-- Back Button -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="BackBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_GoBack}">
+                                <Border Style="{DynamicResource MultiWindowItemWindowButtonStyle}" x:Name="BackBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_GoBack}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnBackTapped"/>
                                     </Border.GestureRecognizers>
-                                    <Label Text="◄" TextColor="{AppThemeBinding Dark=White, Light=#333333}" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12"/>
+                                    <Label Text="◄" InputTransparent="True" TextColor="{AppThemeBinding Dark=White, Light=#333333}" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12"/>
                                     <Border.Triggers>
                                         <DataTrigger TargetType="Border" Binding="{Binding CanGoBack, Source={x:Reference Self}}" Value="False">
                                             <Setter Property="Opacity" Value="0.3"/>
@@ -57,11 +82,11 @@
                                 </Border>
 
                                 <!-- Forward Button -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="ForwardBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_GoForward}" IsVisible="{TemplateBinding AllowGoForward}">
+                                <Border Style="{DynamicResource MultiWindowItemWindowButtonStyle}" x:Name="ForwardBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_GoForward}" IsVisible="{TemplateBinding AllowGoForward}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnForwardTapped"/>
                                     </Border.GestureRecognizers>
-                                    <Label Text="►" TextColor="{AppThemeBinding Dark=White, Light=#333333}" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12"/>
+                                    <Label Text="►" InputTransparent="True" TextColor="{AppThemeBinding Dark=White, Light=#333333}" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12"/>
                                     <Border.Triggers>
                                         <DataTrigger TargetType="Border" Binding="{Binding CanGoForward, Source={x:Reference Self}}" Value="False">
                                             <Setter Property="Opacity" Value="0.3"/>
@@ -71,65 +96,59 @@
                                 </Border>
                             </HorizontalStackLayout>
                             
-                            <!-- Title Text -->
-                            <Label Grid.Column="1"
-                                   InputTransparent="True"
-                                   Text="{TemplateBinding Title}"
-                                   ToolTipProperties.Text="{TemplateBinding Title}"
-                                   TextColor="{AppThemeBinding Dark=White, Light=#1a1a1a}"
-                                   FontSize="14"
-                                   VerticalOptions="Center"
-                                   Margin="10,0,0,0"
-                                   LineBreakMode="TailTruncation"/>
-                            
                             <!-- Window Controls: Min, Max, Close -->
-                            <HorizontalStackLayout Grid.Column="2"  Spacing="4" Margin="0,0,8,0">
+                            <HorizontalStackLayout Grid.Column="2"
+                                                   Spacing="4"
+                                                   Margin="0,0,8,0"
+                                                   InputTransparent="True"
+                                                   CascadeInputTransparent="False">
                                 
                                 <!-- Dock Button (Return to MDI) -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="DockBtn" IsVisible="False" ToolTipProperties.Text="Back to container">
+                                <Border Style="{DynamicResource MultiWindowItemWindowButtonStyle}" x:Name="DockBtn" IsVisible="False" ToolTipProperties.Text="Back to container">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnDockTapped"/>
                                     </Border.GestureRecognizers>
-                                    <Label Text="↙" TextColor="#40FF40" HorizontalOptions="Center" VerticalOptions="Center" FontSize="14"/>
+                                    <Label Text="↙" InputTransparent="True" TextColor="#40FF40" HorizontalOptions="Center" VerticalOptions="Center" FontSize="14"/>
                                 </Border>
 
                                 <!-- PopOut Button (Open in New Window) -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="PopOutBtn" IsVisible="False" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_PopOut}">
+                                <Border Style="{DynamicResource MultiWindowItemWindowButtonStyle}" x:Name="PopOutBtn" IsVisible="False" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_PopOut}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnPopOutTapped"/>
                                     </Border.GestureRecognizers>
-                                    <Label Text="↗" TextColor="#40FF40" HorizontalOptions="Center" VerticalOptions="Center" FontSize="14"/>
+                                    <Label Text="↗" InputTransparent="True" TextColor="#40FF40" HorizontalOptions="Center" VerticalOptions="Center" FontSize="14"/>
                                 </Border>
 
                                 <!-- Minimize Button -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="MinimizeBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_Minimize}">
+                                <Border Style="{DynamicResource MultiWindowItemWindowButtonStyle}" x:Name="MinimizeBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_Minimize}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnMinimizeTapped"/>
                                     </Border.GestureRecognizers>
-                                    <Label Text="—" TextColor="#A060F0" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold"/>
+                                    <Label Text="—" InputTransparent="True" TextColor="#A060F0" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold"/>
                                 </Border>
 
                                 <!-- Maximize/Restore Button -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="MaximizeBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_Maximize}">
+                                <Border Style="{DynamicResource MultiWindowItemWindowButtonStyle}" x:Name="MaximizeBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_Maximize}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnMaximizeTapped"/>
                                     </Border.GestureRecognizers>
-                                    <Label Text="☐" TextColor="#4080FF" HorizontalOptions="Center" VerticalOptions="Center" FontSize="16"/>
+                                    <Label Text="☐" InputTransparent="True" TextColor="#4080FF" HorizontalOptions="Center" VerticalOptions="Center" FontSize="16"/>
                                 </Border>
 
                                 <!-- Close Button -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="CloseBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_Close}">
+                                <Border Style="{DynamicResource MultiWindowItemWindowButtonStyle}" x:Name="CloseBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_Close}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnCloseTapped"/>
                                     </Border.GestureRecognizers>
-                                    <Label Text="✕" TextColor="#FF4040" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold"/>
+                                    <Label Text="✕" InputTransparent="True" TextColor="#FF4040" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold"/>
                                 </Border>
                             </HorizontalStackLayout>
                             
                         </Grid>
 
                         <!-- Separator -->
-                        <BoxView Grid.Row="0" VerticalOptions="End" HeightRequest="1" InputTransparent="True" Color="{AppThemeBinding Dark=#15ffffff, Light=#20000000}"/>
+                        <BoxView Grid.Row="0" VerticalOptions="End" HeightRequest="1" InputTransparent="True"
+                                 Color="{AppThemeBinding Light={StaticResource MultiWindowItemTitleBarSeparatorColorLight}, Dark={StaticResource MultiWindowItemTitleBarSeparatorColorDark}}"/>
 
                         <!-- Content Area -->
                         <ContentPresenter Grid.Row="1" />

@@ -12,6 +12,7 @@ using static SettingManager.SettingsManager;
 using projectFrameCut.Shared;
 using projectFrameCut.Services;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.LivePreview;
 
 public partial class EditSettingPage : ContentPage
 {
@@ -30,6 +31,17 @@ public partial class EditSettingPage : ContentPage
         { SettingLocalizedResources.Edit_ProxyOption_Always, "always" },
         { SettingLocalizedResources.Edit_ProxyOption_Never, "never" },
 
+    };
+    public readonly Dictionary<string, string> PreviewOutputModeStringMapping = new Dictionary<string, string>
+    {
+        { nameof(NativePreviewOutputMode.Disabled), nameof(NativePreviewOutputMode.Disabled) },
+        { nameof(NativePreviewOutputMode.Automatic), nameof(NativePreviewOutputMode.Automatic) },
+        { nameof(NativePreviewOutputMode.Required), nameof(NativePreviewOutputMode.Required) },
+    };
+    public readonly Dictionary<string, string> PreviewCompositionModeStringMapping = new Dictionary<string, string>
+    {
+        { nameof(NativePreviewCompositionMode.SingleCanvas), nameof(NativePreviewCompositionMode.SingleCanvas) },
+        { nameof(NativePreviewCompositionMode.PerClip), nameof(NativePreviewCompositionMode.PerClip) },
     };
     public readonly Dictionary<string, string> OrderOptionStringMapping = new Dictionary<string, string>
     {
@@ -401,6 +413,12 @@ public partial class EditSettingPage : ContentPage
 
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_PreviewOption, SettingLocalizedResources.Edit_PreviewOption_Subtitle))
             .AddSwitch("Edit_UseDynamicPreview", SettingLocalizedResources.Edit_UseDynamicPreview, IsBoolSettingTrue("Edit_UseDynamicPreview"), null)
+            .AddPicker("Edit_PreviewOutputMode", "Preview output mode", PreviewOutputModeStringMapping.Keys.ToArray(),
+                PreviewOutputModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Automatic)),
+                    new KeyValuePair<string, string>(nameof(NativePreviewOutputMode.Automatic), nameof(NativePreviewOutputMode.Automatic))).Key, null)
+            .AddPicker("Edit_PreviewCompositionMode", "Preview composition mode", PreviewCompositionModeStringMapping.Keys.ToArray(),
+                PreviewCompositionModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreviewCompositionMode", nameof(NativePreviewCompositionMode.SingleCanvas)),
+                    new KeyValuePair<string, string>(nameof(NativePreviewCompositionMode.SingleCanvas), nameof(NativePreviewCompositionMode.SingleCanvas))).Key, null)
             .AppendWhen(IsBoolSettingTrue("Edit_UseDynamicPreview"),
                 c => c.AddEntry("Edit_DynamicPreviewResolutionDivisor", SettingLocalizedResources.Edit_DynamicPreviewResolutionDivisor, GetSetting("Edit_DynamicPreviewResolutionDivisor", "1"), "1")
                       .AddEntry("Edit_DynamicPreviewTimeout", SettingLocalizedResources.Edit_DynamicPreviewTimeout, GetSetting("Edit_DynamicPreviewTimeout", "5000"), "5000")
@@ -448,6 +466,21 @@ public partial class EditSettingPage : ContentPage
                         var mode = ProxyStringMapping.FirstOrDefault(k => k.Key == args.Value as string,
                                                  new KeyValuePair<string, string>("ask", "ask")).Value;
                         WriteSetting("Edit_ProxyOption", mode);
+                        return;
+                    }
+
+                case "Edit_PreviewOutputMode":
+                    {
+                        var mode = PreviewOutputModeStringMapping.FirstOrDefault(k => k.Key == args.Value as string,
+                            new KeyValuePair<string, string>(nameof(NativePreviewOutputMode.Automatic), nameof(NativePreviewOutputMode.Automatic))).Value;
+                        WriteSetting(args.Id, mode);
+                        return;
+                    }
+                case "Edit_PreviewCompositionMode":
+                    {
+                        var mode = PreviewCompositionModeStringMapping.FirstOrDefault(k => k.Key == args.Value as string,
+                            new KeyValuePair<string, string>(nameof(NativePreviewCompositionMode.SingleCanvas), nameof(NativePreviewCompositionMode.SingleCanvas))).Value;
+                        WriteSetting(args.Id, mode);
                         return;
                     }
 

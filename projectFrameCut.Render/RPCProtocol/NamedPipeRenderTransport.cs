@@ -39,11 +39,16 @@ public sealed class NamedPipeRenderClientTransport : IRenderTransport
 
         try
         {
+            var payload = RenderRpcSerializer.Serialize(request);
             await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
+                // Cancellation is safe while waiting for the write gate, but not after a framed
+                // message has started. Interrupting between the length prefix and payload leaves
+                // the shared byte stream misaligned for every subsequent request.
+                cancellationToken.ThrowIfCancellationRequested();
                 var pipe = _pipe ?? throw new RenderPipeException("Render server pipe is not connected.");
-                await RenderPipeFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(request), cancellationToken).ConfigureAwait(false);
+                await RenderPipeFrame.WriteAsync(pipe, payload, CancellationToken.None).ConfigureAwait(false);
             }
             finally
             {

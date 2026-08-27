@@ -297,6 +297,16 @@ public sealed class RenderArtifact
     [ProtoMember(9)] public double FrameRate { get; set; }
     [ProtoMember(10)] public bool CacheHit { get; set; }
     [ProtoMember(11)] public bool IsPreview { get; set; }
+    [ProtoMember(12)] public PreviewPixelFormat PixelFormat { get; set; } = PreviewPixelFormat.EncodedImage;
+    [ProtoMember(13)] public int Stride { get; set; }
+    [ProtoMember(14)] public string ColorSpace { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public enum PreviewPixelFormat
+{
+    [ProtoEnum] EncodedImage = 0,
+    [ProtoEnum] Rgba16FloatScRgb = 1,
 }
 
 [ProtoContract]
@@ -306,6 +316,7 @@ public sealed class TimelineFrameRequest
     [ProtoMember(2)] public uint FrameIndex { get; set; }
     [ProtoMember(3)] public int Width { get; set; }
     [ProtoMember(4)] public int Height { get; set; }
+    [ProtoMember(5)] public PreviewPixelFormat PreferredPixelFormat { get; set; } = PreviewPixelFormat.EncodedImage;
 }
 
 [ProtoContract]
@@ -318,6 +329,7 @@ public sealed class ClipPreviewRequest
     [ProtoMember(5)] public int CanvasHeight { get; set; }
     [ProtoMember(6)] public int ProjectWidth { get; set; }
     [ProtoMember(7)] public int ProjectHeight { get; set; }
+    [ProtoMember(8)] public PreviewPixelFormat PreferredPixelFormat { get; set; } = PreviewPixelFormat.EncodedImage;
 }
 
 [ProtoContract]

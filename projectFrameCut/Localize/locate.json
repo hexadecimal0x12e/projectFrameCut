@@ -9080,6 +9080,22 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_PreviewMode",
+        "Value": "\u9884\u89C8\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "InteractableEditor_ReferenceLine",
+        "Value": "\u53C2\u8003\u7EBF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [

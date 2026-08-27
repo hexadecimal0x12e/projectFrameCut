@@ -8,6 +8,9 @@
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:converters="clr-namespace:projectFrameCut.Converters"
+             MinimumWidthRequest="300"
+             MinimumHeightRequest="220"
+             Padding="4"
              x:DataType="viewmodels:ProjectAddClipViewModel">
     <ContentView.Resources>
         <ResourceDictionary>
@@ -28,24 +31,50 @@
     <tv:TabbedView x:Name="MainTabView" x:FieldModifier="public">
         <tv:TabbedView.HeaderRightContent>
             <HorizontalStackLayout Spacing="8" VerticalOptions="Center" Margin="0,2,0,2">
-                <Picker x:Name="OrderOptionPicker"
-                        WidthRequest="130"
-                        BackgroundColor="Transparent"
-                        TextColor="{AppThemeBinding Light=#111827, Dark=#F3F4F6}"
-                        SelectedIndex="{Binding OrderOption}">
-                    <Picker.Items>
-                        <l:Localized Key="AssetPage_OrderBy_AddDate"/>
-                        <l:Localized Key="AssetPage_OrderBy_Name"/>
-                    </Picker.Items>
-                </Picker>
+                <Grid x:Name="OrderOptionContainer">
+                    <Button x:Name="OrderOptionExpandButton"
+                            Text="⇅"
+                            FontSize="18"
+                            WidthRequest="38"
+                            HeightRequest="34"
+                            Padding="0"
+                            CornerRadius="6"
+                            ToolTipProperties.Text="{l:Localized Key=AssetPage_OrderBy_AddDate}"
+                            Clicked="OnOrderOptionExpandButtonClicked"/>
+                    <Picker x:Name="OrderOptionPicker"
+                            IsVisible="False"
+                            WidthRequest="130"
+                            BackgroundColor="Transparent"
+                            TextColor="{AppThemeBinding Light=#111827, Dark=#F3F4F6}"
+                            SelectedIndex="{Binding OrderOption}"
+                            SelectedIndexChanged="OnOrderOptionPickerSelectedIndexChanged">
+                        <Picker.Items>
+                            <l:Localized Key="AssetPage_OrderBy_AddDate"/>
+                            <l:Localized Key="AssetPage_OrderBy_Name"/>
+                        </Picker.Items>
+                    </Picker>
+                </Grid>
 
-                <SearchBar Placeholder="{l:Localized Key=DraftPage_AddClipView_Search}"
-                           x:Name="SearchInputEntry"
-                           Text="{Binding SearchText}"
-                           PlaceholderColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}"
-                           TextColor="{AppThemeBinding Light=#111827, Dark=#F3F4F6}"
-                           BackgroundColor="Transparent"
-                           WidthRequest="250" />
+                <Grid x:Name="SearchContainer">
+                    <Button x:Name="SearchExpandButton"
+                            Text="⌕"
+                            FontSize="20"
+                            WidthRequest="38"
+                            HeightRequest="34"
+                            Padding="0"
+                            CornerRadius="6"
+                            ToolTipProperties.Text="{l:Localized Key=DraftPage_AddClipView_Search}"
+                            Clicked="OnSearchExpandButtonClicked"/>
+                    <SearchBar Placeholder="{l:Localized Key=DraftPage_AddClipView_Search}"
+                               x:Name="SearchInputEntry"
+                               IsVisible="False"
+                               Text="{Binding SearchText}"
+                               PlaceholderColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}"
+                               TextColor="{AppThemeBinding Light=#111827, Dark=#F3F4F6}"
+                               BackgroundColor="Transparent"
+                               WidthRequest="220"
+                               SearchButtonPressed="OnSearchInputSearchButtonPressed" />
+                </Grid>
             </HorizontalStackLayout>
         </tv:TabbedView.HeaderRightContent>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}" Tag="LocalAssets" x:Name="LocalAssetsTab" x:FieldModifier="public">

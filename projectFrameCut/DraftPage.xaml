@@ -4,6 +4,7 @@
              x:Class="projectFrameCut.DraftPage"
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:local="clr-namespace:projectFrameCut"
+             xmlns:controls="clr-namespace:projectFrameCut.Controls"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
              xmlns:mw="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;assembly=projectFrameCut.ApplicationAPIBase"
              x:DataType="local:DraftPage"
@@ -244,7 +245,7 @@
                                 Key="Tab" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ToggleTaskbar}" Command="{Binding ManageWindowCommand}" CommandParameter="taskbar" />
+            <!--   <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ToggleTaskbar}" Command="{Binding ManageWindowCommand}" CommandParameter="taskbar" /> -->
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_CloseAdditional}" Command="{Binding ManageWindowCommand}" CommandParameter="close-extra" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Command,Alt'}" 
@@ -316,16 +317,24 @@
                         HorizontalOptions="Fill"
                         VerticalOptions="Fill" />
                 <Border x:Name="RightContentBorder" StrokeThickness="0" HorizontalOptions="Fill" VerticalOptions="Fill" />
+                <ContentView x:Name="AssistanceHost"
+                             BackgroundColor="Transparent"
+                             HorizontalOptions="Fill"
+                             VerticalOptions="Fill" />
+                <ContentView x:Name="AddClipHost"
+                             BackgroundColor="Transparent"
+                             HorizontalOptions="Fill"
+                             VerticalOptions="Fill" />
             </Grid>
         </Grid>
 
         <Grid Grid.Row="1"
-                  Margin="0,8,0,8"
-                  x:Name="MainControlGrid"
-                  ZIndex="1"
-                  HeightRequest="44"
-                  MaximumHeightRequest="44"
-                  VerticalOptions="Start">
+              Margin="0,8,0,8"
+              x:Name="MainControlGrid"
+              ZIndex="1"
+              HeightRequest="44"
+              MaximumHeightRequest="44"
+              VerticalOptions="Start">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -338,7 +347,6 @@
                 <HorizontalStackLayout IsEnabled="{Binding SelectedAnyClip}" IsVisible="{Binding UnNullUseCompactLayout, Converter={toolkit:InvertedBoolConverter}}"  HorizontalOptions="{Binding UnNullUseCompactLayout, Converter={toolkit:BoolToObjectConverter TrueObject=End, FalseObject=Start}}" Margin="{Binding UnNullUseCompactLayout, Converter={toolkit:BoolToObjectConverter TrueObject='0,0,0,0', FalseObject='8,0,0,0'}}">
                     <BoxView WidthRequest="1" Margin="8,0,4,0" BackgroundColor="#80aaaaaa" />
                     <Button Text="&#xf71e;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding MoveCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" />
-                    <Button Text="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject='&#xf420;', FalseObject='&#xf1f8;'}}"  FontSize="24" Margin="4,0,4,0" FontFamily="Icons"  Command="{Binding SpiltOrCombineCommand}"  IsVisible="True" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" />
                     <Button Text="&#xe14a;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding DeleteCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" />
                 </HorizontalStackLayout>
                 <Label x:Name="LeftInfoLabel"  Text="" FontSize="12" Margin="8,0,0,0" VerticalOptions="Center" HorizontalOptions="Fill" LineBreakMode="CharacterWrap" />
@@ -358,15 +366,6 @@
 
 
             <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar" >
-                <HorizontalStackLayout Grid.Column="4" x:Name="MultiSelectControlLayout" HorizontalOptions="Start" VerticalOptions="Center" Margin="0,0,8,0" Spacing="4">
-                    <CheckBox x:Name="MultiSelectCheckBox" Margin="0,0,0,0" CheckedChanged="MultiSelectCheckBox_CheckedChanged" VerticalOptions="Center" />
-                    <Label Text="{l:Localized Key=DraftPage_CenterMenuBar_MultiSelect}" x:Name="MultiSelectInfoLabel" VerticalOptions="Center" >
-                        <Label.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="MultiSelectLabel_TapGestureRecognizer_Tapped"/>
-                        </Label.GestureRecognizers>
-                    </Label>
-                </HorizontalStackLayout>
-                <Picker x:Name="ResolutionPicker" Margin="0,-2,0,0" WidthRequest="120" MinimumWidthRequest="100" SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
 
                 <Border BackgroundColor="Transparent" StrokeThickness="0" WidthRequest="8"/>
             </HorizontalStackLayout>
@@ -384,11 +383,14 @@
                  Margin="4,2,0,3"
                  HorizontalOptions="Fill"
                  VerticalOptions="Center">
-                <Label x:Name="CurrentPlayheadLabel"
+                <HorizontalStackLayout HorizontalOptions="Start">
+                    <Label x:Name="CurrentPlayheadLabel"
                        Text="00:00/??:??"
                        Margin="8,0,0,0"
-                       VerticalOptions="Center"
-                       HorizontalOptions="Start"/>
+                       VerticalOptions="Center"/>
+                    <Button Text="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject='&#xf420;', FalseObject='&#xf1f8;'}}" IsEnabled="{Binding SelectedAnyClip}" FontSize="24" Margin="12,0,4,0" FontFamily="Icons"  Command="{Binding SpiltOrCombineCommand}"  IsVisible="True" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" />
+                </HorizontalStackLayout>
+
                 <HorizontalStackLayout HorizontalOptions="Center" Spacing="6">
                     <Button Text="−1"
                         FontSize="12"
@@ -414,7 +416,20 @@
                         SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_PlayheadMoveRight}" />
                 </HorizontalStackLayout>
 
-                <HorizontalStackLayout HorizontalOptions="End">
+                <HorizontalStackLayout HorizontalOptions="End" Spacing="0">
+                    <controls:ToggleButton x:Name="MultiSelectToggleButton"
+                                           Text="{l:Localized Key=DraftPage_CenterMenuBar_MultiSelect}"
+                                           Toggled="MultiSelectToggleButton_Toggled"
+                                           Padding="8,4"
+                                           MinimumHeightRequest="32"
+                                           VerticalOptions="Center" />
+                    <controls:ToggleButton x:Name="KeyframeRecordingToggleButton"
+                                           Text="{l:Localized Key=InteractableEditor_KeyFrame}"
+                                           Toggled="KeyframeRecordingToggleButton_Toggled"
+                                           Padding="8,4"
+                                           MinimumHeightRequest="32"
+                                           Margin="4,0,0,0"
+                                           VerticalOptions="Center" />
                     <Button x:Name="ZoomOutButton" Text="-" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
                     <Button x:Name="ZoomResetButton" Text="1x" Margin="8,0,0,0" Clicked="ZoomResetButton_Clicked"/>
                     <Button x:Name="ZoomInButton" Text="+" Margin="8,0,0,0" Clicked="ZoomInButton_Clicked"/>

@@ -14,6 +14,7 @@ using projectFrameCut.Drawing.Text.Typology;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.InteractableEditor;
+using projectFrameCut.LivePreview;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
@@ -240,6 +241,11 @@ namespace projectFrameCut
                 DynamicPreview.DisableVectorPreviewPaths = IsBoolSettingTrueOrDefault("render_DisallowVectorClipToMAUIPathInPreview", true);
                 DynamicPreview.DisableEffectDynamicPreview = IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview");
 
+                DynamicPreview.DefaultOutputMode = ParsePreviewOutputMode(GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Automatic)));
+                LivePreviewer.DefaultOutputMode = DynamicPreview.DefaultOutputMode;
+                DynamicPreview.DefaultCompositionMode = ParsePreviewCompositionMode(GetSetting("Edit_PreviewCompositionMode", nameof(NativePreviewCompositionMode.SingleCanvas)));
+                LivePreviewer.DefaultCompositionMode = DynamicPreview.DefaultCompositionMode;
+
                 // ===== 安全设置同步 =====
 
                 // RichText 安全设置（通过 Markdown2XAML 静态属性，跨程序集通信）
@@ -262,8 +268,18 @@ namespace projectFrameCut
             catch (Exception ex)
             {
                 Log(ex, "Setup modules");
-            }
         }
+
+        static NativePreviewOutputMode ParsePreviewOutputMode(string value)
+            => Enum.TryParse<NativePreviewOutputMode>(value, ignoreCase: true, out var mode)
+                ? mode
+                : NativePreviewOutputMode.Automatic;
+
+        static NativePreviewCompositionMode ParsePreviewCompositionMode(string value)
+            => Enum.TryParse<NativePreviewCompositionMode>(value, ignoreCase: true, out var mode)
+                ? mode
+                : NativePreviewCompositionMode.SingleCanvas;
+    }
         int count = 0;
         private async void TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)
         {

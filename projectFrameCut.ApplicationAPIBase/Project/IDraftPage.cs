@@ -105,7 +105,8 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// Applies the state from the specified snapshot slot to the current draft.
         /// </summary>
         /// <param name="snapshotId">The snapshot identifier to restore from.</param>
-        void ApplySlot(Guid snapshotId);
+        /// <returns>A task representing the asynchronous operation.</returns>
+        Task ApplySlot(Guid snapshotId);
 
         /// <summary>
         /// Starts interactive clip placement mode, allowing the user to click on a track to place a new clip.

@@ -285,26 +285,38 @@
                 </GraphicsView>
 
                 <!-- Transport controls (auto-sized, pinned to the bottom) -->
-                <Grid Grid.Row="1">
-                    <HorizontalStackLayout Spacing="8">
-                        <Button Text="▶"
-                                Command="{Binding PlayPauseCommand}"
-                                FontSize="14"
-                                Padding="8,4"
-                                TextColor="#93C5FD"
-                                CornerRadius="4"  />
-                        <Label Text="{Binding CurrentProgress, StringFormat='{0:P0}'}"
-                                FontSize="11"
-                                TextColor="#9CA3AF"
-                                Margin="4,0,0,0"
-                                VerticalOptions="Center"
-                                WidthRequest="28"
-                                LineBreakMode="NoWrap" />
-                    </HorizontalStackLayout>
-                    <Slider Value="{Binding CurrentProgress, Mode=TwoWay}"
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="Auto,Auto,*,Auto"
+                      ColumnSpacing="8">
+                    <Button Grid.Column="0"
+                            Text="▶"
+                            Command="{Binding PlayPauseCommand}"
+                            FontSize="14"
+                            Padding="8,4"
+                            TextColor="#93C5FD"
+                            CornerRadius="4" />
+                    <Label Grid.Column="1"
+                           Text="{Binding CurrentProgress, StringFormat='{0:P0}'}"
+                           FontSize="11"
+                           TextColor="#9CA3AF"
+                           VerticalOptions="Center"
+                           WidthRequest="28"
+                           LineBreakMode="NoWrap" />
+                    <Slider Grid.Column="2"
+                            Value="{Binding CurrentProgress, Mode=TwoWay}"
                             Minimum="0" Maximum="1"
-                            Margin="82,0,4,0"
                             VerticalOptions="Center" />
+                    <HorizontalStackLayout Grid.Column="3"
+                                           Spacing="4"
+                                           VerticalOptions="Center"
+                                           ToolTipProperties.Text="{l:Localized Key=InteractableEditor_KeyFrame}">
+                        <Label Text="{l:Localized Key=InteractableEditor_KeyFrame}"
+                               FontSize="11"
+                               TextColor="#D1D5DB"
+                               VerticalOptions="Center" />
+                        <Switch IsToggled="{Binding Source={x:Reference InteractiveEditor}, Path=EnableKeyframeRecording, Mode=TwoWay}"
+                                VerticalOptions="Center" />
+                    </HorizontalStackLayout>
                 </Grid>
             </Grid>
         </mw:MultiWindowItem>

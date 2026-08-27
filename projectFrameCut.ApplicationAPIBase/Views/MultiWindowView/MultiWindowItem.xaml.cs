@@ -21,7 +21,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             BindableProperty.Create(nameof(IsDraggable), typeof(bool), typeof(MultiWindowItem), true);
 
         public static readonly BindableProperty IsResizableProperty =
-            BindableProperty.Create(nameof(IsResizable), typeof(bool), typeof(MultiWindowItem), true);
+            BindableProperty.Create(nameof(IsResizable), typeof(bool), typeof(MultiWindowItem), true,
+                propertyChanged: OnIsResizableChanged);
 
         public static readonly BindableProperty IsMaximizableProperty =
             BindableProperty.Create(nameof(IsMaximizable), typeof(bool), typeof(MultiWindowItem), true, propertyChanged: OnButtonVisibilityChanged);
@@ -40,6 +41,34 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         public static readonly BindableProperty IsTitleBarVisibleProperty =
             BindableProperty.Create(nameof(IsTitleBarVisible), typeof(bool), typeof(MultiWindowItem), true, propertyChanged: OnTitleBarVisibilityChanged);
+
+        public static readonly BindableProperty DefaultWindowWidthProperty =
+            BindableProperty.Create(nameof(DefaultWindowWidth), typeof(double), typeof(MultiWindowItem), 400d,
+                validateValue: (_, value) => value is double width && double.IsFinite(width) && width > 0);
+
+        public static readonly BindableProperty DefaultWindowHeightProperty =
+            BindableProperty.Create(nameof(DefaultWindowHeight), typeof(double), typeof(MultiWindowItem), 300d,
+                validateValue: (_, value) => value is double height && double.IsFinite(height) && height > 0);
+
+        public static readonly BindableProperty TitleBarHeightProperty =
+            BindableProperty.Create(nameof(TitleBarHeight), typeof(double), typeof(MultiWindowItem), 32d,
+                validateValue: (_, value) => value is double height && double.IsFinite(height) && height >= 0,
+                propertyChanged: OnTitleBarHeightChanged);
+
+        public static readonly BindableProperty ResizeHandleSizeProperty =
+            BindableProperty.Create(nameof(ResizeHandleSize), typeof(double), typeof(MultiWindowItem), 5d,
+                validateValue: (_, value) => value is double size && double.IsFinite(size) && size >= 0,
+                propertyChanged: OnResizeHandleSizeChanged);
+
+        public static readonly BindableProperty MinimizedWindowHeightProperty =
+            BindableProperty.Create(nameof(MinimizedWindowHeight), typeof(double), typeof(MultiWindowItem), 35d,
+                validateValue: (_, value) => value is double height && double.IsFinite(height) && height > 0,
+                propertyChanged: OnMinimizedWindowHeightChanged);
+
+        public static readonly BindableProperty WindowCornerRadiusProperty =
+            BindableProperty.Create(nameof(WindowCornerRadius), typeof(double), typeof(MultiWindowItem), 10d,
+                validateValue: (_, value) => value is double radius && double.IsFinite(radius) && radius >= 0,
+                propertyChanged: OnWindowCornerRadiusChanged);
 
         public static readonly BindableProperty MinimumWindowWidthProperty =
             BindableProperty.Create(nameof(MinimumWindowWidth), typeof(double), typeof(MultiWindowItem), 240d,
@@ -78,6 +107,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             set => SetValue(IsResizableProperty, value);
         }
 
+        public double ResizeHandleSize
+        {
+            get => (double)GetValue(ResizeHandleSizeProperty);
+            set => SetValue(ResizeHandleSizeProperty, value);
+        }
+
         public bool IsMaximizable
         {
             get => (bool)GetValue(IsMaximizableProperty);
@@ -106,6 +141,41 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             get => (bool)GetValue(IsTitleBarVisibleProperty);
             set => SetValue(IsTitleBarVisibleProperty, value);
+        }
+
+        /// <summary>Default width used when a standalone window returns to the MDI container.</summary>
+        public double DefaultWindowWidth
+        {
+            get => (double)GetValue(DefaultWindowWidthProperty);
+            set => SetValue(DefaultWindowWidthProperty, value);
+        }
+
+        /// <summary>Default height used when a standalone window returns to the MDI container.</summary>
+        public double DefaultWindowHeight
+        {
+            get => (double)GetValue(DefaultWindowHeightProperty);
+            set => SetValue(DefaultWindowHeightProperty, value);
+        }
+
+        /// <summary>Height of the title bar while the item is hosted in a MultiWindowView.</summary>
+        public double TitleBarHeight
+        {
+            get => (double)GetValue(TitleBarHeightProperty);
+            set => SetValue(TitleBarHeightProperty, value);
+        }
+
+        /// <summary>Height of the item while minimized.</summary>
+        public double MinimizedWindowHeight
+        {
+            get => (double)GetValue(MinimizedWindowHeightProperty);
+            set => SetValue(MinimizedWindowHeightProperty, value);
+        }
+
+        /// <summary>Corner radius of a floating window.</summary>
+        public double WindowCornerRadius
+        {
+            get => (double)GetValue(WindowCornerRadiusProperty);
+            set => SetValue(WindowCornerRadiusProperty, value);
         }
 
         /// <summary>Minimum width used by floating restore, layout, and resize operations.</summary>
@@ -226,6 +296,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         // Template Parts
         private Grid _titleBarGrid;
+        private Grid _titleBarDragRegion;
         private Border _visualRoot;
         private Grid _resizeGrid;
         private Border _minimizeBtn;
@@ -291,6 +362,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             base.OnApplyTemplate();
 
             _titleBarGrid = GetTemplateChild("TitleBarGrid") as Grid;
+            _titleBarDragRegion = GetTemplateChild("TitleBarDragRegion") as Grid;
             _visualRoot = GetTemplateChild("VisualRoot") as Border;
             _resizeGrid = GetTemplateChild("ResizeGrid") as Grid;
             _minimizeBtn = GetTemplateChild("MinimizeBtn") as Border;
@@ -299,13 +371,13 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             _dockBtn = GetTemplateChild("DockBtn") as Border;
             _popOutBtn = GetTemplateChild("PopOutBtn") as Border;
 
-            if (_titleBarGrid != null)
+            if (_titleBarDragRegion != null)
             {
                 // Remove existing gestures to avoid duplicates if re-applied
-                _titleBarGrid.GestureRecognizers.Clear();
+                _titleBarDragRegion.GestureRecognizers.Clear();
                 var panGesture = new PanGestureRecognizer();
                 panGesture.PanUpdated += OnTitleBarPanUpdated;
-                _titleBarGrid.GestureRecognizers.Add(panGesture);
+                _titleBarDragRegion.GestureRecognizers.Add(panGesture);
 
                 // Track the pointer position on the title bar so we know the grab offset
                 // at drag start. This enables pointer-position-driven snap detection.
@@ -316,7 +388,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     if (!_isTitleBarDragActive)
                         CaptureTitleBarPointer(pe);
                 };
-                _titleBarGrid.GestureRecognizers.Add(pointerGesture);
+                _titleBarDragRegion.GestureRecognizers.Add(pointerGesture);
 
                 var tapGesture = new TapGestureRecognizer
                 {
@@ -327,12 +399,13 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     Maximize();
                 };
 
-                _titleBarGrid.GestureRecognizers.Add(tapGesture);
+                _titleBarDragRegion.GestureRecognizers.Add(tapGesture);
 
             }
 
             if (_visualRoot != null)
             {
+                _visualRoot.StrokeShape = new RoundRectangle { CornerRadius = WindowCornerRadius };
                 _visualRoot.GestureRecognizers.Clear();
                 var tapGesture = new TapGestureRecognizer();
                 tapGesture.Tapped += (s, e) => Activated?.Invoke(this, EventArgs.Empty);
@@ -400,21 +473,23 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             _popupContainer = GetTemplateChild("PopupContainer") as Border;
 
             // Wire up Resize Handles
-            SetupResizeHandle("ResizeTopLeft", OnResizeTopLeft);
-            SetupResizeHandle("ResizeTop", OnResizeTop);
-            SetupResizeHandle("ResizeTopRight", OnResizeTopRight);
-            SetupResizeHandle("ResizeLeft", OnResizeLeft);
-            SetupResizeHandle("ResizeRight", OnResizeRight);
-            SetupResizeHandle("ResizeBottomLeft", OnResizeBottomLeft);
-            SetupResizeHandle("ResizeBottom", OnResizeBottom);
-            SetupResizeHandle("ResizeBottomRight", OnResizeBottomRight);
+            SetupResizeHandle("ResizeTopLeft", OnResizeTopLeft, ResizeCursorKind.NorthwestSoutheast);
+            SetupResizeHandle("ResizeTop", OnResizeTop, ResizeCursorKind.Vertical);
+            SetupResizeHandle("ResizeTopRight", OnResizeTopRight, ResizeCursorKind.NortheastSouthwest);
+            SetupResizeHandle("ResizeLeft", OnResizeLeft, ResizeCursorKind.Horizontal);
+            SetupResizeHandle("ResizeRight", OnResizeRight, ResizeCursorKind.Horizontal);
+            SetupResizeHandle("ResizeBottomLeft", OnResizeBottomLeft, ResizeCursorKind.NortheastSouthwest);
+            SetupResizeHandle("ResizeBottom", OnResizeBottom, ResizeCursorKind.Vertical);
+            SetupResizeHandle("ResizeBottomRight", OnResizeBottomRight, ResizeCursorKind.NorthwestSoutheast);
+            UpdateResizeHandleSize();
+            UpdateResizeInteraction();
 
             UpdatedButtonVisibility();
             UpdateTitleBarVisibility();
             if (!IsMinimized && !_isMaximized && !_isInWindowMode)
                 EnsureMinimumWindowSize();
 
-            if (ContextMenuProviderGetter?.Invoke()?.CreateNewInstance() is IContextMenuBuilder ContextMenuProvider && _titleBarGrid is not null)
+            if (ContextMenuProviderGetter?.Invoke()?.CreateNewInstance() is IContextMenuBuilder ContextMenuProvider && _titleBarDragRegion is not null)
             {
                 ContextMenuProvider
                     .AddCommand(Localize.APIBaseLocalizedResources.Localized?.MultiWindowView_Close ?? "Close", () => OnCloseTapped(this, EventArgs.Empty))
@@ -429,13 +504,26 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     NumberOfTapsRequired = 1,
                     Buttons = ButtonsMask.Secondary
                 };
-                gesture.Tapped += (s, e) => ContextMenuProvider.TryShow(_titleBarGrid);
-                _titleBarGrid.GestureRecognizers.Add(gesture);
+                gesture.Tapped += (s, e) => ContextMenuProvider.TryShow(_titleBarDragRegion);
+                _titleBarDragRegion.GestureRecognizers.Add(gesture);
 
             }
         }
 
-        private void SetupResizeHandle(string name, EventHandler<PanUpdatedEventArgs> handler)
+        private enum ResizeCursorKind
+        {
+            Horizontal,
+            Vertical,
+            NorthwestSoutheast,
+            NortheastSouthwest
+        }
+
+        static partial void ConfigureResizeCursor(View handle, ResizeCursorKind cursorKind);
+
+        private void SetupResizeHandle(
+            string name,
+            EventHandler<PanUpdatedEventArgs> handler,
+            ResizeCursorKind cursorKind)
         {
             if (GetTemplateChild(name) is View handle)
             {
@@ -443,6 +531,30 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 var pan = new PanGestureRecognizer();
                 pan.PanUpdated += handler;
                 handle.GestureRecognizers.Add(pan);
+                ConfigureResizeCursor(handle, cursorKind);
+            }
+        }
+
+        private void UpdateResizeHandleSize()
+        {
+            if (_resizeGrid == null || _resizeGrid.RowDefinitions.Count < 3 || _resizeGrid.ColumnDefinitions.Count < 3)
+                return;
+
+            var size = new GridLength(ResizeHandleSize, GridUnitType.Absolute);
+            _resizeGrid.RowDefinitions[0].Height = size;
+            _resizeGrid.RowDefinitions[2].Height = size;
+            _resizeGrid.ColumnDefinitions[0].Width = size;
+            _resizeGrid.ColumnDefinitions[2].Width = size;
+        }
+
+        private void UpdateResizeInteraction()
+        {
+            if (_resizeGrid == null) return;
+
+            foreach (var child in _resizeGrid.Children)
+            {
+                if (child is VisualElement handle)
+                    handle.InputTransparent = !IsResizable;
             }
         }
 
@@ -471,12 +583,52 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             }
         }
 
+        private static void OnIsResizableChanged(BindableObject bindable, object oldValue, object newValue)
+        {
+            if (bindable is MultiWindowItem item)
+                item.UpdateResizeInteraction();
+        }
+
+        private static void OnResizeHandleSizeChanged(BindableObject bindable, object oldValue, object newValue)
+        {
+            if (bindable is MultiWindowItem item)
+                item.UpdateResizeHandleSize();
+        }
+
+        private static Color GetConfiguredColor(string resourceKey, string fallback)
+        {
+            if (Application.Current?.Resources.TryGetValue(resourceKey, out var value) == true && value is Color color)
+                return color;
+
+            return Color.FromArgb(fallback);
+        }
+
+        private static void OnTitleBarHeightChanged(BindableObject bindable, object oldValue, object newValue)
+        {
+            if (bindable is MultiWindowItem item)
+                item.UpdateTitleBarVisibility();
+        }
+
+        private static void OnMinimizedWindowHeightChanged(BindableObject bindable, object oldValue, object newValue)
+        {
+            if (bindable is not MultiWindowItem item || !item.IsMinimized) return;
+
+            item.MinimumHeightRequest = item.MinimizedWindowHeight;
+            item.HeightRequest = item.MinimizedWindowHeight;
+        }
+
+        private static void OnWindowCornerRadiusChanged(BindableObject bindable, object oldValue, object newValue)
+        {
+            if (bindable is MultiWindowItem item && !item._isMaximized && !item._isInWindowMode && item._visualRoot != null)
+                item._visualRoot.StrokeShape = new RoundRectangle { CornerRadius = item.WindowCornerRadius };
+        }
+
         private static void OnMinimumWindowSizeChanged(BindableObject bindable, object oldValue, object newValue)
         {
             if (bindable is not MultiWindowItem item) return;
 
             item.MinimumWidthRequest = item.MinimumWindowWidth;
-            item.MinimumHeightRequest = item.IsMinimized ? 35 : item.MinimumWindowHeight;
+            item.MinimumHeightRequest = item.IsMinimized ? item.MinimizedWindowHeight : item.MinimumWindowHeight;
 
             if (!item.IsMinimized && !item._isMaximized && !item._isInWindowMode)
                 item.EnsureMinimumWindowSize();
@@ -525,7 +677,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             if (!_isInWindowMode && _titleBarGrid.Parent is Grid parentGrid && parentGrid.RowDefinitions.Count > 0)
             {
-                parentGrid.RowDefinitions[0].Height = IsTitleBarVisible ? new GridLength(32) : new GridLength(0);
+                parentGrid.RowDefinitions[0].Height = IsTitleBarVisible ? new GridLength(TitleBarHeight) : new GridLength(0);
             }
 
 
@@ -952,7 +1104,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 CloseClicked?.Invoke(this, a);
                 if (a.Cancel) return; // Allow user to cancel closing
 
-                Application.Current?.CloseWindow(_hostWindow);
+                var hostWindow = _hostWindow;
+                CompleteStandaloneWindowClose(hostWindow);
+                TryCloseHostWindow(hostWindow);
                 return;
             }
 
@@ -996,20 +1150,18 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         private void PerformDock(bool closeWindow)
         {
             if (!_isInWindowMode || _hostWindow == null) return;
-
+            LogDiagnostic($"Window {Title} was docked.");
             // Close the host window - but do not destroy the content interaction
             // actually, 'CloseWindow' closes the window. We need to detach THIS content first?
             // If we detach content, the window becomes empty.
             // 1. Detach content from Host Page
-            if (_hostWindow.Page is ContentPage cp)
-            {
-                cp.Content = null;
-            }
+            DetachFromCurrentParent();
 
             // 2. Capture Window ref
             var win = _hostWindow;
             _hostWindow = null!;
             _isInWindowMode = false;
+            OnPropertyChanged(nameof(IsInStandaloneWindowMode));
 
             // Force-close any visible popup when transitioning from OS window back to MDI
             _currentPopup = null!;
@@ -1028,8 +1180,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             _resizeGrid?.IsVisible = true;
             if (_visualRoot != null)
             {
-                _visualRoot.StrokeThickness = 1; // Default
-                _visualRoot.StrokeShape = new RoundRectangle { CornerRadius = 10 }; // Default
+                _visualRoot.SetDynamicResource(Border.StrokeThicknessProperty, "MultiWindowItemBorderThickness");
+                _visualRoot.StrokeShape = new RoundRectangle { CornerRadius = WindowCornerRadius };
             }
 
             if (_titleBarGrid != null)
@@ -1048,7 +1200,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             if (_originalTitleBarParent != null && _originalTitleBarParent.RowDefinitions.Count > 0)
             {
-                _originalTitleBarParent.RowDefinitions[0].Height = new GridLength(32);
+                _originalTitleBarParent.RowDefinitions[0].Height = new GridLength(TitleBarHeight);
             }
 
             // Restore size/pos
@@ -1056,8 +1208,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             this.VerticalOptions = LayoutOptions.Start;
             this.TranslationX = _preWindowX;
             this.TranslationY = _preWindowY;
-            this.WidthRequest = ConstrainWindowWidth(_preWindowWidth > 0 ? _preWindowWidth : 400);
-            this.HeightRequest = ConstrainWindowHeight(_preWindowHeight > 0 ? _preWindowHeight : 300);
+            this.WidthRequest = ConstrainWindowWidth(_preWindowWidth > 0 ? _preWindowWidth : DefaultWindowWidth);
+            this.HeightRequest = ConstrainWindowHeight(_preWindowHeight > 0 ? _preWindowHeight : DefaultWindowHeight);
 
             // Reset margin just in case
             this.Margin = new Thickness(0);
@@ -1081,7 +1233,66 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             if (closeWindow && win != null)
             {
-                Application.Current?.CloseWindow(win);
+                TryCloseHostWindow(win);
+            }
+        }
+
+        private void DetachFromCurrentParent()
+        {
+            if (Parent is Layout layout)
+            {
+                layout.Children.Remove(this);
+            }
+            else if (Parent is ContentView contentView && ReferenceEquals(contentView.Content, this))
+            {
+                contentView.Content = null;
+            }
+            else if (Parent is ContentPage contentPage && ReferenceEquals(contentPage.Content, this))
+            {
+                contentPage.Content = null;
+            }
+        }
+
+        private void CompleteStandaloneWindowClose(Window hostWindow)
+        {
+            // The native Destroying callback may race with a force-close during page
+            // teardown. Only the owner of the current host is allowed to clean up.
+            if (!ReferenceEquals(_hostWindow, hostWindow)) return;
+
+            try
+            {
+                DetachFromCurrentParent();
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic($"Failed to detach standalone window content safely: {ex.Message}");
+            }
+            finally
+            {
+                _hostWindow = null!;
+                _isInWindowMode = false;
+                _currentPopup = null!;
+                _originalParent = null!;
+                _originalTitleBarParent = null!;
+                OnPropertyChanged(nameof(IsInStandaloneWindowMode));
+            }
+        }
+
+        private static void TryCloseHostWindow(Window hostWindow)
+        {
+            try
+            {
+                var application = Application.Current;
+                if (application?.Windows.Contains(hostWindow) == true)
+                {
+                    application.CloseWindow(hostWindow);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Closing can race with the platform's native Destroying event.
+                // At this point the item has already detached and is safe to discard.
+                LogDiagnostic($"Failed to close standalone window safely: {ex.Message}");
             }
         }
 
@@ -1122,9 +1333,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             else
             {
                 _preMinHeight = this.HeightRequest > 0 ? this.HeightRequest : this.Height;
-                // Minimize to TitleHeight approx 32 + borders
-                this.MinimumHeightRequest = 35;
-                this.HeightRequest = 35;
+                this.MinimumHeightRequest = MinimizedWindowHeight;
+                this.HeightRequest = MinimizedWindowHeight;
                 IsMinimized = true;
                 // Disable resize handles
                 _resizeGrid?.IsVisible = false;
@@ -1157,7 +1367,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
                 // Re-enable resize handles
                 _resizeGrid?.IsVisible = true;
-                _visualRoot?.StrokeShape = new RoundRectangle { CornerRadius = 10 };
+                _visualRoot?.StrokeShape = new RoundRectangle { CornerRadius = WindowCornerRadius };
             }
             else
             {
@@ -1211,19 +1421,20 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 if (a.Cancel) return;
             }
 
-            if (_isInWindowMode && _hostWindow != null)
+            if (_hostWindow != null)
             {
                 if (force)
                 {
-                    Application.Current?.CloseWindow(_hostWindow);
+                    var hostWindow = _hostWindow;
+                    CompleteStandaloneWindowClose(hostWindow);
+                    TryCloseHostWindow(hostWindow);
                 }
                 else
                 {
                     PerformDock(true);
                 }
             }
-
-            if (Parent is Layout layout)
+            else if (Parent is Layout layout)
             {
                 layout.Children.Remove(this);
             }
@@ -1293,6 +1504,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             _originalParent = Parent;
             _isInWindowMode = true;
+            OnPropertyChanged(nameof(IsInStandaloneWindowMode));
             _hostWindow = null;
 
             // 1. Detach from current parent
@@ -1379,32 +1591,37 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 Title = this.Title
             };
 #else
+            var standaloneTitleLabel = new Label
+            {
+                Text = Title,
+                VerticalOptions = LayoutOptions.Center,
+            };
+            standaloneTitleLabel.SetAppThemeColor(
+                Label.TextColorProperty,
+                GetConfiguredColor("MultiWindowItemTitleTextColorLight", "#1A1A1A"),
+                GetConfiguredColor("MultiWindowItemTitleTextColorDark", "#FFFFFF"));
+            standaloneTitleLabel.SetDynamicResource(Label.FontSizeProperty, "MultiWindowItemTitleFontSize");
+
+            var standaloneTitleBar = new Grid
+            {
+                Children =
+                {
+                    new HorizontalStackLayout
+                    {
+                        Children = { standaloneTitleLabel },
+                        HorizontalOptions = LayoutOptions.Start,
+                    },
+                    dockBtn
+                }
+            };
+            standaloneTitleBar.SetDynamicResource(HeightRequestProperty, "MultiWindowItemStandaloneTitleBarHeight");
+            standaloneTitleBar.SetDynamicResource(BackgroundColorProperty, "MultiWindowItemTitleBarBackgroundColor");
 
             var hostingPage = new ContentPage
             {
                 Content = new VerticalStackLayout
                 {
-                    new Grid
-                    {
-                        HeightRequest = 50,
-                        Children =
-                        {
-                            new HorizontalStackLayout
-                            {
-                                Children =
-                                {
-                                    new Label
-                                    {
-                                        Text = Title,
-                                        TextColor = Colors.White,
-                                        VerticalOptions = LayoutOptions.Center,
-                                    },
-                                },
-                                HorizontalOptions = LayoutOptions.Start,
-                            },
-                            dockBtn
-                        }
-                    },
+                    standaloneTitleBar,
                     this
                 },
                 Title = this.Title ?? "Window",
@@ -1441,7 +1658,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 newWindow.Destroying += (s, e) =>
                 {
+                    if (!ReferenceEquals(_hostWindow, newWindow)) return;
                     CloseClicked?.Invoke(s, new());
+                    CompleteStandaloneWindowClose(newWindow);
                 };
             }
 #if WINDOWS
@@ -1464,6 +1683,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (!Preferences.Default.Get("MultiWindowView_DockPrompt_NotPromptAgain", false))
             {
                 await Task.Delay(800);
+                if (!ReferenceEquals(_hostWindow, newWindow)
+                    || !_isInWindowMode
+                    || Application.Current?.Windows.Contains(newWindow) != true)
+                {
+                    return;
+                }
                 bool p = false;
                 await Dispatcher.DispatchAsync(async () =>
                 {
@@ -1586,11 +1811,16 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             double width = Width > 0 ? Width : Math.Max(0, WidthRequest);
             double height = Height > 0 ? Height : Math.Max(0, HeightRequest);
 
-            // Compute absolute pointer position relative to the parent container.
-            // During drag, the pointer stays at a constant offset from the window's
-            // top-left (the grab offset captured at pan start).
-            var pointerX = TranslationX + _grabPointerOffset.X;
-            var pointerY = TranslationY + _grabPointerOffset.Y;
+            // Keep snap detection tied to the pointer rather than to a window edge.
+            // The window may extend beyond the MDI area while it is being dragged,
+            // so deriving this from its current bounds would make the pointer appear
+            // to stick as soon as an edge of the window reaches the container edge.
+            var pointerX = _isTitleBarDragActive
+                ? _dragPointerStartX + _dragTotalX
+                : TranslationX + _grabPointerOffset.X;
+            var pointerY = _isTitleBarDragActive
+                ? _dragPointerStartY + _dragTotalY
+                : TranslationY + _grabPointerOffset.Y;
 
             var dragDistance = Math.Sqrt((_dragTotalX * _dragTotalX) + (_dragTotalY * _dragTotalY));
             return new WindowBoundsChangedEventArgs(TranslationX, TranslationY, width, height, pointerX, pointerY, dragDistance, isCanceled);
@@ -1603,11 +1833,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             var currentWidth = Width > 0 ? Width : Math.Max(0, WidthRequest);
             var currentHeight = Height > 0 ? Height : Math.Max(0, HeightRequest);
-            // Pointer coordinates must remain independent from the constrained window
-            // position; otherwise the pointer can never reach a snap edge once the
-            // window itself reaches the container boundary.
-            var pointerX = _dragPointerStartX + _dragTotalX;
-            var pointerY = _dragPointerStartY + _dragTotalY;
+            // This method runs before the drag origin is captured. Preserve the
+            // pointer's current parent-relative position while restoring the window;
+            // using a previous gesture's origin here makes snapped windows jump.
+            var pointerX = TranslationX + _grabPointerOffset.X;
+            var pointerY = TranslationY + _grabPointerOffset.Y;
 
             if (_isMaximized)
                 Maximize();
@@ -1632,6 +1862,74 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 Math.Clamp(relativeY * restoredHeight, 0, Math.Min(32, restoredHeight)));
             TranslationX = pointerX - _grabPointerOffset.X;
             TranslationY = pointerY - _grabPointerOffset.Y;
+
+            // A window restored from a bottom snap can otherwise extend below the
+            // MDI layout slot. The parent clips that part of the visual tree, making
+            // the clipping line look like a fixed bottom edge and hiding the resize
+            // handles. Fit it once before this drag establishes its origin.
+            FitCurrentBoundsInsideParent(pointerX, pointerY);
+        }
+
+        private Rect GetParentMovementArea()
+        {
+            if (Parent is MultiWindowView multiWindowView)
+                return multiWindowView.GetWindowMovementArea();
+
+            if (Parent is VisualElement parent)
+                return new Rect(0, 0, Math.Max(0, parent.Width), Math.Max(0, parent.Height));
+
+            return Rect.Zero;
+        }
+
+        private void FitCurrentBoundsInsideParent(double? pointerX = null, double? pointerY = null)
+        {
+            var area = GetParentMovementArea();
+            if (area.Width <= 0 || area.Height <= 0) return;
+
+            var width = WidthRequest > 0 ? WidthRequest : Math.Max(0, Width);
+            var height = HeightRequest > 0 ? HeightRequest : Math.Max(0, Height);
+
+            if (width > area.Width && area.Width >= MinimumWindowWidth)
+            {
+                width = area.Width;
+                WidthRequest = width;
+            }
+
+            if (height > area.Height && area.Height >= MinimumWindowHeight)
+            {
+                height = area.Height;
+                HeightRequest = height;
+            }
+
+            var maxX = Math.Max(area.Left, area.Right - Math.Min(width, area.Width));
+            var maxY = Math.Max(area.Top, area.Bottom - Math.Min(height, area.Height));
+            TranslationX = Math.Clamp(TranslationX, area.Left, maxX);
+            TranslationY = Math.Clamp(TranslationY, area.Top, maxY);
+
+            // Keep pointer-based snap coordinates continuous even if fitting the
+            // restored window moved its top-left corner away from the pointer.
+            if (pointerX.HasValue && pointerY.HasValue)
+            {
+                _grabPointerOffset = new Point(
+                    pointerX.Value - TranslationX,
+                    pointerY.Value - TranslationY);
+            }
+        }
+
+        private Point ConstrainPositionToParent(double x, double y)
+        {
+            var area = GetParentMovementArea();
+            if (area.Width <= 0 || area.Height <= 0)
+                return new Point(x, y);
+
+            var width = WidthRequest > 0 ? WidthRequest : Math.Max(0, Width);
+            var height = HeightRequest > 0 ? HeightRequest : Math.Max(0, Height);
+            var maxX = Math.Max(area.Left, area.Right - Math.Min(width, area.Width));
+            var maxY = Math.Max(area.Top, area.Bottom - Math.Min(height, area.Height));
+
+            return new Point(
+                Math.Clamp(x, area.Left, maxX),
+                Math.Clamp(y, area.Top, maxY));
         }
 
         private void OnTitleBarPanUpdated(object sender, PanUpdatedEventArgs e)
@@ -1661,20 +1959,23 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     DragStarted?.Invoke(this, CreateBoundsChangedEventArgs());
                     break;
                 case GestureStatus.Running:
-                {
-                    var deltaX = e.TotalX - _dragTotalX;
-                    var deltaY = e.TotalY - _dragTotalY;
-                    _dragTotalX = e.TotalX;
-                    _dragTotalY = e.TotalY;
+                    {
+                        var deltaX = e.TotalX - _dragTotalX;
+                        var deltaY = e.TotalY - _dragTotalY;
+                        _dragTotalX = e.TotalX;
+                        _dragTotalY = e.TotalY;
 
-                    var desiredX = TranslationX + deltaX;
-                    var desiredY = TranslationY + deltaY;
-                    var constrained = ConstrainPositionToParent(desiredX, desiredY);
-                    TranslationX = constrained.X;
-                    TranslationY = constrained.Y;
-                    Dragging?.Invoke(this, CreateBoundsChangedEventArgs());
-                    break;
-                }
+                        // Apply incremental movement so reversing away from a boundary
+                        // responds immediately instead of having to cross accumulated
+                        // out-of-bounds pan distance first.
+                        var constrained = ConstrainPositionToParent(
+                            TranslationX + deltaX,
+                            TranslationY + deltaY);
+                        TranslationX = constrained.X;
+                        TranslationY = constrained.Y;
+                        Dragging?.Invoke(this, CreateBoundsChangedEventArgs());
+                        break;
+                    }
                 case GestureStatus.Completed:
                     _dragTotalX = e.TotalX;
                     _dragTotalY = e.TotalY;
@@ -1690,48 +1991,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             }
         }
 
-        private Point ConstrainPositionToParent(double x, double y)
-        {
-            Rect area;
-            if (Parent is MultiWindowView multiWindowView)
-            {
-                area = multiWindowView.GetWindowMovementArea();
-            }
-            else if (Parent is VisualElement parent)
-            {
-                area = new Rect(0, 0, Math.Max(0, parent.Width), Math.Max(0, parent.Height));
-            }
-            else
-            {
-                return new Point(x, y);
-            }
-
-            if (area.Width <= 0 || area.Height <= 0)
-                return new Point(x, y);
-
-            // Prefer requests because Width/Height can still contain the old snapped
-            // size during the first layout pass after restoring to floating mode.
-            var width = WidthRequest > 0 ? WidthRequest : Math.Max(0, Width);
-            var height = HeightRequest > 0 ? HeightRequest : Math.Max(0, Height);
-
-            if (width > area.Width && area.Width >= MinimumWindowWidth)
-            {
-                width = area.Width;
-                WidthRequest = width;
-            }
-            if (height > area.Height && area.Height >= MinimumWindowHeight)
-            {
-                height = area.Height;
-                HeightRequest = height;
-            }
-
-            var maxX = area.Right - Math.Min(width, area.Width);
-            var maxY = area.Bottom - Math.Min(height, area.Height);
-
-            return new Point(
-                Math.Clamp(x, area.Left, Math.Max(area.Left, maxX)),
-                Math.Clamp(y, area.Top, Math.Max(area.Top, maxY)));
-        }
         #endregion
 
         #region Resizing
@@ -1740,24 +1999,52 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             PreSnapBounds = null;
             (Parent as MultiWindowView)?.ReleaseSnapState(this);
+            FitCurrentBoundsInsideParent();
             _startX = this.TranslationX;
             _startY = this.TranslationY;
-            _startWidth = ConstrainWindowWidth(this.Width > 0 ? this.Width : this.WidthRequest);
-            _startHeight = ConstrainWindowHeight(this.Height > 0 ? this.Height : this.HeightRequest);
+            // Width/Height can still be from the previous layout pass after a resize.
+            // Prefer the current requests so a new gesture starts from the dimensions
+            // the user actually sees instead of jumping back to a stale bottom edge.
+            _startWidth = ConstrainWindowWidth(this.WidthRequest > 0 ? this.WidthRequest : this.Width);
+            _startHeight = ConstrainWindowHeight(this.HeightRequest > 0 ? this.HeightRequest : this.Height);
         }
 
         private void ResizeFromLeft(double totalX)
         {
-            var appliedDelta = Math.Min(totalX, _startWidth - MinimumWindowWidth);
+            var area = GetParentMovementArea();
+            var minimumDelta = area.Width > 0 ? area.Left - _startX : double.NegativeInfinity;
+            var maximumDelta = _startWidth - MinimumWindowWidth;
+            var appliedDelta = Math.Clamp(totalX, minimumDelta, maximumDelta);
             TranslationX = _startX + appliedDelta;
             WidthRequest = _startWidth - appliedDelta;
         }
 
         private void ResizeFromTop(double totalY)
         {
-            var appliedDelta = Math.Min(totalY, _startHeight - MinimumWindowHeight);
+            var area = GetParentMovementArea();
+            var minimumDelta = area.Height > 0 ? area.Top - _startY : double.NegativeInfinity;
+            var maximumDelta = _startHeight - MinimumWindowHeight;
+            var appliedDelta = Math.Clamp(totalY, minimumDelta, maximumDelta);
             TranslationY = _startY + appliedDelta;
             HeightRequest = _startHeight - appliedDelta;
+        }
+
+        private void ResizeFromRight(double totalX)
+        {
+            var area = GetParentMovementArea();
+            var maximumWidth = area.Width > 0
+                ? Math.Max(MinimumWindowWidth, area.Right - _startX)
+                : double.PositiveInfinity;
+            WidthRequest = Math.Clamp(_startWidth + totalX, MinimumWindowWidth, maximumWidth);
+        }
+
+        private void ResizeFromBottom(double totalY)
+        {
+            var area = GetParentMovementArea();
+            var maximumHeight = area.Height > 0
+                ? Math.Max(MinimumWindowHeight, area.Bottom - _startY)
+                : double.PositiveInfinity;
+            HeightRequest = Math.Clamp(_startHeight + totalY, MinimumWindowHeight, maximumHeight);
         }
 
         private void OnResizeRight(object sender, PanUpdatedEventArgs e)
@@ -1766,7 +2053,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (e.StatusType == GestureStatus.Started) PrepareResize();
             if (e.StatusType == GestureStatus.Running)
             {
-                this.WidthRequest = Math.Max(MinimumWindowWidth, _startWidth + e.TotalX);
+                ResizeFromRight(e.TotalX);
             }
         }
 
@@ -1776,7 +2063,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (e.StatusType == GestureStatus.Started) PrepareResize();
             if (e.StatusType == GestureStatus.Running)
             {
-                this.HeightRequest = Math.Max(MinimumWindowHeight, _startHeight + e.TotalY);
+                ResizeFromBottom(e.TotalY);
             }
         }
 
@@ -1786,8 +2073,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (e.StatusType == GestureStatus.Started) PrepareResize();
             if (e.StatusType == GestureStatus.Running)
             {
-                this.WidthRequest = Math.Max(MinimumWindowWidth, _startWidth + e.TotalX);
-                this.HeightRequest = Math.Max(MinimumWindowHeight, _startHeight + e.TotalY);
+                ResizeFromRight(e.TotalX);
+                ResizeFromBottom(e.TotalY);
             }
         }
 
@@ -1831,7 +2118,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 ResizeFromTop(e.TotalY);
                 // Right Logic
-                this.WidthRequest = Math.Max(MinimumWindowWidth, _startWidth + e.TotalX);
+                ResizeFromRight(e.TotalX);
             }
         }
 
@@ -1842,7 +2129,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (e.StatusType == GestureStatus.Running)
             {
                 // Bottom Logic
-                this.HeightRequest = Math.Max(MinimumWindowHeight, _startHeight + e.TotalY);
+                ResizeFromBottom(e.TotalY);
                 ResizeFromLeft(e.TotalX);
             }
         }

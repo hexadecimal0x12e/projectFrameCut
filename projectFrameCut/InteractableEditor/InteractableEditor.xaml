@@ -71,75 +71,129 @@
             </Border>
 
         </AbsoluteLayout>
-        <Grid x:Name="BottomControlsHost"
-              VerticalOptions="End"
-              HorizontalOptions="Fill"
-              HeightRequest="48"
-              InputTransparent="False"
-              ZIndex="9999">
-            <HorizontalStackLayout x:Name="LayoutOptionsBar" Margin="4" VerticalOptions="End" >
-                <HorizontalStackLayout BackgroundColor="#80000000">
-                    <HorizontalStackLayout Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_LockLayout}">
-                        <CheckBox IsChecked="{Binding LockLayout}"/>
-                        <Label Text="&#xe897;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
-                    </HorizontalStackLayout>
-                    <HorizontalStackLayout  Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_EnableSnapping}">
-                        <CheckBox IsChecked="{Binding EnableSnapping}"  />
-                        <Label Text="&#xeeac;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
-                    </HorizontalStackLayout>
-                    <HorizontalStackLayout  Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_AllowClipOutOfBounds}">
-                        <CheckBox IsChecked="{Binding DisallowClipOutOfBounds}"  />
-                        <Label Text="&#xf54f;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
-                    </HorizontalStackLayout>
-                    <HorizontalStackLayout  Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_ShowReferenceLines}">
-                        <CheckBox IsChecked="{Binding ShowReferenceLines}"  />
-                        <Label Text="&#xf017;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
-                    </HorizontalStackLayout>
-                    <HorizontalStackLayout  Margin="4,0" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_ShowAllBorders}">
-                        <CheckBox IsChecked="{Binding ShowAllBorders}"  />
-                        <Label Text="&#xe1e6;" Margin="-12,0,0,0" FontFamily="Icons"  VerticalOptions="Center" />
-                    </HorizontalStackLayout>
-                    <HorizontalStackLayout Margin="4,0">
-                        <CheckBox IsChecked="{Binding EnableKeyframeRecording}" />
-                        <Label Text="{l:Localized Key=InteractableEditor_KeyFrame}" Margin="-16,0,0,0" VerticalOptions="Center" FontSize="11" />
-                    </HorizontalStackLayout>
-                </HorizontalStackLayout>
+        <Border x:Name="InfoIndicatorHost"
+                IsVisible="False"
+                WidthRequest="44"
+                HeightRequest="44"
+                Margin="8"
+                Padding="0"
+                Opacity="0.45"
+                BackgroundColor="#CC202020"
+                Stroke="#B0FFFFFF"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 22"
+                HorizontalOptions="Start"
+                VerticalOptions="End"
+                ZIndex="9999">
+            <Label Text="i"
+                   TextColor="White"
+                   FontSize="20"
+                   FontAttributes="Bold"
+                   HorizontalTextAlignment="Center"
+                   VerticalTextAlignment="Center"
+                   InputTransparent="True" />
+        </Border>
 
-                <Border x:Name="DefaultColorSwatchBorder"
-                        Margin="4,0"
-                        WidthRequest="22"
-                        HeightRequest="22"
-                        StrokeThickness="1.5"
-                        Stroke="#777777"
-                        StrokeShape="RoundRectangle 3"
-                        BackgroundColor="{Binding DefaultReferenceLineColor}"
-                        VerticalOptions="Center"
-                        ToolTipProperties.Text="{l:Localized Key=InteractableEditor_DefaultReferenceLineColor}"
-                        IsVisible="{Binding ShowDetailReferenceLineControl}">
-                    <Border.GestureRecognizers>
-                        <TapGestureRecognizer Tapped="OnDefaultColorSwatchTapped" />
-                    </Border.GestureRecognizers>
-                </Border>
+        <HorizontalStackLayout x:Name="BottomControlsHost"
+                               HorizontalOptions="End"
+                               VerticalOptions="End"
+                               Margin="8"
+                               Spacing="8"
+                               InputTransparent="False"
+                               SizeChanged="OnBottomControlsHostSizeChanged"
+                               ZIndex="9999">
+            <Button x:Name="OptionsButton" Text="&#xe8b8;" FontFamily="Icons" Clicked="OptionsButton_Clicked" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_ConfigurePreview}" />
+            <Button x:Name="RefreshButton" Text="&#xe5d5;" FontFamily="Icons" Clicked="RefreshButton_Clicked" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_Refersh}" />
+        </HorizontalStackLayout>
 
-                <HorizontalStackLayout Margin="4,0" IsVisible="{Binding ShowDetailReferenceLineControl}"
-                    ToolTipProperties.Text="{l:Localized Key=InteractableEditor_DefaultReferenceLineThickness}">
-                    <Label Text="&#xf024;" FontSize="12" FontFamily="Icons" VerticalOptions="Center" />
-                    <Entry x:Name="ThicknessEntry"
-                           WidthRequest="38"
-                           Keyboard="Numeric"
-                           VerticalOptions="Center"
-                           HorizontalTextAlignment="Center"
-                           FontSize="11"
-                           Margin="-6,0,0,0"
-                           Completed="OnThicknessEntryCompleted"
-                           Unfocused="OnThicknessEntryUnfocused" />
-                </HorizontalStackLayout>
+        <Border x:Name="InfoDetailsOverlay"
+                IsVisible="False"
+                InputTransparent="True"
+                Margin="8,8,8,64"
+                Padding="12,8"
+                MinimumWidthRequest="180"
+                MaximumWidthRequest="360"
+                HorizontalOptions="Start"
+                VerticalOptions="End"
+                BackgroundColor="#F0202020"
+                Stroke="#808080"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 6"
+                ZIndex="10000">
+            <Label x:Name="InfoDetailsLabel"
+                   TextColor="White"
+                   FontSize="13"
+                   LineBreakMode="WordWrap" />
+        </Border>
 
-            </HorizontalStackLayout>
-            <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="End" Margin="8,8,8,8" Spacing="8" >
-                <Button x:Name="ManageRefLineButton" Text="&#xe770;" FontFamily="Icons" Clicked="ManageRefLineButton_Clicked" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_ManageReferenceLines}" />
-                <Button x:Name="RefreshButton" Text="&#xe5d5;" FontFamily="Icons" Clicked="RefreshButton_Clicked" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_Refersh}" />
-            </HorizontalStackLayout>
+        <Grid x:Name="OptionsOverlay" IsVisible="False" InputTransparent="False" ZIndex="10000">
+            <Button BackgroundColor="#40000000" BorderWidth="0" CornerRadius="0" Clicked="OptionsOverlayBackground_Clicked" />
+            <Border Margin="8,8,8,8" Padding="16" MaximumWidthRequest="560" MaximumHeightRequest="560"
+                    HorizontalOptions="Center" VerticalOptions="Center" BackgroundColor="#F0202020"
+                    Stroke="#666666" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+                <ScrollView>
+                    <VerticalStackLayout Spacing="10">
+                        <VerticalStackLayout.Resources>
+                            <Style TargetType="Label">
+                                <Setter Property="TextColor" Value="White" />
+                            </Style>
+                        </VerticalStackLayout.Resources>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{l:Localized Key=DraftPage_MenuBar_Edit_ConfigurePreview}" FontAttributes="Bold" FontSize="16" VerticalOptions="Center" />
+                            <Button Grid.Column="1" Text="&#xe5cd;" FontFamily="Icons" Clicked="CloseOptionsButton_Clicked" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{l:Localized Key=InteractableEditor_LockLayout}" VerticalOptions="Center" />
+                            <Switch Grid.Column="1" IsToggled="{Binding LockLayout}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{l:Localized Key=InteractableEditor_EnableSnapping}" VerticalOptions="Center" />
+                            <Switch Grid.Column="1" IsToggled="{Binding EnableSnapping}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{l:Localized Key=InteractableEditor_AllowClipOutOfBounds}" VerticalOptions="Center" />
+                            <Switch Grid.Column="1" IsToggled="{Binding DisallowClipOutOfBounds}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{l:Localized Key=InteractableEditor_ShowReferenceLines}" VerticalOptions="Center" />
+                            <Switch Grid.Column="1" IsToggled="{Binding ShowReferenceLines}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{l:Localized Key=InteractableEditor_ShowAllBorders}" VerticalOptions="Center" />
+                            <Switch Grid.Column="1" IsToggled="{Binding ShowAllBorders}" />
+                        </Grid>
+                        <BoxView HeightRequest="1" BackgroundColor="#555555" />
+                        <Label Text="{l:Localized Key=InteractableEditor_PreviewMode}" FontAttributes="Bold" FontSize="16" VerticalOptions="Center" />
+                        <Picker x:Name="PreviewResolutionPicker" MinimumWidthRequest="180" HorizontalOptions="Fill"
+                                SelectedIndexChanged="PreviewResolutionPicker_SelectedIndexChanged" />
+                        <BoxView HeightRequest="1" BackgroundColor="#555555" />
+                        <Label Text="{l:Localized Key=InteractableEditor_ReferenceLine}" FontAttributes="Bold" FontSize="16" VerticalOptions="Center" />
+                        <HorizontalStackLayout Spacing="12">
+                            <Border x:Name="DefaultColorSwatchBorder"
+                                    WidthRequest="32"
+                                    HeightRequest="32"
+                                    StrokeThickness="1.5"
+                                    Stroke="#777777"
+                                    StrokeShape="RoundRectangle 3"
+                                    BackgroundColor="{Binding DefaultReferenceLineColor}"
+                                    ToolTipProperties.Text="{l:Localized Key=InteractableEditor_DefaultReferenceLineColor}">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnDefaultColorSwatchTapped" />
+                                </Border.GestureRecognizers>
+                            </Border>
+                            <Label Text="{l:Localized Key=InteractableEditor_DefaultReferenceLineThickness}" VerticalOptions="Center" />
+                            <Entry x:Name="ThicknessEntry"
+                                   WidthRequest="56"
+                                   Keyboard="Numeric"
+                                   VerticalOptions="Center"
+                                   HorizontalTextAlignment="Center"
+                                   Completed="OnThicknessEntryCompleted"
+                                   Unfocused="OnThicknessEntryUnfocused" />
+                        </HorizontalStackLayout>
+                        <Button Text="{l:Localized Key=InteractableEditor_ManageReferenceLines}" Clicked="ManageRefLineButton_Clicked" />
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Border>
         </Grid>
     </Grid>
 </ContentView>

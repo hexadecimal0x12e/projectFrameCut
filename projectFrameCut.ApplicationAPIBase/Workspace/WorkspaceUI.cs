@@ -71,7 +71,6 @@ public sealed class DictionaryWorkspaceLayoutStore(IDictionary<string, string> p
 public sealed class WorkspaceWindowHost : IAsyncDisposable
 {
     public const string LayoutStateKey = "__Workspace_WindowLayout_State_v1";
-    public const string LegacyLayoutStateKey = "__DraftPage_MainMultiWindowView_State_v1";
     private readonly IWorkspace _workspace;
     private readonly MultiWindowView _view;
     private readonly WorkspaceViewContext _context;
@@ -164,17 +163,13 @@ public sealed class WorkspaceWindowHost : IAsyncDisposable
         {
             try { state = JsonSerializer.Deserialize<WorkspaceLayoutState>(raw); } catch { }
         }
-        if (state is null)
-        {
-            state = TryMigrateLegacy(_layoutStore.Read(LegacyLayoutStateKey));
-            if (state is not null) _layoutStore.Write(LayoutStateKey, JsonSerializer.Serialize(state));
-        }
         if (state is null) return false;
         var restoredKeys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var item in state.Windows)
         {
-            if (!_windows.TryGetValue(item.WindowKey, out var window)) continue;
-            restoredKeys.Add(item.WindowKey);
+            var windowKey = item.WindowKey;
+            if (!_windows.TryGetValue(windowKey, out var window)) continue;
+            restoredKeys.Add(windowKey);
             if (!item.IsOpen)
             {
                 if (_view.Children.Contains(window)) _view.CloseWindow(window, force: true);
@@ -191,7 +186,7 @@ public sealed class WorkspaceWindowHost : IAsyncDisposable
             window.IsVisible = item.IsVisible;
             if (item.IsMinimized && !window.IsMinimized) window.Minimize();
         }
-        if (state.ActiveWindowKey is not null && _windows.TryGetValue(state.ActiveWindowKey, out var active) && _view.Children.Contains(active))
+        if (state.ActiveWindowKey is string activeWindowKey && !string.IsNullOrWhiteSpace(activeWindowKey) && _windows.TryGetValue(activeWindowKey, out var active) && _view.Children.Contains(active))
             _view.BringToFront(active);
         foreach (var key in _windows.Keys.Where(key => !restoredKeys.Contains(key)))
             ApplyDefaultPlacement(key);
@@ -205,7 +200,11 @@ public sealed class WorkspaceWindowHost : IAsyncDisposable
 
     public ValueTask DisposeAsync()
     {
-        SaveLayout();
+        try
+        {
+            SaveLayout();
+        }
+        catch { }
         foreach (var window in _windows.Values.ToList())
             if (_view.Children.Contains(window)) _view.CloseWindow(window, force: true);
         _windows.Clear();
@@ -269,45 +268,6 @@ public sealed class WorkspaceWindowHost : IAsyncDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(definition.WindowKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(definition.ModuleId);
         ArgumentNullException.ThrowIfNull(definition.CreateContent);
-    }
-
-    private static WorkspaceLayoutState? TryMigrateLegacy(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        try
-        {
-            using var document = JsonDocument.Parse(raw);
-            var root = document.RootElement;
-            if (!root.TryGetProperty("Windows", out var windows)) return null;
-            var keyMap = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                ["PreviewSubwindow"] = "preview.main",
-                ["PropertiesSubwindow"] = "properties.main",
-                ["AssisstantSubWindow"] = "legacy.assistant",
-                ["HistorySubWindow"] = "history.main"
-            };
-            var result = new WorkspaceLayoutState();
-            foreach (var item in windows.EnumerateArray())
-            {
-                if (!item.TryGetProperty("WindowKey", out var keyValue) || keyValue.GetString() is not { } oldKey || !keyMap.TryGetValue(oldKey, out var key)) continue;
-                result.Windows.Add(new WorkspaceWindowState
-                {
-                    WindowKey = key,
-                    IsOpen = !item.TryGetProperty("IsOpen", out var open) || open.GetBoolean(),
-                    IsVisible = !item.TryGetProperty("IsVisible", out var visible) || visible.GetBoolean(),
-                    IsMinimized = item.TryGetProperty("IsMinimized", out var minimized) && minimized.GetBoolean(),
-                    TranslationX = item.TryGetProperty("TranslationX", out var x) ? x.GetDouble() : 0,
-                    TranslationY = item.TryGetProperty("TranslationY", out var y) ? y.GetDouble() : 0,
-                    Width = item.TryGetProperty("WidthRequest", out var width) ? width.GetDouble() : -1,
-                    Height = item.TryGetProperty("HeightRequest", out var height) ? height.GetDouble() : -1,
-                    ZIndex = item.TryGetProperty("ZIndex", out var z) ? z.GetInt32() : 0
-                });
-            }
-            if (root.TryGetProperty("ActiveWindowKey", out var active) && active.GetString() is { } activeKey)
-                result.ActiveWindowKey = keyMap.GetValueOrDefault(activeKey);
-            return result;
-        }
-        catch { return null; }
     }
 
     private sealed class WorkspaceLayoutState

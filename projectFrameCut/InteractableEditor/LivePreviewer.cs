@@ -22,10 +22,33 @@ using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
 namespace projectFrameCut.LivePreview
 {
+    public enum NativePreviewOutputMode
+    {
+        Disabled,
+        Automatic,
+        Required,
+    }
+
+    public enum NativePreviewCompositionMode
+    {
+        SingleCanvas,
+        PerClip,
+    }
+
+    public sealed record PreviewFrameSource(
+        string? ScRgbPath,
+        string? FallbackImagePath,
+        int Width,
+        int Height,
+        int Stride,
+        PreviewPixelFormat PixelFormat,
+        string ColorSpace,
+        bool RequireSwapChain);
+
     public class LivePreviewer
     {
-        private const string StaticFrameCacheVersion = "v2-target-layout";
-        private const string ClipPreviewCacheVersion = "v2-frame-content";
+        private const string StaticFrameCacheVersion = "v3-preview-pixel-format";
+        private const string ClipPreviewCacheVersion = "v3-preview-pixel-format";
         public IClip[]? Clips;
         public ISoundTrack[]? SoundTracks;
         public int targetFrameRate = 60;
@@ -48,6 +71,8 @@ namespace projectFrameCut.LivePreview
             = new Dictionary<Guid, IReadOnlyDictionary<uint, string>>();
         public string ProjectRoot => string.IsNullOrWhiteSpace(TempPath) ? string.Empty : Directory.GetParent(Path.GetFullPath(TempPath))?.FullName ?? string.Empty;
         public string ProjectName { get; set; } = "Untitled Project";
+        public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Automatic;
+        public static NativePreviewCompositionMode DefaultCompositionMode { get; set; } = NativePreviewCompositionMode.SingleCanvas;
 
         public bool IsFrameRendered(uint frameIndex)
         {
@@ -58,7 +83,7 @@ namespace projectFrameCut.LivePreview
                 && Directory.EnumerateFiles(TempPath, $"projectFrameCut_Render_{StaticFrameCacheVersion}_{frameHash}_*.png", SearchOption.TopDirectoryOnly).Any();
         }
 
-        public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight)
+        public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token = default)
         {
             try
             {
@@ -73,8 +98,13 @@ namespace projectFrameCut.LivePreview
                     FrameIndex = frameIndex,
                     Width = targetWidth,
                     Height = targetHeight,
-                }).AsTask().GetAwaiter().GetResult();
-                return ResolveArtifactPath(artifact, CancellationToken.None);
+                    PreferredPixelFormat = PreviewPixelFormat.EncodedImage,
+                }, token).AsTask().GetAwaiter().GetResult();
+                return ResolveArtifactPath(artifact, token);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -89,6 +119,43 @@ namespace projectFrameCut.LivePreview
         public IPicture GetFrame(uint frameIndex, int targetWidth, int targetHeight)
         {
             return new Picture8bpp(RenderFrame(frameIndex, targetWidth, targetHeight));
+        }
+
+        public PreviewFrameSource RenderFrameForDisplay(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token)
+        {
+            (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
+            if (!OperatingSystem.IsWindows() && DefaultOutputMode == NativePreviewOutputMode.Required)
+                throw new PlatformNotSupportedException("Required SwapChain preview is only available on Windows.");
+            if (DefaultOutputMode == NativePreviewOutputMode.Disabled || !OperatingSystem.IsWindows())
+            {
+                var fallback = RenderFrame(frameIndex, targetWidth, targetHeight, token);
+                return new PreviewFrameSource(null, fallback, targetWidth, targetHeight, 0, PreviewPixelFormat.EncodedImage, string.Empty, false);
+            }
+
+            try
+            {
+                var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineFrameAsync(new TimelineFrameRequest
+                {
+                    SessionId = RenderSessionId,
+                    FrameIndex = frameIndex,
+                    Width = targetWidth,
+                    Height = targetHeight,
+                    PreferredPixelFormat = PreviewPixelFormat.Rgba16FloatScRgb,
+                }, token).AsTask().GetAwaiter().GetResult();
+                if (artifact.PixelFormat != PreviewPixelFormat.Rgba16FloatScRgb)
+                    throw new NotSupportedException("The render backend did not return an FP16 scRGB preview artifact.");
+
+                var scRgbPath = ResolveArtifactPath(artifact, token);
+                var fallback = DefaultOutputMode == NativePreviewOutputMode.Automatic
+                    ? RenderFrame(frameIndex, targetWidth, targetHeight, token)
+                    : null;
+                return new PreviewFrameSource(scRgbPath, fallback, artifact.Width, artifact.Height, artifact.Stride, artifact.PixelFormat, artifact.ColorSpace, DefaultOutputMode == NativePreviewOutputMode.Required);
+            }
+            catch when (DefaultOutputMode == NativePreviewOutputMode.Automatic && !token.IsCancellationRequested)
+            {
+                var fallback = RenderFrame(frameIndex, targetWidth, targetHeight, token);
+                return new PreviewFrameSource(null, fallback, targetWidth, targetHeight, 0, PreviewPixelFormat.EncodedImage, string.Empty, false);
+            }
         }
 
         public async Task UpdateDraft(DraftStructureJSON json)
@@ -284,8 +351,48 @@ namespace projectFrameCut.LivePreview
                 CanvasHeight = canvasHeight,
                 ProjectWidth = projectWidth,
                 ProjectHeight = projectHeight,
+                PreferredPixelFormat = PreviewPixelFormat.EncodedImage,
             }, token).AsTask().GetAwaiter().GetResult();
             return ResolveArtifactPath(artifact, token);
+        }
+
+        public PreviewFrameSource RenderClipFrameForDisplay(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token)
+        {
+            if (!OperatingSystem.IsWindows() && DefaultOutputMode == NativePreviewOutputMode.Required)
+                throw new PlatformNotSupportedException("Required SwapChain preview is only available on Windows.");
+            if (DefaultOutputMode == NativePreviewOutputMode.Disabled || !OperatingSystem.IsWindows())
+            {
+                var fallback = RenderClipFrame(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token);
+                return new PreviewFrameSource(null, fallback, canvasWidth, canvasHeight, 0, PreviewPixelFormat.EncodedImage, string.Empty, false);
+            }
+
+            try
+            {
+                var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
+                {
+                    SessionId = RenderSessionId,
+                    ClipId = clipId,
+                    FrameIndex = frameIndex,
+                    CanvasWidth = canvasWidth,
+                    CanvasHeight = canvasHeight,
+                    ProjectWidth = projectWidth,
+                    ProjectHeight = projectHeight,
+                    PreferredPixelFormat = PreviewPixelFormat.Rgba16FloatScRgb,
+                }, token).AsTask().GetAwaiter().GetResult();
+                if (artifact.PixelFormat != PreviewPixelFormat.Rgba16FloatScRgb)
+                    throw new NotSupportedException("The render backend did not return an FP16 scRGB clip-preview artifact.");
+
+                var scRgbPath = ResolveArtifactPath(artifact, token);
+                var fallback = DefaultOutputMode == NativePreviewOutputMode.Automatic
+                    ? RenderClipFrame(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token)
+                    : null;
+                return new PreviewFrameSource(scRgbPath, fallback, artifact.Width, artifact.Height, artifact.Stride, artifact.PixelFormat, artifact.ColorSpace, DefaultOutputMode == NativePreviewOutputMode.Required);
+            }
+            catch when (DefaultOutputMode == NativePreviewOutputMode.Automatic && !token.IsCancellationRequested)
+            {
+                var fallback = RenderClipFrame(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token);
+                return new PreviewFrameSource(null, fallback, canvasWidth, canvasHeight, 0, PreviewPixelFormat.EncodedImage, string.Empty, false);
+            }
         }
 
         public bool HasAudioSources()

@@ -50,10 +50,12 @@ namespace projectFrameCut.InteractableEditor
 
         // ── Photo preview state ────────────────────────────────────────────
 
-        private string? _photoSourcePath;
+        private ImageSource? _photoImageSource;
         private int _photoImageWidth;
         private double _photoThumbHeight;
         private int _photoCountOfTiles;
+        private AbsoluteLayout? _photoTileContainer;
+        private readonly List<Image> _photoTilePool = [];
 
         // ── Shared scroll-aware container ──────────────────────────────────
 
@@ -71,12 +73,15 @@ namespace projectFrameCut.InteractableEditor
         /// the caller should treat this as a signal to clean up.</returns>
         public bool NotifyScrollChanged(double scrollX, double viewportWidth)
         {
-            if (_disposed || _frameContainer is null)
+            if (_disposed)
                 return false;
 
             // Self-heal: if the container has been removed from the visual tree,
             // signal the caller to clean us up.
-            if (_frameContainer.Parent is null)
+            var previewContainer = clip.ClipType is ClipMode.PhotoClip
+                ? (VisualElement?)_photoTileContainer
+                : _frameContainer;
+            if (previewContainer?.Parent is null)
                 return false;
 
             if (clip.ClipType is ClipMode.VideoClip)
@@ -341,37 +346,37 @@ namespace projectFrameCut.InteractableEditor
             var countOfTiles = Math.Max(1, (int)(availableWidth / imageWidth) + 1);
 
             // Cache parameters for scroll-aware updates
-            _photoSourcePath = sourcePath;
+            _photoImageSource = ImageSource.FromFile(sourcePath);
             _photoImageWidth = imageWidth;
             _photoThumbHeight = thumbHeight;
             _photoCountOfTiles = countOfTiles;
 
-            var sharedSource = ImageSource.FromFile(sourcePath);
-
-            _frameContainer = new HorizontalStackLayout
+            // Keep a small, reusable pool of Image controls. Rebuilding the visible
+            // children on every tile boundary makes long photo clips repeatedly load
+            // the same bitmap and forces layout/GC work while the user is scrolling.
+            _photoTileContainer = new AbsoluteLayout
             {
                 HeightRequest = thumbHeight,
+                WidthRequest = availableWidth,
                 InputTransparent = true,
                 VerticalOptions = LayoutOptions.Fill,
                 HorizontalOptions = LayoutOptions.Start,
-                Spacing = 0,
-                Padding = 0,
             };
 
             var (initScrollX, initVpW) = page.GetTimelineScrollState();
-            UpdatePhotoVisibleTiles(initScrollX, initVpW, sharedSource);
+            UpdatePhotoVisibleTiles(initScrollX, initVpW);
 
             var container = new Grid
             {
                 HeightRequest = thumbHeight,
-                WidthRequest = clipWidth,
+                WidthRequest = availableWidth,
                 InputTransparent = true,
                 VerticalOptions = LayoutOptions.Center,
                 HorizontalOptions = LayoutOptions.Fill,
                 IsClippedToBounds = true,
             };
 
-            container.Children.Add(_frameContainer);
+            container.Children.Add(_photoTileContainer);
             container.Children.Add(new Label
             {
                 Text = clip.DisplayName ?? clip.Id.ToString(),
@@ -384,12 +389,10 @@ namespace projectFrameCut.InteractableEditor
             return container;
         }
 
-        private void UpdatePhotoVisibleTiles(double scrollX, double viewportWidth, ImageSource? sharedSource = null)
+        private void UpdatePhotoVisibleTiles(double scrollX, double viewportWidth)
         {
-            if (_frameContainer is null || _photoSourcePath is null)
+            if (_photoTileContainer is null || _photoImageSource is null)
                 return;
-
-            var source = sharedSource ?? ImageSource.FromFile(_photoSourcePath);
 
             double contentStart = ContentGlobalStartX;
             double contentWidth = ContentWidth;
@@ -400,8 +403,7 @@ namespace projectFrameCut.InteractableEditor
             double contentEnd = contentStart + contentWidth;
             if (contentEnd <= viewportLeft || contentStart >= viewportRight)
             {
-                if (_frameContainer.Children.Count > 0)
-                    _frameContainer.Children.Clear();
+                SetPhotoTilePoolVisibleCount(0);
                 _lastFirst = -1;
                 _lastLast = -1;
                 return;
@@ -423,31 +425,43 @@ namespace projectFrameCut.InteractableEditor
             _lastFirst = firstVisible;
             _lastLast = lastVisible;
 
-            _frameContainer.Children.Clear();
+            int visibleCount = lastVisible - firstVisible + 1;
+            EnsurePhotoTilePoolSize(visibleCount);
+            SetPhotoTilePoolVisibleCount(visibleCount);
 
-            if (firstVisible > 0)
+            for (int poolIndex = 0; poolIndex < visibleCount; poolIndex++)
             {
-                _frameContainer.Children.Add(new BoxView
-                {
-                    WidthRequest = firstVisible * step,
-                    HeightRequest = 1,
-                    Color = Colors.Transparent,
-                    InputTransparent = true,
-                });
+                int tileIndex = firstVisible + poolIndex;
+                AbsoluteLayout.SetLayoutBounds(
+                    _photoTilePool[poolIndex],
+                    new Rect(tileIndex * step, 0, _photoImageWidth, _photoThumbHeight));
             }
+        }
 
-            for (int i = firstVisible; i <= lastVisible; i++)
+        private void EnsurePhotoTilePoolSize(int requiredCount)
+        {
+            if (_photoTileContainer is null || _photoImageSource is null)
+                return;
+
+            while (_photoTilePool.Count < requiredCount)
             {
-                _frameContainer.Children.Add(new Image
+                var image = new Image
                 {
-                    Source = source,
+                    Source = _photoImageSource,
                     Aspect = Aspect.AspectFit,
                     HeightRequest = _photoThumbHeight,
                     WidthRequest = _photoImageWidth,
                     InputTransparent = true,
-                    VerticalOptions = LayoutOptions.Fill,
-                });
+                };
+                _photoTilePool.Add(image);
+                _photoTileContainer.Children.Add(image);
             }
+        }
+
+        private void SetPhotoTilePoolVisibleCount(int visibleCount)
+        {
+            for (int i = 0; i < _photoTilePool.Count; i++)
+                _photoTilePool[i].IsVisible = i < visibleCount;
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -459,6 +473,9 @@ namespace projectFrameCut.InteractableEditor
             if (_disposed) return;
             _disposed = true;
             _videoFrameToShow = null;
+            _photoImageSource = null;
+            _photoTilePool.Clear();
+            _photoTileContainer = null;
             _frameContainer = null;
         }
     }

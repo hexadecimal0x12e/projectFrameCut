@@ -9,7 +9,7 @@ public interface IRenderArtifactStore
     string ResolveProjectPath(string projectRoot, string projectRelativePath);
     string CreateTemporaryPath(string finalPath);
     void CommitTemporaryFile(string temporaryPath, string finalPath);
-    RenderArtifact Register(Guid sessionId, string projectRoot, string projectRelativePath, string mediaType, bool cacheHit, bool isPreview, int width = 0, int height = 0, double frameRate = 0);
+    RenderArtifact Register(Guid sessionId, string projectRoot, string projectRelativePath, string mediaType, bool cacheHit, bool isPreview, int width = 0, int height = 0, double frameRate = 0, PreviewPixelFormat pixelFormat = PreviewPixelFormat.EncodedImage, int stride = 0, string? colorSpace = null);
     bool Release(Guid sessionId, Guid artifactId);
     bool TryGetPath(Guid sessionId, Guid artifactId, out string fullPath);
 }
@@ -76,7 +76,7 @@ public sealed class RenderArtifactStore : IRenderArtifactStore
         }
     }
 
-    public RenderArtifact Register(Guid sessionId, string projectRoot, string projectRelativePath, string mediaType, bool cacheHit, bool isPreview, int width = 0, int height = 0, double frameRate = 0)
+    public RenderArtifact Register(Guid sessionId, string projectRoot, string projectRelativePath, string mediaType, bool cacheHit, bool isPreview, int width = 0, int height = 0, double frameRate = 0, PreviewPixelFormat pixelFormat = PreviewPixelFormat.EncodedImage, int stride = 0, string? colorSpace = null)
     {
         var fullPath = ResolveProjectPath(projectRoot, projectRelativePath);
         if (!File.Exists(fullPath))
@@ -97,6 +97,9 @@ public sealed class RenderArtifactStore : IRenderArtifactStore
             FrameRate = frameRate,
             CacheHit = cacheHit,
             IsPreview = isPreview,
+            PixelFormat = pixelFormat,
+            Stride = stride,
+            ColorSpace = colorSpace ?? string.Empty,
         };
         _artifacts[artifact.ArtifactId] = new ArtifactRegistration(sessionId, fullPath, isPreview);
         return artifact;

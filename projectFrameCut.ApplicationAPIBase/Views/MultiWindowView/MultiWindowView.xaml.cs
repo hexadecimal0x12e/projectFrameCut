@@ -275,6 +275,13 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         public IReadOnlyList<MultiWindowItem> Windows => base.Children.OfType<MultiWindowItem>().ToList();
 
         /// <summary>
+        /// Windows that originated from this view and are currently hosted by an
+        /// independent OS window.
+        /// </summary>
+        public IReadOnlyList<MultiWindowItem> StandaloneWindows =>
+            _standaloneWindows.Where(window => window.IsInStandaloneWindowMode).ToList();
+
+        /// <summary>
         /// <b>DO NOT manipulate this collection directly.</b>
         /// </summary>
         ///<remarks>
@@ -284,7 +291,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         public IList<IView> Children => base.Children;
 
         private readonly HashSet<MultiWindowItem> _managedWindows = new();
+        private readonly HashSet<MultiWindowItem> _standaloneWindows = new();
         private readonly Dictionary<MultiWindowItem, WindowSnapZone> _snapStates = new();
+        private readonly Dictionary<MultiWindowItem, Rect> _relativeSnapStates = new();
         private readonly Dictionary<MultiWindowItem, Border> _taskbarItems = new();
         private MultiWindowItem? _snapTarget;
         private WindowSnapZone _pendingSnapZone = WindowSnapZone.None;
@@ -324,6 +333,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         private void OnUnloaded(object? sender, EventArgs e)
         {
+            CloseStandaloneWindows();
             foreach (var item in _managedWindows.ToArray())
             {
                 item.PropertyChanged -= OnTaskbarWindowPropertyChanged;
@@ -331,7 +341,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 item.Close(true);
             }
             _managedWindows.Clear();
+            _standaloneWindows.Clear();
             _snapStates.Clear();
+            _relativeSnapStates.Clear();
             _taskbarItems.Clear();
             _taskbarItemsContainer?.Children.Clear();
             _snapTarget = null;
@@ -354,6 +366,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 ApplySnap(pair.Key, pair.Value, rememberState: true, bringToFront: false);
             }
 
+            ReapplyRelativeSnaps();
+
             ConstrainFloatingWindowsToMdiArea();
         }
 
@@ -361,7 +375,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             foreach (var item in Windows)
             {
-                if (!_snapStates.ContainsKey(item))
+                if (!_snapStates.ContainsKey(item) && !_relativeSnapStates.ContainsKey(item))
                     ConstrainFloatingWindowToMdiArea(item);
             }
         }
@@ -397,6 +411,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 _managedWindows.Remove(item);
                 _snapStates.Remove(item);
+                _relativeSnapStates.Remove(item);
                 RemoveTaskbarItem(item);
                 item.CloseClicked -= OnItemCloseClicked;
                 item.MinimizeClicked -= OnItemMinimizeClicked;
@@ -417,6 +432,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (sender is not MultiWindowItem item) return;
 
             _snapStates.Remove(item);
+            _relativeSnapStates.Remove(item);
             if (_snapTarget is not null && MultiWindowItem.ReferenceEquals(_snapTarget, item))
             {
                 _snapTarget = null;
@@ -558,26 +574,26 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             var label = new Label
             {
                 Text = item.Title,
-                TextColor = Colors.White,
-                FontSize = 12,
                 VerticalOptions = LayoutOptions.Center,
                 Margin = new Thickness(8, 0),
                 LineBreakMode = LineBreakMode.TailTruncation,
                 MaxLines = 1
             };
+            label.SetDynamicResource(Label.TextColorProperty, "MultiWindowViewTaskbarTextColor");
+            label.SetDynamicResource(Label.FontSizeProperty, "MultiWindowViewTaskbarTextFontSize");
 
             var border = new Border
             {
                 Content = label,
-                BackgroundColor = Color.FromArgb("#3C3C40"),
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
                 Stroke = Colors.Transparent,
-                HeightRequest = 32,
-                MinimumWidthRequest = 120,
-                MaximumWidthRequest = 200,
                 VerticalOptions = LayoutOptions.Center,
                 Margin = new Thickness(2, 0),
             };
+            border.SetDynamicResource(BackgroundColorProperty, "MultiWindowViewTaskbarItemBackgroundColor");
+            border.SetDynamicResource(HeightRequestProperty, "MultiWindowViewTaskbarItemHeight");
+            border.SetDynamicResource(MinimumWidthRequestProperty, "MultiWindowViewTaskbarItemMinimumWidth");
+            border.SetDynamicResource(MaximumWidthRequestProperty, "MultiWindowViewTaskbarItemMaximumWidth");
 
             var tap = new TapGestureRecognizer();
             tap.Tapped += (s, e) => OnTaskbarItemTapped(item);
@@ -633,9 +649,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             foreach (var (window, border) in _taskbarItems)
             {
                 var isActive = _activeWindow is not null && MultiWindowItem.ReferenceEquals(_activeWindow, window);
-                border.BackgroundColor = isActive
-                    ? Color.FromArgb("#505055")
-                    : Color.FromArgb("#3C3C40");
+                border.SetDynamicResource(
+                    BackgroundColorProperty,
+                    isActive ? "MultiWindowViewTaskbarItemHoverColor" : "MultiWindowViewTaskbarItemBackgroundColor");
             }
         }
 
@@ -667,6 +683,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 }
                 ApplySnap(pair.Key, pair.Value, rememberState: true, bringToFront: false);
             }
+            ReapplyRelativeSnaps();
         }
 
         private void UpdateTaskbarDynamicVisibility()
@@ -689,6 +706,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     }
                     ApplySnap(pair.Key, pair.Value, rememberState: true, bringToFront: false);
                 }
+                ReapplyRelativeSnaps();
             }
         }
 
@@ -749,6 +767,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             if (e.Element is MultiWindowItem item)
             {
+                _standaloneWindows.Remove(item);
                 if (_managedWindows.Add(item))
                 {
                     item.CloseClicked += OnItemCloseClicked;
@@ -766,6 +785,19 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 {
                     Dispatcher.Dispatch(() => ArrangeWindows(AutoArrangeMode));
                 }
+
+                // Workspace/layout restoration commonly assigns saved bounds just
+                // after adding the child. Defer one pass so an off-screen bottom edge
+                // is brought back before the user tries to drag or resize the window.
+                Dispatcher.Dispatch(() =>
+                {
+                    if (Children.Contains(item)
+                        && !_snapStates.ContainsKey(item)
+                        && !_relativeSnapStates.ContainsKey(item))
+                    {
+                        ConstrainFloatingWindowToMdiArea(item);
+                    }
+                });
             }
         }
 
@@ -773,6 +805,13 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             if (e.Element is MultiWindowItem item)
             {
+                // OpenInNewWindow marks the item as standalone before detaching it
+                // from this view. Keep ownership so the native window cannot outlive
+                // the page/view that created its content.
+                if (item.IsInStandaloneWindowMode)
+                {
+                    _standaloneWindows.Add(item);
+                }
                 item.CloseClicked -= OnItemCloseClicked;
                 item.Activated -= OnItemActivated;
                 item.MinimizeClicked -= OnItemMinimizeClicked;
@@ -782,6 +821,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 item.DragCompleted -= OnItemDragCompleted;
                 _managedWindows.Remove(item);
                 _snapStates.Remove(item);
+                _relativeSnapStates.Remove(item);
                 RemoveTaskbarItem(item);
 
                 if (_activeWindow is not null && MultiWindowItem.ReferenceEquals(_activeWindow, item))
@@ -972,6 +1012,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (clearSnapState)
             {
                 _snapStates.Remove(item);
+                _relativeSnapStates.Remove(item);
                 item.PreSnapBounds = null;
             }
         }
@@ -979,6 +1020,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         internal void ReleaseSnapState(MultiWindowItem item)
         {
             _snapStates.Remove(item);
+            _relativeSnapStates.Remove(item);
             item.PreSnapBounds = null;
 
             if (_snapTarget is not null && MultiWindowItem.ReferenceEquals(_snapTarget, item))
@@ -1011,11 +1053,57 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (rememberState)
             {
                 _snapStates[item] = zone;
+                _relativeSnapStates.Remove(item);
             }
 
             if (bringToFront)
             {
                 BringToFront(item);
+            }
+        }
+
+        private void ApplyRelativeSnap(MultiWindowItem item, Rect relativeBounds, bool rememberState, bool bringToFront)
+        {
+            var area = GetMdiArea();
+            var bounds = new Rect(
+                area.X + (area.Width * relativeBounds.X),
+                area.Y + (area.Height * relativeBounds.Y),
+                area.Width * relativeBounds.Width,
+                area.Height * relativeBounds.Height);
+            if (bounds.Width <= 0 || bounds.Height <= 0) return;
+
+            if (!item.PreSnapBounds.HasValue)
+            {
+                var width = item.ConstrainWindowWidth(item.WidthRequest > 0 ? item.WidthRequest : Math.Max(400, bounds.Width * 0.6));
+                var height = item.ConstrainWindowHeight(item.HeightRequest > 0 ? item.HeightRequest : Math.Max(300, bounds.Height * 0.6));
+                item.PreSnapBounds = new Rect(item.TranslationX, item.TranslationY, width, height);
+            }
+
+            SetWindowBounds(item, bounds, clearSnapState: false);
+
+            if (rememberState)
+            {
+                _relativeSnapStates[item] = relativeBounds;
+                _snapStates.Remove(item);
+            }
+
+            if (bringToFront)
+            {
+                BringToFront(item);
+            }
+        }
+
+        private void ReapplyRelativeSnaps()
+        {
+            foreach (var pair in _relativeSnapStates.ToArray())
+            {
+                if (!Children.Contains(pair.Key))
+                {
+                    _relativeSnapStates.Remove(pair.Key);
+                    continue;
+                }
+
+                ApplyRelativeSnap(pair.Key, pair.Value, rememberState: true, bringToFront: false);
             }
         }
 
@@ -1165,8 +1253,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 WidthRequest = 60,
                 HeightRequest = 40,
-                BackgroundColor = Color.FromArgb("#1E1E1E"),
             };
+            preview.SetDynamicResource(BackgroundColorProperty, "MultiWindowViewLayoutPreviewBackgroundColor");
 
             // Draw cell divisions as colored boxes
             for (int c = 0; c < option.ColumnRatios.Length; c++)
@@ -1179,12 +1267,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 {
                     var cell = new BoxView
                     {
-                        Color = Color.FromArgb("#3F7FB5FF"),
                         WidthRequest = Math.Max(2, colWidth - 2),
                         HeightRequest = Math.Max(2, cellHeight - 2),
                         HorizontalOptions = LayoutOptions.Start,
                         VerticalOptions = LayoutOptions.Start,
                     };
+                    cell.SetDynamicResource(BoxView.ColorProperty, "MultiWindowViewSnapPreviewColor");
 
                     var container = new AbsoluteLayout();
                     container.Children.Add(cell);
@@ -1193,33 +1281,35 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 }
             }
 
+            var optionLabel = new Label
+            {
+                Text = option.DisplayName,
+                FontSize = 11,
+                HorizontalOptions = LayoutOptions.Center
+            };
+            optionLabel.SetDynamicResource(Label.TextColorProperty, "MultiWindowViewOverlayTextColor");
+
             var content = new VerticalStackLayout
             {
                 Spacing = 6,
                 Children =
                 {
                     preview,
-                    new Label
-                    {
-                        Text = option.DisplayName,
-                        TextColor = Colors.White,
-                        FontSize = 11,
-                        HorizontalOptions = LayoutOptions.Center
-                    }
+                    optionLabel
                 }
             };
 
             var border = new Border
             {
                 Content = content,
-                BackgroundColor = Color.FromArgb("#3C3C40"),
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
                 Stroke = Colors.Transparent,
                 StrokeThickness = 2,
                 Padding = new Thickness(8),
-                WidthRequest = 130,
-                HeightRequest = 90
             };
+            border.SetDynamicResource(BackgroundColorProperty, "MultiWindowViewTaskbarItemBackgroundColor");
+            border.SetDynamicResource(WidthRequestProperty, "MultiWindowViewLayoutOptionWidth");
+            border.SetDynamicResource(HeightRequestProperty, "MultiWindowViewLayoutOptionHeight");
 
             var tap = new TapGestureRecognizer();
             var capturedOption = option;
@@ -1228,8 +1318,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             // Hover highlight
             var pointerGesture = new PointerGestureRecognizer();
-            pointerGesture.PointerEntered += (s, args) => border.BackgroundColor = Color.FromArgb("#505055");
-            pointerGesture.PointerExited += (s, args) => border.BackgroundColor = Color.FromArgb("#3C3C40");
+            pointerGesture.PointerEntered += (s, args) => border.SetDynamicResource(BackgroundColorProperty, "MultiWindowViewTaskbarItemHoverColor");
+            pointerGesture.PointerExited += (s, args) => border.SetDynamicResource(BackgroundColorProperty, "MultiWindowViewTaskbarItemBackgroundColor");
             border.GestureRecognizers.Add(pointerGesture);
 
             return border;
@@ -1402,14 +1492,15 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             if (available.Count == 0)
             {
-                ContentChooserList.Children.Add(new Label
+                var emptyLabel = new Label
                 {
                     Text = "No other windows available",
-                    TextColor = Color.FromArgb("#808080"),
                     FontSize = 12,
                     HorizontalOptions = LayoutOptions.Center,
                     Margin = new Thickness(0, 8)
-                });
+                };
+                emptyLabel.SetDynamicResource(Label.TextColorProperty, "MultiWindowViewOverlaySecondaryTextColor");
+                ContentChooserList.Children.Add(emptyLabel);
                 return;
             }
 
@@ -1425,22 +1516,22 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             var label = new Label
             {
                 Text = window.Title,
-                TextColor = Colors.White,
                 FontSize = 13,
                 VerticalOptions = LayoutOptions.Center,
                 LineBreakMode = Microsoft.Maui.LineBreakMode.TailTruncation,
                 Margin = new Thickness(8, 0)
             };
+            label.SetDynamicResource(Label.TextColorProperty, "MultiWindowViewOverlayTextColor");
 
             var border = new Border
             {
                 Content = label,
-                BackgroundColor = Color.FromArgb("#3C3C40"),
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
                 Stroke = Colors.Transparent,
-                HeightRequest = 32,
                 Padding = new Thickness(0)
             };
+            border.SetDynamicResource(BackgroundColorProperty, "MultiWindowViewTaskbarItemBackgroundColor");
+            border.SetDynamicResource(HeightRequestProperty, "MultiWindowViewContentChooserItemHeight");
 
             var tap = new TapGestureRecognizer();
             var capturedWindow = window;
@@ -1448,8 +1539,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             border.GestureRecognizers.Add(tap);
 
             var pointerGesture = new PointerGestureRecognizer();
-            pointerGesture.PointerEntered += (s, args) => border.BackgroundColor = Color.FromArgb("#505055");
-            pointerGesture.PointerExited += (s, args) => border.BackgroundColor = Color.FromArgb("#3C3C40");
+            pointerGesture.PointerEntered += (s, args) => border.SetDynamicResource(BackgroundColorProperty, "MultiWindowViewTaskbarItemHoverColor");
+            pointerGesture.PointerExited += (s, args) => border.SetDynamicResource(BackgroundColorProperty, "MultiWindowViewTaskbarItemBackgroundColor");
             border.GestureRecognizers.Add(pointerGesture);
 
             return border;
@@ -1545,6 +1636,33 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             }
 
             ApplySnap(window, zone, rememberState: true, bringToFront: bringToFront);
+            return true;
+        }
+
+        /// <summary>
+        /// Snap a window to bounds expressed as proportions of the MDI area.
+        /// The bounds are reapplied when the container or taskbar size changes.
+        /// </summary>
+        /// <param name="window">The window to snap.</param>
+        /// <param name="relativeBounds">Normalized X, Y, width, and height values in the range 0..1.</param>
+        /// <param name="bringToFront">Whether the snapped window should become active.</param>
+        /// <returns>True when the snap was applied.</returns>
+        public bool SnapWindowToRelativeBounds(MultiWindowItem window, Rect relativeBounds, bool bringToFront = true)
+        {
+            if (window is null || Width <= 0 || Height <= 0
+                || relativeBounds.X < 0 || relativeBounds.Y < 0
+                || relativeBounds.Width <= 0 || relativeBounds.Height <= 0
+                || relativeBounds.Right > 1 || relativeBounds.Bottom > 1)
+            {
+                return false;
+            }
+
+            if (!Windows.Any(item => MultiWindowItem.ReferenceEquals(item, window)))
+            {
+                return false;
+            }
+
+            ApplyRelativeSnap(window, relativeBounds, rememberState: true, bringToFront: bringToFront);
             return true;
         }
 
@@ -1656,10 +1774,37 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         public void CloseWindow(MultiWindowItem window, bool force = false)
         {
             window.Close(force);
+            if (!window.IsInStandaloneWindowMode)
+            {
+                _standaloneWindows.Remove(window);
+            }
             if (Children.Contains(window))
             {
                 Children.Remove(window);
             }
+        }
+
+        /// <summary>
+        /// Force-closes every independent OS window that originated from this view.
+        /// Safe to call repeatedly while the page is being torn down.
+        /// </summary>
+        public void CloseStandaloneWindows()
+        {
+            foreach (var window in _standaloneWindows.ToArray())
+            {
+                try
+                {
+                    window.Close(force: true);
+                }
+                catch (Exception ex)
+                {
+                    // Continue closing the remaining native windows even if the
+                    // platform has already torn one of them down concurrently.
+                    LogDiagnostic($"Failed to close standalone window safely: {ex.Message}");
+                }
+            }
+
+            _standaloneWindows.Clear();
         }
 
         /// <summary>

@@ -44,11 +44,15 @@ public sealed class UnixSocketRenderClientTransport : IRenderTransport
 
         try
         {
+            var payload = RenderRpcSerializer.Serialize(request);
             await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
+                // Once the frame prefix is written, finish the payload even if the caller stops
+                // waiting. A partial frame would corrupt the shared stream for the next request.
+                cancellationToken.ThrowIfCancellationRequested();
                 var stream = _stream ?? throw new RenderPipeException("Render worker socket is not connected.");
-                await RenderPipeFrame.WriteAsync(stream, RenderRpcSerializer.Serialize(request), cancellationToken).ConfigureAwait(false);
+                await RenderPipeFrame.WriteAsync(stream, payload, CancellationToken.None).ConfigureAwait(false);
             }
             finally { _writeGate.Release(); }
 

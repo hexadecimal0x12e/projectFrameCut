@@ -148,9 +148,10 @@ namespace projectFrameCut
             {
                 Log(ex, $"start UI Thread Watchdog Service", this);
             }
-            var stylePath = Path.Combine(MauiProgram.DataPath, "style.xaml");
-            var colorPath = Path.Combine(MauiProgram.DataPath, "color.xaml");
-            string styleXAML = "", colorXAML = "";
+            var stylePath = Path.Combine(MauiProgram.DataPath, "Style.xaml");
+            var colorPath = Path.Combine(MauiProgram.DataPath, "Color.xaml");
+            var multiWindowPath = Path.Combine(MauiProgram.DataPath, "MultiWindow.xaml");
+            string styleXAML = "", colorXAML = "", multiWindowXAML = "";
             try
             {
                 if (!File.Exists(stylePath))
@@ -163,7 +164,14 @@ namespace projectFrameCut
                     }
                     else
                     {
-                        styleXAML = "";
+                        if ((stylePath = FileSystemService.GetAppPackageFileSync("Styles", "Styles.Default.xaml")) != null && File.Exists(stylePath))
+                        {
+                            styleXAML = File.ReadAllText(stylePath);
+                        }
+                        else
+                        {
+                            styleXAML = "";
+                        }
                     }
 
                 }
@@ -197,20 +205,39 @@ namespace projectFrameCut
 
             try
             {
-                if (!string.IsNullOrWhiteSpace(colorXAML) && !string.IsNullOrWhiteSpace(styleXAML) && !SettingsManager.IsBoolSettingTrue("ui_DisableUserStyle"))
+                if (!File.Exists(multiWindowPath))
+                {
+                    multiWindowPath = FileSystemService.GetAppPackageFileSync("Styles", "MultiWindowView.xaml");
+                    multiWindowXAML = File.ReadAllText(multiWindowPath);
+                }
+                else
+                {
+                    multiWindowXAML = File.ReadAllText(multiWindowPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Extract multi-window XAML", this);
+            }
+
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(colorXAML) && !string.IsNullOrWhiteSpace(styleXAML) && !string.IsNullOrWhiteSpace(multiWindowXAML) && !SettingsManager.IsBoolSettingTrue("ui_DisableUserStyle"))
                 {
                     var resourceDictionary = new ResourceDictionary();
                     var colorResourceDictionary = new ResourceDictionary();
 
                     var loadedStyle = Microsoft.Maui.Controls.Xaml.Extensions.LoadFromXaml(resourceDictionary, styleXAML) as ResourceDictionary;
                     var loadedColor = Microsoft.Maui.Controls.Xaml.Extensions.LoadFromXaml(colorResourceDictionary, colorXAML) as ResourceDictionary;
+                    var loadedMultiWindow = Microsoft.Maui.Controls.Xaml.Extensions.LoadFromXaml(colorResourceDictionary, multiWindowXAML) as ResourceDictionary;
 
                     if (Application.Current != null)
                     {
                         Application.Current.Resources.MergedDictionaries.Clear();
                         Application.Current.Resources.MergedDictionaries.Add(loadedColor);
                         Application.Current.Resources.MergedDictionaries.Add(loadedStyle);
-                        Log($"Applied style from {stylePath} and colors from {colorPath}");
+                        Application.Current.Resources.MergedDictionaries.Add(loadedMultiWindow);
+                        Log($"Applied style from {stylePath}, colors from {colorPath}, and multi-window view from {multiWindowPath}");
                     }
                 }
                 else
@@ -219,6 +246,8 @@ namespace projectFrameCut
                         Log($"No style file found at {stylePath}, using default style and colors.");
                     if (string.IsNullOrWhiteSpace(colorXAML))
                         Log($"No color file found at {colorPath}, using default style and colors.");
+                    if (string.IsNullOrWhiteSpace(multiWindowXAML))
+                        Log($"No multi-window view file found at {multiWindowPath}, using default style and colors.");
                     if (SettingsManager.IsBoolSettingTrue("ui_DisableUserStyle"))
                         Log($"User style is disabled by settings, using default style and colors.");
                 }

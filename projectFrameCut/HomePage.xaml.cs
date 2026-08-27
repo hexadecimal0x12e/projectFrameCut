@@ -1792,18 +1792,32 @@ public partial class HomePage : ContentPage
                 border,
                 OnSelected: () =>
                 {
-                    _lastSelectedItemName = vmItem.Name;
-                    ProjectsCollection.SelectedItem = vmItem;
+                    // CollectionView recycles item containers.  The border can therefore
+                    // display a different project after the list is reloaded, while this
+                    // callback itself remains registered from the original Loaded event.
+                    // Always resolve the item that is currently displayed by the border.
+                    if (border.BindingContext is not ProjectsViewModel currentItem)
+                    {
+                        return;
+                    }
+
+                    _lastSelectedItemName = currentItem.Name;
+                    ProjectsCollection.SelectedItem = currentItem;
                 },
                 OnClicked: async () =>
                 {
-                    if (vmItem._name == CreateButtonName)
+                    if (border.BindingContext is not ProjectsViewModel currentItem)
+                    {
+                        return;
+                    }
+
+                    if (currentItem._name == CreateButtonName)
                     {
                         await CreateDraft();
                     }
                     else
                     {
-                        await GoDraft(vmItem);
+                        await GoDraft(currentItem);
                     }
 
                     ProjectsCollection.SelectedItem = null;
@@ -1811,11 +1825,16 @@ public partial class HomePage : ContentPage
                 },
                 OnContextMenuClick: async () =>
                 {
+                    if (border.BindingContext is not ProjectsViewModel currentItem)
+                    {
+                        return;
+                    }
+
                     if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
                     {
                         Vibration.Vibrate(120);
                     }
-                    await ShowContextMenu(vmItem);
+                    await ShowContextMenu(currentItem);
                 }
             );
 

@@ -3,6 +3,7 @@ using projectFrameCut.ApplicationAPIBase.Localize;
 
 namespace projectFrameCut.ApplicationAPIBase.Project
 {
+    [Obsolete("The DraftTasks was no longer maintained, and it may be removed in a future version. Consider migrate the background work to the Workspace Task API.")]
     public class DraftTasks
     {
         public required string Id { get; init; }
