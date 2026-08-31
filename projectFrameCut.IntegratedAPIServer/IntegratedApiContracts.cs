@@ -27,6 +27,8 @@ public enum IntegratedApiOperation
     AddEffectBundle,
     RemoveEffectBundle,
     SaveProject,
+    ProjectModeQuery,
+    ProjectModeEdit,
 }
 
 public sealed record IntegratedApiAuthorizationRequest(
@@ -65,6 +67,10 @@ public sealed class IntegratedApiServerOptions
     public string? GlobalAssetsDatabasePath { get; init; }
 
     public bool EnableMcp { get; init; } = true;
+
+    public bool RequireMcpAuthorization { get; init; } = true;
+
+    public bool IncludeIntegratedClientMcpTools { get; init; } = true;
 
     public Action<string>? WarningSink { get; init; }
 

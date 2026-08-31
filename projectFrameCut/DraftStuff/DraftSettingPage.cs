@@ -259,6 +259,7 @@ public class DraftSettingPage
                 info.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
                 info.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
                 info.LastOpenAppName = MauiProgram.AssemblyName;
+                info.LastOpenAppIdentifier = MauiProgram.AppIdentifier;
                 await SaveStandaloneProjectInfo(info);
             }
         })

@@ -8,6 +8,7 @@ using projectFrameCut.Shared;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Text;
 
 namespace projectFrameCut.Platforms.Linux;
 
@@ -19,12 +20,22 @@ public class Program : GtkMauiApplication
     public static int Main(string[] args)
     {
         System.Threading.Thread.CurrentThread.Name = "App Main thread";
-
-        if (!args.Contains("--quiet"))
+        if (args.Contains("--quiet"))
         {
-            Console.WriteLine($"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut"} {Assembly.GetExecutingAssembly().GetName().Version}");
-            Console.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
+            Console.SetOut(new NullTextWriter());
+            Console.SetError(new NullTextWriter());
         }
+        else if (args.Contains("--consoleLog"))
+        {
+            MyLoggerExtensions.OnLog += (msg, level) =>
+            {
+                Console.WriteLine($"[{level}] {msg}");
+            };
+        }
+
+        Console.WriteLine($"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut"} {Assembly.GetExecutingAssembly().GetName().Version}");
+        Console.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
+
         if (args.Contains("--waitDebugger"))
         {
             Console.WriteLine("Waiting for debugger to attach...");
@@ -46,9 +57,9 @@ public class Program : GtkMauiApplication
             MyLoggerExtensions.LoggingDiagnosticInfo = true;
         }
 
-        if (args.Any() && args.First() == "gui")
+        if (!args.Any() || args.First() == "gui")
         {
-            args = args.Skip(1).ToArray();
+            args = args.Any() ? args.Skip(1).ToArray() : [];
             Console.WriteLine($"Launching GUI with parameters: '{string.Join(" ", args)}', press Ctrl+C to exit.");
         }
         else
@@ -325,5 +336,13 @@ Environment:
             var decodedValue = Uri.UnescapeDataString(valuePart.Replace('+', ' '));
             yield return $"{decodedKey}={decodedValue}";
         }
+    }
+
+    private class NullTextWriter : TextWriter
+    {
+        public override Encoding Encoding => Encoding.UTF8;
+        public override void Write(char value) { }
+        public override void Write(string? value) { }
+        public override void WriteLine(string? value) { }
     }
 }

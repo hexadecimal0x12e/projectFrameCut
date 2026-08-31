@@ -5,11 +5,7 @@ using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO.Compression;
 using System.Reflection;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -18,16 +14,68 @@ namespace projectFrameCut.Services
     public static class PluginService
     {
         public const int PluginAPIVersion = IPluginBase.CurrentPluginAPIVersion;
-        private const string PluginPemStoragePrefix = "plugin_pem_";
-        private const string PluginPemPepperStorageKey = "plugin_pem_pepper_v1";
 
-        private class SaltedPemEnvelope
+        public static IPluginRevocationSource RevocationSource
         {
-            public int Version { get; set; }
-            public string Salt { get; set; } = string.Empty;
-            public string Nonce { get; set; } = string.Empty;
-            public string CipherText { get; set; } = string.Empty;
-            public string Tag { get; set; } = string.Empty;
+            get => PluginPackageSecurityService.RevocationSource;
+            set => PluginPackageSecurityService.RevocationSource = value ?? EmptyPluginRevocationSource.Instance;
+        }
+
+        public static Task RegisterDevelopmentRootCertificateAsync(byte[] certificateDer, string? label = null) =>
+            PluginPackageSecurityService.RegisterDevelopmentRootCertificateAsync(certificateDer, label);
+
+        public static Task RemoveDevelopmentRootCertificateAsync(string fingerprint) =>
+            PluginPackageSecurityService.RemoveDevelopmentRootCertificateAsync(fingerprint);
+
+        public static Task ForgetPublisherTrustAsync(string publisherId) =>
+            PluginPackageSecurityService.ForgetPublisherAsync(publisherId);
+
+        public static async Task<PluginTrustReport> ValidatePackageAsync(
+            string pluginPath,
+            CancellationToken cancellationToken = default)
+        {
+            var validationRoot = Path.Combine(
+                FileSystem.CacheDirectory,
+                "plugin-validation",
+                Guid.NewGuid().ToString("N"));
+            try
+            {
+                await PluginPackageSecurityService.ExtractPackageSafelyAsync(
+                    pluginPath,
+                    validationRoot,
+                    cancellationToken);
+                using var verification = await PluginPackageSecurityService.VerifyExtractedPackageAsync(
+                    validationRoot,
+                    requirePublisherTrust: false,
+                    cancellationToken);
+                return verification.TrustReport;
+            }
+            finally
+            {
+                try
+                {
+                    if (Directory.Exists(validationRoot))
+                    {
+                        Directory.Delete(validationRoot, true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Failed to clean plugin validation directory: {validationRoot}");
+                }
+            }
+        }
+
+        public static async Task<byte[]> ExportVerifiedAssemblyAsync(
+            string pluginID,
+            CancellationToken cancellationToken = default)
+        {
+            var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
+            using var verification = await PluginPackageSecurityService.VerifyExtractedPackageAsync(
+                pluginRoot,
+                requirePublisherTrust: true,
+                cancellationToken);
+            return [.. verification.AssemblyBytes];
         }
 
         public static async Task AddAPlugin(string pluginPath, Page currentPage)
@@ -52,531 +100,207 @@ namespace projectFrameCut.Services
                 }
             }
 
-            IPluginBase? pluginInstance = null;
-            PluginMetadata metadata = null!;
-            string failReason = string.Empty;
+            PluginPackageVerificationResult? verification = null;
+            string failReason = "The plugin package could not be validated.";
             string pluginRoot = string.Empty;
-            bool PEMExists = false;
-            await Task.Run(async () =>
+            try
             {
-                try
-                {
-                    string? localizedPluginBrokenReason = null;
-                    try
-                    {
-                        localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing;
-                    }
-                    catch { }
-                    failReason = localizedPluginBrokenReason ?? "Some of the plugin files are missing. Try reinstall it.";
-                    Directory.CreateDirectory(Path.Combine(MauiProgram.BasicDataPath, "Plugins"));
-                    pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", $"{Path.GetFileNameWithoutExtension(pluginPath)}_{Guid.NewGuid()}");
+                Directory.CreateDirectory(Path.Combine(MauiProgram.BasicDataPath, "Plugins"));
+                pluginRoot = Path.Combine(
+                    MauiProgram.BasicDataPath,
+                    "Plugins",
+                    $"{Path.GetFileNameWithoutExtension(pluginPath)}_{Guid.NewGuid():N}");
 
-                    //1 extract plugin
-                    ZipFile.ExtractToDirectory(pluginPath, pluginRoot, true);
+                await PluginPackageSecurityService.ExtractPackageSafelyAsync(pluginPath, pluginRoot);
+                verification = await PluginPackageSecurityService.VerifyExtractedPackageAsync(
+                    pluginRoot,
+                    requirePublisherTrust: false);
 
-                    //2 read metadata
-                    var metadataFilePath = Path.Combine(pluginRoot, "metadata.json");
-                    if (File.Exists(metadataFilePath))
-                    {
-                        var metadataJson = await File.ReadAllTextAsync(metadataFilePath);
-                        metadata = JsonSerializer.Deserialize<PluginMetadata>(metadataJson);
-
-                    }
-
-                    if (metadata is null)
-                    {
-                        return;
-                    }
-
-                    if (!File.Exists(Path.Combine(pluginRoot, metadata.PluginID + ".dll.enc")) ||
-                       !File.Exists(Path.Combine(pluginRoot, metadata.PluginID + ".dll.sig")) ||
-                       !File.Exists(Path.Combine(pluginRoot, "hashtable.json")))
-                    {
-                        return;
-                    }
-                    var htb = File.ReadAllText(Path.Combine(pluginRoot, "hashtable.json"));
-                    //3 chech hashtable
-                    if (!ChechHashtable(pluginRoot, htb, out failReason))
-                    {
-                        return;
-                    }
-
-                    //3 decrypt plugin
-                    var sigPath = Path.Combine(pluginRoot, metadata.PluginID + ".dll.sig");
-                    var encPath = Path.Combine(pluginRoot, metadata.PluginID + ".dll.enc");
-                    var pemPath = Path.Combine(pluginRoot, "publickey.pem");
-                    if (await HashServices.ComputeFileHashAsync(pemPath, SHA512.Create()) != metadata.PluginKey)
-                    {
-                        return;
-                    }
-
-                    var storPluginPem = await GetPluginPemFromSecureStorageAsync(metadata.PluginID);
-                    PEMExists = storPluginPem is not null;
-                    var pluginPemFromPackage = File.ReadAllText(pemPath);
-                    if (PEMExists && storPluginPem != pluginPemFromPackage)
-                    {
-                        failReason = SettingsManager.SettingLocalizedResources.Plugin_InvaildSignToPreviousOne;
-                        return;
-                    }
-
-
-                    var decBytes = FileCryptoService.DecryptToFileWithPassword(metadata.PluginKey, await File.ReadAllBytesAsync(encPath));
-                    if (decBytes.Length < 64)
-                    {
-                        return;
-                    }
-                    if (HashServices.ComputeBytesHash(decBytes) != metadata.PluginHash)
-                    {
-                        return;
-                    }
-                    var pluginSig = File.ReadAllText(sigPath);
-                    var pluginPem = File.ReadAllText(pemPath);
-                    if (!FileSignerService.VerifyFileSignature(pluginPem, decBytes, pluginSig))
-                    {
-                        return;
-                    }
-                    ResolveEventHandler resolver = (s, e) =>
-                    {
-                        var name = new AssemblyName(e.Name).Name;
-                        return TryResolveAssembly(name, [pluginRoot, AppContext.BaseDirectory], true);
-                    };
-
-
-                    AppDomain.CurrentDomain.AssemblyResolve += resolver;
-                    try
-                    {
-                        Assembly plugin = Assembly.Load(decBytes);
-                        try
-                        {
-                            var workingDir = Environment.CurrentDirectory;
-                            Environment.CurrentDirectory = pluginRoot;
-                            pluginInstance = CreateIPluginFromAsb(plugin, pluginRoot);
-                            Environment.CurrentDirectory = workingDir;
-
-                            if (pluginInstance != null)
-                            {
-                                bool removeDependencies = true;
-                                if (pluginInstance.Properties.TryGetValue("RemoveCommonDependency", out var propVal))
-                                {
-                                    if (bool.TryParse(propVal, out bool result) && result)
-                                    {
-                                        removeDependencies = false;
-                                    }
-                                }
-
-                                if (removeDependencies)
-                                {
-                                    Log("Merging common dependencies...");
-                                    var htbDict = JsonSerializer.Deserialize<Dictionary<string, string>>(htb) ?? new();
-                                    var baseDir = AppContext.BaseDirectory;
-                                    var filesToCheck = Directory.GetFiles(pluginRoot, "*.dll");
-                                    bool hashtableChanged = false;
-
-                                    foreach (var file in filesToCheck.Where(f => !Path.GetFileNameWithoutExtension(f).StartsWith("projectFrameCut.")))
-                                    {
-                                        var fileName = Path.GetFileName(file);
-                                        var destPath = Path.Combine(baseDir, fileName);
-
-                                        if (File.Exists(destPath))
-                                        {
-                                            var localHash = HashServices.ComputeFileHash(file);
-                                            var destHash = HashServices.ComputeFileHash(destPath);
-                                            if (localHash == destHash)
-                                            {
-                                                try
-                                                {
-                                                    File.Delete(file);
-                                                    if (htbDict.ContainsKey(fileName))
-                                                    {
-                                                        htbDict.Remove(fileName);
-                                                        hashtableChanged = true;
-                                                    }
-                                                    Log($"Merged common dependency {fileName}.");
-                                                }
-                                                catch (Exception ex)
-                                                {
-                                                    Log(ex, $"Failed to remove common dependency {fileName}");
-                                                }
-                                            }
-                                        }
-                                    }
-
-
-                                    try
-                                    {
-                                        void removeLangDependence(string key)
-                                        {
-                                            if (Directory.GetFiles(key).Length == 1 && Path.GetFileName(Directory.GetFiles(key)[0]) == "Microsoft.Maui.Controls.resources.dll")
-                                            {
-                                                Directory.Delete(key, true);
-                                                htbDict.Remove(key);
-                                                Log($"Deleted directory {key}.");
-                                            }
-                                        }
-
-                                        foreach (var key in Directory.GetDirectories(pluginRoot, "??", SearchOption.TopDirectoryOnly))
-                                        {
-                                            removeLangDependence(key);
-                                        }
-                                        foreach (var key in Directory.GetDirectories(pluginRoot, "??-??", SearchOption.TopDirectoryOnly))
-                                        {
-                                            removeLangDependence(key);
-                                        }
-                                        foreach (var key in Directory.GetDirectories(pluginRoot, "??-????", SearchOption.TopDirectoryOnly))
-                                        {
-                                            removeLangDependence(key);
-                                        }
-                                    }
-                                    catch { }
-
-                                    if (hashtableChanged)
-                                    {
-                                        File.WriteAllText(Path.Combine(pluginRoot, "hashtable.json"), JsonSerializer.Serialize(htbDict));
-                                    }
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            failReason = ex.Message;
-                            return;
-                        }
-                    }
-                    finally
-                    {
-                        AppDomain.CurrentDomain.AssemblyResolve -= resolver;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log(ex);
-                    failReason = Localized._ExceptionTemplate(ex);
-                    return;
-                }
-                finally
-                {
-
-                }
-                if (pluginInstance is null)
+                var metadata = verification.Metadata;
+                var trust = verification.TrustReport;
+                var trustDescription =
+                    $"{SettingsManager.SettingLocalizedResources.Plugin_AddWarn(metadata.Name)}\r\r" +
+                    $"Publisher: {trust.PublisherName ?? metadata.Author}\r\n" +
+                    $"Publisher ID: {trust.PublisherId}\r\n" +
+                    $"Signing certificate: {trust.SigningCertificateFingerprint}\r\n" +
+                    $"Certificate chain: valid";
+                var confirmed = await currentPage.DisplayAlertAsync(
+                    Localized._Warn,
+                    trustDescription,
+                    Localized._OK,
+                    Localized._Cancel);
+                if (!confirmed)
                 {
                     return;
                 }
 
+                await PluginPackageSecurityService.TrustPublisherAsync(trust);
 
-            });
+                var destination = Path.Combine(MauiProgram.BasicDataPath, "Plugins", metadata.PluginID);
+                if (Directory.Exists(destination))
+                {
+                    Directory.Delete(destination, true);
+                }
+                Directory.Move(pluginRoot, destination);
+                pluginRoot = string.Empty;
 
-            if (pluginInstance is null)
+                var itemsPath = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
+                List<PluginItem> items = File.Exists(itemsPath)
+                    ? JsonSerializer.Deserialize<List<PluginItem>>(await File.ReadAllTextAsync(itemsPath)) ?? []
+                    : [];
+                items.RemoveAll(item => item.Id == metadata.PluginID);
+                items.Add(new PluginItem
+                {
+                    Name = metadata.Name,
+                    Author = metadata.Author,
+                    Description = metadata.Description,
+                    Enabled = true,
+                    Id = metadata.PluginID,
+                    Version = metadata.Version,
+                    PackageFormatVersion = metadata.PackageFormatVersion,
+                    PublisherId = metadata.PublisherId,
+                    SigningCertificateFingerprint = metadata.SigningCertificateFingerprint
+                });
+                await File.WriteAllTextAsync(itemsPath, JsonSerializer.Serialize(items));
+
+                var (newInstance, loadFailure) = await CreateFromID(metadata.PluginID);
+                if (newInstance is not null)
+                {
+                    PluginManager.LoadFrom(newInstance);
+                }
+                else if (!string.IsNullOrWhiteSpace(loadFailure))
+                {
+                    await currentPage.DisplayAlertAsync(
+                        Localized._Error,
+                        SettingsManager.SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(loadFailure),
+                        Localized._OK);
+                }
+            }
+            catch (Exception ex)
             {
+                Log(ex, "Install certificate-chain plugin");
+                failReason = ex.Message;
+                await currentPage.DisplayAlertAsync(
+                    Localized._Error,
+                    SettingsManager.SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(failReason),
+                    Localized._OK);
+            }
+            finally
+            {
+                verification?.Dispose();
                 CleanupTempPluginDirectory(pluginRoot);
-                await currentPage.DisplayAlertAsync(Localized._Error, SettingsManager.SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(failReason), Localized._OK);
-                return;
             }
-            else
-            {
-                failReason = "";
-                var conf = await currentPage.DisplayAlertAsync(Localized._Warn, SettingsManager.SettingLocalizedResources.Plugin_AddWarn(pluginInstance.Name), Localized._OK, Localized._Cancel);
-                if (conf)
-                {
-                    if (!PEMExists)
-                    {
-                        var pemPath = Path.Combine(pluginRoot, "publickey.pem");
-                        var pem = File.ReadAllText(pemPath);
-                        await SavePluginPemToSecureStorageAsync(pluginInstance.PluginID, pem);
-                    }
-                    if (Directory.Exists(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID))) Directory.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID), true);
-                    Directory.Move(pluginRoot, Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID));
-                    File.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, "metadata.json"));
-                    File.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, "publickey.pem"));
-                    FileCryptoService.EncryptToFileWithPassword(metadata.PluginKey, Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, "hashtable.json"), Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, "hashtable.json.enc"));
-                    File.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, "hashtable.json"));
-                    List<PluginItem> items = new();
-                    if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "plugins.json")))
-                    {
-                        items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) ?? new();
-                    }
-                    if (items.Any(i => i.Id == pluginInstance.PluginID))
-                    {
-                        items = items.RemoveRange(items.Where(i => i.Id == pluginInstance.PluginID)).ToList();
-                    }
-                    items.Add(new PluginItem
-                    {
-                        Name = pluginInstance.Name,
-                        Author = pluginInstance.Author,
-                        Description = pluginInstance.Description,
-                        Enabled = true,
-                        Id = pluginInstance.PluginID,
-                        Version = pluginInstance.Version
-                    });
-                    File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "Plugins.json"), JsonSerializer.Serialize(items));
-                    var (newInstance, _) = await CreateFromID(pluginInstance.PluginID);
-                    if (newInstance is IPluginBase pluginBase)
-                    {
-                        PluginManager.LoadFrom(newInstance);
-                    }
-                }
-                else
-                {
-                    CleanupTempPluginDirectory(pluginRoot);
-                }
-            }
-
-        }
-
-        private static bool ChechHashtable(string pluginRoot, string hashtable, out string failReason)
-        {
-            var hashTable = JsonSerializer.Deserialize<Dictionary<string, string>>(hashtable);
-            var files = Directory.GetFiles(pluginRoot);
-            if (hashTable is null)
-            {
-                failReason = "Failed to read hashtable.";
-                return false;
-            }
-            foreach (var item in hashTable)
-            {
-                if (File.Exists(Path.Combine(pluginRoot, item.Key)))
-                {
-                    var hash = HashServices.ComputeFileHash(Path.Combine(pluginRoot, item.Key));
-                    if (hash != item.Value)
-                    {
-                        string? localizedFailReason = null;
-                        try
-                        {
-                            localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_InvaildFileHash(item.Key);
-                        }
-                        catch { }
-                        failReason = localizedFailReason ?? $"File hash mismatch for {item.Key}.";
-                        return false;
-                    }
-                }
-                else
-                {
-                    if (item.Key == "metadata.json") break;
-                    string? localizedFailReason = null;
-                    try
-                    {
-                        localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing + $" (File {item.Key} is missing.)";
-                    }
-                    catch { }
-                    failReason = localizedFailReason ?? $"File {item.Key} missing.";
-                    return false;
-                }
-            }
-            failReason = "";
-            return true;
         }
 
         public static async Task<Tuple<IPluginBase?, string?>> CreateFromID(string pluginID)
         {
-            var pluginPem = await GetPluginPemFromSecureStorageAsync(pluginID);
-            var plugin = CreateFromID(pluginID, out string failReason, pluginPem);
-            return new(plugin, failReason);
-
+            var result = await CreateFromIDCoreAsync(pluginID);
+            return new(result.Plugin, result.FailReason);
         }
 
         public static IPluginBase? CreateFromID(string pluginID, out string failReason, string? pluginPem = null)
         {
-            failReason = "";
+            var result = TaskHelper.SyncWait(
+                () => CreateFromIDCoreAsync(pluginID),
+                CancellationToken.None);
+            failReason = result.FailReason;
+            return result.Plugin;
+        }
+
+        private static async Task<(IPluginBase? Plugin, string FailReason)> CreateFromIDCoreAsync(string pluginID)
+        {
+            var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
+            if (!Directory.Exists(pluginRoot))
+            {
+                return (null, "Plugin file not found.");
+            }
+
+            if (!File.Exists(Path.Combine(pluginRoot, PluginPackageSecurityService.ManifestFileName)))
+            {
+                return (null, "Legacy plugin packages are no longer supported. Reinstall this plugin using a certificate-chain package with format version 2.");
+            }
+
             try
             {
-                var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
-                if (Directory.Exists(pluginRoot))
+                using var verification = await PluginPackageSecurityService.VerifyExtractedPackageAsync(
+                    pluginRoot,
+                    requirePublisherTrust: true);
+
+                string? loadFailReason = null;
+                ResolveEventHandler resolver = (s, e) =>
                 {
-                    pluginPem ??= GetPluginPemFromSecureStorage(pluginID);
-                    if (string.IsNullOrEmpty(pluginPem))
+                    var name = new AssemblyName(e.Name).Name;
+                    var assembly = TryResolveAssembly(name, [pluginRoot, AppContext.BaseDirectory], false);
+                    if (assembly is null)
                     {
-                        string? localizedPluginBrokenReason = null;
-                        try
-                        {
-                            localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_SignMissing;
-                        }
-                        catch { }
-                        failReason = localizedPluginBrokenReason ?? "Plugin's signature is missing or corrupted. Try reinstall it.";
-                        return null;
+                        loadFailReason = $"Dependency assembly '{name}' not found.";
                     }
+                    return assembly;
+                };
 
-                    if (!File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.enc")) || !File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.sig")) || !File.Exists(Path.Combine(pluginRoot, "hashtable.json.enc")))
-                    {
-                        string? localizedPluginBrokenReason = null;
-                        try
-                        {
-                            localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing;
-                        }
-                        catch { }
-                        failReason = localizedPluginBrokenReason ?? "Some of the plugin files are missing. Try reinstall it.";
-                        return null;
-                    }
+                AppDomain.CurrentDomain.AssemblyResolve += resolver;
+                IPluginBase? plugin;
+                var workingDirectory = Environment.CurrentDirectory;
+                try
+                {
+                    Environment.CurrentDirectory = pluginRoot;
+                    plugin = CreateIPluginFromAsb(Assembly.Load(verification.AssemblyBytes), pluginRoot);
+                }
+                finally
+                {
+                    Environment.CurrentDirectory = workingDirectory;
+                    AppDomain.CurrentDomain.AssemblyResolve -= resolver;
+                }
 
-                    var pemHash = HashServices.ComputeStringHash(pluginPem ?? string.Empty, SHA512.Create());
-                    var pluginEnc = File.ReadAllBytes(Path.Combine(pluginRoot, pluginID + ".dll.enc"));
-                    var htbEnc = File.ReadAllBytes(Path.Combine(pluginRoot, "hashtable.json.enc"));
-                    var decBytes = FileCryptoService.DecryptToFileWithPassword(pemHash, pluginEnc);
-                    var decHashtable = FileCryptoService.DecryptToFileWithPassword(pemHash, htbEnc);
-                    var htbJson = Encoding.UTF8.GetString(decHashtable);
-                    if (!ChechHashtable(pluginRoot, htbJson, out failReason))
-                    {
-                        return null;
-                    }
-                    var pluginSig = File.ReadAllText(Path.Combine(pluginRoot, pluginID + ".dll.sig"));
-                    if (!FileSignerService.VerifyFileSignature(pluginPem, decBytes, pluginSig))
-                    {
-                        string? localizedFailReason = null;
-                        try
-                        {
-                            localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_InvaildSignToPreviousOne;
-                        }
-                        catch { }
-                        failReason = localizedFailReason ?? "Plugin may be modified, and it's sign is mismatch.";
-                        return null;
-                    }
-                    string? loadFailReason = null;
-                    ResolveEventHandler resolver = (s, e) =>
-                    {
-                        var name = new AssemblyName(e.Name).Name;
-                        var asb = TryResolveAssembly(name, new[] { pluginRoot, AppContext.BaseDirectory }, false);
-                        if (asb is null)
-                        {
-                            loadFailReason = $"Dependency assembly '{name}' not found.";
-                        }
-                        return asb;
-                    };
-                    AppDomain.CurrentDomain.AssemblyResolve += resolver;
-                    IPluginBase? plugin;
+                if (plugin is null)
+                {
+                    return (null, "The type 'PluginLoader' was not found in the plugin assembly.");
+                }
+
+                if (!string.Equals(plugin.PluginID, verification.Metadata.PluginID, StringComparison.Ordinal))
+                {
+                    return (null, "The plugin assembly id does not match the signed package metadata.");
+                }
+
+                if (plugin is IApplicationPluginBase applicationPlugin &&
+                    applicationPlugin.AppLevelPluginAPIVersion != IApplicationPluginBase.CurrentAppLevelPluginAPIVersion)
+                {
+                    return (null, "The plugin application API version is not compatible with this application version.");
+                }
+
+                var optionFilePath = Path.Combine(pluginRoot, "option.json");
+                if (File.Exists(optionFilePath))
+                {
                     try
                     {
-                        var workingDir = Environment.CurrentDirectory;
-                        Environment.CurrentDirectory = pluginRoot;
-                        var asb = Assembly.Load(decBytes);
-                        plugin = CreateIPluginFromAsb(asb, pluginRoot);
-                        Environment.CurrentDirectory = workingDir;
-                    }
-                    catch (EntryPointNotFoundException ex)
-                    {
-                        string? localizedFailReason = null;
-                        try
+                        var savedConfiguration = JsonSerializer.Deserialize<Dictionary<string, string>>(
+                            await File.ReadAllTextAsync(optionFilePath)) ?? [];
+                        foreach (var item in savedConfiguration)
                         {
-                            localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_CannotCreateInstance(ex.Message);
+                            if (plugin.Configuration.ContainsKey(item.Key))
+                            {
+                                plugin.Configuration[item.Key] = item.Value;
+                            }
                         }
-                        catch { }
-                        failReason = localizedFailReason ?? ex.Message;
-                        return null;
                     }
                     catch (Exception ex)
                     {
-                        if (loadFailReason is not null)
-                        {
-                            string? localizedPluginBrokenReason = null;
-                            try
-                            {
-                                localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing;
-                            }
-                            catch { }
-                            failReason = $"{localizedPluginBrokenReason ?? "Some of the plugin files are missing. Try reinstall it."} ({loadFailReason})";
-                            return null;
-                        }
-                        string? localizedFailReason = null, localizedExcMessage = null;
-                        try
-                        {
-                            localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
-                        }
-                        catch { }
-                        try
-                        {
-                            localizedExcMessage = Localized._ExceptionTemplate(ex);
-                        }
-                        catch { }
-                        failReason = $"{localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it."} ({localizedExcMessage ?? ex.Message})";
-                        return null;
+                        Log(ex, $"Failed to load plugin configuration from {optionFilePath}");
                     }
-                    finally
-                    {
-                        AppDomain.CurrentDomain.AssemblyResolve -= resolver;
-                    }
-
-                    if (plugin is null)
-                    {
-                        string? localizedFailReason = null;
-                        try
-                        {
-                            localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_CannotCreateInstance("The type 'PluginLoader' not found in the assembly.");
-                        }
-                        catch { }
-                        failReason = localizedFailReason ?? $"The type 'PluginLoader' not found in the assembly.";
-                        return null;
-                    }
-
-                    if (plugin is IApplicationPluginBase apb)
-                    {
-                        if (apb.AppLevelPluginAPIVersion != IApplicationPluginBase.CurrentAppLevelPluginAPIVersion)
-                        {
-                            string? localizedFailReason = null;
-                            try
-                            {
-                                localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
-                            }
-                            catch { }
-                            failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
-                            return null;
-                        }
-                    }
-
-                    var optionFilePath = Path.Combine(pluginRoot, "option.json");
-                    if (File.Exists(optionFilePath))
-                    {
-                        try
-                        {
-                            var configJson = File.ReadAllText(optionFilePath);
-                            var savedConfig = JsonSerializer.Deserialize<Dictionary<string, string>>(configJson) ?? new();
-
-                            foreach (var kvp in savedConfig)
-                            {
-                                if (plugin.Configuration.ContainsKey(kvp.Key))
-                                {
-                                    plugin.Configuration[kvp.Key] = kvp.Value;
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Log(ex, $"Failed to load plugin configuration from {optionFilePath}");
-                        }
-                    }
-
-                    return plugin.OnLoaded(out failReason) ? plugin : null;
                 }
-                else
+
+                if (!plugin.OnLoaded(out var onLoadedFailure))
                 {
-                    string? localizedPluginBrokenReason = null;
-                    try
-                    {
-                        localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing_DirectoryNotFound;
-                    }
-                    catch { }
-                    failReason = localizedPluginBrokenReason ?? "Plugin file not found.";
-                    return null;
+                    return (null, onLoadedFailure);
                 }
-            }
-            catch (ReflectionTypeLoadException)
-            {
-                string? localizedFailReason = null;
-                try
-                {
-                    localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
-                }
-                catch { }
-                failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
-            }
 
+                return (plugin, string.Empty);
+            }
             catch (Exception ex)
             {
-                string? localizedPluginBrokenReason = null;
-                try
-                {
-                    localizedPluginBrokenReason = Localized._ExceptionTemplate(ex);
-                }
-                catch { }
-                failReason = localizedPluginBrokenReason ?? $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
+                Log(ex, $"Load certificate-chain plugin: {pluginID}");
+                return (null, ex.Message);
             }
-            return null;
         }
 
         private static Assembly? TryResolveAssembly(string name, string[] paths, bool keepInMemory)
@@ -603,127 +327,6 @@ namespace projectFrameCut.Services
             }
             Log($"Assembly {name} not found.");
             return null;
-        }
-
-        private static string GetPluginPemStorageKey(string pluginID) => $"{PluginPemStoragePrefix}{pluginID}";
-
-        private static async Task<string> GetOrCreatePluginPemPepperAsync()
-        {
-            var pepper = await SecureStorage.Default.GetAsync(PluginPemPepperStorageKey);
-            if (!string.IsNullOrEmpty(pepper))
-            {
-                return pepper;
-            }
-
-            var bytes = RandomNumberGenerator.GetBytes(32);
-            pepper = Convert.ToBase64String(bytes);
-            await SecureStorage.Default.SetAsync(PluginPemPepperStorageKey, pepper);
-            return pepper;
-        }
-
-        private static byte[] DerivePemKey(byte[] pepper, byte[] salt)
-        {
-            var mix = new byte[pepper.Length + salt.Length];
-            Buffer.BlockCopy(pepper, 0, mix, 0, pepper.Length);
-            Buffer.BlockCopy(salt, 0, mix, pepper.Length, salt.Length);
-            return SHA256.HashData(mix);
-        }
-
-        private static async Task SavePluginPemToSecureStorageAsync(string pluginID, string pem)
-        {
-            var pepperBase64 = await GetOrCreatePluginPemPepperAsync();
-            var pepper = Convert.FromBase64String(pepperBase64);
-            var salt = RandomNumberGenerator.GetBytes(16);
-            var nonce = RandomNumberGenerator.GetBytes(12);
-            var key = DerivePemKey(pepper, salt);
-            var plain = Encoding.UTF8.GetBytes(pem);
-            var cipher = new byte[plain.Length];
-            var tag = new byte[16];
-            var aad = Encoding.UTF8.GetBytes(pluginID);
-
-            using (var aes = new AesGcm(key))
-            {
-                aes.Encrypt(nonce, plain, cipher, tag, aad);
-            }
-
-            var payload = new SaltedPemEnvelope
-            {
-                Version = 1,
-                Salt = Convert.ToBase64String(salt),
-                Nonce = Convert.ToBase64String(nonce),
-                CipherText = Convert.ToBase64String(cipher),
-                Tag = Convert.ToBase64String(tag)
-            };
-
-            await SecureStorage.Default.SetAsync(GetPluginPemStorageKey(pluginID), JsonSerializer.Serialize(payload));
-        }
-
-        private static async Task<string?> GetPluginPemFromSecureStorageAsync(string pluginID)
-        {
-            var key = GetPluginPemStorageKey(pluginID);
-            var raw = await SecureStorage.Default.GetAsync(key);
-            if (string.IsNullOrEmpty(raw))
-            {
-                return raw;
-            }
-
-            try
-            {
-                var payload = JsonSerializer.Deserialize<SaltedPemEnvelope>(raw);
-                if (payload?.Version != 1 ||
-                    string.IsNullOrEmpty(payload.Salt) ||
-                    string.IsNullOrEmpty(payload.Nonce) ||
-                    string.IsNullOrEmpty(payload.CipherText) ||
-                    string.IsNullOrEmpty(payload.Tag))
-                {
-                    // Legacy plaintext PEM format, migrate in-place to salted protected format.
-                    await SavePluginPemToSecureStorageAsync(pluginID, raw);
-                    return raw;
-                }
-
-                var pepperBase64 = await SecureStorage.Default.GetAsync(PluginPemPepperStorageKey);
-                if (string.IsNullOrEmpty(pepperBase64))
-                {
-                    return null;
-                }
-
-                var pepper = Convert.FromBase64String(pepperBase64);
-                var salt = Convert.FromBase64String(payload.Salt);
-                var nonce = Convert.FromBase64String(payload.Nonce);
-                var cipher = Convert.FromBase64String(payload.CipherText);
-                var tag = Convert.FromBase64String(payload.Tag);
-                var plain = new byte[cipher.Length];
-                var pemKey = DerivePemKey(pepper, salt);
-                var aad = Encoding.UTF8.GetBytes(pluginID);
-
-                using (var aes = new AesGcm(pemKey))
-                {
-                    aes.Decrypt(nonce, cipher, tag, plain, aad);
-                }
-
-                return Encoding.UTF8.GetString(plain);
-            }
-            catch (CryptographicException ex)
-            {
-                Log(ex, $"Plugin PEM secure storage record validation failed: {pluginID}");
-                return null;
-            }
-            catch (FormatException ex)
-            {
-                Log(ex, $"Plugin PEM secure storage record format invalid: {pluginID}");
-                return null;
-            }
-            catch (JsonException)
-            {
-                // Legacy plaintext PEM format, migrate in-place to salted protected format.
-                await SavePluginPemToSecureStorageAsync(pluginID, raw);
-                return raw;
-            }
-        }
-
-        private static string? GetPluginPemFromSecureStorage(string pluginID)
-        {
-            return TaskHelper.SyncWait(() => GetPluginPemFromSecureStorageAsync(pluginID));
         }
 
         public static IPluginBase? CreateIPluginFromAsb(Assembly asb, string workingPath)
@@ -800,7 +403,7 @@ namespace projectFrameCut.Services
 
         public static Dictionary<string, string> FailedLoadPlugin = new();
 
-        public static List<IPluginBase> LoadUserPlugins(Func<string, string> pemGetter = null)
+        public static List<IPluginBase> LoadUserPlugins(Func<string, string>? legacyPemGetter = null)
         {
             List<IPluginBase> plugins = new();
             if (!File.Exists(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) return new();
@@ -838,7 +441,7 @@ namespace projectFrameCut.Services
                     }
 #endif
                     Log($"Loading userPlugin: {item.Id}");
-                    var p = CreateFromID(item.Id, out string fail, pemGetter?.Invoke(item.Id));
+                    var p = CreateFromID(item.Id, out string fail);
                     if (p is not null)
                     {
                         if (p is IApplicationPluginBase b) b.OnApplicationPluginLoaded();
@@ -935,11 +538,14 @@ namespace projectFrameCut.Services
 
         public class PluginItem
         {
-            public string Id { get; set; }
-            public string Name { get; set; }
-            public string Author { get; set; }
-            public string Description { get; set; }
-            public Version Version { get; set; }
+            public string Id { get; set; } = string.Empty;
+            public string Name { get; set; } = string.Empty;
+            public string Author { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
+            public Version Version { get; set; } = new(0, 0);
+            public int PackageFormatVersion { get; set; }
+            public string PublisherId { get; set; } = string.Empty;
+            public string SigningCertificateFingerprint { get; set; } = string.Empty;
             public bool Enabled { get; set; }
             public bool ShouldRemove { get; set; } = false;
         }

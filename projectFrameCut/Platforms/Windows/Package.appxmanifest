@@ -66,60 +66,10 @@
 						</com:ExeServer>
 					</com:ComServer>
 				</com:Extension>
-				<!-- File associations will be handled by launch manager -->
-				<!--			<uap:Extension Category="windows.fileTypeAssociation">
-					<uap:FileTypeAssociation Name="projectframecut_draft_bundle">
-						<uap:SupportedFileTypes>
-							<uap:FileType>.pjfc</uap:FileType>
-						</uap:SupportedFileTypes>
-					</uap:FileTypeAssociation>
-				</uap:Extension>
-				<uap:Extension Category="windows.fileTypeAssociation">
-					<uap:FileTypeAssociation Name="projectframecut_plugin">
-						<uap:SupportedFileTypes>
-							<uap:FileType>.pjfcPlugin</uap:FileType>
-						</uap:SupportedFileTypes>
-						<uap:EditFlags AlwaysUnsafe="true"/>
-					</uap:FileTypeAssociation>
-				</uap:Extension>
-				<uap:Extension Category="windows.protocol">
-					<uap:Protocol Name="pjfc">
-						<uap:DisplayName>projectFrameCut URI Protool</uap:DisplayName>
-					</uap:Protocol>
-				</uap:Extension>
-				<uap:Extension Category="windows.protocol">
-					<uap:Protocol Name="pjfcwinappx">
-						<uap:DisplayName>projectFrameCut URI Protool-Windows (APPX)</uap:DisplayName>
-					</uap:Protocol>
-				</uap:Extension>
-					<uap3:Extension Category="windows.appUriHandler">
-					<uap3:AppUriHandler>
-						<uap3:Host Name="pjfc.hexadecimal0x12e.com" />
-					</uap3:AppUriHandler>
-				</uap3:Extension> 
-				<uap:Extension Category="windows.fileTypeAssociation">
-					<uap:FileTypeAssociation Name="projectframecut_drafttemplate">
-						<uap:SupportedFileTypes>
-							<uap:FileType>.pjfcTemplate</uap:FileType>
-						</uap:SupportedFileTypes>
-					</uap:FileTypeAssociation>
-				</uap:Extension>-->
 			</Extensions>
 		</Application>
 
-		<Application Id="CLI" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
-			<uap:VisualElements DisplayName="projectFrameCut" Description="the entrypoint for the projectFrameCut CLI, this should be hidden" AppListEntry="none"
-													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
-			<Extensions>
-				<uap3:Extension Category="windows.appExecutionAlias" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
-					<uap3:AppExecutionAlias>
-						<desktop:ExecutionAlias Alias="pjfc-cli.exe" />
-					</uap3:AppExecutionAlias>
-				</uap3:Extension>
-			</Extensions>
-		</Application>
-
-		<Application Id="CLIVersionSpecificAlias" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
+		<Application Id="projectFrameCutCompatible" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
 			<uap:VisualElements DisplayName="projectFrameCut (DO NOT DISABLE THIS ALIAS, OR YOU WILL BREAK THE APPLICATION)" Description="the entrypoint for the projectFrameCut CLI (version-specific alias), this should be hidden" AppListEntry="none" 
 													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
 			<Extensions>

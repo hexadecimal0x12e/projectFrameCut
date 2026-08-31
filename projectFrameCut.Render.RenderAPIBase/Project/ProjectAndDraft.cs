@@ -58,6 +58,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// </summary>
         public string LastOpenAppName { get; set; } = "Unknown";
         /// <summary>
+        /// Determine the Identifier of Application while the draft is saved.
+        /// </summary>
+        public string LastOpenAppIdentifier { get; set; } = "Unknown";
+        /// <summary>
         /// Determine what plugins used in this project.
         /// </summary>
         public List<string> PluginUsed { get; set; } = new List<string>();

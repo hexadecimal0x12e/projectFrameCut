@@ -462,6 +462,21 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
     public class PluginMetadata
     {
         /// <summary>
+        /// The package format version. External plugins must use version 2 or later.
+        /// </summary>
+        public int PackageFormatVersion { get; set; }
+
+        /// <summary>
+        /// SHA-256 fingerprint of the publisher CA certificate.
+        /// </summary>
+        public string PublisherId { get; set; } = string.Empty;
+
+        /// <summary>
+        /// SHA-256 fingerprint of the end-entity certificate that signed this package.
+        /// </summary>
+        public string SigningCertificateFingerprint { get; set; } = string.Empty;
+
+        /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
         /// </summary>
         public string PluginID { get; set; }

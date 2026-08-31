@@ -218,6 +218,10 @@ public partial class DraftPage : ContentPage, IDraftPage
     private IHistoryGraphProvider? _activeHistoryProvider;
     private RemoteProjectSession? _remoteProjectSession;
     private bool _remoteSessionDetached;
+    private const int RemoteProjectSyncIntervalMs = 2000;
+    private CancellationTokenSource? _remoteProjectMonitorCts;
+    private long _remoteChangePromptedRevision = -1;
+    private string _remoteChangePromptedHash = string.Empty;
     private const int RenderBackendHealthCheckIntervalMs = 5000;
     private static readonly TimeSpan RenderBackendReconnectTimeout = TimeSpan.FromSeconds(30);
     private readonly SemaphoreSlim _renderBackendRestartLock = new(1, 1);
@@ -337,6 +341,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public bool UnNullUseCompactLayout => UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone;
     public bool IsPopupShowing => Popup.IsVisible;
     public bool IsTimelineScrollEnabled { get; set { field = value; OnPropertyChanged(nameof(IsTimelineScrollEnabled)); } }
+    public bool AllowExit { get; set; } = true;
     #endregion
 
     #region options
@@ -759,6 +764,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 this.Window.SizeChanged += Window_SizeChanged;
             }
         });
+        StartRemoteProjectMonitor();
     }
 
     private async void DraftPage_Loaded(object? sender, EventArgs e)
@@ -7201,7 +7207,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     /// Builds an editor page over an already-open remote session. The returned
     /// page takes ownership of the session and closes it when the page exits.
     /// </summary>
-    private static DraftPage CreateFromRemoteSession(RemoteProjectSession session)
+    internal static DraftPage CreateFromRemoteSession(RemoteProjectSession session)
     {
         ProjectJSONStructure project = session.Project;
         DraftStructureJSON draft = session.Draft;
@@ -7236,27 +7242,156 @@ public partial class DraftPage : ContentPage, IDraftPage
         return page;
     }
 
+    internal async Task<bool> PrepareForMcpProjectReplacementAsync()
+    {
+        RemoteProjectSession? session = _remoteProjectSession;
+        if (session is null) return true;
+        if (!_workspace.GetModule<ProjectModule>().IsDirty) return true;
+
+        long previousSavedRevision = session.LastSavedRevision;
+        await Save(true, new ClipUpdateEventArgs
+        {
+            Reason = ClipUpdateReason.Unknown,
+            DetailInfo = "Auto-save before MCP project switch",
+        });
+        return session.LastSavedRevision > previousSavedRevision;
+    }
+
+    internal bool HasUnsavedRemoteChanges =>
+        _remoteProjectSession is not null && _workspace.GetModule<ProjectModule>().IsDirty;
+
+    internal void DetachRemoteSessionForReplacement()
+    {
+        StopRemoteProjectMonitor();
+        _remoteProjectSession = null;
+        _remoteSessionDetached = true;
+        ExitNoSave = true;
+    }
+
+    internal async Task CompleteMcpProjectReplacementAsync()
+    {
+        RemoteProjectSession? session = _remoteProjectSession;
+        if (session is null) return;
+
+        try
+        {
+            await session.CloseSharedServerSessionAsync();
+        }
+        catch (Exception ex) when (
+            ex is RemoteRenderException remote && remote.ErrorCode == RenderErrorCode.SessionNotFound ||
+            ex.Data[nameof(RemoteError.Code)] is RenderErrorCode code && code == RenderErrorCode.SessionNotFound ||
+            ex.Data["RenderErrorCode"] is RenderErrorCode renderCode && renderCode == RenderErrorCode.SessionNotFound)
+        {
+        }
+
+        DetachRemoteSessionForReplacement();
+    }
+
+    private void StartRemoteProjectMonitor()
+    {
+        RemoteProjectSession? session = _remoteProjectSession;
+        if (session is null || !session.MonitorChanges || _remoteProjectMonitorCts is not null) return;
+
+        var cancellation = new CancellationTokenSource();
+        _remoteProjectMonitorCts = cancellation;
+        _ = MonitorRemoteProjectChangesAsync(session, cancellation.Token);
+    }
+
+    private void StopRemoteProjectMonitor()
+    {
+        CancellationTokenSource? cancellation = _remoteProjectMonitorCts;
+        _remoteProjectMonitorCts = null;
+        if (cancellation is null) return;
+        try { cancellation.Cancel(); }
+        catch (ObjectDisposedException) { }
+    }
+
+    private async Task MonitorRemoteProjectChangesAsync(
+        RemoteProjectSession session,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(RemoteProjectSyncIntervalMs, cancellationToken).ConfigureAwait(false);
+                if (AlreadyDisappeared || !ReferenceEquals(_remoteProjectSession, session)) return;
+
+                HeadlessProjectSnapshot latest;
+                try
+                {
+                    latest = await session.ReadLatestSnapshotAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Monitor remote project changes", this);
+                    continue;
+                }
+
+                if (session.MatchesSnapshot(latest)) continue;
+                await Dispatcher.DispatchAsync(() => HandleRemoteProjectChangeAsync(session, latest));
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Monitor remote project changes", this);
+        }
+    }
+
+    private async Task HandleRemoteProjectChangeAsync(
+        RemoteProjectSession session,
+        HeadlessProjectSnapshot latest)
+    {
+        if (AlreadyDisappeared || !ReferenceEquals(_remoteProjectSession, session) || session.MatchesSnapshot(latest)) return;
+        if (saveLocker.CurrentCount == 0) return;
+
+        if (_workspace.GetModule<ProjectModule>().IsDirty)
+        {
+            if (_remoteChangePromptedRevision == latest.Revision &&
+                string.Equals(_remoteChangePromptedHash, latest.SnapshotHash, StringComparison.Ordinal)) return;
+
+            _remoteChangePromptedRevision = latest.Revision;
+            _remoteChangePromptedHash = latest.SnapshotHash;
+            bool sync = await DisplayAlertAsync(
+                Localized._Info,
+                Localized.DraftPage_RemoteProject_ModifiedOnServer,
+                Localized.DraftPage_RemoteProject_SyncFromServer,
+                Localized._Cancel);
+            if (!sync) return;
+        }
+
+        await SyncRemoteProjectFromServerAsync(latest);
+    }
+
     /// <summary>
     /// Discards the local unsaved edits and reloads the editor from the latest
     /// server-side snapshot, keeping the same remote session alive. The current
     /// page is replaced in the navigation stack by a freshly built one.
     /// </summary>
-    private async Task SyncRemoteProjectFromServerAsync()
+    private async Task SyncRemoteProjectFromServerAsync(HeadlessProjectSnapshot? latest = null)
     {
         var session = _remoteProjectSession;
         if (session is null) return;
         SetStateBusy();
         try
         {
-            await session.SyncFromServerAsync();
+            if (latest is null)
+                await session.SyncFromServerAsync();
+            else
+                session.AdoptSnapshot(latest);
             var replacement = CreateFromRemoteSession(session);
             string? title = App.Current?.Windows?[0]?.Title;
 
             // Hand the session over to the replacement page: while leaving the
             // navigation stack, this page must neither save nor close anything.
-            _remoteProjectSession = null;
-            _remoteSessionDetached = true;
-            ExitNoSave = true;
+            DetachRemoteSessionForReplacement();
 
             Navigation.InsertPageBefore(replacement, this);
             Shell.SetTabBarIsVisible(replacement, false);
@@ -9171,6 +9306,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
                 ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
                 ProjectInfo.LastOpenAppName = MauiProgram.AssemblyName;
+                ProjectInfo.LastOpenAppIdentifier = MauiProgram.AppIdentifier;
                 ProjectInfo.ProjectName ??= ProjectName;
                 ProjectDuration = draft.Duration;
                 try
@@ -9271,6 +9407,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
             ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
             ProjectInfo.LastOpenAppName = MauiProgram.AssemblyName;
+            ProjectInfo.LastOpenAppIdentifier = MauiProgram.AppIdentifier;
             ProjectInfo.PluginUsed =
                 draft.Clips
                            .Select(c => c.FromPlugin)
@@ -10522,6 +10659,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             Log(ex, "Save window layout", this);
         }
         StopRenderBackendWatchdog();
+        StopRemoteProjectMonitor();
         CancelPendingClipPlacement();
         foreach (var (_, cts) in _perClipThumbCts)
         {
@@ -10658,6 +10796,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     protected override bool OnBackButtonPressed()
     {
+        if (!AllowExit) return true;
         if (!ignoreRunningTasks && RunningTasks.Any(c => !c.Value.InnerTask.IsCompleted))
         {
             Dispatcher.Dispatch(async () =>

@@ -5,6 +5,8 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using projectFrameCut.Render.Contracts;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut.IntegratedAPIServer.MCP;
 
@@ -99,62 +101,92 @@ internal static class IntegratedApiToolCatalog
     public static IReadOnlyList<McpServerTool> Create(
         IIntegratedApiBackend backend,
         EndpointAuthorizationManager authorization,
-        IntegratedApiRequestContextAccessor requestContextAccessor)
-        =>
+        IntegratedApiRequestContextAccessor requestContextAccessor,
+        bool requireAuthorization = true,
+        bool includeIntegratedClientTools = true)
+    {
+        List<McpServerTool> tools = [];
+        McpServerTool CreateTool(string name, string description, string schema, IntegratedApiOperation operation)
+            => Tool(name, description, schema, operation, requireAuthorization);
+
+        if (requireAuthorization)
+        {
+            tools.Add(new AuthorizationTool(backend, authorization, requestContextAccessor));
+        }
+
+        tools.AddRange(
         [
-            new AuthorizationTool(backend, authorization, requestContextAccessor),
-            Tool("get_timeline_info", "Get timeline metadata: frame rate, resolution, total frames, layer count.", EmptySchema, IntegratedApiOperation.GetTimelineInfo),
-            Tool("list_layers", "List all layers/tracks in the timeline with their properties.", EmptySchema, IntegratedApiOperation.ListLayers),
-            Tool("list_available_effects", "List all available effect types with their parameters and defaults.", EmptySchema, IntegratedApiOperation.ListAvailableEffects),
-            Tool("get_effect_info", "Get detailed information about a specific effect type.", Schema("effectType", "string", true), IntegratedApiOperation.GetEffectInfo),
-            Tool("get_project_metadata", "Get project metadata: name, file path, creation/modification times, file size.", EmptySchema, IntegratedApiOperation.GetProjectMetadata),
-            Tool("list_connected_clients", "List currently connected editor clients.", EmptySchema, IntegratedApiOperation.ListConnectedClients),
-            Tool("get_client_environment", "Query the integrated editor environment capabilities.", ObjectSchema("""
-                "clientId":{"type":"string","description":"Integrated editor client ID"},
-                "timeoutMs":{"type":"integer","description":"Optional request timeout in milliseconds"}
-                """, "clientId"), IntegratedApiOperation.GetClientEnvironment),
-            Tool("render_client_preview", "Render one timeline frame in the integrated editor.", ObjectSchema("""
-                "clientId":{"type":"string"},"frame":{"type":"integer"},
-                "width":{"type":"integer"},"height":{"type":"integer"},"timeoutMs":{"type":"integer"}
-                """, "clientId", "frame"), IntegratedApiOperation.RenderClientPreview),
-            Tool("apply_client_patch", "Apply a clip patch in the integrated editor.", ObjectSchema("""
-                "clientId":{"type":"string"},"clipId":{"type":"string"},
-                "patch":{"type":"object"},"timeoutMs":{"type":"integer"}
-                """, "clientId", "clipId", "patch"), IntegratedApiOperation.ApplyClientPatch),
-            Tool("move_client_clip", "Move a clip in the integrated editor.", ObjectSchema("""
-                "clientId":{"type":"string"},"clipId":{"type":"string"},
-                "layerIndex":{"type":"integer"},"startFrame":{"type":"integer"},"timeoutMs":{"type":"integer"}
-                """, "clientId", "clipId", "layerIndex", "startFrame"), IntegratedApiOperation.MoveClientClip),
-            Tool("list_clips", "List all clips in the current project.", EmptySchema, IntegratedApiOperation.ListClips),
-            Tool("get_clip", "Get one clip by ID.", Schema("clipId", "string", true), IntegratedApiOperation.GetClip),
-            Tool("upsert_clip", "Create or replace a clip.", ObjectSchema("\"clip\":{\"type\":\"object\",\"description\":\"ClipDraftDTO\"}", "clip"), IntegratedApiOperation.UpsertClip),
-            Tool("move_clip", "Move a clip to another track or frame position.", ObjectSchema("""
+            CreateTool("get_timeline_info", "Get timeline metadata: frame rate, resolution, total frames, layer count.", EmptySchema, IntegratedApiOperation.GetTimelineInfo),
+            CreateTool("list_layers", "List all layers/tracks in the timeline with their properties.", EmptySchema, IntegratedApiOperation.ListLayers),
+            CreateTool("list_available_effects", "List all available effect types with their parameters and defaults.", EmptySchema, IntegratedApiOperation.ListAvailableEffects),
+            CreateTool("get_effect_info", "Get detailed information about a specific effect type.", Schema("effectType", "string", true), IntegratedApiOperation.GetEffectInfo),
+            CreateTool("get_project_metadata", "Get project metadata: name, file path, creation/modification times, file size.", EmptySchema, IntegratedApiOperation.GetProjectMetadata),
+        ]);
+
+        if (includeIntegratedClientTools)
+        {
+            tools.AddRange(
+            [
+                CreateTool("list_connected_clients", "List currently connected editor clients.", EmptySchema, IntegratedApiOperation.ListConnectedClients),
+                CreateTool("get_client_environment", "Query the integrated editor environment capabilities.", ObjectSchema("""
+                    "clientId":{"type":"string","description":"Integrated editor client ID"},
+                    "timeoutMs":{"type":"integer","description":"Optional request timeout in milliseconds"}
+                    """, "clientId"), IntegratedApiOperation.GetClientEnvironment),
+                CreateTool("render_client_preview", "Render one timeline frame in the integrated editor.", ObjectSchema("""
+                    "clientId":{"type":"string"},"frame":{"type":"integer"},
+                    "width":{"type":"integer"},"height":{"type":"integer"},"timeoutMs":{"type":"integer"}
+                    """, "clientId", "frame"), IntegratedApiOperation.RenderClientPreview),
+                CreateTool("apply_client_patch", "Apply a clip patch in the integrated editor.", ObjectSchema("""
+                    "clientId":{"type":"string"},"clipId":{"type":"string"},
+                    "patch":{"type":"object"},"timeoutMs":{"type":"integer"}
+                    """, "clientId", "clipId", "patch"), IntegratedApiOperation.ApplyClientPatch),
+                CreateTool("move_client_clip", "Move a clip in the integrated editor.", ObjectSchema("""
+                    "clientId":{"type":"string"},"clipId":{"type":"string"},
+                    "layerIndex":{"type":"integer"},"startFrame":{"type":"integer"},"timeoutMs":{"type":"integer"}
+                    """, "clientId", "clipId", "layerIndex", "startFrame"), IntegratedApiOperation.MoveClientClip),
+            ]);
+        }
+
+        tools.AddRange(
+        [
+            CreateTool("list_clips", "List all clips in the current project.", EmptySchema, IntegratedApiOperation.ListClips),
+            CreateTool("get_clip", "Get one clip by ID.", Schema("clipId", "string", true), IntegratedApiOperation.GetClip),
+            CreateTool("upsert_clip", "Create or replace a clip.", ObjectSchema("\"clip\":{\"type\":\"object\",\"description\":\"ClipDraftDTO\"}", "clip"), IntegratedApiOperation.UpsertClip),
+            CreateTool("move_clip", "Move a clip to another track or frame position.", ObjectSchema("""
                 "clipId":{"type":"string"},"layerIndex":{"type":"integer"},
                 "startFrame":{"type":"integer"},"subLayerIndex":{"type":"integer"}
                 """, "clipId", "layerIndex", "startFrame"), IntegratedApiOperation.MoveClip),
-            Tool("patch_clip", "Patch selected clip fields.", ObjectSchema("""
+            CreateTool("patch_clip", "Patch selected clip fields.", ObjectSchema("""
                 "clipId":{"type":"string"},"patch":{"type":"object"}
                 """, "clipId", "patch"), IntegratedApiOperation.PatchClip),
-            Tool("delete_clip", "Delete a clip by ID.", Schema("clipId", "string", true), IntegratedApiOperation.DeleteClip),
-            Tool("add_effect", "Add or replace one effect on a clip.", ObjectSchema("""
+            CreateTool("delete_clip", "Delete a clip by ID.", Schema("clipId", "string", true), IntegratedApiOperation.DeleteClip),
+            CreateTool("add_effect", "Add or replace one effect on a clip.", ObjectSchema("""
                 "clipId":{"type":"string"},"effect":{"type":"object"}
                 """, "clipId", "effect"), IntegratedApiOperation.AddEffect),
-            Tool("remove_effect", "Remove one effect from a clip.", ObjectSchema("""
+            CreateTool("remove_effect", "Remove one effect from a clip.", ObjectSchema("""
                 "clipId":{"type":"string"},"effectKey":{"type":"string"}
                 """, "clipId", "effectKey"), IntegratedApiOperation.RemoveEffect),
-            Tool("add_effect_bundle", "Add or replace one effect bundle on a clip.", ObjectSchema("""
+            CreateTool("add_effect_bundle", "Add or replace one effect bundle on a clip.", ObjectSchema("""
                 "clipId":{"type":"string"},"bundle":{"type":"object"}
                 """, "clipId", "bundle"), IntegratedApiOperation.AddEffectBundle),
-            Tool("remove_effect_bundle", "Remove an effect bundle from a clip.", ObjectSchema("""
+            CreateTool("remove_effect_bundle", "Remove an effect bundle from a clip.", ObjectSchema("""
                 "clipId":{"type":"string"},"bundleId":{"type":"string"}
                 """, "clipId", "bundleId"), IntegratedApiOperation.RemoveEffectBundle),
-            Tool("save_project", "Persist the current project state to disk.", ObjectSchema("""
+            CreateTool("save_project", "Persist the current project state to disk.", ObjectSchema("""
                 "changeReason":{"type":"string"}
                 """), IntegratedApiOperation.SaveProject),
-        ];
+        ]);
 
-    private static McpServerTool Tool(string name, string description, string schema, IntegratedApiOperation operation)
-        => new BackendTool(name, description, schema, operation);
+        return tools;
+    }
+
+    private static McpServerTool Tool(
+        string name,
+        string description,
+        string schema,
+        IntegratedApiOperation operation,
+        bool requireAuthorization)
+        => new BackendTool(name, description, schema, operation, requireAuthorization);
 
     private static string Schema(string propertyName, string type, bool required)
         => ObjectSchema($"\"{propertyName}\":{{\"type\":\"{type}\"}}", required ? [propertyName] : []);
@@ -168,11 +200,18 @@ internal static class IntegratedApiToolCatalog
     private sealed class BackendTool : ExplicitTool
     {
         private readonly IntegratedApiOperation _operation;
+        private readonly bool _requireAuthorization;
 
-        public BackendTool(string name, string description, string schema, IntegratedApiOperation operation)
+        public BackendTool(
+            string name,
+            string description,
+            string schema,
+            IntegratedApiOperation operation,
+            bool requireAuthorization)
             : base(name, description, schema)
         {
             _operation = operation;
+            _requireAuthorization = requireAuthorization;
         }
 
         public override async ValueTask<CallToolResult> InvokeAsync(
@@ -183,7 +222,8 @@ internal static class IntegratedApiToolCatalog
             var services = request.Services ?? throw new InvalidOperationException("MCP request services are unavailable.");
             var authorization = services.GetRequiredService<EndpointAuthorizationManager>();
             var requestContextAccessor = services.GetRequiredService<IntegratedApiRequestContextAccessor>();
-            if (!authorization.IsAuthorized(request.Server, GetRemoteEndpoint(requestContextAccessor)))
+            if (_requireAuthorization &&
+                !authorization.IsAuthorized(request.Server, GetRemoteEndpoint(requestContextAccessor)))
             {
                 return Error("This client endpoint is not authorized. Call authorize_client first.");
             }
@@ -199,16 +239,13 @@ internal static class IntegratedApiToolCatalog
             {
                 return Error("The operation was cancelled.");
             }
-            catch (ArgumentException ex)
+            catch (Exception ex) when (ex is ArgumentException or KeyNotFoundException or RenderRpcException or InvalidOperationException or FormatException or JsonException)
             {
                 return Error(ex.Message);
             }
-            catch (KeyNotFoundException ex)
+            catch (Exception ex)
             {
-                return Error(ex.Message);
-            }
-            catch
-            {
+                Logger.Log(ex, "Process MCP Message");
                 return Error("The integrated editor could not complete the requested operation.");
             }
         }

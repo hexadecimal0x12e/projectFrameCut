@@ -79,6 +79,13 @@ namespace projectFrameCut
 
         public static string ProgramConfig = "?", ProgramCommit = "?", AssemblyName = "projectFrameCut";
 
+        public static string AppIdentifier =>
+#if MAUISDK
+            AppInfo.PackageName;
+#else
+            "hexadecimal0x12e.projectFrameCut";
+#endif
+
         private static readonly string[] FoldersNeedInUserdata =
         [
             "My Drafts",
@@ -175,6 +182,33 @@ namespace projectFrameCut
                 }
                 catch { } //safe to ignore it
             }
+#if WINDOWS || LINUX
+            if (CmdlineArgs.Contains("--allowCtrlCExit"))
+            {
+                PosixSignalRegistration.Create(PosixSignal.SIGINT, async ctx =>
+                {
+                    Console.Error.WriteLine("SIGINT received, trying to exit...");
+                    Task.Delay(10000).ContinueWith((_) => Task.Run(() => Environment.Exit(32767)));
+                    try
+                    {
+                        RenderRpcBootstrap.DetachActiveCliRender();
+                        if (AppShell.instance?.CurrentPage is DraftPage pg)
+                        {
+                            try
+                            {
+                                await pg.Save(true, new ApplicationAPIBase.Project.ClipUpdateEventArgs { Reason = ApplicationAPIBase.Project.ClipUpdateReason.Unknown, DetailInfo = "Auto-save when Ctrl-C Received" });
+                            }
+                            catch (Exception ex)
+                            {
+                                Log(ex, "Auto-saving project when closing", pg);
+                            }
+                        }
+                    }
+                    catch { }
+                    Environment.Exit(32767);
+                });
+            }
+#endif
             string loggingDir = "";
             try
             {

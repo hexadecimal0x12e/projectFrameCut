@@ -5,6 +5,7 @@ using projectFrameCut.Drawing.Base;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.IntegratedAPIServer;
 using projectFrameCut.IntegratedAPIServer.Headless;
+using projectFrameCut.IntegratedAPIServer.MCP;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
@@ -51,7 +52,7 @@ using ILGPU;
 namespace projectFrameCut
 {
     /// <summary>
-    /// Entry point for commands exposed by pjfc-cli.
+    /// Entry point for commands exposed by pjfc.
     /// Keep the option descriptions in this file in sync with Program and HomePage.
     /// </summary>
     public static class CLIProgram
@@ -140,21 +141,12 @@ namespace projectFrameCut
                 }
             }
 
-            Localized = SimpleLocalizer.Init(args.FirstOrDefault(c => c.StartsWith("--locale="))?.Substring("--locale=".Length));
-            SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-            SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
-            projectFrameCut.ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(Localized._LocaleId_, out var apiloc) ? apiloc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
-#if WINDOWS
-            SimpleLocalizerBaseGeneratedHelper.Localized = ISimpleLocalizerBase_Helper.GetMapping().TryGetValue(Localized._LocaleId_, out var hloc) ? hloc : ISimpleLocalizerBase_Helper.GetMapping().First().Value;
-#endif
-            PluginManager.CurrentLocale = Localized._LocaleId_;
-            PluginManager.ExtenedLocalizationGetter = new((k) =>
-            {
-                return Localized.IsItemExist(k) ? Localized.DynamicLookup(k, k) : null;
-            });
+            InitializeCliLocalization(args);
 
             switch (args[0].ToLowerInvariant())
             {
+                case "mcp":
+                    return RunMcp(args.Skip(1).ToArray());
                 case "headless":
                     return RunBackend(args.Skip(1).ToArray());
                 case "rpc_server":
@@ -167,19 +159,17 @@ namespace projectFrameCut
             }
 
             Console.Error.WriteLine($"Unknown command: {args[0]}");
-            Console.Error.WriteLine("Run 'pjfc-cli help' to see the available commands.");
+            Console.Error.WriteLine("Run 'pjfc help' to see the available commands.");
             return InvalidCommandExitCode;
         }
 
         private static int WriteCommandHelp(string command)
         {
-#if !ANDROID && !iDevices
             if (command.Equals("rpc_server", StringComparison.OrdinalIgnoreCase))
             {
                 WriteRpcServerHelp();
                 return SuccessExitCode;
             }
-#endif
 
             if (command.Equals("render", StringComparison.OrdinalIgnoreCase))
             {
@@ -193,6 +183,12 @@ namespace projectFrameCut
                 return SuccessExitCode;
             }
 
+            if (command.Equals("mcp", StringComparison.OrdinalIgnoreCase))
+            {
+                WriteMcpHelp();
+                return SuccessExitCode;
+            }
+
             if (command.Equals("gui", StringComparison.OrdinalIgnoreCase))
             {
                 WriteGuiHelp();
@@ -200,7 +196,7 @@ namespace projectFrameCut
             }
 
             Console.Error.WriteLine($"No help topic found for '{command}'.");
-            Console.Error.WriteLine("Run 'pjfc-cli help' to see the available topics.");
+            Console.Error.WriteLine("Run 'pjfc help' to see the available topics.");
             return InvalidCommandExitCode;
         }
 
@@ -209,6 +205,230 @@ namespace projectFrameCut
             value.Equals("--help", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("-h", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("/?", StringComparison.OrdinalIgnoreCase);
+
+        private static void InitializeCliLocalization(string[] args)
+        {
+            Localized = SimpleLocalizer.Init(args.FirstOrDefault(c => c.StartsWith("--locale="))?.Substring("--locale=".Length));
+            SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+            SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+            projectFrameCut.ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(Localized._LocaleId_, out var apiloc) ? apiloc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+#if WINDOWS
+            SimpleLocalizerBaseGeneratedHelper.Localized = ISimpleLocalizerBase_Helper.GetMapping().TryGetValue(Localized._LocaleId_, out var hloc) ? hloc : ISimpleLocalizerBase_Helper.GetMapping().First().Value;
+#endif
+            PluginManager.CurrentLocale = Localized._LocaleId_;
+            PluginManager.ExtenedLocalizationGetter = new(k =>
+                Localized.IsItemExist(k) ? Localized.DynamicLookup(k, k) : null);
+        }
+        #endregion
+
+        #region mcp
+
+        private static int RunMcp(string[] args)
+        {
+            if (args.Any(IsHelpOption))
+            {
+                WriteMcpHelp();
+                return SuccessExitCode;
+            }
+
+            string? projectRoot = GetOption(args, "projectRoot", required: false)
+                ?? GetOption(args, "project", required: false)
+                ?? args.FirstOrDefault(static argument => !argument.StartsWith("--", StringComparison.Ordinal));
+
+            if (!string.IsNullOrWhiteSpace(projectRoot) && !Directory.Exists(projectRoot))
+            {
+                Console.Error.WriteLine($"MCP project root does not exist: {projectRoot}");
+                return InvalidCommandExitCode;
+            }
+
+            string dataRoot;
+            try
+            {
+                dataRoot = Path.GetFullPath(ResolveDataRoot(GetOption(args, "dataRoot", required: false)));
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Failed to resolve the MCP user data root: {ex.Message}");
+                return InvalidCommandExitCode;
+            }
+
+            string transportValue = GetOption(args, "transport") ?? "stdio";
+            McpTransportMode transport;
+            if (transportValue.Equals("stdio", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!args.Contains("--quiet"))
+                {
+                    Console.Error.WriteLine("Error: MCP stdio transport requires --quiet flag.");
+                    Console.Error.WriteLine("To avoid unexpected behavior, MCP stdio server cannot run without the --quiet flag.");
+                    return InvalidCommandExitCode;
+                }
+
+                transport = McpTransportMode.Stdio;
+            }
+            else if (transportValue.Equals("http", StringComparison.OrdinalIgnoreCase))
+            {
+                transport = McpTransportMode.Http;
+            }
+            else if (transportValue.Equals("raw_pipe", StringComparison.OrdinalIgnoreCase))
+            {
+                transport = McpTransportMode.RawPipe;
+            }
+            else
+            {
+                Console.Error.WriteLine("mcp --transport must be either 'stdio', 'http', or 'raw_pipe'.");
+                return InvalidCommandExitCode;
+            }
+
+            Uri? httpListenUri = null;
+            string? httpListen = GetOption(args, "listen", required: false);
+            if (transport == McpTransportMode.Http)
+            {
+                if (string.IsNullOrWhiteSpace(httpListen) ||
+                    !Uri.TryCreate(httpListen, UriKind.Absolute, out httpListenUri))
+                {
+                    Console.Error.WriteLine("HTTP MCP transport requires --listen=<http[s]://host:port>.");
+                    return InvalidCommandExitCode;
+                }
+
+                try
+                {
+                    IntegratedApiServer.ValidateListenUri(httpListenUri);
+                }
+                catch (ArgumentException ex)
+                {
+                    Console.Error.WriteLine($"Invalid MCP HTTP listen address: {ex.Message}");
+                    return InvalidCommandExitCode;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(httpListen))
+            {
+                Console.Error.WriteLine("mcp --listen is only valid with --transport=http.");
+                return InvalidCommandExitCode;
+            }
+
+            string? rawPipeName = GetOption(args, "pipe", required: false);
+            string? rawPipeParentPid = GetOption(args, "parentPid", required: false);
+            if (transport == McpTransportMode.RawPipe)
+            {
+                if (string.IsNullOrWhiteSpace(rawPipeName))
+                {
+                    Console.Error.WriteLine("Raw pipe MCP transport requires --pipe=<pipeName>.");
+                    return InvalidCommandExitCode;
+                }
+                if (!string.IsNullOrWhiteSpace(rawPipeParentPid) &&
+                    (!int.TryParse(rawPipeParentPid, out int parentPid) || parentPid <= 0))
+                {
+                    Console.Error.WriteLine("Raw pipe parent PID must be a positive process ID.");
+                    return InvalidCommandExitCode;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(rawPipeName))
+            {
+                Console.Error.WriteLine("mcp --pipe is only valid with --transport=raw_pipe.");
+                return InvalidCommandExitCode;
+            }
+            else if (!string.IsNullOrWhiteSpace(rawPipeParentPid))
+            {
+                Console.Error.WriteLine("mcp --parentPid is only valid with --transport=raw_pipe.");
+                return InvalidCommandExitCode;
+            }
+
+            Uri? rpcListenUri = null;
+            string? rpcToken = GetOption(args, "rpcToken", required: false)
+                ?? GetOption(args, "projectServerToken", required: false);
+            string globalAssetsDatabasePath = Path.Combine(dataRoot, "My Assets", ".database", "database.json");
+            bool startClient = !args.Any(static argument =>
+                argument.Equals("--headless", StringComparison.OrdinalIgnoreCase));
+            string? rpcListen = GetOption(args, "rpcListen", required: false)
+                ?? GetOption(args, "projectServer", required: false);
+            if (!string.IsNullOrWhiteSpace(rpcListen))
+            {
+                if (!Uri.TryCreate(rpcListen, UriKind.Absolute, out rpcListenUri))
+                {
+                    Console.Error.WriteLine("mcp --rpcListen requires an absolute <http[s]://host:port> address.");
+                    return InvalidCommandExitCode;
+                }
+
+                try
+                {
+                    IntegratedApiServer.ValidateListenUri(rpcListenUri);
+                    IntegratedApiServer.ValidateRpcToken(rpcToken ?? string.Empty);
+                }
+                catch (ArgumentException ex)
+                {
+                    Console.Error.WriteLine($"Invalid MCP RPC server configuration: {ex.Message}");
+                    return InvalidCommandExitCode;
+                }
+
+            }
+            else if (!string.IsNullOrWhiteSpace(rpcToken))
+            {
+                Console.Error.WriteLine("mcp --rpcToken requires --rpcListen=<http[s]://host:port>.");
+                return InvalidCommandExitCode;
+            }
+
+            using var cancellation = new CancellationTokenSource();
+#if WINDOWS || LINUX
+            Console.CancelKeyPress += (_, eventArgs) =>
+            {
+                eventArgs.Cancel = true;
+                cancellation.Cancel();
+            };
+#endif
+
+            try
+            {
+                McpService.RunAsync(new McpServiceOptions
+                {
+                    ProjectRoot = projectRoot,
+                    UserDataRoot = dataRoot,
+                    Transport = transport,
+                    RawPipeName = rawPipeName,
+                    RawPipeParentPid = rawPipeParentPid,
+                    HttpListenUri = httpListenUri,
+                    RpcListenUri = rpcListenUri,
+                    RpcToken = rpcToken,
+                    GlobalAssetsDatabasePath = globalAssetsDatabasePath,
+                    StartClient = startClient,
+                    RenderRuntimeInitializer = _ =>
+                    {
+                        InitializeRenderRuntime(dataRoot);
+                        return ValueTask.CompletedTask;
+                    },
+                    ClientExited = () =>
+                    {
+                        try { cancellation.Cancel(); }
+                        catch (ObjectDisposedException) { }
+                    },
+#if WINDOWS
+                    ClientExecutable = $"projectFrameCutCompatible_{MauiProgram.AppIdentifier}_{Assembly.GetExecutingAssembly().GetName().Version}.exe",
+#elif LINUX
+                    ClientExecutable = Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule?.FileName,
+#endif
+                    WarningSink = warning => Console.Error.WriteLine($"Warning: {warning}"),
+                    HttpMcpServerStarted = uri =>
+                    {
+                        Console.Error.WriteLine($"projectFrameCut MCP HTTP server listening at {uri.AbsoluteUri.TrimEnd('/')}/mcp");
+                    },
+                    RpcServerStarted = uri =>
+                    {
+                        string serverAddress = uri.AbsoluteUri.TrimEnd('/');
+                        Console.Error.WriteLine($"projectFrameCut RPC server listening at {serverAddress}/rpc");
+                    },
+                }, cancellation.Token).GetAwaiter().GetResult();
+                return SuccessExitCode;
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                return SuccessExitCode;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"MCP {transportValue.ToLowerInvariant()} server failed: {ex}");
+                return 1;
+            }
+        }
+
         #endregion
 
         #region backend
@@ -1264,6 +1484,18 @@ namespace projectFrameCut
             }
         }
 
+        private static string ResolveDataRoot(string? dataRoot)
+        {
+            if (!string.IsNullOrWhiteSpace(dataRoot)) return dataRoot;
+
+            string overridePathFile = Path.Combine(AppDataPath, "OverrideUserDataPath.txt");
+            return File.Exists(overridePathFile)
+                ? File.ReadAllText(overridePathFile).Trim()
+                : Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                    "projectFrameCut");
+        }
+
         private static string? GetOption(string[] args, string name, bool required = true)
         {
             var prefix = $"--{name}=";
@@ -1279,16 +1511,136 @@ namespace projectFrameCut
         #endregion
 
         #region help
+        private static void WriteGeneralHelp()
+        {
+            Console.WriteLine(
+@"projectFrameCut command-line interface
+
+Usage:
+  pjfc <command> [arguments] [options]
+  pjfc help [command]
+
+Commands:
+  gui        Launch the projectFrameCut graphical interface.
+  render     Run the built-in renderer.
+  headless   Start the headless backend for remote access and automation.
+  mcp        Serve the user library or one project over MCP.
+  help       Show general help or detailed help for a command.
+  reset      Reset the application to its default state by clearing settings.
+  about      Show version and build information.
+
+  instance   Launch the instance manager CLI. 
+             Note this command is only available in the Windows build and provided by instance manager.
+
+Global options:
+  --quiet            Suppress all console outputs, include logs, version/copyright banner, and diagnostic messages.
+
+  --consoleLog       Write application logs to the console. Mutually exclusive with with --quiet flag. 
+
+  --logDiagnostic    Include diagnostic-level log messages.
+
+  --loadPlugins      Load all enabled User-level plugin(s) which has been enabled.
+                     Not applicable to gui mode because GUI will handle plugin by itself.
+
+  --ffmpegRoot       Sets the root path for FFmpeg binaries. 
+                     If not specified, defaults to the internal FFmpeg path, or the user configured 
+                     path/plugin in the GUI settings.
+
+  --dataRoot         Optional user-data directory used for assets and rendering.
+                     If not specified, defaults to the path defined in <App Data>\OverrideUserDataPath.txt 
+                     or %USERPROFILE%\Documents\projectFrameCut by default.
+
+
+Help options:
+  -h, --help, /?    Show this help text.
+");
+        }
+
+        private static void WriteMcpHelp()
+        {
+            Console.WriteLine(
+@"Start a projectFrameCut MCP server
+
+Usage:
+  pjfc mcp --transport=stdio --quiet [--projectRoot=<path>] [options]
+  pjfc mcp --transport=http --listen=<http[s]://host:port>
+           [--projectRoot=<path>] [options]
+  pjfc mcp --transport=raw_pipe --pipe=<pipeName>
+           [--projectRoot=<path>] [options]
+
+Options:
+  --transport    MCP transport mode: stdio, http, or raw_pipe.
+  --listen       MCP HTTP listen address. Required for HTTP transport; the MCP
+                 endpoint is /mcp.
+  --pipe         Named pipe name. Required for raw_pipe transport. The value
+                 is passed to the platform named-pipe implementation as-is.
+  --parentPid    Router process ID. Optional for raw_pipe; when the parent
+                 exits, the MCP server and its GUI client are stopped.
+  --projectRoot  Optional project directory to load. Without it, the server
+                 starts in no-project mode. --project=<path> and a positional
+                 path are also accepted.
+  --dataRoot     Optional user data root containing My Drafts, My Templates,
+                 and My Assets.
+  --headless     Do not start the graphical client in MCP mode. 
+                 When not set, the client connects through an authenticated 
+                 local named pipe and waits for enter_project when no project
+                 is loaded. Exiting this client also stops the MCP server.
+
+Optional RPC server:
+  --rpcListen    HTTP listen address for the protobuf RPC server.
+  --rpcToken     Bearer token for RPC clients. Required with --rpcListen and
+                 must contain at least 32 non-whitespace characters.
+
+The MCP server can switch between no-project library tools and project
+editing tools without reconnecting. Entering or exiting a project emits a tool
+list-changed notification. 
+
+No graphical interface is started when --headless is supplied. 
+Diagnostics and failures are written to stderr.
+
+For HTTP MCP, --rpcListen may equal --listen; /mcp and /rpc then share one
+listener. 
+
+For stdio MCP, the --quiet flag is required to suppress all log outputs.
+To avoid unexpected log messages in the stdio stream, if the --quiet flag is not specified, 
+the stdio MCP server will exit with an error.
+
+For raw_pipe MCP, the server accepts one named-pipe client and uses the pipe
+as the bidirectional MCP byte stream. The client disconnecting ends the MCP
+server; the external multiplexer is responsible for routing multiple CLI
+instances. Use --headless to avoid starting the graphical client.
+");
+        }
+
+        private static void WriteBackendHelp()
+        {
+            Console.WriteLine(
+@"Start the projectFrameCut headless backend
+
+Usage:
+  pjfc backend --listen=<http[s]://host:port> --token=<token> --projectRoot=<path> [--dataRoot=<path>]
+
+Options:
+  --listen      HTTP or HTTPS listen address.
+  --token       Bearer token used by RPC clients. It must contain at least 32
+                non-whitespace characters.
+  --projectRoot Project directory to load before the RPC server starts.
+  --dataRoot    projectFrameCut's User Data directory. If not specified, default to the path defined in
+                <App Data>\OverrideUserDataPath.txt's path or %USERPROFILE%\Documents\projectFrameCut by default.
+
+The backend loads the project before accepting RPC requests and keeps running until Ctrl+C or process termination.
+");
+        }
 
         private static void WriteGuiHelp()
         {
             Console.WriteLine(
 @"
 
-Launch the projectFrameCut Application UI
+Launch the projectFrameCut Application
 
 Usage:
-  pjfc-cli gui [<target>] [options]
+  pjfc gui [<target>] [options]
   pjfc:[<target>][?<option>[&<option>...]] 
 
 Arguments:
@@ -1302,6 +1654,8 @@ Launch options:
                                    An explicit target takes precedence.
 
   --noSplash                       Do not display the startup splash screen.
+
+Application options:
 
   --overrideCulture=<culture>      Override the application culture for this run.
                                    <culture> is a .NET culture name such as zh-CN,
@@ -1317,19 +1671,15 @@ Launch options:
   --basicUserData=<path>           Override the application-data directory used
                                    for settings and other internal state in one run.
 
-  --noSettings                     Do not persist setting changes automatically
-                                   made during this run. The setting changes will 
-                                   be committed to the file only when this app closes 
-                                   normally.
-
-  --disablePlugins                 Disable plugin-engine startup for this run.
-
-  --scripting=disable|enableWithHostingPipe        
+  --scripting=disable|enable|enableWithHostingPipe        
                                    Control the scripting engine for this run. 
                                    if this argument is omitted, the scripting engine 
                                    is controlled by the user preferences.
 
                                    'disable' disables scripting whatever the user preferences are.
+
+                                   'enable' enables scripting when the user preferences 
+                                   are not disabled scripting engine (default behavior).
 
                                    'enableWithHostingPipe' is very dangerous and 
                                    should only be used in a secure environment, because 
@@ -1338,13 +1688,29 @@ Launch options:
                                    When scripting is disabled in the user preferences,  
                                    the scripting engine is always disabled and this argument has no effect.
 
-Logging and diagnostics:
+
+
+Platform-specific options:
+  gtkArg:<argument for GTK>        Linux only: pass an argument to the GTK runtime. For example, 
+                                   gtkArg:--enable-animations=false disables GTK animations.
+
   --log                            Open the dedicated log window.
+                                   Available on windows only. 
+                                   On Linux, use --consoleLog to see the log in the console.
 
-Integration options:
-  --mcp=<http[s]://host:port>     Start the integrated MCP HTTP server for the
-                                   project being opened. The MCP endpoint is /mcp.
+Advandced option:
+  --noSettings                     Do not persist setting changes automatically
+                                   made during this run. The setting changes will 
+                                   be committed to the file only when this app closes 
+                                   normally.
 
+  --disablePlugins                 Disable plugin-engine startup for this run.
+
+  --allowCtrlCExit                 Allow use Ctrl+C (or SIGINT in Linux) to exit the GUI application.
+                                   Note that the exit for Ctrl+C may cause data loss 
+                                   if the project was not saved properly.
+
+Remote access:
   --remote=<address>?token=<RPC_TOKEN>
   --remote=<address> --remoteToken=<RPC_TOKEN>
                                   Connect to the specified RPC Server.
@@ -1362,22 +1728,14 @@ Protocol URI:
   --overrideCulture=en-US.
 
 Examples:
-  pjfc-cli gui
-  pjfc-cli gui ""D:\Video Projects\demo.pjfc""
-  pjfc-cli gui --continue --noSplash
-  pjfc-cli gui ""D:\Video Projects\demo.pjfc"" --consoleLog --logDiagnostic
-  pjfc-cli gui --overrideCulture=en-US --userData=""D:\pjfc-data""
+  pjfc gui
+  pjfc gui ""D:\Video Projects\demo.pjfc""
+  pjfc gui --continue --noSplash
+  pjfc gui ""D:\Video Projects\demo.pjfc"" --consoleLog --logDiagnostic
+  pjfc gui --overrideCulture=en-US --userData=""D:\pjfc-data""
   projectFrameCut.exe ""D:\Video Projects\demo.pjfc""
   projectFrameCut.exe ""pjfc:file:///D:/Video%20Projects/demo.pjfc?--noSplash""
-
-Notes:
-  * Most GUI options are case-sensitive; use the spelling shown above.
-    --continue and --mcp are accepted case-insensitively.
-  * Options that take a value require the --name=value form.
-  * When several non-option arguments are supplied, the longest one is selected
-    as the launch target. Supplying one target is recommended.
-  * `pjfc-cli gui` launches the GUI immediately. Use `pjfc-cli help gui` to view
-    this document without starting it.");
+");
         }
 
         public static void WriteAbout()
@@ -1424,77 +1782,24 @@ See the LICENSE and license.md file in the project root for more information.
 """);
         }
 
-        private static void WriteGeneralHelp()
-        {
-            Console.WriteLine(
-@"projectFrameCut command-line interface
-
-Usage:
-  pjfc-cli <command> [arguments] [options]
-  pjfc-cli help [command]
-
-Commands:
-  gui        Launch the projectFrameCut graphical interface.
-  render     Run the built-in renderer.
-  headless   Start the headless backend for remote access and automation.
-  help       Show general help or detailed help for a command.
-  reset      Reset the application to its default state by clearing settings.
-  about      Show version and build information.
-
-Global options:
-  --quiet            Suppress the pjfc-cli version banner and copyright notice.
-
-  --consoleLog       Write application logs to the console.
-
-  --logDiagnostic    Include diagnostic-level log messages.
-
-  --loadPlugins      Load all enabled User-level plugin(s) which has been enabled.
-
-  --ffmpegRoot       Sets the root path for FFmpeg binaries. 
-                     If not specified, defaults to the internal FFmpeg path,
-                     or the user configured path/plugin in the GUI settings.
-
-Help options:
-  -h, --help, /?    Show this help text.
-");
-        }
-
-        private static void WriteBackendHelp()
-        {
-            Console.WriteLine(
-@"Start the projectFrameCut headless backend
-
-Usage:
-  pjfc-cli backend --listen=<http[s]://host:port> --token=<token> --projectRoot=<path> [--dataRoot=<path>]
-
-Options:
-  --listen      HTTP or HTTPS listen address.
-  --token       Bearer token used by RPC clients. It must contain at least 32
-                non-whitespace characters.
-  --projectRoot Project directory to load before the RPC server starts.
-  --dataRoot    projectFrameCut's User Data directory. If not specified, default to the path defined in
-                <App Data>\OverrideUserDataPath.txt's path or %USERPROFILE%\Documents\projectFrameCut by default.
-
-The backend loads the project before accepting RPC requests and keeps running until Ctrl+C or process termination.
-Use ASP.NET's Environment variables to configure the HTTP server option (except application URL), such as ASPNETCORE_Kestrel__Certificates__Default__Path, and ASPNETCORE_Kestrel__Certificates__Default__Password.
-");
-        }
-
         private static void WriteRenderHelp()
         {
             Console.WriteLine(
 @"Render a project
 
 Usage:
-  pjfc-cli render -project=<project directory> -output=<file>
-                  -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
-                  [-target=video|audio|all|void] [-assetDbFile=<database.json>]
-                  [-maxParallelThreads=<number>] [-oneByOneRender=true|false]
-                  [-renderByLayer=true|false] [-prepareInWorker=true|false]
-                  [-enableThreadAffinity=true|false] [-GCOptions=0|1|2]
-                  [-chunkRender=true|false] [-chunkFrames=<number>|-chunkSeconds=<number>]
-                  [-chunkParallelism=<number>] [-chunkResume=true|false]
-                  [-chunkKeepFiles=true|false]
+  pjfc render -project=<project directory> -output=<file>
+              -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
+                [-target=video|audio|all|void] [-assetDbFile=<database.json>]
+                [-maxParallelThreads=<number>] [-oneByOneRender=true|false]
+                [-renderByLayer=true|false] [-prepareInWorker=true|false]
+                [-enableThreadAffinity=true|false] [-GCOptions=0|1|2]
+                [-chunkRender=true|false] [-chunkFrames=<number>|-chunkSeconds=<number>]
+                [-chunkParallelism=<number>] [-chunkResume=true|false]
+                [-chunkKeepFiles=true|false]
+
+This command is usually used internally, not intended for direct use by end users. 
+It is provided for detached rendering of a project for the UI, and for integration with other tools.
 
 This command provide a simple way to render a project in the command line.
 For full functionality of out-of-process rendering, use StandaloneRender.
@@ -1510,33 +1815,7 @@ For the usage of params, refer to the StandaloneRender's documentation.
             Console.WriteLine(
 @"Start the projectFrameCut Render RPC server
 This is internal command used by the GUI to start the Render RPC server.
-It is not intended to be run directly by users.
-
-Usage:
-  pjfc-cli rpc_server --pipe=<pipe-name> --token=<token> --dataRoot=<path> [--parentPid=<pid>] [--quiet]
-
-Optional integrated HTTP RPC server:
-  --http=<http[s]://host:port>
-                       Additionally start the headless HTTP protobuf RPC server
-                       provided by projectFrameCut.IntegratedAPIServer alongside
-                       the named-pipe server, for remote control and
-                       cross-module communication. Both channels share the same
-                       render backend, so render sessions are visible across
-                       them. The HTTP endpoint serves /rpc and /artifact.
-                       If the HTTP server cannot be started, the command fails.
-
-  --projectRoot=<path> Project directory the server is started for. It is
-                       normally supplied by the GUI when it starts a backend for
-                       a project. With --http, the HTTP RPC server preloads this
-                       project so clients do not hit a server-has-no-project
-                       error; without it the HTTP server starts without a
-                       preloaded project and clients open projects on demand.
-
-  --httpToken=<token>  Bearer token for the HTTP RPC endpoint. If omitted, the
-                       pipe --token value is reused, which must then contain at
-                       least 32 non-whitespace characters.
-
-The command is normally started by the graphical application.
+It is not intended to be run directly by users. The command is normally started by the graphical application.
 ");
         }
 

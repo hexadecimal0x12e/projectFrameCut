@@ -144,6 +144,11 @@
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<MauiAsset Include="Resources\Styles\**" LogicalName="Styles\%(RecursiveDir)%(Filename)%(Extension)" />
+
+		<!-- Plugin trusting Root CA -->
+		<EmbeddedResource Include="Resources\PluginTrust\builtin-root-ca.cer"
+					LogicalName="projectFrameCut.PluginTrust.builtin-root-ca.cer"
+					Condition="Exists('Resources\PluginTrust\builtin-root-ca.cer')" />
 	</ItemGroup>
 
 

@@ -24,6 +24,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public static void SetupFFmpegLogging(int minLogLevel = ffmpeg.AV_LOG_INFO)
         {
+            if (Environment.GetCommandLineArgs().Contains("--quiet")) return;
             if (Interlocked.Exchange(ref _ffmpegLogHooked, 1) == 1) return;
 
             _ffmpegLogCallback = new av_log_set_callback_callback(OnFFmpegLog);

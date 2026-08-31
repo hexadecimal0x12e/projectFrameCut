@@ -18,12 +18,12 @@ namespace projectFrameCut.Platforms.Android
             : base(handle, ownership)
         {
             System.Threading.Thread.CurrentThread.Name = "App Main thread";
-            MainContext = this;
             IsRenderWorkerProcess = global::Android.App.Application.ProcessName
                 ?.EndsWith(":renderworker", StringComparison.Ordinal) == true;
             NativeLoader.Init();
             if (IsRenderWorkerProcess) return;
 
+            MainContext = this;
             string? loggingDir = null;
             var extFilesDir = GetExternalFilesDir(null);
             if (extFilesDir != null)
@@ -87,7 +87,7 @@ namespace projectFrameCut.Platforms.Android
                         return handle;
                     }
                 }
-                LogDiagnostic($"Failed to load native library {libraryName} from any known path.");
+                Log($"Failed to load native library {libraryName} from any known path. StackTrace: {Environment.NewLine}{Environment.StackTrace}", "error");
                 return IntPtr.Zero;
             }
 
@@ -98,6 +98,6 @@ namespace projectFrameCut.Platforms.Android
     internal sealed class RenderWorkerMauiApplication : Microsoft.Maui.Controls.Application
     {
         protected override Microsoft.Maui.Controls.Window CreateWindow(IActivationState? activationState)
-            => new(new Microsoft.Maui.Controls.ContentPage());
+            => new(new Microsoft.Maui.Controls.ContentPage() { Content = new Label { Text = " This page should NOT be displayed.", HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center } });
     }
 }

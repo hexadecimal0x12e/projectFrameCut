@@ -83,12 +83,6 @@ public partial class PluginSettingPage : ContentPage
 
         rootPPB.AddSeparator().AddButton(SettingLocalizedResources.Plugin_ReloadAllButton, async (s, e) =>
         {
-            Dictionary<string, string> pems = new();
-            foreach (var item in PluginManager.LoadedPlugins)
-            {
-                var k = await SecureStorage.Default.GetAsync($"plugin_pem_{item.Key}");
-                if (!string.IsNullOrEmpty(k)) pems[item.Key] = k;
-            }
             try
             {
                 PluginManager.ForceUnloadAll();
@@ -112,7 +106,7 @@ public partial class PluginSettingPage : ContentPage
 
 #endif
                     ..MauiProgram.IntegratedPlugins,
-                    ..PluginService.LoadUserPlugins((i) => pems.TryGetValue(i, out var p) ? p : throw new KeyNotFoundException()),
+                    ..PluginService.LoadUserPlugins(),
                 ];
 
 
@@ -360,9 +354,8 @@ public partial class PluginSettingPage : ContentPage
             }
             if (flag == "EnablePlugin")
             {
-                var pem = await SecureStorage.Default.GetAsync($"plugin_pem_{id}");
                 PluginService.EnablePlugin(id);
-                var p = PluginService.CreateFromID(id, out var fail, pem);
+                var p = PluginService.CreateFromID(id, out var fail);
                 if (p != null)
                 {
                     PluginManager.LoadFrom(p);

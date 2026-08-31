@@ -1,4 +1,5 @@
 using projectFrameCut.IntegratedAPIServer;
+using projectFrameCut.IntegratedAPIServer.Headless;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RPCProtocol;
 using System.Net;
@@ -82,6 +83,47 @@ public sealed class HeadlessRpcTests
         }
         finally
         {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task NamedPipeReadsAndClearsDefaultHeadlessProject()
+    {
+        string root = CreateEmptyProject();
+        string pipeName = $"projectFrameCut-headless-test-{Guid.NewGuid():N}";
+        string token = Convert.ToHexString(Guid.NewGuid().ToByteArray());
+        using var cancellation = new CancellationTokenSource();
+        var service = new HeadlessProjectService();
+        await service.InitializeAsync(root);
+        Task serverTask = new NamedPipeRenderServer(service)
+            .RunAsync(pipeName, token, cancellationToken: cancellation.Token);
+
+        try
+        {
+            string clientId = $"headless-test-{Guid.NewGuid():N}";
+            await using var client = new RenderClient(
+                new NamedPipeRenderClientTransport(pipeName, token, clientId),
+                clientId);
+
+            HeadlessProjectSnapshot snapshot = await client.GetHeadlessProjectSnapshotAsync(Guid.Empty);
+            Assert.AreEqual(Path.GetFullPath(root), snapshot.ProjectRoot);
+
+            await service.ClearDefaultProjectAsync();
+            Exception? exception = null;
+            try { _ = await client.GetHeadlessProjectSnapshotAsync(Guid.Empty); }
+            catch (Exception ex) { exception = ex; }
+            Assert.IsNotNull(exception);
+            RenderErrorCode errorCode = exception is RemoteRenderException remote
+                ? remote.ErrorCode
+                : (RenderErrorCode)exception.Data[nameof(RemoteError.Code)]!;
+            Assert.AreEqual(RenderErrorCode.SessionNotFound, errorCode);
+        }
+        finally
+        {
+            cancellation.Cancel();
+            try { await serverTask; } catch (OperationCanceledException) { }
+            await service.DisposeAsync();
             Directory.Delete(root, recursive: true);
         }
     }

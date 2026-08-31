@@ -317,77 +317,19 @@ public partial class AdvancedSettingPage : ContentPage
                             var failReason = "";
                             try
                             {
-                                var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
-                                if (Directory.Exists(pluginRoot))
+                                var assemblyBytes = await PluginService.ExportVerifiedAssemblyAsync(pluginID);
+                                var savePath = Path.Combine(FileSystem.CacheDirectory, $"{pluginID}.dll");
+                                await File.WriteAllBytesAsync(savePath, assemblyBytes, default);
+                                await Share.RequestAsync(new ShareFileRequest
                                 {
-                                    var pluginPem = await SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}");
-                                    if (string.IsNullOrEmpty(pluginPem))
-                                    {
-                                        string? localizedPluginBrokenReason = null;
-                                        try
-                                        {
-                                            localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_SignMissing;
-                                        }
-                                        catch { }
-                                        failReason = localizedPluginBrokenReason ?? "Plugin's signature is missing or corrupted. Try reinstall it.";
-                                        throw new FileNotFoundException(failReason, pluginID);
-                                    }
-
-                                    if (!File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.enc")) || !File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.sig")) || !File.Exists(Path.Combine(pluginRoot, "hashtable.json.enc")))
-                                    {
-                                        string? localizedPluginBrokenReason = null;
-                                        try
-                                        {
-                                            localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing;
-                                        }
-                                        catch { }
-                                        failReason = localizedPluginBrokenReason ?? "Some of the plugin files are missing. Try reinstall it.";
-                                    }
-
-                                    var pemHash = HashServices.ComputeStringHash(pluginPem ?? string.Empty, SHA512.Create());
-                                    var pluginEnc = File.ReadAllBytes(Path.Combine(pluginRoot, pluginID + ".dll.enc"));
-                                    var htbEnc = File.ReadAllBytes(Path.Combine(pluginRoot, "hashtable.json.enc"));
-                                    var decBytes = FileCryptoService.DecryptToFileWithPassword(pemHash, pluginEnc);
-                                    var savePath = Path.Combine(FileSystem.CacheDirectory, $"{pluginID}.dll");
-                                    await File.WriteAllBytesAsync(savePath, decBytes, default);
-                                    await Share.RequestAsync(new ShareFileRequest()
-                                    {
-                                        File = new ShareFile(savePath),
-                                        Title = $"assembly for {pluginID}",
-                                    });
-                                    return;
-                                }
-                                else
-                                {
-                                    string? localizedPluginBrokenReason = null;
-                                    try
-                                    {
-                                        localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing_DirectoryNotFound;
-                                    }
-                                    catch { }
-                                    failReason = localizedPluginBrokenReason ?? "Plugin file not found.";
-                                }
+                                    File = new ShareFile(savePath),
+                                    Title = $"assembly for {pluginID}",
+                                });
+                                return;
                             }
-                            catch (ReflectionTypeLoadException)
-                            {
-                                string? localizedFailReason = null;
-                                try
-                                {
-                                    localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
-                                }
-                                catch { }
-                                failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
-                            }
-
                             catch (Exception ex)
                             {
-                                string? localizedPluginBrokenReason = null;
-                                try
-                                {
-                                    localizedPluginBrokenReason = Localized._ExceptionTemplate(ex);
-                                }
-                                catch { }
-                                failReason = localizedPluginBrokenReason ?? $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
+                                failReason = ex.Message;
                             }
                             await DisplayAlertAsync(Localized._Error, $"failed\r\n({failReason ?? "unknown"})", Localized._OK);
                         }

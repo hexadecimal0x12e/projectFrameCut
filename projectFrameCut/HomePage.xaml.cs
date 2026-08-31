@@ -34,6 +34,7 @@ using IPicture = projectFrameCut.Drawing.Base.IPicture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Drawing.Vector.ImportExport;
@@ -46,8 +47,10 @@ using System.Runtime;
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 using Windows.ApplicationModel.UserActivities;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml.Media;
 using winui = Microsoft.UI.Xaml.Controls;
+using WinRT.Interop;
 #endif
 
 namespace projectFrameCut;
@@ -58,6 +61,21 @@ public partial class HomePage : ContentPage
     private string? _pendingIntegratedMcpAddress;
     private IntegratedApiServer? _integratedApiServer;
     private IntegratedApiBackend? _integratedApiBackend;
+    private CancellationTokenSource? _mcpClientModeCancellation;
+    private IRenderClient? _mcpClientModeClient;
+    private Task? _mcpClientModeMonitor;
+    private DraftPage? _mcpClientModePage;
+    private Guid _mcpClientModeSessionId;
+    private long _mcpClientModeRevision;
+    private string _mcpClientModeSnapshotHash = string.Empty;
+    private long _mcpClientModeDeclinedRevision = -1;
+    private string _mcpClientModeDeclinedSnapshotHash = string.Empty;
+#if WINDOWS
+    private Microsoft.UI.Xaml.Window? _mcpClientNativeWindow;
+    private AppWindow? _mcpClientAppWindow;
+    private bool _mcpClientCloseConfirmed;
+    private bool _mcpClientClosePromptOpen;
+#endif
 
     private const string CreateButtonName = "!!CreateButton!!";
 
@@ -85,6 +103,16 @@ public partial class HomePage : ContentPage
             await projectFrameCut.WinUI.App.BringToForeground();
 
 #endif
+            if (string.Equals(
+                GetCommandLineOption(MauiProgram.CmdlineArgs, "--mcpMode"),
+                "client",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                if (!HasAlreadyLaunchedFromFile) await LaunchFromFile();
+                HasAlreadyLaunchedFromFile = true;
+                return;
+            }
+
             if (VersionTracking.Default.IsFirstLaunchEver)
             {
                 SettingsManager.WriteSetting("ui_ShowWelcomePage", "True");
@@ -198,6 +226,7 @@ public partial class HomePage : ContentPage
     {
         HasAlreadyLaunchedFromFile = true;
         var origCont = Content;
+        bool restoreContent = true;
         Dispatcher.Dispatch(() =>
         {
             Content = new ActivityIndicator
@@ -212,6 +241,18 @@ public partial class HomePage : ContentPage
             string path = "";
 
             var args = argsOverride ?? MauiProgram.CmdlineArgs.ToArray();
+            string? mcpMode = GetCommandLineOption(args, "--mcpMode");
+            if (string.Equals(mcpMode, "client", StringComparison.OrdinalIgnoreCase))
+            {
+                string? pipeName = GetCommandLineOption(args, "--mcpPipe");
+                string? pipeToken = GetCommandLineOption(args, "--mcpToken");
+                if (string.IsNullOrWhiteSpace(pipeName) || string.IsNullOrWhiteSpace(pipeToken))
+                    throw new ArgumentException("MCP client mode requires --mcpPipe and --mcpToken.");
+
+                await StartMcpClientModeAsync(pipeName, pipeToken);
+                restoreContent = false;
+                return;
+            }
 #if WINDOWS
             var integratedMcpArg = args.FirstOrDefault(c => c.StartsWith("--mcp=", StringComparison.OrdinalIgnoreCase));
             if (!string.IsNullOrWhiteSpace(integratedMcpArg))
@@ -393,12 +434,309 @@ public partial class HomePage : ContentPage
         }
         finally
         {
-            Dispatcher.Dispatch(() =>
+            if (restoreContent) Dispatcher.Dispatch(() =>
             {
                 Content = origCont;
             });
         }
     }
+
+    private async Task StartMcpClientModeAsync(string pipeName, string pipeToken)
+    {
+        if (_mcpClientModeMonitor is not null) return;
+
+#if WINDOWS
+        EnableMcpClientCloseConfirmation();
+#endif
+
+        MenuBarItems.Clear();
+        ToolbarItems.Clear();
+        Title = "  ";
+        Application.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} (MCP)";
+
+        var cancellation = new CancellationTokenSource();
+        string clientId = $"projectFrameCut-mcp-editor-{Guid.NewGuid():N}";
+        var transport = new NamedPipeRenderClientTransport(
+            pipeName,
+            pipeToken,
+            clientId);
+        var client = new RenderClient(transport, clientId);
+        try
+        {
+            Exception? connectionError = null;
+            for (int attempt = 0; attempt < 10; attempt++)
+            {
+                try
+                {
+                    _ = await client.GetCapabilitiesAsync(cancellation.Token);
+                    connectionError = null;
+                    break;
+                }
+                catch (Exception ex) when (ex is IOException or TimeoutException or OperationCanceledException)
+                {
+                    connectionError = ex;
+                    await Task.Delay(200, cancellation.Token);
+                }
+            }
+            if (connectionError is not null)
+                throw new IOException("Could not connect to the MCP named pipe.", connectionError);
+
+            _mcpClientModeCancellation = cancellation;
+            _mcpClientModeClient = client;
+            ShowMcpWaitingState();
+            _mcpClientModeMonitor = MonitorMcpClientModeAsync(client, cancellation.Token);
+        }
+        catch
+        {
+            cancellation.Dispose();
+            await client.DisposeAsync();
+            throw;
+        }
+    }
+
+#if WINDOWS
+    private void EnableMcpClientCloseConfirmation()
+    {
+        if (_mcpClientAppWindow is not null || Window?.Handler?.PlatformView is not Microsoft.UI.Xaml.Window nativeWindow)
+            return;
+
+        nint windowHandle = WindowNative.GetWindowHandle(nativeWindow);
+        Microsoft.UI.WindowId windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(windowHandle);
+        _mcpClientNativeWindow = nativeWindow;
+        _mcpClientAppWindow = AppWindow.GetFromWindowId(windowId);
+        _mcpClientAppWindow.Closing += OnMcpClientWindowClosing;
+    }
+
+    private async void OnMcpClientWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
+    {
+        if (_mcpClientCloseConfirmed) return;
+
+        args.Cancel = true;
+        if (_mcpClientClosePromptOpen) return;
+
+        _mcpClientClosePromptOpen = true;
+        try
+        {
+            if (!await DisplayAlertAsync(
+                Localized._Warn,
+                Localized.McpClient_CloseWarning,
+                Localized._Confirm,
+                Localized._Cancel))
+                return;
+
+            _mcpClientCloseConfirmed = true;
+            _mcpClientNativeWindow?.Close();
+        }
+        finally
+        {
+            _mcpClientClosePromptOpen = false;
+        }
+    }
+#endif
+
+    private async Task MonitorMcpClientModeAsync(IRenderClient client, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                HeadlessProjectSnapshot? snapshot = null;
+                try
+                {
+                    snapshot = await client.GetHeadlessProjectSnapshotAsync(Guid.Empty, cancellationToken);
+                }
+                catch (Exception ex) when (HasRenderErrorCode(ex, RenderErrorCode.SessionNotFound))
+                {
+                }
+
+                bool transitioned = await ApplyMcpProjectStateAsync(client, snapshot);
+                await Task.Delay(transitioned ? 500 : 5000, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Monitor MCP client mode", this);
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                ShowMcpWaitingState(Localized._ExceptionTemplate(ex));
+                await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            });
+        }
+    }
+
+    private async Task<bool> ApplyMcpProjectStateAsync(
+        IRenderClient client,
+        HeadlessProjectSnapshot? snapshot)
+    {
+        bool transitioned = true;
+        await Dispatcher.DispatchAsync(async () =>
+        {
+            DraftPage? activePage = _mcpClientModePage;
+            if (activePage is not null && !Navigation.NavigationStack.Contains(activePage))
+            {
+                _mcpClientModePage = null;
+                activePage = null;
+            }
+
+            Guid targetSessionId = snapshot?.SessionId ?? Guid.Empty;
+            bool sameSession = _mcpClientModeSessionId == targetSessionId;
+            bool sameSnapshot = sameSession && snapshot is not null &&
+                _mcpClientModeRevision == snapshot.Revision &&
+                string.Equals(_mcpClientModeSnapshotHash, snapshot.SnapshotHash, StringComparison.Ordinal);
+            if (activePage is not null && sameSnapshot)
+            {
+                transitioned = false;
+                return;
+            }
+            if (activePage is null && targetSessionId != Guid.Empty && sameSnapshot)
+            {
+                transitioned = false;
+                return;
+            }
+            if (activePage is null && snapshot is null && _mcpClientModeSessionId == Guid.Empty)
+            {
+                transitioned = false;
+                return;
+            }
+
+            bool refreshingCurrentSession = activePage is not null && sameSession && snapshot is not null;
+            if (refreshingCurrentSession && activePage!.HasUnsavedRemoteChanges)
+            {
+                bool alreadyDeclined = _mcpClientModeDeclinedRevision == snapshot!.Revision &&
+                    string.Equals(_mcpClientModeDeclinedSnapshotHash, snapshot.SnapshotHash, StringComparison.Ordinal);
+                if (alreadyDeclined)
+                {
+                    transitioned = false;
+                    return;
+                }
+
+                bool sync = await DisplayAlertAsync(
+                    Localized._Info,
+                    Localized.DraftPage_RemoteProject_ModifiedOnServer,
+                    Localized.DraftPage_RemoteProject_SyncFromServer,
+                    Localized._Cancel);
+                if (!sync)
+                {
+                    _mcpClientModeDeclinedRevision = snapshot.Revision;
+                    _mcpClientModeDeclinedSnapshotHash = snapshot.SnapshotHash;
+                    transitioned = false;
+                    return;
+                }
+            }
+
+            if (activePage is not null && !refreshingCurrentSession)
+            {
+                try
+                {
+                    if (!await activePage.PrepareForMcpProjectReplacementAsync())
+                    {
+                        transitioned = false;
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    transitioned = false;
+                    Log(ex, "Save MCP project before replacement", this);
+                    await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+                    return;
+                }
+            }
+
+            if (snapshot is null)
+            {
+                try
+                {
+                    if (activePage is not null)
+                        await activePage.CompleteMcpProjectReplacementAsync();
+                    _mcpClientModePage = null;
+                    _mcpClientModeSessionId = Guid.Empty;
+                    _mcpClientModeRevision = 0;
+                    _mcpClientModeSnapshotHash = string.Empty;
+                    _mcpClientModeDeclinedRevision = -1;
+                    _mcpClientModeDeclinedSnapshotHash = string.Empty;
+                    if (activePage is not null) await Navigation.PopToRootAsync(false);
+                    ShowMcpWaitingState();
+                }
+                catch (Exception ex)
+                {
+                    transitioned = false;
+                    Log(ex, "Close MCP project page", this);
+                    await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+                }
+                return;
+            }
+
+            try
+            {
+                RemoteProjectSession session = RemoteProjectSession.CreateNamedPipeSession(client, snapshot);
+                DraftPage page = DraftPage.CreateFromRemoteSession(session);
+                page.AllowExit = false;
+                await page.PostInit();
+                if (activePage is not null)
+                {
+                    if (refreshingCurrentSession)
+                        activePage.DetachRemoteSessionForReplacement();
+                    else
+                        await activePage.CompleteMcpProjectReplacementAsync();
+                }
+                App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {page.ProjectName} (MCP)";
+                AppShell.instance?.HideNavView();
+                Shell.SetTabBarIsVisible(page, false);
+                Shell.SetNavBarIsVisible(page, true);
+
+                if (activePage is null)
+                {
+                    await Navigation.PushAsync(page);
+                }
+                else
+                {
+                    Navigation.InsertPageBefore(page, activePage);
+                    Navigation.RemovePage(activePage);
+                }
+
+                _mcpClientModePage = page;
+                _mcpClientModeSessionId = snapshot.SessionId;
+                _mcpClientModeRevision = snapshot.Revision;
+                _mcpClientModeSnapshotHash = snapshot.SnapshotHash;
+                _mcpClientModeDeclinedRevision = -1;
+                _mcpClientModeDeclinedSnapshotHash = string.Empty;
+                lastPage = page;
+            }
+            catch (Exception ex)
+            {
+                transitioned = false;
+                Log(ex, "Open MCP project page", this);
+                await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            }
+        });
+        return transitioned;
+    }
+
+    private void ShowMcpWaitingState(string? detail = null)
+    {
+        string text = detail ?? Localized.HomePage_WaitingForMCPProject;
+        AppShell.instance?.HideNavView();
+        Content = new VerticalStackLayout
+        {
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center,
+            Spacing = 12,
+            Children =
+            {
+                new ActivityIndicator { IsRunning = true, WidthRequest = 48, HeightRequest = 48 },
+                new Label { Text = text, HorizontalTextAlignment = TextAlignment.Center },
+            },
+        };
+    }
+
+    private static bool HasRenderErrorCode(Exception exception, RenderErrorCode code)
+        => exception is RemoteRenderException remote && remote.ErrorCode == code
+            || exception.Data[nameof(RemoteError.Code)] is RenderErrorCode dataCode && dataCode == code
+            || exception.Data["RenderErrorCode"] is RenderErrorCode renderCode && renderCode == code;
 
     private async void CollectionView_SelectionChanged(object? sender, Microsoft.Maui.Controls.SelectionChangedEventArgs e)
     {
@@ -508,6 +846,7 @@ public partial class HomePage : ContentPage
             LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion,
             LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
             LastOpenAppName = MauiProgram.AssemblyName,
+            LastOpenAppIdentifier = MauiProgram.AppIdentifier,
             PluginUsed = []
         };
 
@@ -607,6 +946,7 @@ public partial class HomePage : ContentPage
             LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion,
             LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
             LastOpenAppName = MauiProgram.AssemblyName,
+            LastOpenAppIdentifier = MauiProgram.AppIdentifier,
             PluginUsed = []
         };
 
@@ -2121,6 +2461,7 @@ public partial class HomePage : ContentPage
                 LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion,
                 LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
                 LastOpenAppName = MauiProgram.AssemblyName,
+                LastOpenAppIdentifier = MauiProgram.AppIdentifier,
                 PluginUsed = []
             };
 

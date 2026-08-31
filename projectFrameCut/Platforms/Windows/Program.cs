@@ -40,13 +40,22 @@ namespace projectFrameCut.WinUI
             Debug.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
             try
             {
-                if (args.Contains("--consoleLog"))
+                if (args.Contains("--quiet"))
+                {
+                    Console.SetOut(new NullTextWriter());
+                    Console.SetError(new NullTextWriter());
+                }
+                else if (args.Contains("--consoleLog"))
                 {
                     MyLoggerExtensions.OnLog += (msg, level) =>
                     {
                         Console.WriteLine($"[{level}] {msg}");
                     };
                 }
+
+                Console.WriteLine($"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut"} {Assembly.GetExecutingAssembly().GetName().Version}");
+                Console.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
+
                 if (args.Contains("--log"))
                 {
                     Thread logThread = new Thread(Helper.HelperProgram.LogMain);
@@ -78,12 +87,6 @@ namespace projectFrameCut.WinUI
                         Console.Error.WriteLine("Sorry, projectFrameCut requires Windows 10 2004 / LTSC 2021 (build 19041) or higher to run.\r\nConsider upgrade your Windows system.");
                         return 255;
                     }
-                    if (!args.Contains("--quiet"))
-                    {
-                        Console.WriteLine($"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut"} {Assembly.GetExecutingAssembly().GetName().Version}");
-                        Console.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
-                    }
-
                     if (args.Any() && args.First() == "gui")
                     {
                         args = args.Skip(1).ToArray();
@@ -623,5 +626,13 @@ Environment:
             }
         }
 
+        internal partial class NullTextWriter : TextWriter
+        {
+            public override Encoding Encoding => Encoding.UTF8;
+            public override void Write(char value) { }
+            public override void Write(string? value) { }
+            public override void WriteLine(string? value) { }
+
+        }
     }
 }

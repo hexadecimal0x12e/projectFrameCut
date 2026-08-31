@@ -29,6 +29,8 @@ public sealed class IntegratedApiServer : IAsyncDisposable
     private EndpointAuthorizationManager? _authorization;
     private IntegratedApiRequestContextAccessor? _requestContextAccessor;
     private bool _enableMcp;
+    private bool _requireMcpAuthorization;
+    private bool _includeIntegratedClientMcpTools;
 
     public bool IsRunning => _server?.IsListening == true;
 
@@ -36,6 +38,17 @@ public sealed class IntegratedApiServer : IAsyncDisposable
 
     public async Task StartAsync(IntegratedApiServerOptions options, IIntegratedApiBackend backend, CancellationToken cancellationToken = default)
         => await StartCoreAsync(options, backend, null, cancellationToken).ConfigureAwait(false);
+
+    public async Task StartAsync(
+        IntegratedApiServerOptions options,
+        IIntegratedApiBackend backend,
+        HeadlessProjectService headlessService,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(backend);
+        ArgumentNullException.ThrowIfNull(headlessService);
+        await StartCoreAsync(options, backend, headlessService, cancellationToken).ConfigureAwait(false);
+    }
 
     public async Task StartHeadlessAsync(IntegratedApiServerOptions options, CancellationToken cancellationToken = default)
         => await StartCoreAsync(options, null, null, cancellationToken).ConfigureAwait(false);
@@ -64,6 +77,8 @@ public sealed class IntegratedApiServer : IAsyncDisposable
 
             _backend = backend;
             _enableMcp = backend is not null && options.EnableMcp;
+            _requireMcpAuthorization = options.RequireMcpAuthorization;
+            _includeIntegratedClientMcpTools = options.IncludeIntegratedClientMcpTools;
             _authorization = new EndpointAuthorizationManager();
             _requestContextAccessor = new IntegratedApiRequestContextAccessor();
             _headlessService = headlessServiceOverride ?? (enableRpc ? new HeadlessProjectService(options.GlobalAssetsDatabasePath) : null);
@@ -241,16 +256,41 @@ public sealed class IntegratedApiServer : IAsyncDisposable
     {
         string id = Guid.NewGuid().ToString("N");
         var transport = new StreamableHttpServerTransport(null) { SessionId = id, Stateless = false, FlowExecutionContextFromRequests = true };
-        var tools = IntegratedApiToolCatalog.Create(_backend!, _authorization!, _requestContextAccessor!);
+        ProjectModeMcpToolCollection? dynamicTools = _backend is ProjectMcpModeController modeController
+            ? new ProjectModeMcpToolCollection(
+                modeController,
+                _authorization!,
+                _requestContextAccessor!,
+                _requireMcpAuthorization,
+                _includeIntegratedClientMcpTools)
+            : null;
+        McpServerPrimitiveCollection<McpServerTool> tools;
+        if (dynamicTools is not null)
+        {
+            tools = dynamicTools.Tools;
+        }
+        else
+        {
+            tools = new McpServerPrimitiveCollection<McpServerTool>(StringComparer.Ordinal);
+            foreach (McpServerTool tool in IntegratedApiToolCatalog.Create(
+                _backend!,
+                _authorization!,
+                _requestContextAccessor!,
+                _requireMcpAuthorization,
+                _includeIntegratedClientMcpTools))
+            {
+                tools.Add(tool);
+            }
+        }
         var options = new McpServerOptions
         {
             ServerInfo = new Implementation { Name = "projectFrameCut.IntegratedAPIServer", Version = "1.0.0" },
-            ToolCollection = [.. tools],
+            ToolCollection = tools,
         };
 #pragma warning disable MCPEXP002
         var server = McpServer.Create(transport, options, loggerFactory: null, _services);
 #pragma warning restore MCPEXP002
-        var session = new McpSession(id, transport, server);
+        var session = new McpSession(id, transport, server, dynamicTools);
         _mcpSessions.Add(id, session);
         session.RunTask = server.RunAsync();
         return session;
@@ -323,7 +363,7 @@ public sealed class IntegratedApiServer : IAsyncDisposable
     private async ValueTask DisposeRuntimeAsync()
     {
         if (_services is not null) await _services.DisposeAsync().ConfigureAwait(false);
-        _services = null; _headlessService = null; _backend = null; _authorization = null; _requestContextAccessor = null; _rpcTokenHash = null; _enableMcp = false;
+        _services = null; _headlessService = null; _backend = null; _authorization = null; _requestContextAccessor = null; _rpcTokenHash = null; _enableMcp = false; _requireMcpAuthorization = true; _includeIntegratedClientMcpTools = true;
     }
 
     public async ValueTask DisposeAsync() { await StopAsync().ConfigureAwait(false); _lifecycleLock.Dispose(); }
@@ -345,7 +385,11 @@ public sealed class IntegratedApiServer : IAsyncDisposable
 
     private static bool IsLoopbackHost(string host) => string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) || (IPAddress.TryParse(host.Trim('[', ']'), out var address) && IPAddress.IsLoopback(address));
 
-    private sealed class McpSession(string id, StreamableHttpServerTransport transport, McpServer server) : IAsyncDisposable
+    private sealed class McpSession(
+        string id,
+        StreamableHttpServerTransport transport,
+        McpServer server,
+        IDisposable? dynamicTools) : IAsyncDisposable
     {
         public string Id { get; } = id;
         public StreamableHttpServerTransport Transport { get; } = transport;
@@ -353,6 +397,7 @@ public sealed class IntegratedApiServer : IAsyncDisposable
         public Task? RunTask { get; set; }
         public async ValueTask DisposeAsync()
         {
+            dynamicTools?.Dispose();
             await Server.DisposeAsync().ConfigureAwait(false);
             if (RunTask is not null) await RunTask.ConfigureAwait(false);
             await Transport.DisposeAsync().ConfigureAwait(false);

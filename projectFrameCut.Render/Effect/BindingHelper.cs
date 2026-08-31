@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 
 namespace projectFrameCut.Render.Effect
 {
@@ -292,7 +293,21 @@ namespace projectFrameCut.Render.Effect
                         continue;
                     }
 
+                    bool hadPersistedImplementType = provider.MetaData.TryGetValue(
+                        EffectProviderBase.ImplementTypeParameterKey,
+                        out object? persistedImplementTypeValue);
+                    EffectImplementType? persistedImplementType = persistedImplementTypeValue switch
+                    {
+                        EffectImplementType value => value,
+                        int value when Enum.IsDefined(typeof(EffectImplementType), value) => (EffectImplementType)value,
+                        long value when value is >= int.MinValue and <= int.MaxValue && Enum.IsDefined(typeof(EffectImplementType), (int)value) => (EffectImplementType)(int)value,
+                        string value when Enum.TryParse(value, ignoreCase: true, out EffectImplementType parsed) => parsed,
+                        JsonElement { ValueKind: JsonValueKind.Number } value when value.TryGetInt32(out int parsed) && Enum.IsDefined(typeof(EffectImplementType), parsed) => (EffectImplementType)parsed,
+                        JsonElement { ValueKind: JsonValueKind.String } value when Enum.TryParse(value.GetString(), ignoreCase: true, out EffectImplementType parsed) => parsed,
+                        _ => null,
+                    };
                     var imp = EffectHelper.ForcePreferToType
+                        ?? persistedImplementType
                         ?? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{provider.FromPlugin}.{provider.TypeName}", EffectImplementType.NotSpecified);
                     provider.MetaData[EffectProviderBase.ImplementTypeParameterKey] = imp;
                     IEffect[] effects;
@@ -302,7 +317,10 @@ namespace projectFrameCut.Render.Effect
                     }
                     finally
                     {
-                        provider.MetaData.Remove(EffectProviderBase.ImplementTypeParameterKey);
+                        if (hadPersistedImplementType)
+                            provider.MetaData[EffectProviderBase.ImplementTypeParameterKey] = persistedImplementTypeValue!;
+                        else
+                            provider.MetaData.Remove(EffectProviderBase.ImplementTypeParameterKey);
                     }
 
                     for (int i = 0; i < effects.Length; i++)

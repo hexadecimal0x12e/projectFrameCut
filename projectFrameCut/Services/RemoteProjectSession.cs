@@ -15,18 +15,32 @@ namespace projectFrameCut.Services;
 internal sealed class RemoteProjectSession : IAsyncDisposable
 {
     private readonly IRenderClient _client;
-    private readonly HttpRenderClientTransport _transport;
+    private readonly Func<RenderArtifact, string, CancellationToken, Task<string>> _artifactResolver;
+    private readonly bool _ownsClient;
+    private readonly bool _closeSession;
+    private readonly bool _monitorChanges;
     private bool _closed;
 
-    private RemoteProjectSession(IRenderClient client, HttpRenderClientTransport transport, HeadlessProjectSnapshot snapshot)
+    private RemoteProjectSession(
+        IRenderClient client,
+        HeadlessProjectSnapshot snapshot,
+        Func<RenderArtifact, string, CancellationToken, Task<string>> artifactResolver,
+        bool ownsClient,
+        bool closeSession,
+        bool monitorChanges)
     {
         _client = client;
-        _transport = transport;
         Snapshot = snapshot;
+        _artifactResolver = artifactResolver;
+        _ownsClient = ownsClient;
+        _closeSession = closeSession;
+        _monitorChanges = monitorChanges;
     }
 
     public IRenderClient Client => _client;
     public HeadlessProjectSnapshot Snapshot { get; private set; }
+    public long LastSavedRevision { get; private set; } = -1;
+    public bool MonitorChanges => _monitorChanges;
     public string ProjectRoot => Snapshot.ProjectRoot;
     public ProjectJSONStructure Project => Deserialize<ProjectJSONStructure>(Snapshot.ProjectJson);
     public DraftStructureJSON Draft => Deserialize<DraftStructureJSON>(Snapshot.TimelineJson);
@@ -62,7 +76,13 @@ internal sealed class RemoteProjectSession : IAsyncDisposable
                     message ?? "The remote RPC server has no project loaded. Open a project on the remote device first (or start it with --projectRoot), then try again.",
                     ex);
             }
-            return new RemoteProjectSession(client, transport, snapshot);
+            return new RemoteProjectSession(
+                client,
+                snapshot,
+                (artifact, localProjectRoot, ct) => DownloadArtifactAsync(transport, artifact, localProjectRoot, ct),
+                ownsClient: true,
+                closeSession: true,
+                monitorChanges: true);
         }
         catch
         {
@@ -71,12 +91,36 @@ internal sealed class RemoteProjectSession : IAsyncDisposable
         }
     }
 
+    public static RemoteProjectSession CreateNamedPipeSession(
+        IRenderClient client,
+        HeadlessProjectSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(snapshot);
+        return new RemoteProjectSession(
+            client,
+            snapshot,
+            static (artifact, projectRoot, _) => Task.FromResult(ResolveLocalArtifact(artifact, projectRoot)),
+            ownsClient: false,
+            closeSession: false,
+            monitorChanges: false);
+    }
+
     public async Task<string> MaterializeArtifactAsync(
         RenderArtifact artifact,
         string localProjectRoot,
         CancellationToken cancellationToken = default)
     {
         ThrowIfClosed();
+        return await _artifactResolver(artifact, localProjectRoot, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<string> DownloadArtifactAsync(
+        HttpRenderClientTransport transport,
+        RenderArtifact artifact,
+        string localProjectRoot,
+        CancellationToken cancellationToken)
+    {
         string localPath = RenderRpcBootstrap.ResolveArtifactPath(localProjectRoot, artifact);
         string? directory = Path.GetDirectoryName(localPath);
         if (directory is null) throw new InvalidDataException("The remote artifact path has no parent directory.");
@@ -85,7 +129,7 @@ internal sealed class RemoteProjectSession : IAsyncDisposable
         if (File.Exists(localPath) && await MatchesArtifactAsync(localPath, artifact, cancellationToken).ConfigureAwait(false))
             return localPath;
 
-        byte[] content = await _transport.DownloadArtifactAsync(
+        byte[] content = await transport.DownloadArtifactAsync(
             new ArtifactRequest { SessionId = artifact.SessionId, ArtifactId = artifact.ArtifactId },
             cancellationToken).ConfigureAwait(false);
         if (artifact.Size >= 0 && content.LongLength != artifact.Size)
@@ -104,8 +148,14 @@ internal sealed class RemoteProjectSession : IAsyncDisposable
         {
             try { if (File.Exists(temporaryPath)) File.Delete(temporaryPath); } catch { }
         }
-
         return localPath;
+    }
+
+    private static string ResolveLocalArtifact(RenderArtifact artifact, string projectRoot)
+    {
+        string path = RenderRpcBootstrap.ResolveArtifactPath(projectRoot, artifact);
+        if (!File.Exists(path)) throw new FileNotFoundException("The named-pipe render artifact was not found.", path);
+        return path;
     }
 
     public async Task ApplyAndSaveAsync(
@@ -130,6 +180,7 @@ internal sealed class RemoteProjectSession : IAsyncDisposable
             Precondition = CreatePrecondition(),
             ChangeReason = changeReason ?? string.Empty,
         }, cancellationToken).ConfigureAwait(false);
+        LastSavedRevision = Snapshot.Revision;
     }
 
     /// <summary>
@@ -139,13 +190,34 @@ internal sealed class RemoteProjectSession : IAsyncDisposable
     /// </summary>
     public async Task<bool> SyncFromServerAsync(CancellationToken cancellationToken = default)
     {
-        ThrowIfClosed();
-        HeadlessProjectSnapshot latest = await _client.GetHeadlessProjectSnapshotAsync(
-            Snapshot.SessionId, cancellationToken).ConfigureAwait(false);
-        bool changed = latest.Revision != Snapshot.Revision ||
-            !string.Equals(latest.SnapshotHash, Snapshot.SnapshotHash, StringComparison.Ordinal);
-        Snapshot = latest;
+        HeadlessProjectSnapshot latest = await ReadLatestSnapshotAsync(cancellationToken).ConfigureAwait(false);
+        bool changed = !MatchesSnapshot(latest);
+        AdoptSnapshot(latest);
         return changed;
+    }
+
+    public async Task<HeadlessProjectSnapshot> ReadLatestSnapshotAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfClosed();
+        return await _client.GetHeadlessProjectSnapshotAsync(
+            Snapshot.SessionId, cancellationToken).ConfigureAwait(false);
+    }
+
+    public bool MatchesSnapshot(HeadlessProjectSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        return snapshot.SessionId == Snapshot.SessionId &&
+            snapshot.Revision == Snapshot.Revision &&
+            string.Equals(snapshot.SnapshotHash, Snapshot.SnapshotHash, StringComparison.Ordinal);
+    }
+
+    public void AdoptSnapshot(HeadlessProjectSnapshot snapshot)
+    {
+        ThrowIfClosed();
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.SessionId != Snapshot.SessionId)
+            throw new InvalidOperationException("Cannot adopt a snapshot from another remote project session.");
+        Snapshot = snapshot;
     }
 
     public async Task CloseAsync(CancellationToken cancellationToken = default)
@@ -154,12 +226,20 @@ internal sealed class RemoteProjectSession : IAsyncDisposable
         _closed = true;
         try
         {
-            await _client.CloseProjectAsync(Snapshot.SessionId, cancellationToken).ConfigureAwait(false);
+            if (_closeSession)
+                await _client.CloseProjectAsync(Snapshot.SessionId, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
-            await _client.DisposeAsync().ConfigureAwait(false);
+            if (_ownsClient) await _client.DisposeAsync().ConfigureAwait(false);
         }
+    }
+
+    public async Task CloseSharedServerSessionAsync(CancellationToken cancellationToken = default)
+    {
+        if (_closed) return;
+        await _client.CloseProjectAsync(Snapshot.SessionId, cancellationToken).ConfigureAwait(false);
+        _closed = true;
     }
 
     public async ValueTask DisposeAsync() => await CloseAsync().ConfigureAwait(false);

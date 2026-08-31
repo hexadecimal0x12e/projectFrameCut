@@ -1,4 +1,5 @@
 using projectFrameCut.McpCore;
+using projectFrameCut.IntegratedAPIServer.MCP;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -17,6 +18,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
     private readonly RenderBackendService _renderService;
     private readonly bool _ownsRenderService;
     private readonly ConcurrentDictionary<Guid, HeadlessSession> _sessions = new();
+    private readonly SemaphoreSlim _defaultSessionGate = new(1, 1);
     private readonly string? _globalAssetsDatabasePath;
     private Guid _defaultSessionId;
 
@@ -60,6 +62,48 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
         _defaultSessionId = snapshot.SessionId;
     }
 
+    public async ValueTask EnsureDefaultProjectAsync(string projectRoot, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectRoot);
+        string normalizedRoot = Path.GetFullPath(projectRoot);
+        await _defaultSessionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            Guid previousSessionId = _defaultSessionId;
+            if (previousSessionId != Guid.Empty &&
+                _sessions.TryGetValue(previousSessionId, out HeadlessSession? previousSession) &&
+                string.Equals(
+                    previousSession.Workspace.ProjectRoot,
+                    normalizedRoot,
+                    OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            HeadlessProjectSnapshot replacement = await OpenAsync(
+                new OpenHeadlessProjectRequest { ProjectRoot = normalizedRoot },
+                cancellationToken).ConfigureAwait(false);
+            _defaultSessionId = replacement.SessionId;
+        }
+        finally
+        {
+            _defaultSessionGate.Release();
+        }
+    }
+
+    public async ValueTask ClearDefaultProjectAsync(CancellationToken cancellationToken = default)
+    {
+        await _defaultSessionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            _defaultSessionId = Guid.Empty;
+        }
+        finally
+        {
+            _defaultSessionGate.Release();
+        }
+    }
+
     public async ValueTask<RenderResponseEnvelope> DispatchAsync(
         RenderRequestEnvelope request,
         CancellationToken cancellationToken = default)
@@ -95,6 +139,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
                 RenderOperation.AddOrReplaceHeadlessEffectBundle => Success(request, await MutateAsync(Read<HeadlessClipMutationRequest>(request), static (editor, value) => editor.AddOrReplaceEffectBundle(value.ClipId, Deserialize<EffectBundleJSONStructure>(value.Json)), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.RemoveHeadlessEffectBundle => Success(request, await RemoveEffectBundleAsync(Read<RemoveHeadlessEffectBundleRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.SaveHeadlessProject => Success(request, await SaveAsync(Read<HeadlessSaveProjectRequest>(request), cancellationToken).ConfigureAwait(false)),
+                RenderOperation.ApplyHeadlessProjectEdit => Success(request, await ApplyProjectEditAsync(Read<HeadlessProjectEditRequest>(request), cancellationToken).ConfigureAwait(false)),
                 _ => await _renderService.DispatchAsync(request, cancellationToken).ConfigureAwait(false),
             };
         }
@@ -348,6 +393,12 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
 
     private ValueTask<HeadlessJsonResponse> RemoveEffectBundleAsync(RemoveHeadlessEffectBundleRequest request, CancellationToken cancellationToken)
         => MutateCoreAsync(request.Precondition, session => session.Editor.RemoveEffectBundle(request.ClipId, request.BundleId), cancellationToken);
+
+    private ValueTask<HeadlessJsonResponse> ApplyProjectEditAsync(HeadlessProjectEditRequest request, CancellationToken cancellationToken)
+        => MutateCoreAsync(
+            request.Precondition,
+            session => ProjectModeEditingService.Edit(session.Workspace, Deserialize<JsonElement>(request.Json)),
+            cancellationToken);
 
     private async ValueTask<HeadlessJsonResponse> MutateCoreAsync(
         HeadlessMutationPrecondition precondition,
@@ -628,6 +679,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
         foreach (var session in _sessions.Values) session.Dispose();
         _sessions.Clear();
         _defaultSessionId = Guid.Empty;
+        _defaultSessionGate.Dispose();
         if (_ownsRenderService) await _renderService.DisposeAsync().ConfigureAwait(false);
     }
 

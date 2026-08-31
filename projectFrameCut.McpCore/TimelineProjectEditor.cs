@@ -162,70 +162,85 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
     {
         foreach (var (key, value) in patch)
         {
+            object? normalizedValue = NormalizeJsonValue(value);
             switch (key.Trim().ToLowerInvariant())
             {
                 case "name":
                 case "displayname":
-                    clip.Name = value?.ToString() ?? string.Empty;
+                    clip.Name = normalizedValue?.ToString() ?? string.Empty;
                     break;
                 case "layerindex":
-                    clip.LayerIndex = Convert.ToUInt32(value);
+                    clip.LayerIndex = Convert.ToUInt32(normalizedValue);
                     break;
                 case "startframe":
-                    clip.StartFrame = Convert.ToUInt32(value);
+                    clip.StartFrame = Convert.ToUInt32(normalizedValue);
                     break;
                 case "duration":
-                    clip.Duration = Convert.ToUInt32(value);
+                    clip.Duration = Convert.ToUInt32(normalizedValue);
                     break;
                 case "frametime":
-                    clip.FrameTime = Convert.ToSingle(value);
+                    clip.FrameTime = Convert.ToSingle(normalizedValue);
                     break;
                 case "secondperfpreratio":
                 case "secondperframeratio":
-                    clip.SecondPerFrameRatio = Convert.ToSingle(value);
+                    clip.SecondPerFrameRatio = Convert.ToSingle(normalizedValue);
                     break;
                 case "filepath":
-                    clip.FilePath = value?.ToString();
+                    clip.FilePath = normalizedValue?.ToString();
                     break;
                 case "sourceduration":
-                    clip.SourceDuration = value is null ? null : Convert.ToInt64(value);
+                    clip.SourceDuration = normalizedValue is null ? null : Convert.ToInt64(normalizedValue);
                     break;
                 case "isinfinitelength":
-                    clip.IsInfiniteLength = Convert.ToBoolean(value);
+                    clip.IsInfiniteLength = Convert.ToBoolean(normalizedValue);
                     break;
                 case "shoulddisplayinui":
-                    clip.ShouldDisplayInUI = Convert.ToBoolean(value);
+                    clip.ShouldDisplayInUI = Convert.ToBoolean(normalizedValue);
                     break;
                 case "targetwidth":
-                    clip.TargetWidth = Convert.ToInt32(value);
+                    clip.TargetWidth = Convert.ToInt32(normalizedValue);
                     break;
                 case "targetheight":
-                    clip.TargetHeight = Convert.ToInt32(value);
+                    clip.TargetHeight = Convert.ToInt32(normalizedValue);
                     break;
                 case "targetx":
-                    clip.TargetX = Convert.ToInt32(value);
+                    clip.TargetX = Convert.ToInt32(normalizedValue);
                     break;
                 case "targety":
-                    clip.TargetY = Convert.ToInt32(value);
+                    clip.TargetY = Convert.ToInt32(normalizedValue);
                     break;
                 case "fromplugin":
-                    clip.FromPlugin = value?.ToString() ?? string.Empty;
+                    clip.FromPlugin = normalizedValue?.ToString() ?? string.Empty;
                     break;
                 case "typename":
-                    clip.TypeName = value?.ToString() ?? string.Empty;
+                    clip.TypeName = normalizedValue?.ToString() ?? string.Empty;
                     break;
                 case "cliptype":
-                    clip.ClipType = value is JsonElement je && je.ValueKind == JsonValueKind.Number
-                        ? (ClipMode)je.GetInt32()
-                        : Enum.TryParse<ClipMode>(value?.ToString(), out var parsedMode) ? parsedMode : clip.ClipType;
+                    clip.ClipType = Enum.TryParse<ClipMode>(normalizedValue?.ToString(), out var parsedMode)
+                        ? parsedMode
+                        : clip.ClipType;
                     break;
                 case "metadata":
                 case "extradata":
-                    clip.MetaData = value is null
+                    clip.MetaData = normalizedValue is null
                         ? null
-                        : JsonSerializer.Deserialize<Dictionary<string, object>>(JsonSerializer.Serialize(value), TimelineProjectWorkspace.JsonOptions);
+                        : JsonSerializer.Deserialize<Dictionary<string, object>>(JsonSerializer.Serialize(normalizedValue), TimelineProjectWorkspace.JsonOptions);
                     break;
             }
         }
     }
+
+    private static object? NormalizeJsonValue(object? value)
+        => value is not JsonElement json
+            ? value
+            : json.ValueKind switch
+            {
+                JsonValueKind.Null => null,
+                JsonValueKind.String => json.GetString(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.Number when json.TryGetInt64(out long integer) => integer,
+                JsonValueKind.Number => json.GetDouble(),
+                _ => json.Clone(),
+            };
 }
