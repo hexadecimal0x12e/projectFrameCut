@@ -1,5 +1,6 @@
 ﻿using FFmpeg.AutoGen;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
@@ -255,6 +256,8 @@ public partial class AdvancedSettingPage : ContentPage
                                 File.WriteAllText(timelineFile, jsonText);
                             }
                         }
+
+                        DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(projectDir);
                     }
                     catch (Exception ex)
                     {

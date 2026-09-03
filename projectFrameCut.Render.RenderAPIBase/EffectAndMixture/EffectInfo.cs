@@ -15,7 +15,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Define the type name of the effect. 
         /// </summary>
         /// <remarks>
-        /// it SHOULD equals to <see cref="IEffectBundle.TypeName"/>, <see cref="IEffectFactory.TypeName"/> and so on.
+        /// it SHOULD equal the provider and factory TypeName values.
         /// </remarks>
         public required string TypeName { get; init; }
         /// <summary>

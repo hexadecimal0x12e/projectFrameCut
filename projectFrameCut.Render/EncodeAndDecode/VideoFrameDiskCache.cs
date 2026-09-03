@@ -435,7 +435,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     for (uint i = 0; i < d.TotalFrames; i++)
                     {
                         if (token.IsCancellationRequested) return;
-                        d.GetFrame(i, false).Dispose();
+                        d.GetFrame(i).Dispose();
                         progress.Report((double)i / d.TotalFrames);
                     }
                 }
@@ -449,7 +449,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         for (uint i = 0; i < s.TotalFrames; i++)
                         {
                             if (token.IsCancellationRequested) return;
-                            s.GetFrame(i, false).Dispose();
+                            s.GetFrame(i).Dispose();
                             progress.Report((double)i / s.TotalFrames);
                         }
                     }
@@ -461,7 +461,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         for (uint i = 0; i < s.TotalFrames; i++)
                         {
                             if (token.IsCancellationRequested) return;
-                            s.GetFrame(i, false).Dispose();
+                            s.GetFrame(i).Dispose();
                             progress.Report((double)i / s.TotalFrames);
                         }
                     }

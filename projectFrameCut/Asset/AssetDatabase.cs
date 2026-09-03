@@ -187,7 +187,7 @@ namespace projectFrameCut.Asset
                             var vid = PluginManager.CreateVideoSource(sourcePath);
                             asset.Duration = vid.TotalFrames;
                             asset.SecondPerFrame = (float)(1f / vid.Fps);
-                            vid.GetFrame(0U, false).SaveToPng(thumbnailPath);
+                            vid.GetFrame(0U).SaveToPng(thumbnailPath);
                         }
                         catch (Exception ex)
                         {
@@ -216,7 +216,7 @@ namespace projectFrameCut.Asset
                         }
                         try
                         {
-                            PluginManager.CreateVideoSource(sourcePath).GetFrame(0U, false).SaveToPng(thumbnailPath);
+                            PluginManager.CreateVideoSource(sourcePath).GetFrame(0U).SaveToPng(thumbnailPath);
                         }
                         catch
                         {

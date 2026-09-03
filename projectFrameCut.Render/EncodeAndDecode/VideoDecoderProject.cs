@@ -98,7 +98,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             renderer.ClearCaches();
         }
 
-        public IPicture GetFrame(uint targetFrame, bool hasAlpha = false)
+        public IPicture GetFrame(uint targetFrame)
         {
             if (renderer is null) throw new ArgumentNullException("Render is not inited yet.");
             var cts = new CancellationTokenSource();

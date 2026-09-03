@@ -77,6 +77,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public bool IsReorderable { get; }
 
         /// <summary>
+        /// Gets whether this effect can process a frame after it has been resized to the target canvas size.
+        /// </summary>
+        [JsonIgnore]
+        public bool CanProcessFromCanvas => false;
+
+        /// <summary>
         /// Indicates whether this effect needs a specific computer with the computer which it's ID is <see cref="NeedComputer"/> to run.
         /// Or be null indicates this effect does not need a specific computer.
         /// </summary>
@@ -119,7 +125,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Get the info of this effect. Used in MCP calling in agent.
         /// </summary>
         /// <remarks>
-        /// For UI Displaying purpose please use EffectBundle's GetDisplayInfo method instead.
+        /// For UI displaying purposes, use the EffectProvider's display information instead.
         /// </remarks>
         /// <returns></returns>
         public virtual EffectInfo GetInfo()

@@ -166,12 +166,12 @@ internal static class IntegratedApiToolCatalog
             CreateTool("remove_effect", "Remove one effect from a clip.", ObjectSchema("""
                 "clipId":{"type":"string"},"effectKey":{"type":"string"}
                 """, "clipId", "effectKey"), IntegratedApiOperation.RemoveEffect),
-            CreateTool("add_effect_bundle", "Add or replace one effect bundle on a clip.", ObjectSchema("""
-                "clipId":{"type":"string"},"bundle":{"type":"object"}
-                """, "clipId", "bundle"), IntegratedApiOperation.AddEffectBundle),
-            CreateTool("remove_effect_bundle", "Remove an effect bundle from a clip.", ObjectSchema("""
-                "clipId":{"type":"string"},"bundleId":{"type":"string"}
-                """, "clipId", "bundleId"), IntegratedApiOperation.RemoveEffectBundle),
+            CreateTool("add_effect_provider", "Add or replace one effect provider on a clip.", ObjectSchema("""
+                "clipId":{"type":"string"},"provider":{"type":"object"}
+                """, "clipId", "provider"), IntegratedApiOperation.AddEffectProvider),
+            CreateTool("remove_effect_provider", "Remove an effect provider from a clip.", ObjectSchema("""
+                "clipId":{"type":"string"},"providerId":{"type":"string"}
+                """, "clipId", "providerId"), IntegratedApiOperation.RemoveEffectProvider),
             CreateTool("save_project", "Persist the current project state to disk.", ObjectSchema("""
                 "changeReason":{"type":"string"}
                 """), IntegratedApiOperation.SaveProject),

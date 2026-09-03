@@ -16,10 +16,10 @@ using projectFrameCut.Shared;
 namespace projectFrameCut.ScriptEngine
 {
     // ────────────────────────────────────────────────────────────────
-    //  EffectBundleCmdletBase — EffectBundle CRUD 共享基类
+    //  EffectProviderCmdletBase — EffectProvider CRUD 共享基类
     //  复用 DraftPageCmdletBase 的 UI 线程调度与辅助方法
     // ────────────────────────────────────────────────────────────────
-    public abstract class EffectBundleCmdletBase : PSCmdlet
+    public abstract class EffectProviderCmdletBase : PSCmdlet
     {
         /// <summary>写操作设为 true 以自动调度到 UI 线程。</summary>
         protected virtual bool RequiresUIThread => false;
@@ -103,53 +103,53 @@ namespace projectFrameCut.ScriptEngine
         }
 
         /// <summary>
-        /// 按 Guid 查找 clip 上的 EffectBundle，未找到时写非终止错误。
+        /// 按 Guid 查找 clip 上的 EffectProvider，未找到时写非终止错误。
         /// </summary>
-        protected IEffectProvider? ResolveEffectBundle(ClipElementUI clip, Guid bundleId)
+        protected IEffectProvider? ResolveEffectProvider(ClipElementUI clip, Guid providerId)
         {
-            if (clip.EffectProviders is not null && clip.EffectProviders.TryGetValue(bundleId, out var bundle))
-                return bundle;
+            if (clip.EffectProviders is not null && clip.EffectProviders.TryGetValue(providerId, out var provider))
+                return provider;
 
             WriteError(new ErrorRecord(
-                new ArgumentException($"EffectBundle with Id '{bundleId}' not found on clip '{clip.DisplayName}'."),
-                "EffectBundleNotFound",
+                new ArgumentException($"EffectProvider with Id '{providerId}' not found on clip '{clip.DisplayName}'."),
+                "EffectProviderNotFound",
                 ErrorCategory.ObjectNotFound,
-                bundleId));
+                providerId));
             return null;
         }
 
         // ─── PSObject 输出构建器 ───────────────────────────────
 
-        /// <summary>构造标准的 EffectBundle PSObject（含元数据概要）。</summary>
-        protected PSObject NewEffectBundleObject(IEffectProvider bundle)
+        /// <summary>构造标准的 EffectProvider PSObject（含元数据概要）。</summary>
+        protected PSObject NewEffectProviderObject(IEffectProvider provider)
         {
-            var obj = NewEffectBundleSummaryObject(bundle);
-            obj.Properties.Add(new PSNoteProperty("FromPlugin", bundle.FromPlugin));
-            obj.Properties.Add(new PSNoteProperty("Target", bundle.Target.ToString()));
-            obj.Properties.Add(new PSNoteProperty("InputSource", bundle.HasMainPictureInput() ? bundle.GetMainInputSource() : null));
-            obj.Properties.Add(new PSNoteProperty("IsFinalOutput", bundle.IsFinalOutputSource()));
-            obj.Properties.Add(new PSNoteProperty("AnchorsBindingState", ToHashtable(bundle.AnchorsBindingState)));
-            obj.Properties.Add(new PSNoteProperty("Fields", bundle.Fields.Values.Select(NewSettableFieldObject).ToArray()));
-            obj.Properties.Add(new PSNoteProperty("MetaData", ToHashtable(bundle.MetaData)));
+            var obj = NewEffectProviderSummaryObject(provider);
+            obj.Properties.Add(new PSNoteProperty("FromPlugin", provider.FromPlugin));
+            obj.Properties.Add(new PSNoteProperty("Target", provider.Target.ToString()));
+            obj.Properties.Add(new PSNoteProperty("InputSource", provider.HasMainPictureInput() ? provider.GetMainInputSource() : null));
+            obj.Properties.Add(new PSNoteProperty("IsFinalOutput", provider.IsFinalOutputSource()));
+            obj.Properties.Add(new PSNoteProperty("AnchorsBindingState", ToHashtable(provider.AnchorsBindingState)));
+            obj.Properties.Add(new PSNoteProperty("Fields", provider.Fields.Values.Select(NewSettableFieldObject).ToArray()));
+            obj.Properties.Add(new PSNoteProperty("MetaData", ToHashtable(provider.MetaData)));
             return obj;
         }
 
         /// <summary>
-        /// 构造简化的 EffectBundle PSObject（仅 Id、Name、Type、Enabled 和当前参数值）。
-        /// 用于快速查看 Bundle 列表。
+        /// 构造简化的 EffectProvider PSObject（仅 Id、Name、Type、Enabled 和当前参数值）。
+        /// 用于快速查看 Provider 列表。
         /// </summary>
-        protected PSObject NewEffectBundleSummaryObject(IEffectProvider bundle)
+        protected PSObject NewEffectProviderSummaryObject(IEffectProvider provider)
         {
             var obj = new PSObject();
-            obj.Properties.Add(new PSNoteProperty("Id", bundle.Id));
-            obj.Properties.Add(new PSNoteProperty("Name", bundle.Name));
-            obj.Properties.Add(new PSNoteProperty("TypeName", bundle.TypeName));
-            obj.Properties.Add(new PSNoteProperty("Enabled", bundle.Enabled));
-            obj.Properties.Add(new PSNoteProperty("EffectType", bundle.TypeOfEffect.ToString()));
-            obj.Properties.Add(new PSNoteProperty("ParameterCount", bundle.Fields?.Count ?? 0));
+            obj.Properties.Add(new PSNoteProperty("Id", provider.Id));
+            obj.Properties.Add(new PSNoteProperty("Name", provider.Name));
+            obj.Properties.Add(new PSNoteProperty("TypeName", provider.TypeName));
+            obj.Properties.Add(new PSNoteProperty("Enabled", provider.Enabled));
+            obj.Properties.Add(new PSNoteProperty("EffectType", provider.TypeOfEffect.ToString()));
+            obj.Properties.Add(new PSNoteProperty("ParameterCount", provider.Fields?.Count ?? 0));
             obj.Properties.Add(new PSNoteProperty("ParameterSummary",
-                bundle.Fields is { Count: > 0 }
-                    ? string.Join("; ", bundle.Fields.Select(kv => $"{kv.Key}={GetFieldValue(kv.Value) ?? "null"}"))
+                provider.Fields is { Count: > 0 }
+                    ? string.Join("; ", provider.Fields.Select(kv => $"{kv.Key}={GetFieldValue(kv.Value) ?? "null"}"))
                     : "(none)"));
             return obj;
         }
@@ -251,14 +251,14 @@ namespace projectFrameCut.ScriptEngine
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  #region Available EffectBundle Types
+    //  #region Available EffectProvider Types
     // ════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// 列出工程中所有可用的 EffectBundle 类型及其元数据。
+    /// 列出工程中所有可用的 EffectProvider 类型及其元数据。
     /// </summary>
-    [Cmdlet(VerbsCommon.Get, "EffectBundleTypes")]
-    public sealed class GetProjectEffectBundleTypeCommand : EffectBundleCmdletBase
+    [Cmdlet(VerbsCommon.Get, "EffectProviderTypes")]
+    public sealed class GetProjectEffectProviderTypeCommand : EffectProviderCmdletBase
     {
         [Parameter]
         public string? Name { get; set; }
@@ -280,7 +280,7 @@ namespace projectFrameCut.ScriptEngine
                 if (EffectType.HasValue && provider.TypeOfEffect != EffectType.Value) continue;
                 if (Target.HasValue && !provider.Target.HasFlag(Target.Value)) continue;
 
-                var obj = NewEffectBundleObject(provider);
+                var obj = NewEffectProviderObject(provider);
                 obj.Properties.Add(new PSNoteProperty("RegistrationKey", typeName));
                 WriteObject(obj);
             }
@@ -288,20 +288,20 @@ namespace projectFrameCut.ScriptEngine
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  #region EffectBundle CRUD on Clip
+    //  #region EffectProvider CRUD on Clip
     // ════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// 获取 clip 上的 EffectBundle 列表。
+    /// 获取 clip 上的 EffectProvider 列表。
     /// </summary>
-    [Cmdlet(VerbsCommon.Get, "ProjectClipEffectBundle")]
-    public sealed class GetProjectClipEffectBundleCommand : EffectBundleCmdletBase
+    [Cmdlet(VerbsCommon.Get, "ProjectClipEffectProvider")]
+    public sealed class GetProjectClipEffectProviderCommand : EffectProviderCmdletBase
     {
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
         public Guid ClipId { get; set; }
 
         [Parameter]
-        public Guid? BundleId { get; set; }
+        public Guid? ProviderId { get; set; }
 
         [Parameter]
         public string? TypeName { get; set; }
@@ -322,13 +322,13 @@ namespace projectFrameCut.ScriptEngine
             if (clip?.EffectProviders is null) return;
 
             var providers = clip.EffectProviders.Values.AsEnumerable();
-            if (BundleId.HasValue) providers = providers.Where(provider => provider.Id == BundleId.Value);
+            if (ProviderId.HasValue) providers = providers.Where(provider => provider.Id == ProviderId.Value);
             if (!string.IsNullOrWhiteSpace(TypeName))
                 providers = providers.Where(provider => provider.TypeName.Equals(TypeName, StringComparison.OrdinalIgnoreCase));
 
             foreach (var provider in providers)
             {
-                var obj = Detailed ? NewEffectBundleObject(provider) : NewEffectBundleSummaryObject(provider);
+                var obj = Detailed ? NewEffectProviderObject(provider) : NewEffectProviderSummaryObject(provider);
                 if (ShowFields && !Detailed)
                     obj.Properties.Add(new PSNoteProperty("Fields", provider.Fields.Values.Select(NewSettableFieldObject).ToArray()));
                 WriteObject(obj);
@@ -337,10 +337,10 @@ namespace projectFrameCut.ScriptEngine
     }
 
     /// <summary>
-    /// 为 clip 添加一个 EffectBundle。
+    /// 为 clip 添加一个 EffectProvider。
     /// </summary>
-    [Cmdlet(VerbsCommon.Add, "ProjectClipEffectBundle", SupportsShouldProcess = true)]
-    public sealed class AddProjectClipEffectBundleCommand : EffectBundleCmdletBase
+    [Cmdlet(VerbsCommon.Add, "ProjectClipEffectProvider", SupportsShouldProcess = true)]
+    public sealed class AddProjectClipEffectProviderCommand : EffectProviderCmdletBase
     {
         protected override bool RequiresUIThread => true;
 
@@ -348,14 +348,14 @@ namespace projectFrameCut.ScriptEngine
         public Guid ClipId { get; set; }
 
         /// <summary>
-        /// EffectBundle 的类型名称，对应 EffectServices.GetAvailableEffectBundles() 的 key，
+        /// EffectProvider 的类型名称，对应 EffectServices.GetAvailableEffectProviders() 的 key，
         /// 例如 "Blur"、"Crop"、"Flip" 等。
         /// </summary>
         [Parameter(Mandatory = true, Position = 1)]
         public string? TypeName { get; set; }
 
         /// <summary>
-        /// 此 Bundle 实例的自定义名称。不指定则使用 TypeName。
+        /// 此 Provider 实例的自定义名称。不指定则使用 TypeName。
         /// </summary>
         [Parameter]
         public string? Name { get; set; }
@@ -407,16 +407,16 @@ namespace projectFrameCut.ScriptEngine
             EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, provider, clip.GetEffectTarget());
             ClipInfoBuilder.RebuildAllEffects(clip);
             page!.RefreshPropertyPanel(clip);
-            if (PassThru) WriteObject(NewEffectBundleObject(provider));
+            if (PassThru) WriteObject(NewEffectProviderObject(provider));
         }
     }
 
     /// <summary>
-    /// 修改 clip 上的 EffectBundle 属性。
+    /// 修改 clip 上的 EffectProvider 属性。
     /// 核心功能是通过 SettableFields 机制设置字段值，同时支持修改 Name/Enabled 等通用属性。
     /// </summary>
-    [Cmdlet(VerbsCommon.Set, "ProjectClipEffectBundle", SupportsShouldProcess = true)]
-    public sealed class SetProjectClipEffectBundleCommand : EffectBundleCmdletBase
+    [Cmdlet(VerbsCommon.Set, "ProjectClipEffectProvider", SupportsShouldProcess = true)]
+    public sealed class SetProjectClipEffectProviderCommand : EffectProviderCmdletBase
     {
         protected override bool RequiresUIThread => true;
 
@@ -424,7 +424,7 @@ namespace projectFrameCut.ScriptEngine
         public Guid ClipId { get; set; }
 
         [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
-        public Guid BundleId { get; set; }
+        public Guid ProviderId { get; set; }
 
         /// <summary>
         /// 新的名称。
@@ -447,9 +447,9 @@ namespace projectFrameCut.ScriptEngine
 
         /// <summary>
         /// 清空所有参数并重置为默认值后，再应用 Fields（若有）。
-        /// 注意：EffectBundle 接口本身不提供重置方法，此开关将清空 Parameters 字典。
-        /// 各个 EffectBundle 会通过 Create() 重新生成工厂，但 Parameters 需要手动重建。
-        /// 此参数仅清空 Parameters 字典，不会重设 SettableFields 的定义。
+        /// 注意：EffectProvider 接口本身不提供重置方法，此开关将清空 Fields 字典。
+        /// 各个 EffectProvider 会通过工厂重新生成，但字段值需要手动重建。
+        /// 此参数仅清空 Fields 字典，不会重设 SettableFields 的定义。
         /// </summary>
         [Parameter]
         public SwitchParameter ResetToDefaults { get; set; }
@@ -474,7 +474,7 @@ namespace projectFrameCut.ScriptEngine
             if (!EnsurePageLoaded(out var page)) return;
             var clip = ResolveClip(page!, ClipId);
             if (clip is null) return;
-            var provider = ResolveEffectBundle(clip, BundleId);
+            var provider = ResolveEffectProvider(clip, ProviderId);
             if (provider is null) return;
 
             var action = $"Update effect provider '{provider.Name}' on clip '{clip.DisplayName}'";
@@ -521,15 +521,15 @@ namespace projectFrameCut.ScriptEngine
 
             ClipInfoBuilder.RebuildAllEffects(clip);
             page!.RefreshPropertyPanel(clip);
-            if (PassThru) WriteObject(NewEffectBundleObject(provider));
+            if (PassThru) WriteObject(NewEffectProviderObject(provider));
         }
     }
 
     /// <summary>
-    /// 从 clip 移除一个 EffectBundle。
+    /// 从 clip 移除一个 EffectProvider。
     /// </summary>
-    [Cmdlet(VerbsCommon.Remove, "ProjectClipEffectBundle", SupportsShouldProcess = true)]
-    public sealed class RemoveProjectClipEffectBundleCommand : EffectBundleCmdletBase
+    [Cmdlet(VerbsCommon.Remove, "ProjectClipEffectProvider", SupportsShouldProcess = true)]
+    public sealed class RemoveProjectClipEffectProviderCommand : EffectProviderCmdletBase
     {
         protected override bool RequiresUIThread => true;
 
@@ -537,7 +537,7 @@ namespace projectFrameCut.ScriptEngine
         public Guid ClipId { get; set; }
 
         [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
-        public Guid BundleId { get; set; }
+        public Guid ProviderId { get; set; }
 
         [Parameter]
         public SwitchParameter Force { get; set; }
@@ -548,21 +548,21 @@ namespace projectFrameCut.ScriptEngine
             var clip = ResolveClip(page!, ClipId);
             if (clip is null) return;
 
-            if (clip.EffectProviders is null || !clip.EffectProviders.TryGetValue(BundleId, out var bundle))
+            if (clip.EffectProviders is null || !clip.EffectProviders.TryGetValue(ProviderId, out var provider))
             {
                 WriteError(new ErrorRecord(
-                    new ArgumentException($"EffectBundle with Id '{BundleId}' not found on clip '{clip.DisplayName}'."),
-                    "EffectBundleNotFound",
+                    new ArgumentException($"EffectProvider with Id '{ProviderId}' not found on clip '{clip.DisplayName}'."),
+                    "EffectProviderNotFound",
                     ErrorCategory.ObjectNotFound,
-                    BundleId));
+                    ProviderId));
                 return;
             }
 
-            var action = $"Remove EffectBundle '{bundle.Name}' ({BundleId}) from clip '{clip.DisplayName}'";
-            if (!Force && !ShouldProcess(clip.DisplayName, bundle.Name, action))
+            var action = $"Remove EffectProvider '{provider.Name}' ({ProviderId}) from clip '{clip.DisplayName}'";
+            if (!Force && !ShouldProcess(clip.DisplayName, provider.Name, action))
                 return;
 
-            EffectBindingHelper.RemoveProvider(clip.EffectProviders, BundleId);
+            EffectBindingHelper.RemoveProvider(clip.EffectProviders, ProviderId);
             ClipInfoBuilder.RebuildAllEffects(clip);
             page!.RefreshPropertyPanel(clip);
         }
@@ -573,11 +573,11 @@ namespace projectFrameCut.ScriptEngine
     // ════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// 获取指定 EffectBundle 类型的所有 SettableFields 定义。
+    /// 获取指定 EffectProvider 类型的所有 SettableFields 定义。
     /// 用于脚本编写时查看可设置的字段。
     /// </summary>
-    [Cmdlet("Get", "EffectBundleField")]
-    public sealed class GetEffectBundleFieldCommand : EffectBundleCmdletBase
+    [Cmdlet("Get", "EffectProviderField")]
+    public sealed class GetEffectProviderFieldCommand : EffectProviderCmdletBase
     {
         [Parameter(Mandatory = true, Position = 0)]
         public string? TypeName { get; set; }

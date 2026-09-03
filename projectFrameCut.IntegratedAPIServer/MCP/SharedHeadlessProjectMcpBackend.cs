@@ -109,14 +109,14 @@ internal sealed class SharedHeadlessProjectMcpBackend : IIntegratedApiBackend, I
                 IntegratedApiOperation.RemoveEffect => Wrap(
                     "removed",
                     await RemoveEffectAsync(arguments, cancellationToken).ConfigureAwait(false)),
-                IntegratedApiOperation.AddEffectBundle => await MutateClipAsync(
-                    _client.AddOrReplaceHeadlessEffectBundleAsync,
+                IntegratedApiOperation.AddEffectProvider => await MutateClipAsync(
+                    _client.AddOrReplaceHeadlessEffectProviderAsync,
                     RequiredString(arguments, "clipId"),
-                    RequiredProperty(arguments, "bundle").GetRawText(),
+                    RequiredProperty(arguments, "provider").GetRawText(),
                     cancellationToken).ConfigureAwait(false),
-                IntegratedApiOperation.RemoveEffectBundle => Wrap(
+                IntegratedApiOperation.RemoveEffectProvider => Wrap(
                     "removed",
-                    await RemoveEffectBundleAsync(arguments, cancellationToken).ConfigureAwait(false)),
+                    await RemoveEffectProviderAsync(arguments, cancellationToken).ConfigureAwait(false)),
                 IntegratedApiOperation.SaveProject => await SaveProjectAsync(
                     OptionalString(arguments, "changeReason"),
                     cancellationToken).ConfigureAwait(false),
@@ -287,13 +287,13 @@ internal sealed class SharedHeadlessProjectMcpBackend : IIntegratedApiBackend, I
         return ParseElement(response.Json);
     }
 
-    private async ValueTask<JsonElement> RemoveEffectBundleAsync(JsonElement arguments, CancellationToken cancellationToken)
+    private async ValueTask<JsonElement> RemoveEffectProviderAsync(JsonElement arguments, CancellationToken cancellationToken)
     {
-        HeadlessJsonResponse response = await _client.RemoveHeadlessEffectBundleAsync(new RemoveHeadlessEffectBundleRequest
+        HeadlessJsonResponse response = await _client.RemoveHeadlessEffectProviderAsync(new RemoveHeadlessEffectProviderRequest
         {
             Precondition = CreatePrecondition(),
             ClipId = RequiredString(arguments, "clipId"),
-            BundleId = Guid.Parse(RequiredString(arguments, "bundleId")),
+            ProviderId = Guid.Parse(RequiredString(arguments, "providerId")),
         }, cancellationToken).ConfigureAwait(false);
         _snapshot = response.Snapshot;
         return ParseElement(response.Json);

@@ -1095,7 +1095,7 @@ public partial class TestPage : ContentPage
             {
                 var src = new HDRDecoderContext(vidFile);
                 src.Initialize();
-                var frame = src.GetFrame(idx, false);
+                var frame = src.GetFrame(idx);
                 if (frame is not HDRPicture16bpp h)
                 {
                     await DisplayAlertAsync(Title, "Failed to decode HDR frame, got non-HDR picture.", "ok");
@@ -1128,7 +1128,7 @@ public partial class TestPage : ContentPage
             else
             {
                 var src = PluginManager.CreateVideoSource(vidFile);
-                var frame = src.GetFrame(idx, false);
+                var frame = src.GetFrame(idx);
                 LogDiagnostic(frame.GetDiagnosticsInfo());
                 PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
                 {
@@ -1217,7 +1217,7 @@ public partial class TestPage : ContentPage
         for(uint i = 0;i < src.TotalFrames; i++)
         {
             Log($"{i} of {src.TotalFrames} done");
-            dest.Append(src.GetFrame(i, false));
+            dest.Append(src.GetFrame(i));
         }
         dest.Finish();
         dest.Dispose();

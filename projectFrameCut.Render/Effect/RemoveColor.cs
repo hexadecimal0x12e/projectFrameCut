@@ -32,6 +32,7 @@ namespace projectFrameCut.Render.Effect
         public string NeedComputer => "RemoveColorComputer";
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
+        bool IEffect.CanProcessFromCanvas => true;
         public string? BindedEffectProvidingSystemID { get; set; }
 
 

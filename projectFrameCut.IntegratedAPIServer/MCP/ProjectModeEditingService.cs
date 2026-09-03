@@ -751,7 +751,7 @@ internal static class ProjectModeEditingService
     }
 
     private static Dictionary<Guid, IEffectProvider> RestoreProviders(ClipDraftDTO clip, out IReadOnlyList<BindingDiagnostic> diagnostics)
-        => EffectBindingHelper.MigrateToEffectProviders(clip.EffectProviders, clip.EffectBundles, out diagnostics);
+        => EffectBindingHelper.MigrateToEffectProviders(clip.EffectProviders, null, out diagnostics);
 
     private static void CommitProviders(ClipDraftDTO clip, Dictionary<Guid, IEffectProvider> providers, bool allowIncompletePicturePath = false)
     {
@@ -762,7 +762,6 @@ internal static class ProjectModeEditingService
         if (allowIncompletePicturePath && diagnostics.Any(item => item.Code != "MissingFinalOutput"))
             throw new InvalidOperationException("Invalid effect provider graph: " + string.Join(" ", diagnostics.Select(item => item.Message)));
         clip.EffectProviders = providers.Values.Select(SerializeProvider).ToArray();
-        clip.EffectBundles = null;
     }
 
     private static EffectProviderJSONStructure SerializeProvider(IEffectProvider provider)

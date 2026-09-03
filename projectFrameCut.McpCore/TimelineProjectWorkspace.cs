@@ -1,4 +1,5 @@
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Shared;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -61,6 +62,8 @@ public sealed class TimelineProjectWorkspace
             throw new FileNotFoundException("No timeline.json or save slot could be loaded.", timelineFile);
         }
 
+        EffectBindingHelper.NormalizeDraftProviders(draft);
+
         List<AssetItem> assets = [];
         if (File.Exists(assetsFile))
         {
@@ -81,6 +84,7 @@ public sealed class TimelineProjectWorkspace
     public void Save(string? changeReason = null)
     {
         Directory.CreateDirectory(ProjectRoot);
+        EffectBindingHelper.NormalizeDraftProviders(Draft);
 
         if (Draft.SnapshotID == Guid.Empty)
         {
@@ -109,6 +113,7 @@ public sealed class TimelineProjectWorkspace
     public void ReplaceDraft(DraftStructureJSON draft)
     {
         Draft = draft ?? throw new ArgumentNullException(nameof(draft));
+        EffectBindingHelper.NormalizeDraftProviders(Draft);
     }
 
     public void ReplaceProjectInfo(ProjectJSONStructure projectInfo)

@@ -109,7 +109,12 @@ public partial class RenderPage : ContentPage
         var vmDefault = new RenderPageViewModel();
         try
         {
-            vmDefault.Resoultion = SettingsManager.GetSetting("render_DefaultResolution", vmDefault.Resoultion);
+            var defaultResolution = SettingsManager.GetSetting("render_DefaultResolution", vmDefault.Resoultion);
+            if (vmDefault.ExportOptions_Resolution.Contains(defaultResolution, StringComparer.Ordinal)
+                || defaultResolution == Localized.RenderPage_CustomOption)
+            {
+                vmDefault.Resoultion = defaultResolution;
+            }
             vmDefault.FramerateDisplay = SettingsManager.GetSetting("render_DefaultFramerate", vmDefault.FramerateDisplay);
             vmDefault.EncodingDisplay = SettingsManager.GetSetting("render_DefaultEncoding", vmDefault.EncodingDisplay);
             vmDefault.BitDepthDisplay = SettingsManager.GetSetting("render_DefaultBitDepth", vmDefault.BitDepthDisplay);
@@ -141,10 +146,18 @@ public partial class RenderPage : ContentPage
         Title = Localized.RenderPage_ExportTitle(projectInfo.ProjectName);
         ScreenSaverOverlay.InputTransparent = true;
         ScreenSaverOverlay.CascadeInputTransparent = true;
-        var vm = new RenderPageViewModel(ProjectUsesHDR);
+        var vm = new RenderPageViewModel(
+            ProjectUsesHDR,
+            Math.Max(1, projectInfo.RelativeWidth),
+            Math.Max(1, projectInfo.RelativeHeight));
         try
         {
-            vm.Resoultion = SettingsManager.GetSetting("render_DefaultResolution", vm.Resoultion);
+            var defaultResolution = SettingsManager.GetSetting("render_DefaultResolution", vm.Resoultion);
+            if (vm.ExportOptions_Resolution.Contains(defaultResolution, StringComparer.Ordinal)
+                || defaultResolution == Localized.RenderPage_CustomOption)
+            {
+                vm.Resoultion = defaultResolution;
+            }
             vm.FramerateDisplay = SettingsManager.GetSetting("render_DefaultFramerate", vm.FramerateDisplay);
             vm.EncodingDisplay = SettingsManager.GetSetting("render_DefaultEncoding", vm.EncodingDisplay);
             vm.BitDepthDisplay = SettingsManager.GetSetting("render_DefaultBitDepth", vm.BitDepthDisplay);
@@ -508,6 +521,8 @@ public partial class RenderPage : ContentPage
                     "ffv1" => ".mkv",
                     _ => ".mp4"
                 };
+                if (vm.UseAlphaBrightnessPackage) ext = ".mkv";
+                if (vm.UseAlphaBrightnessPackage) fmt = "AV_PIX_FMT_YUV420P10LE";
 
                 running = true;
                 DeviceDisplay.Current.KeepScreenOn = true;
@@ -534,7 +549,7 @@ public partial class RenderPage : ContentPage
                     { "copyright", $"Made by {Localized.AppBrand}" }
                 };
 
-                if (RenderRpcBootstrap.SupportsCliRenderProcess && !string.IsNullOrWhiteSpace(_workingPath))
+                if (!vm.UseAlphaBrightnessPackage && RenderRpcBootstrap.SupportsCliRenderProcess && !string.IsNullOrWhiteSpace(_workingPath))
                 {
                     var detached = await RenderProjectViaCliAsync(vm, resultPath, enc, fmt);
                     if (detached) return;
@@ -583,7 +598,7 @@ public partial class RenderPage : ContentPage
                 if (_cts.IsCancellationRequested) return;
 
                 double targetFps = double.Parse(vm.Framerate);
-                if (Math.Abs(targetFps - Math.Round(targetFps)) > 0.001)
+                if (!vm.UseAlphaBrightnessPackage && Math.Abs(targetFps - Math.Round(targetFps)) > 0.001)
                 {
                     Log($"Resampling video from {(int)Math.Round(targetFps)} to {targetFps}...");
                     SetSubProg("Resample");
@@ -612,12 +627,19 @@ public partial class RenderPage : ContentPage
                 {
                     try
                     {
-                        VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, resultPath, true, mtdDict);
+                        if (vm.UseAlphaBrightnessPackage)
+                        {
+                            File.Move(vidOutputPath, resultPath, true);
+                        }
+                        else
+                        {
+                            VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, resultPath, true, mtdDict);
+                        }
                         if (!SettingsManager.IsBoolSettingTrue("DeveloperMode"))
                         {
                             try
                             {
-                                File.Delete(vidOutputPath);
+                                if (!vm.UseAlphaBrightnessPackage) File.Delete(vidOutputPath);
                                 File.Delete(audOutputPath);
                             }
                             catch { }
@@ -1088,11 +1110,18 @@ public partial class RenderPage : ContentPage
                 _ => IPicture.PicturePixelMode.UShortPicture
             };
 
+            if (vm.UseAlphaBrightnessPackage)
+            {
+                bpp = IPicture.PicturePixelMode.UShortPicture;
+                fmt = "AV_PIX_FMT_YUV420P10LE";
+                ext = ".mkv";
+            }
+
             if (ProjectUsesHDR)
             {
                 bpp = IPicture.PicturePixelMode.UShortPicture;
                 fmt = "AV_PIX_FMT_YUV420P10LE";
-                ext = ".mp4";
+                ext = vm.UseAlphaBrightnessPackage ? ".mkv" : ".mp4";
                 enc = "libx265";
             }
             bool dumpDiagData = SettingsManager.IsBoolSettingTrue("render_DumpDiagData");
@@ -1219,19 +1248,32 @@ public partial class RenderPage : ContentPage
                 if (string.IsNullOrWhiteSpace(outputPath)) throw new InvalidOperationException("No output path specified for rendering.");
                 Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? throw new NullReferenceException());
 
-                builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt, ProjectUsesHDR ? "HDRVideoWriter" : null)
+                if (vm.UseAlphaBrightnessPackage)
                 {
-                    EnablePreview = true,
-                    DoGCAfterEachWrite = gcOption > 0,
-                    DisposeFrameAfterEachWrite = true,
-                    Duration = duration,
-                    LogStat = false,
-                    BlockWrite = blockwrite
-                };
+                    var channels = (vm.PreserveAlpha ? AuxiliaryVideoChannels.Alpha : AuxiliaryVideoChannels.None)
+                        | (vm.PreserveHdrBrightness ? AuxiliaryVideoChannels.Brightness : AuxiliaryVideoChannels.None);
+                    builder = new VideoBuilder(new AlphaBrightnessVideoWriter
+                    {
+                        Width = width, Height = height, FramePerSecond = fps, OutputPath = outputPath,
+                        CodecName = enc, PixelFormat = fmt, Metadata = metadata, Channels = channels
+                    })
+                    {
+                        EnablePreview = true, DoGCAfterEachWrite = gcOption > 0, DisposeFrameAfterEachWrite = true,
+                        Duration = duration, LogStat = false, BlockWrite = blockwrite
+                    };
+                }
+                else
+                {
+                    builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt, ProjectUsesHDR ? "HDRVideoWriter" : null)
+                    {
+                        EnablePreview = true, DoGCAfterEachWrite = gcOption > 0, DisposeFrameAfterEachWrite = true,
+                        Duration = duration, LogStat = false, BlockWrite = blockwrite
+                    };
+                }
             }
 
 
-            builder?.Writer?.Metadata = metadata ?? new();
+            if (!vm.UseAlphaBrightnessPackage) builder?.Writer?.Metadata = metadata ?? new();
 
             Renderer renderer = new Renderer
             {
@@ -1866,6 +1908,40 @@ public partial class RenderPage : ContentPage
 
     }
 
+    private async void ExportAlphaHdr_Clicked(object sender, EventArgs e)
+    {
+        if (BindingContext is not RenderPageViewModel vm) return;
+#if WINDOWS
+        var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv", MauiProgram.DataPath);
+        if (string.IsNullOrWhiteSpace(resultPath)) return;
+#else
+        string resultPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv");
+#endif
+        try
+        {
+            await PrepareUIForRender();
+            await DoCompute(new RenderPageViewModel(ProjectUsesHDR)
+            {
+                Encoding = vm.Encoding,
+                BitDepth = "10bit",
+                Width = vm.Width,
+                Height = vm.Height,
+                Framerate = vm.Framerate,
+                PreserveAlpha = true,
+                PreserveHdrBrightness = ProjectUsesHDR
+            }, resultPath);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "export alpha/hdr", this);
+            await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+        }
+        finally
+        {
+            await CleanupUIForRenderDone();
+        }
+    }
+
     private async void Export16bitRawVideo_Clicked(object sender, EventArgs e)
     {
         if (BindingContext is not RenderPageViewModel vm) return;
@@ -1921,6 +1997,7 @@ public partial class RenderPage : ContentPage
         MoreOptions.IsEnabled = false;
         ExportAudioOnly.IsEnabled = false;
         ExportVideoOnly.IsEnabled = false;
+        ExportAlphaHdr.IsEnabled = false;
         Export16bitRawVideo.IsEnabled = false;
         await SubProgress.ProgressTo(0, 250, Easing.Linear);
 
@@ -2049,26 +2126,81 @@ public partial class RenderPage : ContentPage
 
 public class RenderPageViewModel : INotifyPropertyChanged
 {
-    bool HDREnabled = false;
+    private const long Pixels720P = 1280L * 720;
+    private const long Pixels1080P = 1920L * 1080;
+    private const long Pixels2K = 2560L * 1440;
+    private const long Pixels4K = 3840L * 2160;
+    private const long Pixels8K = 7680L * 4320;
+
+    bool _hdrEnabled;
+    public bool HDREnabled => _hdrEnabled;
+    bool _preserveAlpha;
+    public bool PreserveAlpha { get => _preserveAlpha; set { if (SetProperty(ref _preserveAlpha, value)) OnPropertyChanged(nameof(UseAlphaBrightnessPackage)); } }
+    bool _preserveHdrBrightness;
+    public bool PreserveHdrBrightness { get => _preserveHdrBrightness; set { if (SetProperty(ref _preserveHdrBrightness, value)) OnPropertyChanged(nameof(UseAlphaBrightnessPackage)); } }
+    public bool UseAlphaBrightnessPackage => PreserveAlpha || PreserveHdrBrightness;
+    private readonly string[] _exportOptionsResolution;
 
     public RenderPageViewModel()
+        : this(false, 3840, 2160)
     {
-
     }
 
     public RenderPageViewModel(bool hdrEnabled)
+        : this(hdrEnabled, 3840, 2160)
     {
-        HDREnabled = hdrEnabled;
     }
 
-    public string[] ExportOptions_Resolution { get; } = [
-        "1280x720",
-        "1920x1080",
-        "2560x1440",
-        "3840x2160",
-        "7680x4320",
-        Localized.RenderPage_CustomOption
-    ];
+    public RenderPageViewModel(bool hdrEnabled, int projectWidth, int projectHeight)
+    {
+        _hdrEnabled = hdrEnabled;
+        _exportOptionsResolution = BuildResolutionOptions(projectWidth, projectHeight);
+        _resoultion = string.Empty;
+        var r = GetScaledResolution(projectWidth, projectHeight, Pixels4K);
+        Resoultion = BuildResolutionOption(r.Width, r.Height);
+    }
+
+    public string[] ExportOptions_Resolution => _exportOptionsResolution;
+
+    private static string[] BuildResolutionOptions(int projectWidth, int projectHeight)
+    {
+        projectWidth = Math.Max(1, projectWidth);
+        projectHeight = Math.Max(1, projectHeight);
+
+        var options = new List<(int Width, int Height)>();
+        foreach (var targetPixels in new[] { Pixels720P, Pixels1080P, Pixels2K, Pixels4K })
+        {
+            options.Add(GetScaledResolution(projectWidth, projectHeight, targetPixels));
+        }
+
+        if (projectWidth > projectHeight)
+        {
+            options.Add(GetScaledResolution(projectWidth, projectHeight, Pixels8K));
+        }
+
+        options.Add((projectWidth, projectHeight));
+
+        return options
+            .Distinct()
+            .OrderBy(option => (long)option.Width * option.Height)
+            .ThenBy(option => option.Width)
+            .Select(option => BuildResolutionOption(option.Width, option.Height))
+            .Append(Localized.RenderPage_CustomOption)
+            .ToArray();
+    }
+
+    private static (int Width, int Height) GetScaledResolution(int projectWidth, int projectHeight, long targetPixels)
+    {
+        var scale = Math.Sqrt(targetPixels / (double)((long)projectWidth * projectHeight));
+        return (RoundToEven(projectWidth * scale), RoundToEven(projectHeight * scale));
+    }
+
+    private static int RoundToEven(double value)
+    {
+        return Math.Max(2, (int)(Math.Round(value / 2, MidpointRounding.AwayFromZero) * 2));
+    }
+
+    private static string BuildResolutionOption(int width, int height) => $"{width}x{height}";
 
     public string[] ExportOptions_Framerate { get; } =
         ["23.97", "24", "29.97", "30", "44.96", "45", "59.94", "60", "89.91", "90", "119.88", "120", Localized.RenderPage_CustomOption];

@@ -116,18 +116,45 @@ public class InternalPluginBase : IPluginBase
 
 
 
-    public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider =>
-        new Dictionary<string, (Func<bool>, Func<string, IVideoSource>)>
+    public Dictionary<string, IVideoSource> VideoSourceProvider =>
+        new Dictionary<string, (Func<bool>, IVideoSource)>
         {
-            { "DecoderContextHW", (HWAccelDecodeOptionGetter, new((p) => new DecoderContextHW(p))) },
-            { "DecoderContext8Bit", (AlwaysTrue, new((p) => new DecoderContext8Bit(p))) },
-            { "DecoderContext16Bit", (AlwaysTrue, new((p) => new DecoderContext16Bit(p))) },
-            { "HDRDecoderContext", (AlwaysTrue, new((p) => new HDRDecoderContext(p))) },
-            { "HttpDecoderContext", (AlwaysTrue, new((p) => new HttpDecoderContext(p))) },
-            { "FFmpegDeviceDecoderContext", (AlwaysTrue, new((p) => new FFmpegDeviceDecoderContext(p))) },
-            { "RPSVDecoderContext", (AlwaysTrue, new((p) => new RawPictureSequenceStreamVideoDecoderContext(p))) },
-            { "DecoderContextPJFCProject", (AlwaysTrue, new((p) => new DecoderContextPJFCProject(p))) }
+            { "DecoderContextHW", (HWAccelDecodeOptionGetter, new DecoderContextHW()) },
+            { "DecoderContext8Bit", (AlwaysTrue, new DecoderContext8Bit())},
+            { "DecoderContext16Bit", (AlwaysTrue, new DecoderContext16Bit()) },
+            { "HDRDecoderContext", (AlwaysTrue, new HDRDecoderContext())},
+            { "AlphaBrightnessDecoderContext", (AlwaysTrue, new AlphaBrightnessDecoderContext()) },
+            { "HttpDecoderContext", (AlwaysTrue, new HttpDecoderContext()) },
+            { "FFmpegDeviceDecoderContext", (AlwaysTrue, new FFmpegDeviceDecoderContext()) },
+            { "RPSVDecoderContext", (AlwaysTrue, new RawPictureSequenceStreamVideoDecoderContext()) },
+            { "DecoderContextPJFCProject", (AlwaysTrue, new DecoderContextPJFCProject()) }
         }.ComputeCondition();
+
+    public IVideoSource VideoSourceCreator(string filePath)
+    {
+        if (AlphaBrightnessDecoderContext.IsAlphaBrightnessVideo(filePath)) return new AlphaBrightnessDecoderContext(filePath);
+        var prefered = VideoSourceProvider.Values.Where((k) => k.PreferredExtension.Contains(Path.GetExtension(filePath)));
+        if (prefered.Any())
+        {
+            return prefered.First().CreateNew(filePath);
+        }
+        else
+        {
+            foreach (var provider in VideoSourceProvider.Values)
+            {
+                var instance = provider.CreateNew(filePath);
+                if (instance.TryInitialize())
+                {
+                    return instance;
+                }
+                else
+                {
+                    instance.Dispose();
+                }
+            }
+        }
+        throw new NotSupportedException($"No suitable video source found for the given file '{filePath}'.");
+    }
 
 
 
@@ -151,6 +178,7 @@ public class InternalPluginBase : IPluginBase
             { "VideoWriterHWAccel", ((() => HWAccelEncodeOptionGetter() && !(OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())), new((_) => new VideoWriterHWAccel())) },
             { "VideoWriter", (AlwaysTrue, new((_) => new VideoWriter())) },
             { "HDRVideoWriter", (AlwaysTrue, new((_) => new HDRVideoWriter())) },
+            { "AlphaBrightnessVideoWriter", (AlwaysTrue, new((_) => new AlphaBrightnessVideoWriter())) },
             { "BlackHoleWriter", (AlwaysTrue, new((_) => new BlackholeVideoWriter())) }
         }.ComputeCondition();
 

@@ -46,16 +46,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// <summary>
         /// Create a new instance of the video source with a different source.
         /// </summary>
-
         public IVideoSource CreateNew(string newSource);
 
         /// <summary>
         /// Read the actual frame from the video source.
         /// </summary>
         /// <param name="targetFrame">the frame index to read</param>
-        /// <param name="hasAlpha">keep the alpha channel if true</param>
         /// <returns>the frame</returns>
-        abstract IPicture GetFrame(uint targetFrame, bool hasAlpha = false);
+        abstract IPicture GetFrame(uint targetFrame);
 
         /// <summary>
         /// Reads a frame, crops a rectangle in source coordinates, and scales it to the requested output size.
@@ -63,11 +61,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// the decoder. The default implementation preserves compatibility with third-party decoders.
         /// </summary>
         public virtual IPicture GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
-            int targetWidth, int targetHeight, bool hasAlpha = false)
+            int targetWidth, int targetHeight)
         {
             ValidateFrameRegion(sourceX, sourceY, sourceWidth, sourceHeight, targetWidth, targetHeight);
 
-            IPicture result = GetFrame(targetFrame, hasAlpha);
+            IPicture result = GetFrame(targetFrame);
             try
             {
                 if (sourceX != 0 || sourceY != 0 || sourceWidth != result.Width || sourceHeight != result.Height)
@@ -94,8 +92,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         }
 
         /// <summary>Reads and scales the complete source frame.</summary>
-        public virtual IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha = false)
-            => GetFrame(targetFrame, 0, 0, Width, Height, targetWidth, targetHeight, hasAlpha);
+        public virtual IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight)
+            => GetFrame(targetFrame, 0, 0, Width, Height, targetWidth, targetHeight);
 
         private void ValidateFrameRegion(int sourceX, int sourceY, int sourceWidth, int sourceHeight,
             int targetWidth, int targetHeight)
@@ -110,7 +108,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
                 throw new ArgumentOutOfRangeException(nameof(sourceWidth), "The crop rectangle must be inside the decoded frame.");
         }
         /// <summary>
-        /// The <see cref="GetFrame(uint, bool)"/> return's <seealso cref="IPicture.BitPerPixel"/> of the result frames.
+        /// The <see cref="GetFrame(uint)"/> return's <seealso cref="IPicture.BitPerPixel"/> of the result frames.
         /// Return null if unknown or variable.
         /// </summary>
         public int? ResultBitPerPixel { get; }
@@ -170,11 +168,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
 
     public interface IVideoSource<T> : IVideoSource 
     {
-        public new IPicture<T> GetFrame(uint targetFrame, bool hasAlpha = false);
-        IPicture IVideoSource.GetFrame(uint targetFrame, bool hasAlpha) => GetFrame(targetFrame, hasAlpha);
+        public new IPicture<T> GetFrame(uint targetFrame);
+        IPicture IVideoSource.GetFrame(uint targetFrame) => GetFrame(targetFrame);
 
         public new virtual IPicture<T> GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
-            int targetWidth, int targetHeight, bool hasAlpha = false)
+            int targetWidth, int targetHeight)
         {
             if (sourceX < 0 || sourceY < 0 || sourceWidth <= 0 || sourceHeight <= 0 ||
                 sourceX > Width - sourceWidth || sourceY > Height - sourceHeight)
@@ -182,7 +180,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
             if (targetWidth <= 0 || targetHeight <= 0)
                 throw new ArgumentOutOfRangeException(nameof(targetWidth), "The output size must be positive.");
 
-            IPicture<T> result = GetFrame(targetFrame, hasAlpha);
+            IPicture<T> result = GetFrame(targetFrame);
             try
             {
                 if (sourceX != 0 || sourceY != 0 || sourceWidth != result.Width || sourceHeight != result.Height)
@@ -211,14 +209,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         }
 
         IPicture IVideoSource.GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
-            int targetWidth, int targetHeight, bool hasAlpha)
+            int targetWidth, int targetHeight)
             => GetFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
-                targetWidth, targetHeight, hasAlpha);
+                targetWidth, targetHeight);
 
-        public new virtual IPicture<T> GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha = false)
-            => GetFrame(targetFrame, 0, 0, Width, Height, targetWidth, targetHeight, hasAlpha);
+        public new virtual IPicture<T> GetFrame(uint targetFrame, int targetWidth, int targetHeight)
+            => GetFrame(targetFrame, 0, 0, Width, Height, targetWidth, targetHeight);
 
-        IPicture IVideoSource.GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha)
-            => GetFrame(targetFrame, targetWidth, targetHeight, hasAlpha);
+        IPicture IVideoSource.GetFrame(uint targetFrame, int targetWidth, int targetHeight)
+            => GetFrame(targetFrame, targetWidth, targetHeight);
     }
 }

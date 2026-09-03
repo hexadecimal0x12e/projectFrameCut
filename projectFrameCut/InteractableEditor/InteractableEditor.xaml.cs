@@ -2339,11 +2339,6 @@ namespace projectFrameCut.InteractableEditor
                 return canvasView is not null;
             }
 
-            if (LivePreviewerHost.Content?.AutomationId == "DynamicPreview.SingleCanvas")
-            {
-                SetRealtimePreviewContent(null);
-            }
-
             if (preparedPreviews.Count == 0)
             {
                 if (IsInteractiveManipulationInProgress)

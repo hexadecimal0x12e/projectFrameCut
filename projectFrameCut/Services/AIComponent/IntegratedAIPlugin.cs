@@ -56,7 +56,7 @@ internal sealed class IntegratedAIPlugin : IPluginBase
     public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; } = [];
     public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider { get; } = [];
     public Dictionary<string, Func<IComputer>> ComputerProvider { get; } = [];
-    public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider { get; } = [];
+    public Dictionary<string, IVideoSource> VideoSourceProvider { get; } = [];
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; } = [];
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; } = [];
     public Dictionary<string, string> Configuration { get; set; } = [];

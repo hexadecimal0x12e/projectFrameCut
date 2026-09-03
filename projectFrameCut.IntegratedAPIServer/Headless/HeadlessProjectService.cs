@@ -136,8 +136,8 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
                 RenderOperation.DeleteHeadlessClip => Success(request, await MutateAsync(Read<HeadlessClipMutationRequest>(request), static (editor, value) => editor.DeleteClip(value.ClipId), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.AddOrReplaceHeadlessEffect => Success(request, await MutateAsync(Read<HeadlessClipMutationRequest>(request), static (editor, value) => editor.AddOrReplaceEffect(value.ClipId, Deserialize<EffectAndMixtureJSONStructure>(value.Json)), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.RemoveHeadlessEffect => Success(request, await RemoveEffectAsync(Read<RemoveHeadlessEffectRequest>(request), cancellationToken).ConfigureAwait(false)),
-                RenderOperation.AddOrReplaceHeadlessEffectBundle => Success(request, await MutateAsync(Read<HeadlessClipMutationRequest>(request), static (editor, value) => editor.AddOrReplaceEffectBundle(value.ClipId, Deserialize<EffectBundleJSONStructure>(value.Json)), cancellationToken).ConfigureAwait(false)),
-                RenderOperation.RemoveHeadlessEffectBundle => Success(request, await RemoveEffectBundleAsync(Read<RemoveHeadlessEffectBundleRequest>(request), cancellationToken).ConfigureAwait(false)),
+                RenderOperation.AddOrReplaceHeadlessEffectProvider => Success(request, await MutateAsync(Read<HeadlessClipMutationRequest>(request), static (editor, value) => editor.AddOrReplaceEffectProvider(value.ClipId, Deserialize<EffectProviderJSONStructure>(value.Json)), cancellationToken).ConfigureAwait(false)),
+                RenderOperation.RemoveHeadlessEffectProvider => Success(request, await RemoveEffectProviderAsync(Read<RemoveHeadlessEffectProviderRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.SaveHeadlessProject => Success(request, await SaveAsync(Read<HeadlessSaveProjectRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.ApplyHeadlessProjectEdit => Success(request, await ApplyProjectEditAsync(Read<HeadlessProjectEditRequest>(request), cancellationToken).ConfigureAwait(false)),
                 _ => await _renderService.DispatchAsync(request, cancellationToken).ConfigureAwait(false),
@@ -391,8 +391,8 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
     private ValueTask<HeadlessJsonResponse> RemoveEffectAsync(RemoveHeadlessEffectRequest request, CancellationToken cancellationToken)
         => MutateCoreAsync(request.Precondition, session => session.Editor.RemoveEffect(request.ClipId, request.EffectKey), cancellationToken);
 
-    private ValueTask<HeadlessJsonResponse> RemoveEffectBundleAsync(RemoveHeadlessEffectBundleRequest request, CancellationToken cancellationToken)
-        => MutateCoreAsync(request.Precondition, session => session.Editor.RemoveEffectBundle(request.ClipId, request.BundleId), cancellationToken);
+    private ValueTask<HeadlessJsonResponse> RemoveEffectProviderAsync(RemoveHeadlessEffectProviderRequest request, CancellationToken cancellationToken)
+        => MutateCoreAsync(request.Precondition, session => session.Editor.RemoveEffectProvider(request.ClipId, request.ProviderId), cancellationToken);
 
     private ValueTask<HeadlessJsonResponse> ApplyProjectEditAsync(HeadlessProjectEditRequest request, CancellationToken cancellationToken)
         => MutateCoreAsync(

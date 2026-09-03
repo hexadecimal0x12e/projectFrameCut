@@ -60,7 +60,6 @@ public sealed class DynamicPreview : IDisposable
     private static readonly ConcurrentDictionary<string, long> s_fallbackDiskFrameAccess = new(StringComparer.Ordinal);
     public static string DiskCacheRoot { get; set { if (Directory.Exists(value)) field = value; } } = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
     public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Automatic;
-    public static NativePreviewCompositionMode DefaultCompositionMode { get; set; } = NativePreviewCompositionMode.SingleCanvas;
 
 
     private IClip[]? _clips;
@@ -138,15 +137,6 @@ public sealed class DynamicPreview : IDisposable
             targetWidth = Math.Max(1, targetWidth);
             targetHeight = Math.Max(1, targetHeight);
             var (projectWidth, projectHeight) = ResolveProjectDimensions(targetWidth, targetHeight);
-            if (ShouldUseSingleCanvasPreview())
-            {
-                var canvasPreview = await Task.Run(
-                    () => GenerateCanvasPreviewPrepared(frameIndex, targetWidth, targetHeight, token),
-                    token).ConfigureAwait(false);
-                var result = new[] { canvasPreview };
-                CacheOverlayPreparedPreviews(result);
-                return result;
-            }
             return await GetFinalRequests(frameIndex, projectWidth, projectHeight, prepareVersion, targetWidth, targetHeight, token, applyClipTargetLayout).ConfigureAwait(false);
         }
         finally
@@ -374,17 +364,6 @@ public sealed class DynamicPreview : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public async Task<IReadOnlyList<PreparedPreview>?> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, bool applyClipTargetLayout, bool checkVersion, long prepareVersion, CancellationToken token)
     {
-        if (ShouldUseSingleCanvasPreview())
-        {
-            var canvasPreview = await Task.Run(
-                () => GenerateCanvasPreviewPrepared(frameIndex, canvasWidth, canvasHeight, token),
-                token).ConfigureAwait(false);
-            if (checkVersion && prepareVersion != Interlocked.Read(ref _prepareVersion)) return null;
-            var result = new[] { canvasPreview };
-            CacheOverlayPreparedPreviews(result);
-            return result;
-        }
-
         if (requests.Count == 0)
         {
             return [];
@@ -749,60 +728,6 @@ public sealed class DynamicPreview : IDisposable
         {
             try { frame.Dispose(); } catch { }
             throw;
-        }
-    }
-
-    private bool ShouldUseSingleCanvasPreview()
-        => _previewer is not null
-            && DefaultCompositionMode == NativePreviewCompositionMode.SingleCanvas
-            && DefaultOutputMode != NativePreviewOutputMode.Disabled
-            && OperatingSystem.IsWindows();
-
-    private PreparedPreview GenerateCanvasPreviewPrepared(uint frameIndex, int canvasWidth, int canvasHeight, CancellationToken token)
-    {
-        if (_previewer is null)
-            return new PreparedPreview(Guid.Empty, null, "LivePreviewer is unavailable.", null, isCanvasPreview: true);
-
-        try
-        {
-            var displayFrame = _previewer.RenderFrameForDisplay(frameIndex, canvasWidth, canvasHeight, token);
-#if WINDOWS
-            if (displayFrame.ScRgbPath is not null || displayFrame.RequireSwapChain)
-            {
-                return new PreparedPreview(Guid.Empty, () => new HdrPreviewView
-                {
-                    Frame = displayFrame,
-                    HorizontalOptions = LayoutOptions.Fill,
-                    VerticalOptions = LayoutOptions.Fill,
-                    AutomationId = "DynamicPreview.SingleCanvas",
-                }, null, null, isCanvasPreview: true);
-            }
-#endif
-            var fallbackPath = displayFrame.FallbackImagePath
-                ?? throw new InvalidOperationException("The preview did not provide a displayable frame.");
-            var source = _previewer.ArtifactResolver is not null
-                ? CreateFileStreamImageSource(fallbackPath)
-                : ImageSource.FromFile(fallbackPath);
-            return new PreparedPreview(Guid.Empty, () => new Image
-            {
-                Source = source,
-                Aspect = Aspect.AspectFit,
-                HorizontalOptions = LayoutOptions.Fill,
-                VerticalOptions = LayoutOptions.Fill,
-                AutomationId = "DynamicPreview.SingleCanvas",
-            }, null, null, isCanvasPreview: true);
-        }
-        catch (OperationCanceledException) when (token.IsCancellationRequested)
-        {
-            return new PreparedPreview(Guid.Empty, null, null, null, isCanvasPreview: true);
-        }
-        catch (Exception ex)
-        {
-            Log(ex, $"Render full-canvas dynamic preview frame {frameIndex}", this);
-            Func<View>? errorFactory = DefaultOutputMode == NativePreviewOutputMode.Required
-                ? () => CreateSwapChainErrorView(ex.Message)
-                : null;
-            return new PreparedPreview(Guid.Empty, errorFactory, ex.Message, null, isCanvasPreview: true);
         }
     }
 

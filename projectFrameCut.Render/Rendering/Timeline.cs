@@ -27,6 +27,7 @@ namespace projectFrameCut.Render.Rendering
     {
         //public static ConcurrentDictionary<string, IComputer> ComputerCache = new();
         public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture16bpp.GenerateSolidColor(w, h, 0, 0, 0, null);
+        public static bool ProcessEffectFromCanvas { get; set; } = true;
         private static readonly ConcurrentDictionary<Guid, object> FrameHashLocks = new();
 
         public static IEnumerable<OneFrame> GetFramesInOneFrame(
@@ -299,14 +300,17 @@ namespace projectFrameCut.Render.Rendering
                             int scopedEnd = c.IsScoped ? c.EndPoint : (int)(srcFrame.ParentClip.StartFrame + srcFrame.ParentClip.GetEffectiveDuration());
                             if (scopedEnd <= scopedStart || frameIndex < scopedStart || frameIndex >= scopedEnd) continue;
                             float continuousProgress = Math.Clamp((float)(frameIndex - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
+                            effected = ResizeForEffectIfNeeded(effected, effect, clipPos.TargetWidth, clipPos.TargetHeight);
                             effected = c.Render(effected, continuousProgress, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
                         else if (effect is INormalEffect n)
                         {
+                            effected = ResizeForEffectIfNeeded(effected, effect, clipPos.TargetWidth, clipPos.TargetHeight);
                             effected = n.Render(effected, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
                         else if (effect is IBindableArgumentEffect b)
                         {
+                            effected = ResizeForEffectIfNeeded(effected, effect, clipPos.TargetWidth, clipPos.TargetHeight);
                             _ = EffectProcessing.ProcessBindableArgsEffect(frameIndex, ref effected, ref bindableEffectResultCache, bindableEffectResultCache2, srcFrame.ParentClip, b, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight); //single frame render, no need to remove
                         }
                         else if (effect is IClipPositionProvider p)
@@ -469,6 +473,23 @@ namespace projectFrameCut.Render.Rendering
             }
 
             return Math.Max(1, fallbackWidth);
+        }
+
+        private static IPicture ResizeForEffectIfNeeded(IPicture frame, IEffect effect, int targetWidth, int targetHeight)
+        {
+            if (!ProcessEffectFromCanvas || !effect.CanProcessFromCanvas
+                || targetWidth <= 0 || targetHeight <= 0
+                || frame.Width == targetWidth && frame.Height == targetHeight)
+            {
+                return frame;
+            }
+
+            var resized = frame.Resize(targetWidth, targetHeight, true);
+            if (!ReferenceEquals(frame, resized))
+            {
+                try { frame.Dispose(); } catch { }
+            }
+            return resized;
         }
 
         private static int ResolveClipOutputHeight(IClip clip, int fallbackHeight, int projectRelativeHeight)

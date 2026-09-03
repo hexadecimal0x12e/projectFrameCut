@@ -241,6 +241,8 @@ public partial class HomePage : ContentPage
             string path = "";
 
             var args = argsOverride ?? MauiProgram.CmdlineArgs.ToArray();
+            bool continueRequested = args.Any(c => c.Equals("--continue", StringComparison.OrdinalIgnoreCase));
+            bool openRenderPage = args.Any(c => c.Equals("--render", StringComparison.OrdinalIgnoreCase));
             string? mcpMode = GetCommandLineOption(args, "--mcpMode");
             if (string.Equals(mcpMode, "client", StringComparison.OrdinalIgnoreCase))
             {
@@ -317,13 +319,13 @@ public partial class HomePage : ContentPage
                 }
             }
 
-            if (Preferences.ContainsKey("LaunchedPJFCUri"))
+            if (string.IsNullOrWhiteSpace(path) && Preferences.ContainsKey("LaunchedPJFCUri"))
             {
                 path = Preferences.Get("LaunchedPJFCUri", "");
             }
 
             //--continue: directly resume to the last opened project when no explicit path is given.
-            if (string.IsNullOrWhiteSpace(path) && args.Any(c => c.Equals("--continue", StringComparison.OrdinalIgnoreCase)))
+            if (string.IsNullOrWhiteSpace(path) && continueRequested)
             {
                 if (SettingsManager.IsSettingExists("General_LastOpenedProject"))
                 {
@@ -371,7 +373,14 @@ public partial class HomePage : ContentPage
                                     if (draft is ProjectJSONStructure && Path.GetDirectoryName(path) is string p)
                                     {
                                         LogDiagnostic($"Launch target from cli args:{path}");
-                                        await GoDraft(p, draft.ProjectName ?? "Project", skipAskForRecover: args.Any(c => c.StartsWith("--fromCrashHandler")));
+                                        if (openRenderPage)
+                                        {
+                                            await GoRender(p);
+                                        }
+                                        else
+                                        {
+                                            await GoDraft(p, draft.ProjectName ?? "Project", skipAskForRecover: args.Any(c => c.StartsWith("--fromCrashHandler")));
+                                        }
                                         return;
 
                                     }
@@ -412,7 +421,14 @@ public partial class HomePage : ContentPage
                         {
                             if (File.Exists(Path.Combine(path, "project.json")) || File.Exists(Path.Combine(path, "project.pjfc")))
                             {
-                                await GoDraft(path, (Path.GetDirectoryName(path) ?? "Project").Split('.')?.FirstOrDefault("Project")!, false, false);
+                                if (openRenderPage)
+                                {
+                                    await GoRender(path);
+                                }
+                                else
+                                {
+                                    await GoDraft(path, (Path.GetDirectoryName(path) ?? "Project").Split('.')?.FirstOrDefault("Project")!, false, false);
+                                }
 
                             }
                         }
@@ -862,6 +878,7 @@ public partial class HomePage : ContentPage
         File.WriteAllText(
             Path.Combine(draftSourcePath, "project.pjfc"),
             JsonSerializer.Serialize(ProjectInfo));
+        DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(draftSourcePath);
         await Task.Delay(1500);
         await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
 
@@ -953,6 +970,7 @@ public partial class HomePage : ContentPage
         File.WriteAllText(
             Path.Combine(draftSourcePath, "project.json"),
             JsonSerializer.Serialize(ProjectInfo));
+        DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(draftSourcePath);
 
         await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
 
@@ -2029,22 +2047,29 @@ public partial class HomePage : ContentPage
 
 
     private async Task GoRender(ProjectsViewModel vmItem)
+        => await GoRender(vmItem._projectPath);
+
+    private async Task GoRender(string draftSourcePath)
     {
         try
         {
-            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(vmItem._projectPath, "project.pjfc")), DraftPage.DraftJSONOption);
-            var tml = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(vmItem._projectPath, "timeline.json")), DraftPage.DraftJSONOption);
+            string projectPath = File.Exists(Path.Combine(draftSourcePath, "project.pjfc"))
+                ? Path.Combine(draftSourcePath, "project.pjfc")
+                : Path.Combine(draftSourcePath, "project.json");
+            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(projectPath), DraftPage.DraftJSONOption);
+            var tml = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(draftSourcePath, "timeline.json")), DraftPage.DraftJSONOption);
             if (tml is null || project is null)
             {
                 await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
                 return;
             }
             (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(tml, project);
-            var draftPage = new DraftPage(project ?? new ProjectJSONStructure(), dict, new(), trackCount, vmItem._projectPath, project?.ProjectName ?? "?", false);
+            var draftPage = new DraftPage(project, dict, new(), trackCount, draftSourcePath, project.ProjectName ?? "?", false);
             var draft = DraftImportAndExportHelper.ExportFromDraftPage(draftPage, true, false);
-            var renderPage = new RenderPage(vmItem._projectPath, tml.Duration, project, draft);
+            var renderPage = new RenderPage(draftSourcePath, tml.Duration, project, draft);
             await Dispatcher.DispatchAsync(async () =>
             {
+                App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {project.ProjectName}";
                 Shell.SetTabBarIsVisible(renderPage, false);
                 Shell.SetNavBarIsVisible(renderPage, true);
 #if WINDOWS
@@ -2057,7 +2082,7 @@ public partial class HomePage : ContentPage
         }
         catch (Exception ex)
         {
-            Log(ex, "get project info", this);
+            Log(ex, "open render page", this);
             await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n({ex.Message})", Localized._OK);
             return;
         }
@@ -2503,6 +2528,7 @@ public partial class HomePage : ContentPage
             File.WriteAllText(
                 Path.Combine(draftSourcePath, "project.pjfc"),
                 JsonSerializer.Serialize(ProjectInfo));
+            DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(draftSourcePath);
 
         }
         catch (Exception ex)

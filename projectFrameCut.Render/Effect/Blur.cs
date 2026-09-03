@@ -24,6 +24,7 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public bool IsReorderable => true;
+        bool IEffect.CanProcessFromCanvas => true;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -79,6 +80,7 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
+        bool IEffect.CanProcessFromCanvas => true;
 
         public static List<string> ParametersNeeded { get; } = new List<string> { "Sigma" };
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
@@ -159,7 +161,7 @@ namespace projectFrameCut.Render.Effect
 
     /// <summary>
     /// The Render-side provider of the Blur effect. It owns the factory capability and the property metadata
-    /// (previously split between <c>BlurEffectBundle</c> and <c>BlurEffectFactory</c>).
+    /// (previously split between the provider and factory implementations).
     /// </summary>
     public class BlurEffectProvider : EffectProviderBase
     {

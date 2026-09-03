@@ -755,6 +755,7 @@ public class DraftSettingPage
 
                 await System.IO.File.WriteAllTextAsync(projectFilePath, System.Text.Json.JsonSerializer.Serialize(parent.ProjectInfo, DraftPage.DraftJSONOption));
                 parent.ProjectInfo.SaveSnapshotMapping(System.IO.Path.GetDirectoryName(projectFilePath)!, DraftPage.DraftJSONOption);
+                DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(System.IO.Path.GetDirectoryName(projectFilePath)!);
                 parent.SetStateOK(Localized._Done);
             }
 
@@ -855,6 +856,7 @@ public class DraftSettingPage
 
                 await System.IO.File.WriteAllTextAsync(projectFilePath, System.Text.Json.JsonSerializer.Serialize(parent.ProjectInfo, DraftPage.DraftJSONOption));
                 parent.ProjectInfo.SaveSnapshotMapping(System.IO.Path.GetDirectoryName(projectFilePath)!, DraftPage.DraftJSONOption);
+                DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(System.IO.Path.GetDirectoryName(projectFilePath)!);
                 parent.SetStateOK(Localized._Done);
             }
 
@@ -965,6 +967,7 @@ public class DraftSettingPage
                 System.IO.File.Copy(srcAssets, dstAssets, overwrite: true);
             }
 
+            DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(standaloneProjectPath);
             await ShowInfoAsync(Localized._Done);
             tabView.SelectedItem.Content = BuildHistoryGraphTab();
         }
@@ -1318,10 +1321,10 @@ public class DraftSettingPage
             }
         }
 
-        var bundleIdSet = new HashSet<Guid>(effectProviders.Select(x => x.Provider.Id));
+        var providerIdSet = new HashSet<Guid>(effectProviders.Select(x => x.Provider.Id));
         var standaloneEffects = (clip.Effects ?? [])
             .Select((effect, idx) => new { Effect = effect, Index = idx })
-            .Where(x => !IsEffectBoundToExistingBundle(x.Effect, bundleIdSet))
+            .Where(x => !IsEffectBoundToExistingProvider(x.Effect, providerIdSet))
             .OrderBy(x => x.Effect.Index)
             .ThenBy(x => x.Effect.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x.Index)
@@ -1520,14 +1523,14 @@ public class DraftSettingPage
         return true;
     }
 
-    private static bool IsEffectBoundToExistingBundle(EffectAndMixtureJSONStructure effect, HashSet<Guid> bundleIds)
+    private static bool IsEffectBoundToExistingProvider(EffectAndMixtureJSONStructure effect, HashSet<Guid> providerIds)
     {
         if (effect is null || string.IsNullOrWhiteSpace(effect.BindedEffectGroupID))
         {
             return false;
         }
 
-        return Guid.TryParse(effect.BindedEffectGroupID.Trim(), out var gid) && bundleIds.Contains(gid);
+        return Guid.TryParse(effect.BindedEffectGroupID.Trim(), out var gid) && providerIds.Contains(gid);
     }
 
     private static string BuildStandaloneEffectSummary(EffectAndMixtureJSONStructure effect)
@@ -1541,7 +1544,7 @@ public class DraftSettingPage
     /// <summary>
     /// Builds a read-only summary of an <see cref="IEffectProvider"/> instance for the standalone
     /// clip-management card. <paramref name="migratedFromBundle"/> marks providers restored from a
-    /// legacy <c>EffectBundles</c> array so the UI can hint that they are still on the old format.
+    /// legacy effect data so the UI can hint that they are still on the old format.
     /// </summary>
     private static string BuildStandaloneEffectProviderSummary(IEffectProvider provider, bool migratedFromBundle)
     {
@@ -1904,6 +1907,7 @@ public class DraftSettingPage
 
         await System.IO.File.WriteAllTextAsync(timelinePath, System.Text.Json.JsonSerializer.Serialize(draft, DraftPage.DraftJSONOption));
         await System.IO.File.WriteAllTextAsync(assetsPath, System.Text.Json.JsonSerializer.Serialize(assets, DraftPage.DraftJSONOption));
+        DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(projectRoot);
 
         if (!IsStandaloneJsonMode)
         {
@@ -1980,6 +1984,7 @@ public class DraftSettingPage
         string projectFilePath = ResolveStandaloneProjectFilePath();
         await System.IO.File.WriteAllTextAsync(projectFilePath, System.Text.Json.JsonSerializer.Serialize(info, DraftPage.DraftJSONOption));
         info.SaveSnapshotMapping(standaloneProjectPath, DraftPage.DraftJSONOption);
+        DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(standaloneProjectPath);
     }
 
     private string ResolveStandaloneProjectFilePath()

@@ -102,7 +102,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             int sourceHeight = Math.Max(1, decoder.Height - sourceY);
 
             IPicture result;
-            if (decoder is HDRDecoderContext h)
+            if (decoder is IHDRVideoSource h)
             {
                 result = h.GetHDRFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
                         targetWidth, targetHeight, hasAlpha: true)
@@ -198,7 +198,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 if (!string.IsNullOrWhiteSpace(TargetDecoder) && TargetDecoder != "auto")
                 {
                     var supportedPlugin = PluginManager.LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(TargetDecoder)) ?? throw new NotSupportedException($"The specified video decoder '{TargetDecoder}' was not found for the file '{FilePath}'.");
-                    return supportedPlugin.VideoSourceProvider[TargetDecoder](null!).CreateNew(FilePath);
+                    return supportedPlugin.VideoSourceProvider[TargetDecoder].CreateNew(FilePath);
                 }
 
                 return PluginManager.CreateVideoSource(FilePath);

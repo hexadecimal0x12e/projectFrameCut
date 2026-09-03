@@ -76,14 +76,14 @@ internal sealed class HeadlessProjectMcpBackend : IIntegratedApiBackend, IDispos
                         RequiredString(arguments, "clipId"),
                         RequiredString(arguments, "effectKey")),
                 },
-                IntegratedApiOperation.AddEffectBundle => _editor.AddOrReplaceEffectBundle(
+                IntegratedApiOperation.AddEffectProvider => _editor.AddOrReplaceEffectProvider(
                     RequiredString(arguments, "clipId"),
-                    RequiredValue<EffectBundleJSONStructure>(arguments, "bundle")),
-                IntegratedApiOperation.RemoveEffectBundle => new
+                    RequiredValue<EffectProviderJSONStructure>(arguments, "provider")),
+                IntegratedApiOperation.RemoveEffectProvider => new
                 {
-                    removed = _editor.RemoveEffectBundle(
+                    removed = _editor.RemoveEffectProvider(
                         RequiredString(arguments, "clipId"),
-                        Guid.Parse(RequiredString(arguments, "bundleId"))),
+                        Guid.Parse(RequiredString(arguments, "providerId"))),
                 },
                 IntegratedApiOperation.SaveProject => SaveProject(OptionalString(arguments, "changeReason")),
                 IntegratedApiOperation.ProjectModeQuery => ProjectModeEditingService.Query(

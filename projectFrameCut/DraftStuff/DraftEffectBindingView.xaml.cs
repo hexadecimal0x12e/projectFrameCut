@@ -95,12 +95,12 @@ public partial class DraftEffectBindingView : ContentView
     private CancellationTokenSource? _providerRebuildCts;
 
     /// <summary>
-    /// Raised when effect bundles or connections have been modified inside this view.
+    /// Raised when effect providers or connections have been modified inside this view.
     /// Subscribers (e.g. ClipInfoBuilder's effect tab) should rebuild effects and refresh UI.
     /// </summary>
-    public event Action? EffectBundlesChanged;
+    public event Action? EffectProvidersChanged;
 
-    private void NotifyEffectBundlesChanged() => EffectBundlesChanged?.Invoke();
+    private void NotifyEffectProvidersChanged() => EffectProvidersChanged?.Invoke();
 
     private const double NodeDefaultWidth = 150;
     private const double NodeDefaultHeight = 80;
@@ -1739,7 +1739,7 @@ public partial class DraftEffectBindingView : ContentView
         // 参数条上下切换后节点端口 Y 偏移变化，重建连线让端点刷新。
         RebuildConnections();
         ConnectionsLayer.Invalidate();
-        NotifyEffectBundlesChanged();
+        NotifyEffectProvidersChanged();
     }
 
     private static bool GetParamDirection(NodeViewModel node)
@@ -2031,21 +2031,21 @@ public partial class DraftEffectBindingView : ContentView
             {
                 if (e.Id == "AddProvider")
                 {
-                    var BundleType = e.Value?.ToString();
-                    if (!string.IsNullOrWhiteSpace(BundleType)) AddBundle(BundleType);
+                    var providerTypeName = e.Value?.ToString();
+                    if (!string.IsNullOrWhiteSpace(providerTypeName)) AddProvider(providerTypeName);
                 }
             },
             hideKeyFramedProviders: true
         ));
     }
 
-    private void AddBundle(string bundleTypeName)
+    private void AddProvider(string providerTypeName)
     {
         if (_clip == null) return;
 
-        var bundlesFactories = EffectServices.GetAvailableEffectProviders();
+        var providerFactories = EffectServices.GetAvailableEffectProviders();
 
-        if (bundlesFactories.TryGetValue(bundleTypeName, out var factory))
+        if (providerFactories.TryGetValue(providerTypeName, out var factory))
         {
             var instance = factory();
             instance.Id = Guid.NewGuid();
@@ -2313,7 +2313,7 @@ public partial class DraftEffectBindingView : ContentView
                 if (ReferenceEquals(_clip, clip) && rebuiltEffects != null)
                 {
                     clip.Effects = rebuiltEffects;
-                    NotifyEffectBundlesChanged();
+                    NotifyEffectProvidersChanged();
                 }
             }
             finally

@@ -3059,7 +3059,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                             var vid = PluginManager.CreateVideoSource(localPath);
                             item.Duration = vid.TotalFrames;
                             item.SecondPerFrame = (float)(1f / vid.Fps);
-                            vid.GetFrame(0U, false).SaveToPng(thumbnailPath);
+                            vid.GetFrame(0U).SaveToPng(thumbnailPath);
                             item.ThumbnailPath = thumbnailPath;
                             break;
                         }

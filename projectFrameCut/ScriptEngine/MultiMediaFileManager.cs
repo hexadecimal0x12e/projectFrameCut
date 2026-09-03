@@ -579,7 +579,7 @@ namespace projectFrameCut.ScriptEngine
                 if (!decoder.Initialized)
                     return false;
 
-                var picture = decoder.GetFrame(frame, hasAlpha: false);
+                var picture = decoder.GetFrame(frame);
                 if (picture == null || picture.Disposed)
                     return false;
 
@@ -609,7 +609,7 @@ namespace projectFrameCut.ScriptEngine
                 if (!decoder.Initialized)
                     return false;
 
-                var picture = decoder.GetFrame(frame, hasAlpha: false);
+                var picture = decoder.GetFrame(frame);
                 if (picture == null || picture.Disposed)
                     return false;
 

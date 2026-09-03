@@ -203,6 +203,7 @@ public partial class CreatePage : ContentPage
         File.WriteAllText(
             Path.Combine(projectDir, "assets.json"),
             JsonSerializer.Serialize(projectAssets, DraftPage.DraftJSONOption));
+        DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(projectDir);
 
         await Navigation.PushAsync(new HomePage(Path.Combine(projectDir, "project.pjfc"), true));
     }

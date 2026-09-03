@@ -1333,7 +1333,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             _workspace,
             MainMultiWindowView,
             new WorkspaceViewContext(this),
-            new DictionaryWorkspaceLayoutStore(ProjectInfo.UserDefinedProperties));
+            new DictionaryWorkspaceLayoutStore(ProjectInfo.Properties));
         _workspaceWindowHost.WindowCreationFailed += (_, ex) => Log(ex, "Create workspace module window", this);
         var workspaceExperienceProviders = new List<IWorkspaceExperienceProvider>
         {
@@ -1779,7 +1779,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
                     try
                     {
-                        var frame = vidSrc.GetFrame((uint)f, false);
+                        var frame = vidSrc.GetFrame((uint)f);
                         var aspect = (double)frame.Height / frame.Width;
                         var targetHeight = (int)(ThumbTargetWidth * aspect);
                         var resized = frame.Resize(ThumbTargetWidth, targetHeight, false);
@@ -9432,6 +9432,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             if (!AlreadyDisappeared) _workspaceWindowHost.SaveLayout();
             await _workspace.GetModule<ProjectModule>().SaveProjectAsync();
+            DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(WorkingPath);
         }
         catch (Exception ex)
         {

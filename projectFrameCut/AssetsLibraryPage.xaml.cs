@@ -294,7 +294,7 @@ public partial class AssetsLibraryPage : ContentPage
 
                     try
                     {
-                        var frame = vidSrc.GetFrame((uint)f, false);
+                        var frame = vidSrc.GetFrame((uint)f);
                         var aspect = (double)frame.Height / frame.Width;
                         var targetHeight = (int)(AssetThumbTargetWidth * aspect);
                         var resized = frame.Resize(AssetThumbTargetWidth, targetHeight, false);

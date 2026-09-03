@@ -25,6 +25,7 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public bool IsReorderable => true;
+        bool IEffect.CanProcessFromCanvas => true;
 
         public static List<string> ParametersNeeded { get; } = ["Amount"];
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
@@ -77,6 +78,7 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
+        bool IEffect.CanProcessFromCanvas => true;
 
         public static List<string> ParametersNeeded { get; } = ["Amount"];
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>

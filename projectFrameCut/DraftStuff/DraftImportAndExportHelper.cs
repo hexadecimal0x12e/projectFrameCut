@@ -23,11 +23,38 @@ namespace projectFrameCut.DraftStuff
 {
     internal static class DraftImportAndExportHelper
     {
+        private const string ProjectDirectoryDesktopIni =
+"""
+[.ShellClassInfo]
+DirectoryClass=projectFrameCut.ProjectDirectory
+IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwpk6y\LocalState\appicon.ico,0
+""";
         private const string InternalPlaceEffectName = "__Internal_Place__";
         private const string InternalResizeEffectName = "__Internal_Resize__";
         private const string SolidColorOutputWidthKey = "SolidColorOutputWidth";
         private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
         private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
+
+        public static void EnsureProjectDirectoryShellIntegration(string projectPath)
+        {
+            if (string.IsNullOrWhiteSpace(projectPath) || !Directory.Exists(projectPath)) return;
+
+            try
+            {
+                string desktopIniPath = Path.Combine(projectPath, "desktop.ini");
+                File.WriteAllText(desktopIniPath, ProjectDirectoryDesktopIni);
+                if (OperatingSystem.IsWindows())
+                {
+                    File.SetAttributes(desktopIniPath, FileAttributes.Hidden | FileAttributes.System);
+                    File.SetAttributes(projectPath, File.GetAttributes(projectPath) | FileAttributes.ReadOnly);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Update project directory shell integration for {projectPath}");
+            }
+        }
+
         private static void InitializeEffects(ClipElementUI element, ClipDraftDTO dto, int relativeWidth, int relativeHeight)
         {
             try
@@ -384,26 +411,7 @@ namespace projectFrameCut.DraftStuff
 
                     return structure;
                 }).ToArray(),
-                // 新格式 EffectProviders 已能完整表达 provider 数据（加载时优先使用），
-                // 为避免同一数据重复写入，有 EffectProviders 时不再生成 legacy EffectBundles。
-                EffectBundles = elem.EffectProviders is { Count: > 0 }
-                    ? null
-                    : elem.EffectProviders?.Values
-                        .Select(b => new EffectBundleJSONStructure
-                        {
-                            Id = b.Id,
-                            BundleTypeName = b.TypeName,
-                            Parameters = b.Fields?
-                                .Where(kv => kv.Value is StaticEffectArgumentField sf)
-                                .ToDictionary(kv => kv.Key, kv => ((StaticEffectArgumentField)kv.Value).Value)
-                                ?? new Dictionary<string, object>(),
-                            Name = b.Name,
-                            Enabled = b.Enabled,
-                            BindedInputId = Guid.TryParse(b.GetMainInputSource(), out var inputId) ? inputId : IEffectProvider.NoConnectionGUID,
-                            BindedOutputId = b.IsFinalOutputSource() ? IEffectProvider.OutputAnchorGUID : IEffectProvider.NoConnectionGUID,
-                            BindedInputIds = Guid.TryParse(b.GetMainInputSource(), out var legacyInputId) ? [legacyInputId] : [],
-                        }).ToArray(),
-                // Provider-native serialization (the preferred shape). The legacy EffectBundles write above is kept for MCP compatibility.
+                EffectBundles = null,
                 EffectProviders = elem.EffectProviders?.Values
                     .Select(p => new EffectProviderJSONStructure
                     {

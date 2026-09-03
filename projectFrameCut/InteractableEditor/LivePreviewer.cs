@@ -29,12 +29,6 @@ namespace projectFrameCut.LivePreview
         Required,
     }
 
-    public enum NativePreviewCompositionMode
-    {
-        SingleCanvas,
-        PerClip,
-    }
-
     public sealed record PreviewFrameSource(
         string? ScRgbPath,
         string? FallbackImagePath,
@@ -72,7 +66,6 @@ namespace projectFrameCut.LivePreview
         public string ProjectRoot => string.IsNullOrWhiteSpace(TempPath) ? string.Empty : Directory.GetParent(Path.GetFullPath(TempPath))?.FullName ?? string.Empty;
         public string ProjectName { get; set; } = "Untitled Project";
         public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Automatic;
-        public static NativePreviewCompositionMode DefaultCompositionMode { get; set; } = NativePreviewCompositionMode.SingleCanvas;
 
         public bool IsFrameRendered(uint frameIndex)
         {

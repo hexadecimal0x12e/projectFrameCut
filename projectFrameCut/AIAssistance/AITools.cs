@@ -105,33 +105,33 @@ namespace projectFrameCut.AIAssistance
                     if (currentPage is null) return null;
                     if (!EffectServices.GetAvailableEffectProviders().TryGetValue(typeName, out var factory)) return null;
                     var provider = factory();
-                    var added = TimelineMcpLiveService.AddEffectBundle(currentPage, clipId, provider);
+                    var added = TimelineMcpLiveService.AddEffectProvider(currentPage, clipId, provider);
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                     return new { added.Id, added.Name, added.TypeName };
-                }, "add_effect_bundle_to_clip","Add an effect bundle on the selected clip."),
-                AIFunctionFactory.Create((string clipId, Guid bundleId) =>
+                }, "add_effect_provider_to_clip","Add an effect provider on the selected clip."),
+                AIFunctionFactory.Create((string clipId, Guid providerId) =>
                 {
                     if (currentPage is null) return false;
-                    var removed = TimelineMcpLiveService.RemoveEffectBundle(currentPage, clipId, bundleId);
+                    var removed = TimelineMcpLiveService.RemoveEffectProvider(currentPage, clipId, providerId);
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                     return removed;
-                }, "remove_effect_bundle_from_clip","Remove an effect bundle from a clip by id."),
-                AIFunctionFactory.Create((string Type) => EffectServices.GetAvailableEffectProviders().TryGetValue(Type, out var factory) ? DescribeEffectProvider(factory()) : null, "get_effect_bundle_info","Get a specific effect provider's information, including its configurable fields."),
-                AIFunctionFactory.Create((string effectType) => EffectServices.GetAvailableEffectProviders().TryGetValue(effectType, out var factory) ? factory().Fields.Keys.ToArray() : null, "get_effect_bundle_settable_fields","Get a specific kind of effect provider's settable field ids."),
-                AIFunctionFactory.Create((string clipId, Guid bundleId, Dictionary<string, object> fields) =>
+                }, "remove_effect_provider_from_clip","Remove an effect provider from a clip by id."),
+                AIFunctionFactory.Create((string Type) => EffectServices.GetAvailableEffectProviders().TryGetValue(Type, out var factory) ? DescribeEffectProvider(factory()) : null, "get_effect_provider_info","Get a specific effect provider's information, including its configurable fields."),
+                AIFunctionFactory.Create((string effectType) => EffectServices.GetAvailableEffectProviders().TryGetValue(effectType, out var factory) ? factory().Fields.Keys.ToArray() : null, "get_effect_provider_settable_fields","Get a specific kind of effect provider's settable field ids."),
+                AIFunctionFactory.Create((string clipId, Guid providerId, Dictionary<string, object> fields) =>
                 {
                     if (currentPage is null) return new[] { "No project is loaded." };
                     if (!Guid.TryParse(clipId, out var id) || !currentPage.Clips.TryGetValue(id, out var clip))
                         return new[] { $"Clip '{clipId}' was not found." };
-                    if (clip.EffectProviders is null || !clip.EffectProviders.TryGetValue(bundleId, out var provider))
-                        return new[] { $"Effect provider '{bundleId}' was not found on clip '{clipId}'." };
+                    if (clip.EffectProviders is null || !clip.EffectProviders.TryGetValue(providerId, out var provider))
+                        return new[] { $"Effect provider '{providerId}' was not found on clip '{clipId}'." };
 
                     var feedback = ApplyEffectProviderFields(provider, fields);
                     ClipInfoBuilder.RebuildAllEffects(clip);
                     currentPage.RefreshPropertyPanel(clip);
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                     return feedback;
-                }, "set_effect_bundle_fields","Update an existing effect provider on a clip using its Fields. Provide the clip id, provider id, and a dictionary of field id -> value. Use get_draft_info to find provider ids and get_effect_bundle_info to discover effect types."),
+                }, "set_effect_provider_fields","Update an existing effect provider on a clip using its Fields. Provide the clip id, provider id, and a dictionary of field id -> value. Use get_draft_info to find provider ids and get_effect_provider_info to discover effect types."),
                 AIFunctionFactory.Create(GenerateImage, "create_an_AIGC_image","Add an AI generated image to the draft. Use param Prompt to define how the picture looks like and NegativePrompt to define what not in the picture. Use param Style to define the style of this image. Use param Width and Height to define the image size (default: 1024x1024)."),
                 AIFunctionFactory.Create(GenerateVideo, "create_an_AIGC_video","Add an AI generated video to the draft. Use param Prompt to define how the video looks like and NegativePrompt to define what not in the video. Use param Style to define the style of this video."),
 
@@ -212,7 +212,7 @@ namespace projectFrameCut.AIAssistance
                 {
                     "add_from_assets", "add_text_clip", "set_text_clip_style_fields", "set_propertypanel_selectedTab",
                     "set_propertypanel_properties", "remove_propertypanel_properties",
-                    "move_clip", "add_effect_bundle_to_clip", "set_effect_bundle_fields", "remove_effect_bundle_from_clip",
+                    "move_clip", "add_effect_provider_to_clip", "set_effect_provider_fields", "remove_effect_provider_from_clip",
                     "create_an_AIGC_image", "create_an_AIGC_video"
                 };
                 toolCalls.RemoveAll(t => t.Name != null && modifyToolNames.Contains(t.Name));
@@ -246,7 +246,7 @@ namespace projectFrameCut.AIAssistance
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableEffects(), "environment_get_effects","Get all effects available in the user environment.", serializerOptions),
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailablePlugins(), "environment_get_plugins","Get all plugins loaded in the user environment.", serializerOptions),
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableTextStyles(), "environment_get_textstyles","Get all Text clip style providers loaded in the user environment, including their settable fields.", serializerOptions),
-                AIFunctionFactory.Create((string Type) => EffectServices.GetAvailableEffectProviders().TryGetValue(Type, out var factory) ? DescribeEffectProvider(factory()) : null, "get_effect_bundle_info","Get a specific effect provider's information, including its configurable fields."),
+                AIFunctionFactory.Create((string Type) => EffectServices.GetAvailableEffectProviders().TryGetValue(Type, out var factory) ? DescribeEffectProvider(factory()) : null, "get_effect_provider_info","Get a specific effect provider's information, including its configurable fields."),
                 AIFunctionFactory.Create(async (string url, int maximumCharacters = 30000) =>
                     await (WebBrowsingService.Current?.BrowseAsync(url, maximumCharacters)
                         ?? Task.FromResult("Error: webpage browsing is not available in the current chat view.")),

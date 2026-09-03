@@ -34,14 +34,9 @@ public partial class EditSettingPage : ContentPage
     };
     public readonly Dictionary<string, string> PreviewOutputModeStringMapping = new Dictionary<string, string>
     {
-        { nameof(NativePreviewOutputMode.Disabled), nameof(NativePreviewOutputMode.Disabled) },
-        { nameof(NativePreviewOutputMode.Automatic), nameof(NativePreviewOutputMode.Automatic) },
-        { nameof(NativePreviewOutputMode.Required), nameof(NativePreviewOutputMode.Required) },
-    };
-    public readonly Dictionary<string, string> PreviewCompositionModeStringMapping = new Dictionary<string, string>
-    {
-        { nameof(NativePreviewCompositionMode.SingleCanvas), nameof(NativePreviewCompositionMode.SingleCanvas) },
-        { nameof(NativePreviewCompositionMode.PerClip), nameof(NativePreviewCompositionMode.PerClip) },
+        { SettingLocalizedResources.Edit_NativePreviewOutputMode_Disabled, nameof(NativePreviewOutputMode.Disabled) },
+        { SettingLocalizedResources.Edit_NativePreviewOutputMode_Automatic, nameof(NativePreviewOutputMode.Automatic) },
+        { SettingLocalizedResources.Edit_NativePreviewOutputMode_Required, nameof(NativePreviewOutputMode.Required) },
     };
     public readonly Dictionary<string, string> OrderOptionStringMapping = new Dictionary<string, string>
     {
@@ -415,15 +410,12 @@ public partial class EditSettingPage : ContentPage
             .AddSwitch("Edit_UseDynamicPreview", SettingLocalizedResources.Edit_UseDynamicPreview, IsBoolSettingTrue("Edit_UseDynamicPreview"), null)
             .AddPicker("Edit_PreviewOutputMode", "Preview output mode", PreviewOutputModeStringMapping.Keys.ToArray(),
                 PreviewOutputModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Automatic)),
-                    new KeyValuePair<string, string>(nameof(NativePreviewOutputMode.Automatic), nameof(NativePreviewOutputMode.Automatic))).Key, null)
-            .AddPicker("Edit_PreviewCompositionMode", "Preview composition mode", PreviewCompositionModeStringMapping.Keys.ToArray(),
-                PreviewCompositionModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreviewCompositionMode", nameof(NativePreviewCompositionMode.SingleCanvas)),
-                    new KeyValuePair<string, string>(nameof(NativePreviewCompositionMode.SingleCanvas), nameof(NativePreviewCompositionMode.SingleCanvas))).Key, null)
+                    new KeyValuePair<string, string>(SettingLocalizedResources.Edit_NativePreviewOutputMode_Automatic, "")).Key, null)
             .AppendWhen(IsBoolSettingTrue("Edit_UseDynamicPreview"),
                 c => c.AddEntry("Edit_DynamicPreviewResolutionDivisor", SettingLocalizedResources.Edit_DynamicPreviewResolutionDivisor, GetSetting("Edit_DynamicPreviewResolutionDivisor", "1"), "1")
                       .AddEntry("Edit_DynamicPreviewTimeout", SettingLocalizedResources.Edit_DynamicPreviewTimeout, GetSetting("Edit_DynamicPreviewTimeout", "5000"), "5000")
             )
-            .AppendWhen(!IsBoolSettingTrue("Edit_UseDynamicPreview"), 
+            .AppendWhen(!IsBoolSettingTrue("Edit_UseDynamicPreview"),
                 c => c.AddPicker("Edit_LiveVideoPreviewDefaultResolution", SettingLocalizedResources.Edit_LiveVideoPreviewDefaultResolution, resolutions, GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720"), null)
                       .AddEntry("Edit_LiveVideoPreviewBufferLength", SettingLocalizedResources.Edit_LiveVideoPreviewBufferLength, GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), "240")
                       .AddEntry("Edit_LiveVideoPreviewZoomFactor", SettingLocalizedResources.Edit_LiveVideoPreviewZoomFactor, GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), "8")
@@ -476,14 +468,6 @@ public partial class EditSettingPage : ContentPage
                         WriteSetting(args.Id, mode);
                         return;
                     }
-                case "Edit_PreviewCompositionMode":
-                    {
-                        var mode = PreviewCompositionModeStringMapping.FirstOrDefault(k => k.Key == args.Value as string,
-                            new KeyValuePair<string, string>(nameof(NativePreviewCompositionMode.SingleCanvas), nameof(NativePreviewCompositionMode.SingleCanvas))).Value;
-                        WriteSetting(args.Id, mode);
-                        return;
-                    }
-
                 case "TextTemplates":
                     {
                         File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "TextTemplates.json"), System.Text.Json.JsonSerializer.Serialize(TextTemplates));
@@ -508,13 +492,9 @@ public partial class EditSettingPage : ContentPage
                     }
             }
 
-
-
-
         }
         catch (Exception ex)
         {
-            // �����쳣��֪ͨ�û�
             await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }

@@ -56,6 +56,7 @@ namespace projectFrameCut.Render.Effect
         public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
         bool IEffect.IsReorderable => false;
+        bool IEffect.CanProcessFromCanvas => true;
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.IPicture)
         {
@@ -575,6 +576,7 @@ namespace projectFrameCut.Render.Effect
         public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
         bool IEffect.IsReorderable => false;
+        bool IEffect.CanProcessFromCanvas => true;
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {

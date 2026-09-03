@@ -243,8 +243,6 @@ namespace projectFrameCut
 
                 DynamicPreview.DefaultOutputMode = ParsePreviewOutputMode(GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Automatic)));
                 LivePreviewer.DefaultOutputMode = DynamicPreview.DefaultOutputMode;
-                DynamicPreview.DefaultCompositionMode = ParsePreviewCompositionMode(GetSetting("Edit_PreviewCompositionMode", nameof(NativePreviewCompositionMode.SingleCanvas)));
-                LivePreviewer.DefaultCompositionMode = DynamicPreview.DefaultCompositionMode;
 
                 // ===== 安全设置同步 =====
 
@@ -275,10 +273,6 @@ namespace projectFrameCut
                 ? mode
                 : NativePreviewOutputMode.Automatic;
 
-        static NativePreviewCompositionMode ParsePreviewCompositionMode(string value)
-            => Enum.TryParse<NativePreviewCompositionMode>(value, ignoreCase: true, out var mode)
-                ? mode
-                : NativePreviewCompositionMode.SingleCanvas;
     }
         int count = 0;
         private async void TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)

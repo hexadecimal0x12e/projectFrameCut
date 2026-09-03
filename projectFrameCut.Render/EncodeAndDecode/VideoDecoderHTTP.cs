@@ -57,6 +57,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public bool EnableDiskCache { get; set; }
         private Lock locker = new();
 
+        public HttpDecoderContext()
+        {
+            _url = null!;
+        }
+
         public HttpDecoderContext(string url)
         {
             if (!Enabled)
@@ -210,7 +215,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
         [DebuggerNonUserCode()]
-        public IPicture GetFrame(uint targetFrame, bool hasAlpha = false)
+        public IPicture GetFrame(uint targetFrame)
         {
             if (EnableLock) locker.Enter();
 
@@ -300,7 +305,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
             {
                 Log($"[HttpDecoderContext] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
-                return GetFrame(targetFrame - 1, hasAlpha);
+                return GetFrame(targetFrame - 1);
             }
             double fps = _fps > 0 ? _fps : 1.0;
             double seconds = targetFrame / fps;
@@ -317,10 +322,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                 _rgb->data,
                                 _rgb->linesize);
             if (EnableLock) locker.Exit();
-            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _url, targetFrame);
+            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _url, targetFrame);
         }
 
-        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
+        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, string filePath = "", uint frameIdx = 0)
         {
             var size = width * height;
             var result = new Picture8bpp(width, height)

@@ -32,6 +32,7 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.NotSpecified;
         public bool IsReorderable => true;
+        bool IEffect.CanProcessFromCanvas => true;
         public string TypeName => "IntOverlay";
         public string? BindedEffectProvidingSystemID { get; set; }
 

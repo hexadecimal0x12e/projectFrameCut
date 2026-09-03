@@ -9112,6 +9112,14 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_ToolBar_ExportVideoWithAlpha",
+        "Value": "\u5BFC\u51FA\u7528\u4E8E\u53E0\u5C42/\u8D34\u7EB8\u7684\u89C6\u9891",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [

@@ -545,7 +545,7 @@ public static class TimelineMcpLiveService
         return removed;
     }
 
-    public static IEffectProvider AddEffectBundle(DraftPage page, string clipId, IEffectProvider bundle)
+    public static IEffectProvider AddEffectProvider(DraftPage page, string clipId, IEffectProvider provider)
     {
         if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip))
         {
@@ -553,21 +553,21 @@ public static class TimelineMcpLiveService
         }
 
         clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
-        clip.EffectProviders[bundle.Id] = bundle;
-        EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, bundle, clip.GetEffectTarget());
+        clip.EffectProviders[provider.Id] = provider;
+        EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, provider, clip.GetEffectTarget());
         ClipInfoBuilder.RebuildAllEffects(clip);
         page.RefreshPropertyPanel(clip);
-        return bundle;
+        return provider;
     }
 
-    public static bool RemoveEffectBundle(DraftPage page, string clipId, Guid bundleId)
+    public static bool RemoveEffectProvider(DraftPage page, string clipId, Guid providerId)
     {
         if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip) || clip.EffectProviders is null)
         {
             return false;
         }
 
-        bool removed = EffectBindingHelper.RemoveProvider(clip.EffectProviders, bundleId);
+        bool removed = EffectBindingHelper.RemoveProvider(clip.EffectProviders, providerId);
         if (removed)
         {
             ClipInfoBuilder.RebuildAllEffects(clip);

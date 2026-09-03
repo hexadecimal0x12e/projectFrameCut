@@ -89,6 +89,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private Lock locker = new();
 
+        public DecoderContext16Bit()
+        {
+            _path = null!;
+        }
+
         public DecoderContext16Bit(string path)
         {
             _path = path;
@@ -249,18 +254,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
 
-        public IPicture<ushort> GetFrame(uint targetFrame, bool hasAlpha = false)
-            => GetFrameCore(targetFrame, hasAlpha, null);
+        public IPicture<ushort> GetFrame(uint targetFrame)
+            => GetFrameCore(targetFrame, null);
 
         public IPicture<ushort> GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
-            int targetWidth, int targetHeight, bool hasAlpha = false)
-            => GetFrameCore(targetFrame, hasAlpha,
+            int targetWidth, int targetHeight)
+            => GetFrameCore(targetFrame,
                 new VideoFrameRegion(sourceX, sourceY, sourceWidth, sourceHeight, targetWidth, targetHeight));
 
-        public IPicture<ushort> GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha = false)
-            => GetFrame(targetFrame, 0, 0, _width, _height, targetWidth, targetHeight, hasAlpha);
+        public IPicture<ushort> GetFrame(uint targetFrame, int targetWidth, int targetHeight)
+            => GetFrame(targetFrame, 0, 0, _width, _height, targetWidth, targetHeight);
 
-        private IPicture<ushort> GetFrameCore(uint targetFrame, bool hasAlpha, VideoFrameRegion? region)
+        private IPicture<ushort> GetFrameCore(uint targetFrame, VideoFrameRegion? region)
         {
             bool lockTaken = false;
             try
@@ -363,7 +368,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                 break;
                             }
 
-                            CacheDecodedFrame((uint)decodedFrameNumber, hasAlpha, targetFrame);
+                            CacheDecodedFrame((uint)decodedFrameNumber);
                             decodedFrameNumber++;
                             continue;
                         }
@@ -401,7 +406,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
                     {
                         Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
-                        return GetFrameCore(targetFrame - 1, hasAlpha, region);
+                        return GetFrameCore(targetFrame - 1, region);
                     }
 
                     double fps = _fps > 0 ? _fps : 1.0;
@@ -422,7 +427,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         requestedRegion.TargetWidth, requestedRegion.TargetHeight,
                         AVPixelFormat.AV_PIX_FMT_BGR48LE,
                         (data, stride, width, height) => PixelsToPicture(
-                            data, stride, width, height, hasAlpha, _path, targetFrame, height));
+                            data, stride, width, height, _path, targetFrame, height));
                 }
 
                 int scaledRows = ffmpeg.sws_scale(
@@ -439,7 +444,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 if (scaledRows < _height)
                     Log($"[VideoDecoder] sws_scale only processed {scaledRows}/{_height} rows for '{_path}' frame {targetFrame}.", "warning");
 
-                var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, scaledRows);
+                var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _path, targetFrame, scaledRows);
                 CacheFinalFrame(targetFrame, picture);
                 return picture;
             }
@@ -511,7 +516,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _needsTimestampCalibration = targetFrame > 0 && !fellBackToStart;
         }
 
-        private void CacheDecodedFrame(uint frameNumber, bool hasAlpha, uint targetFrame)
+        private void CacheDecodedFrame(uint frameNumber)
         {
             if (!IVideoSource.EnableDiskCache)
                 return;
@@ -525,7 +530,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 _rgb->data,
                 _rgb->linesize);
 
-            var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, frameNumber, _height);
+            var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _path, frameNumber, _height);
             CacheFinalFrame(frameNumber, picture);
         }
 
@@ -539,7 +544,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
 
         [DebuggerNonUserCode()]
-        private static Picture16bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0, int maxRows = int.MaxValue)
+        private static Picture16bpp PixelsToPicture(byte* data, int stride, int width, int height, string filePath = "", uint frameIdx = 0, int maxRows = int.MaxValue)
         {
             // Validate input parameters
             if (data == null)
@@ -557,8 +562,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 r = new ushort[size],
                 g = new ushort[size],
                 b = new ushort[size],
-                HasAlphaChannel = hasAlpha,
-                a = hasAlpha ? AllocateFilledAlphaArray(size) : null,
             };
             int validRows = Math.Min(height, maxRows);
             int idx, baseIndex, offset, x, y;
@@ -595,13 +598,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 }
             };
             return result;
-        }
-
-        private static float[] AllocateFilledAlphaArray(int size)
-        {
-            var arr = new float[size];
-            Array.Fill(arr, 1f);
-            return arr;
         }
 
         public void Dispose()
@@ -649,7 +645,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
     }
 
-    public sealed unsafe class HDRDecoderContext : IVideoSource<ushort>
+    public sealed unsafe class HDRDecoderContext : IVideoSource<ushort>, IHDRVideoSource
     {
         private const float DefaultSdrMaximumBrightness = 100f;
         private const float DefaultHdrMaximumBrightness = 1000f;
@@ -701,6 +697,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
         
         
         private Lock locker = new();
+
+        public HDRDecoderContext()
+        {
+            _path = null!;
+        }
 
         public HDRDecoderContext(string path)
         {
@@ -861,15 +862,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 throw new InvalidDataException($"Decoder RGB buffer is invalid for '{_path}' when trying to read frame {targetFrame}.");
         }
 
-        public IPicture<ushort> GetFrame(uint targetFrame, bool hasAlpha = false) => GetHDRFrame(targetFrame, hasAlpha).DegradeToSDR();
+        public IPicture<ushort> GetFrame(uint targetFrame) => GetHDRFrame(targetFrame).DegradeToSDR();
 
         public IPicture<ushort> GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
-            int targetWidth, int targetHeight, bool hasAlpha = false)
+            int targetWidth, int targetHeight)
             => GetHDRFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
-                targetWidth, targetHeight, hasAlpha).DegradeToSDR();
+                targetWidth, targetHeight).DegradeToSDR();
 
-        public IPicture<ushort> GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha = false)
-            => GetFrame(targetFrame, 0, 0, _width, _height, targetWidth, targetHeight, hasAlpha);
+        public IPicture<ushort> GetFrame(uint targetFrame, int targetWidth, int targetHeight)
+            => GetFrame(targetFrame, 0, 0, _width, _height, targetWidth, targetHeight);
 
         public HDRPicture16bpp GetHDRFrame(uint targetFrame, bool hasAlpha = false)
             => GetHDRFrameCore(targetFrame, hasAlpha, null);
@@ -985,7 +986,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                 break;
                             }
 
-                            CacheDecodedFrame((uint)decodedFrameNumber, hasAlpha, targetFrame);
+                            CacheDecodedFrame((uint)decodedFrameNumber, hasAlpha);
                             decodedFrameNumber++;
                             continue;
                         }
@@ -1134,7 +1135,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _needsTimestampCalibration = targetFrame > 0 && !fellBackToStart;
         }
 
-        private void CacheDecodedFrame(uint frameNumber, bool hasAlpha, uint targetFrame)
+        private void CacheDecodedFrame(uint frameNumber, bool hasAlpha)
         {
             if (!IVideoSource.EnableDiskCache)
                 return;
@@ -1512,6 +1513,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
         
         private Lock locker = new();
 
+        public DecoderContext8Bit()
+        {
+            _path = null!;
+        }
+
         public DecoderContext8Bit(string path)
         {
             _path = path;
@@ -1686,18 +1692,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
 
         [DebuggerNonUserCode()]
-        public IPicture<byte> GetFrame(uint targetFrame, bool hasAlpha)
-            => GetFrameCore(targetFrame, hasAlpha, null);
+        public IPicture<byte> GetFrame(uint targetFrame)
+            => GetFrameCore(targetFrame, null);
 
         public IPicture<byte> GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight,
-            int targetWidth, int targetHeight, bool hasAlpha = false)
-            => GetFrameCore(targetFrame, hasAlpha,
+            int targetWidth, int targetHeight)
+            => GetFrameCore(targetFrame,
                 new VideoFrameRegion(sourceX, sourceY, sourceWidth, sourceHeight, targetWidth, targetHeight));
 
-        public IPicture<byte> GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool hasAlpha = false)
-            => GetFrame(targetFrame, 0, 0, _width, _height, targetWidth, targetHeight, hasAlpha);
+        public IPicture<byte> GetFrame(uint targetFrame, int targetWidth, int targetHeight)
+            => GetFrame(targetFrame, 0, 0, _width, _height, targetWidth, targetHeight);
 
-        private IPicture<byte> GetFrameCore(uint targetFrame, bool hasAlpha, VideoFrameRegion? region)
+        private IPicture<byte> GetFrameCore(uint targetFrame, VideoFrameRegion? region)
         {
             bool lockTaken = false;
             try
@@ -1801,7 +1807,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                             }
 
                             // Cache intermediate frames during forward decode
-                            CacheDecodedFrame((uint)decodedFrameNumber, hasAlpha, targetFrame);
+                            CacheDecodedFrame((uint)decodedFrameNumber);
                             decodedFrameNumber++;
                             continue;
                         }
@@ -1839,7 +1845,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
                     {
                         Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
-                        return GetFrameCore(targetFrame - 1, hasAlpha, region);
+                        return GetFrameCore(targetFrame - 1, region);
                     }
 
                     double fps = _fps > 0 ? _fps : 1.0;
@@ -1860,7 +1866,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         requestedRegion.TargetWidth, requestedRegion.TargetHeight,
                         AVPixelFormat.AV_PIX_FMT_BGR24,
                         (data, stride, width, height) => PixelsToPicture(
-                            data, stride, width, height, hasAlpha, _path, targetFrame, height));
+                            data, stride, width, height, _path, targetFrame, height));
                 }
 
                 int scaledRows = ffmpeg.sws_scale(
@@ -1876,7 +1882,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 if (scaledRows < _height)
                     Log($"[VideoDecoder] sws_scale only processed {scaledRows}/{_height} rows for '{_path}' frame {targetFrame}.", "warning");
 
-                var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, scaledRows);
+                var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _path, targetFrame, scaledRows);
                 CacheFinalFrame(targetFrame, picture);
                 return picture;
             }
@@ -1951,7 +1957,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _needsTimestampCalibration = targetFrame > 0 && !fellBackToStart;
         }
 
-        private void CacheDecodedFrame(uint frameNumber, bool hasAlpha, uint targetFrame)
+        private void CacheDecodedFrame(uint frameNumber)
         {
             if (!IVideoSource.EnableDiskCache)
                 return;
@@ -1966,7 +1972,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 _rgb->data,
                 _rgb->linesize);
 
-            var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, frameNumber, _height);
+            var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _path, frameNumber, _height);
             CacheFinalFrame(frameNumber, picture);
         }
 
@@ -1979,7 +1985,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
         //[DebuggerNonUserCode()]
-        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0, int maxRows = int.MaxValue)
+        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, string filePath = "", uint frameIdx = 0, int maxRows = int.MaxValue)
         {
             // Validate input parameters
             if (data == null)

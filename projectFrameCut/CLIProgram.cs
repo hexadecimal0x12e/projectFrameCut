@@ -271,11 +271,20 @@ namespace projectFrameCut
             }
             else if (transportValue.Equals("raw_pipe", StringComparison.OrdinalIgnoreCase))
             {
+#if WINDOWS || LINUX
+                var origColor = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.Error.WriteLine("WARNNING: 'raw_pipe' transport is used internally ONLY. The behave of this transport is not guaranteed to be stable and may change with time.");
+                Console.Error.WriteLine("You can ignore this message safely when this client was start by Agent.");
+                Console.ForegroundColor = origColor;
+#else
+                Log("'raw_pipe' transport is used internally ONLY. The behave of this transport is not guaranteed to be stable and may change with time.", "warn");
+#endif
                 transport = McpTransportMode.RawPipe;
             }
             else
             {
-                Console.Error.WriteLine("mcp --transport must be either 'stdio', 'http', or 'raw_pipe'.");
+                Console.Error.WriteLine("mcp --transport must be either 'stdio' or 'http'.");
                 return InvalidCommandExitCode;
             }
 
@@ -786,6 +795,7 @@ namespace projectFrameCut
 
             IVideoSource CreateChunkVideoSource(string path)
             {
+                if (AlphaBrightnessDecoderContext.IsAlphaBrightnessVideo(path)) return new AlphaBrightnessDecoderContext(path);
                 if (HDRDecoderContext.IsHdrVideo(path)) return new HDRDecoderContext(path);
                 return bpp == IPicture.PicturePixelMode.UShortPicture
                     ? new DecoderContext16Bit(path)
@@ -1529,8 +1539,12 @@ Commands:
   reset      Reset the application to its default state by clearing settings.
   about      Show version and build information.
 
+Commands provided by instance manager （installed separately）:   
+
+  stdio_mcp  Starts the stdio background MCP server.
+             No any parameters are required. 
+
   instance   Launch the instance manager CLI. 
-             Note this command is only available in the Windows build and provided by instance manager.
 
 Global options:
   --quiet            Suppress all console outputs, include logs, version/copyright banner, and diagnostic messages.
@@ -1565,17 +1579,11 @@ Usage:
   pjfc mcp --transport=stdio --quiet [--projectRoot=<path>] [options]
   pjfc mcp --transport=http --listen=<http[s]://host:port>
            [--projectRoot=<path>] [options]
-  pjfc mcp --transport=raw_pipe --pipe=<pipeName>
-           [--projectRoot=<path>] [options]
 
 Options:
-  --transport    MCP transport mode: stdio, http, or raw_pipe.
+  --transport    MCP transport mode: stdio or http.
   --listen       MCP HTTP listen address. Required for HTTP transport; the MCP
                  endpoint is /mcp.
-  --pipe         Named pipe name. Required for raw_pipe transport. The value
-                 is passed to the platform named-pipe implementation as-is.
-  --parentPid    Router process ID. Optional for raw_pipe; when the parent
-                 exits, the MCP server and its GUI client are stopped.
   --projectRoot  Optional project directory to load. Without it, the server
                  starts in no-project mode. --project=<path> and a positional
                  path are also accepted.
@@ -1604,11 +1612,6 @@ listener.
 For stdio MCP, the --quiet flag is required to suppress all log outputs.
 To avoid unexpected log messages in the stdio stream, if the --quiet flag is not specified, 
 the stdio MCP server will exit with an error.
-
-For raw_pipe MCP, the server accepts one named-pipe client and uses the pipe
-as the bidirectional MCP byte stream. The client disconnecting ends the MCP
-server; the external multiplexer is responsible for routing multiple CLI
-instances. Use --headless to avoid starting the graphical client.
 ");
         }
 
@@ -1641,6 +1644,9 @@ Launch the projectFrameCut Application
 
 Usage:
   pjfc gui [<target>] [options]
+  pjfc gui --continue [options]
+  pjfc gui --render {<target>|--continue} [options]
+
   pjfc:[<target>][?<option>[&<option>...]] 
 
 Arguments:
@@ -1649,17 +1655,24 @@ Arguments:
                                    directory, or a .pjfcPlugin package. Quote paths
                                    containing spaces.
 
-Launch options:
   --continue                       Open the last project when <target> is omitted.
                                    An explicit target takes precedence.
 
-  --noSplash                       Do not display the startup splash screen.
+  --render                         Load project and directly open the render page. 
+                                   This option requires <target> is specified 
+                                   or --continue is used. When --continue is used, the last
+                                   project will be opened and directly open the render page.
+
+                                   To implement automatic rendering, please use 'render' mode. 
 
 Application options:
 
+  --noSplash                       Do not display the startup splash screen.
+
+
   --overrideCulture=<culture>      Override the application culture for this run.
-                                   <culture> is a .NET culture name such as zh-CN,
-                                   en-US, or ja-JP.
+                                   <culture> is a BCP-47 tag such as zh-CN, en-US,
+                                   or ja-JP.
 
   --userData=<path>                Override the user-data directory for one run
                                    (include your projects, assets, templates, 
@@ -1694,9 +1707,7 @@ Platform-specific options:
   gtkArg:<argument for GTK>        Linux only: pass an argument to the GTK runtime. For example, 
                                    gtkArg:--enable-animations=false disables GTK animations.
 
-  --log                            Open the dedicated log window.
-                                   Available on windows only. 
-                                   On Linux, use --consoleLog to see the log in the console.
+  --log                            Windows only: Open the dedicated log window. 
 
 Advandced option:
   --noSettings                     Do not persist setting changes automatically
@@ -1730,11 +1741,10 @@ Protocol URI:
 Examples:
   pjfc gui
   pjfc gui ""D:\Video Projects\demo.pjfc""
+  pjfc gui --render ""D:\Video Projects\demo.pjfc""
   pjfc gui --continue --noSplash
   pjfc gui ""D:\Video Projects\demo.pjfc"" --consoleLog --logDiagnostic
   pjfc gui --overrideCulture=en-US --userData=""D:\pjfc-data""
-  projectFrameCut.exe ""D:\Video Projects\demo.pjfc""
-  projectFrameCut.exe ""pjfc:file:///D:/Video%20Projects/demo.pjfc?--noSplash""
 ");
         }
 

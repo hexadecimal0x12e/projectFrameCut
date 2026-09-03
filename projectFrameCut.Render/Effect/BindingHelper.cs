@@ -1,4 +1,5 @@
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,59 @@ namespace projectFrameCut.Render.Effect
 {
     public static class EffectBindingHelper
     {
+        /// <summary>
+        /// Normalizes a loaded draft to provider-native effect data. Legacy data is
+        /// read only here and is never emitted after the draft is saved.
+        /// </summary>
+        public static void NormalizeDraftProviders(DraftStructureJSON draft)
+        {
+            ArgumentNullException.ThrowIfNull(draft);
+
+            foreach (ClipDraftDTO clip in draft.Clips)
+                NormalizeClipProviders(clip);
+        }
+
+        public static void NormalizeClipProviders(ClipDraftDTO clip)
+        {
+            ArgumentNullException.ThrowIfNull(clip);
+
+            if (clip.EffectProviders is { Length: > 0 })
+            {
+                clip.EffectBundles = null;
+                return;
+            }
+
+            if (clip.EffectBundles is not { Length: > 0 }) return;
+
+            Dictionary<Guid, IEffectProvider> providers = MigrateToEffectProviders(null, clip.EffectBundles);
+            if (providers.Count == 0) return;
+
+            clip.EffectProviders = providers.Values.Select(SerializeProvider).ToArray();
+            clip.EffectBundles = null;
+        }
+
+        private static EffectProviderJSONStructure SerializeProvider(IEffectProvider provider)
+            => new()
+            {
+                Id = provider.Id,
+                FromPlugin = provider.FromPlugin,
+                TypeName = provider.TypeName,
+                Name = provider.Name,
+                Enabled = provider.Enabled,
+                AnchorsBindingState = new(provider.AnchorsBindingState ?? []),
+                StaticFields = provider.Fields
+                    .Where(item => item.Value is StaticEffectArgumentField or DynamicEffectParamField)
+                    .ToDictionary(item => item.Key, item => EffectParamConvert.Normalize(GetFieldValue(item.Value)) ?? new object()),
+                MetaData = provider.MetaData is { Count: > 0 } ? new(provider.MetaData) : null,
+            };
+
+        private static object? GetFieldValue(IEffectArgumentField field) => field switch
+        {
+            StaticEffectArgumentField staticField => staticField.Value,
+            DynamicEffectParamField dynamicField => dynamicField.StaticFallbackValue,
+            _ => field.GetGetter()(),
+        };
+
         /// <summary>
         /// 将旧的 EffectBundle 数据迁移为新的 <see cref="IEffectProvider"/> 实例集合。
         /// 若已存在新的 EffectProvider 数据则优先使用；否则从 EffectBundles 转换。

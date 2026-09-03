@@ -123,7 +123,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <remarks>
         /// When the argument is null or empty when creating a IVideoSource, the provider should return an instance that can be used to check for preferred extensions.
         /// </remarks>
-        public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider { get; }
+        public Dictionary<string, IVideoSource> VideoSourceProvider { get; }
 
         /// <summary>
         /// Create an IAudioSource instance from the given file path.
@@ -308,16 +308,16 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <exception cref="NotSupportedException"></exception>
         public virtual IVideoSource VideoSourceCreator(string filePath)
         {
-            var prefered = VideoSourceProvider.Values.Where((k) => k(null!).PreferredExtension.Contains(Path.GetExtension(filePath)));
+            var prefered = VideoSourceProvider.Values.Where((k) => k.PreferredExtension.Contains(Path.GetExtension(filePath)));
             if (prefered.Any())
             {
-                return prefered.First()(null!).CreateNew(filePath);
+                return prefered.First().CreateNew(filePath);
             }
             else
             {
                 foreach (var provider in VideoSourceProvider.Values)
                 {
-                    var instance = provider(filePath);
+                    var instance = provider.CreateNew(filePath);
                     if (instance.TryInitialize())
                     {
                         return instance;
@@ -372,7 +372,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         {
             if (VideoSourceProvider.TryGetValue(decoderName, out var value))
             {
-                return value(filePath);
+                return value.CreateNew(filePath);
             }
             throw new NotSupportedException($"Video source '{decoderName}' not found.");
         }

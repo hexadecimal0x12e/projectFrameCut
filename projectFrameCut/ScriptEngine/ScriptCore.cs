@@ -434,13 +434,13 @@ namespace projectFrameCut.ScriptEngine
             new SessionStateCmdletEntry("Add-ProjectAsset", typeof(AddProjectAssetCommand), null),
             new SessionStateCmdletEntry("Remove-ProjectAsset", typeof(RemoveProjectAssetCommand), null),
 
-            // EffectBundle Management
-            new SessionStateCmdletEntry("Get-EffectBundleTypes", typeof(GetProjectEffectBundleTypeCommand), null),
-            new SessionStateCmdletEntry("Get-EffectBundleField", typeof(GetEffectBundleFieldCommand), null),
-            new SessionStateCmdletEntry("Get-ProjectClipEffectBundle", typeof(GetProjectClipEffectBundleCommand), null),
-            new SessionStateCmdletEntry("Add-ProjectClipEffectBundle", typeof(AddProjectClipEffectBundleCommand), null),
-            new SessionStateCmdletEntry("Set-ProjectClipEffectBundle", typeof(SetProjectClipEffectBundleCommand), null),
-            new SessionStateCmdletEntry("Remove-ProjectClipEffectBundle", typeof(RemoveProjectClipEffectBundleCommand), null),
+            // EffectProvider Management
+            new SessionStateCmdletEntry("Get-EffectProviderTypes", typeof(GetProjectEffectProviderTypeCommand), null),
+            new SessionStateCmdletEntry("Get-EffectProviderField", typeof(GetEffectProviderFieldCommand), null),
+            new SessionStateCmdletEntry("Get-ProjectClipEffectProvider", typeof(GetProjectClipEffectProviderCommand), null),
+            new SessionStateCmdletEntry("Add-ProjectClipEffectProvider", typeof(AddProjectClipEffectProviderCommand), null),
+            new SessionStateCmdletEntry("Set-ProjectClipEffectProvider", typeof(SetProjectClipEffectProviderCommand), null),
+            new SessionStateCmdletEntry("Remove-ProjectClipEffectProvider", typeof(RemoveProjectClipEffectProviderCommand), null),
 
             // Text Management
             new SessionStateCmdletEntry("Get-TextStyleField", typeof(GetTextStyleFieldCommand), null),

@@ -56,8 +56,8 @@ public enum RenderOperation
     [ProtoEnum] DeleteHeadlessClip = 109,
     [ProtoEnum] AddOrReplaceHeadlessEffect = 110,
     [ProtoEnum] RemoveHeadlessEffect = 111,
-    [ProtoEnum] AddOrReplaceHeadlessEffectBundle = 112,
-    [ProtoEnum] RemoveHeadlessEffectBundle = 113,
+    [ProtoEnum] AddOrReplaceHeadlessEffectProvider = 112,
+    [ProtoEnum] RemoveHeadlessEffectProvider = 113,
     [ProtoEnum] SaveHeadlessProject = 114,
     [ProtoEnum] ApplyHeadlessProjectEdit = 115,
 }
@@ -565,11 +565,11 @@ public sealed class RemoveHeadlessEffectRequest
 }
 
 [ProtoContract]
-public sealed class RemoveHeadlessEffectBundleRequest
+public sealed class RemoveHeadlessEffectProviderRequest
 {
     [ProtoMember(1)] public HeadlessMutationPrecondition Precondition { get; set; } = new();
     [ProtoMember(2)] public string ClipId { get; set; } = string.Empty;
-    [ProtoMember(3)] public Guid BundleId { get; set; }
+    [ProtoMember(3)] public Guid ProviderId { get; set; }
 }
 
 [ProtoContract]

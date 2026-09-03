@@ -184,28 +184,26 @@ internal sealed class IntegratedApiBackend(DraftPage page) : IIntegratedApiBacke
                         GetRequiredString(arguments, "effectKey"))
                 };
                 break;
-            case IntegratedApiOperation.AddEffectBundle:
+            case IntegratedApiOperation.AddEffectProvider:
             {
-#pragma warning disable CS0618
-                var bundle = DeserializeRequired<EffectBundleJSONStructure>(arguments, "bundle");
-                var providers = EffectBindingHelper.MigrateToEffectProviders(null, [bundle]);
-#pragma warning restore CS0618
-                if (!providers.TryGetValue(bundle.Id, out var provider))
+                var providerData = DeserializeRequired<EffectProviderJSONStructure>(arguments, "provider");
+                var providers = EffectBindingHelper.MigrateToEffectProviders([providerData], null);
+                if (!providers.TryGetValue(providerData.Id, out var provider))
                 {
-                    throw new InvalidOperationException($"Effect bundle '{bundle.BundleTypeName}' could not be restored.");
+                    throw new InvalidOperationException($"Effect provider '{providerData.TypeName}' could not be restored.");
                 }
 
-                TimelineMcpLiveService.AddEffectBundle(_page, GetRequiredString(arguments, "clipId"), provider);
-                result = bundle;
+                TimelineMcpLiveService.AddEffectProvider(_page, GetRequiredString(arguments, "clipId"), provider);
+                result = providerData;
                 break;
             }
-            case IntegratedApiOperation.RemoveEffectBundle:
+            case IntegratedApiOperation.RemoveEffectProvider:
                 result = new
                 {
-                    removed = TimelineMcpLiveService.RemoveEffectBundle(
+                    removed = TimelineMcpLiveService.RemoveEffectProvider(
                         _page,
                         GetRequiredString(arguments, "clipId"),
-                        GetRequiredGuid(arguments, "bundleId"))
+                        GetRequiredGuid(arguments, "providerId"))
                 };
                 break;
             case IntegratedApiOperation.SaveProject:
@@ -426,8 +424,8 @@ internal sealed class IntegratedApiBackend(DraftPage page) : IIntegratedApiBacke
             or IntegratedApiOperation.DeleteClip
             or IntegratedApiOperation.AddEffect
             or IntegratedApiOperation.RemoveEffect
-            or IntegratedApiOperation.AddEffectBundle
-            or IntegratedApiOperation.RemoveEffectBundle;
+            or IntegratedApiOperation.AddEffectProvider
+            or IntegratedApiOperation.RemoveEffectProvider;
 
     public ValueTask DisposeAsync()
     {

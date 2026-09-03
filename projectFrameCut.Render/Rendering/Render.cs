@@ -75,6 +75,7 @@ namespace projectFrameCut.Render.Rendering
         public bool EnableGPUBatchProcess { get; set; } = true;
         public bool AllowReorderEffect { get; set; } = true;
         public bool EnableEffectAutoRetry { get; set; } = true;
+        public bool ProcessEffectFromCanvas { get; set; } = true;
 
         public int MaxRenderScheduleTimeout { get; set; } = 500;
         public int MinSchedulePreparedFrames { get => field > 0 ? field : MaxThreads; set; }
@@ -1871,12 +1872,14 @@ namespace projectFrameCut.Render.Rendering
                     ValueProviderFrameContext.BeginFrame(targetFrame, clipProgress);
                     for (int _effectIdx = 0; _effectIdx < effects.Length; _effectIdx++)
                     {
+                        var item = effects[_effectIdx];
                         // Try GPU batch processing (2+ consecutive GPU effects)
                         if (EnableGPUBatchProcess)
                         {
-                            var batch = CollectGpuBatch(effects, _effectIdx, out var nextBatchIdx);
+                            var batch = CollectGpuBatch(effects, _effectIdx, ProcessEffectFromCanvas, out var nextBatchIdx);
                             if (batch.Count >= 2)
                             {
+                                frame = ResizeForEffectIfNeeded(frame, batch[0], targetPos.TargetWidth, targetPos.TargetHeight);
                                 frame = ProcessGpuBatch(frame, batch, frame.Width, frame.Height);
                                 _effectIdx = nextBatchIdx - 1; // -1 because for loop will increment
                                 continue;
@@ -1884,7 +1887,6 @@ namespace projectFrameCut.Render.Rendering
                         }
 
 
-                        var item = effects[_effectIdx];
                         // Reuse Computer instance when NeedComputer hasn't changed within the same clip chain
                         if (item.NeedComputer != lastComputerType)
                         {
@@ -1900,6 +1902,7 @@ namespace projectFrameCut.Render.Rendering
                             {
                                 case EffectType.NormalEffect:
                                     if (item is not INormalEffect e) goto notdefined;
+                                    frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
                                     frame = e.Render(frame, computer, TargetWidth, TargetHeight);
                                     continue;
                                 case EffectType.ContinuousEffect:
@@ -1908,6 +1911,7 @@ namespace projectFrameCut.Render.Rendering
                                     int scopedEnd = c.IsScoped ? c.EndPoint : (int)(clip.StartFrame + clip.GetEffectiveDuration());
                                     if (scopedEnd <= scopedStart || targetFrame < scopedStart || targetFrame >= scopedEnd) continue;
                                     float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
+                                    frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
                                     frame = c.Render(frame, continuousProgress, computer, TargetWidth, TargetHeight);
                                     continue; 
                                 case EffectType.ContinuousClipPositionProvider:
@@ -1981,6 +1985,7 @@ namespace projectFrameCut.Render.Rendering
                     notdefined:
                         if (item is IBindableArgumentEffect be)
                         {
+                            frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
                             EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, be, computer, TargetWidth, TargetHeight);
                         }
                         else if (item is IContinuousEffect c)
@@ -1989,10 +1994,12 @@ namespace projectFrameCut.Render.Rendering
                             int scopedEnd = c.IsScoped ? c.EndPoint : (int)(clip.StartFrame + clip.GetEffectiveDuration());
                             if (scopedEnd <= scopedStart || targetFrame < scopedStart || targetFrame >= scopedEnd) continue;
                             float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
+                            frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
                             frame = c.Render(frame, continuousProgress, computer, TargetWidth, TargetHeight);
                         }
                         else if (item is INormalEffect n)
                         {
+                            frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
                             frame = n.Render(frame, computer, TargetWidth, TargetHeight);
                         }
                         else if (item is IClipPositionProvider p)
@@ -2207,6 +2214,24 @@ namespace projectFrameCut.Render.Rendering
             FrameRenderElapsed[frameIndex] = sw.Elapsed;
         }
 
+        private IPicture ResizeForEffectIfNeeded(IPicture frame, IEffect effect, int targetWidth, int targetHeight)
+        {
+            if (!ProcessEffectFromCanvas || !effect.CanProcessFromCanvas
+                || targetWidth <= 0 || targetHeight <= 0
+                || frame.Width == targetWidth && frame.Height == targetHeight)
+            {
+                return frame;
+            }
+
+            var resized = frame.Resize(targetWidth, targetHeight, true);
+            if (!ReferenceEquals(frame, resized))
+            {
+                try { frame.Dispose(); } catch { }
+            }
+            IRenderContext.CurrentFrameBuffer = resized;
+            return resized;
+        }
+
         #region GPU batch
 
         /// <summary>
@@ -2214,10 +2239,11 @@ namespace projectFrameCut.Render.Rendering
         /// that can be batched into a single GPU session.
         /// Returns the batch only if it contains at least 2 effects.
         /// </summary>
-        static List<IEffect> CollectGpuBatch(IReadOnlyList<IEffect> effects, int startIndex, out int nextIndex)
+        static List<IEffect> CollectGpuBatch(IReadOnlyList<IEffect> effects, int startIndex, bool splitByCanvasSupport, out int nextIndex)
         {
             var batch = new List<IEffect>();
             string? fromPlugin = null;
+            bool canProcessFromCanvas = false;
 
             for (int i = startIndex; i < effects.Count; i++)
             {
@@ -2240,9 +2266,11 @@ namespace projectFrameCut.Render.Rendering
                     if (batch.Count == 0)
                     {
                         fromPlugin = item.FromPlugin;
+                        canProcessFromCanvas = item.CanProcessFromCanvas;
                         batch.Add(item);
                     }
-                    else if (item.FromPlugin == fromPlugin)
+                    else if (item.FromPlugin == fromPlugin
+                        && (!splitByCanvasSupport || item.CanProcessFromCanvas == canProcessFromCanvas))
                     {
                         batch.Add(item);
                     }
@@ -2272,7 +2300,7 @@ namespace projectFrameCut.Render.Rendering
         /// to group GPU-batchable effects from the same plugin together, maximizing batch size.
         /// Non-reorderable effects stay in their original positions as anchors.
         /// </summary>
-        private static IEffect[] ReorderEffectsForGpuBatching(IEffect[] effects)
+        private IEffect[] ReorderEffectsForGpuBatching(IEffect[] effects)
         {
             if (effects.Length <= 1) return effects;
 
@@ -2285,7 +2313,9 @@ namespace projectFrameCut.Render.Rendering
                 if (!list[i].IsReorderable) { i++; continue; }
 
                 int blockStart = i;
-                while (i < list.Count && list[i].IsReorderable)
+                bool canProcessFromCanvas = list[i].CanProcessFromCanvas;
+                while (i < list.Count && list[i].IsReorderable
+                    && (!ProcessEffectFromCanvas || list[i].CanProcessFromCanvas == canProcessFromCanvas))
                     i++;
                 int blockEnd = i;
 

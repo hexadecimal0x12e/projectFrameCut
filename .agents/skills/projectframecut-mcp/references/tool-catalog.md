@@ -67,8 +67,8 @@ Supported keyframe easing names are `Linear`, `QuadIn`, `QuadOut`, `QuadInOut`, 
 | `get_effect_info` | Required `effectType`. Returns parameters/defaults for one type. |
 | `add_effect` | Required `clipId`, raw `effect` object. Adds or replaces one legacy effect record. |
 | `remove_effect` | Required `clipId`, `effectKey`. |
-| `add_effect_bundle` | Required `clipId`, raw `bundle` object. Adds or replaces a bundle. |
-| `remove_effect_bundle` | Required `clipId`, `bundleId`. |
+| `add_effect_provider` | Required `clipId`, raw `provider` object. Adds or replaces a provider. |
+| `remove_effect_provider` | Required `clipId`, `providerId`. |
 
 Prefer the provider-native tools below when editing the current effect graph.
 

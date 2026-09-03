@@ -3,6 +3,7 @@ using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
+using projectFrameCut.DraftStuff;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
@@ -564,6 +565,7 @@ public partial class TemplateCreatePage : ContentView
             File.WriteAllText(Path.Combine(projectDir, "project.pjfc"), JsonSerializer.Serialize(project, DraftPage.DraftJSONOption));
             File.WriteAllText(Path.Combine(projectDir, "timeline.json"), JsonSerializer.Serialize(draft, DraftPage.DraftJSONOption));
             File.WriteAllText(Path.Combine(projectDir, "assets.json"), JsonSerializer.Serialize(projectAssets, DraftPage.DraftJSONOption));
+            DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(projectDir);
 
             await RequestCloseAsync();
         }

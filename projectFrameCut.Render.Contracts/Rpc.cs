@@ -45,8 +45,8 @@ public interface IRenderClient : IAsyncDisposable
     ValueTask<HeadlessJsonResponse> DeleteHeadlessClipAsync(HeadlessClipMutationRequest request, CancellationToken cancellationToken = default);
     ValueTask<HeadlessJsonResponse> AddOrReplaceHeadlessEffectAsync(HeadlessClipMutationRequest request, CancellationToken cancellationToken = default);
     ValueTask<HeadlessJsonResponse> RemoveHeadlessEffectAsync(RemoveHeadlessEffectRequest request, CancellationToken cancellationToken = default);
-    ValueTask<HeadlessJsonResponse> AddOrReplaceHeadlessEffectBundleAsync(HeadlessClipMutationRequest request, CancellationToken cancellationToken = default);
-    ValueTask<HeadlessJsonResponse> RemoveHeadlessEffectBundleAsync(RemoveHeadlessEffectBundleRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessJsonResponse> AddOrReplaceHeadlessEffectProviderAsync(HeadlessClipMutationRequest request, CancellationToken cancellationToken = default);
+    ValueTask<HeadlessJsonResponse> RemoveHeadlessEffectProviderAsync(RemoveHeadlessEffectProviderRequest request, CancellationToken cancellationToken = default);
     ValueTask<HeadlessProjectSnapshot> SaveHeadlessProjectAsync(HeadlessSaveProjectRequest request, CancellationToken cancellationToken = default);
     ValueTask<HeadlessJsonResponse> ApplyHeadlessProjectEditAsync(HeadlessProjectEditRequest request, CancellationToken cancellationToken = default);
 }
@@ -99,8 +99,8 @@ public sealed class RenderClient(IRenderTransport transport, string? clientId = 
     public ValueTask<HeadlessJsonResponse> DeleteHeadlessClipAsync(HeadlessClipMutationRequest request, CancellationToken ct = default) => SendAsync<HeadlessClipMutationRequest, HeadlessJsonResponse>(RenderOperation.DeleteHeadlessClip, request, ct);
     public ValueTask<HeadlessJsonResponse> AddOrReplaceHeadlessEffectAsync(HeadlessClipMutationRequest request, CancellationToken ct = default) => SendAsync<HeadlessClipMutationRequest, HeadlessJsonResponse>(RenderOperation.AddOrReplaceHeadlessEffect, request, ct);
     public ValueTask<HeadlessJsonResponse> RemoveHeadlessEffectAsync(RemoveHeadlessEffectRequest request, CancellationToken ct = default) => SendAsync<RemoveHeadlessEffectRequest, HeadlessJsonResponse>(RenderOperation.RemoveHeadlessEffect, request, ct);
-    public ValueTask<HeadlessJsonResponse> AddOrReplaceHeadlessEffectBundleAsync(HeadlessClipMutationRequest request, CancellationToken ct = default) => SendAsync<HeadlessClipMutationRequest, HeadlessJsonResponse>(RenderOperation.AddOrReplaceHeadlessEffectBundle, request, ct);
-    public ValueTask<HeadlessJsonResponse> RemoveHeadlessEffectBundleAsync(RemoveHeadlessEffectBundleRequest request, CancellationToken ct = default) => SendAsync<RemoveHeadlessEffectBundleRequest, HeadlessJsonResponse>(RenderOperation.RemoveHeadlessEffectBundle, request, ct);
+    public ValueTask<HeadlessJsonResponse> AddOrReplaceHeadlessEffectProviderAsync(HeadlessClipMutationRequest request, CancellationToken ct = default) => SendAsync<HeadlessClipMutationRequest, HeadlessJsonResponse>(RenderOperation.AddOrReplaceHeadlessEffectProvider, request, ct);
+    public ValueTask<HeadlessJsonResponse> RemoveHeadlessEffectProviderAsync(RemoveHeadlessEffectProviderRequest request, CancellationToken ct = default) => SendAsync<RemoveHeadlessEffectProviderRequest, HeadlessJsonResponse>(RenderOperation.RemoveHeadlessEffectProvider, request, ct);
     public ValueTask<HeadlessProjectSnapshot> SaveHeadlessProjectAsync(HeadlessSaveProjectRequest request, CancellationToken ct = default) => SendAsync<HeadlessSaveProjectRequest, HeadlessProjectSnapshot>(RenderOperation.SaveHeadlessProject, request, ct);
     public ValueTask<HeadlessJsonResponse> ApplyHeadlessProjectEditAsync(HeadlessProjectEditRequest request, CancellationToken ct = default) => SendAsync<HeadlessProjectEditRequest, HeadlessJsonResponse>(RenderOperation.ApplyHeadlessProjectEdit, request, ct);
 

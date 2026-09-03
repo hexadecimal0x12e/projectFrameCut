@@ -1,5 +1,6 @@
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Shared;
 using System.Text.Json;
 
@@ -18,6 +19,7 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
     public ClipDraftDTO UpsertClip(ClipDraftDTO clip)
     {
         ArgumentNullException.ThrowIfNull(clip);
+        EffectBindingHelper.NormalizeClipProviders(clip);
         var clips = Workspace.Draft.Clips.ToList();
         int index = clips.FindIndex(c => c.Id == clip.Id);
         if (index >= 0)
@@ -97,35 +99,35 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
         return clip.Effects.Length != before;
     }
 
-    public EffectBundleJSONStructure AddOrReplaceEffectBundle(string clipId, EffectBundleJSONStructure bundle)
+    public EffectProviderJSONStructure AddOrReplaceEffectProvider(string clipId, EffectProviderJSONStructure provider)
     {
         var clip = GetClip(clipId);
-        var bundles = clip.EffectBundles?.ToList() ?? [];
-        var existingIndex = bundles.FindIndex(b => b.Id == bundle.Id);
+        var providers = clip.EffectProviders?.ToList() ?? [];
+        var existingIndex = providers.FindIndex(p => p.Id == provider.Id);
         if (existingIndex >= 0)
         {
-            bundles[existingIndex] = bundle;
+            providers[existingIndex] = provider;
         }
         else
         {
-            bundles.Add(bundle);
+            providers.Add(provider);
         }
 
-        clip.EffectBundles = bundles.ToArray();
-        return bundle;
+        clip.EffectProviders = providers.ToArray();
+        return provider;
     }
 
-    public bool RemoveEffectBundle(string clipId, Guid bundleId)
+    public bool RemoveEffectProvider(string clipId, Guid providerId)
     {
         var clip = GetClip(clipId);
-        if (clip.EffectBundles is null || clip.EffectBundles.Length == 0)
+        if (clip.EffectProviders is null || clip.EffectProviders.Length == 0)
         {
             return false;
         }
 
-        int before = clip.EffectBundles.Length;
-        clip.EffectBundles = clip.EffectBundles.Where(b => b.Id != bundleId).ToArray();
-        return clip.EffectBundles.Length != before;
+        int before = clip.EffectProviders.Length;
+        clip.EffectProviders = clip.EffectProviders.Where(p => p.Id != providerId).ToArray();
+        return clip.EffectProviders.Length != before;
     }
 
     public ClipDraftDTO? FindClip(string id)

@@ -2816,7 +2816,7 @@ namespace projectFrameCut.DraftStuff
                     var bindView = new DraftEffectBindingView();
                     bindView.LoadClip(clip, page, showAllEffect);
                     // Sync the completed graph rebuild to the draft preview.
-                    bindView.EffectBundlesChanged += () =>
+                    bindView.EffectProvidersChanged += () =>
                     {
                         // DraftEffectBindingView has already rebuilt the provider graph. Do not build it a
                         // second time or rebuild the entire property/timeline UI for a single connection.
@@ -2839,7 +2839,7 @@ namespace projectFrameCut.DraftStuff
                         v.CloseClicked += (s, e) =>
                         {
                             RebuildAllEffects(clip, false);
-                            // 与 EffectBundlesChanged 一致：触发 __REFRESH_PANEL__ 让 DraftPage 重建并刷新预览。
+                            // 与 EffectProvidersChanged 一致：触发 __REFRESH_PANEL__ 让 DraftPage 重建并刷新预览。
                             handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                         };
                     }

@@ -119,6 +119,7 @@ namespace projectFrameCut.StandaloneRender
                         -project=<project dir>
                         -output=<output file>
                         -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
+                        [-multistream=<true|false>]                 (write Alpha/HDR Brightness streams into an MKV)
                         [-target=<video|audio|all>]
                         [-assetDbFile=<path to database.json file>]
                         [-pluginRoot=<path to plugin root>]
@@ -621,6 +622,8 @@ namespace projectFrameCut.StandaloneRender
                 use16Bit = trace;
             }
 
+            bool multistream = bool.TryParse(switches.GetOrAdd("multistream", "false"), out var multistreamValue) && multistreamValue;
+
             var bpp = use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
             var chunkOptions = ParseChunkRenderOptions(switches, fps);
             long? requestedBitRate = switches.TryGetValue("bitRate", out var bitRateText)
@@ -635,7 +638,18 @@ namespace projectFrameCut.StandaloneRender
             }
             var outputPath = switches["output"].Replace("{CurrentTime}", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
 
-            Log($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, 16 bit render:{use16Bit}({fmpBPP} bpp output)");
+            if (multistream && !outputPath.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase))
+            {
+                Log("ERROR: --multistream=true requires an .mkv output path.", "error");
+                return 1;
+            }
+            if (multistream && chunkOptions.Enabled)
+            {
+                Log("ERROR: --multistream=true cannot be combined with --chunkRender=true.", "error");
+                return 1;
+            }
+
+            Log($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, 16 bit render:{use16Bit}({fmpBPP} bpp output), multistream:{multistream}");
 
             #endregion
 
@@ -867,7 +881,13 @@ namespace projectFrameCut.StandaloneRender
             ConcurrentDictionary<int, Renderer> activeChunkRenderers = new();
             IVideoWriter CreateConfiguredWriter(string path, bool intermediateChunk)
             {
-                IVideoWriter writer = PluginManager.CreateVideoWriter(outputEncoder);
+                IVideoWriter writer = multistream
+                    ? new AlphaBrightnessVideoWriter
+                    {
+                        CodecName = outputEncoder,
+                        Channels = AuxiliaryVideoChannels.Alpha | AuxiliaryVideoChannels.Brightness,
+                    }
+                    : PluginManager.CreateVideoWriter(outputEncoder);
                 writer.Width = width;
                 writer.Height = height;
                 writer.FramePerSecond = fps;
@@ -1934,7 +1954,7 @@ namespace projectFrameCut.StandaloneRender
                 {
                     try
                     {
-                        using var probeFrame = source.GetFrame(probe, false);
+                        using var probeFrame = source.GetFrame(probe);
                         if (probeFrame is null) break;
                         totalFrames = probe + 1;
                     }
@@ -1957,7 +1977,7 @@ namespace projectFrameCut.StandaloneRender
             Log($"Warming up ({warmupCount} frames)...");
             for (uint i = 0; i < warmupCount; i++)
             {
-                using var warmupFrame = source.GetFrame(i, false);
+                using var warmupFrame = source.GetFrame(i);
             }
             Log("Warm-up done.");
 
@@ -1970,7 +1990,7 @@ namespace projectFrameCut.StandaloneRender
 
             for (uint i = 0; i < decodeTotal; i++)
             {
-                using var frame = source.GetFrame(i, false);
+                using var frame = source.GetFrame(i);
                 if (frame is not null)
                 {
                     decodedCount++;
@@ -2150,7 +2170,7 @@ namespace projectFrameCut.StandaloneRender
             {
                 try
                 {
-                    using (var frame = source.GetFrame(i, false))
+                    using (var frame = source.GetFrame(i))
                     {
                         writer.Append(frame);
                         encodedCount++;

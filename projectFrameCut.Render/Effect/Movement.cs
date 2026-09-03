@@ -8,7 +8,7 @@ namespace projectFrameCut.Render.Effect
 {
     /// <summary>
     /// The Render-side provider of the Movement effect. It creates a straight-line movement value producer
-    /// bound to a point placer (replaces the legacy <c>MovementEffectBundle</c>).
+    /// bound to a point placer (replaces the legacy movement provider).
     /// </summary>
     public class MovementEffectProvider : EffectProviderBase
     {

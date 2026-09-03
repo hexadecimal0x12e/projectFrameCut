@@ -45,7 +45,7 @@ public partial class ClipCropConfiguratorView : ContentView
 
     private int _effectIndex;
     private EffectImplementType _implementType = EffectImplementType.NotSpecified;
-    private Guid _bundleId = Guid.NewGuid();
+    private Guid _providerId = Guid.NewGuid();
 
     public static readonly BindableProperty EnabledProperty = BindableProperty.Create(
         nameof(Enabled),
@@ -311,26 +311,26 @@ public partial class ClipCropConfiguratorView : ContentView
         return fallback;
     }
 
-    public void LoadFromProvider(IEffectProvider? bundle, IEffect? fallbackEffect = null)
+    public void LoadFromProvider(IEffectProvider? provider, IEffect? fallbackEffect = null)
     {
-        if (bundle is null || !string.Equals(bundle.TypeName, "Crop", StringComparison.Ordinal))
+        if (provider is null || !string.Equals(provider.TypeName, "Crop", StringComparison.Ordinal))
         {
             LoadFromEffect(fallbackEffect);
             return;
         }
 
-        _bundleId = bundle.Id == Guid.Empty ? _bundleId : bundle.Id;
+        _providerId = provider.Id == Guid.Empty ? _providerId : provider.Id;
         _effectIndex = fallbackEffect?.Index ?? 0;
         _implementType = fallbackEffect?.ImplementType ?? EffectImplementType.NotSpecified;
 
-        Enabled = bundle.Enabled;
-        StartX = Math.Max(0, ReadIntParameter(bundle.Fields, "StartX", 0));
-        StartY = Math.Max(0, ReadIntParameter(bundle.Fields, "StartY", 0));
-        CropWidth = Math.Max(1, ReadIntParameter(bundle.Fields, "Width", 1));
-        CropHeight = Math.Max(1, ReadIntParameter(bundle.Fields, "Height", 1));
+        Enabled = provider.Enabled;
+        StartX = Math.Max(0, ReadIntParameter(provider.Fields, "StartX", 0));
+        StartY = Math.Max(0, ReadIntParameter(provider.Fields, "StartY", 0));
+        CropWidth = Math.Max(1, ReadIntParameter(provider.Fields, "Width", 1));
+        CropHeight = Math.Max(1, ReadIntParameter(provider.Fields, "Height", 1));
         RelativeWidth = Math.Max(0, fallbackEffect?.RelativeWidth ?? RelativeWidth);
         RelativeHeight = Math.Max(0, fallbackEffect?.RelativeHeight ?? RelativeHeight);
-        Angle = ReadFloatParameter(bundle.Fields, "Angle", 0f);
+        Angle = ReadFloatParameter(provider.Fields, "Angle", 0f);
     }
 
     public void LoadFromEffect(IEffect? effect)
@@ -376,10 +376,10 @@ public partial class ClipCropConfiguratorView : ContentView
 
     public IEffectProvider BuildEffectProvider(Guid? providerId = null)
     {
-        _bundleId = providerId ?? (_bundleId == Guid.Empty ? Guid.NewGuid() : _bundleId);
+        _providerId = providerId ?? (_providerId == Guid.Empty ? Guid.NewGuid() : _providerId);
         var provider = new CropEffectProvider
         {
-            Id = _bundleId,
+            Id = _providerId,
             Enabled = Enabled,
             Name = InternalCropKey,
             Fields = new Dictionary<string, IEffectArgumentField>
