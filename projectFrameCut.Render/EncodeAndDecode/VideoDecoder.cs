@@ -45,6 +45,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
     public sealed unsafe class DecoderContext16Bit : IVideoSource<ushort>
     {
         private readonly string _path;
+        private readonly FFmpegStreamIOContext? _streamIO;
         private AVFormatContext* _fmt = null;
         private AVCodecContext* _codec = null;
         private long _totalFrames;
@@ -101,12 +102,22 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (!string.IsNullOrWhiteSpace(path) && IVideoSource.EnableDiskCache) _diskCache = new VideoFrameDiskCache(_path);
         }
 
+        public DecoderContext16Bit(Stream source, long length, bool leaveOpen = false)
+        {
+            _path = "<stream>";
+            _streamIO = new FFmpegStreamIOContext(source, length, leaveOpen);
+            Initialize();
+        }
+
         public IVideoSource CreateNew(string newSource) => new DecoderContext16Bit(newSource);
+        public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) => new DecoderContext16Bit(source, length, leaveOpen);
+
+        private int CheckIO(int result) => _streamIO?.Check(result) ?? result;
 
 
         public void Initialize()
         {
-            if (_path is null || Initialized) return; //VideoSourceCreator needs a instance to get PreferredExtension
+            if ((_path is null && _streamIO is null) || Initialized) return; //VideoSourceCreator needs a instance to get PreferredExtension
 
             try
             {
@@ -116,14 +127,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 fixed (AVFormatContext** fmtPtr = &_fmt)
                 {
-                    int averr = ffmpeg.avformat_open_input(fmtPtr, _path, null, null);
+                    int averr = _streamIO is null
+                        ? ffmpeg.avformat_open_input(fmtPtr, _path, null, null)
+                        : _streamIO.Open(fmtPtr);
                     if (averr != 0)
                     {
-                        FFmpegHelper.DetectWhyCannotOpenVideo(_path, averr);
+                        if (_streamIO is null) FFmpegHelper.DetectWhyCannotOpenVideo(_path, averr);
+                        throw new InvalidDataException($"Failed to open video stream (code {averr}, {FFmpegHelper.GetErrorString(averr) ?? "unknown"}).");
                     }
                 }
 
-                if (ffmpeg.avformat_find_stream_info(_fmt, null) != 0)
+                if (CheckIO(ffmpeg.avformat_find_stream_info(_fmt, null)) != 0)
                     throw new InvalidDataException($"File '{_path}' seems don't like a multimedia file. Try install the encoder extension. If you continuously encountering this issue, try install ffmpeg toolkit on your computer, then run this command and observe whether there is any error message:\r\nffprobe {Path.GetFullPath(_path)}");
 
                 for (int i = 0; i < _fmt->nb_streams; i++)
@@ -301,7 +315,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     {
                         while (true)
                         {
-                            int readRet = ffmpeg.av_read_frame(_fmt, _pkt);
+                            int readRet = CheckIO(ffmpeg.av_read_frame(_fmt, _pkt));
                             if (readRet < 0)
                             {
                                 _eof = true;
@@ -465,7 +479,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             if (_fps <= 0 || _fmt == null || _videoStreamIndex < 0)
             {
-                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                CheckIO(ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD));
                 ffmpeg.avcodec_flush_buffers(_codec);
                 _currentFrameNumber = 0;
                 _eof = false;
@@ -479,7 +493,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             double timeBaseSeconds = ffmpeg.av_q2d(timeBase);
             if (timeBaseSeconds <= 0)
             {
-                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                CheckIO(ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD));
                 ffmpeg.avcodec_flush_buffers(_codec);
                 _currentFrameNumber = 0;
                 _eof = false;
@@ -493,11 +507,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
             long streamStart = stream->start_time == ffmpeg.AV_NOPTS_VALUE ? 0 : stream->start_time;
             long seekTimestamp = streamStart + (long)(seekTimeSeconds / timeBaseSeconds);
 
-            int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, seekTimestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            int seekRet = CheckIO(ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, seekTimestamp, ffmpeg.AVSEEK_FLAG_BACKWARD));
             bool fellBackToStart = false;
             if (seekRet < 0)
             {
-                seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, streamStart, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                seekRet = CheckIO(ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, streamStart, ffmpeg.AVSEEK_FLAG_BACKWARD));
                 if (seekRet < 0)
                 {
                     var msg = $"Failed to seek decoder for '{_path}' (code {seekRet}).";
@@ -637,6 +651,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (_sws != null) { ffmpeg.sws_freeContext(_sws); _sws = null; }
             if (_codec != null) { AVCodecContext* tmp = _codec; _codec = null; ffmpeg.avcodec_free_context(&tmp); }
             if (_fmt != null) { AVFormatContext* tmp = _fmt; _fmt = null; ffmpeg.avformat_close_input(&tmp); }
+            _streamIO?.Dispose();
         }
 
         ~DecoderContext16Bit()
@@ -653,6 +668,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private const float ChannelMaxValue = 65535f;
 
         private readonly string _path;
+        private readonly FFmpegStreamIOContext? _streamIO;
         private AVFormatContext* _fmt = null;
         private AVCodecContext* _codec = null;
         private long _totalFrames;
@@ -710,12 +726,22 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (!string.IsNullOrWhiteSpace(path) && IVideoSource.EnableDiskCache) _diskCache = new VideoFrameDiskCache(_path);
         }
 
+        public HDRDecoderContext(Stream source, long length, bool leaveOpen = false)
+        {
+            _path = "<stream>";
+            _streamIO = new FFmpegStreamIOContext(source, length, leaveOpen);
+            Initialize();
+        }
+
         public IVideoSource CreateNew(string newSource) => new HDRDecoderContext(newSource);
+        public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) => new HDRDecoderContext(source, length, leaveOpen);
+
+        private int CheckIO(int result) => _streamIO?.Check(result) ?? result;
 
 
         public void Initialize()
         {
-            if (_path is null || Initialized) return; //VideoSourceCreator needs a instance to get PreferredExtension
+            if ((_path is null && _streamIO is null) || Initialized) return; //VideoSourceCreator needs a instance to get PreferredExtension
 
             try
             {
@@ -725,14 +751,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 fixed (AVFormatContext** fmtPtr = &_fmt)
                 {
-                    int averr = ffmpeg.avformat_open_input(fmtPtr, _path, null, null);
+                    int averr = _streamIO is null
+                        ? ffmpeg.avformat_open_input(fmtPtr, _path, null, null)
+                        : _streamIO.Open(fmtPtr);
                     if (averr != 0)
                     {
-                        FFmpegHelper.DetectWhyCannotOpenVideo(_path, averr);
+                        if (_streamIO is null) FFmpegHelper.DetectWhyCannotOpenVideo(_path, averr);
+                        throw new InvalidDataException($"Failed to open video stream (code {averr}, {FFmpegHelper.GetErrorString(averr) ?? "unknown"}).");
                     }
                 }
 
-                if (ffmpeg.avformat_find_stream_info(_fmt, null) != 0)
+                if (CheckIO(ffmpeg.avformat_find_stream_info(_fmt, null)) != 0)
                     throw new InvalidDataException($"File '{_path}' seems don't like a multimedia file. Try install the encoder extension. If you continuously encountering this issue, try install ffmpeg toolkit on your computer, then run this command and observe whether there is any error message:\r\nffprobe {Path.GetFullPath(_path)}");
 
                 for (int i = 0; i < _fmt->nb_streams; i++)
@@ -919,7 +948,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     {
                         while (true)
                         {
-                            int readRet = ffmpeg.av_read_frame(_fmt, _pkt);
+                            int readRet = CheckIO(ffmpeg.av_read_frame(_fmt, _pkt));
                             if (readRet < 0)
                             {
                                 _eof = true;
@@ -1084,7 +1113,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             if (_fps <= 0 || _fmt == null || _videoStreamIndex < 0)
             {
-                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                CheckIO(ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD));
                 ffmpeg.avcodec_flush_buffers(_codec);
                 _currentFrameNumber = 0;
                 _eof = false;
@@ -1098,7 +1127,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             double timeBaseSeconds = ffmpeg.av_q2d(timeBase);
             if (timeBaseSeconds <= 0)
             {
-                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                CheckIO(ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD));
                 ffmpeg.avcodec_flush_buffers(_codec);
                 _currentFrameNumber = 0;
                 _eof = false;
@@ -1112,11 +1141,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
             long streamStart = stream->start_time == ffmpeg.AV_NOPTS_VALUE ? 0 : stream->start_time;
             long seekTimestamp = streamStart + (long)(seekTimeSeconds / timeBaseSeconds);
 
-            int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, seekTimestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            int seekRet = CheckIO(ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, seekTimestamp, ffmpeg.AVSEEK_FLAG_BACKWARD));
             bool fellBackToStart = false;
             if (seekRet < 0)
             {
-                seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, streamStart, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                seekRet = CheckIO(ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, streamStart, ffmpeg.AVSEEK_FLAG_BACKWARD));
                 if (seekRet < 0)
                 {
                     var msg = $"Failed to seek decoder for '{_path}' (code {seekRet}).";
@@ -1396,6 +1425,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (_sws != null) { ffmpeg.sws_freeContext(_sws); _sws = null; }
             if (_codec != null) { AVCodecContext* tmp = _codec; _codec = null; ffmpeg.avcodec_free_context(&tmp); }
             if (_fmt != null) { AVFormatContext* tmp = _fmt; _fmt = null; ffmpeg.avformat_close_input(&tmp); }
+            _streamIO?.Dispose();
         }
 
         /// <summary>
@@ -1468,6 +1498,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
     {
 
         private readonly string _path;
+        private readonly FFmpegStreamIOContext? _streamIO;
         private AVFormatContext* _fmt = null;
         private AVCodecContext* _codec = null;
         private long _totalFrames;
@@ -1525,12 +1556,22 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (!string.IsNullOrWhiteSpace(path) && IVideoSource.EnableDiskCache) _diskCache = new VideoFrameDiskCache(_path);
         }
 
+        public DecoderContext8Bit(Stream source, long length, bool leaveOpen = false)
+        {
+            _path = "<stream>";
+            _streamIO = new FFmpegStreamIOContext(source, length, leaveOpen);
+            Initialize();
+        }
+
         public IVideoSource CreateNew(string newSource) => new DecoderContext8Bit(newSource);
+        public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) => new DecoderContext8Bit(source, length, leaveOpen);
+
+        private int CheckIO(int result) => _streamIO?.Check(result) ?? result;
 
 
         public void Initialize()
         {
-            if (_path is null || Initialized) return; //VideoSourceCreator needs a instance to get PreferredExtension
+            if ((_path is null && _streamIO is null) || Initialized) return; //VideoSourceCreator needs a instance to get PreferredExtension
 
             try
             {
@@ -1540,15 +1581,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 fixed (AVFormatContext** fmtPtr = &_fmt)
                 {
-                    var averr = ffmpeg.avformat_open_input(fmtPtr, _path, null, null);
+                    var averr = _streamIO is null
+                        ? ffmpeg.avformat_open_input(fmtPtr, _path, null, null)
+                        : _streamIO.Open(fmtPtr);
                     if (averr != 0)
                     {
-                        FFmpegHelper.DetectWhyCannotOpenVideo(_path, averr);
+                        if (_streamIO is null) FFmpegHelper.DetectWhyCannotOpenVideo(_path, averr);
+                        throw new InvalidDataException($"Failed to open video stream (code {averr}, {FFmpegHelper.GetErrorString(averr) ?? "unknown"}).");
 
                     }
                 }
 
-                if (ffmpeg.avformat_find_stream_info(_fmt, null) != 0)
+                if (CheckIO(ffmpeg.avformat_find_stream_info(_fmt, null)) != 0)
                     throw new InvalidDataException($"File '{_path}' seems don't like a multimedia file.Try install the encoder extension. If you continuously encountering this issue, try install ffmpeg toolkit on your computer, then run this command and observe whether there is any error message:\r\nffprobe {Path.GetFullPath(_path)}");
 
                 for (int i = 0; i < _fmt->nb_streams; i++)
@@ -1739,7 +1783,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     {
                         while (true)
                         {
-                            int readRet = ffmpeg.av_read_frame(_fmt, _pkt);
+                            int readRet = CheckIO(ffmpeg.av_read_frame(_fmt, _pkt));
                             if (readRet < 0)
                             {
                                 _eof = true;
@@ -1904,7 +1948,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (_fps <= 0 || _fmt == null || _videoStreamIndex < 0)
             {
                 // Degrade to legacy seek-to-zero
-                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                CheckIO(ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD));
                 ffmpeg.avcodec_flush_buffers(_codec);
                 _currentFrameNumber = 0;
                 _eof = false;
@@ -1918,7 +1962,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             double timeBaseSeconds = ffmpeg.av_q2d(timeBase);
             if (timeBaseSeconds <= 0)
             {
-                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                CheckIO(ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD));
                 ffmpeg.avcodec_flush_buffers(_codec);
                 _currentFrameNumber = 0;
                 _eof = false;
@@ -1933,12 +1977,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
             long streamStart = stream->start_time == ffmpeg.AV_NOPTS_VALUE ? 0 : stream->start_time;
             long seekTimestamp = streamStart + (long)(seekTimeSeconds / timeBaseSeconds);
 
-            int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, seekTimestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            int seekRet = CheckIO(ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, seekTimestamp, ffmpeg.AVSEEK_FLAG_BACKWARD));
             bool fellBackToStart = false;
             if (seekRet < 0)
             {
                 // Fallback: seek to beginning
-                seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, streamStart, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                seekRet = CheckIO(ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, streamStart, ffmpeg.AVSEEK_FLAG_BACKWARD));
                 if (seekRet < 0)
                 {
                     var msg = $"Failed to seek decoder for '{_path}' (code {seekRet}).";
@@ -2077,6 +2121,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (_sws != null) { ffmpeg.sws_freeContext(_sws); _sws = null; }
             if (_codec != null) { AVCodecContext* tmp = _codec; _codec = null; ffmpeg.avcodec_free_context(&tmp); }
             if (_fmt != null) { AVFormatContext* tmp = _fmt; _fmt = null; ffmpeg.avformat_close_input(&tmp); }
+            _streamIO?.Dispose();
         }
 
         ~DecoderContext8Bit()

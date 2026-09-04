@@ -939,7 +939,7 @@ namespace projectFrameCut.ScriptEngine
 
         protected override void ProcessRecordImpl()
         {
-            WriteObject(Path.GetFullPath(Path.Combine(FileSystem.CacheDirectory, "ScriptWorkspace")));
+                WriteObject(Path.GetFullPath(Path.Combine(MauiProgram.CachePath, "ScriptWorkspace")));
         }
     }
 }

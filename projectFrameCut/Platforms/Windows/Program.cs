@@ -546,7 +546,8 @@ Environment:
             }
             catch (Exception)
             {
-                logPath = Path.Combine(Directory.CreateTempSubdirectory("projectFrameCut_").FullName, "crash.log");
+            var crashLogDir = Directory.CreateDirectory(Path.Combine(MauiProgram.CachePath, $"crash_{Guid.NewGuid():N}")).FullName;
+            logPath = Path.Combine(crashLogDir, "crash.log");
                 logMessage = $"{header}\r\nthis log is in: {logPath}\r\n\r\n{content}";
                 File.WriteAllText(logPath, logMessage);
             }

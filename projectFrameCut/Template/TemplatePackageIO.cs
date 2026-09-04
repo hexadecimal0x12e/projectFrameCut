@@ -56,8 +56,8 @@ internal static class TemplatePackageIO
                 ?? throw new InvalidOperationException("Failed to clone template."),
         };
 
-        var packageDir = Path.Combine(FileSystem.CacheDirectory, $"template_package_{Guid.NewGuid():N}");
-        var zipPath = Path.Combine(FileSystem.CacheDirectory, $"template_package_{Guid.NewGuid():N}.zip");
+        var packageDir = Path.Combine(MauiProgram.CachePath, $"template_package_{Guid.NewGuid():N}");
+        var zipPath = Path.Combine(MauiProgram.CachePath, $"template_package_{Guid.NewGuid():N}.zip");
 
         Directory.CreateDirectory(packageDir);
 
@@ -198,7 +198,7 @@ internal static class TemplatePackageIO
             return new TemplateLoadResult(template, filePath, 0);
         }
 
-        var extractDir = Path.Combine(FileSystem.CacheDirectory, $"template_extract_{Guid.NewGuid():N}");
+        var extractDir = Path.Combine(MauiProgram.CachePath, $"template_extract_{Guid.NewGuid():N}");
         Directory.CreateDirectory(extractDir);
 
         try
@@ -551,7 +551,7 @@ internal static class TemplatePackageIO
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentNullException.ThrowIfNull(jsonOptions);
 
-        var extractDir = Path.Combine(FileSystem.CacheDirectory, $"template_import_{Guid.NewGuid():N}");
+        var extractDir = Path.Combine(MauiProgram.CachePath, $"template_import_{Guid.NewGuid():N}");
         Directory.CreateDirectory(extractDir);
 
         try
@@ -622,7 +622,7 @@ internal static class TemplatePackageIO
         if (!File.Exists(pjfcPath))
             throw new FileNotFoundException(Localized.TemplateExtractPage_FileNotFound, pjfcPath);
 
-        var extractDir = Path.Combine(FileSystem.CacheDirectory, $"template_use_{Guid.NewGuid():N}");
+        var extractDir = Path.Combine(MauiProgram.CachePath, $"template_use_{Guid.NewGuid():N}");
         Directory.CreateDirectory(extractDir);
 
         try

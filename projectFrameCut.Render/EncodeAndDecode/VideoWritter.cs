@@ -247,6 +247,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             var srcPixFmt =
                 (_pixelFormat == AVPixelFormat.AV_PIX_FMT_GBRP16LE ||
                  _pixelFormat == AVPixelFormat.AV_PIX_FMT_YUV420P16LE ||
+                 _pixelFormat == AVPixelFormat.AV_PIX_FMT_GRAY16LE ||
                  _pixelFormat == AVPixelFormat.AV_PIX_FMT_RGBA64LE ||
                  _pixelFormat == AVPixelFormat.AV_PIX_FMT_BGRA64LE)
                 ? AVPixelFormat.AV_PIX_FMT_RGBA64LE

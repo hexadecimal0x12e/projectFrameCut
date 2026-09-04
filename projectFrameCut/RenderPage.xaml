@@ -9,6 +9,7 @@
              Title="RenderPage">
     <ContentPage.ToolbarItems>
         <ToolbarItem Order="Secondary" Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/>
+        <ToolbarItem Order="Secondary" Text="{l:Localized Key=RenderPage_ToolBar_AdvancedEncodingOption}" x:Name="AdvancedEncoderOverride" Clicked="AdvancedEncoderOverride_Clicked" />
         <ToolbarItem Order="Secondary" Text="{l:Localized Key=RenderPage_ToolBar_ExportVideoWithAlpha}" x:Name="ExportAlphaHdr" Clicked="ExportAlphaHdr_Clicked" />
         <ToolbarItem Order="Secondary" Text="{l:Localized Key=RenderPage_ToolBar_ExportAudioOnly}" x:Name="ExportAudioOnly" Clicked="ExportAudioOnly_Clicked" />
         <ToolbarItem Order="Secondary" Text="{l:Localized Key=RenderPage_ToolBar_ExportVideoOnly}" x:Name="ExportVideoOnly" Clicked="ExportVideoOnly_Clicked" />
@@ -83,19 +84,6 @@
                         <Entry Placeholder="Framerate" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
                             Keyboard="Numeric"
                             Text="{Binding Framerate, Mode=TwoWay}" />
-                    </HorizontalStackLayout>
-
-                    <Picker
-                    Margin="0,8,0,0"
-                    x:Name="encodingPicker"
-                    Title="{l:Localized Key=RenderPage_SelectEncoding}"
-                    ItemsSource="{Binding ExportOptions_Encoding}"
-                    SelectedItem="{Binding EncodingDisplay, Mode=TwoWay}" />
-                    <HorizontalStackLayout x:Name="CustomEncodingBox" Margin="0,8,0,8"
-                                        IsVisible="{Binding IsCustomEncodingVisible}">
-                        <Entry Placeholder="Encoding" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
-                            Keyboard="Text"
-                            Text="{Binding Encoding, Mode=TwoWay}" />
                     </HorizontalStackLayout>
 
                     <Picker

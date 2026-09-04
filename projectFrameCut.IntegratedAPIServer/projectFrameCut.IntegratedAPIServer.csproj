@@ -13,7 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\projectFrameCut.McpCore\projectFrameCut.McpCore.csproj" />
     <ProjectReference Include="..\projectFrameCut.Render.Contracts\projectFrameCut.Render.Contracts.csproj" />
     <ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
   </ItemGroup>

@@ -35,7 +35,7 @@ namespace projectFrameCut.Services
             CancellationToken cancellationToken = default)
         {
             var validationRoot = Path.Combine(
-                FileSystem.CacheDirectory,
+                MauiProgram.CachePath,
                 "plugin-validation",
                 Guid.NewGuid().ToString("N"));
             try

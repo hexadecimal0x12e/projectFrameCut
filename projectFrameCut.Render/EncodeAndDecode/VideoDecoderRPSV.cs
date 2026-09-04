@@ -164,10 +164,19 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
+        public RawPictureSequenceStreamVideoDecoderContext(Stream source, long length, bool leaveOpen = false)
+        {
+            if (!leaveOpen) source.Dispose();
+            throw new NotSupportedException("RawPictureSequenceStreamVideoDecoderContext only supports RPSV transports.");
+        }
+
         public IVideoSource CreateNew(string newSource)
         {
             return new RawPictureSequenceStreamVideoDecoderContext(newSource);
         }
+
+        public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) =>
+            new RawPictureSequenceStreamVideoDecoderContext(source, length, leaveOpen);
 
         public void Dispose()
         {

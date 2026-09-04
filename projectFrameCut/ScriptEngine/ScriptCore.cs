@@ -68,7 +68,7 @@ namespace projectFrameCut.ScriptEngine
         {
             try
             {
-                Directory.Delete(Path.GetFullPath(Path.Combine(FileSystem.CacheDirectory, "ScriptWorkspace")), true);
+                Directory.Delete(Path.GetFullPath(Path.Combine(MauiProgram.CachePath, "ScriptWorkspace")), true);
             }
             catch { }
 

@@ -50,6 +50,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         DraftStructureJSON timeline = new();
 
         public IVideoSource CreateNew(string newSource) => new DecoderContextPJFCProject(newSource);
+        public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) => new DecoderContextPJFCProject(source, length, leaveOpen);
 
         Renderer renderer;
         public IPicture.PicturePixelMode TargetPPB = IPicture.PicturePixelMode.BytePicture;
@@ -91,6 +92,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 throw new ArgumentException($"The source {newSource} is not a valid .pjfc project file.");
             }
+        }
+
+        public DecoderContextPJFCProject(Stream source, long length, bool leaveOpen = false)
+        {
+            if (!leaveOpen) source.Dispose();
+            throw new NotSupportedException("DecoderContextPJFCProject requires a project directory.");
         }
 
         public void Dispose()

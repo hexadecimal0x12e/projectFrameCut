@@ -306,7 +306,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             panel.AddPicker(HorizontalAlignmentKey, PPLocalizedResources.TextOption_HorizonOption, new[] { ClipHorizontalAlignment.Left.ToString(), ClipHorizontalAlignment.Center.ToString(), ClipHorizontalAlignment.Right.ToString() }, GetOrDefault(HorizontalAlignmentKey, ClipHorizontalAlignment.Left.ToString()));
             panel.AddPicker(VerticalAlignmentKey, PPLocalizedResources.TextOption_VerticalOption, new[] { ClipVerticalAlignment.Top.ToString(), ClipVerticalAlignment.Center.ToString(), ClipVerticalAlignment.Bottom.ToString() }, GetOrDefault(VerticalAlignmentKey, ClipVerticalAlignment.Top.ToString()));
             panel.AddEntry(WrappingWidthKey, PPLocalizedResources.TextOption_WrapW, GetOrDefault(WrappingWidthKey, string.Empty), PPLocalizedResources.TextOption_WrapW_Hint);
-            panel.AddSwitch(ApplyKerningKey, PPLocalizedResources.TextOption_Kerning, ParseBool(GetOrDefault(ApplyKerningKey, bool.TrueString), true));
+            panel.AddCheckbox(ApplyKerningKey, PPLocalizedResources.TextOption_Kerning, ParseBool(GetOrDefault(ApplyKerningKey, bool.TrueString), true));
             panel.AddEntry(LineSpacingKey, PPLocalizedResources.TextOption_LineSpacing, GetOrDefault(LineSpacingKey, 1f.ToString(CultureInfo.InvariantCulture)), "1.0");
             panel.AddEntry(RotationKey, PPLocalizedResources.TextOption_Rotation, GetOrDefault(RotationKey, 0f.ToString(CultureInfo.InvariantCulture)), "0");
             panel.AddEntry(StrokeWidthKey, PPLocalizedResources.TextOption_Stroke, GetOrDefault(StrokeWidthKey, string.Empty), PPLocalizedResources.TextOption_Stroke_Hint);
@@ -315,8 +315,8 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 GetOrDefault(StrokeColorKey, "#000000"),
                 invoker), StrokeColorKey, GetOrDefault(StrokeColorKey, "#000000"));
             panel.AddEntry(DpiKey, "DPI", GetOrDefault(DpiKey, string.Empty), string.Empty);
-            panel.AddSwitch(UseVerticalLayoutKey, PPLocalizedResources.TextOption_UseVerticalLayout, ParseBool(GetOrDefault(UseVerticalLayoutKey, bool.FalseString), false));
-            panel.AddSwitch(KeepNonCJKTextAsHorizontalKey, PPLocalizedResources.TextOption_KeepNonCJKHorizontal, ParseBool(GetOrDefault(KeepNonCJKTextAsHorizontalKey, bool.FalseString), false));
+            panel.AddCheckbox(UseVerticalLayoutKey, PPLocalizedResources.TextOption_UseVerticalLayout, ParseBool(GetOrDefault(UseVerticalLayoutKey, bool.FalseString), false));
+            panel.AddCheckbox(KeepNonCJKTextAsHorizontalKey, PPLocalizedResources.TextOption_KeepNonCJKHorizontal, ParseBool(GetOrDefault(KeepNonCJKTextAsHorizontalKey, bool.FalseString), false));
             return panel;
         }
 

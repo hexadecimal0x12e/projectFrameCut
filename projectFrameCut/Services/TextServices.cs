@@ -83,7 +83,7 @@ namespace projectFrameCut.Services
             {
                 var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
 
-                var cachePath = Path.Combine(FileSystem.CacheDirectory, "FontCache", isDark ? "dark" : "light", $"{item.FontName.Replace(':', '_')}.png");
+                var cachePath = Path.Combine(MauiProgram.CachePath, "FontCache", isDark ? "dark" : "light", $"{item.FontName.Replace(':', '_')}.png");
                 if (File.Exists(cachePath))
                 {
                     return ImageSource.FromFile(cachePath);
@@ -157,9 +157,9 @@ namespace projectFrameCut.Services
 
         public static void LoadFonts()
         {
-            Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "FontCache"));
-            Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "FontCache", "dark"));
-            Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "FontCache", "light"));
+            Directory.CreateDirectory(Path.Combine(MauiProgram.CachePath, "FontCache"));
+            Directory.CreateDirectory(Path.Combine(MauiProgram.CachePath, "FontCache", "dark"));
+            Directory.CreateDirectory(Path.Combine(MauiProgram.CachePath, "FontCache", "light"));
             LoadedFonts.Clear();
             foreach (var f in (new[] { "*.ttf", "*.otf", "*.ttc" }).SelectMany(ext => Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "My Assets"), ext)))
             {

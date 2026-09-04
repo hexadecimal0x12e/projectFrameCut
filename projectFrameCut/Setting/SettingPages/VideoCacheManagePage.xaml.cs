@@ -36,7 +36,7 @@ public partial class VideoCacheManagePage : ContentPage
         InitializeComponent();
         if (string.IsNullOrWhiteSpace(VideoFrameDiskCache.CacheBaseDir) || !Directory.Exists(VideoFrameDiskCache.CacheBaseDir))
         {
-            VideoFrameDiskCache.CacheBaseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VideoCache");
+            VideoFrameDiskCache.CacheBaseDir = Path.Combine(MauiProgram.CachePath, "VideoFrameCache");
         }
         CurrentPathLabel.Text = Localized.VideoCacheManagePage_CurrentPath(VideoFrameDiskCache.CacheBaseDir);
         if (GetSettingAs<long>("codec_VideoFrameDiskCacheMaxSizeMB", 0) != 0)
@@ -180,7 +180,7 @@ public partial class VideoCacheManagePage : ContentPage
     private async void OnOpenFolderClicked(object sender, EventArgs e)
     {
         if (sender is not Button b || b.CommandParameter is not string hash) return;
-        var baseDir = VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(Path.GetTempPath(), "projectFrameCutVideoCache");
+        var baseDir = VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(MauiProgram.CachePath, "VideoFrameCache");
         var dir = Path.Combine(baseDir, hash);
         Directory.CreateDirectory(dir);
         var opened = await FileSystemService.OpenFolderAsync(dir);
@@ -294,7 +294,7 @@ public partial class VideoCacheManagePage : ContentPage
                 Localized._Cancel);
             if (conf)
             {
-                VideoFrameDiskCache.CacheBaseDir = Path.Combine(FileSystem.CacheDirectory, "VideoFrameCache");
+                VideoFrameDiskCache.CacheBaseDir = Path.Combine(MauiProgram.CachePath, "VideoFrameCache");
                 return;
             }
             else

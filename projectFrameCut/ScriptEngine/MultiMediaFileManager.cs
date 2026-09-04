@@ -415,7 +415,7 @@ namespace projectFrameCut.ScriptEngine
         public SwitchParameter Force { get; set; }
 
         /// <summary>放置提取帧的临时目录基路径</summary>
-        internal static readonly string DefaultFrameOutputDir = Path.Combine(FileSystem.CacheDirectory, "ScriptWorkspace", "extracted-frames");
+        internal static readonly string DefaultFrameOutputDir = Path.Combine(MauiProgram.CachePath, "ScriptWorkspace", "extracted-frames");
 
         protected override void ProcessRecord()
         {

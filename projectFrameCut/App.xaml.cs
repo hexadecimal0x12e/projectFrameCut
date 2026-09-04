@@ -333,11 +333,11 @@ namespace projectFrameCut
 
                 nativeWindow.Closed += async (s, e) =>
                 {
-                    RenderRpcBootstrap.DetachActiveCliRender();
                     if (AppShell.instance.CurrentPage is DraftPage pg)
                     {
                         try
                         {
+                            pg.SaveProjectThumbnailBeforeExit();
                             await pg.Save(true, new ApplicationAPIBase.Project.ClipUpdateEventArgs { Reason = ApplicationAPIBase.Project.ClipUpdateReason.Unknown, DetailInfo = "Auto-save when closing window" });
                         }
                         catch (Exception ex)
@@ -345,6 +345,7 @@ namespace projectFrameCut
                             Log(ex, "Auto-saving project when closing window", this);
                         }
                     }
+                    RenderRpcBootstrap.DetachActiveCliRender();
                 };
 
                 try

@@ -41,14 +41,14 @@ namespace projectFrameCut.Render.Compose
         }
 
         /// <summary>
-        /// Clamps float array into destination at specified offset using SIMD.
+        /// Clamps a float array range into a destination range using SIMD.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public static void ClampAlphaOffset(float[] source, float[] destination, int destOffset, int count)
+        public static void ClampAlphaOffset(float[] source, float[] destination, int sourceOffset, int destOffset, int count)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (destination == null) throw new ArgumentNullException(nameof(destination));
-            if (count < 0 || count > source.Length || destOffset + count > destination.Length)
+            if (sourceOffset < 0 || destOffset < 0 || count < 0 || sourceOffset + count > source.Length || destOffset + count > destination.Length)
                 throw new ArgumentOutOfRangeException(nameof(count));
 
             int simdCount = Vector<float>.Count;
@@ -57,7 +57,7 @@ namespace projectFrameCut.Render.Compose
             // Process in SIMD chunks
             for (; i <= count - simdCount; i += simdCount)
             {
-                var v = new Vector<float>(source, i);
+                var v = new Vector<float>(source, sourceOffset + i);
                 v = Vector.Min(v, Vector<float>.One);
                 v = Vector.Max(v, Vector<float>.Zero);
                 v.CopyTo(destination, destOffset + i);
@@ -66,7 +66,7 @@ namespace projectFrameCut.Render.Compose
             // Handle remaining elements scalar
             for (; i < count; i++)
             {
-                float value = source[i];
+                float value = source[sourceOffset + i];
                 destination[destOffset + i] = value < 0f ? 0f : value > 1f ? 1f : value;
             }
         }

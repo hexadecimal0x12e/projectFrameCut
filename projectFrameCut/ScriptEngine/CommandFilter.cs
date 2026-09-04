@@ -767,7 +767,7 @@ namespace projectFrameCut.ScriptEngine
             {
                 var fullPath = Path.GetFullPath(targetPath);
                 var basePath = Path.GetFullPath(WorkingPath);
-                var workspacePath = Path.GetFullPath(Path.Combine(FileSystem.CacheDirectory, "ScriptWorkspace"));
+                var workspacePath = Path.GetFullPath(Path.Combine(MauiProgram.CachePath, "ScriptWorkspace"));
                 var userDataPath = Path.GetFullPath(MauiProgram.DataPath);
                 var appDataPath = Path.GetFullPath(MauiProgram.BasicDataPath);
 

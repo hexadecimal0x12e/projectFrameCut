@@ -1,5 +1,6 @@
 ﻿using FFmpeg.AutoGen;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using System;
@@ -117,8 +118,8 @@ namespace projectFrameCut.Render.Rendering
         /// </summary>
         public int DiskCacheMaxPendingFrames { get; set; }
         /// <summary>
-        /// Root directory for the disk cache. If not set, defaults to
-        /// <c>%TEMP%\projectFrameCutVBCache\{Guid}</c>.
+        /// Root directory for the disk cache. If not set, defaults to the
+        /// application cache directory.
         /// Must be set before <see cref="EnableDiskCacheRouting"/> is enabled (or set the property first),
         /// otherwise the default path is used. Safe to set at any time — the new path takes effect
         /// for the next batch of frames spilled to disk.
@@ -468,7 +469,7 @@ namespace projectFrameCut.Render.Rendering
         private void EnsureDiskCacheDir()
         {
             if (_diskCacheDir is not null) return;
-            var baseDir = DiskCacheDirectory ?? Path.Combine(Path.GetTempPath(), "pjfc_VideoFrameCache");
+            var baseDir = DiskCacheDirectory ?? Path.Combine(GlobalPluginHelper.GetCacheRoot(), "RenderingCache");
             _diskCacheDir = Path.Combine(baseDir, Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_diskCacheDir);
             Log($"[VideoBuilder] Disk cache directory created: {_diskCacheDir}");

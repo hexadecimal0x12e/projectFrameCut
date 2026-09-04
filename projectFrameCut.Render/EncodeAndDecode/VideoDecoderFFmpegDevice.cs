@@ -73,7 +73,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
+        public FFmpegDeviceDecoderContext(Stream source, long length, bool leaveOpen = false)
+        {
+            if (!leaveOpen) source.Dispose();
+            throw new NotSupportedException("FFmpegDeviceDecoderContext only supports FFmpeg input devices.");
+        }
+
         public IVideoSource CreateNew(string newSource) => new FFmpegDeviceDecoderContext(newSource);
+        public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) => new FFmpegDeviceDecoderContext(source, length, leaveOpen);
 
         public void Initialize()
         {

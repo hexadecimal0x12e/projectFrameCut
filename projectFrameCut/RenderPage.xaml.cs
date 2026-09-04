@@ -80,6 +80,7 @@ public partial class RenderPage : ContentPage
     private readonly SemaphoreSlim _previewUpdateSemaphore = new SemaphoreSlim(1, 1);
     private ToolbarItem? _toggleLogToolbarItem;
     private bool _isLogPanelVisible;
+    private bool? _hardwareAccelerationOverride;
 
     private System.Timers.Timer? _screenSaverTimer;
     private System.Timers.Timer? _moveHintTimer;
@@ -116,7 +117,6 @@ public partial class RenderPage : ContentPage
                 vmDefault.Resoultion = defaultResolution;
             }
             vmDefault.FramerateDisplay = SettingsManager.GetSetting("render_DefaultFramerate", vmDefault.FramerateDisplay);
-            vmDefault.EncodingDisplay = SettingsManager.GetSetting("render_DefaultEncoding", vmDefault.EncodingDisplay);
             vmDefault.BitDepthDisplay = SettingsManager.GetSetting("render_DefaultBitDepth", vmDefault.BitDepthDisplay);
             if (Enum.TryParse<PostRenderAction>(SettingsManager.GetSetting("render_DefaultPostRenderAction", "None"), out var action))
             {
@@ -125,6 +125,7 @@ public partial class RenderPage : ContentPage
         }
         catch { }
         BindingContext = vmDefault;
+        InitializeAdvancedCodecOptions();
         SizeChanged += (_, _) => UpdatePreviewViewportSizing();
         InitializeLogTimer();
         InitializeLogPanel();
@@ -159,24 +160,12 @@ public partial class RenderPage : ContentPage
                 vm.Resoultion = defaultResolution;
             }
             vm.FramerateDisplay = SettingsManager.GetSetting("render_DefaultFramerate", vm.FramerateDisplay);
-            vm.EncodingDisplay = SettingsManager.GetSetting("render_DefaultEncoding", vm.EncodingDisplay);
             vm.BitDepthDisplay = SettingsManager.GetSetting("render_DefaultBitDepth", vm.BitDepthDisplay);
             if (Enum.TryParse<PostRenderAction>(SettingsManager.GetSetting("render_DefaultPostRenderAction", "None"), out var action))
             {
                 vm.SelectedPostRenderActionEnum = action;
             }
-            if (ProjectUsesHDR)
-            {
-                vm.Encoding = vm.Encoding switch
-                {
-                    "h265/hevc" => "h265",
-                    "hevc" => "h265",
-                    "libx265" => "h265",
-                    "h265" => "h265",
-                    _ => "h265"
-                };
-                vm.BitDepth = "10bit";
-            }
+            if (ProjectUsesHDR) vm.BitDepth = "10bit";
             if (SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true))
             {
                 MaxParallelThreadsCountLabel.IsVisible = false;
@@ -190,6 +179,7 @@ public partial class RenderPage : ContentPage
         }
         catch { }
         BindingContext = vm;
+        InitializeAdvancedCodecOptions();
         SizeChanged += (_, _) => UpdatePreviewViewportSizing();
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)MaxParallelThreadsCount.Value);
         CancelRender.IsEnabled = false;
@@ -216,6 +206,64 @@ public partial class RenderPage : ContentPage
         _toggleLogToolbarItem.Clicked += ToggleLogPanel_Clicked;
         ToolbarItems.Add(_toggleLogToolbarItem);
         UpdateLogPanelToggleText();
+    }
+
+    private void InitializeAdvancedCodecOptions()
+    {
+        UpdateAdvancedCodecOptionText();
+    }
+
+    private void UpdateAdvancedCodecOptionText()
+    {
+        var vm = BindingContext as RenderPageViewModel;
+        var encoder = string.IsNullOrWhiteSpace(vm?.Encoding)
+            ? SettingsManager.SettingLocalizedResources.RenderEffectImplement_NotSpecified
+            : vm.Encoding;
+        var hardware = _hardwareAccelerationOverride switch
+        {
+            true => SettingsManager.SettingLocalizedResources.Plugin_Enable(SettingsManager.SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding),
+            false => SettingsManager.SettingLocalizedResources.Plugin_Disable(SettingsManager.SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding),
+            _ => SettingsManager.SettingLocalizedResources.RenderEffectImplement_NotSpecified
+        };
+
+    }
+
+    private async void AdvancedEncoderOverride_Clicked(object? sender, EventArgs e)
+    {
+        if (running || BindingContext is not RenderPageViewModel vm) return;
+
+        var input = await DisplayPromptAsync(
+            Localized.RenderPage_SelectEncoding,
+            SettingsManager.SettingLocalizedResources.GeneralCodec_SubTitle,
+            Localized._OK,
+            Localized._Cancel,
+            initialValue: vm.Encoding);
+        if (input is null) return;
+
+        vm.Encoding = input.Trim();
+        await PromptHardwareAccelerationAsync();
+        UpdateAdvancedCodecOptionText();
+    }
+
+    private async Task PromptHardwareAccelerationAsync()
+    {
+        if (running) return;
+
+        var automatic = SettingsManager.SettingLocalizedResources.RenderEffectImplement_NotSpecified;
+        var enabled = SettingsManager.SettingLocalizedResources.Plugin_Enable(SettingsManager.SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding);
+        var disabled = SettingsManager.SettingLocalizedResources.Plugin_Disable(SettingsManager.SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding);
+        var selected = await DisplayActionSheetAsync(
+            SettingsManager.SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding,
+            Localized._Cancel,
+            null,
+            automatic,
+            enabled,
+            disabled);
+
+        if (selected == automatic) _hardwareAccelerationOverride = null;
+        else if (selected == enabled) _hardwareAccelerationOverride = true;
+        else if (selected == disabled) _hardwareAccelerationOverride = false;
+        else return;
     }
 
     private void ToggleLogPanel_Clicked(object? sender, EventArgs e)
@@ -498,6 +546,7 @@ public partial class RenderPage : ContentPage
 
             if (BindingContext is RenderPageViewModel vm)
             {
+                var encoderSelection = ResolveEncoderOptions(vm);
                 var fmt = vm.BitDepth switch
                 {
                     "8bit" => "AV_PIX_FMT_YUV420P",
@@ -505,28 +554,14 @@ public partial class RenderPage : ContentPage
                     "12bit" => "AV_PIX_FMT_YUV420P10LE",
                     _ => "AV_PIX_FMT_GBRP16LE"
                 };
-                var enc = (ProjectUsesHDR ? "h265" : vm.Encoding) switch
-                {
-                    "h264" or "libx264" => "h264",
-                    "h265" or "hevc" or "h265/hevc" or "libx265" => "h265",
-                    "av1" => "av1",
-                    "ffv1" => "ffv1",
-                    _ => "h264"
-                };
-                var ext = enc switch
-                {
-                    "h264" => ".mp4",
-                    "h265" => ".mp4",
-                    "av1" => ".mkv",
-                    "ffv1" => ".mkv",
-                    _ => ".mp4"
-                };
+                var enc = encoderSelection.Encoder;
+                var ext = encoderSelection.Extension;
                 if (vm.UseAlphaBrightnessPackage) ext = ".mkv";
                 if (vm.UseAlphaBrightnessPackage) fmt = "AV_PIX_FMT_YUV420P10LE";
 
                 running = true;
                 DeviceDisplay.Current.KeepScreenOn = true;
-                Log("Output options:\r\n" + vm.BuildSummary());
+                Log($"Output options:\r\n{vm.BuildSummary()}\r\nEncoder: {enc}\r\nHardware acceleration: {encoderSelection.UseHardwareAcceleration}");
                 string vidOutputPath = Path.Combine(cacheDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
                 string audOutputPath = Path.Combine(cacheDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
                 string compOutputPath = Path.Combine(cacheDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.composed{ext}");
@@ -551,7 +586,7 @@ public partial class RenderPage : ContentPage
 
                 if (!vm.UseAlphaBrightnessPackage && RenderRpcBootstrap.SupportsCliRenderProcess && !string.IsNullOrWhiteSpace(_workingPath))
                 {
-                    var detached = await RenderProjectViaCliAsync(vm, resultPath, enc, fmt);
+                    var detached = await RenderProjectViaCliAsync(vm, resultPath, enc, fmt, encoderSelection.UseHardwareAcceleration);
                     if (detached) return;
 #if ANDROID
                     var savedPath = await MediaStoreSaver.SaveMediaFileAsync(resultPath, Path.GetFileName(resultPath), "video/mp4", subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
@@ -709,7 +744,7 @@ public partial class RenderPage : ContentPage
 
     }
 
-    private async Task<bool> RenderProjectViaCliAsync(RenderPageViewModel vm, string resultPath, string encoder, string pixelFormat, bool writeToVoid = false)
+    private async Task<bool> RenderProjectViaCliAsync(RenderPageViewModel vm, string resultPath, string encoder, string pixelFormat, bool useHardwareAcceleration, bool writeToVoid = false)
     {
         SetSubProg("PrepareDraft");
         _currentCliRenderStage = string.Empty;
@@ -745,7 +780,7 @@ public partial class RenderPage : ContentPage
             TempPath = Path.Combine(MauiProgram.DataPath, "RenderCache"),
             PreviewPath = _activeCliPreviewPath,
             UseHwAccelDecoder = SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelDecoding", true),
-            UseHwAccelEncoder = SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelEncoding", true),
+            UseHwAccelEncoder = useHardwareAcceleration,
             WriteToVoid = writeToVoid
         });
         _activeRenderRpcJobId = jobId;
@@ -963,6 +998,7 @@ public partial class RenderPage : ContentPage
 
                 if (RenderRpcBootstrap.SupportsCliRenderProcess && !string.IsNullOrWhiteSpace(_workingPath))
                 {
+                    var encoderSelection = ResolveEncoderOptions(vm);
                     var fmt = vm.BitDepth switch
                     {
                         "8bit" => "AV_PIX_FMT_YUV420P",
@@ -970,16 +1006,8 @@ public partial class RenderPage : ContentPage
                         "12bit" => "AV_PIX_FMT_YUV420P10LE",
                         _ => "AV_PIX_FMT_GBRP16LE"
                     };
-                    var enc = (ProjectUsesHDR ? "h265" : vm.Encoding) switch
-                    {
-                        "h264" or "libx264" => "h264",
-                        "h265" or "hevc" or "h265/hevc" or "libx265" => "h265",
-                        "av1" => "av1",
-                        "ffv1" => "ffv1",
-                        _ => "h264"
-                    };
                     var voidOutputPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"render-void-{Guid.NewGuid():N}.tmp");
-                    await RenderProjectViaCliAsync(vm, voidOutputPath, enc, fmt, writeToVoid: true);
+                    await RenderProjectViaCliAsync(vm, voidOutputPath, encoderSelection.Encoder, fmt, encoderSelection.UseHardwareAcceleration, writeToVoid: true);
                     DeviceDisplay.Current.KeepScreenOn = false;
                     return;
                 }
@@ -1052,6 +1080,160 @@ public partial class RenderPage : ContentPage
         }
     }
 
+    private sealed record EncoderSelection(string Encoder, bool UseHardwareAcceleration, string Extension);
+
+    private const long FourKPixelCount = 3840L * 2160;
+
+    private EncoderSelection ResolveEncoderOptions(RenderPageViewModel vm)
+    {
+        var width = ParseDimension(vm.Width, 3840);
+        var height = ParseDimension(vm.Height, 2160);
+        var hdr = vm.HDREnabled || (_project is not null && ProjectUsesHDR);
+        var preferHardware = (_hardwareAccelerationOverride
+            ?? SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelEncoding", true))
+            && !OperatingSystem.IsAndroid()
+            && !OperatingSystem.IsIOS();
+        var available = GetAvailableVideoEncoders();
+
+        if (!string.IsNullOrWhiteSpace(vm.Encoding))
+        {
+            var requested = ResolveRequestedEncoder(vm.Encoding, available, preferHardware, hdr);
+            return CreateEncoderSelection(requested.Encoder, requested.UseHardwareAcceleration);
+        }
+
+        string[] families = hdr || vm.BitDepth != "8bit"
+            ? ["hevc", "av1", "h264"]
+            : (long)width * height >= FourKPixelCount
+                ? ["av1", "hevc", "h264"]
+                : ["h264", "hevc", "av1"];
+
+        foreach (var family in families)
+        {
+            if (!hdr && preferHardware && FindHardwareEncoder(family, available) is string hardwareEncoder)
+                return CreateEncoderSelection(hardwareEncoder, true);
+            if (FindSoftwareEncoder(family, available) is string softwareEncoder)
+                return CreateEncoderSelection(softwareEncoder, false);
+        }
+
+        var fallback = available
+            .Where(c => !IsHardwareEncoder(c) && !c.Equals("wrapped_avframe", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(c => c switch
+            {
+                "mpeg4" => 0,
+                "vp9" or "libvpx-vp9" => 1,
+                "ffv1" => 2,
+                _ => 3
+            })
+            .FirstOrDefault()
+            ?? (hdr || vm.BitDepth != "8bit" ? "libx265" : "libx264");
+        return CreateEncoderSelection(fallback, false);
+    }
+
+    private static (string Encoder, bool UseHardwareAcceleration) ResolveRequestedEncoder(
+        string requested,
+        HashSet<string> available,
+        bool preferHardware,
+        bool hdr)
+    {
+        requested = requested.Trim();
+        var family = GetCodecFamily(requested);
+        if (family is not null && requested is not "libx264" and not "libx265")
+        {
+            if (!hdr && preferHardware && FindHardwareEncoder(family, available) is string hardwareEncoder)
+                return (hardwareEncoder, true);
+            if (FindSoftwareEncoder(family, available) is string softwareEncoder)
+                return (softwareEncoder, false);
+        }
+
+        if (available.Contains(requested) || available.Count == 0)
+            return (requested, !hdr && IsHardwareEncoder(requested));
+
+        return (requested, !hdr && IsHardwareEncoder(requested));
+    }
+
+    private static HashSet<string> GetAvailableVideoEncoders()
+    {
+        try
+        {
+            return FFmpegHelper.CodecUtils
+                .GetCodecsByType(AVMediaType.AVMEDIA_TYPE_VIDEO, true)
+                .Select(c => c.Name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private static string? FindSoftwareEncoder(string family, HashSet<string> available)
+    {
+        string[] candidates = family switch
+        {
+            "h264" => ["libx264", "h264"],
+            "hevc" => ["libx265", "hevc", "h265"],
+            "av1" => ["libaom-av1", "libsvtav1", "svtav1", "librav1e", "rav1e", "av1"],
+            _ => []
+        };
+        return candidates.FirstOrDefault(available.Contains);
+    }
+
+    private static string? FindHardwareEncoder(string family, HashSet<string> available)
+    {
+        string[] roots = family == "hevc" ? ["hevc", "h265"] : [family];
+        var suffixes = GetHardwareEncoderSuffixes();
+        foreach (var root in roots)
+        {
+            foreach (var suffix in suffixes)
+            {
+                var candidate = root + suffix;
+                if (available.Contains(candidate)) return candidate;
+            }
+        }
+        return available.FirstOrDefault(c => IsHardwareEncoder(c) && GetCodecFamily(c) == family);
+    }
+
+    private static string[] GetHardwareEncoderSuffixes()
+    {
+        if (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsMacOS()) return ["_videotoolbox"];
+        if (OperatingSystem.IsWindows()) return ["_nvenc", "_amf", "_qsv", "_vaapi", "_videotoolbox", "_mediacodec", "_mf"];
+        return ["_vaapi", "_nvenc", "_qsv", "_amf", "_videotoolbox", "_mediacodec", "_mf"];
+    }
+
+    private static string? GetCodecFamily(string codec)
+    {
+        var name = codec.Trim().ToLowerInvariant();
+        if (name is "h264" or "avc" or "avc1" or "x264" or "libx264" || name.StartsWith("h264_")) return "h264";
+        if (name is "h265" or "hevc" or "h265/hevc" or "x265" or "libx265" || name.StartsWith("hevc_")) return "hevc";
+        if (name is "av1" or "libaom-av1" or "svtav1" or "libsvtav1" or "rav1e" or "librav1e" || name.StartsWith("av1_")) return "av1";
+        return null;
+    }
+
+    private static bool IsHardwareEncoder(string codec)
+        => codec.Contains("_nvenc", StringComparison.OrdinalIgnoreCase)
+            || codec.Contains("_amf", StringComparison.OrdinalIgnoreCase)
+            || codec.Contains("_qsv", StringComparison.OrdinalIgnoreCase)
+            || codec.Contains("_vaapi", StringComparison.OrdinalIgnoreCase)
+            || codec.Contains("_videotoolbox", StringComparison.OrdinalIgnoreCase)
+            || codec.Contains("_mediacodec", StringComparison.OrdinalIgnoreCase)
+            || codec.EndsWith("_mf", StringComparison.OrdinalIgnoreCase);
+
+    private static EncoderSelection CreateEncoderSelection(string encoder, bool useHardwareAcceleration)
+        => new(encoder, useHardwareAcceleration, GetEncoderExtension(encoder));
+
+    private static string GetEncoderExtension(string encoder)
+    {
+        var name = encoder.ToLowerInvariant();
+        if (name.Contains("h264") || name.Contains("hevc") || name.Contains("h265") || name == "mpeg4") return ".mp4";
+        if (name.Contains("prores") || name.Contains("dnx")) return ".mov";
+        return ".mkv";
+    }
+
+    private static int ParseDimension(string value, int fallback)
+        => int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result) && result > 0
+            ? result
+            : fallback;
+
 
     double totalProg = 0, lastProg = 0;
     string _currentSubProgText = "";
@@ -1083,6 +1265,7 @@ public partial class RenderPage : ContentPage
     {
         try
         {
+            var encoderSelection = ResolveEncoderOptions(vm);
             var fmt = vm.BitDepth switch
             {
                 "8bit" => "AV_PIX_FMT_YUV420P",
@@ -1090,19 +1273,8 @@ public partial class RenderPage : ContentPage
                 "12bit" => "AV_PIX_FMT_YUV420P10LE",
                 _ => "AV_PIX_FMT_GBRP16LE"
             };
-            var enc = vm.Encoding;
-            var ext = vm.Encoding switch
-            {
-                "libx264" => ".mp4",
-                "h264" => ".mp4",
-                "libx265" => ".mp4",
-                "h265" => ".mp4",
-                "h265/hevc" => ".mp4",
-                "hevc" => ".mp4",
-                "av1" => ".mkv",
-                "ffv1" => ".mkv",
-                _ => ".mkv"
-            };
+            var enc = encoderSelection.Encoder;
+            var ext = encoderSelection.Extension;
 
             var bpp = vm.BitDepth switch
             {
@@ -1122,8 +1294,8 @@ public partial class RenderPage : ContentPage
                 bpp = IPicture.PicturePixelMode.UShortPicture;
                 fmt = "AV_PIX_FMT_YUV420P10LE";
                 ext = vm.UseAlphaBrightnessPackage ? ".mkv" : ".mp4";
-                enc = "libx265";
             }
+            Log($"Selected video encoder: {enc}; hardware acceleration: {encoderSelection.UseHardwareAcceleration}");
             bool dumpDiagData = SettingsManager.IsBoolSettingTrue("render_DumpDiagData");
 
             if (dumpDiagData && PictureLifecycleTracker.Enabled)
@@ -1234,7 +1406,7 @@ public partial class RenderPage : ContentPage
                             EnableDiskCacheRouting = SettingsManager.IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", true),
                             DiskCacheMaxFrameCount = SettingsManager.GetSettingAs("render_MaxDiskBufferCount", 500, 500),
                             DiskCacheThreshold = SettingsManager.GetSettingAs("render_DiskBufferThreshold", 0.7, 0.7),
-                            DiskCacheDirectory = Path.Combine(VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VideoCache"), "RenderingCache")
+                            DiskCacheDirectory = Path.Combine(VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(MauiProgram.CachePath, "VideoFrameCache"), "RenderingCache")
                         };
                         break;
                     case "null":
@@ -1264,7 +1436,10 @@ public partial class RenderPage : ContentPage
                 }
                 else
                 {
-                    builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt, ProjectUsesHDR ? "HDRVideoWriter" : null)
+                    var writerType = ProjectUsesHDR
+                        ? "HDRVideoWriter"
+                        : encoderSelection.UseHardwareAcceleration ? "VideoWriterHWAccel" : "VideoWriter";
+                    builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt, writerType)
                     {
                         EnablePreview = true, DoGCAfterEachWrite = gcOption > 0, DisposeFrameAfterEachWrite = true,
                         Duration = duration, LogStat = false, BlockWrite = blockwrite
@@ -1718,7 +1893,8 @@ public partial class RenderPage : ContentPage
             return;
         }
 
-        var (pixelFormat, encoder, ext) = GetStandaloneOutputOptions(vm.BitDepth);
+        var encoderSelection = ResolveEncoderOptions(vm);
+        var (pixelFormat, encoder, ext) = GetStandaloneOutputOptions(vm.BitDepth, encoderSelection.Encoder);
 
 #if WINDOWS
         var outputPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", MauiProgram.DataPath);
@@ -1729,7 +1905,7 @@ public partial class RenderPage : ContentPage
 #endif
 
 
-        var args = BuildStandaloneRenderArgs(width, height, fps, pixelFormat, encoder, outputPath);
+        var args = BuildStandaloneRenderArgs(width, height, fps, pixelFormat, encoder, outputPath, encoderSelection.UseHardwareAcceleration);
         await DisplayPromptAsync(Localized._Info, "Copy the args below:", Localized._OK, null, initialValue: args);
     }
 
@@ -1758,15 +1934,16 @@ public partial class RenderPage : ContentPage
         return width > 0 && height > 0 && fps > 0;
     }
 
-    private static (string PixelFormat, string Encoder, string Extension) GetStandaloneOutputOptions(string bitDepth)
+    private static (string PixelFormat, string Encoder, string Extension) GetStandaloneOutputOptions(string bitDepth, string encoder)
     {
-        return bitDepth switch
+        var pixelFormat = bitDepth switch
         {
-            "8bit" => ("AV_PIX_FMT_YUV420P", "libx264", ".mp4"),
-            "10bit" => ("AV_PIX_FMT_YUV420P10LE", "libx265", ".mp4"),
-            "12bit" => ("AV_PIX_FMT_YUV420P10LE", "libx265", ".mp4"),
-            _ => ("AV_PIX_FMT_GBRP16LE", "ffv1", ".mkv")
+            "8bit" => "AV_PIX_FMT_YUV420P",
+            "10bit" => "AV_PIX_FMT_YUV420P10LE",
+            "12bit" => "AV_PIX_FMT_YUV420P10LE",
+            _ => "AV_PIX_FMT_GBRP16LE"
         };
+        return (pixelFormat, encoder, GetEncoderExtension(encoder));
     }
 
 
@@ -1857,18 +2034,7 @@ public partial class RenderPage : ContentPage
     private async void ExportVideoOnly_Clicked(object sender, EventArgs e)
     {
         if (BindingContext is not RenderPageViewModel vm) return;
-        var ext = vm.Encoding switch
-        {
-            "libx264" => ".mp4",
-            "h264" => ".mp4",
-            "libx265" => ".mov",
-            "h265" => ".mov",
-            "h265/hevc" => ".mov",
-            "hevc" => ".mov",
-            "av1" => ".mkv",
-            "ffv1" => ".mkv",
-            _ => ".mkv"
-        };
+        var ext = ResolveEncoderOptions(vm).Extension;
 #if WINDOWS
         var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", MauiProgram.DataPath);
         if (string.IsNullOrWhiteSpace(resultPath)) return;
@@ -1995,6 +2161,7 @@ public partial class RenderPage : ContentPage
         UpdateRenderLayoutForLogPanel();
         CancelRender.IsEnabled = true;
         MoreOptions.IsEnabled = false;
+        AdvancedEncoderOverride.IsEnabled = false;
         ExportAudioOnly.IsEnabled = false;
         ExportVideoOnly.IsEnabled = false;
         ExportAlphaHdr.IsEnabled = false;
@@ -2038,6 +2205,7 @@ public partial class RenderPage : ContentPage
         running = false;
         UpdateRenderLayoutForLogPanel();
         CancelRender.IsEnabled = false;
+        AdvancedEncoderOverride.IsEnabled = true;
         UpdateLogRefreshState();
 
         StopScreenSaverTimer();
@@ -2047,7 +2215,7 @@ public partial class RenderPage : ContentPage
         await PerformPostRenderAction();
     }
 
-    private string BuildStandaloneRenderArgs(int width, int height, int fps, string pixelFormat, string encoder, string outputPath)
+    private string BuildStandaloneRenderArgs(int width, int height, int fps, string pixelFormat, string encoder, string outputPath, bool useHardwareAcceleration)
     {
         var args = new List<string>
         {
@@ -2060,6 +2228,7 @@ public partial class RenderPage : ContentPage
 
         var maxThreads = Math.Max(1, (int)Math.Round(MaxParallelThreadsCount.Value));
         args.Add($"-maxParallelThreads={maxThreads}");
+        args.Add($"-preferHwAccelEncoder={useHardwareAcceleration}");
 
         if (SettingsManager.IsBoolSettingTrue("render_BlockWrite"))
         {
@@ -2205,29 +2374,6 @@ public class RenderPageViewModel : INotifyPropertyChanged
     public string[] ExportOptions_Framerate { get; } =
         ["23.97", "24", "29.97", "30", "44.96", "45", "59.94", "60", "89.91", "90", "119.88", "120", Localized.RenderPage_CustomOption];
 
-    public string[] ExportOptions_Encoding
-    {
-        get
-        {
-            if (HDREnabled)
-            {
-                return
-                [
-                    "h265", // Apple playback compatibility: force HEVC for HDR exports
-                    Localized.RenderPage_CustomOption
-                ];
-            }
-            else
-            {
-                return
-                [
-                    "av1", "h264", "h265", // because of license, provided FFmpeg doesn't have libx264/libx265
-                    Localized.RenderPage_CustomOption
-                ];
-            }
-        }
-    }
-
     public string[] ExportOptions_BitDepth
     {
         get
@@ -2342,34 +2488,11 @@ public class RenderPageViewModel : INotifyPropertyChanged
         }
     }
 
-    string _encoding = "av1";
+    string _encoding = "";
     public string Encoding
     {
-        get
-        {
-            if (_encoding == Localized.RenderPage_CustomOption) return "";
-            else return _encoding;
-        }
-        set
-        {
-            if (SetProperty(ref _encoding, value))
-            {
-                OnPropertyChanged(nameof(IsCustomEncodingVisible));
-            }
-        }
-    }
-
-    public string EncodingDisplay
-    {
-        get
-        {
-            if (ExportOptions_Encoding.Any((x) => x == Encoding)) return Encoding;
-            else return Localized.RenderPage_CustomOption;
-        }
-        set
-        {
-            Encoding = value;
-        }
+        get => _encoding;
+        set => SetProperty(ref _encoding, value);
     }
 
     string _bitDepth = "8bit";
@@ -2426,11 +2549,10 @@ public class RenderPageViewModel : INotifyPropertyChanged
 
     public bool IsCustomResolutionVisible => _resoultion == Localized.RenderPage_CustomOption;
     public bool IsCustomFramerateVisible => !ExportOptions_Framerate.Where((x) => x != Localized.RenderPage_CustomOption).Any((x) => x == _framerate);
-    public bool IsCustomEncodingVisible => !ExportOptions_Encoding.Where((x) => x != Localized.RenderPage_CustomOption).Any((x) => x == _encoding);
     public bool IsCustomBitDepthVisible => !ExportOptions_BitDepth.Where((x) => x != Localized.RenderPage_CustomOption).Any((x) => x == _bitDepth);
 
     public string BuildSummary() =>
-        $"{_width}x{_height} @ {_framerate} fps\nEncoding: {_encoding}\nBitDepth: {_bitDepth}";
+        $"{_width}x{_height} @ {_framerate} fps\nEncoder override: {(_encoding is { Length: > 0 } ? _encoding : "auto")}\nBitDepth: {_bitDepth}";
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)

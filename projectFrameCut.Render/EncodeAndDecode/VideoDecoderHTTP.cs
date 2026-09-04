@@ -74,7 +74,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
+        public HttpDecoderContext(Stream source, long length, bool leaveOpen = false)
+        {
+            if (!leaveOpen) source.Dispose();
+            throw new NotSupportedException("HttpDecoderContext only supports HTTP URLs.");
+        }
+
         public IVideoSource CreateNew(string newSource) => new HttpDecoderContext(newSource);
+        public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) => new HttpDecoderContext(source, length, leaveOpen);
 
         public void Initialize()
         {

@@ -126,46 +126,46 @@ public partial class AdvancedSettingPage : ContentPage
             c => c.AddText(SettingLocalizedResources.Advanced_ManualEditSetting)
                   .AddCustomChild(layout)
                   .AddSeparator()
-                  .AddSwitch("DeveloperMode", SettingLocalizedResources.Advanced_DeveloperMode, SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+                  .AddCheckbox("DeveloperMode", SettingLocalizedResources.Advanced_DeveloperMode, SettingsManager.IsBoolSettingTrue("DeveloperMode"))
                   .AddSeparator())
         .AddText(SettingLocalizedResources.Advanced_Logging, fontSize: 20)
-        .AddSwitch("LogUIMessageToLogger", SettingLocalizedResources.Advanced_LogUIMessageToLogger, SettingsManager.IsBoolSettingTrue("LogUIMessageToLogger"))
-        .AddSwitch("DedicatedLogWindow", SettingLocalizedResources.Advanced_DedicatedLogWindow, SettingsManager.IsBoolSettingTrue("DedicatedLogWindow"))
+        .AddCheckbox("LogUIMessageToLogger", SettingLocalizedResources.Advanced_LogUIMessageToLogger, SettingsManager.IsBoolSettingTrue("LogUIMessageToLogger"))
+        .AddCheckbox("DedicatedLogWindow", SettingLocalizedResources.Advanced_DedicatedLogWindow, SettingsManager.IsBoolSettingTrue("DedicatedLogWindow"))
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.Advanced_Recover, fontSize: 20)
-        .AddSwitch("DontPanicOnUnhandledException", SettingLocalizedResources.Advanced_DontPanicOnUnhandledException, SettingsManager.IsBoolSettingTrue("DontPanicOnUnhandledException"))
-        .AddSwitch("AutoRecoverDraft", SettingLocalizedResources.Advanced_AutoRecoverDraft, SettingsManager.IsBoolSettingTrue("AutoRecoverDraft"))
+        .AddCheckbox("DontPanicOnUnhandledException", SettingLocalizedResources.Advanced_DontPanicOnUnhandledException, SettingsManager.IsBoolSettingTrue("DontPanicOnUnhandledException"))
+        .AddCheckbox("AutoRecoverDraft", SettingLocalizedResources.Advanced_AutoRecoverDraft, SettingsManager.IsBoolSettingTrue("AutoRecoverDraft"))
         .AddSeparator()
 
         .AddText(Localized.AppShell_ProjectsTab, fontSize: 20)
-        .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
-        .AddSwitch("edit_IgnoreEffectsTargetInEffectTab", SettingLocalizedResources.Edit_IgnoreEffectsTargetInEffectTab, SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab"), null)
-        .AddSwitch("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer", SettingLocalizedResources.Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer, SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer"), null)
-        .AddSwitch("render_ForceDirectRenderTransport", SettingLocalizedResources.Render_ForceDirectRenderTransport, SettingsManager.IsBoolSettingTrue("render_ForceDirectRenderTransport"), null)
-        .AddSwitch("render_RpcServerEnableHttp", SettingLocalizedResources.Render_RpcServerEnableHttp, SettingsManager.IsBoolSettingTrue("render_RpcServerEnableHttp"), null)
+        .AddCheckbox("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
+        .AddCheckbox("edit_IgnoreEffectsTargetInEffectTab", SettingLocalizedResources.Edit_IgnoreEffectsTargetInEffectTab, SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab"), null)
+        .AddCheckbox("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer", SettingLocalizedResources.Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer, SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer"), null)
+        .AddCheckbox("render_ForceDirectRenderTransport", SettingLocalizedResources.Render_ForceDirectRenderTransport, SettingsManager.IsBoolSettingTrue("render_ForceDirectRenderTransport"), null)
+        .AddCheckbox("render_RpcServerEnableHttp", SettingLocalizedResources.Render_RpcServerEnableHttp, SettingsManager.IsBoolSettingTrue("render_RpcServerEnableHttp"), null)
         .AddEntry("render_RpcServerHttpPort", SettingLocalizedResources.Render_RpcServerHttpPort, GetSetting("render_RpcServerHttpPort", ""), "39485")
         .AddSeparator()
 
         .AddText("IPicture", fontSize: 20)
-        .AddSwitch("diag_TraceIPictureObject", SettingLocalizedResources.Advanced_TraceIPictureObject, SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject"))
-        .AddSwitch("render_DisallowPictureModeDowngrade", SettingLocalizedResources.Render_DisallowPictureModeDowngrade, IsBoolSettingTrue("render_DisallowPictureModeDowngrade"), null)
+        .AddCheckbox("diag_TraceIPictureObject", SettingLocalizedResources.Advanced_TraceIPictureObject, SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject"))
+        .AddCheckbox("render_DisallowPictureModeDowngrade", SettingLocalizedResources.Render_DisallowPictureModeDowngrade, IsBoolSettingTrue("render_DisallowPictureModeDowngrade"), null)
         .AddSeparator()
         
         .AddText(Localized.MainSettingsPage_Tab_Render, fontSize: 20)
-        .AddSwitch("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
-        .AddSwitch("render_DumpDiagData", SettingLocalizedResources.Render_DumpDiagData, IsBoolSettingTrue("render_DumpDiagData"), null)
+        .AddCheckbox("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
+        .AddCheckbox("render_DumpDiagData", SettingLocalizedResources.Render_DumpDiagData, IsBoolSettingTrue("render_DumpDiagData"), null)
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.Advanced_TextAndGlobalization, fontSize: 20)
         .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts.TryGetValue(GetSetting("OverrideCulture", "default"), out var k) ? k : "", null)
-        .AddSwitch("UseSystemFont", SettingLocalizedResources.Advanced_UseSystemFont, SettingsManager.IsBoolSettingTrue("UseSystemFont"))
-        .AddSwitch("diag_TypesettingEngineDiagMode", SettingLocalizedResources.Advanced_TypesettingEngineDiagMode, IsBoolSettingTrue("diag_TypesettingEngineDiagMode"), null)
+        .AddCheckbox("UseSystemFont", SettingLocalizedResources.Advanced_UseSystemFont, SettingsManager.IsBoolSettingTrue("UseSystemFont"))
+        .AddCheckbox("diag_TypesettingEngineDiagMode", SettingLocalizedResources.Advanced_TypesettingEngineDiagMode, IsBoolSettingTrue("diag_TypesettingEngineDiagMode"), null)
         .AddSeparator()
 
         .AddText("UI", fontSize: 20)
-        .AddSwitch("ui_ForceUseShell", SettingLocalizedResources.Advanced_UseMAUIShell, SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
-        .AddSwitch("ui_ShowWelcomePage", SettingLocalizedResources.Advanced_ShowWelcomePage, SettingsManager.IsBoolSettingTrue("ui_ShowWelcomePage"))
+        .AddCheckbox("ui_ForceUseShell", SettingLocalizedResources.Advanced_UseMAUIShell, SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
+        .AddCheckbox("ui_ShowWelcomePage", SettingLocalizedResources.Advanced_ShowWelcomePage, SettingsManager.IsBoolSettingTrue("ui_ShowWelcomePage"))
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.GeneralCodec_Title, fontSize: 20)
@@ -321,7 +321,7 @@ public partial class AdvancedSettingPage : ContentPage
                             try
                             {
                                 var assemblyBytes = await PluginService.ExportVerifiedAssemblyAsync(pluginID);
-                                var savePath = Path.Combine(FileSystem.CacheDirectory, $"{pluginID}.dll");
+                                var savePath = Path.Combine(MauiProgram.CachePath, $"{pluginID}.dll");
                                 await File.WriteAllBytesAsync(savePath, assemblyBytes, default);
                                 await Share.RequestAsync(new ShareFileRequest
                                 {

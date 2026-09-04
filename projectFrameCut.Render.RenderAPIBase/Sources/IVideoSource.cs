@@ -1,11 +1,13 @@
-﻿using projectFrameCut.Shared;
-using projectFrameCut.Render.RenderAPIBase.Plugins;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using projectFrameCut.Drawing.Base;
+﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Shared;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
 
 namespace projectFrameCut.Render.RenderAPIBase.Sources
 {
@@ -47,6 +49,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// Create a new instance of the video source with a different source.
         /// </summary>
         public IVideoSource CreateNew(string newSource);
+
+        /// <summary>
+        /// Create a new instance that reads a complete, fixed-length video from a seekable stream.
+        /// </summary>
+        public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false);
 
         /// <summary>
         /// Read the actual frame from the video source.
@@ -219,4 +226,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         IPicture IVideoSource.GetFrame(uint targetFrame, int targetWidth, int targetHeight)
             => GetFrame(targetFrame, targetWidth, targetHeight);
     }
+
+    public interface IHDRVideoSource : IVideoSource
+    {
+        HDRPicture16bpp GetHDRFrame(uint targetFrame, bool hasAlpha = false);
+        HDRPicture16bpp GetHDRFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight, bool hasAlpha = false);
+    }
+
 }

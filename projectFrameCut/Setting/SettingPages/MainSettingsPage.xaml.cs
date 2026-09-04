@@ -221,7 +221,7 @@ namespace projectFrameCut
 
                 try
                 {
-                    var vfdCahceDir = GetSetting("codec_VideoFrameDiskCachePath", Path.Combine(FileSystem.CacheDirectory, "VideoFrameCache"));
+                    var vfdCahceDir = GetSetting("codec_VideoFrameDiskCachePath", Path.Combine(MauiProgram.CachePath, "VideoFrameCache"));
                     Directory.CreateDirectory(vfdCahceDir);
                     VideoFrameDiskCache.CacheBaseDir = vfdCahceDir;
                     VideoFrameDiskCache.EnableCompression = IsBoolSettingTrueOrDefault("codec_VideoFrameDiskCacheEnableCompress", true);

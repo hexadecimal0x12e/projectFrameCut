@@ -1,6 +1,7 @@
 using FFmpeg.AutoGen;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Processing.Converting;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 
@@ -60,7 +61,7 @@ public sealed unsafe class AlphaBrightnessVideoWriter : IVideoWriter
         if (Width <= 0 || Height <= 0 || FramePerSecond <= 0) throw new ArgumentOutOfRangeException(nameof(Width));
         if (File.Exists(OutputPath)) throw new InvalidOperationException($"Video file {OutputPath} already exists.");
 
-        _workDirectory = Path.Combine(VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(Path.GetTempPath(), "projectFrameCutVideoCache"), "pjfc_multistream", Guid.NewGuid().ToString("N"));
+        _workDirectory = Path.Combine(GlobalPluginHelper.GetCacheRoot(), "pjfc_multistream", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_workDirectory);
         _mainPath = Path.Combine(_workDirectory, "main.mkv");
         _main = new VideoWriter
@@ -98,9 +99,16 @@ public sealed unsafe class AlphaBrightnessVideoWriter : IVideoWriter
     {
         if (!_initialized || _main is null) throw new InvalidOperationException("Initialize before appending frames.");
         if (picture.Width != Width || picture.Height != Height) throw new ArgumentException("Frame dimensions do not match the writer.");
+        int pixels = checked(Width * Height);
+        if (_alpha is not null && picture.HasAlphaChannel && picture.a?.Length != pixels)
+            throw new InvalidDataException($"Frame #{_index} has an invalid alpha channel.");
+        if (_brightness is not null && picture is IHDRPicture<ushort> hdrSource && hdrSource.Brightness?.Length != pixels)
+            throw new InvalidDataException($"Frame #{_index} has an invalid HDR brightness channel.");
+
         if (picture is HDRPicture16bpp hdrPicture)
         {
-            _main.Append(hdrPicture.DegradeToSDR(HDRImageDegradeToSDRMode.DiscardBrightnessChannel));
+            using var sdr = hdrPicture.DegradeToSDR(HDRImageDegradeToSDRMode.DiscardBrightnessChannel);
+            _main.Append(sdr);
         }
         else
         {
@@ -108,8 +116,16 @@ public sealed unsafe class AlphaBrightnessVideoWriter : IVideoWriter
         }
         if (picture is IHDRPicture<ushort> hdr && float.IsFinite(hdr.MaximumBrightness) && hdr.MaximumBrightness > 0f)
             _maximumBrightness = Math.Max(_maximumBrightness, hdr.MaximumBrightness);
-        if (_alpha is not null) _alpha.Append(CreateGrayPicture(picture, false));
-        if (_brightness is not null) _brightness.Append(CreateGrayPicture(picture, true));
+        if (_alpha is not null)
+        {
+            using var alpha = CreateGrayPicture(picture, false);
+            _alpha.Append(alpha);
+        }
+        if (_brightness is not null)
+        {
+            using var brightness = CreateGrayPicture(picture, true);
+            _brightness.Append(brightness);
+        }
         _index++;
     }
 

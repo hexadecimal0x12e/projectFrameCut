@@ -1152,7 +1152,7 @@ public partial class AssistanceChatView : ContentView
                 using Windows.Storage.Streams.IRandomAccessStream stream =
                     await streamRef.OpenReadAsync();
 
-                string tempDir = Path.Combine(Path.GetTempPath(), "ClipboardContent");
+                string tempDir = Path.Combine(MauiProgram.CachePath, "ClipboardContent");
                 Directory.CreateDirectory(tempDir);
                 string fileName = $"clipboard_image_{Guid.NewGuid():N}.png";
                 string filePath = Path.Combine(tempDir, fileName);
@@ -1199,7 +1199,7 @@ public partial class AssistanceChatView : ContentView
             }
 
             bool foundAny = false;
-            string tempDir = Path.Combine(FileSystem.CacheDirectory, "ClipboardContent");
+            string tempDir = Path.Combine(MauiProgram.CachePath, "ClipboardContent");
             Directory.CreateDirectory(tempDir);
 
             for (int i = 0; i < clipData.ItemCount; i++)
@@ -1300,7 +1300,7 @@ public partial class AssistanceChatView : ContentView
             var pasteboard = UIKit.UIPasteboard.General;
             bool foundAny = false;
 
-            string tempDir = Path.Combine(FileSystem.CacheDirectory, "ClipboardContent");
+            string tempDir = Path.Combine(MauiProgram.CachePath, "ClipboardContent");
             Directory.CreateDirectory(tempDir);
 
             // 1) 尝试获取图片

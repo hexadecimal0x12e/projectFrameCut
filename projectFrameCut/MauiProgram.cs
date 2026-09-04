@@ -35,6 +35,7 @@ using System.Text;
 using System.Text.Json;
 using Exception = System.Exception;
 using Thread = System.Threading.Thread;
+using System.Runtime.CompilerServices;
 
 #if ANDROID
 using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
@@ -75,6 +76,8 @@ namespace projectFrameCut
 
         public static string BasicDataPath { get; private set; }
 
+        public static string CachePath { get; private set; }
+
         public static string FFmpegRoot { get; private set; }
 
         public static string ProgramConfig = "?", ProgramCommit = "?", AssemblyName = "projectFrameCut";
@@ -110,56 +113,6 @@ namespace projectFrameCut
 
         public static bool IsStoreMode { get; private set; } = true;
 
-        /// <summary>
-        /// Initializes the localization state needed by the Android render-worker
-        /// process. The worker has a deliberately minimal MAUI bootstrap and does
-        /// not execute the normal application initialization path, so it must
-        /// receive the already-selected locale through its start Intent.
-        /// </summary>
-        public static void InitializeWorkerLocalization(string? locate)
-        {
-            locate = string.IsNullOrWhiteSpace(locate) ? "en-US" : locate;
-            try
-            {
-                Localized = SimpleLocalizer.Init(locate);
-            }
-            catch
-            {
-                SimpleLocalizer.IsFallbackMatched = true;
-                Localized = ISimpleLocalizerBase.GetMapping().First().Value;
-            }
-
-            SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping()
-                .TryGetValue(Localized._LocaleId_, out var settingsLocalized)
-                ? settingsLocalized
-                : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-            SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping()
-                .TryGetValue(Localized._LocaleId_, out var propertyPanelLocalized)
-                ? propertyPanelLocalized
-                : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
-            projectFrameCut.ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping()
-                .TryGetValue(Localized._LocaleId_, out var apiLocalized)
-                ? apiLocalized
-                : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
-            PluginManager.CurrentLocale = Localized._LocaleId_;
-            PluginManager.ExtenedLocalizationGetter = key =>
-                Localized.IsItemExist(key) ? Localized.DynamicLookup(key, key) : null;
-
-            try
-            {
-                var cultureName = locate == "文言文" ? "zh-HK" : Localized._LocaleId_;
-                var culture = CultureInfo.CreateSpecificCulture(cultureName);
-                Thread.CurrentThread.CurrentCulture = culture;
-                Thread.CurrentThread.CurrentUICulture = culture;
-                CultureInfo.DefaultThreadCurrentCulture = culture;
-                CultureInfo.DefaultThreadCurrentUICulture = culture;
-            }
-            catch
-            {
-                // Localization must not prevent the worker service from starting.
-            }
-        }
-
         public static MauiApp CreateMauiApp()
         {
 #if ANDROID
@@ -168,6 +121,7 @@ namespace projectFrameCut
             {
                 DataPath = FileSystem.AppDataDirectory;
                 BasicDataPath = Path.Combine(FileSystem.AppDataDirectory, "AppData");
+                CachePath = FileSystem.CacheDirectory;
                 Directory.CreateDirectory(BasicDataPath);
                 return MauiApp.CreateBuilder()
                     .UseMauiApp<projectFrameCut.Platforms.Android.RenderWorkerMauiApplication>()
@@ -191,11 +145,11 @@ namespace projectFrameCut
                     Task.Delay(10000).ContinueWith((_) => Task.Run(() => Environment.Exit(32767)));
                     try
                     {
-                        RenderRpcBootstrap.DetachActiveCliRender();
                         if (AppShell.instance?.CurrentPage is DraftPage pg)
                         {
                             try
                             {
+                                pg.SaveProjectThumbnailBeforeExit();
                                 await pg.Save(true, new ApplicationAPIBase.Project.ClipUpdateEventArgs { Reason = ApplicationAPIBase.Project.ClipUpdateReason.Unknown, DetailInfo = "Auto-save when Ctrl-C Received" });
                             }
                             catch (Exception ex)
@@ -203,19 +157,48 @@ namespace projectFrameCut
                                 Log(ex, "Auto-saving project when closing", pg);
                             }
                         }
+                        RenderRpcBootstrap.DetachActiveCliRender();
                     }
                     catch { }
                     Environment.Exit(32767);
                 });
             }
 #endif
+
+#if MAUISDK
+            Log($"""
+                projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} 
+                                  {ProgramConfig}@{ProgramCommit},
+                                  on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture},
+                                  os version {Environment.OSVersion}/{DeviceInfo.Version},
+                                  clr version {Environment.Version},
+                                  cmdline: {Environment.CommandLine}
+                """);
+#else
+            Log($"""
+                projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} 
+                                  {ProgramConfig}@{ProgramCommit},
+                                  in cpu arch {RuntimeInformation.ProcessArchitecture},
+                                  os version {Environment.OSVersion},
+                                  clr version {Environment.Version},
+                                  cmdline: {Environment.CommandLine}
+                """);
+#endif
+            Log("Copyright (c) hexadecimal0x12e 2025-2026, and thanks to other open-source code's authors.");
+
             string loggingDir = "";
             try
             {
-#if !LINUX
+#if MAUISDK
+                CachePath = FileSystem.CacheDirectory;
                 loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging");
                 DataPath = FileSystem.AppDataDirectory;
                 BasicDataPath = FileSystem.AppDataDirectory;
+#else
+                CachePath = GetInitialCachePath();
+                loggingDir = System.IO.Path.Combine(CachePath, "logging");
+                DataPath = CachePath;
+                BasicDataPath = CachePath;
 #endif
 
 #if ANDROID
@@ -340,33 +323,6 @@ namespace projectFrameCut
                 Debug.WriteLine($"Failed to set up log file: {ex.Message}");
                 Crash(new InvalidOperationException($"projectFrameCut can't initialize BasicData. Try uninstall program, cleanup BasicData and reinstall program.", ex));
             }
-            try
-            {
-                ProgramConfig = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config";
-                ProgramCommit = (Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last();
-                AssemblyName = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut";
-            }
-            catch { }
-#if MAUISDK
-            Log($"""
-                projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} 
-                                  {ProgramConfig}@{ProgramCommit},
-                                  on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture},
-                                  os version {Environment.OSVersion}/{DeviceInfo.Version},
-                                  clr version {Environment.Version},
-                                  cmdline: {Environment.CommandLine}
-                """);
-#else
-            Log($"""
-                projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} 
-                                  {ProgramConfig}@{ProgramCommit},
-                                  in cpu arch {RuntimeInformation.ProcessArchitecture},
-                                  os version {Environment.OSVersion},
-                                  clr version {Environment.Version},
-                                  cmdline: {Environment.CommandLine}
-                """);
-#endif
-            Log("Copyright (c) hexadecimal0x12e 2025-2026, and thanks to other open-source code's authors.");
             Log($"BasicDataPath:{BasicDataPath}, DataPath:{DataPath}");
             try
             {
@@ -814,6 +770,32 @@ namespace projectFrameCut
             }
         }
 
+        [ModuleInitializerAttribute]
+        public static void LoadModuleeConfig()
+        {
+            try
+            {
+                ProgramConfig = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config";
+                ProgramCommit = (Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last();
+                AssemblyName = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut";
+                CachePath = GetInitialCachePath();
+            }
+            catch { }
+        }
+
+        private static string GetInitialCachePath()
+        {
+#if WINDOWS
+            try
+            {
+                if (WinUI.App.IsPackaged())
+                    return Windows.Storage.ApplicationData.Current.LocalCacheFolder.Path;
+            }
+            catch { }
+#endif
+            return Path.Combine(Path.GetTempPath(), new string(AssemblyName.Select(t => char.IsAsciiLetterOrDigit(t) ? t : '_').ToArray()));
+        }
+
         public static void InitLocate(ref string locate, ref CultureInfo culture)
         {
             try
@@ -954,6 +936,7 @@ namespace projectFrameCut
             {
                 PluginManager.InitGlobalGetter();
                 GlobalPluginHelper.PluginsDataRootPath = Path.Combine(BasicDataPath, "Plugins");
+                GlobalPluginHelper.CacheRootPath = CachePath;
                 var internalBase = new InternalApplicationPluginBase();
                 internalBase.locateId = SettingsManager.GetSetting("locate", "default");
                 (internalBase as IApplicationPluginBase).OnApplicationPluginLoaded();
@@ -1278,7 +1261,7 @@ namespace projectFrameCut
 
         public static ITemplateStructure? LoadPjfcTemplateSync(string packagePath)
         {
-            var extractDir = Path.Combine(FileSystem.CacheDirectory, $"startup_extract_{Guid.NewGuid():N}");
+            var extractDir = Path.Combine(CachePath, $"startup_extract_{Guid.NewGuid():N}");
             try
             {
                 System.IO.Compression.ZipFile.ExtractToDirectory(packagePath, extractDir, overwriteFiles: true);
@@ -1382,6 +1365,57 @@ namespace projectFrameCut
 
 
         }
+
+        /// <summary>
+        /// Initializes the localization state needed by the Android render-worker
+        /// process. The worker has a deliberately minimal MAUI bootstrap and does
+        /// not execute the normal application initialization path, so it must
+        /// receive the already-selected locale through its start Intent.
+        /// </summary>
+        public static void InitializeWorkerLocalization(string? locate)
+        {
+            locate = string.IsNullOrWhiteSpace(locate) ? "en-US" : locate;
+            try
+            {
+                Localized = SimpleLocalizer.Init(locate);
+            }
+            catch
+            {
+                SimpleLocalizer.IsFallbackMatched = true;
+                Localized = ISimpleLocalizerBase.GetMapping().First().Value;
+            }
+
+            SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping()
+                .TryGetValue(Localized._LocaleId_, out var settingsLocalized)
+                ? settingsLocalized
+                : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+            SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping()
+                .TryGetValue(Localized._LocaleId_, out var propertyPanelLocalized)
+                ? propertyPanelLocalized
+                : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+            projectFrameCut.ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping()
+                .TryGetValue(Localized._LocaleId_, out var apiLocalized)
+                ? apiLocalized
+                : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+            PluginManager.CurrentLocale = Localized._LocaleId_;
+            PluginManager.ExtenedLocalizationGetter = key =>
+                Localized.IsItemExist(key) ? Localized.DynamicLookup(key, key) : null;
+
+            try
+            {
+                var cultureName = locate == "文言文" ? "zh-HK" : Localized._LocaleId_;
+                var culture = CultureInfo.CreateSpecificCulture(cultureName);
+                Thread.CurrentThread.CurrentCulture = culture;
+                Thread.CurrentThread.CurrentUICulture = culture;
+                CultureInfo.DefaultThreadCurrentCulture = culture;
+                CultureInfo.DefaultThreadCurrentUICulture = culture;
+            }
+            catch
+            {
+                // Localization must not prevent the worker service from starting.
+            }
+        }
+
 
     }
 

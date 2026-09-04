@@ -190,7 +190,7 @@ public partial class UserDataManagePage : ContentPage
             }
         }
 
-        var cahceFiles = Directory.GetFiles(FileSystem.CacheDirectory, "*", SearchOption.AllDirectories).Concat(Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "RenderCache"), "*", SearchOption.AllDirectories));
+        var cahceFiles = Directory.GetFiles(MauiProgram.CachePath, "*", SearchOption.AllDirectories).Concat(Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "RenderCache"), "*", SearchOption.AllDirectories));
         CacheFileCount = cahceFiles.Count();
         CahceSize = cahceFiles.Sum(c => new FileInfo(c).Length);
 
@@ -433,7 +433,7 @@ public partial class UserDataManagePage : ContentPage
 
     private async void ClearCacheButton_Clicked(object sender, EventArgs e)
     {
-        var files = Directory.GetFiles(FileSystem.CacheDirectory, "*", SearchOption.AllDirectories).Concat(Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "RenderCache"), "*", SearchOption.AllDirectories));
+        var files = Directory.GetFiles(MauiProgram.CachePath, "*", SearchOption.AllDirectories).Concat(Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "RenderCache"), "*", SearchOption.AllDirectories));
         var size = Math.Round(files.Sum(f => new FileInfo(f).Length) / 1024.0 / 1024.0, 2);
         if (!await DisplayAlertAsync(Localized._Info, SettingsManager.SettingLocalizedResources.Misc_ClearCache_Confirm((ulong)files.Count(), size), Localized._Confirm, Localized._Cancel)) return;
         foreach (var item in files)

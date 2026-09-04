@@ -23,7 +23,7 @@ namespace projectFrameCut.Platforms.iOS
             // denies that with EPERM.  We must use Foundation APIs (NSFileManager,
             // NSSearchPath) for ALL file operations at the crash-handler level.
             //
-            // Strategy: Documents → Library/Caches → NSTemporaryDirectory.
+            // Strategy: Documents → Library/Caches → the shared application cache path.
             string? root = null;
             try
             {
@@ -52,8 +52,7 @@ namespace projectFrameCut.Platforms.iOS
 
             if (root is null)
             {
-                try { root = Path.GetTempPath(); }
-                catch { }
+                root = MauiProgram.CachePath;
             }
 
             if (root is not null)
@@ -208,13 +207,11 @@ Environment:
         /// </summary>
         private static void WriteCrashLogFile(string logMessage)
         {
-            // Determine target directory — fallback chain: crashLogDir → temp
+            // Determine target directory — fallback chain: crashLogDir → shared cache
             string? targetDir = crashLogDir;
             if (targetDir is null || !EnsureDirectoryExists(targetDir))
             {
-                // Last resort: temp directory
-                try { targetDir = Path.GetTempPath(); }
-                catch { return; }
+                targetDir = MauiProgram.CachePath;
             }
 
             if (!EnsureDirectoryExists(targetDir))

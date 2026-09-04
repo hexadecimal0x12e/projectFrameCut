@@ -78,22 +78,10 @@ namespace projectFrameCut.LivePreview
 
         public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token = default)
         {
+            (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
             try
             {
-                ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
-                (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
-                var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash) ? indexedHash : "nullframe";
-                var cachedPath = Path.Combine(ProjectRoot, "thumbs", $"projectFrameCut_Render_{StaticFrameCacheVersion}_{frameHash}_{targetWidth}x{targetHeight}.png");
-                if (File.Exists(cachedPath)) return cachedPath;
-                var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineFrameAsync(new TimelineFrameRequest
-                {
-                    SessionId = RenderSessionId,
-                    FrameIndex = frameIndex,
-                    Width = targetWidth,
-                    Height = targetHeight,
-                    PreferredPixelFormat = PreviewPixelFormat.EncodedImage,
-                }, token).AsTask().GetAwaiter().GetResult();
-                return ResolveArtifactPath(artifact, token);
+                return RenderFrameCore(frameIndex, targetWidth, targetHeight, token);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
@@ -107,6 +95,44 @@ namespace projectFrameCut.LivePreview
                 errFrame.SaveToPng(destPath);
                 return destPath;
             }
+        }
+
+        public string? TryRenderFrame(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token = default)
+        {
+            (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
+            try
+            {
+                return RenderFrameCore(frameIndex, targetWidth, targetHeight, token);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Render frame #{frameIndex}", this);
+                return null;
+            }
+        }
+
+        private string RenderFrameCore(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token)
+        {
+            ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
+            var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash) ? indexedHash : "nullframe";
+            var cachedPath = Path.Combine(ProjectRoot, "thumbs", $"projectFrameCut_Render_{StaticFrameCacheVersion}_{frameHash}_{targetWidth}x{targetHeight}.png");
+            if (File.Exists(cachedPath)) return cachedPath;
+            var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineFrameAsync(new TimelineFrameRequest
+            {
+                SessionId = RenderSessionId,
+                FrameIndex = frameIndex,
+                Width = targetWidth,
+                Height = targetHeight,
+                PreferredPixelFormat = PreviewPixelFormat.EncodedImage,
+            }, token).AsTask().GetAwaiter().GetResult();
+            var path = ResolveArtifactPath(artifact, token);
+            if (!File.Exists(path))
+                throw new FileNotFoundException("The render backend returned an artifact that does not exist.", path);
+            return path;
         }
 
         public IPicture GetFrame(uint frameIndex, int targetWidth, int targetHeight)

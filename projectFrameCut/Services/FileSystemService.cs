@@ -36,7 +36,7 @@ namespace projectFrameCut.Services
         public static string GetAppPackageFileSync(string path)
         {
             if (!OperatingSystem.IsAndroid()) return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
-            var cacheDir = Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "AppPackageFiles"));
+            var cacheDir = Directory.CreateDirectory(Path.Combine(MauiProgram.CachePath, "AppPackageFiles"));
             var tempFilePath = Path.Combine(cacheDir.FullName, path);
             if (Path.GetDirectoryName(tempFilePath) is string dir) Directory.CreateDirectory(dir);
             if (File.Exists(tempFilePath)) return tempFilePath;

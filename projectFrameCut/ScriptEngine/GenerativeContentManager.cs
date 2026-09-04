@@ -10,7 +10,7 @@ namespace projectFrameCut.ScriptEngine
     {
         internal static string GetWorkspacePath()
         {
-            return Path.GetFullPath(Path.Combine(FileSystem.CacheDirectory, "ScriptWorkspace"));
+            return Path.GetFullPath(Path.Combine(MauiProgram.CachePath, "ScriptWorkspace"));
         }
 
         internal static string ResolveOutputPath(string? fileName, string extension)

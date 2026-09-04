@@ -41,9 +41,7 @@ internal sealed class AndroidRenderWorkerController : Java.Lang.Object, IService
 
     public static string CreateSocketPath()
     {
-        var cacheRoot = global::Android.App.Application.Context.CacheDir?.AbsolutePath
-            ?? throw new InvalidOperationException("Android cache directory is unavailable.");
-        return Path.Combine(cacheRoot, $"r-{Guid.NewGuid():N}.sock");
+        return Path.Combine(MauiProgram.CachePath, $"r-{Guid.NewGuid():N}.sock");
     }
 
     public static AndroidRenderWorkerController StartEditorWorker(

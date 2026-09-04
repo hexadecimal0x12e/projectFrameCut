@@ -1095,7 +1095,7 @@ namespace projectFrameCut.DraftStuff
                     .AddCheckbox("allowFreeScaleResize", PPLocalizedResources.General_LocationAndSize_FreeZoom, allowFreeScaleResize)
                     .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, rotationDeg)
                     .AddText(new SingleLineLabel(PPLocalizedResources.General_Crop, 25))
-                    .AddSwitch("cropEnable", PPLocalizedResources._Enabled, currentCropProvider.Enabled)
+                    .AddCheckbox("cropEnable", PPLocalizedResources._Enabled, currentCropProvider.Enabled)
                     .AppendWhen(currentCropProvider.Enabled,
                     c => c.AddButton(PPLocalizedResources.Effect_ProgressPlacer_OpenEditor, async (_, _) => await page.ShowAPopup(content: cropView, mode: "dialog"))
                         .AddSeparator()

@@ -681,7 +681,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ApplyClipEditorPreviewOverlayMode();
 
         string dynamicPreviewCacheRoot = IsRemoteProject
-            ? Path.Combine(FileSystem.CacheDirectory, "remoteConnection", ProjectInfo.ProjectUniqueId.ToString("N"))
+            ? Path.Combine(MauiProgram.CachePath, "remoteConnection", ProjectInfo.ProjectUniqueId.ToString("N"))
             : Path.Combine(WorkingPath, "thumbs", "clipLocalFallback");
         if (IsRemoteProject)
         {
@@ -697,7 +697,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         previewer.targetFrameRate = Math.Max(1, (int)ProjectInfo.TargetFrameRate);
         previewer.ProjectJson = JsonSerializer.Serialize(ProjectInfo, savingOpts);
         previewer.TempPath = IsRemoteProject
-            ? Path.Combine(FileSystem.CacheDirectory, "remoteConnection", ProjectInfo.ProjectUniqueId.ToString("N"), "thumbs")
+            ? Path.Combine(MauiProgram.CachePath, "remoteConnection", ProjectInfo.ProjectUniqueId.ToString("N"), "thumbs")
             : Path.Combine(WorkingPath, "thumbs");
         previewer.ProjectName = ProjectName;
         DynamicPreviewProvider.SetLivePreviewer(ref previewer!);
@@ -9342,29 +9342,9 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (noSlot)
             {
                 ProjectInfo.NormallyExited = true;
+                await Task.Run(SaveProjectThumbnailBeforeExit);
                 await timelineModule.SaveAsync(draft);
                 await assetModule.SaveAsync();
-                try
-                {
-                    using var cts = new CancellationTokenSource();
-                    cts.CancelAfter(10000);
-                    await Task.Run(() =>
-                    {
-                        try
-                        {
-                            var thumbPath = ProjectInfo.ThumbPath ?? previewer.RenderFrame(0U, 1280, 720);
-                            if (!string.IsNullOrEmpty(thumbPath) && File.Exists(thumbPath))
-                            {
-                                var destPath = Path.Combine(WorkingPath, "thumbs", "_project.png");
-                                File.Copy(thumbPath, destPath, true);
-                            }
-                        }
-                        catch { }
-
-                    }, cts.Token);
-
-                }
-                catch { }
             }
             else //avoid worst condition (crashes while saving)
             {
@@ -10650,6 +10630,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         // navigation begins. True when leaving for the export page (same project);
         // false when the project is actually being closed (back to HomePage/exit).
         bool leavingProject = !_navigatingToRenderPage;
+        if (leavingProject && !ExitNoSave)
+            SaveProjectThumbnailBeforeExit();
         AlreadyDisappeared = true;
         try
         {
@@ -10728,12 +10710,12 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         try
         {
-            if (!ExitNoSave) await Save(true);
-            if (_remoteProjectSession is not null)
+            if (leavingProject && !ExitNoSave) await Save(true);
+            if (leavingProject && _remoteProjectSession is not null)
             {
                 await _remoteProjectSession.CloseAsync();
             }
-            else if (!_remoteSessionDetached)
+            else if (leavingProject && !_remoteSessionDetached)
             {
                 try
                 {
@@ -10744,14 +10726,17 @@ public partial class DraftPage : ContentPage, IDraftPage
                     Log(ex, "Close render RPC project session", this);
                 }
             }
-            try { await RenderRpcBootstrap.DisposeAsync(); }
-            catch (Exception ex) { Log(ex, "Dispose render RPC backend", this); }
-            try
+            if (leavingProject)
             {
-                await _workspaceWindowHost.DisposeAsync();
-                await _workspace.DisposeAsync();
+                try { await RenderRpcBootstrap.DisposeAsync(); }
+                catch (Exception ex) { Log(ex, "Dispose render RPC backend", this); }
+                try
+                {
+                    await _workspaceWindowHost.DisposeAsync();
+                    await _workspace.DisposeAsync();
+                }
+                catch (Exception ex) { Log(ex, "Dispose workspace", this); }
             }
-            catch (Exception ex) { Log(ex, "Dispose workspace", this); }
             App.Current?.Windows?[0]?.Title = Localized.AppBrand;
             TouchProjectFolder();
             base.OnNavigatingFrom(e);
@@ -10767,6 +10752,42 @@ public partial class DraftPage : ContentPage, IDraftPage
             catch { }
         }
 
+    }
+
+    internal void SaveProjectThumbnailBeforeExit()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(WorkingPath)) return;
+
+            var projectThumbPath = ProjectInfo.ThumbPath;
+            var thumbPath = !string.IsNullOrWhiteSpace(projectThumbPath) && File.Exists(projectThumbPath)
+                ? projectThumbPath
+                : previewer.TryRenderFrame(0U, 1280, 720);
+            if (string.IsNullOrWhiteSpace(thumbPath) || !File.Exists(thumbPath))
+            {
+                Log("Project thumbnail render failed; keeping the previous thumbnail.", "warn");
+                return;
+            }
+
+            var destPath = Path.Combine(WorkingPath, "thumbs", "_project.png");
+            var tempPath = $"{destPath}.{Guid.NewGuid():N}.tmp";
+            Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+            try
+            {
+                File.Copy(thumbPath, tempPath, true);
+                File.Move(tempPath, destPath, true);
+                LogDiagnostic($"Project thumbnail saved before exit: {destPath}");
+            }
+            finally
+            {
+                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Save project thumbnail before exit", this);
+        }
     }
 
     private void TouchProjectFolder()

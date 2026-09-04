@@ -13,6 +13,17 @@
             }
             return Path.Combine(PluginsDataRootPath, plugin.PluginID);
         }
+        /// <summary>
+        /// Get the shared cache root.
+        /// </summary>
+        public static string GetCacheRoot()
+        {
+            if (CacheRootPath is string path)
+                return path;
+            if (PluginsDataRootPath is string pluginsPath)
+                return Path.Combine(pluginsPath, "__Cache__");
+            throw new InvalidOperationException("CacheRootPath is not initialized.");
+        }
 
         internal static string? PluginsDataRootPath
         {
@@ -22,6 +33,19 @@
                 if (PluginsDataRootPath is not null)
                 {
                     throw new InvalidOperationException("PluginsDataRootPath is already initialized.");
+                }
+                field = value;
+            }
+        }
+
+        internal static string? CacheRootPath
+        {
+            get => field;
+            set
+            {
+                if (field is not null)
+                {
+                    throw new InvalidOperationException("CacheRootPath is already initialized.");
                 }
                 field = value;
             }
@@ -69,6 +93,5 @@
         }
 
     }
-#pragma warning restore CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
 
 }

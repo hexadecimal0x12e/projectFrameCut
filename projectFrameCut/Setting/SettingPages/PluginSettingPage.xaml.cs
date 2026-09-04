@@ -120,7 +120,7 @@ public partial class PluginSettingPage : ContentPage
             }
 
         })
-        .AddSwitch("DisablePluginEngine", SettingLocalizedResources.Advanced_DisablePluginEngine, IsBoolSettingTrue("DisablePluginEngine"));
+        .AddCheckbox("DisablePluginEngine", SettingLocalizedResources.Advanced_DisablePluginEngine, IsBoolSettingTrue("DisablePluginEngine"));
 
         var scv = rootPPB.AddSeparator().ListenToChanges((e) => SettingInvoker(e, this)).Build();
         DropGestureRecognizer drop = new();

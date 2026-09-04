@@ -1944,7 +1944,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             var factories = TransformServices.GetAvailableTransforms();
             if (!factories.TryGetValue(transform.TypeKey, out var factory)) return;
 
-            var previewDir = Path.Combine(FileSystem.CacheDirectory, "TransformPreviews");
+            var previewDir = Path.Combine(MauiProgram.CachePath, "TransformPreviews");
             Directory.CreateDirectory(previewDir);
             var videoPath = Path.Combine(previewDir, $"{transform.TypeKey}.mp4");
 
@@ -2292,7 +2292,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
 
             // ???????
-            var sketchDir = Path.Combine(FileSystem.CacheDirectory, "Sketches");
+            var sketchDir = Path.Combine(MauiProgram.CachePath, "Sketches");
             Directory.CreateDirectory(sketchDir);
             var tempPath = Path.Combine(sketchDir, $"sketch_{Guid.NewGuid():N}.png");
 
@@ -3428,7 +3428,7 @@ public class TextStyleItemViewModel
     public required TextClipEntry ActualTemplate { get; set; } = default!;
     private ImageSource? _previewSource;
 
-    private static string PreviewCacheDir => Path.Combine(FileSystem.CacheDirectory, "TextStylePreviews");
+    private static string PreviewCacheDir => Path.Combine(MauiProgram.CachePath, "TextStylePreviews");
 
     private string ComputeCacheKey()
     {
@@ -3558,7 +3558,7 @@ public class TextStyleProviderItemViewModel
 
     private ImageSource? _previewSource;
 
-    private static string PreviewCacheDir => Path.Combine(FileSystem.CacheDirectory, "TextStylePreviews");
+    private static string PreviewCacheDir => Path.Combine(MauiProgram.CachePath, "TextStylePreviews");
 
     private string ComputeCacheKey()
     {

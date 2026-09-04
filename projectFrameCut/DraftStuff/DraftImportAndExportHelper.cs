@@ -42,6 +42,12 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             try
             {
                 string desktopIniPath = Path.Combine(projectPath, "desktop.ini");
+                if (OperatingSystem.IsWindows() && File.Exists(desktopIniPath))
+                {
+                    File.SetAttributes(
+                        desktopIniPath,
+                        File.GetAttributes(desktopIniPath) & ~(FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReadOnly));
+                }
                 File.WriteAllText(desktopIniPath, ProjectDirectoryDesktopIni);
                 if (OperatingSystem.IsWindows())
                 {

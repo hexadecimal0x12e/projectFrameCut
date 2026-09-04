@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.Drawing.Text.FontHelper;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
 
 namespace projectFrameCut.ApplicationAPIBase.Views.Pickers;
@@ -329,7 +330,7 @@ public partial class FontPicker : ContentView
 
             try
             {
-                var cachePath = Path.Combine(FileSystem.CacheDirectory, "FontCache", $"{item.FontName.Replace(':', '_')}.png");
+                var cachePath = Path.Combine(GlobalPluginHelper.GetCacheRoot(), "FontCache", $"{item.FontName.Replace(':', '_')}.png");
                 if (File.Exists(cachePath))
                     updates.Add((item, cachePath));
             }

@@ -2001,7 +2001,7 @@ public partial class HomePage : ContentPage
             HeightRequest = 200
         };
         var fileName = $"{new string(vmItem.Name.Select(s => char.IsAsciiLetterOrDigit(s) ? s : '_').ToArray())}_{Guid.NewGuid()}.pjfc";
-        var tmpPath = Path.Combine(FileSystem.CacheDirectory, fileName);
+        var tmpPath = Path.Combine(MauiProgram.CachePath, fileName);
         await Task.Run(() =>
         {
             ZipFile.CreateFromDirectory(vmItem._projectPath, tmpPath, CompressionLevel.SmallestSize, includeBaseDirectory: false);

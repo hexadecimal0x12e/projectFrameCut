@@ -119,7 +119,6 @@ namespace projectFrameCut.StandaloneRender
                         -project=<project dir>
                         -output=<output file>
                         -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
-                        [-multistream=<true|false>]                 (write Alpha/HDR Brightness streams into an MKV)
                         [-target=<video|audio|all>]
                         [-assetDbFile=<path to database.json file>]
                         [-pluginRoot=<path to plugin root>]
@@ -134,18 +133,15 @@ namespace projectFrameCut.StandaloneRender
                         [-FFmpegLibraryPath=<path to FFmpeg libraries>]
                         [-diagReportPath=<path diag report output directory>]
                         [-preferHwAccelDecoder=<true|false>]
+                        [-ApproximateMixture=<true|false>]
                         [-PictureResizer=<cpu|hwaccel>]
                         [-VideoFrameDiskCacheRoot=<path to video frame disk cache root>]
                         [-enableDiskCacheRouting=<true|false> or -forceUseDiskCache=<true|false>]
-                        [-diskCacheThreshold=<0.1-0.95>]
-                        [-diskCacheMaxFrameCount=<number>]
-                        [-videoBuilderDiskCacheRoot=<path>]
+                        [-diskCacheThreshold=<0.1-0.95>] [-diskCacheMaxFrameCount=<number>] [-videoBuilderDiskCacheRoot=<path>]
                         [-chunkRender=<true|false>]
-                        [-chunkFrames=<number> | -chunkSeconds=<number>]
-                        [-chunkParallelism=<number>]
-                        [-chunkResume=<true|false>]
-                        [-chunkKeepFiles=<true|false>]
-                        [-ApproximateMixture=<true|false>]
+                        [-chunkFrames=<number> | -chunkSeconds=<number>] [-chunkParallelism=<number>]
+                        [-chunkResume=<true|false>] [-chunkKeepFiles=<true|false>]
+                        [-multiStream=<true|false>]
 
 
 
@@ -194,6 +190,7 @@ namespace projectFrameCut.StandaloneRender
                         [-preferHwAccelDecoder=<true|false>]
                         [-preferHwAccelEncoder=<true|false>]
                         [-bitRate=<bitrate in bps>]                 (optional, encoder bitrate)
+                        [-multiStream=<true|false>]
 
                     ---
 
@@ -622,7 +619,7 @@ namespace projectFrameCut.StandaloneRender
                 use16Bit = trace;
             }
 
-            bool multistream = bool.TryParse(switches.GetOrAdd("multistream", "false"), out var multistreamValue) && multistreamValue;
+            bool multiStream = bool.TryParse(switches.GetOrAdd("multiStream", "false"), out var multiStreamValue) && multiStreamValue;
 
             var bpp = use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
             var chunkOptions = ParseChunkRenderOptions(switches, fps);
@@ -638,18 +635,18 @@ namespace projectFrameCut.StandaloneRender
             }
             var outputPath = switches["output"].Replace("{CurrentTime}", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
 
-            if (multistream && !outputPath.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase))
+            if (multiStream && !outputPath.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase))
             {
-                Log("ERROR: --multistream=true requires an .mkv output path.", "error");
+                Log("ERROR: --multiStream=true requires an .mkv output path.", "error");
                 return 1;
             }
-            if (multistream && chunkOptions.Enabled)
+            if (multiStream && chunkOptions.Enabled)
             {
-                Log("ERROR: --multistream=true cannot be combined with --chunkRender=true.", "error");
+                Log("ERROR: --multiStream=true cannot be combined with --chunkRender=true.", "error");
                 return 1;
             }
 
-            Log($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, 16 bit render:{use16Bit}({fmpBPP} bpp output), multistream:{multistream}");
+            Log($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, 16 bit render:{use16Bit}({fmpBPP} bpp output), multiStream:{multiStream}");
 
             #endregion
 
@@ -881,7 +878,7 @@ namespace projectFrameCut.StandaloneRender
             ConcurrentDictionary<int, Renderer> activeChunkRenderers = new();
             IVideoWriter CreateConfiguredWriter(string path, bool intermediateChunk)
             {
-                IVideoWriter writer = multistream
+                IVideoWriter writer = multiStream
                     ? new AlphaBrightnessVideoWriter
                     {
                         CodecName = outputEncoder,
@@ -2061,9 +2058,17 @@ namespace projectFrameCut.StandaloneRender
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
             bool hwAccelEncode = bool.TryParse(switches.GetOrAdd("preferHwAccelEncoder", "false"), out var hwAccelEncodeValue) && hwAccelEncodeValue;
+            bool multiStream = bool.TryParse(switches.GetOrAdd("multiStream", "false"), out var multiStreamValue) && multiStreamValue;
             InternalPluginBase.HWAccelDecodeOptionGetter = new(() => hwAccelDecode);
             InternalPluginBase.HWAccelEncodeOptionGetter = new(() => hwAccelEncode);
             Log($"Use hardware acceleration for decoding: {hwAccelDecode}, encoding: {hwAccelEncode}");
+
+            outputPath = outputPath.Replace("{CurrentTime}", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+            if (multiStream && !outputPath.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase))
+            {
+                Log("ERROR: -multiStream=true requires an .mkv output path.", "error");
+                return 1;
+            }
 
             var encoder = switches.GetOrAdd("encoder", "libx264");
             var pixelFormatStr = switches.GetOrAdd("pixelFormat", "AV_PIX_FMT_YUV420P");
@@ -2075,7 +2080,9 @@ namespace projectFrameCut.StandaloneRender
             IVideoSource? source = null;
             try
             {
-                source = PluginManager.CreateVideoSource(sourcePath);
+                source = multiStream && HDRDecoderContext.IsHdrVideo(sourcePath)
+                    ? new HDRDecoderContext(sourcePath)
+                    : PluginManager.CreateVideoSource(sourcePath);
                 Log($"Created decoder: {source?.TypeName ?? "(null)"}");
             }
             catch (Exception ex)
@@ -2115,15 +2122,10 @@ namespace projectFrameCut.StandaloneRender
 
             Log($"Source: {srcWidth}x{srcHeight}, {srcFps:F2}fps, {decodeCount}/{totalFrames} frames, decoder: {source.TypeName}");
 
-            // ── 创建编码器 ──────────────────────────────────────
-            outputPath = outputPath.Replace("{CurrentTime}", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
-
             Log($"Creating encoder: {encoder}, pixel format: {pixelFormatStr}, {srcWidth}x{srcHeight} @ {srcFps:F0}fps");
 
-            IVideoWriter writer;
-            if (hwAccelEncode)
-            {
-                writer = new VideoWriterHWAccel
+            IVideoWriter writer = multiStream
+                ? new AlphaBrightnessVideoWriter
                 {
                     Width = srcWidth,
                     Height = srcHeight,
@@ -2132,20 +2134,33 @@ namespace projectFrameCut.StandaloneRender
                     PixelFormat = pixelFormatStr,
                     OutputPath = outputPath,
                     BitRate = bitRate,
-                };
-            }
-            else
+                    Channels = AuxiliaryVideoChannels.Alpha | AuxiliaryVideoChannels.Brightness,
+                }
+                : hwAccelEncode
+                    ? new VideoWriterHWAccel
+                    {
+                        Width = srcWidth,
+                        Height = srcHeight,
+                        FramePerSecond = (int)Math.Round(srcFps),
+                        CodecName = encoder,
+                        PixelFormat = pixelFormatStr,
+                        OutputPath = outputPath,
+                        BitRate = bitRate,
+                    }
+                    : new VideoWriter
+                    {
+                        Width = srcWidth,
+                        Height = srcHeight,
+                        FramePerSecond = (int)Math.Round(srcFps),
+                        CodecName = encoder,
+                        PixelFormat = pixelFormatStr,
+                        OutputPath = outputPath,
+                        BitRate = bitRate,
+                    };
+
+            if (multiStream && hwAccelEncode)
             {
-                writer = new VideoWriter
-                {
-                    Width = srcWidth,
-                    Height = srcHeight,
-                    FramePerSecond = (int)Math.Round(srcFps),
-                    CodecName = encoder,
-                    PixelFormat = pixelFormatStr,
-                    OutputPath = outputPath,
-                    BitRate = bitRate,
-                };
+                Log("WARNING: -preferHwAccelEncoder is not supported by multistream output; using the software writer.", "warn");
             }
 
             try
@@ -2170,9 +2185,19 @@ namespace projectFrameCut.StandaloneRender
             {
                 try
                 {
-                    using (var frame = source.GetFrame(i))
+                    using (var frame = multiStream && source is IHDRVideoSource hdrSource
+                        ? hdrSource.GetHDRFrame(i, hasAlpha: true)
+                        : source.GetFrame(i))
                     {
-                        writer.Append(frame);
+                        if (multiStream && frame.BitPerPixel != IPicture.PicturePixelMode.UShortPicture)
+                        {
+                            using var converted = frame.ToBitPerPixel(IPicture.PicturePixelMode.UShortPicture);
+                            writer.Append(converted);
+                        }
+                        else
+                        {
+                            writer.Append(frame);
+                        }
                         encodedCount++;
                     }
 
@@ -2216,6 +2241,7 @@ namespace projectFrameCut.StandaloneRender
             Log($"  Decoder           : {source.TypeName}", "stat");
             Log($"  Encoder           : {encoder}", "stat");
             Log($"  Pixel format      : {pixelFormatStr}", "stat");
+            Log($"  Multi-stream      : {multiStream}", "stat");
             Log($"  Bitrate           : {bitRate / 1000.0 / 1000.0:F1} Mbps", "stat");
             Log($"  Frames encoded    : {encodedCount}", "stat");
             Log($"  Total time        : {totalTime.TotalSeconds:F3}s", "stat");

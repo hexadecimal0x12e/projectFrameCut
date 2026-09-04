@@ -254,7 +254,7 @@ namespace projectFrameCut.Render.Compose
                     }
 
                     if (p16.HasAlphaChannel && p16.a is not null)
-                        SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, dstRow, w);
+                        SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, srcRow, dstRow, w);
                     else
                         SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, w);
                 }
@@ -275,7 +275,7 @@ namespace projectFrameCut.Render.Compose
                         srcRow, dstRow, w);
 
                     if (p8.HasAlphaChannel && p8.a is not null)
-                        SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, dstRow, w);
+                        SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, srcRow, dstRow, w);
                     else
                         SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, w);
                 }
@@ -306,16 +306,17 @@ namespace projectFrameCut.Render.Compose
                         srcRow, dstRow, w);
 
                     if (p16.HasAlphaChannel && p16.a is not null)
-                        SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, dstRow, w);
+                        SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, srcRow, dstRow, w);
                     else
                         SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, w);
 
                     if (outBrightness != null)
                     {
                         if (baseBrightness != null)
-                            SIMDAlphaProcessor.ClampAlpha(baseBrightness, outBrightness, w);
+                            SIMDAlphaProcessor.ClampAlphaOffset(baseBrightness, outBrightness, srcRow, dstRow, w);
                         else
-                            SIMDAlphaProcessor.EstimateBrightnessFromUshort(p16.r, p16.g, p16.b, outBrightness, w);
+                            SIMDAlphaProcessor.EstimateBrightnessFromUshortOffset(
+                                p16.r, p16.g, p16.b, srcRow, outBrightness, dstRow, w);
                     }
                 }
                 return;
@@ -335,14 +336,14 @@ namespace projectFrameCut.Render.Compose
                         srcRow, dstRow, w);
 
                     if (p8.HasAlphaChannel && p8.a is not null)
-                        SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, dstRow, w);
+                        SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, srcRow, dstRow, w);
                     else
                         SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, w);
 
                     if (outBrightness != null)
                     {
                         if (baseBrightness != null)
-                            SIMDAlphaProcessor.ClampAlpha(baseBrightness, outBrightness, w);
+                            SIMDAlphaProcessor.ClampAlphaOffset(baseBrightness, outBrightness, srcRow, dstRow, w);
                         else
                             SIMDAlphaProcessor.EstimateBrightnessFromUshortOffset(
                                 outR, outG, outB, dstRow, outBrightness, dstRow, w);

@@ -426,7 +426,7 @@ public partial class TestPage : ContentPage
                         denoiseDelta.Add(dn[i + 1] - dn[i]);
                     }
                     //await DisplayAlert("Info", $"avg delta: {delta.Average()}", "ok");
-                    var p = Path.Combine(FileSystem.CacheDirectory, $"dragtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.csv");
+                    var p = Path.Combine(MauiProgram.CachePath, $"dragtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.csv");
                     StreamWriter sw = new(p, append: false);
                     sw.WriteLine("i,PositionX,DenoisedX,DeltaX,DenoisedDeltaX");
                     for (int i = 0; i < delta.Count; i++)
@@ -926,7 +926,7 @@ public partial class TestPage : ContentPage
             var f = HDRPicture16bpp.GenerateSolidColor(2560, 1440, 32767, 32767, 32767, 1, 1, 10000);
             var w = new HDRVideoWriter
             {
-                OutputPath = Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
+                OutputPath = Path.Combine(MauiProgram.CachePath, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
                 Width = 2560,
                 Height = 1440,
                 FramePerSecond = 30,
@@ -964,18 +964,18 @@ public partial class TestPage : ContentPage
                     f.Brightness[idx] = 1f;
                 }
             }
-            f.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+            f.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
 
             for (int i = 0; i < 1; i++)
             {
                 c.TextEntries = [te with { Text = $"Frame {i}" }];
                 var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, 16);
-                textFrame.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+                textFrame.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 var t = HDRPicture16bpp.ToHDRPictureBySignal(textFrame, 5000);
                 Log(t.GetDiagnosticsInfo());
-                t.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+                t.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 var r = ClassicOverlayMixture.Default.Mix(f, t, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
-                r.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+                r.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 w.Append(r);
                 Log($"Wrote frame {i}, r:{r.GetDiagnosticsInfo()}");
             }
@@ -1002,9 +1002,9 @@ public partial class TestPage : ContentPage
             b = f.b,
             a = f.a
         };
-        fThrowBrightness.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fThrowBrightness.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fNormalizeBrigtnessToRGB = f.DegradeToSDR(HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB);
-        fNormalizeBrigtnessToRGB.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fNormalizeBrigtnessToRGB.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fReplaceAlpha = new Picture16bpp(f)
         {
             r = f.r,
@@ -1012,7 +1012,7 @@ public partial class TestPage : ContentPage
             b = f.b,
             a = f.Brightness
         };
-        fReplaceAlpha.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fReplaceAlpha.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fReplaceAlphaAndComposeMask = ClassicOverlayMixture.Default.Mix(fThrowBrightness, new Picture16bpp(f)
         {
             r = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
@@ -1020,10 +1020,10 @@ public partial class TestPage : ContentPage
             b = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
             a = f.Brightness.Select(c => Math.Clamp(1 - c, 0, 1)).ToArray()
         }, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
-        fReplaceAlphaAndComposeMask.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fReplaceAlphaAndComposeMask.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var w = new HDRVideoWriter
         {
-            OutputPath = Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
+            OutputPath = Path.Combine(MauiProgram.CachePath, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
             Width = 2560,
             Height = 1440,
             FramePerSecond = 30,
@@ -1202,7 +1202,7 @@ public partial class TestPage : ContentPage
         var vidFile = await FileSystemService.PickFileAsync();
         if (string.IsNullOrWhiteSpace(vidFile)) vidFile = await DisplayPromptAsync("info", "input src path");
         if (string.IsNullOrWhiteSpace(vidFile)) return;
-        var outputPath = Path.Combine(FileSystem.CacheDirectory, $"reencode-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4");
+        var outputPath = Path.Combine(MauiProgram.CachePath, $"reencode-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4");
         var src = PluginManager.CreateVideoSource(vidFile);
         var dest = new VideoWriterHWAccel
         {
@@ -1248,7 +1248,7 @@ public partial class TestPage : ContentPage
         .AddSlider("testSlider", "Test Slider:", 0, 100, 50)
         .AddSeparator(null)
         .AddCheckbox("testCheckbox", "Test Checkbox:", false)
-        .AddSwitch("testSwitch", "Test Switch:", true)
+        .AddCheckbox("testSwitch", "Test Switch:", true)
         .AddSeparator(null)
         .AddButton("testButton", "Click me!")
         .AddText(new projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders.InfoSingleLineLabel("abcdef", "ghijklm"))

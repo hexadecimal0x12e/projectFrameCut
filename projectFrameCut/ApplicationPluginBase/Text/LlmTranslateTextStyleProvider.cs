@@ -323,7 +323,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
             panel.AddEntry(ColorKey, "Source Color", GetOrDefault(ColorKey, "#FFFFFF"), "#FFFFFF");
             panel.AddEntry(TranslationColorKey, "Translation Color", GetOrDefault(TranslationColorKey, "#CFCFCF"), "#CFCFCF");
-            panel.AddSwitch(TranslationAutoGenerateKey, "Auto Generate", ParseBool(GetOrDefault(TranslationAutoGenerateKey, bool.TrueString), true));
+            panel.AddCheckbox(TranslationAutoGenerateKey, "Auto Generate", ParseBool(GetOrDefault(TranslationAutoGenerateKey, bool.TrueString), true));
             return panel;
         }
 

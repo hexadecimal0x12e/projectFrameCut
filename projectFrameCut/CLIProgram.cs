@@ -71,6 +71,8 @@ namespace projectFrameCut
             MauiProgram.BasicDataPath;
 #endif
 
+        public static string AppCachePath => MauiProgram.CachePath;
+
         public static int CLIMain(string[] args)
         {
             FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false; //avoid ready check exploding FFmpeg.AutoGen library before we set the root path
@@ -729,7 +731,10 @@ namespace projectFrameCut
             if (!switches.TryGetValue("output_options", out var outputSpec))
                 throw new ArgumentException("-output_options is required.");
             if (!switches.TryGetValue("temp_path", out var tempPath))
-                tempPath = Path.GetTempPath();
+            {
+                tempPath = MauiProgram.CachePath;
+                Directory.CreateDirectory(tempPath);
+            }
 
             var output = outputSpec.Split(',', StringSplitOptions.TrimEntries);
             if (output.Length != 5 || !int.TryParse(output[0], out var width) || !int.TryParse(output[1], out var height) || !int.TryParse(output[2], out var fps))
@@ -1393,6 +1398,7 @@ namespace projectFrameCut
             if (!PluginManager.Inited)
             {
                 try { GlobalPluginHelper.PluginsDataRootPath = dataRoot; PluginManager.InitGlobalGetter(); } catch (InvalidOperationException) { }
+                try { GlobalPluginHelper.CacheRootPath = AppCachePath; PluginManager.InitGlobalGetter(); } catch (InvalidOperationException) { }
                 PluginManager.Init(
                 [
                     new InternalPluginBase(),
