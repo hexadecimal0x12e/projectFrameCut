@@ -294,6 +294,8 @@ namespace projectFrameCut.Services
                     return (null, onLoadedFailure);
                 }
 
+                plugin = await PluginIsolationFactory.CreateAsync(plugin, verification, pluginRoot);
+
                 return (plugin, string.Empty);
             }
             catch (Exception ex)

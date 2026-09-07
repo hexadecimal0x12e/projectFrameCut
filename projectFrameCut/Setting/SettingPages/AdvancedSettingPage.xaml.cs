@@ -166,6 +166,8 @@ public partial class AdvancedSettingPage : ContentPage
         .AddText("UI", fontSize: 20)
         .AddCheckbox("ui_ForceUseShell", SettingLocalizedResources.Advanced_UseMAUIShell, SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
         .AddCheckbox("ui_ShowWelcomePage", SettingLocalizedResources.Advanced_ShowWelcomePage, SettingsManager.IsBoolSettingTrue("ui_ShowWelcomePage"))
+        .AddCheckbox("render_RpcServerShowConsole", SettingLocalizedResources.Render_RpcServerShowConsole, SettingsManager.IsBoolSettingTrue("render_RpcServerShowConsole"), null)
+        .AddCheckbox("plugin_IsolationShowConsole", SettingLocalizedResources.Plugin_IsolationShowConsole, SettingsManager.IsBoolSettingTrue("plugin_IsolationShowConsole"), null)
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.GeneralCodec_Title, fontSize: 20)

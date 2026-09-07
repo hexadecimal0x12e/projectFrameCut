@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls;
 using projectFrameCut.Setting.SettingPages;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -22,9 +22,6 @@ using projectFrameCut.Shared;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
-#if !DISABLE_POWERSHELL_SDK
-using projectFrameCut.ScriptEngine;
-#endif
 using System.ComponentModel;
 
 namespace projectFrameCut
@@ -255,10 +252,6 @@ namespace projectFrameCut
                     enableXAMLExternalSource: IsBoolSettingTrueOrDefault("Security_RichText_EnableXAMLExternalSource", false)
                 );
 
-                // Script 引擎审计模式
-#if !DISABLE_POWERSHELL_SDK
-                PSCommandAuthorizationHelper.AuditMode = IsBoolSettingTrueOrDefault("Security_Script_AuditMode", false);
-#endif
 
                 // 远程内容：HTTP 解码器
                 HttpDecoderContext.Enabled = IsBoolSettingTrueOrDefault("Security_RemoteContent_EnableHttpDecoder", true);

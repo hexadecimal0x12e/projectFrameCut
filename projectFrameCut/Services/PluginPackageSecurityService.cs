@@ -39,7 +39,7 @@ internal static class PluginPackageSecurityService
     public const string ManifestSignatureFileName = "manifest.sig";
     public const string PublisherChainFileName = "publisher-chain.pem";
 
-    private const string BuiltInRootCertificateSha256 = "88BD4DEBEF9243673892E4DEC11294EF0023D60C4616A0B5B9E40B6B3AB90EC1";
+    private const string BuiltInRootCertificateSha256 = "C3E7349066D93C16E45C292B34B9CDD3ADB32F9067315EA0ECB43C51839EF491";
     private const string BuiltInRootResourceName = "projectFrameCut.PluginTrust.builtin-root-ca.cer";
 
     private const string DevelopmentRootsStorageKey = "plugin_development_roots_v1";
@@ -57,7 +57,23 @@ internal static class PluginPackageSecurityService
     public static async Task<PluginPackageVerificationResult> VerifyExtractedPackageAsync(
         string pluginRoot,
         bool requirePublisherTrust,
+        CancellationToken cancellationToken = default) =>
+        await VerifyExtractedPackageCoreAsync(pluginRoot, requirePublisherTrust, null, cancellationToken);
+
+    public static async Task<PluginPackageVerificationResult> VerifyExtractedProjectPackageAsync(
+        string pluginRoot,
+        byte[] publisherCertificateDer,
         CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(publisherCertificateDer);
+        return await VerifyExtractedPackageCoreAsync(pluginRoot, false, publisherCertificateDer, cancellationToken);
+    }
+
+    private static async Task<PluginPackageVerificationResult> VerifyExtractedPackageCoreAsync(
+        string pluginRoot,
+        bool requirePublisherTrust,
+        byte[]? projectPublisherCertificateDer,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginRoot);
 
@@ -82,8 +98,11 @@ internal static class PluginPackageSecurityService
 
         var packageCertificates = PluginTrustValidator.LoadCertificateChainFromPem(
             await File.ReadAllTextAsync(chainPath, cancellationToken));
-        var trustedRoots = await LoadTrustedRootsAsync(cancellationToken);
-        var publisherTrusted = await IsPublisherTrustedAsync(manifest.PublisherId, manifest.PluginId);
+        var trustedRoots = projectPublisherCertificateDer is null
+            ? await LoadTrustedRootsAsync(cancellationToken)
+            : new X509Certificate2Collection(X509CertificateLoader.LoadCertificate(projectPublisherCertificateDer));
+        var publisherTrusted = projectPublisherCertificateDer is not null ||
+            await IsPublisherTrustedAsync(manifest.PublisherId, manifest.PluginId);
         PluginCertificateValidationResult certificateValidation;
         try
         {

@@ -6,6 +6,7 @@ namespace projectFrameCut.Render.Contracts;
 
 public static class RenderProtocol
 {
+    public const string AdditionalPipePrefix = "projectFrameCut-rpc-";
     public const int CurrentVersion = 3;
     public const int MinimumSupportedVersion = 2;
     public const int PipeProtocolVersion = 1;
@@ -28,6 +29,16 @@ public enum RenderOperation
 {
     [ProtoEnum] Unknown = 0,
     [ProtoEnum] GetCapabilities = 1,
+    [ProtoEnum] CreateAdditionalPipe = 18,
+    [ProtoEnum] GetExternalRpcRequest = 19,
+    [ProtoEnum] ResolveExternalRpcRequest = 20,
+    [ProtoEnum] RegisterGuiProject = 30,
+    [ProtoEnum] UnregisterGuiProject = 31,
+    [ProtoEnum] GetGuiProjectWork = 32,
+    [ProtoEnum] CompleteGuiProjectWork = 33,
+    [ProtoEnum] InvokeGuiProject = 34,
+    [ProtoEnum] GetGuiProjectSession = 35,
+    [ProtoEnum] CreateGuiProjectPipe = 36,
     [ProtoEnum] OpenProject = 2,
     [ProtoEnum] CloseProject = 3,
     [ProtoEnum] GetProjectSnapshot = 4,
@@ -60,6 +71,24 @@ public enum RenderOperation
     [ProtoEnum] RemoveHeadlessEffectProvider = 113,
     [ProtoEnum] SaveHeadlessProject = 114,
     [ProtoEnum] ApplyHeadlessProjectEdit = 115,
+    [ProtoEnum] IsolationNegotiate = 2000,
+    [ProtoEnum] IsolationLoadPlugin = 2001,
+    [ProtoEnum] IsolationCreateProvider = 2002,
+    [ProtoEnum] IsolationBuildProvider = 2003,
+    [ProtoEnum] IsolationCloneEffect = 2004,
+    [ProtoEnum] IsolationReleaseObject = 2005,
+    [ProtoEnum] IsolationProcessNormalEffect = 2006,
+    [ProtoEnum] IsolationProcessContinuousEffect = 2007,
+    [ProtoEnum] IsolationProcessMixture = 2008,
+    [ProtoEnum] IsolationSupportsSourceReplacement = 2009,
+    [ProtoEnum] IsolationProcessSourceReplacement = 2010,
+    [ProtoEnum] IsolationCreateVideoSource = 2011,
+    [ProtoEnum] IsolationInitializeVideoSource = 2012,
+    [ProtoEnum] IsolationReadVideoFrame = 2013,
+    [ProtoEnum] IsolationShutdown = 2014,
+    [ProtoEnum] IsolationAuthorizePlugin = 2015,
+    [ProtoEnum] IsolationInvokeProjectTool = 2016,
+    [ProtoEnum] IsolationUpdateProjectPluginConfiguration = 2017,
 }
 
 [ProtoContract]
@@ -166,11 +195,28 @@ public sealed class RenderResponseEnvelope
     [ProtoMember(2)] public Guid RequestId { get; set; }
     [ProtoMember(3)] public byte[] Payload { get; set; } = [];
     [ProtoMember(4)] public RemoteError? Error { get; set; }
+    [ProtoMember(5)] public List<RemoteLogEntry> Logs { get; set; } = [];
+}
+
+[ProtoContract]
+public sealed class RemoteLogEntry
+{
+    [ProtoMember(1)] public string Level { get; set; } = "info";
+    [ProtoMember(2)] public string Message { get; set; } = string.Empty;
 }
 
 [ProtoContract]
 public sealed class EmptyRequest
 {
+}
+
+[ProtoContract]
+public sealed class CreateAdditionalPipeRequest { }
+
+[ProtoContract]
+public sealed class CreateAdditionalPipeResponse
+{
+    [ProtoMember(1)] public string Token { get; set; } = string.Empty;
 }
 
 [ProtoContract]

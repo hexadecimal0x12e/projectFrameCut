@@ -1,15 +1,17 @@
 using FFmpeg.AutoGen;
-using projectFrameCut.Asset;
+using LocalizedResources;
 using projectFrameCut.ApplicationAPIBase.Plugins;
-using projectFrameCut.Drawing.Base;
+using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.IntegratedAPIServer;
 using projectFrameCut.IntegratedAPIServer.Headless;
 using projectFrameCut.IntegratedAPIServer.MCP;
-using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -22,16 +24,15 @@ using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Runtime;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using static projectFrameCut.Shared.Logger;
 using IPicture = projectFrameCut.Drawing.Base.IPicture;
-using projectFrameCut.Render.HwAccelEngine;
-using LocalizedResources;
-using System.Diagnostics.CodeAnalysis;
 
 
 
@@ -145,16 +146,26 @@ namespace projectFrameCut
 
             InitializeCliLocalization(args);
 
+
             switch (args[0].ToLowerInvariant())
             {
                 case "mcp":
+                    StartLog(args[0].ToLowerInvariant());
                     return RunMcp(args.Skip(1).ToArray());
                 case "headless":
+                    StartLog(args[0].ToLowerInvariant());
                     return RunBackend(args.Skip(1).ToArray());
                 case "rpc_server":
+                    StartLog(args[0].ToLowerInvariant());
                     return RunRpcServer(args.Skip(1).ToArray());
+                case "rpc_request":
+                    return RunRpcRequestAsync(args.Skip(1).ToArray()).GetAwaiter().GetResult();
                 case "render":
+                    StartLog(args[0].ToLowerInvariant());
                     return RunRender(args.Skip(1).ToArray());
+                case "sandbox_worker":
+                    StartLog(args[0].ToLowerInvariant());
+                    return RunSandboxWorker(args.Skip(1).ToArray());
                 case "about":
                     WriteAbout();
                     return 0;
@@ -165,11 +176,44 @@ namespace projectFrameCut
             return InvalidCommandExitCode;
         }
 
+        private static void StartLog(string mode)
+        {
+            try
+            {
+                if (Environment.GetEnvironmentVariables().Contains("PJFC_NO_LOG") || Environment.GetCommandLineArgs().Contains("--noLog"))
+                {
+                    return;
+                }
+                var logPath = Path.Combine(AppDataPath, "logging", $"log-{mode}-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log");
+                var logDir = Path.GetDirectoryName(logPath);
+                if (!string.IsNullOrWhiteSpace(logDir) && !Directory.Exists(logDir))
+                {
+                    Directory.CreateDirectory(logDir);
+                }
+                var logWriter = new StreamWriter(logPath, append: true)
+                {
+                    AutoFlush = true
+                };
+                MyLoggerExtensions.OnLog += (m, l) =>
+                {
+                    try
+                    {
+                        logWriter.WriteLine($"[{DateTime.Now:T} @ {l}] {m}");
+                    }
+                    catch { }
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Failed to start logging: {ex.Message}");
+            }
+        }
+
         private static int WriteCommandHelp(string command)
         {
-            if (command.Equals("rpc_server", StringComparison.OrdinalIgnoreCase))
+            if (command.Equals("rpc_request", StringComparison.OrdinalIgnoreCase))
             {
-                WriteRpcServerHelp();
+                WriteRpcRequestHelp();
                 return SuccessExitCode;
             }
 
@@ -196,6 +240,23 @@ namespace projectFrameCut
                 WriteGuiHelp();
                 return SuccessExitCode;
             }
+
+#if WINDOWS || LINUX
+            if (command.Equals("accels", StringComparison.OrdinalIgnoreCase))
+            {
+                Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
+                var devices = context.Devices.ToList();
+                List<AcceleratorInfo> listAccels = new();
+                for (uint i = 0; i < devices.Count; i++)
+                {
+                    var item = devices[(int)i];
+                    listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
+                }
+                Console.Error.WriteLine(JsonSerializer.Serialize(listAccels, new JsonSerializerOptions { WriteIndented = true }));
+                Console.ReadLine();
+                return 0;
+            }
+#endif
 
             Console.Error.WriteLine($"No help topic found for '{command}'.");
             Console.Error.WriteLine("Run 'pjfc help' to see the available topics.");
@@ -531,11 +592,6 @@ namespace projectFrameCut
         {
             try
             {
-                if (args.Any(IsHelpOption))
-                {
-                    WriteRpcServerHelp();
-                    return SuccessExitCode;
-                }
                 var pipe = GetOption(args, "pipe") ?? string.Empty;
                 var token = GetOption(args, "token") ?? string.Empty;
                 var parentPid = GetOption(args, "parentPid", required: false);
@@ -543,7 +599,6 @@ namespace projectFrameCut
                 if (string.IsNullOrWhiteSpace(pipe) || string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(dataRoot))
                 {
                     Console.Error.WriteLine("rpc_server requires --pipe=<pipe-name> and --token=<token> and --dataRoot=<path>.");
-                    WriteRpcServerHelp();
                     return InvalidCommandExitCode;
                 }
 
@@ -560,7 +615,6 @@ namespace projectFrameCut
                     if (!Uri.TryCreate(httpListen, UriKind.Absolute, out httpListenUri))
                     {
                         Console.Error.WriteLine("rpc_server --http requires an absolute <http[s]://host:port> listen address.");
-                        WriteRpcServerHelp();
                         return InvalidCommandExitCode;
                     }
 
@@ -619,7 +673,8 @@ namespace projectFrameCut
             await using var httpHost = httpListenUri is null
                 ? null
                 : await StartHttpRpcServerAsync(service, httpListenUri, httpToken!, httpProjectRoot, dataRoot, cancellationToken).ConfigureAwait(false);
-            await new NamedPipeRenderServer(service).RunAsync(pipe, token, parentPid, cancellationToken).ConfigureAwait(false);
+            await new NamedPipeRenderServer(service, allowAdditionalPipes: true, requestDirectory: Path.Combine(AppDataPath, "RpcRequest"))
+                .RunAsync(pipe, token, parentPid, cancellationToken).ConfigureAwait(false);
             return SuccessExitCode;
         }
 
@@ -666,6 +721,25 @@ namespace projectFrameCut
             {
                 await server.DisposeAsync().ConfigureAwait(false);
                 await headlessService.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
+        private static int RunSandboxWorker(string[] args)
+        {
+            try
+            {
+#if WINDOWS
+                Platforms.Windows.WindowsPluginIsolationPlatform.ValidateWorkerProcess();
+                projectFrameCut.Render.PluginIsolation.PluginIsolationWorker.RunAsync(args).GetAwaiter().GetResult();
+                return SuccessExitCode;
+#else
+                throw new PlatformNotSupportedException("The sandbox worker requires Windows AppContainer activation.");
+#endif
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[SandboxWorker/error] {ex.GetType().Name}: {ex.Message}");
+                return 1;
             }
         }
 
@@ -748,6 +822,12 @@ namespace projectFrameCut
             var jsonOptions = new JsonSerializerOptions { NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
             var projectFile = File.Exists(Path.Combine(projectRoot, "project.pjfc")) ? "project.pjfc" : "project.json";
             var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(projectRoot, projectFile)), jsonOptions) ?? new();
+            if (project.ProjectPlugins?.Any(x => x.Enabled) == true)
+            {
+                var projectPluginLoad = await ProjectPluginService.LoadProjectPluginsAsync(projectRoot, project, _ => Task.FromResult(false), cancellationToken);
+                if (projectPluginLoad.Failed.Count > 0)
+                    throw new InvalidOperationException("Project plugins failed to load: " + string.Join("; ", projectPluginLoad.Failed.Select(x => $"{x.Key}: {x.Value}")));
+            }
             var timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(projectRoot, "timeline.json")), jsonOptions) ?? new();
 
             var assets = new ConcurrentDictionary<string, AssetItem>();
@@ -1391,10 +1471,110 @@ namespace projectFrameCut
 
         #endregion
 
+        #region rpc
+        private static async Task<int> RunRpcRequestAsync(string[] args)
+        {
+            if (args.Any(IsHelpOption)) { WriteRpcRequestHelp(); return 0; }
+            using var rsa = RSA.Create(3072);
+            using var cancellation = new CancellationTokenSource();
+            ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; cancellation.Cancel(); };
+            Console.CancelKeyPress += cancel;
+            string? path = null;
+            var wait = args.Any(a => a.Equals("--wait", StringComparison.OrdinalIgnoreCase));
+            try
+            {
+                var publicKeyPath = GetOption(args, "publicKey", false);
+                if (wait && publicKeyPath is not null) throw new ArgumentException("--wait generates its own in-memory key; do not supply --publicKey.");
+                if (!wait && publicKeyPath is null) throw new ArgumentException("Supply --publicKey=<public PEM file> or --wait.");
+                var seconds = int.Parse(GetOption(args, "timeout", false) ?? "300");
+                if (seconds < 5 || seconds > 3600) throw new ArgumentException("--timeout must be 5-3600 seconds.");
+                if (!wait) rsa.ImportFromPem(File.ReadAllText(publicKeyPath!));
+                var request = new ExternalRpcRequest
+                {
+                    AppName = GetOption(args, "name", false) ?? "",
+                    Author = GetOption(args, "author", false) ?? "",
+                    Purpose = GetOption(args, "purpose", false) ?? "",
+                    PublicKey = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo()),
+                    ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(seconds),
+                };
+                request.Validate();
+                var directory = Path.GetFullPath(GetOption(args, "requestDir", false) ?? Path.Combine(AppDataPath, "RpcRequest"));
+                Directory.CreateDirectory(directory);
+                path = Path.Combine(directory, $"{request.RequestId:N}.json");
+                var temporary = path + ".tmp";
+                try
+                {
+                    await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(request), cancellation.Token).ConfigureAwait(false);
+                    File.Move(temporary, path);
+                }
+                finally { if (File.Exists(temporary)) File.Delete(temporary); }
+                if (!wait)
+                {
+                    Console.WriteLine(JsonSerializer.Serialize(new { request.RequestId, Path = path }));
+                    return 0;
+                }
+                while (DateTimeOffset.UtcNow < request.ExpiresAt)
+                {
+                    cancellation.Token.ThrowIfCancellationRequested();
+                    ExternalRpcRequest? response = null;
+                    try { response = ExternalRpcRequest.ReadFile(path); }
+                    catch (IOException) { }
+                    catch (JsonException) { }
+                    if (response is not null)
+                    {
+                        if (response.RequestId != request.RequestId || response.PublicKey != request.PublicKey)
+                            throw new ArgumentException("RPC response does not match the request.");
+                        if (response.Status == "approved")
+                        {
+                            var connection = JsonSerializer.Deserialize<ExternalRpcConnection>(rsa.Decrypt(
+                                Convert.FromBase64String(response.EncryptedConnection), RSAEncryptionPadding.OaepSHA256))
+                                ?? throw new ArgumentException("Empty RPC connection.");
+                            if (connection.RequestId != request.RequestId || connection.Token.Length != 64 ||
+                                !connection.Token.All(Uri.IsHexDigit) || connection.PipeName != RenderProtocol.AdditionalPipePrefix + connection.Token)
+                                throw new ArgumentException("Invalid RPC connection response.");
+                            Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "success", connection }));
+                            return 0;
+                        }
+                        if (response.Status != "pending")
+                        {
+                            Console.Error.WriteLine(JsonSerializer.Serialize(new { status = response.Status }));
+                            return response.Status == "denied" ? 3 : response.Status == "expired" ? 4 : 1;
+                        }
+                    }
+                    await Task.Delay(250, cancellation.Token).ConfigureAwait(false);
+                }
+                Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "timeout" }));
+                return 4;
+            }
+            catch (OperationCanceledException) { return 130; }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"RPC request failed: {ex.Message}");
+                return ex is ArgumentException or FormatException ? 2 : 1;
+            }
+            finally
+            {
+                Console.CancelKeyPress -= cancel;
+                if (wait && path is not null)
+                {
+                    try { File.Delete(path); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+                }
+            }
+        }
+
+        #endregion
+
         #region misc
 
         internal static void InitializeRenderRuntime(string dataRoot, string ffmpegRoot = "")
         {
+            PluginManager.ProjectPluginLoader = async (projectRoot, project, cancellationToken) =>
+            {
+                var result = await ProjectPluginService.LoadProjectPluginsAsync(projectRoot, project, _ => Task.FromResult(false), cancellationToken);
+                if (result.Failed.Count > 0)
+                    throw new InvalidOperationException("Project plugins failed to load: " + string.Join("; ", result.Failed.Select(x => $"{x.Key}: {x.Value}")));
+            };
+            PluginManager.ProjectPluginUnloader = ProjectPluginService.UnloadProjectPluginsAsync;
             if (!PluginManager.Inited)
             {
                 try { GlobalPluginHelper.PluginsDataRootPath = dataRoot; PluginManager.InitGlobalGetter(); } catch (InvalidOperationException) { }
@@ -1537,6 +1717,7 @@ Usage:
   pjfc help [command]
 
 Commands:
+  rpc_request Request an external RPC pipe with interactive approval.
   gui        Launch the projectFrameCut graphical interface.
   render     Run the built-in renderer.
   headless   Start the headless backend for remote access and automation.
@@ -1641,6 +1822,26 @@ The backend loads the project before accepting RPC requests and keeps running un
 ");
         }
 
+        private static void WriteRpcRequestHelp()
+        {
+            Console.WriteLine(
+"""
+Usage:
+    pjfc rpc_request --name=<app> --author=<author> --purpose=<purpose> --wait
+    pjfc rpc_request --name=<app> --author=<author> --purpose=<purpose> --publicKey=<public.pem>
+
+--wait          Generate an ephemeral private key, wait for approval, and print connection JSON.
+--publicKey     Submit using the caller's RSA public PEM key; print request ID and file path.
+--timeout       Request lifetime in seconds (5-3600; default 300).
+--requestDir    Override the default AppData/RpcRequest directory (must match the target app).
+
+Open a local project in projectFrameCut to authorize. No callback command is executed.
+Responses replace the request file; EncryptedConnection uses RSA-OAEP-SHA256.
+--wait prints PipeName and Token in plaintext to stdout for the calling program only.
+Exit codes: 0 success/submitted, 1 failure, 2 invalid arguments, 3 denied, 4 expired, 130 canceled.
+""");
+        }
+
         private static void WriteGuiHelp()
         {
             Console.WriteLine(
@@ -1689,25 +1890,6 @@ Application options:
 
   --basicUserData=<path>           Override the application-data directory used
                                    for settings and other internal state in one run.
-
-  --scripting=disable|enable|enableWithHostingPipe        
-                                   Control the scripting engine for this run. 
-                                   if this argument is omitted, the scripting engine 
-                                   is controlled by the user preferences.
-
-                                   'disable' disables scripting whatever the user preferences are.
-
-                                   'enable' enables scripting when the user preferences 
-                                   are not disabled scripting engine (default behavior).
-
-                                   'enableWithHostingPipe' is very dangerous and 
-                                   should only be used in a secure environment, because 
-                                   it allows arbitrary code execution from a remote process.
-
-                                   When scripting is disabled in the user preferences,  
-                                   the scripting engine is always disabled and this argument has no effect.
-
-
 
 Platform-specific options:
   gtkArg:<argument for GTK>        Linux only: pass an argument to the GTK runtime. For example, 
@@ -1823,15 +2005,6 @@ For full functionality of out-of-process rendering, use StandaloneRender.
 The render command is executed in-process and uses the same Renderer,
 VideoBuilder, audio composer, plugin manager, and accelerator manager as the GUI.
 For the usage of params, refer to the StandaloneRender's documentation.
-");
-        }
-
-        private static void WriteRpcServerHelp()
-        {
-            Console.WriteLine(
-@"Start the projectFrameCut Render RPC server
-This is internal command used by the GUI to start the Render RPC server.
-It is not intended to be run directly by users. The command is normally started by the graphical application.
 ");
         }
 

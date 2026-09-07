@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Core;
 using Microsoft.Maui.Storage;
 using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Helpers;
@@ -22,9 +22,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
-#if !DISABLE_POWERSHELL_SDK
-using System.Management.Automation;
-#endif
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -674,7 +671,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 TemplateId = kv.Key,
                 Name = string.IsNullOrWhiteSpace(template.TemplateName) ? kv.Key.ToString() : template.TemplateName,
-                TemplateType = template.TemplateType.ToString(),
+                TemplateType = template is ScriptBasedTemplateStructure ? "Script (unsupported)" : template.TemplateType.ToString(),
                 Scope = template.Scope.ToString(),
                 Template = template
             };
@@ -818,31 +815,16 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             return;
         }
 
-        // ---- 原有 JSON 模板逻辑 ----
+        if (templateViewModel.Template is ScriptBasedTemplateStructure)
+        {
+            await _draftPage.DisplayAlertAsync(Localized._Error, "Script templates are no longer supported.", Localized._OK);
+            return;
+        }
+
         if (templateViewModel.Template is not JSONBasedTemplateStructure jsonTemplate)
         {
-            if (templateViewModel.Template is ScriptBasedTemplateStructure scriptTemplate)
-            {
-                jsonTemplate = new JSONBasedTemplateStructure
-                {
-                    TemplateName = scriptTemplate.TemplateName,
-                    TemplateID = scriptTemplate.TemplateID,
-                    Scope = scriptTemplate.Scope,
-                    Draft = scriptTemplate.Draft ?? new DraftStructureJSON(),
-                    Project = scriptTemplate.Project ?? new ProjectJSONStructure(),
-                    AssetHashTable = scriptTemplate.AssetHashTable,
-                    CreatedInAPIVersion = scriptTemplate.CreatedInAPIVersion,
-                    HaveAsset = scriptTemplate.HaveAsset,
-                    TemplateVersion = scriptTemplate.TemplateVersion,
-                    VariableDefinitions = scriptTemplate.VariableDefinitions,
-                    Variables = scriptTemplate.Variables
-                };
-            }
-            else
-            {
-                await _draftPage.DisplayAlertAsync(Localized._Info, "the templates are not supported for timeline insertion.", Localized._OK);
-                return;
-            }
+            await _draftPage.DisplayAlertAsync(Localized._Info, "This template does not support timeline insertion.", Localized._OK);
+            return;
         }
 
         try
@@ -928,14 +910,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             if (templateClips.Count == 0)
             {
-                if (templateViewModel.Template is ScriptBasedTemplateStructure scriptTemplate)
-                {
-                    await ApplyScriptTemplateAsync(scriptTemplate, templateViewModel.Name);
-                }
-                else
-                {
-                    await _draftPage.DisplayAlertAsync(Localized._Info, "This template has no valid timeline clips.", Localized._OK);
-                }
+                await _draftPage.DisplayAlertAsync(Localized._Info, "This template has no valid timeline clips.", Localized._OK);
                 return;
             }
 
@@ -1077,14 +1052,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
                 _ = _draftPage.UpdateAdjacencyForTrack();
                 return firstClip ?? throw new InvalidOperationException("No clip could be placed from template.");
-            }, trackFilter, templateViewModel.Name,
-            async () =>
-            {
-                if (templateViewModel.Template is ScriptBasedTemplateStructure scriptTemplate)
-                {
-                    await ApplyScriptTemplateAsync(scriptTemplate, templateViewModel.Name, inputValues);
-                }
-            });
+            }, trackFilter, templateViewModel.Name);
 
             ClipAdded?.Invoke(this, EventArgs.Empty);
         }
@@ -1117,79 +1085,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             inputView.CloseRequested -= closeRequestedHandler;
         }
     }
-
-    /// <summary>
-    /// 应用脚本模板：用户填入变量 → 注入 PowerShell 运行空间 → 执行脚本。
-    /// </summary>
-#if !DISABLE_POWERSHELL_SDK
-    private async Task ApplyScriptTemplateAsync(ScriptBasedTemplateStructure template, string? name, Dictionary<string, string?>? inputValues = null)
-    {
-        string? tempExtractDir = null;
-        try
-        {
-            // 0. 从 .pjfcTemplate 包中提取并读取脚本内容
-            string scriptContent;
-            try
-            {
-                var (_, dir) = await TemplatePackageIO.ExtractStoredTemplateAsync(
-                    template.TemplateID, DraftPage.DraftJSONOption);
-                tempExtractDir = dir;
-
-                var scriptFilePath = Path.Combine(dir, "script.ps1");
-                if (!File.Exists(scriptFilePath))
-                {
-                    await _draftPage.DisplayAlertAsync(Localized._Error,
-                        $"模板「{template.TemplateName}」没有关联脚本。", Localized._OK);
-                    return;
-                }
-
-                scriptContent = await File.ReadAllTextAsync(scriptFilePath);
-            }
-            catch (FileNotFoundException)
-            {
-                await _draftPage.DisplayAlertAsync(Localized._Error,
-                    $"找不到模板「{template.TemplateName}」的包文件。", Localized._OK);
-                return;
-            }
-
-            // 1. 获取变量输入
-            inputValues ??= await PromptTemplateValuesWithViewAsync(template, name);
-            if (inputValues is null)
-                return;
-
-            // 2. 准备脚本运行环境：将填充后的变量注入 ScriptEngine
-            var scriptVars = new Dictionary<string, object?>();
-            foreach (var (key, value) in inputValues)
-                scriptVars[key] = value;
-            scriptVars["TemplateName"] = template.TemplateName;
-
-            _draftPage.ScriptEngine.SetVariables(scriptVars);
-
-            // 3. 执行脚本
-            var result = await _draftPage.ScriptEngine.ExecuteAsync(scriptContent);
-
-            await _draftPage.DisplayAlertAsync(Localized._Info, $"成功导入模板「{template.TemplateName}」。\n\n{result}", Localized._OK);
-
-            // 5. 刷新时间线
-            ClipAdded?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "apply script template", this);
-            await _draftPage.DisplayAlertAsync(Localized._Error,
-                $"执行脚本模板「{template.TemplateName}」时出错：{ex.Message}", Localized._OK);
-        }
-        finally
-        {
-            TemplatePackageIO.TryCleanupExtractDir(tempExtractDir);
-        }
-    }
-#else
-    private Task ApplyScriptTemplateAsync(ScriptBasedTemplateStructure template, string? name, Dictionary<string, string?>? inputValues = null)
-    {
-        return Task.CompletedTask;
-    }
-#endif
 
     private static void ReplaceTemplatePlaceholders(
         JsonNode? node,

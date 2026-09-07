@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFrameworks>net10.0-android;net10.0_linux</TargetFrameworks>
@@ -69,7 +69,6 @@
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 		<AppxPackageDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\AppPackages\</AppxPackageDir>
 
-		<PwshSDKVersion>7.6.5</PwshSDKVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
@@ -105,7 +104,7 @@
 		<MtouchDebug>True</MtouchDebug>
 		<IpaIncludeArtwork>False</IpaIncludeArtwork>
 		<ProvisioningType>manual</ProvisioningType>
-		<DefineConstants>$(DefineConstants);iDevices;DISABLE_POWERSHELL_SDK;MAUISDK</DefineConstants>
+		<DefineConstants>$(DefineConstants);iDevices;MAUISDK</DefineConstants>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
@@ -121,7 +120,7 @@
 		<MtouchDebug>True</MtouchDebug>
 		<IpaIncludeArtwork>False</IpaIncludeArtwork>
 		<ProvisioningType>manual</ProvisioningType>
-		<DefineConstants>$(DefineConstants);iDevices;DISABLE_POWERSHELL_SDK;MAUISDK</DefineConstants>
+		<DefineConstants>$(DefineConstants);iDevices;MAUISDK</DefineConstants>
 		<MtouchInterpreter>all</MtouchInterpreter>
 		<PublishReadyToRun>false</PublishReadyToRun>
 	</PropertyGroup>
@@ -146,9 +145,7 @@
 		<MauiAsset Include="Resources\Styles\**" LogicalName="Styles\%(RecursiveDir)%(Filename)%(Extension)" />
 
 		<!-- Plugin trusting Root CA -->
-		<EmbeddedResource Include="Resources\PluginTrust\builtin-root-ca.cer"
-					LogicalName="projectFrameCut.PluginTrust.builtin-root-ca.cer"
-					Condition="Exists('Resources\PluginTrust\builtin-root-ca.cer')" />
+		<EmbeddedResource Include="Resources\PluginTrust\builtin-root-ca.cer" LogicalName="projectFrameCut.PluginTrust.builtin-root-ca.cer" Condition="Exists('Resources\PluginTrust\builtin-root-ca.cer')" />
 	</ItemGroup>
 
 
@@ -187,6 +184,7 @@
 		<ProjectReference Include="..\projectFrameCut.IntegratedAPIServer\projectFrameCut.IntegratedAPIServer.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render.Contracts\projectFrameCut.Render.Contracts.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render.HwAccelEngine\projectFrameCut.Render.HwAccelEngine.csproj" />
+		<ProjectReference Include="..\projectFrameCut.Render.RPCProtocol\projectFrameCut.Render.RPCProtocol.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
 	</ItemGroup>
@@ -198,8 +196,6 @@
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<PackageReference Include="Microsoft.Graphics.Win2D" Version="1.4.0" />
-		<PackageReference Include="Microsoft.PowerShell.SDK" Version="$(PwshSDKVersion)" />
-		<PackageReference Include="PowerShellStandard.Library" Version="5.1.1" />
 		<PackageReference Include="Woohoo.Platform.Windows" Version="0.1.0" />
 		<PackageReference Include="System.Management" Version="*" /> <!-- pwsh SDK relys on this library so we don't fix the version -->
 		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
@@ -213,8 +209,6 @@
 
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-		<PackageReference Include="Microsoft.PowerShell.SDK" Version="$(PwshSDKVersion)" ExcludeAssets="native" /> <!-- Microsoft.PowerShell.Native has a native lib which was not compactable with android, so we exclude it -->
-		<PackageReference Include="PowerShellStandard.Library" Version="5.1.1" />
 		<AndroidMavenLibrary Include="io.github.kyant0:fishnet" Version="1.1.0" />
 		<AndroidNativeLibrary Include="..\..\playground\FFmpeg\android\**\*.so" />
 		<AndroidNativeLibrary Include="Platforms\Android\nativeLibs\**\*.so" />
@@ -240,11 +234,9 @@
 	</PropertyGroup>
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
-		<Compile Remove="ScriptEngine\**\*.cs" />
 	</ItemGroup>
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
-		<Compile Remove="ScriptEngine\**\*.cs" />
 	</ItemGroup>
 
 	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
@@ -257,8 +249,6 @@
 	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
 		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4" Version="0.1.0-preview.12.26368.2" />
 		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4.Essentials" Version="0.1.0-preview.12.26368.2" />
-		<PackageReference Include="Microsoft.PowerShell.SDK" Version="$(PwshSDKVersion)" />
-		<PackageReference Include="PowerShellStandard.Library" Version="5.1.1" />
 	</ItemGroup>
 
 	<Target Name="RestorePlatformCompileItems" BeforeTargets="CoreCompile">

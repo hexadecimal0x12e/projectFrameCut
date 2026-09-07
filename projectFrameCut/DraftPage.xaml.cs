@@ -55,11 +55,10 @@ using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using CommunityToolkit.Maui.Extensions;
-using projectFrameCut.Drawing.Base.Picture;
-#if !DISABLE_POWERSHELL_SDK
-using projectFrameCut.ScriptEngine;
-#endif
-
+using projectFrameCut.ApplicationAPIBase.Plugins;
+using System.Security.Cryptography;
+using System.Globalization;
+using System.Text.Json.Nodes;
 
 #if WINDOWS
 using Windows.ApplicationModel.DataTransfer;
@@ -255,15 +254,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ConcurrentDictionary<int, AbsoluteLayout> Tracks = new();
     public ConcurrentDictionary<string, AssetItem> Assets = new();
 
-    /// <summary>
-    /// 集成的 PowerShell 脚本引擎，可通过 <c>ScriptEngine.ExecuteAsync()</c> 执行脚本，
-    /// 内置 Get-ProjectClip / Add-ProjectClip 等命令与当前时间线交互。
-    /// </summary>
-#if !DISABLE_POWERSHELL_SDK
-    public ScriptCore ScriptEngine { get; } = new();
-#else
-    public object? ScriptEngine => null;
-#endif
 
     public string WorkingPath { get; set; } = "";
     public event EventHandler<ClipUpdateEventArgs>? OnClipChanged;
@@ -299,6 +289,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand NextFrameCommand { get; private set; }
     public ICommand CleanRenderCacheCommand { get; private set; }
     public ICommand RestartBackendCommand { get; private set; }
+    public ICommand CreateRpcTokenCommand { get; private set; }
     public ICommand ArrowRightCommand { get; private set; }
     public ICommand ArrowLeftCommand { get; private set; }
     public ICommand ArrowUpCommand { get; private set; }
@@ -317,7 +308,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand SetTimelineScrollLockCommand { get; private set; }
     public ICommand TimelineScrollCommand { get; private set; }
     public ICommand FollowPlayheadCommand { get; private set; }
-    public ICommand ShowScriptWindowCommand { get; private set; }
 
     public bool _ShouldShowClipMoveControlInCenterInfoBar => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is null : true;
     public bool _ShouldShowCenterCompactControlGrid => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is not null : false;
@@ -536,11 +526,28 @@ public partial class DraftPage : ContentPage, IDraftPage
         _ = ClipEditor.UpdateClips(Clips);
         InitializeWorkspace();
 
-#if !DISABLE_POWERSHELL_SDK
-        ScriptEngine.Initialize(this,
-            CreatePowerShellAuthorizationHandler(this),
-            CreateEnhancedPowerShellAuthorizationHandler(this));
-#endif
+    }
+
+    private async Task CreateRpcTokenAsync()
+    {
+        try
+        {
+            if (AlreadyDisappeared) return;
+            if (IsRemoteProject) throw new NotSupportedException("External pipes must be created on the local render backend.");
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var client = RenderRpcBootstrap.Client;
+            var sessionId = await EnsureGuiRpcSessionAsync(client, timeout.Token);
+            var result = await client.CreateGuiProjectPipeAsync(new() { SessionId = sessionId }, timeout.Token);
+            if (AlreadyDisappeared) return;
+            await DisplayAlertAsync(Localized.DraftPage_CreateRpcToken,
+                $"{result.Token}\n\n{RenderProtocol.AdditionalPipePrefix}{{TOKEN}}", Localized._OK);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Create external RPC token", this);
+            if (!AlreadyDisappeared)
+                await DisplayAlertAsync(Localized._Error, Localized.DraftPage_CreateRpcTokenFailed, Localized._OK);
+        }
     }
 
     private void RegisterCommands()
@@ -570,6 +577,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         NextFrameCommand = new Command(async () => await MovePlayhead(1));
         CleanRenderCacheCommand = new Command(async () => await CleanRenderCache());
         RestartBackendCommand = new Command(async () => await RestartRenderBackendAsync(showErrorDialog: true));
+        CreateRpcTokenCommand = new Command(async () => await CreateRpcTokenAsync());
         ArrowLeftCommand = new Command(async () => await HandleMoveArrowAsync(-SnapGridPixels, 0));
         ArrowRightCommand = new Command(async () => await HandleMoveArrowAsync(SnapGridPixels, 0));
         ArrowUpCommand = new Command(async () => await HandleMoveArrowAsync(0, -1));
@@ -598,9 +606,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                 await HandleMoveArrowAsync(offset, 0, invertScrollLockBehavior: true);
         });
         FollowPlayheadCommand = new Command(async () => await ScrollTimelineToPlayhead());
-#if !DISABLE_POWERSHELL_SDK
-        ShowScriptWindowCommand = new Command(ShowScriptWindow);
-#endif
 
         EscapeCommand =
             new Command(async () =>
@@ -4868,7 +4873,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region asset
-    private async Task AddAsset(string path)
+    internal async Task AddAsset(string path, bool showAssetPanel = true)
     {
         SetStateBusy(Localized.DraftPage_PrepareAsset);
         try
@@ -4912,11 +4917,14 @@ public partial class DraftPage : ContentPage, IDraftPage
             Log($"Added asset '{item.Path}'s info: {item.Duration} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.Duration * item.SecondPerFrame} s");
             Assets.AddOrUpdate(cid, item, (_, _) => item);
             _workspace.GetModule<AssetModule>().Add(item);
-            Dispatcher.Dispatch(async () =>
+            if (showAssetPanel)
             {
-                await HidePopup();
-                AssetPanelButton_Clicked(this, new());
-            });
+                Dispatcher.Dispatch(async () =>
+                {
+                    await HidePopup();
+                    AssetPanelButton_Clicked(this, new());
+                });
+            }
             SetStateOK(Localized.DraftPage_AssetAdded(Path.GetFileNameWithoutExtension(path)));
             var createProxy = (ProxyOption != "never") && ((ProxyOption == "always") || await DisplayAlertAsync(Localized.DraftPage_CreateProxy(item.Name), Localized.DraftPage_CreateProxy_Info, Localized._Confirm, Localized._Cancel));
             var task = new DraftTasks(cid, (c) => Task.Run(cancellationToken: c, action: async () =>
@@ -5915,301 +5923,6 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     }
 
-#if !DISABLE_POWERSHELL_SDK
-    private void ShowScriptWindow()
-    {
-        const string scriptWindowTitle = "Script Console";
-        // 检查是否已存在脚本窗口
-        if (MainMultiWindowView.Windows.FirstOrDefault(w => w.Title == scriptWindowTitle) is MultiWindowItem existing)
-        {
-            MainMultiWindowView.BringToFront(existing);
-            return;
-        }
-
-        var inputEditor = new Editor
-        {
-            Placeholder = "Enter PowerShell command…\ne.g. Get-ProjectClip\n     Add-ProjectClip -Name Test -Track 0 -StartX 100",
-            HeightRequest = 100,
-            FontSize = 13,
-            FontFamily = "MarkdownCodeBlock",
-            IsSpellCheckEnabled = false,
-            AutoSize = EditorAutoSizeOption.TextChanges,
-        };
-
-        var outputEditor = new Editor
-        {
-            IsReadOnly = true,
-            FontSize = 13,
-            FontFamily = "MarkdownCodeBlock",
-            BackgroundColor = Color.FromArgb("#1E1E1E"),
-            TextColor = Colors.White,
-        };
-
-        var runButton = new Button
-        {
-            Text = "▶ Run",
-            BackgroundColor = Color.FromArgb("#0E639C"),
-            TextColor = Colors.White,
-            CornerRadius = 4,
-            HeightRequest = 32,
-            Margin = new Thickness(0, 0, 4, 0),
-        };
-
-        var clearButton = new Button
-        {
-            Text = "Clear",
-            BackgroundColor = Color.FromArgb("#333333"),
-            TextColor = Colors.White,
-            CornerRadius = 4,
-            HeightRequest = 32,
-            Margin = new Thickness(4, 0, 0, 0),
-        };
-
-        var statusLabel = new Label
-        {
-            Text = "Ready",
-            FontSize = 11,
-            VerticalOptions = LayoutOptions.Center,
-            HorizontalOptions = LayoutOptions.Fill,
-            TextColor = Color.FromArgb("#888888"),
-        };
-
-
-        clearButton.Clicked += (_, _) =>
-        {
-            inputEditor.Text = "";
-            outputEditor.Text = "";
-            statusLabel.Text = "Cleared";
-            statusLabel.TextColor = Color.FromArgb("#888888");
-        };
-
-        // 快速命令按钮
-        var quickCmds = new[] { "Get-ProjectClip", "Get-ProjectClip | Format-Table -AutoSize", "Add-ProjectClip -Name 'Test' -Track 0 -StartX 100" };
-        var quickCmdBar = new HorizontalStackLayout { Spacing = 4, Margin = new Thickness(0, 4) };
-        foreach (var cmd in quickCmds)
-        {
-            var chip = new Button
-            {
-                Text = cmd,
-                FontSize = 11,
-                BackgroundColor = Color.FromArgb("#2D2D2D"),
-                TextColor = Color.FromArgb("#CCCCCC"),
-                CornerRadius = 4,
-                Padding = new Thickness(8, 2),
-                HeightRequest = 26,
-            };
-            chip.Clicked += (_, _) =>
-            {
-                inputEditor.Text = cmd;
-            };
-            quickCmdBar.Children.Add(chip);
-        }
-
-        var buttonBar = new HorizontalStackLayout
-        {
-            Children = { runButton, clearButton },
-            Spacing = 0,
-            Margin = new Thickness(0, 4),
-        };
-
-        var cmdBar = new ScrollView { Content = quickCmdBar, Orientation = ScrollOrientation.Horizontal };
-
-        // ════════════════════════════════════════════════════════════════
-        //  授权面板（内联在 Script Console 窗口内，基于事件驱动）
-        //  通过 TaskCompletionSource 实现完全非阻塞授权。
-        // ════════════════════════════════════════════════════════════════
-        var authMessageLabel = new Label
-        {
-            FontSize = 12,
-            TextColor = Colors.White,
-            LineBreakMode = LineBreakMode.WordWrap,
-        };
-
-        // 当前待处理的授权请求
-        TaskCompletionSource<Dictionary<string, AuthorizationResult>>? pendingAuthTcs = null;
-        IReadOnlyList<string>? pendingCmdNames = null;
-
-        var btnAllow = new Button { Text = Localized.ScriptEngine_Auth_Allow, BackgroundColor = Color.FromArgb("#4EC9B0"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
-        var btnAllowRemember = new Button { Text = Localized.ScriptEngine_Auth_AllowRemember, BackgroundColor = Color.FromArgb("#1E6F5C"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
-        var btnDeny = new Button { Text = Localized.ScriptEngine_Auth_Deny, BackgroundColor = Color.FromArgb("#C04040"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
-        var btnDenyRemember = new Button { Text = Localized.ScriptEngine_Auth_DenyRemember, BackgroundColor = Color.FromArgb("#8B0000"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
-
-        var authPanel = new Border
-        {
-            IsVisible = false,
-            BackgroundColor = Color.FromArgb("#252526"),
-            Stroke = Color.FromArgb("#555555"),
-            StrokeThickness = 1,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
-            Padding = new Thickness(12, 10),
-            Content = new VerticalStackLayout
-            {
-                Spacing = 8,
-                Children =
-                {
-                    new Label { Text = Localized.ScriptEngine_Auth_DialogTitle, FontSize = 14, TextColor = Colors.Yellow, FontAttributes = FontAttributes.Bold },
-                    new ScrollView { Content = authMessageLabel, MaximumHeightRequest = 150 },
-                    new HorizontalStackLayout
-                    {
-                        Spacing = 8,
-                        HorizontalOptions = LayoutOptions.Center,
-                        Children = { btnAllow, btnAllowRemember, btnDeny, btnDenyRemember },
-                    },
-                }
-            },
-        };
-
-        // ── 订阅授权请求事件（完全非阻塞） ──
-        EventHandler<AuthorizationRequestedEventArgs>? authHandler = null;
-        authHandler = (sender, args) =>
-        {
-            // 构建显示消息
-            var sb = new System.Text.StringBuilder();
-
-            if (!string.IsNullOrEmpty(args.ObfuscationWarning))
-            {
-                sb.AppendLine($"{Localized.ScriptEngine_Auth_SecurityWarningLabel}{args.ObfuscationWarning}");
-                sb.AppendLine($"{Localized.ScriptEngine_Auth_ThreatLevelLabel}{args.ThreatLevel?.ToString() ?? Localized._Unknown}");
-                sb.AppendLine();
-            }
-
-            if (args.CommandNames.Count > 0)
-            {
-                sb.AppendLine(Localized.ScriptEngine_Auth_RequestHeader);
-                for (int i = 0; i < args.CommandNames.Count; i++)
-                {
-                    var name = args.CommandNames[i];
-                    var ctx = args.Commands.Count > i ? args.Commands[i] : null;
-                    sb.Append($"\n  • {Localized.ScriptEngine_Auth_CommandLabel}{name}");
-                    if (ctx?.TargetPath != null) sb.Append($"\n    {Localized.ScriptEngine_Auth_TargetPathLabel}{ctx.TargetPath}");
-                    if (ctx?.TargetUrl != null) sb.Append($"\n    {Localized.ScriptEngine_Auth_TargetUrlLabel}{ctx.TargetUrl}");
-                }
-            }
-            else
-            {
-                sb.Append(Localized.ScriptEngine_Auth_RequestHeader);
-            }
-
-            // 更新 UI 并存储 TCS
-            authMessageLabel.Text = sb.ToString();
-            pendingAuthTcs = args.Completion;
-            pendingCmdNames = args.CommandNames;
-            authPanel.IsVisible = true;
-        };
-        ScriptEngine.AuthorizationRequested += authHandler;
-
-        // ── 简化后的 Run 按钮 ──
-        runButton.Clicked += async (_, _) =>
-        {
-            var script = inputEditor.Text?.Trim();
-            if (string.IsNullOrWhiteSpace(script))
-            {
-                statusLabel.Text = "Please enter a command.";
-                return;
-            }
-
-            runButton.IsEnabled = false;
-            statusLabel.Text = "Running…";
-            statusLabel.TextColor = Color.FromArgb("#888888");
-            outputEditor.Text = "";
-
-            try
-            {
-                var result = await ScriptEngine.ExecuteAsync(script);
-                outputEditor.Text = result;
-                statusLabel.Text = $"Completed ({result.Length} chars)";
-                statusLabel.TextColor = Color.FromArgb("#4EC9B0");
-            }
-            catch (Exception ex)
-            {
-                outputEditor.Text = $"ERROR: {ex.Message}";
-                statusLabel.Text = "Failed";
-                statusLabel.TextColor = Colors.OrangeRed;
-            }
-            finally
-            {
-                runButton.IsEnabled = true;
-            }
-        };
-
-        void CompleteAuth(AuthorizationResult decision)
-        {
-            var tcs = pendingAuthTcs;
-            var names = pendingCmdNames;
-            pendingAuthTcs = null;
-            pendingCmdNames = null;
-            if (tcs != null)
-            {
-                var decisions = names?.ToDictionary(c => c, _ => decision)
-                    ?? new Dictionary<string, AuthorizationResult>();
-                tcs.TrySetResult(decisions);
-            }
-            authPanel.IsVisible = false;
-        }
-
-        btnAllow.Clicked += (_, _) => CompleteAuth(AuthorizationResult.Allow);
-        btnAllowRemember.Clicked += (_, _) => CompleteAuth(AuthorizationResult.AllowAndRemember);
-        btnDeny.Clicked += (_, _) => CompleteAuth(AuthorizationResult.Deny);
-        btnDenyRemember.Clicked += (_, _) => CompleteAuth(AuthorizationResult.DenyAndRemember);
-
-        var windowContent = new Grid
-        {
-            RowDefinitions =
-            {
-                new RowDefinition { Height = GridLength.Auto },                          // 0: 测试警告
-                new RowDefinition { Height = GridLength.Auto },                          // 1: 快速命令
-                new RowDefinition { Height = GridLength.Auto },                          // 2: 输入
-                new RowDefinition { Height = GridLength.Auto },                          // 3: 按钮
-                new RowDefinition { Height = GridLength.Auto },                          // 4: 授权面板（默认隐藏）
-                new RowDefinition { Height = new GridLength(1, GridUnitType.Star) },     // 5: 输出
-                new RowDefinition { Height = GridLength.Auto },                          // 6: 状态
-            },
-            Padding = new Thickness(8),
-            ColumnDefinitions = { new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) } },
-            RowSpacing = 4,
-            Children =
-            {
-                new Label { Text = Localized.DraftPage_Scripting_TestOnly, TextColor = Colors.Yellow },
-                cmdBar,
-                inputEditor,
-                buttonBar,
-                authPanel,
-                outputEditor,
-                statusLabel,
-            },
-        };
-
-        Grid.SetRow(cmdBar, 1);
-        Grid.SetRow(inputEditor, 2);
-        Grid.SetRow(buttonBar, 3);
-        Grid.SetRow(authPanel, 4);
-        Grid.SetRow(outputEditor, 5);
-        Grid.SetRow(statusLabel, 6);
-
-        var window = new MultiWindowItem
-        {
-            Title = scriptWindowTitle,
-            Content = windowContent,
-            WidthRequest = 500,
-            HeightRequest = 450,
-            IsResizable = true,
-            IsMaximizable = true,
-            IsMinimizable = true,
-            IsClosable = true,
-            IsDraggable = true,
-            IsPopOutVisible = true
-        };
-
-        // ── 窗口关闭时取消订阅事件 ──
-        window.CloseClicked += (_, _) =>
-        {
-            if (authHandler != null)
-                ScriptEngine.AuthorizationRequested -= authHandler;
-        };
-
-        MainMultiWindowView.AddWindow(window);
-    }
-#endif
 
     private async Task ShowClipPopup(View anchorView, View popupContent, ClipElementUI? clip = null)
     {
@@ -8763,6 +8476,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         _renderBackendWatchdogCts = cts;
         _renderBackendDisconnectedSinceUtc = DateTime.UtcNow;
         _ = Task.Run(() => MonitorRenderBackendAsync(cts.Token));
+        _ = Task.Run(() => MonitorExternalRpcRequestsAsync(cts.Token));
+        _ = Task.Run(() => MonitorGuiRpcAsync(cts.Token));
     }
 
     private void StopRenderBackendWatchdog()
@@ -9271,23 +8986,25 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region save, undo and redo
-
-    public async Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null)
+    public async Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null, bool throwOnFailure = false)
     {
         if (string.IsNullOrEmpty(WorkingPath))
         {
+            if (throwOnFailure) throw new InvalidOperationException("Project working path is empty.");
             Log("saving failed: working path is empty", "warn");
             SetStateFail(Localized.DraftPage_CannotSave_NoPath);
             return;
         }
         if (IsReadonly)
         {
+            if (throwOnFailure) throw new InvalidOperationException("Project is read-only.");
             Log("saving failed: project is read-only", "warn");
             SetStateFail(Localized.DraftPage_CannotSave_Readonly);
             return;
         }
         if (!await saveLocker.WaitAsync(1500))
         {
+            if (throwOnFailure) throw new TimeoutException("Project save is busy.");
             Log("Cannot save because of failed to acquire save lock, skipping this save.", "warn");
             return;
         }
@@ -9417,6 +9134,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         catch (Exception ex)
         {
             Log(ex, "saving draft failed", this);
+            if (throwOnFailure) throw;
             SetStateFail(Localized.DraftPage_CannotSave_Exception(ex));
         }
         finally
@@ -9772,6 +9490,415 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     #endregion
 
+    #region rpc/remote
+    private readonly SemaphoreSlim _guiRegistrationGate = new(1, 1);
+    private Guid _guiSessionId;
+    private IRenderClient? _guiClient;
+
+    #region external RPC
+    private async Task<Guid> EnsureGuiRpcSessionAsync(IRenderClient client, CancellationToken ct)
+    {
+        await _guiRegistrationGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            if (AlreadyDisappeared) throw new InvalidOperationException("Project is closed.");
+            if (ReferenceEquals(_guiClient, client) && _guiSessionId != Guid.Empty) return _guiSessionId;
+            var id = Guid.NewGuid();
+            await client.RegisterGuiProjectAsync(new() { SessionId = id }, ct).ConfigureAwait(false);
+            _guiClient = client;
+            _guiSessionId = id;
+            Log($"Registered GUI RPC session {id}.");
+            return id;
+        }
+        finally { _guiRegistrationGate.Release(); }
+    }
+
+    private async Task MonitorGuiRpcAsync(CancellationToken ct)
+    {
+        if (!RenderRpcBootstrap.SupportsCliRenderProcess) return;
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                try
+                {
+                    if (!RenderRpcBootstrap.TryGetClient(out var client) || client is null)
+                    { await Task.Delay(1000, ct); continue; }
+                    var id = await EnsureGuiRpcSessionAsync(client, ct).ConfigureAwait(false);
+                    var work = await client.GetGuiProjectWorkAsync(new() { SessionId = id }, ct).ConfigureAwait(false);
+                    if (work.Request is null) continue;
+                    var result = new GuiProjectResult { SessionId = id, RequestId = work.Request.RequestId };
+                    try
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        result.Json = await MainThread.InvokeOnMainThreadAsync(async () =>
+                        {
+                            if (AlreadyDisappeared || id != _guiSessionId || ct.IsCancellationRequested)
+                                throw new InvalidOperationException("Project session is closed.");
+                            Log($"GUI RPC {work.Request.Operation}, request {work.Request.RequestId}.");
+                            return JsonSerializer.Serialize(await ExecuteGuiProjectAsync(work.Request));
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"GUI RPC {work.Request.Operation}", this);
+                        result.Error = new RemoteError(ex);
+                    }
+                    await client.CompleteGuiProjectWorkAsync(result, ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
+                catch (Exception ex)
+                {
+                    Log(ex, "GUI RPC request loop", this);
+                    await Task.Delay(1000, ct).ConfigureAwait(false);
+                }
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+        finally
+        {
+            if (_guiClient is not null && _guiSessionId != Guid.Empty)
+            {
+                try
+                {
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                    await _guiClient.UnregisterGuiProjectAsync(new() { SessionId = _guiSessionId }, timeout.Token).ConfigureAwait(false);
+                }
+                catch (Exception ex) { Log(ex, "Unregister GUI RPC session", this); }
+                _guiSessionId = Guid.Empty;
+                _guiClient = null;
+            }
+        }
+    }
+
+    private object GuiClipSnapshot(ClipElementUI clip)
+    {
+        var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, clip, false);
+        return new
+        {
+            ClipId = dto.Id,
+            dto.Name,
+            Type = dto.ClipType.ToString(),
+            TrackId = dto.LayerIndex,
+            dto.StartFrame,
+            DurationFrames = dto.Duration,
+            SourceStartFrame = dto.RelativeStartFrame,
+            dto.FilePath,
+            WidthPixels = dto.TargetWidth,
+            HeightPixels = dto.TargetHeight,
+            XPixels = dto.TargetX,
+            YPixels = dto.TargetY
+        };
+    }
+
+    private static object GuiField(IEffectArgumentField field) => new
+    {
+        FieldId = field.Id,
+        FieldType = field.FieldType.ToString(),
+        field.DefaultValue,
+        field.MinValue,
+        field.MaxValue,
+        field.PresetOptions,
+        field.Remarks,
+        Value = field switch { StaticEffectArgumentField f => f.Value, DynamicEffectParamField f => f.StaticFallbackValue, _ => null },
+    };
+
+    private static object GuiProvider(IEffectProvider provider, Guid clipId, string? registrationKey = null) => new
+    {
+        ClipId = clipId,
+        ProviderId = provider.Id,
+        provider.Name,
+        TypeName = registrationKey ?? provider.TypeName,
+        provider.Enabled,
+        Target = provider.Target.ToString(),
+        EffectType = provider.TypeOfEffect.ToString(),
+        InputProviderId = provider.HasMainPictureInput() ? provider.GetMainInputSource() : null,
+        IsFinalOutput = provider.IsFinalOutputSource(),
+        Fields = provider.Fields.Values.Select(GuiField).ToArray(),
+    };
+
+    private async Task<object?> ExecuteGuiProjectAsync(GuiProjectRequest request)
+    {
+        using var document = JsonDocument.Parse(request.ParametersJson);
+        var p = document.RootElement;
+        if (p.ValueKind != JsonValueKind.Object) throw new ArgumentException("Parameters must be an object.");
+        bool Has(string key) => p.TryGetProperty(key, out _);
+        string? S(string key) => Has(key) ? p.GetProperty(key).GetString() : null;
+        int I(string key, int fallback = 0) => Has(key) ? p.GetProperty(key).GetInt32() : fallback;
+        uint U(string key, uint fallback = 0) => Has(key) ? p.GetProperty(key).GetUInt32() : fallback;
+        Guid G(string key) => Has(key) ? p.GetProperty(key).GetGuid() : Guid.Empty;
+        bool B(string key, bool fallback = false) => Has(key) ? p.GetProperty(key).GetBoolean() : fallback;
+        Dictionary<string, object> Fields() => Has("Fields")
+            ? p.GetProperty("Fields").EnumerateObject().ToDictionary(x => x.Name, x => EffectParamConvert.Normalize(x.Value.Clone())!) : new();
+        ClipElementUI Clip() => Clips.TryGetValue(G("ClipId"), out var c) ? c : throw new KeyNotFoundException("Clip not found.");
+        IEffectProvider Factory() => EffectServices.GetAvailableEffectProviders().TryGetValue(S("TypeName") ?? "", out var f)
+            ? f() : throw new KeyNotFoundException("Effect provider type not found.");
+        object Info() => new
+        {
+            SessionId = _guiSessionId,
+            Name = ProjectInfo.ProjectName,
+            WidthPixels = ProjectInfo.RelativeWidth,
+            HeightPixels = ProjectInfo.RelativeHeight,
+            FrameRate = ProjectInfo.TargetFrameRate,
+            DurationFrames = ProjectDuration,
+            ClipCount = Clips.Count,
+            TrackCount = Tracks.Count,
+            AssetCount = Assets.Count,
+            WorkingPath,
+            CurrentFrame
+        };
+        foreach (var key in new[] { "StartFrame", "SourceStartFrame", "DurationFrames", "TrackId" })
+            if (Has(key) && (U(key) > int.MaxValue || (key == "DurationFrames" && U(key) == 0)))
+                throw new ArgumentException($"Invalid {key}.");
+        foreach (var key in new[] { "WidthPixels", "HeightPixels" })
+            if (Has(key) && I(key) <= 0) throw new ArgumentException($"Invalid {key}.");
+        var operation = request.Operation;
+        bool write = !operation.ToString().StartsWith("Get", StringComparison.Ordinal);
+        if (write && IsReadonly) throw new InvalidOperationException("Project is read-only.");
+        object? result;
+        switch (operation)
+        {
+            case GuiProjectOperation.GetInfo: return Info();
+            case GuiProjectOperation.Save:
+                await Save(throwOnFailure: true);
+                return Info();
+            case GuiProjectOperation.GetClip:
+                return Clips.Values.Where(c => (!Has("ClipId") || c.Id == G("ClipId"))
+                    && (!Has("TrackId") || c.origTrack == I("TrackId"))
+                    && (!Has("Name") || c.DisplayName.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)))
+                    .Select(GuiClipSnapshot).ToArray();
+            case GuiProjectOperation.AddClip:
+                {
+                    if (!Tracks.ContainsKey(I("TrackId"))) throw new ArgumentException("Track not found.");
+                    if (Has("FilePath") && Has("AssetId")) throw new ArgumentException("Choose FilePath or AssetId.");
+                    ClipElementUI c;
+                    if (Has("AssetId"))
+                    {
+                        if (!Assets.TryGetValue(S("AssetId")!, out var asset)) throw new KeyNotFoundException("Asset not found.");
+                        c = CreateFromAsset(asset, I("TrackId"), FrameToPixel(U("StartFrame")));
+                    }
+                    else
+                    {
+                        var path = S("FilePath");
+                        if (path is not null && !File.Exists(path)) throw new FileNotFoundException("Source file not found.", path);
+                        c = CreateAndAddClip(FrameToPixel(U("StartFrame")), FrameToPixel(U("DurationFrames", 300)), I("TrackId"),
+                            labelText: S("Name") ?? "New Clip", relativeStart: U("SourceStartFrame"));
+                        if (path is not null)
+                        {
+                            c.SourcePath = path;
+                            c.ClipType = ClipElementUI.DetermineClipMode(path);
+                            if (c.ClipType is ClipMode.VideoClip or ClipMode.AudioClip) c.UpdateSourceDuration();
+                        }
+                    }
+                    result = GuiClipSnapshot(ApplyGuiClipParameters(c, p));
+                    break;
+                }
+            case GuiProjectOperation.SetClip: result = GuiClipSnapshot(ApplyGuiClipParameters(Clip(), p)); break;
+            case GuiProjectOperation.CopyClip:
+                {
+                    var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, Clip(), false);
+                    dto.Id = Guid.NewGuid();
+                    dto.Name = S("Name") ?? $"Copy of {dto.Name}";
+                    dto.StartFrame = U("StartFrame", checked(dto.StartFrame + dto.Duration));
+                    dto.LayerIndex = U("TrackId", dto.LayerIndex);
+                    result = GuiClipSnapshot(TimelineMcpLiveService.ReplaceClip(this, dto));
+                    break;
+                }
+            case GuiProjectOperation.RemoveClip:
+                if (!TimelineMcpLiveService.DeleteClip(this, Clip().Id)) throw new InvalidOperationException("Clip could not be removed.");
+                result = null; break;
+            case GuiProjectOperation.GetTrack:
+                return Tracks.Keys.OrderBy(x => x).Where(x => !Has("TrackId") || x == I("TrackId"))
+                    .Select(x => new { TrackId = x, ClipCount = Clips.Values.Count(c => c.origTrack == x) }).ToArray();
+            case GuiProjectOperation.AddTrack:
+                {
+                    int id = I("TrackId", Tracks.Keys.DefaultIfEmpty(-1).Max() + 1);
+                    if (id < 0 || Tracks.ContainsKey(id)) throw new ArgumentException("Invalid or duplicate track.");
+                    AddATrack(id); result = new { TrackId = id }; break;
+                }
+            case GuiProjectOperation.GetAsset:
+                return Assets.Where(a => (!Has("AssetId") || a.Key == S("AssetId")) && (!Has("Name") || (a.Value.Name ?? "").Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)))
+                    .Select(a => new { AssetId = a.Key, a.Value.Name, a.Value.Path, Type = a.Value.AssetType.ToString(), a.Value.Width, a.Value.Height, a.Value.Duration }).ToArray();
+            case GuiProjectOperation.AddAsset:
+                {
+                    var source = S("FilePath") ?? throw new ArgumentException("FilePath is required.");
+                    if (!File.Exists(source)) throw new FileNotFoundException("Asset file not found.", source);
+                    var directory = Path.Combine(WorkingPath, "assets");
+                    Directory.CreateDirectory(directory);
+                    var destination = Path.Combine(directory, Guid.NewGuid() + Path.GetExtension(source));
+                    File.Copy(source, destination);
+                    try
+                    {
+                        var asset = AssetDatabase.Create(destination, S("Name") ?? Path.GetFileNameWithoutExtension(source), AssetItem.GetAssetType(destination))
+                            ?? throw new InvalidOperationException("Cannot import asset.");
+                        if (!Assets.TryAdd(asset.AssetId, asset)) throw new InvalidOperationException("Duplicate asset ID.");
+                        result = new { asset.AssetId, asset.Name, asset.Path }; break;
+                    }
+                    catch { File.Delete(destination); throw; }
+                }
+            case GuiProjectOperation.RemoveAsset:
+                if (!Assets.TryRemove(S("AssetId") ?? "", out _)) throw new KeyNotFoundException("Asset not found.");
+                result = null; break;
+            case GuiProjectOperation.GetTextStyle:
+                return PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(x => x.TextClipStyleProvider)
+                    .Select(x => new { StyleId = x.Key, FromPlugin = x.Value().FromPlugin }).ToArray();
+            case GuiProjectOperation.GetTextStyleField:
+                return (TimelineMcpLiveService.ResolveTextStyleProvider(S("StyleId") ?? "") ?? throw new KeyNotFoundException("Text style not found."))
+                    .SettableFields.Values.Select(f => new { FieldId = f.Id, FieldType = f.FieldType.ToString(), f.DefaultValue, f.MinValue, f.MaxValue, f.PresetOptions, f.Remarks }).ToArray();
+            case GuiProjectOperation.AddTextClip:
+                {
+                    if (!Tracks.ContainsKey(I("TrackId"))) throw new ArgumentException("Track not found.");
+                    var c = TimelineMcpLiveService.AddTextClipToPage(this, S("StyleId") ?? "", S("Text") ?? "",
+                        0, I("TrackId"), Fields(), strictFields: true);
+                    result = GuiClipSnapshot(ApplyGuiClipParameters(c, p)); break;
+                }
+            case GuiProjectOperation.SetTextClipStyle:
+                TimelineMcpLiveService.SetTextClipStyleFields(this, Clip().Id, Fields(), strictFields: true);
+                result = GuiClipSnapshot(Clip()); break;
+            case GuiProjectOperation.GetEffectProviderType:
+                return EffectServices.GetAvailableEffectProviders().Select(x => (Key: x.Key, Provider: x.Value()))
+                    .Where(x => !Has("Name") || x.Key.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)
+                        || x.Provider.Name.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase))
+                    .Select(x => GuiProvider(x.Provider, Guid.Empty, x.Key)).ToArray();
+            case GuiProjectOperation.GetEffectProviderField: return Factory().Fields.Values.Select(GuiField).ToArray();
+            case GuiProjectOperation.GetClipEffectProvider:
+                return (Clip().EffectProviders?.Values.AsEnumerable() ?? Enumerable.Empty<IEffectProvider>())
+                    .Where(x => (!Has("ProviderId") || x.Id == G("ProviderId")) && (!Has("TypeName") || x.TypeName == S("TypeName")))
+                    .Select(x => GuiProvider(x, G("ClipId"))).ToArray();
+            case GuiProjectOperation.AddClipEffectProvider:
+            case GuiProjectOperation.SetClipEffectProvider:
+                {
+                    var c = Clip();
+                    var provider = operation == GuiProjectOperation.AddClipEffectProvider ? Factory()
+                        : c.EffectProviders?.GetValueOrDefault(G("ProviderId")) ?? throw new KeyNotFoundException("Effect provider not found.");
+                    if (!EffectBindingHelper.AreTargetsCompatible(provider.Target, c.GetEffectTarget())) throw new ArgumentException("Effect target is incompatible.");
+                    if (Has("InputProviderId") && !provider.HasMainPictureInput()) throw new ArgumentException("Provider has no main picture input.");
+                    ApplyGuiProviderFields(provider, Fields(), B("ResetToDefaults"));
+                    if (Has("Name")) provider.Name = S("Name")!;
+                    if (Has("Enabled")) provider.Enabled = B("Enabled");
+                    if (operation == GuiProjectOperation.AddClipEffectProvider) TimelineMcpLiveService.AddEffectProvider(this, c.Id.ToString(), provider);
+                    if (Has("InputProviderId")) provider.SetMainInputSource(G("InputProviderId"));
+                    if (Has("IsFinalOutput"))
+                    {
+                        if (B("IsFinalOutput")) EffectBindingHelper.SetFinalOutput(c.EffectProviders!, provider.Id);
+                        else provider.SetFinalOutputSource(false);
+                    }
+                    ClipInfoBuilder.RebuildAllEffects(c);
+                    RefreshPropertyPanel(c);
+                    result = GuiProvider(provider, c.Id); break;
+                }
+            case GuiProjectOperation.RemoveClipEffectProvider:
+                if (!TimelineMcpLiveService.RemoveEffectProvider(this, Clip().Id.ToString(), G("ProviderId"))) throw new KeyNotFoundException("Effect provider not found.");
+                result = null; break;
+            default: throw new NotSupportedException("Unknown GUI project operation.");
+        }
+        var change = new ClipUpdateEventArgs { Reason = ClipUpdateReason.PropertyChanged, DetailInfo = $"RPC {operation}" };
+        ForwardClipChangeToWorkspace(this, change);
+        change.NoSave = true;
+        await DraftChangedAsync(this, change);
+        return result;
+    }
+
+    private ClipElementUI ApplyGuiClipParameters(ClipElementUI clip, JsonElement parameters)
+    {
+        var node = JsonSerializer.SerializeToNode(DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, clip, false))!;
+        foreach (var (source, target) in new[] { ("Name", "Name"), ("StartFrame", "StartFrame"), ("DurationFrames", "Duration"),
+            ("SourceStartFrame", "RelativeStartFrame"), ("TrackId", "LayerIndex"), ("FilePath", "FilePath"),
+            ("WidthPixels", "TargetWidth"), ("HeightPixels", "TargetHeight"), ("XPixels", "TargetX"), ("YPixels", "TargetY") })
+            if (parameters.TryGetProperty(source, out var value)) node[target] = JsonNode.Parse(value.GetRawText());
+        var dto = node.Deserialize<ClipDraftDTO>()!;
+        if (dto.Duration == 0 || dto.LayerIndex > int.MaxValue || !Tracks.ContainsKey((int)dto.LayerIndex)) throw new ArgumentException("Invalid duration or track.");
+        return TimelineMcpLiveService.ReplaceClip(this, dto);
+    }
+
+    private static void ApplyGuiProviderFields(IEffectProvider provider, Dictionary<string, object> values, bool reset)
+    {
+        var fields = new Dictionary<string, IEffectArgumentField>(reset
+            ? EffectServices.GetAvailableEffectProviders()[provider.TypeName]().Fields : provider.Fields);
+        foreach (var (id, raw) in values)
+        {
+            if (!fields.TryGetValue(id, out var f)) throw new ArgumentException($"Unknown effect field '{id}'.");
+            var value = EffectParamConvert.Normalize(raw);
+            object? converted = (f.FieldType & (EffectArgumentFieldType)0xFFFF) switch
+            {
+                EffectArgumentFieldType.Integer => Convert.ToInt32(value, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.UnsignedInteger => Convert.ToUInt16(value, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.Numeric => Convert.ToSingle(value, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.Boolean => Convert.ToBoolean(value, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.Long => Convert.ToInt64(value, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.UnsignedLong => Convert.ToUInt64(value, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.String => value?.ToString(),
+                _ => value,
+            };
+            if (f.PresetOptions is { Length: > 0 } && converted is string text && !f.PresetOptions.Contains(text)) throw new ArgumentException($"Invalid option for '{id}'.");
+            fields[id] = new StaticEffectArgumentField
+            {
+                Id = id,
+                FieldType = f.FieldType,
+                Value = converted,
+                DefaultValue = f.DefaultValue,
+                MinValue = f.MinValue,
+                MaxValue = f.MaxValue,
+                PresetOptions = f.PresetOptions,
+                Remarks = f.Remarks
+            };
+        }
+        provider.Fields = fields;
+        foreach (var id in (reset ? provider.EnumerateFieldBindings().Select(x => x.Key).ToArray() : values.Keys.ToArray())) provider.ClearFieldBinding(id);
+    }
+
+    private async Task MonitorExternalRpcRequestsAsync(CancellationToken ct)
+    {
+        IRenderClient? checkedClient = null;
+        var supported = false;
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(1000, ct).ConfigureAwait(false);
+                if (AlreadyDisappeared || !RenderRpcBootstrap.SupportsCliRenderProcess ||
+                    !RenderRpcBootstrap.TryGetClient(out var client) || client is null) continue;
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                timeout.CancelAfter(TimeSpan.FromSeconds(5));
+                if (!ReferenceEquals(checkedClient, client))
+                {
+                    supported = (await client.GetCapabilitiesAsync(timeout.Token).ConfigureAwait(false))
+                        .Operations.Contains(nameof(RenderOperation.GetExternalRpcRequest));
+                    checkedClient = client;
+                }
+                if (!supported) continue;
+                var sessionId = await EnsureGuiRpcSessionAsync(client, timeout.Token).ConfigureAwait(false);
+                var pending = await client.GetExternalRpcRequestAsync(timeout.Token).ConfigureAwait(false);
+                if (pending.ClaimId == Guid.Empty) continue;
+                var request = JsonSerializer.Deserialize<ExternalRpcRequest>(pending.Json)!;
+                var approved = await MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    if (AlreadyDisappeared || ct.IsCancellationRequested) return false;
+                    var format = Localized.DraftPage_ExternalRpcAuthorization;
+                    if (!format.Contains("{0}"))
+                        format = ISimpleLocalizerBase.GetMapping()["en-US"].DraftPage_ExternalRpcAuthorization;
+                    return await DisplayAlertAsync(Localized.DraftPage_CreateRpcToken,
+                        string.Format(format, request.AppName, request.Author, request.Purpose,
+                            Convert.ToHexString(SHA256.HashData(Convert.FromBase64String(request.PublicKey)))),
+                        Localized._OK, Localized._Cancel);
+                }).WaitAsync(ct).ConfigureAwait(false);
+                if (AlreadyDisappeared || ct.IsCancellationRequested) return;
+                using var responseTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                responseTimeout.CancelAfter(TimeSpan.FromSeconds(10));
+                await client.ResolveExternalRpcRequestAsync(new() { ClaimId = pending.ClaimId, Approved = approved, GuiSessionId = sessionId }, responseTimeout.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+            catch (Exception ex)
+            {
+                Log(ex, "Authorize external RPC request", this);
+                try { await Task.Delay(5000, ct).ConfigureAwait(false); }
+                catch (OperationCanceledException) { return; }
+            }
+        }
+    }
+    #endregion
+    #endregion
+
     #region misc
     private void SetPlayPauseIconToPlay()
     {
@@ -10065,16 +10192,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                 Priority = 1,
                 Command = SettingsCommand
             });
-            if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
-            {
-                ToolbarItems.Add(new ToolbarItem
-                {
-                    Text = Localized.DraftPage_MenuBar_Project_Scripting,
-                    Order = ToolbarItemOrder.Secondary,
-                    Priority = 1,
-                    Command = ShowScriptWindowCommand,
-                });
-            }
 
             var MoreOptionButton = new ToolbarItem
             {
@@ -10350,76 +10467,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         return new Size(widthDp, heightDp);
     }
 
-    /// <summary>
-    /// 创建 PowerShell 命令授权处理器。
-    /// 当脚本尝试执行可能危害或未分类的命令时，弹出对话框询问用户。
-    /// 用户可以选择允许/拒绝，并可选择记住此次决策。
-    /// </summary>
-#if !DISABLE_POWERSHELL_SDK
-    public static CommandAuthorizationCallback CreatePowerShellAuthorizationHandler(Page page)
-    {
-        return (commandInfo, commandOrigin) =>
-        {
-            var signal = new ManualResetEventSlim(false);
-            var result = AuthorizationResult.Deny;
-
-            MainThread.BeginInvokeOnMainThread(async () =>
-            {
-                try
-                {
-                    // 第一层：询问是否允许执行此命令
-                    var allowed = await page.DisplayAlertAsync(
-                        Localized.ScriptEngine_Auth_DialogTitle,
-                        BuildDetailedAuthMessage(new AuthorizationContext
-                        {
-                            CommandInfo = commandInfo,
-                            CommandOrigin = commandOrigin,
-                        }),
-                        Localized.ScriptEngine_Auth_Allow,
-                        Localized.ScriptEngine_Auth_Deny);
-
-                    if (allowed)
-                    {
-                        // 第二层：询问是否记住此决策
-                        var remember = await page.DisplayAlertAsync(
-                            Localized._Info,
-                            Localized.ScriptEngine_Auth_SureRemember,
-                            Localized.ScriptEngine_Auth_RememberAllow_Yes,
-                            Localized.ScriptEngine_Auth_RememberAllow_No);
-                        result = remember ? AuthorizationResult.AllowAndRemember : AuthorizationResult.Allow;
-                    }
-                    else
-                    {
-                        var remember = await page.DisplayAlertAsync(
-                            Localized._Info,
-                            Localized.ScriptEngine_Auth_SureRemember,
-                            Localized.ScriptEngine_Auth_RememberDeny_Yes,
-                            Localized.ScriptEngine_Auth_RememberDeny_No);
-                        result = remember ? AuthorizationResult.DenyAndRemember : AuthorizationResult.Deny;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(ex, "PowerShell authorization prompt");
-                    result = AuthorizationResult.Deny;
-                }
-                finally
-                {
-                    signal.Set();
-                }
-            });
-
-            // 阻塞等待用户决策（30 秒超时保护）
-            if (!signal.Wait(TimeSpan.FromSeconds(30)))
-            {
-                Logger.Log("PowerShell authorization prompt timed out after 30s");
-                result = AuthorizationResult.Deny;
-            }
-
-            return result;
-        };
-    }
-#endif
 
     /// <summary>
     /// 检查当前 AI 聊天窗口是否活跃（在 MultiWindowView 中可见且有打开的会话）。
@@ -10431,155 +10478,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             && ChatSessionsView.Current is not null;
     }
 
-    /// <summary>
-    /// 创建增强的 PowerShell 命令授权处理器，显示丰富的命令参数信息。
-    /// 如果有活跃的 AI 聊天窗口，将授权请求路由到聊天界面中，减少弹框打断。
-    /// 包括文件操作的目标路径、Web 请求的 URL、路径安全状态等。
-    /// </summary>
-#if !DISABLE_POWERSHELL_SDK
-    public static EnhancedAuthorizationCallback CreateEnhancedPowerShellAuthorizationHandler(Page page)
-    {
-        return (context, allowRemember) =>
-        {
-            var signal = new ManualResetEventSlim(false);
-            var result = AuthorizationResult.Deny;
 
-            // ════════════════════════════════════════════════════════════════
-            //  路由到聊天界面：如果有活跃的 AI 聊天窗口
-            // ════════════════════════════════════════════════════════════════
-            if (page is DraftPage draftPage && draftPage.IsChatActive())
-            {
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    try
-                    {
-                        var chatTask = draftPage.ChatSessionsView.Current!
-                            .ShowAuthorizationRequestAsync(context, allowRemember);
-
-                        // 用户点击按钮后，在后台线程完成对 ManualResetEvent 的信号通知
-                        chatTask.ContinueWith(t =>
-                        {
-                            if (t.IsCompletedSuccessfully)
-                                result = t.Result;
-                            signal.Set();
-                        }, TaskScheduler.Default);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Log(ex, "PowerShell chat authorization");
-                        signal.Set(); // 防止超时，使用默认 Deny
-                    }
-                });
-
-                // 聊天界面不阻塞 UI，给予用户充分的决策时间（5 分钟）
-                if (!signal.Wait(TimeSpan.FromSeconds(300)))
-                {
-                    Logger.Log("PowerShell chat authorization timed out after 300s");
-                    result = AuthorizationResult.Deny;
-                }
-            }
-            else
-            {
-                // ════════════════════════════════════════════════════════════════
-                //  传统对话框方式（聊天窗口不可用时）
-                // ════════════════════════════════════════════════════════════════
-                MainThread.InvokeOnMainThreadAsync(async () =>
-                {
-                    try
-                    {
-                        // 构建详细消息
-                        var message = BuildDetailedAuthMessage(context);
-
-                        // 第一层：询问是否允许执行此命令
-                        var allowed = await page.DisplayAlertAsync(
-                            Localized.ScriptEngine_Auth_DialogTitle,
-                            message,
-                            Localized._Confirm, Localized._Cancel);
-
-                        if (allowed)
-                        {
-                            var remember = allowRemember && await page.DisplayAlertAsync(
-                                Localized._Info,
-                                Localized.ScriptEngine_Auth_SureRemember,
-                                Localized.ScriptEngine_Auth_RememberAllow_Yes, Localized.ScriptEngine_Auth_RememberAllow_No);
-                            result = remember ? AuthorizationResult.AllowAndRemember : AuthorizationResult.Allow;
-                        }
-                        else
-                        {
-                            var remember = allowRemember && await page.DisplayAlertAsync(
-                                Localized._Info,
-                                Localized.ScriptEngine_Auth_SureRemember,
-                                Localized.ScriptEngine_Auth_RememberDeny_Yes, Localized.ScriptEngine_Auth_RememberDeny_No);
-                            result = remember ? AuthorizationResult.DenyAndRemember : AuthorizationResult.Deny;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Log(ex, "PowerShell enhanced authorization");
-                        result = AuthorizationResult.Deny;
-                    }
-                    finally
-                    {
-                        signal.Set();
-                    }
-                });
-
-                if (!signal.Wait(TimeSpan.FromSeconds(30)))
-                {
-                    Logger.Log("PowerShell enhanced authorization prompt timed out after 30s");
-                    result = AuthorizationResult.Deny;
-                }
-            }
-
-            return result;
-        };
-    }
-#endif
-
-    /// <summary>
-    /// 构建增强授权对话框的详细消息文本。
-    /// </summary>
-#if !DISABLE_POWERSHELL_SDK
-    private static string BuildDetailedAuthMessage(AuthorizationContext ctx)
-    {
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine(Localized.ScriptEngine_Auth_RequestHeader);
-        sb.AppendLine();
-        sb.AppendLine($"{Localized.ScriptEngine_Auth_CommandLabel}{ctx.CommandInfo?.Name ?? Localized._Unknown}");
-
-        // 文件路径信息
-        if (!string.IsNullOrEmpty(ctx.TargetPath))
-        {
-            sb.AppendLine();
-            sb.AppendLine($"{Localized.ScriptEngine_Auth_TargetPathLabel}{ctx.TargetPath}");
-            sb.AppendLine($"{Localized.ScriptEngine_Auth_PathStatusLabel}{ctx.PathSafetyStatus switch
-            {
-                PathSafety.Safe => Localized.ScriptEngine_Auth_PathSafe,
-                PathSafety.OutsideProject => Localized.ScriptEngine_Auth_PathOutsideProject,
-                PathSafety.PathTraversal => Localized.ScriptEngine_Auth_PathTraversal,
-                PathSafety.Unresolved => Localized.ScriptEngine_Auth_PathUnresolved,
-                _ => Localized._Unknown,
-            }}");
-        }
-
-        // URL 信息
-        if (!string.IsNullOrEmpty(ctx.TargetUrl))
-        {
-            sb.AppendLine();
-            sb.AppendLine($"{Localized.ScriptEngine_Auth_TargetUrlLabel}{ctx.TargetUrl}");
-        }
-
-        // 混淆警告
-        if (!string.IsNullOrEmpty(ctx.ObfuscationWarning))
-        {
-            sb.AppendLine();
-            sb.AppendLine($"{Localized.ScriptEngine_Auth_SecurityWarningLabel}{ctx.ObfuscationWarning}");
-            sb.AppendLine($"{Localized.ScriptEngine_Auth_ThreatLevelLabel}{ctx.ThreatLevel?.ToString() ?? Localized._Unknown}");
-        }
-
-        return sb.ToString();
-    }
-#endif
 
     #endregion
 
@@ -10750,6 +10649,11 @@ public partial class DraftPage : ContentPage, IDraftPage
                 await (App.Current?.Windows?[0].Page?.DisplayAlertAsync(Localized._Error, Localized.DraftPage_CannotSave_Exception(ex), Localized._OK) ?? Task.CompletedTask);
             }
             catch { }
+        }
+        finally
+        {
+            if (leavingProject)
+                await ProjectPluginService.UnloadProjectPluginsAsync();
         }
 
     }

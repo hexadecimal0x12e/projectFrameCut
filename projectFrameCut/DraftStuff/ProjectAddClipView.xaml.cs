@@ -9,6 +9,7 @@ public partial class ProjectAddClipView : ContentView
 
     private readonly int ItemSize = 180;
     private readonly int ItemSpacing = 8;
+    private bool _isAddingAsset;
 
     public ProjectAddClipView(ref DraftPage draftPage)
     {
@@ -63,6 +64,39 @@ public partial class ProjectAddClipView : ContentView
                     SearchContainer.IsVisible = true;
                     break;
                 }
+        }
+    }
+
+    private async void OnAddAssetClicked(object? sender, EventArgs e)
+    {
+        if (_isAddingAsset || sender is not Button button) return;
+        _isAddingAsset = true;
+        button.IsEnabled = false;
+        try
+        {
+            var file = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = Localized.AssetPage_AddAAsset
+            });
+            if (file is null) return;
+
+            if (button.CommandParameter is "SharedAssets")
+                await Asset.AssetDatabase.Add(file.FullPath, _page);
+            else
+                await _page.AddAsset(file.FullPath, false);
+
+            await _viewModel.LoadAssets();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Add asset from clip panel", _page);
+            await _page.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
+        finally
+        {
+            _page.SetStateOK();
+            button.IsEnabled = true;
+            _isAddingAsset = false;
         }
     }
 

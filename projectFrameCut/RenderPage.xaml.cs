@@ -506,6 +506,8 @@ public partial class RenderPage : ContentPage
             try { RenderRpcBootstrap.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
             catch (Exception ex) { Log(ex, "Dispose render backend", this); }
         }
+        try { ProjectPluginService.UnloadProjectPluginsAsync().GetAwaiter().GetResult(); }
+        catch (Exception ex) { Log(ex, "Unload project plugins", this); }
     }
 
     protected override bool OnBackButtonPressed()

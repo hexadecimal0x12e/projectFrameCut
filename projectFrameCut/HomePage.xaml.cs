@@ -1104,8 +1104,15 @@ public partial class HomePage : ContentPage
             project.SnapshotIDMapping = ProjectJSONStructure.RebuildSnapshotMappingFromSlots(draftSourcePath, DraftPage.DraftJSONOption);
         }
 
+        if (!await LoadProjectPluginsForProjectAsync(draftSourcePath, project))
+        {
+            await Dispatcher.DispatchAsync(async () => Content = origContent);
+            return;
+        }
+
         if (!await CheckProjectVersionCompatibility(project))
         {
+            await ProjectPluginService.UnloadProjectPluginsAsync();
             await Dispatcher.DispatchAsync(async () => Content = origContent);
             return;
         }
@@ -1381,6 +1388,9 @@ public partial class HomePage : ContentPage
                             }
 #endif
                             await p.PostInit();
+                            var projectPluginsItem = new MenuFlyoutItem { Text = "Project plugins" };
+                            projectPluginsItem.Clicked += async (_, _) => await p.Navigation.PushAsync(new ProjectPluginPage(p));
+                            p.ExtensionsMenuBar.Add(projectPluginsItem);
                             foreach (var plugin in PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>())
                             {
                                 try
@@ -1580,6 +1590,10 @@ public partial class HomePage : ContentPage
                     await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_FailByException(ex), "OK");
                 }
             });
+        }
+        else
+        {
+            await ProjectPluginService.UnloadProjectPluginsAsync();
         }
     }
 
@@ -2063,6 +2077,7 @@ public partial class HomePage : ContentPage
                 await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
                 return;
             }
+            if (!await LoadProjectPluginsForProjectAsync(draftSourcePath, project)) return;
             (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(tml, project);
             var draftPage = new DraftPage(project, dict, new(), trackCount, draftSourcePath, project.ProjectName ?? "?", false);
             var draft = DraftImportAndExportHelper.ExportFromDraftPage(draftPage, true, false);
@@ -2082,11 +2097,34 @@ public partial class HomePage : ContentPage
         }
         catch (Exception ex)
         {
+            await ProjectPluginService.UnloadProjectPluginsAsync();
             Log(ex, "open render page", this);
             await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n({ex.Message})", Localized._OK);
             return;
         }
 
+    }
+
+    private async Task<bool> LoadProjectPluginsForProjectAsync(string projectRoot, ProjectJSONStructure project)
+    {
+        var result = await ProjectPluginService.LoadProjectPluginsAsync(
+            projectRoot,
+            project,
+            prompt => DisplayAlertAsync(
+                Localized._Warn,
+                $"Project: {prompt.ProjectName}\r\n" +
+                $"Plugin: {prompt.PluginName} ({prompt.PluginId})\r\n" +
+                $"Capabilities: {prompt.Capabilities}\r\n" +
+                $"Publisher: {prompt.PublisherFingerprint}\r\n" +
+                $"Package: {prompt.PackageSha256}\r\n\r\nTrust this plugin for this project on this device?",
+                Localized._Confirm,
+                Localized._Cancel));
+        if (result.Failed.Count == 0) return true;
+        var details = string.Join("\r\n", result.Failed.Select(x => $"{x.Key}: {x.Value}"));
+        if (await DisplayAlertAsync(Localized._Warn, $"Some project plugins could not be loaded:\r\n{details}", Localized.HomePage_SourceNotFound_Continue, Localized._Cancel))
+            return true;
+        await ProjectPluginService.UnloadProjectPluginsAsync();
+        return false;
     }
 
     private async Task RenameProject(ProjectsViewModel vmItem)

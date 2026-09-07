@@ -43,6 +43,7 @@ public partial class DiagnosticSettingPage : ContentPage
         }
         rootPPB = new PropertyPanelBuilder()
             .AddButton(SettingLocalizedResources.Diag_GenerateReport, async (s, e) => await MakeDiagReport())
+            .AddButton("解码器测试", async (_, _) => await Navigation.PushAsync(new DecoderTestPage()))
             .AddSeparator()
             .AddText(SettingLocalizedResources.Diag_InfoSection_App)
             .AddCustomChild(new Editor

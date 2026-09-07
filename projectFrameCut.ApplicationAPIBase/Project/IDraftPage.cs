@@ -214,8 +214,9 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// </summary>
         /// <param name="noSlot">Whether to skip saving to a history slot.</param>
         /// <param name="args">Optional clip update event arguments describing what changed.</param>
+        /// <param name="throwOnFailure">Whether to throw an exception if the save operation fails.</param>
         /// <returns>A task representing the asynchronous save operation.</returns>
-        Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null);
+        public Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null, bool throwOnFailure = false);
 
         /// <summary>
         /// Sets the editor state to busy with a default status message.

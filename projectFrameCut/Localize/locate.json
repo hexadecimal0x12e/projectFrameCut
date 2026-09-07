@@ -9129,6 +9129,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "\u751F\u6210\u5916\u90E8 RPC \u4EE4\u724C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "\u65E0\u6CD5\u751F\u6210\u5916\u90E8 RPC \u4EE4\u724C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "\u5E94\u7528\uFF1A{{0}}\\n\u4F5C\u8005\uFF1A{{1}}\\n\u7528\u9014\uFF1A{{2}}\\n\u516C\u94A5\u6307\u7EB9\uFF1A{{3}}\\n\\n\u4EE5\u4E0A\u4FE1\u606F\u7531\u8BF7\u6C42\u65B9\u63D0\u4F9B\uFF0C\u672A\u7ECF\u8EAB\u4EFD\u9A8C\u8BC1\u3002\u662F\u5426\u5141\u8BB8\u5176\u8BBF\u95EE\u5F53\u524D RPC \u540E\u7AEF\uFF1F\u6388\u6743\u5728\u540E\u7AEF\u5173\u95ED\u65F6\u5931\u6548\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -18921,6 +18945,30 @@
       {
         "Id": "RenderPage_ToolBar_AdvancedEncodingOption",
         "Value": "Unset localization item:RenderPage_ToolBar_AdvancedEncodingOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Generate external RPC token",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Failed to generate an external RPC token.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "App: {{0}}\\nAuthor: {{1}}\\nPurpose: {{2}}\\nPublic key fingerprint: {{3}}\\n\\nThese details are supplied by the requester and are not verified. Allow access to the current RPC backend? Access ends when the backend closes.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28745,6 +28793,30 @@
       {
         "Id": "RenderPage_ToolBar_AdvancedEncodingOption",
         "Value": "Unset localization item:RenderPage_ToolBar_AdvancedEncodingOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Unset localization item:DraftPage_CreateRpcToken()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Unset localization item:DraftPage_CreateRpcTokenFailed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "Unset localization item:DraftPage_ExternalRpcAuthorization()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -38580,6 +38652,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Unset localization item:DraftPage_CreateRpcToken()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Unset localization item:DraftPage_CreateRpcTokenFailed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "Unset localization item:DraftPage_ExternalRpcAuthorization()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -48395,6 +48491,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Unset localization item:DraftPage_CreateRpcToken()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Unset localization item:DraftPage_CreateRpcTokenFailed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "Unset localization item:DraftPage_ExternalRpcAuthorization()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -58204,6 +58324,30 @@
       {
         "Id": "RenderPage_ToolBar_AdvancedEncodingOption",
         "Value": "Unset localization item:RenderPage_ToolBar_AdvancedEncodingOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Unset localization item:DraftPage_CreateRpcToken()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Unset localization item:DraftPage_CreateRpcTokenFailed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "Unset localization item:DraftPage_ExternalRpcAuthorization()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -68036,6 +68180,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Unset localization item:DraftPage_CreateRpcToken()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Unset localization item:DraftPage_CreateRpcTokenFailed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "Unset localization item:DraftPage_ExternalRpcAuthorization()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -77854,6 +78022,30 @@
       {
         "Id": "RenderPage_ToolBar_AdvancedEncodingOption",
         "Value": "Unset localization item:RenderPage_ToolBar_AdvancedEncodingOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Unset localization item:DraftPage_CreateRpcToken()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Unset localization item:DraftPage_CreateRpcTokenFailed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "Unset localization item:DraftPage_ExternalRpcAuthorization()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -87679,6 +87871,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Unset localization item:DraftPage_CreateRpcToken()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Unset localization item:DraftPage_CreateRpcTokenFailed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "Unset localization item:DraftPage_ExternalRpcAuthorization()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -97492,6 +97708,30 @@
       {
         "Id": "RenderPage_ToolBar_AdvancedEncodingOption",
         "Value": "Unset localization item:RenderPage_ToolBar_AdvancedEncodingOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Unset localization item:DraftPage_CreateRpcToken()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Unset localization item:DraftPage_CreateRpcTokenFailed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "Unset localization item:DraftPage_ExternalRpcAuthorization()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -107318,6 +107558,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Unset localization item:DraftPage_CreateRpcToken()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Unset localization item:DraftPage_CreateRpcTokenFailed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "Unset localization item:DraftPage_ExternalRpcAuthorization()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -117130,6 +117394,30 @@
       {
         "Id": "RenderPage_ToolBar_AdvancedEncodingOption",
         "Value": "Unset localization item:RenderPage_ToolBar_AdvancedEncodingOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Unset localization item:DraftPage_CreateRpcToken()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Unset localization item:DraftPage_CreateRpcTokenFailed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "Unset localization item:DraftPage_ExternalRpcAuthorization()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -126947,6 +127235,30 @@
       {
         "Id": "RenderPage_ToolBar_AdvancedEncodingOption",
         "Value": "Unset localization item:RenderPage_ToolBar_AdvancedEncodingOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Unset localization item:DraftPage_CreateRpcToken()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Unset localization item:DraftPage_CreateRpcTokenFailed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "Unset localization item:DraftPage_ExternalRpcAuthorization()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -136772,6 +137084,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Unset localization item:DraftPage_CreateRpcToken()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Unset localization item:DraftPage_CreateRpcTokenFailed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "Unset localization item:DraftPage_ExternalRpcAuthorization()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -146584,6 +146920,30 @@
       {
         "Id": "RenderPage_ToolBar_AdvancedEncodingOption",
         "Value": "Unset localization item:RenderPage_ToolBar_AdvancedEncodingOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcToken",
+        "Value": "Unset localization item:DraftPage_CreateRpcToken()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CreateRpcTokenFailed",
+        "Value": "Unset localization item:DraftPage_CreateRpcTokenFailed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization",
+        "Value": "Unset localization item:DraftPage_ExternalRpcAuthorization()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

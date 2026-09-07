@@ -67,6 +67,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public List<string> PluginUsed { get; set; } = new List<string>();
 
         /// <summary>
+        /// Plugins carried by this project and loaded only while this project is open.
+        /// </summary>
+        public List<ProjectPluginReference> ProjectPlugins { get; set; } = new();
+
+        /// <summary>
         /// The relative width of the draft.
         /// </summary>
         public int RelativeWidth { get; set; } = 1920;
@@ -233,6 +238,32 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
             [JsonIgnore]
             public Guid PrimaryNext => Next?.Count > 0 ? Next[0] : Guid.Empty;
         }
+    }
+
+    [Flags]
+    public enum ProjectPluginCapability
+    {
+        None = 0,
+        Effects = 1,
+        VideoSources = 2,
+        Tools = 4,
+        Menus = 8,
+        Settings = 16,
+        PropertyPanels = 32,
+        TextStyles = 64,
+        VectorHandlers = 128,
+    }
+
+    public sealed class ProjectPluginReference
+    {
+        public string PluginId { get; set; } = string.Empty;
+        public string PackagePath { get; set; } = string.Empty;
+        public string PackageSha256 { get; set; } = string.Empty;
+        public string PublisherCertificateDer { get; set; } = string.Empty;
+        public string PublisherCertificateFingerprint { get; set; } = string.Empty;
+        public ProjectPluginCapability Capabilities { get; set; }
+        public bool Enabled { get; set; } = true;
+        public Dictionary<string, string> Configuration { get; set; } = new();
     }
 
 

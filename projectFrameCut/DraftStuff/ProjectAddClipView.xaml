@@ -83,21 +83,21 @@
                             SelectionMode="None"
                             Margin="8"
                             SizeChanged="OnCollectionViewSizeChanged">
-                <CollectionView.ItemsLayout>
-                    <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
-                </CollectionView.ItemsLayout>
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
+                    </CollectionView.ItemsLayout>
 
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="viewmodels:AssetItemViewModel">
-                        <Border StrokeThickness="1" 
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="viewmodels:AssetItemViewModel">
+                            <Border StrokeThickness="1" 
                                 Stroke="{Binding BackgroundBrush}"
                                 BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}" 
                                 HeightRequest="160" 
                                 WidthRequest="180"
                                 StrokeShape="RoundRectangle 8">
-                            <Grid RowDefinitions="*,Auto">
-                                <!-- 缩略图 -->
-                                <Image Grid.Row="0"
+                                <Grid RowDefinitions="*,Auto">
+                                    <!-- 缩略图 -->
+                                    <Image Grid.Row="0"
                                        Source="{Binding ThumbPath}" 
                                        Aspect="AspectFit" 
                                        Margin="4"
@@ -105,13 +105,13 @@
                                        IsVisible="{Binding HasThumbnail}"/>
 
 
-                                <!-- 添加按钮 -->
-                                <Grid Grid.Row="2" 
+                                    <!-- 添加按钮 -->
+                                    <Grid Grid.Row="2" 
                                       BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}" 
                                       ColumnDefinitions="*,50"
                                       Padding="4">
-                                    <Grid HorizontalOptions="Start" Padding="4" Grid.Column="0">
-                                        <Label Text="{Binding Name}" 
+                                        <Grid HorizontalOptions="Start" Padding="4" Grid.Column="0">
+                                            <Label Text="{Binding Name}" 
                                                ToolTipProperties.Text="{Binding Name}"
                                                Margin="2,-4,0,0"
                                                LineBreakMode="TailTruncation" 
@@ -119,34 +119,60 @@
                                                MaxLines="1"
                                                Grid.Column="0"
                                                VerticalOptions="Start"/>
-                                        <Label Text="{Binding DurationDisplay}" 
+                                            <Label Text="{Binding DurationDisplay}" 
                                                ToolTipProperties.Text="{Binding DurationDisplay}"
                                                LineBreakMode="TailTruncation" 
                                                FontSize="12" 
                                                MaxLines="1"
                                                Grid.Column="1"
                                                VerticalOptions="End"/>
-                                    </Grid>
-                                    <Button Text="➕" 
+                                        </Grid>
+                                        <Button Text="➕" 
                                             HorizontalOptions="End"
                                             FontSize="16"
                                             CornerRadius="4"
                                             Grid.Column="1"
                                             ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}"
                                             Command="{Binding AddAssetClipCommand}"/>
+                                    </Grid>
                                 </Grid>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
 
                 <CollectionView.EmptyView>
-                    <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
+                        <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
                            FontSize="14"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"
                            Margin="20"/>
                 </CollectionView.EmptyView>
+                <CollectionView.Footer>
+                    <Border StrokeThickness="1"
+                            Stroke="Gray"
+                            BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}"
+                            HeightRequest="160"
+                            WidthRequest="180"
+                            HorizontalOptions="Start"
+                            Margin="0,0,0,8"
+                            StrokeShape="RoundRectangle 8">
+                        <Grid RowDefinitions="*,Auto">
+                            <Button Text="➕"
+                                    FontSize="28"
+                                    BackgroundColor="Transparent"
+                                    HorizontalOptions="Center"
+                                    VerticalOptions="Center"
+                                    ToolTipProperties.Text="{l:Localized Key=AssetPage_AddAAsset}"
+                                    CommandParameter="LocalAssets"
+                                    Clicked="OnAddAssetClicked"/>
+                            <Label Grid.Row="1"
+                                   Text="{l:Localized Key=AssetPage_AddAAsset}"
+                                   HorizontalOptions="Center"
+                                   Margin="4,4,4,10"
+                                   FontSize="12"/>
+                        </Grid>
+                    </Border>
+                </CollectionView.Footer>
             </CollectionView>
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_SharedAssets}" Tag="SharedAssets" x:Name="SharedAssetsTab" x:FieldModifier="public">
@@ -155,21 +181,21 @@
                             SelectionMode="None"
                             Margin="8"
                             SizeChanged="OnCollectionViewSizeChanged">
-                <CollectionView.ItemsLayout>
-                    <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
-                </CollectionView.ItemsLayout>
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
+                    </CollectionView.ItemsLayout>
 
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="viewmodels:AssetItemViewModel">
-                        <Border StrokeThickness="1" 
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="viewmodels:AssetItemViewModel">
+                            <Border StrokeThickness="1" 
                                 Stroke="{Binding BackgroundBrush}"
                                 BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}" 
                                 HeightRequest="160" 
                                 WidthRequest="180"
                                 StrokeShape="RoundRectangle 8">
-                            <Grid RowDefinitions="*,Auto">
-                                <!-- 缩略图 -->
-                                <Image Grid.Row="0"
+                                <Grid RowDefinitions="*,Auto">
+                                    <!-- 缩略图 -->
+                                    <Image Grid.Row="0"
                                        Source="{Binding ThumbPath}" 
                                        Aspect="AspectFit" 
                                        Margin="4"
@@ -177,13 +203,13 @@
                                        IsVisible="{Binding HasThumbnail}"/>
 
 
-                                <!-- 添加按钮 -->
-                                <Grid Grid.Row="2" 
+                                    <!-- 添加按钮 -->
+                                    <Grid Grid.Row="2" 
                                       BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}" 
                                       ColumnDefinitions="*,50"
                                       Padding="4">
-                                    <Grid HorizontalOptions="Start" Padding="4" Grid.Column="0">
-                                        <Label Text="{Binding Name}" 
+                                        <Grid HorizontalOptions="Start" Padding="4" Grid.Column="0">
+                                            <Label Text="{Binding Name}" 
                                                ToolTipProperties.Text="{Binding Name}"
                                                Margin="2,-4,0,0"
                                                LineBreakMode="TailTruncation" 
@@ -191,15 +217,15 @@
                                                MaxLines="1"
                                                Grid.Column="0"
                                                VerticalOptions="Start"/>
-                                        <Label Text="{Binding DurationDisplay}" 
+                                            <Label Text="{Binding DurationDisplay}" 
                                                ToolTipProperties.Text="{Binding DurationDisplay}"
                                                LineBreakMode="TailTruncation" 
                                                FontSize="12" 
                                                MaxLines="1"
                                                Grid.Column="1"
                                                VerticalOptions="End"/>
-                                    </Grid>
-                                    <Button Text="➕" 
+                                        </Grid>
+                                        <Button Text="➕" 
                                             HorizontalOptions="End"
                                             FontSize="16"
                                             CornerRadius="4"
@@ -207,19 +233,45 @@
                                             ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}"
                                             Command="{Binding AddAssetClipCommand}"/>
 
+                                    </Grid>
                                 </Grid>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
 
                 <CollectionView.EmptyView>
-                    <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
+                        <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
                            FontSize="14"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"
                            Margin="20"/>
                 </CollectionView.EmptyView>
+                <CollectionView.Footer>
+                    <Border StrokeThickness="1"
+                            Stroke="Gray"
+                            BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}"
+                            HeightRequest="160"
+                            WidthRequest="180"
+                            HorizontalOptions="Start"
+                            Margin="0,0,0,8"
+                            StrokeShape="RoundRectangle 8">
+                        <Grid RowDefinitions="*,Auto">
+                            <Button Text="➕"
+                                    FontSize="28"
+                                    BackgroundColor="Transparent"
+                                    HorizontalOptions="Center"
+                                    VerticalOptions="Center"
+                                    ToolTipProperties.Text="{l:Localized Key=AssetPage_AddAAsset}"
+                                    CommandParameter="SharedAssets"
+                                    Clicked="OnAddAssetClicked"/>
+                            <Label Grid.Row="1"
+                                   Text="{l:Localized Key=AssetPage_AddAAsset}"
+                                   HorizontalOptions="Center"
+                                   Margin="4,4,4,10"
+                                   FontSize="12"/>
+                        </Grid>
+                    </Border>
+                </CollectionView.Footer>
             </CollectionView>
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_Templates}" Tag="Templates" x:Name="TemplatesTab" x:FieldModifier="public">

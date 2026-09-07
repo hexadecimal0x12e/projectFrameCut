@@ -13,7 +13,6 @@ internal static class RenderCompletionNotifier
     private static readonly ConcurrentDictionary<Guid, ProgressNotificationState> ProgressStates = new();
     internal static string LastCompletedOutputPathFile => Path.Combine(
         CLIProgram.AppDataPath,
-        "projectFrameCut",
         "last-completed-output.txt");
 
     public static void NotifyProgress(RenderJob job) => NotifyProgress(job, false);

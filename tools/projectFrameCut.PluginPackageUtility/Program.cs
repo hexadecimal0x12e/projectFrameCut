@@ -53,6 +53,16 @@ internal static class PluginPackageCli
         string? chain = null;
         string? password = null;
         string? passwordEnvironmentVariable = null;
+        string? pluginId = null;
+        string? version = null;
+        string? name = null;
+        string? author = null;
+        string? description = null;
+        string? authorUrl = null;
+        string? publishingUrl = null;
+        string? mainAssembly = null;
+        int? pluginApiVersion = null;
+        int? pluginApiMinorVersion = null;
         var passwordFromStandardInput = false;
         var force = false;
 
@@ -81,6 +91,36 @@ internal static class PluginPackageCli
                     break;
                 case "--password-stdin":
                     passwordFromStandardInput = true;
+                    break;
+                case "--plugin-id":
+                    pluginId = ReadValue(args, ref index, argument);
+                    break;
+                case "--version":
+                    version = ReadValue(args, ref index, argument);
+                    break;
+                case "--name":
+                    name = ReadValue(args, ref index, argument);
+                    break;
+                case "--author":
+                    author = ReadValue(args, ref index, argument);
+                    break;
+                case "--description":
+                    description = ReadValue(args, ref index, argument);
+                    break;
+                case "--author-url":
+                    authorUrl = ReadValue(args, ref index, argument);
+                    break;
+                case "--publishing-url":
+                    publishingUrl = ReadValue(args, ref index, argument);
+                    break;
+                case "--main-assembly":
+                    mainAssembly = ReadValue(args, ref index, argument);
+                    break;
+                case "--api-version":
+                    pluginApiVersion = ReadIntValue(args, ref index, argument);
+                    break;
+                case "--api-minor-version":
+                    pluginApiMinorVersion = ReadIntValue(args, ref index, argument);
                     break;
                 case "--force":
                     force = true;
@@ -126,6 +166,16 @@ internal static class PluginPackageCli
             SigningCertificatePath = certificate,
             CertificatePassword = password,
             CertificateChainPath = chain,
+            PluginId = pluginId,
+            Version = version,
+            Name = name,
+            Author = author,
+            Description = description,
+            AuthorUrl = authorUrl,
+            PublishingUrl = publishingUrl,
+            MainAssemblyPath = mainAssembly,
+            PluginApiVersion = pluginApiVersion,
+            PluginApiMinorVersion = pluginApiMinorVersion,
             Force = force
         };
     }
@@ -140,6 +190,14 @@ internal static class PluginPackageCli
         return args[index];
     }
 
+    private static int ReadIntValue(ReadOnlySpan<string> args, ref int index, string option)
+    {
+        var value = ReadValue(args, ref index, option);
+        return int.TryParse(value, out var result)
+            ? result
+            : throw new ArgumentException($"Option '{option}' requires an integer value.");
+    }
+
     private static void PrintUsage()
     {
         Console.WriteLine("projectFrameCut Plugin Package Utility");
@@ -149,7 +207,10 @@ internal static class PluginPackageCli
         Console.WriteLine("       --certificate <signing-leaf.pfx> --chain <leaf-to-root.pem>");
         Console.WriteLine("       [--password <value> | --password-env <NAME> | --password-stdin] [--force]");
         Console.WriteLine();
-        Console.WriteLine("The staging directory must contain metadata.json and <PluginID>.dll.");
+        Console.WriteLine("The staging directory must contain <PluginID>.dll.");
+        Console.WriteLine("If metadata.json is absent, generate it with --plugin-id and --version.");
+        Console.WriteLine("Use --main-assembly when the assembly file name differs from the plugin ID.");
+        Console.WriteLine("metadata.json and hashtable.json are generated in the package.");
         Console.WriteLine("All files outside data/ and option.json are immutable and are covered by the manifest.");
     }
 }
@@ -161,6 +222,16 @@ public sealed class PluginPackageOptions
     public required string SigningCertificatePath { get; init; }
     public required string CertificateChainPath { get; init; }
     public string? CertificatePassword { get; init; }
+    public string? PluginId { get; init; }
+    public string? Version { get; init; }
+    public string? Name { get; init; }
+    public string? Author { get; init; }
+    public string? Description { get; init; }
+    public string? AuthorUrl { get; init; }
+    public string? PublishingUrl { get; init; }
+    public string? MainAssemblyPath { get; init; }
+    public int? PluginApiVersion { get; init; }
+    public int? PluginApiMinorVersion { get; init; }
     public bool Force { get; init; }
 }
 
@@ -178,6 +249,7 @@ public static class PluginPackageBuilder
     private const string ManifestFileName = "manifest.json";
     private const string ManifestSignatureFileName = "manifest.sig";
     private const string PublisherChainFileName = "publisher-chain.pem";
+    private const string HashtableFileName = "hashtable.json";
     private const string OptionFileName = "option.json";
     private const string LegacyPublicKeyFileName = "publickey.pem";
 
@@ -215,12 +287,6 @@ public static class PluginPackageBuilder
             throw new IOException($"Output file '{outputPath}' already exists. Use --force to replace it.");
         }
 
-        var metadataPath = Path.Combine(inputDirectory, MetadataFileName);
-        if (!File.Exists(metadataPath))
-        {
-            throw new FileNotFoundException("The staging directory must contain metadata.json.", metadataPath);
-        }
-
         using var signingCertificate = LoadSigningCertificate(certificatePath, options.CertificatePassword);
         var chainCertificates = PluginTrustValidator.LoadCertificateChainFromPem(
             await File.ReadAllTextAsync(chainPath, cancellationToken));
@@ -228,16 +294,18 @@ public static class PluginPackageBuilder
         {
             ValidateSigningMaterial(signingCertificate, chainCertificates);
 
-            var metadata = JsonSerializer.Deserialize<PluginMetadata>(
-                await File.ReadAllTextAsync(metadataPath, cancellationToken),
-                MetadataJsonOptions)
-                ?? throw new InvalidDataException("metadata.json is invalid.");
+            var metadataPath = Path.Combine(inputDirectory, MetadataFileName);
+            var metadata = File.Exists(metadataPath)
+                ? JsonSerializer.Deserialize<PluginMetadata>(
+                    await File.ReadAllTextAsync(metadataPath, cancellationToken),
+                    MetadataJsonOptions) ?? throw new InvalidDataException("metadata.json is invalid.")
+                : CreateMetadata(options);
 
             ValidatePluginId(metadata.PluginID);
-            var assemblyPath = Path.Combine(inputDirectory, metadata.PluginID + ".dll");
+            var assemblyPath = ResolveAssemblyPath(inputDirectory, metadata.PluginID, options.MainAssemblyPath);
             if (!File.Exists(assemblyPath))
             {
-                throw new FileNotFoundException($"The main plugin assembly '{metadata.PluginID}.dll' was not found.", assemblyPath);
+                throw new FileNotFoundException($"The main plugin assembly '{Path.GetRelativePath(inputDirectory, assemblyPath)}' was not found.", assemblyPath);
             }
 
             var publisherId = PluginTrustValidator.GetCertificateSha256Fingerprint(chainCertificates[1]);
@@ -255,6 +323,7 @@ public static class PluginPackageBuilder
             var packageFiles = await ReadImmutableStagingFilesAsync(
                 inputDirectory,
                 metadata.PluginID,
+                assemblyPath,
                 cancellationToken);
             packageFiles[MetadataFileName] = JsonSerializer.SerializeToUtf8Bytes(metadata, MetadataJsonOptions);
             packageFiles[PublisherChainFileName] = ExportCertificateChainPem(chainCertificates);
@@ -265,6 +334,7 @@ public static class PluginPackageBuilder
             packageFiles[encryptedAssemblyName] = encryptedAssembly;
             packageFiles[assemblySignatureName] = Encoding.UTF8.GetBytes(
                 Convert.ToBase64String(Sign(signingCertificate, assemblyBytes)));
+            packageFiles[HashtableFileName] = CreateHashtable(packageFiles);
 
             var manifest = new PluginPackageManifest
             {
@@ -364,9 +434,11 @@ public static class PluginPackageBuilder
             }
         }
 
+        var now = DateTime.UtcNow;
         foreach (var certificate in chain.Cast<X509Certificate2>())
         {
-            if (certificate.NotBefore > DateTime.UtcNow || certificate.NotAfter < DateTime.UtcNow)
+            if (certificate.NotBefore.ToUniversalTime() > now ||
+                certificate.NotAfter.ToUniversalTime() < now)
             {
                 throw new CryptographicException($"The certificate '{certificate.Subject}' is outside its validity period.");
             }
@@ -377,9 +449,68 @@ public static class PluginPackageBuilder
         }
     }
 
+    private static PluginMetadata CreateMetadata(PluginPackageOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.PluginId) || string.IsNullOrWhiteSpace(options.Version))
+        {
+            throw new InvalidDataException(
+                "metadata.json was not found. --plugin-id and --version are required to generate it.");
+        }
+
+        var pluginId = options.PluginId!;
+        var versionText = options.Version!;
+        if (!System.Version.TryParse(versionText, out var version))
+        {
+            throw new InvalidDataException($"Plugin version '{versionText}' is invalid.");
+        }
+
+        return new PluginMetadata
+        {
+            PluginID = pluginId,
+            PluginAPIVersion = options.PluginApiVersion ?? IPluginBase.CurrentPluginAPIVersion,
+            PluginAPIMinorVersion = options.PluginApiMinorVersion ?? 0,
+            Name = options.Name ?? pluginId,
+            Author = options.Author ?? string.Empty,
+            Description = options.Description ?? string.Empty,
+            Version = version,
+            AuthorUrl = options.AuthorUrl ?? string.Empty,
+            PublishingUrl = options.PublishingUrl
+        };
+    }
+
+    private static string ResolveAssemblyPath(string inputDirectory, string pluginId, string? mainAssemblyPath)
+    {
+        var relativePath = string.IsNullOrWhiteSpace(mainAssemblyPath)
+            ? pluginId + ".dll"
+            : mainAssemblyPath;
+        var assemblyPath = Path.GetFullPath(Path.Combine(inputDirectory, relativePath));
+        var relativeAssemblyPath = Path.GetRelativePath(inputDirectory, assemblyPath);
+        if (Path.IsPathRooted(relativeAssemblyPath) ||
+            relativeAssemblyPath is "." or ".." ||
+            relativeAssemblyPath.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+            relativeAssemblyPath.StartsWith("../", StringComparison.Ordinal))
+        {
+            throw new InvalidDataException("--main-assembly must point to a file inside the staging directory.");
+        }
+
+        return assemblyPath;
+    }
+
+    private static byte[] CreateHashtable(IReadOnlyDictionary<string, byte[]> files)
+    {
+        var hashes = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (var file in files)
+        {
+            hashes[file.Key] = PluginTrustValidator.ComputeSha256Hex(file.Value);
+        }
+
+        return JsonSerializer.SerializeToUtf8Bytes(hashes, MetadataJsonOptions);
+    }
+
     private static async Task<Dictionary<string, byte[]>> ReadImmutableStagingFilesAsync(
         string inputDirectory,
         string pluginId,
+        string assemblyPath,
         CancellationToken cancellationToken)
     {
         var files = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
@@ -395,7 +526,8 @@ public static class PluginPackageBuilder
 
             var relativePath = PluginTrustValidator.NormalizeManifestPath(
                 Path.GetRelativePath(root, filePath).Replace('\\', '/'));
-            if (relativePath.Equals(pluginId + ".dll", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(Path.GetFullPath(filePath), assemblyPath, StringComparison.OrdinalIgnoreCase) ||
+                relativePath.Equals(pluginId + ".dll", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -407,6 +539,7 @@ public static class PluginPackageBuilder
             if (relativePath.Equals(ManifestFileName, StringComparison.OrdinalIgnoreCase) ||
                 relativePath.Equals(ManifestSignatureFileName, StringComparison.OrdinalIgnoreCase) ||
                 relativePath.Equals(PublisherChainFileName, StringComparison.OrdinalIgnoreCase) ||
+                relativePath.Equals(HashtableFileName, StringComparison.OrdinalIgnoreCase) ||
                 relativePath.Equals(LegacyPublicKeyFileName, StringComparison.OrdinalIgnoreCase) ||
                 relativePath.Equals(pluginId + ".dll.enc", StringComparison.OrdinalIgnoreCase) ||
                 relativePath.Equals(pluginId + ".dll.sig", StringComparison.OrdinalIgnoreCase))
@@ -510,7 +643,7 @@ public static class PluginPackageBuilder
         var builder = new StringBuilder();
         foreach (var certificate in chain.Cast<X509Certificate2>())
         {
-            builder.Append(certificate.ExportCertificatePem());
+            builder.AppendLine(certificate.ExportCertificatePem().TrimEnd());
         }
 
         return Encoding.ASCII.GetBytes(builder.ToString());

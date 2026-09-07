@@ -80,7 +80,22 @@ namespace projectFrameCut.Services
             var factory = PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>()
                 .SelectMany(c => c.EffectProviderUIProvider)
                 .FirstOrDefault(kv => kv.Key == provider.TypeName).Value;
-            return factory is not null ? factory(provider) : PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().First(c => c.PluginID == provider.FromPlugin)?.GetDefaultEffectProviderUIProvider(provider) ?? throw new InvalidOperationException("No either specific or default UI provider found for the given effect provider and it's parent plugin.");
+            var plugin = PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().First(c => c.PluginID == provider.FromPlugin);
+            if (factory is not null)
+            {
+                try { return factory(provider); }
+                catch (Exception ex) { projectFrameCut.Shared.Logger.Log(ex, $"Create custom UI for isolated effect provider '{provider.TypeName}'", typeof(EffectServices)); }
+            }
+            try
+            {
+                return plugin.GetDefaultEffectProviderUIProvider(provider)
+                    ?? throw new InvalidOperationException("The plugin did not provide a default effect provider UI.");
+            }
+            catch (Exception ex)
+            {
+                projectFrameCut.Shared.Logger.Log(ex, $"Create plugin default UI for isolated effect provider '{provider.TypeName}'", typeof(EffectServices));
+                return new ApplicationPluginBase.Effect.EffectProviderUI(provider);
+            }
         }
 
         public static Dictionary<string, string> GetLocalizedEffectProviderNames(string splitter = " ", bool haveSubFix = true)

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
@@ -51,4 +51,5 @@
 	</ItemGroup>
 
 
+  <ItemGroup><ProjectReference Include="..\projectFrameCut.RpcClient\projectFrameCut.RpcClient.csproj" /></ItemGroup>
 </Project>

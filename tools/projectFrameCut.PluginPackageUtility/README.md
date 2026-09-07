@@ -6,11 +6,15 @@ PFX private key stays in the publishing environment.
 
 ## Input
 
-The staging directory must contain:
+The staging directory normally contains:
 
 - `metadata.json` with the normal plugin metadata fields;
 - `<PluginID>.dll`, where `<PluginID>` is `metadata.json`'s `PluginID`;
 - any immutable dependency files needed by the plugin.
+
+When `metadata.json` is absent, the utility generates it from `--plugin-id`,
+`--version`, and the optional metadata switches. `--main-assembly` can identify
+the published main DLL when its file name differs from the plugin ID.
 
 Files under `data/` and `option.json` are treated as runtime-managed mutable data;
 they are included in the archive but intentionally omitted from the signed
@@ -28,6 +32,22 @@ dotnet run --project tools/PluginPackageUtility -- pack `
   --password-env PJFC_PLUGIN_PFX_PASSWORD
 ```
 
+For a publish directory without `metadata.json`:
+
+```powershell
+dotnet run --project tools/PluginPackageUtility -- pack `
+  --input .\publish `
+  --output .\Example.Plugin.pjfc-plugin `
+  --plugin-id Example.Plugin `
+  --version 1.2.0 `
+  --name "Example Plugin" `
+  --author "Example Author" `
+  --description "An example plugin" `
+  --certificate .\publisher-plugin-signing.pfx `
+  --chain .\publisher-chain.pem `
+  --password-env PJFC_PLUGIN_PFX_PASSWORD
+```
+
 Use `--password-stdin` in CI when an environment variable is not appropriate.
 `--force` is required to replace an existing output file.
 
@@ -37,8 +57,11 @@ for the first certificate. The tool validates RSA 2048+, Digital Signature and
 Code Signing usage on the leaf, CA/Certificate Signing usage on the publisher CA,
 chain order, and weak signature algorithms before it writes anything.
 
-The generated package contains `metadata.json`, `publisher-chain.pem`,
-`manifest.json`, `manifest.sig`, encrypted `<PluginID>.dll.enc`, signed
-`<PluginID>.dll.sig`, and all other immutable staging files. `manifest.json` is
-canonicalized with `PluginTrustValidator.GetCanonicalManifestBytes`, so its
-signature is byte-for-byte compatible with the runtime verifier.
+The generated package contains `metadata.json`, `hashtable.json`,
+`publisher-chain.pem`, `manifest.json`, `manifest.sig`, encrypted
+`<PluginID>.dll.enc`, signed `<PluginID>.dll.sig`, and all other immutable
+staging files. `hashtable.json` maps every generated package file except itself
+and the v2 manifest/signature to its SHA-256 hash, matching the old MSBuild
+packager's compatibility file. `manifest.json` is canonicalized with
+`PluginTrustValidator.GetCanonicalManifestBytes`, so its signature is
+byte-for-byte compatible with the runtime verifier.

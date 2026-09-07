@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:v="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;assembly=projectFrameCut.ApplicationAPIBase"
@@ -152,15 +152,7 @@
                     <ContentView x:Name="ResultParticalContentView" />
                 </VerticalStackLayout>
             </Border>
-            <Border StrokeThickness="4">
-                <VerticalStackLayout>
-                    <Label Text="pwsh script engine test"/>
-                    <Entry x:Name="ScriptInputEntry" Placeholder="Input script here" />
-                    <Button x:Name="ExecteCommandButton" Text="Execute Command" Clicked="ExecteCommandButton_Clicked"/>
-                    <Editor x:Name="ScriptOutputEditor" HeightRequest="150" Placeholder="" IsReadOnly="False"></Editor>
-                    <Button x:Name="InvokeNativeFuncButton" Text="Invoke libpsl-native" Clicked="InvokeNativeFuncButton_Clicked"/>
-                </VerticalStackLayout>
-            </Border>
+
             
             
 

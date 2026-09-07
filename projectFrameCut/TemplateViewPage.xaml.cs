@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
 using Microsoft.Maui.Controls.Shapes;
@@ -325,17 +325,6 @@ public partial class TemplateViewPage : ContentPage
             }
 
             await ImportTemplate(path);
-        }
-        catch (Exception ex)
-        {
-            await DisplayAlertAsync(Localized._Error, $"{Localized.TemplateCreatePage_InvalidTemplate}{Environment.NewLine}{Environment.NewLine}{Localized._ExceptionTemplate(ex)})", Localized._OK);
-        }
-    }
-    private async void CreateScriptTemplateButton_Clicked(object sender, EventArgs e)
-    {
-        try
-        {
-            await Navigation.PushAsync(new ScriptTemplateCreatePage());
         }
         catch (Exception ex)
         {

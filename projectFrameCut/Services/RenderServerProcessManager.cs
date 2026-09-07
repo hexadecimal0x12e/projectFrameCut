@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Runtime.Versioning;
 using FFmpeg.AutoGen;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -146,15 +147,18 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         throw new PlatformNotSupportedException("The projectFrameCut Render RPC server is not supported on this platform. Use In-Process RPC Backend mode.");
 #endif
 
+        [UnsupportedOSPlatform("ios")]
         void StartProcess(string execPath, bool withHttp)
         {
+            if (OperatingSystem.IsIOS() || OperatingSystem.IsAndroid()) throw new InvalidOperationException("RPC Worker process was not available on mobile.");
+            var noConsole = !SettingsManager.IsBoolSettingTrue("render_RpcServerShowConsole");
             var startInfo = new ProcessStartInfo
             {
                 FileName = execPath,
                 UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
+                CreateNoWindow = noConsole,
+                RedirectStandardError = noConsole,
+                RedirectStandardOutput = noConsole,
             };
             startInfo.ArgumentList.Add("rpc_server");
             startInfo.ArgumentList.Add($"--pipe={_pipeName}");
@@ -172,7 +176,8 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             startInfo.ArgumentList.Add($"--locale={Localized._LocaleId_}");
             startInfo.ArgumentList.Add($"--preferHwAccelDecoder={SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelDecoding", true)}");
             startInfo.ArgumentList.Add($"--preferHwAccelEncoder={SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelEncoding", true)}");
-            startInfo.ArgumentList.Add("--quiet");
+            if (MyLoggerExtensions.LoggingDiagnosticInfo) startInfo.ArgumentList.Add($"--logDiagnostic");
+            if (!noConsole) startInfo.ArgumentList.Add($"--consoleLog");
 
             if (withHttp)
             {
@@ -196,18 +201,22 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             {
                 _process = Process.Start(startInfo)
                     ?? throw new InvalidOperationException("Unable to start pjfc-cli.exe RPC server.");
-                _process.ErrorDataReceived += (_, e) =>
+                if (noConsole)
                 {
-                    if (!string.IsNullOrWhiteSpace(e.Data))
-                        Log(e.Data, "RPCWorker Stderr");
-                };
-                _process.OutputDataReceived += (_, e) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(e.Data))
-                        Log(e.Data, "RPCWorker Stdout");
-                };
-                _process.BeginErrorReadLine();
-                _process.BeginOutputReadLine();
+                    _process.ErrorDataReceived += (_, e) =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(e.Data))
+                            Log(e.Data, "RPCWorker Stderr");
+                    };
+                    _process.OutputDataReceived += (_, e) =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(e.Data))
+                            Log(e.Data, "RPCWorker Stdout");
+                    };
+                    _process.BeginErrorReadLine();
+                    _process.BeginOutputReadLine();
+
+                }
 
                 var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId);
                 var client = new RenderClient(transport, _clientId);

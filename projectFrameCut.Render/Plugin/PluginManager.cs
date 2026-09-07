@@ -23,7 +23,11 @@ namespace projectFrameCut.Render.Plugin
     {
         public const int CurrentPluginAPIVersion = IPluginBase.CurrentPluginAPIVersion;
         private static Dictionary<string, IPluginBase> loadedPlugins = new();
+        private static readonly HashSet<string> projectPluginIds = new(StringComparer.Ordinal);
         public static IReadOnlyDictionary<string, IPluginBase> LoadedPlugins => loadedPlugins;
+        public static IReadOnlyCollection<string> ProjectPluginIds => projectPluginIds;
+        public static Func<string, ProjectJSONStructure, CancellationToken, Task>? ProjectPluginLoader { get; set; }
+        public static Func<Task>? ProjectPluginUnloader { get; set; }
         public static bool Inited { get; private set; } = false;
 
         public static Func<string, string?>? ExtenedLocalizationGetter = null;
@@ -52,6 +56,7 @@ namespace projectFrameCut.Render.Plugin
             if (Inited) throw new InvalidOperationException("PluginManager has already been initialized.");
             Inited = true;
             loadedPlugins.Clear();
+            projectPluginIds.Clear();
             foreach (var plugin in plugins)
             {
                 if (plugin.Properties.TryGetValue("IsInternalPlugin", out var value) && bool.TryParse(value, out var result) && result) plugin.OnLoaded(out _);
@@ -72,12 +77,14 @@ namespace projectFrameCut.Render.Plugin
                 }
                 catch { }
                 loadedPlugins.Remove(id);
+                projectPluginIds.Remove(id);
                 Logger.Log($"Plugin {id} unloaded.");
             }
         }
 
         public static void ForceUnloadAll()
         {
+            Inited = false;
             foreach (var item in loadedPlugins)
             {
                 try
@@ -87,7 +94,7 @@ namespace projectFrameCut.Render.Plugin
                 catch { }
             }
             loadedPlugins.Clear();
-            Inited = false;
+            projectPluginIds.Clear();
         }
 
         public static void LoadFrom(IPluginBase pluginInstance)
@@ -116,12 +123,32 @@ namespace projectFrameCut.Render.Plugin
 
         }
 
+        public static void LoadProjectPlugin(IPluginBase pluginInstance)
+        {
+            ArgumentNullException.ThrowIfNull(pluginInstance);
+            if (pluginInstance.PluginAPIVersion != CurrentPluginAPIVersion)
+                throw new InvalidProgramException($"Plugin {pluginInstance.Name} has incompatible API version {pluginInstance.PluginAPIVersion}, expected {CurrentPluginAPIVersion}.");
+            if (loadedPlugins.ContainsKey(pluginInstance.PluginID))
+                throw new InvalidOperationException($"Plugin id '{pluginInstance.PluginID}' is already loaded.");
+            loadedPlugins.Add(pluginInstance.PluginID, pluginInstance);
+            projectPluginIds.Add(pluginInstance.PluginID);
+            Logger.Log($"Project plugin {pluginInstance.PluginID} loaded.");
+        }
+
+        public static void UnloadProjectPlugins()
+        {
+            foreach (var id in projectPluginIds.ToArray())
+                Unload(id);
+            projectPluginIds.Clear();
+        }
+
         public static void UnloadPlugin(string id)
         {
             if (loadedPlugins.TryGetValue(id, out IPluginBase? value))
             {
                 value.OnClosing();
                 loadedPlugins.Remove(id);
+                projectPluginIds.Remove(id);
                 Logger.Log($"Plugin {id} unloaded.");
             }
         }

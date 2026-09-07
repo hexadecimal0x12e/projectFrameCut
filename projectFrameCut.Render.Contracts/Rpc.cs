@@ -16,6 +16,16 @@ public interface IRenderTransport : IAsyncDisposable
 public interface IRenderClient : IAsyncDisposable
 {
     string ClientId { get; }
+    ValueTask<GuiProjectSession> RegisterGuiProjectAsync(GuiProjectSession request, CancellationToken cancellationToken = default);
+    ValueTask<EmptyResponse> UnregisterGuiProjectAsync(GuiProjectSession request, CancellationToken cancellationToken = default);
+    ValueTask<GuiProjectWork> GetGuiProjectWorkAsync(GuiProjectSession request, CancellationToken cancellationToken = default);
+    ValueTask<EmptyResponse> CompleteGuiProjectWorkAsync(GuiProjectResult request, CancellationToken cancellationToken = default);
+    ValueTask<GuiProjectResult> InvokeGuiProjectAsync(GuiProjectRequest request, CancellationToken cancellationToken = default);
+    ValueTask<GuiProjectSession> GetGuiProjectSessionAsync(EmptyRequest request, CancellationToken cancellationToken = default);
+    ValueTask<CreateAdditionalPipeResponse> CreateGuiProjectPipeAsync(GuiProjectSession request, CancellationToken cancellationToken = default);
+    ValueTask<CreateAdditionalPipeResponse> CreateAdditionalPipeAsync(CancellationToken cancellationToken = default);
+    ValueTask<PendingExternalRpcRequest> GetExternalRpcRequestAsync(CancellationToken cancellationToken = default);
+    ValueTask ResolveExternalRpcRequestAsync(ResolveExternalRpcRequest request, CancellationToken cancellationToken = default);
     ValueTask<RenderCapabilities> GetCapabilitiesAsync(CancellationToken cancellationToken = default);
     ValueTask<RenderSession> OpenProjectAsync(OpenProjectRequest request, CancellationToken cancellationToken = default);
     ValueTask CloseProjectAsync(Guid sessionId, CancellationToken cancellationToken = default);
@@ -67,6 +77,16 @@ public sealed class DirectRenderTransport(IRenderService service) : IRenderTrans
 
 public sealed class RenderClient(IRenderTransport transport, string? clientId = null) : IRenderClient
 {
+    public ValueTask<GuiProjectSession> RegisterGuiProjectAsync(GuiProjectSession request, CancellationToken ct = default) => SendAsync<GuiProjectSession, GuiProjectSession>(RenderOperation.RegisterGuiProject, request, ct);
+    public ValueTask<EmptyResponse> UnregisterGuiProjectAsync(GuiProjectSession request, CancellationToken ct = default) => SendAsync<GuiProjectSession, EmptyResponse>(RenderOperation.UnregisterGuiProject, request, ct);
+    public ValueTask<GuiProjectWork> GetGuiProjectWorkAsync(GuiProjectSession request, CancellationToken ct = default) => SendAsync<GuiProjectSession, GuiProjectWork>(RenderOperation.GetGuiProjectWork, request, ct);
+    public ValueTask<EmptyResponse> CompleteGuiProjectWorkAsync(GuiProjectResult request, CancellationToken ct = default) => SendAsync<GuiProjectResult, EmptyResponse>(RenderOperation.CompleteGuiProjectWork, request, ct);
+    public ValueTask<GuiProjectResult> InvokeGuiProjectAsync(GuiProjectRequest request, CancellationToken ct = default) => SendAsync<GuiProjectRequest, GuiProjectResult>(RenderOperation.InvokeGuiProject, request, ct);
+    public ValueTask<GuiProjectSession> GetGuiProjectSessionAsync(EmptyRequest request, CancellationToken ct = default) => SendAsync<EmptyRequest, GuiProjectSession>(RenderOperation.GetGuiProjectSession, request, ct);
+    public ValueTask<CreateAdditionalPipeResponse> CreateGuiProjectPipeAsync(GuiProjectSession request, CancellationToken ct = default) => SendAsync<GuiProjectSession, CreateAdditionalPipeResponse>(RenderOperation.CreateGuiProjectPipe, request, ct);
+    public ValueTask<CreateAdditionalPipeResponse> CreateAdditionalPipeAsync(CancellationToken ct = default) => SendAsync<CreateAdditionalPipeRequest, CreateAdditionalPipeResponse>(RenderOperation.CreateAdditionalPipe, new(), ct);
+    public ValueTask<PendingExternalRpcRequest> GetExternalRpcRequestAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, PendingExternalRpcRequest>(RenderOperation.GetExternalRpcRequest, new(), ct);
+    public async ValueTask ResolveExternalRpcRequestAsync(ResolveExternalRpcRequest request, CancellationToken ct = default) => _ = await SendAsync<ResolveExternalRpcRequest, EmptyResponse>(RenderOperation.ResolveExternalRpcRequest, request, ct).ConfigureAwait(false);
     private readonly IRenderTransport _transport = transport ?? throw new ArgumentNullException(nameof(transport));
     public string ClientId { get; } = string.IsNullOrWhiteSpace(clientId) ? $"client-{Guid.NewGuid():N}" : clientId;
 

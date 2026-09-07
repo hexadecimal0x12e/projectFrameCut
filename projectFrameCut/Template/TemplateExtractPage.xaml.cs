@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using System.Collections.ObjectModel;
@@ -19,7 +19,7 @@ public partial class TemplateExtractPage : ContentPage
     private readonly ObservableCollection<TemplateExtractFieldItem> _allFields = [];
     private readonly ObservableCollection<TemplateExtractFieldItem> _filteredFields = [];
     private readonly ObservableCollection<TemplateExtractFieldItem> _configFields = [];
-    private readonly ObservableCollection<ScriptVariableItem> _manualVariables = [];
+    private readonly ObservableCollection<TemplateVariableItem> _manualVariables = [];
     private readonly ObservableCollection<TemplateClipItem> _clips = [];
     private static readonly IReadOnlyList<TemplateScope> ScopeValues =
     [
@@ -35,8 +35,6 @@ public partial class TemplateExtractPage : ContentPage
     private bool _showNonRecommended;
     private int _currentStep = 1;
     private readonly ObservableCollection<string> _tags = [];
-    private string _scriptContent = "";
-    private bool _scriptEnabled;
 
     public TemplateExtractPage(ViewModels.ProjectsViewModel projectVm)
     {
@@ -57,32 +55,10 @@ public partial class TemplateExtractPage : ContentPage
     }
 
     private List<string> GetScopeOptions() =>
-        _scriptEnabled
-        ? [Localized.TemplateExtractPage_Scope_Clip, Localized.TemplateExtractPage_Scope_Track]
-        : [Localized.TemplateExtractPage_Scope_Any, Localized.TemplateExtractPage_Scope_Project, Localized.TemplateExtractPage_Scope_Clip, Localized.TemplateExtractPage_Scope_Track];
+        [Localized.TemplateExtractPage_Scope_Any, Localized.TemplateExtractPage_Scope_Project, Localized.TemplateExtractPage_Scope_Clip, Localized.TemplateExtractPage_Scope_Track];
 
-
-    private TemplateScope GetSelectedScope()
-    {
-        var index = ScopePicker.SelectedIndex;
-        if (index < 0 || index >= ScopeValues.Count)
-        {
-            return TemplateScope.Any;
-        }
-
-        if (_scriptEnabled)
-        {
-            return index switch
-            {
-                1 => TemplateScope.Tracks,
-                _ => TemplateScope.Clips,
-            };
-        }
-        else
-        {
-            return ScopeValues[index];
-        }
-    }
+    private TemplateScope GetSelectedScope() => ScopePicker.SelectedIndex >= 0 && ScopePicker.SelectedIndex < ScopeValues.Count
+        ? ScopeValues[ScopePicker.SelectedIndex] : TemplateScope.Any;
 
     private async void TemplateExtractPage_Loaded(object? sender, EventArgs e)
     {
@@ -959,36 +935,12 @@ public partial class TemplateExtractPage : ContentPage
                 return;
             }
 
-            // 如果启用了脚本且有脚本内容，创建脚本模板；否则创建标准 JSON 模板
-            ITemplateStructure template;
-            if (_scriptEnabled && !string.IsNullOrWhiteSpace(_scriptContent))
+            ITemplateStructure template = new JSONBasedTemplateStructure
             {
-                template = new ScriptBasedTemplateStructure
-                {
-                    TemplateName = projectName,
-                    TemplateVersion = 2,
-                    Scope = GetSelectedScope(),
-                    Project = project,
-                    Draft = draft,
-                    Variables = vars,
-                    VariableDefinitions = variableDefinitions,
-                    CreatedInAPIVersion = IPluginBase.CurrentPluginAPIVersion
-                };
-            }
-            else
-            {
-                template = new JSONBasedTemplateStructure
-                {
-                    TemplateName = projectName,
-                    TemplateVersion = 2,
-                    Scope = GetSelectedScope(),
-                    Project = project,
-                    Draft = draft,
-                    Variables = vars,
-                    VariableDefinitions = variableDefinitions,
-                    CreatedInAPIVersion = IPluginBase.CurrentPluginAPIVersion
-                };
-            }
+                TemplateName = projectName, TemplateVersion = 2, Scope = GetSelectedScope(),
+                Project = project, Draft = draft, Variables = vars, VariableDefinitions = variableDefinitions,
+                CreatedInAPIVersion = IPluginBase.CurrentPluginAPIVersion
+            };
 
             var mtd = new TemplateMetadataStructure
             {
@@ -1043,8 +995,7 @@ public partial class TemplateExtractPage : ContentPage
                     selectedAssets,
                     mtd,
                     _projectVm._projectPath,
-                    DraftPage.DraftJSONOption,
-                    scriptContent: _scriptContent);
+                    DraftPage.DraftJSONOption);
 
                 await using var packageZipStream = File.OpenRead(packageZipPath);
                 var savePath = await FileSystemService.SaveAFile($"{safeName}_{template.TemplateID}.pjfcTemplate", packageZipStream);
@@ -1162,73 +1113,6 @@ public partial class TemplateExtractPage : ContentPage
         TagInputEntry.IsEnabled = !isBusy;
         AddTagButton.IsEnabled = !isBusy;
         ReadmeEditor.IsEnabled = !isBusy;
-        ScriptEnabledSwitch.IsEnabled = !isBusy;
-        SelectScriptButton.IsEnabled = !isBusy && _scriptEnabled;
-        ScriptEditor.IsEnabled = !isBusy && _scriptEnabled;
-    }
-
-    private void ScriptEnabledSwitch_Toggled(object? sender, ToggledEventArgs e)
-    {
-        _scriptEnabled = e.Value;
-        ScriptUploadPanel.IsVisible = _scriptEnabled;
-        if (!_scriptEnabled)
-        {
-            ScopePicker.SelectedIndex = 0;
-            ScopePicker.ItemsSource = GetScopeOptions();
-
-            _scriptContent = "";
-            ScriptFileNameLabel.Text = Localized.TemplateExtractPage_NoFileSelected;
-            ScriptEditor.Text = "";
-        }
-        else
-        {
-            var idx = ScopePicker.SelectedIndex;
-            ScopePicker.ItemsSource = GetScopeOptions();
-
-            if (GetSelectedScope() is TemplateScope.Any or TemplateScope.Project)
-            {
-                ScopePicker.SelectedIndex = 0;
-            }
-            else
-            {
-                ScopePicker.SelectedIndex = idx - 2;
-
-            }
-        }
-    }
-
-    private async void SelectScript_Clicked(object? sender, EventArgs e)
-    {
-        if (_isBusy)
-            return;
-
-        try
-        {
-            var result = await FilePicker.Default.PickAsync(new PickOptions
-            {
-                FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
-                {
-                    [DevicePlatform.WinUI] = new[] { ".ps1" },
-                    [DevicePlatform.Android] = new[] { "application/ps1", "text/plain" }
-                })
-            });
-
-            if (result is null || string.IsNullOrWhiteSpace(result.FullPath))
-                return;
-
-            _scriptContent = await File.ReadAllTextAsync(result.FullPath);
-            ScriptFileNameLabel.Text = result.FileName;
-            ScriptEditor.Text = _scriptContent;
-        }
-        catch (Exception ex)
-        {
-            await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
-        }
-    }
-
-    private void ScriptEditor_TextChanged(object? sender, TextChangedEventArgs e)
-    {
-        _scriptContent = ScriptEditor.Text ?? "";
     }
 
     private void OnAddManualVariableClicked(object? sender, EventArgs e)
@@ -1238,7 +1122,7 @@ public partial class TemplateExtractPage : ContentPage
         while (_manualVariables.Any(v => string.Equals(v.VariableName, baseName + index, StringComparison.OrdinalIgnoreCase)))
             index++;
 
-        _manualVariables.Add(new ScriptVariableItem
+        _manualVariables.Add(new TemplateVariableItem
         {
             VariableName = baseName + index,
             DisplayName = "Variable " + index,
@@ -1249,7 +1133,7 @@ public partial class TemplateExtractPage : ContentPage
 
     private void OnDeleteManualVariableClicked(object? sender, EventArgs e)
     {
-        if (sender is not Button { BindingContext: ScriptVariableItem item })
+        if (sender is not Button { BindingContext: TemplateVariableItem item })
             return;
 
         _manualVariables.Remove(item);

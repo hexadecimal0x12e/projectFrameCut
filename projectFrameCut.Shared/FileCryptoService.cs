@@ -81,12 +81,16 @@ namespace projectFrameCut.Shared
 
         public static byte[] EncryptToFileWithPassword(string password, byte[] inputBytes)
         {
-            // nonce|tag|ciphertext
+            // salt|nonce|tag|ciphertext
             var salt = new byte[SaltSize];
             RandomNumberGenerator.Fill(salt);
             var key = DeriveKeyFromPassword(password, salt);
+            var outBytes = Encrypt(key, inputBytes);
+            var result = new byte[SaltSize + outBytes.Length];
 
-            return Encrypt(key, inputBytes);
+            Buffer.BlockCopy(salt, 0, result, 0, SaltSize);
+            Buffer.BlockCopy(outBytes, 0, result, SaltSize, outBytes.Length);
+            return result;
         }
 
 

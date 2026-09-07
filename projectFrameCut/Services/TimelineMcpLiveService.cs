@@ -1,4 +1,4 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Project;
@@ -182,10 +182,17 @@ public static class TimelineMcpLiveService
         return pvd.Value?.Invoke();
     }
 
-    internal static void ApplyTextStyleFields(ITextClipStyleProvider provider, Dictionary<string, object>? fields, List<string>? resultLog = null)
+    internal static void ApplyTextStyleFields(ITextClipStyleProvider provider, Dictionary<string, object>? fields, List<string>? resultLog = null, bool strict = false)
     {
         if (fields is null || fields.Count == 0) return;
-        if (provider.SettableFields is null || provider.SettableFields.Count == 0) return;
+        if (provider.SettableFields is null || provider.SettableFields.Count == 0)
+        {
+            if (strict) throw new ArgumentException("Text style has no settable fields.");
+            return;
+        }
+        if (strict)
+            foreach (var key in fields.Keys)
+                if (!provider.SettableFields.ContainsKey(key)) throw new ArgumentException($"Unknown text style field '{key}'.");
 
         foreach (var kv in fields)
         {
@@ -202,6 +209,7 @@ public static class TimelineMcpLiveService
             }
             else
             {
+                if (strict) throw new ArgumentException($"Cannot set text style field '{kv.Key}': {feedback}");
                 resultLog?.Add($"Warning: Failed to set field '{kv.Key}' on text style '{provider.TypeName}': {feedback}");
             }
         }
@@ -278,7 +286,7 @@ public static class TimelineMcpLiveService
     /// <summary>
     /// 同步创建并添加文本 Clip。调用方必须已在 UI 线程上。
     /// </summary>
-    internal static ClipElementUI AddTextClipToPage(DraftPage page, string styleId, string text, int startPosition, int track, Dictionary<string, object>? fields = null)
+    internal static ClipElementUI AddTextClipToPage(DraftPage page, string styleId, string text, int startPosition, int track, Dictionary<string, object>? fields = null, bool strictFields = false)
     {
         var providerItem = ResolveTextStyleProvider(styleId);
         if (providerItem is null)
@@ -290,7 +298,7 @@ public static class TimelineMcpLiveService
         provider.Parameters = new Dictionary<string, string>(providerItem.Parameters);
         provider.BasicText = text;
 
-        ApplyTextStyleFields(provider, fields);
+        ApplyTextStyleFields(provider, fields, strict: strictFields);
 
         var entries = BuildTextEntriesWithFontFallback(provider);
 
@@ -363,7 +371,7 @@ public static class TimelineMcpLiveService
         return provider;
     }
 
-    internal static List<string> SetTextClipStyleFields(DraftPage page, Guid clipId, Dictionary<string, object> fields)
+    internal static List<string> SetTextClipStyleFields(DraftPage page, Guid clipId, Dictionary<string, object> fields, bool strictFields = false)
     {
         if (!page.Clips.TryGetValue(clipId, out var clip))
         {
@@ -382,7 +390,7 @@ public static class TimelineMcpLiveService
         }
 
         var resultLog = new List<string>();
-        ApplyTextStyleFields(provider, fields, resultLog);
+        ApplyTextStyleFields(provider, fields, resultLog, strict: strictFields);
 
         var entries = BuildTextEntriesWithFontFallback(provider);
 

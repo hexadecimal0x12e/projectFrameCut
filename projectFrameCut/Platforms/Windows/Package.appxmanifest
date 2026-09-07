@@ -7,6 +7,7 @@
 	xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
 	xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+	xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
 	xmlns:uap4="http://schemas.microsoft.com/appx/manifest/uap/windows10/4">
 
 	<!--wtf, why the pfn is not hexadecimal0x12e.projectFrameCut in ms store-->
@@ -79,6 +80,15 @@
 					</uap3:AppExecutionAlias>
 				</uap3:Extension>
 			</Extensions>
+		</Application>
+		
+		<Application Id="InSandboxWorkerNoConsole" Executable="projectFrameCut.exe" uap10:TrustLevel="appContainer" uap10:RuntimeBehavior="packagedClassicApp" uap10:SupportsMultipleInstances="true">
+			<uap:VisualElements DisplayName="projectFrameCut Sandbox runner (No Console)" Description="AppContainer isolated environment helper" AppListEntry="none" 
+													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
+		</Application>
+		<Application Id="InSandboxWorkerConsole" Executable="pjfc-cli.exe" uap10:TrustLevel="appContainer" uap10:RuntimeBehavior="packagedClassicApp" uap10:SupportsMultipleInstances="true">
+			<uap:VisualElements DisplayName="projectFrameCut Sandbox runner (Console)" Description="AppContainer isolated environment helper" AppListEntry="none" 
+													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
 		</Application>
 
 	</Applications>

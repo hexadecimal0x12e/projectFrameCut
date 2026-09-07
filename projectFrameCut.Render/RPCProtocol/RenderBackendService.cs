@@ -30,6 +30,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private readonly ConcurrentDictionary<Guid, BackendSession> _sessions = new();
     private readonly ConcurrentDictionary<Guid, JobEntry> _jobs = new();
     private readonly object _persistGate = new();
+    private readonly SemaphoreSlim _projectLifecycleGate = new(1, 1);
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -92,7 +93,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         MinimumProtocolVersion = RenderProtocol.MinimumSupportedVersion,
         BackendVersion = typeof(Renderer).Assembly.GetName().Version?.ToString() ?? "unknown",
         Operations = Enum.GetValues<RenderOperation>()
-            .Where(static operation => operation != RenderOperation.Unknown && (int)operation < 100)
+            .Where(static operation => operation != RenderOperation.Unknown && operation != RenderOperation.CreateAdditionalPipe
+                && operation != RenderOperation.GetExternalRpcRequest && operation != RenderOperation.ResolveExternalRpcRequest && (int)operation < 100 && ((int)operation < 30 || (int)operation > 36))
             .Select(static operation => operation.ToString())
             .ToList(),
         Encoders = ["libx264"],
@@ -101,10 +103,38 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
 
     private async ValueTask<RenderSession> OpenProjectAsync(OpenProjectRequest request, CancellationToken cancellationToken)
     {
+        await _projectLifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { return await OpenProjectCoreAsync(request, cancellationToken).ConfigureAwait(false); }
+        finally { _projectLifecycleGate.Release(); }
+    }
+
+    private async ValueTask<RenderSession> OpenProjectCoreAsync(OpenProjectRequest request, CancellationToken cancellationToken)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.ProjectRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.TimelineJson);
         var root = Path.GetFullPath(request.ProjectRoot);
         if (!Directory.Exists(root)) throw new DirectoryNotFoundException($"Project root '{root}' does not exist.");
+        if (PluginManager.ProjectPluginIds.Count > 0 &&
+            _sessions.Values.Any(x => !string.Equals(x.ProjectRoot, root, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)))
+            throw new NotSupportedException("A render backend with active project plugins cannot host a different project.");
+
+        var project = string.IsNullOrWhiteSpace(request.ProjectJson)
+            ? null
+            : JsonSerializer.Deserialize<ProjectJSONStructure>(request.ProjectJson, _jsonOptions);
+        var hasProjectPlugins = project?.ProjectPlugins?.Any(x => x.Enabled) == true;
+        var loadedProjectPluginsForOpen = false;
+        if (hasProjectPlugins)
+        {
+            if (_sessions.Values.Any(x => !string.Equals(x.ProjectRoot, root, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)))
+                throw new NotSupportedException("A render backend cannot host project plugins from multiple projects at the same time.");
+            if (PluginManager.ProjectPluginLoader is null)
+                throw new NotSupportedException("This render host does not provide project plugin isolation.");
+            if (PluginManager.ProjectPluginIds.Count == 0)
+            {
+                await PluginManager.ProjectPluginLoader(root, project!, cancellationToken).ConfigureAwait(false);
+                loadedProjectPluginsForOpen = true;
+            }
+        }
 
         var sessionId = request.SessionId == Guid.Empty ? Guid.NewGuid() : request.SessionId;
         var draft = JsonSerializer.Deserialize<DraftStructureJSON>(request.TimelineJson, _jsonOptions)
@@ -117,16 +147,23 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 group => ResolveProjectSourcePath(root, group.Last().Path) ?? string.Empty,
                 StringComparer.Ordinal);
 
-        var clips = await Task.Run(() => CreateClips(draft, assets, request.ProxyRoot, root, cancellationToken), cancellationToken).ConfigureAwait(false);
-        var soundTracks = await Task.Run(() => CreateSoundTracks(draft, assets, root, cancellationToken), cancellationToken).ConfigureAwait(false);
+        IClip[] clips;
+        ISoundTrack[] soundTracks;
+        try
+        {
+            clips = await Task.Run(() => CreateClips(draft, assets, request.ProxyRoot, root, cancellationToken), cancellationToken).ConfigureAwait(false);
+            soundTracks = await Task.Run(() => CreateSoundTracks(draft, assets, root, cancellationToken), cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            if (loadedProjectPluginsForOpen && _sessions.IsEmpty && PluginManager.ProjectPluginUnloader is not null)
+                await PluginManager.ProjectPluginUnloader().ConfigureAwait(false);
+            throw;
+        }
         // Project duration is a timeline property. Do not derive it from runtime
         // GetEffectiveDuration(): speed providers and open-ended sources may deliberately
         // report UInt32.MaxValue even though the clip has a finite UI/timeline duration.
         var duration = ResolveDuration(draft);
-        var project = string.IsNullOrWhiteSpace(request.ProjectJson)
-            ? null
-            : JsonSerializer.Deserialize<ProjectJSONStructure>(request.ProjectJson, _jsonOptions);
-
         var snapshotHash = ComputeTextHash($"{request.ProjectJson}\n{request.TimelineJson}");
         FrameHashIndex hashIndex;
         try
@@ -137,6 +174,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         {
             foreach (var clip in clips) { try { clip.Dispose(); } catch { } }
             foreach (var track in soundTracks) { try { track.Dispose(); } catch { } }
+            if (loadedProjectPluginsForOpen && _sessions.IsEmpty && PluginManager.ProjectPluginUnloader is not null)
+                await PluginManager.ProjectPluginUnloader().ConfigureAwait(false);
             throw;
         }
 
@@ -220,12 +259,21 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
 
     private async ValueTask<EmptyResponse> CloseProjectAsync(SessionRequest request, CancellationToken cancellationToken)
     {
+        await _projectLifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { return await CloseProjectCoreAsync(request, cancellationToken).ConfigureAwait(false); }
+        finally { _projectLifecycleGate.Release(); }
+    }
+
+    private async ValueTask<EmptyResponse> CloseProjectCoreAsync(SessionRequest request, CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         CancelJobsForSession(request.SessionId);
         if (_sessions.TryRemove(request.SessionId, out var session))
         {
             await session.DisposeAsync().ConfigureAwait(false);
         }
+        if (_sessions.IsEmpty && PluginManager.ProjectPluginIds.Count > 0 && PluginManager.ProjectPluginUnloader is not null)
+            await PluginManager.ProjectPluginUnloader().ConfigureAwait(false);
         return new();
     }
 
@@ -1079,6 +1127,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         foreach (var job in _jobs.Values) job.Cancellation.Cancel();
         foreach (var session in _sessions.Values) await session.DisposeAsync().ConfigureAwait(false);
         _sessions.Clear();
+        if (PluginManager.ProjectPluginIds.Count > 0 && PluginManager.ProjectPluginUnloader is not null)
+            await PluginManager.ProjectPluginUnloader().ConfigureAwait(false);
         PersistJobs();
     }
 

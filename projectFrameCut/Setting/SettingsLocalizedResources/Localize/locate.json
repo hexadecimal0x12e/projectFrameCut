@@ -2925,6 +2925,22 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "\u663E\u793A RPC \u540E\u7AEF Worker \u7684\u63A7\u5236\u53F0\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "\u663E\u793A\u63D2\u4EF6\u9694\u79BB Worker \u7684\u63A7\u5236\u53F0\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -6012,6 +6028,22 @@
       {
         "Id": "Edit_EnableMultiWindow",
         "Value": "Unset localization item:Edit_EnableMultiWindow()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9104,6 +9136,22 @@
       {
         "Id": "Edit_EnableMultiWindow",
         "Value": "Unset localization item:Edit_EnableMultiWindow()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12204,6 +12252,22 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -15294,6 +15358,22 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -18380,6 +18460,22 @@
       {
         "Id": "Edit_EnableMultiWindow",
         "Value": "Unset localization item:Edit_EnableMultiWindow()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -21480,6 +21576,22 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -24574,6 +24686,22 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -27659,6 +27787,22 @@
       {
         "Id": "Edit_EnableMultiWindow",
         "Value": "Unset localization item:Edit_EnableMultiWindow()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -30755,6 +30899,22 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -33842,6 +34002,22 @@
       {
         "Id": "Edit_EnableMultiWindow",
         "Value": "Unset localization item:Edit_EnableMultiWindow()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36937,6 +37113,22 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -40024,6 +40216,22 @@
       {
         "Id": "Edit_EnableMultiWindow",
         "Value": "Unset localization item:Edit_EnableMultiWindow()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -43123,6 +43331,22 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -46212,6 +46436,22 @@
       {
         "Id": "Edit_EnableMultiWindow",
         "Value": "Unset localization item:Edit_EnableMultiWindow()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RpcServerShowConsole",
+        "Value": "Unset localization item:Render_RpcServerShowConsole()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_IsolationShowConsole",
+        "Value": "Unset localization item:Plugin_IsolationShowConsole()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
