@@ -33,6 +33,14 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
     internal static string SessionDirectory => Path.Combine(ApplicationData.Current.LocalFolder.Path, "plugin-isolation");
     internal static string ProjectPluginDirectory => Path.Combine(ApplicationData.Current.LocalFolder.Path, "project-plugins");
 
+    public static bool IsInAppContainer()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        if (!NativeMethods.GetTokenInformation(identity.AccessToken, 29, out var isAppContainer, sizeof(int), out _))
+            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+        return isAppContainer != 0;
+    }
+
     internal static void ValidateWorkerProcess()
     {
         _ = PackageFamilyName;
@@ -41,7 +49,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
             throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
         if (isAppContainer == 0)
             throw new UnauthorizedAccessException("sandbox_worker must be activated through InSandboxWorker in an AppContainer.");
-        Console.Error.WriteLine($"[SandboxWorker/info] AppContainer verified for process {Environment.ProcessId}.");
+        Log($"AppContainer verified for process {Environment.ProcessId}.");
     }
 
     public async ValueTask<IPluginIsolationSession> StartAsync(PluginIsolationLaunchContext context, CancellationToken cancellationToken = default)
@@ -83,7 +91,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
                     $"--pluginId={context.PluginId}",
                     $"--pluginRoot={pluginDirectory}",
                     $"--instancePackageName={familyName}",
-                    "----forceRouteToCLI",
+                    "--forceRouteToCLI",
                     "--consoleLog",
                 ];
             if (MyLoggerExtensions.LoggingDiagnosticInfo)

@@ -1717,16 +1717,15 @@ Usage:
   pjfc help [command]
 
 Commands:
+  gui         Launch the projectFrameCut graphical interface.
+  render      Run the built-in renderer.
+  headless    Start the headless backend for remote access and automation.
   rpc_request Request an external RPC pipe with interactive approval.
-  gui        Launch the projectFrameCut graphical interface.
-  render     Run the built-in renderer.
-  headless   Start the headless backend for remote access and automation.
-  mcp        Serve the user library or one project over MCP.
-  help       Show general help or detailed help for a command.
-  reset      Reset the application to its default state by clearing settings.
-  about      Show version and build information.
+  mcp         Serve the user library or one project over MCP in HTTP/stdio.
+  help        Show general help or detailed help for a command.
+  about       Show version and build information.
 
-Commands provided by instance manager （installed separately）:   
+Commands provided by instance manager (installed separately):   
 
   stdio_mcp  Starts the stdio background MCP server.
              No any parameters are required. 
@@ -1734,23 +1733,31 @@ Commands provided by instance manager （installed separately）:
   instance   Launch the instance manager CLI. 
 
 Global options:
-  --quiet            Suppress all console outputs, include logs, version/copyright banner, and diagnostic messages.
+  --quiet             Suppress all console outputs, include logs, version/copyright banner, and diagnostic messages.
 
-  --consoleLog       Write application logs to the console. Mutually exclusive with with --quiet flag. 
+  --consoleLog        Write application logs to the console. Mutually exclusive with with --quiet flag. 
 
-  --logDiagnostic    Include diagnostic-level log messages.
+  --logDiagnostic     Include diagnostic-level log messages to be announced in logger system.
+                      Not applicable to gui mode because of user configuration.
+                      Note that this option only affects the logger system and does not change the console output behavior.
 
-  --loadPlugins      Load all enabled User-level plugin(s) which has been enabled.
-                     Not applicable to gui mode because GUI will handle plugin by itself.
+  --noLog             Disable logging file writing. This does not affect 'gui' mode or console logging.
+                      Set environment variable PJFC_NO_LOG to achieve the same effect.
 
-  --ffmpegRoot       Sets the root path for FFmpeg binaries. 
-                     If not specified, defaults to the internal FFmpeg path, or the user configured 
-                     path/plugin in the GUI settings.
+  --loadPlugins       Load all enabled User-level plugin(s) which has been enabled.
+                      Not applicable to gui mode because GUI will handle plugin by itself.
 
-  --dataRoot         Optional user-data directory used for assets and rendering.
-                     If not specified, defaults to the path defined in <App Data>\OverrideUserDataPath.txt 
-                     or %USERPROFILE%\Documents\projectFrameCut by default.
+  --ffmpegRoot=...    Sets the root path for FFmpeg binaries. 
+                      If not specified, defaults to the internal FFmpeg path, or the user configured 
+                      path/plugin in the GUI settings when in gui mode.
 
+  --dataRoot=...      Optional user-data directory used for assets and rendering.
+                      If not specified, defaults to the path defined in <App Data>\OverrideUserDataPath.txt 
+                      or %USERPROFILE%\Documents\projectFrameCut by default.
+
+  --forceRouteToCLI   Force the application to route to the CLI mode, bypassing the GUI launch.
+                      can be used to start the application in CLI mode without a console window.
+                      Set environment variable PJFC_FORCE_CLI to achieve the same effect.
 
 Help options:
   -h, --help, /?    Show this help text.
@@ -1856,7 +1863,7 @@ Usage:
 
   pjfc:[<target>][?<option>[&<option>...]] 
 
-Arguments:
+Target:
   <target>                         Item to open after the GUI starts. Supported
                                    targets are a .pjfc project/package, a project
                                    directory, or a .pjfcPlugin package. Quote paths
@@ -1873,13 +1880,10 @@ Arguments:
                                    To implement automatic rendering, please use 'render' mode. 
 
 Application options:
-
   --noSplash                       Do not display the startup splash screen.
 
-
   --overrideCulture=<culture>      Override the application culture for this run.
-                                   <culture> is a BCP-47 tag such as zh-CN, en-US,
-                                   or ja-JP.
+                                   <culture> is a BCP-47 tag such as zh-CN, en-US, or ja-JP.
 
   --userData=<path>                Override the user-data directory for one run
                                    (include your projects, assets, templates, 

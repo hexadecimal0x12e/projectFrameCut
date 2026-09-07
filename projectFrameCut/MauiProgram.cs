@@ -893,11 +893,6 @@ namespace projectFrameCut
                             }
                             break;
                         }
-                    case "文言文":
-                        {
-                            culture = CultureInfo.CreateSpecificCulture("zh-HK");
-                            break;
-                        }
                     default:
                         {
                             if (!cul.Any((c) => CultureInfo.CreateSpecificCulture(c.Name).Name == locate))
@@ -1403,8 +1398,7 @@ namespace projectFrameCut
 
             try
             {
-                var cultureName = locate == "文言文" ? "zh-HK" : Localized._LocaleId_;
-                var culture = CultureInfo.CreateSpecificCulture(cultureName);
+                var culture = CultureInfo.CreateSpecificCulture(Localized._LocaleId_);
                 Thread.CurrentThread.CurrentCulture = culture;
                 Thread.CurrentThread.CurrentUICulture = culture;
                 CultureInfo.DefaultThreadCurrentCulture = culture;

@@ -1378,15 +1378,6 @@ public partial class HomePage : ContentPage
                                     p.DefaultPreviewHeight = 720;
                                 }
                             }
-#if WINDOWS || LINUX
-                            // AcceleratorsManager was initialized during plugin load.
-                            // No need to re-enumerate devices here — the configuration from
-                            // accels.json (or the default first non-CPU accelerator) is already loaded.
-                            if (projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.DefaultAccelerator is null)
-                            {
-                                Log("WARNING: No ILGPU accelerator found on this device. GPU-accelerated effects will be unavailable.");
-                            }
-#endif
                             await p.PostInit();
                             var projectPluginsItem = new MenuFlyoutItem { Text = "Project plugins" };
                             projectPluginsItem.Clicked += async (_, _) => await p.Navigation.PushAsync(new ProjectPluginPage(p));

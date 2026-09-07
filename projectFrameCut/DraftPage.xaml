@@ -28,14 +28,10 @@
             </MenuFlyoutItem>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_CleanRenderCache}" Command="{Binding CleanRenderCacheCommand}"/>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Option}" Command="{Binding SettingsCommand}"/>
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_RestartBackend}" Command="{Binding RestartBackendCommand}"/>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_CreateRpcToken}" Command="{Binding CreateRpcTokenCommand}"/>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Option}" Command="{Binding SettingsCommand}"/>
-            <!-- TODO
-            <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Share}"/>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Cooperate}"/>
-            -->
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_ExitWithoutSave}" Command="{Binding ExitNoSaveCommand}"/>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Exit}" Command="{Binding ExitCommand}"/>

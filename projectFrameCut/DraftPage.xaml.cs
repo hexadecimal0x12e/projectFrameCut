@@ -86,6 +86,14 @@ namespace projectFrameCut;
 
 public partial class DraftPage : ContentPage, IDraftPage
 {
+#if WINDOWS || LINUX
+    static DraftPage()
+    {
+        projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.UseExternalBackend =
+            RenderRpcBootstrap.SupportsCliRenderProcess;
+    }
+#endif
+
     #region const
     public const int ClipHeight = 62;
     const double MinClipWidth = 30.0;
@@ -539,8 +547,10 @@ public partial class DraftPage : ContentPage, IDraftPage
             var sessionId = await EnsureGuiRpcSessionAsync(client, timeout.Token);
             var result = await client.CreateGuiProjectPipeAsync(new() { SessionId = sessionId }, timeout.Token);
             if (AlreadyDisappeared) return;
-            await DisplayAlertAsync(Localized.DraftPage_CreateRpcToken,
-                $"{result.Token}\n\n{RenderProtocol.AdditionalPipePrefix}{{TOKEN}}", Localized._OK);
+            if (await DisplayAlertAsync(Localized._Warn, Localized.DraftPage_CreateRpcToken_Warn, Localized._Confirm, Localized._Cancel) && !string.IsNullOrWhiteSpace(await DisplayPromptAsync(Localized._Info, Localized.DraftPage_CreateRpcToken_SuccessCopy, Localized.DraftPage_MenuBar_Edit_Copy, Localized._OK, result.Token, result.Token.Length, Keyboard.Text, result.Token)))
+            {
+                await Microsoft.Maui.ApplicationModel.DataTransfer.Clipboard.SetTextAsync(result.Token);
+            }
         }
         catch (Exception ex)
         {
@@ -679,6 +689,10 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         if (Inited) return;
         Inited = true;
+#if WINDOWS || LINUX
+        if (IsRemoteProject)
+            projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.UseExternalBackend = true;
+#endif
         await _workspace.StartAsync();
         OnClipChanged += ForwardClipChangeToWorkspace;
         SelectedClipChanged += ForwardSelectionToWorkspace;
@@ -744,8 +758,8 @@ public partial class DraftPage : ContentPage, IDraftPage
 #elif IOS
         MetalComputerHelper.RegisterComputerBridge();
 #elif WINDOWS || LINUX
-        // AcceleratorsManager was initialized during plugin load.
-        if (projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.DefaultAccelerator is null)
+        if (!projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.UseExternalBackend &&
+            projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.DefaultAccelerator is null)
             throw new InvalidDataException("No valid ILGPU accelerator found.");
 #endif
 
@@ -9874,12 +9888,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                 var approved = await MainThread.InvokeOnMainThreadAsync(async () =>
                 {
                     if (AlreadyDisappeared || ct.IsCancellationRequested) return false;
-                    var format = Localized.DraftPage_ExternalRpcAuthorization;
-                    if (!format.Contains("{0}"))
-                        format = ISimpleLocalizerBase.GetMapping()["en-US"].DraftPage_ExternalRpcAuthorization;
-                    return await DisplayAlertAsync(Localized.DraftPage_CreateRpcToken,
-                        string.Format(format, request.AppName, request.Author, request.Purpose,
-                            Convert.ToHexString(SHA256.HashData(Convert.FromBase64String(request.PublicKey)))),
+                    return await DisplayAlertAsync(Localized.DraftPage_ExternalRpcAuthorization_Title(request.AppName),
+                        Localized.DraftPage_ExternalRpcAuthorization(request.AppName, request.Author, request.Purpose),
                         Localized._OK, Localized._Cancel);
                 }).WaitAsync(ct).ConfigureAwait(false);
                 if (AlreadyDisappeared || ct.IsCancellationRequested) return;

@@ -89,7 +89,7 @@ namespace projectFrameCut.WinUI
                     MauiProgram.NoOverrideCulture = true;
                 }
                 string processName = Process.GetCurrentProcess().ProcessName.ToLowerInvariant().Trim();
-                if (!processName.StartsWith("projectframecut") || args.Contains("----forceRouteToCLI"))
+                if (!processName.StartsWith("projectframecut") || args.Contains("--forceRouteToCLI") || Environment.GetEnvironmentVariables().Contains("PJFC_FORCE_CLI"))
                 {
                     if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
                     {
@@ -114,6 +114,17 @@ namespace projectFrameCut.WinUI
             {
                 if (args.Any(c => c.StartsWith("----AppNotificationActivated:")) && TryOpenLastCompletedRenderOutput())
                     return 0;
+
+                if (Platforms.Windows.WindowsPluginIsolationPlatform.IsInAppContainer())
+                {
+                    _ = MessageBox(IntPtr.Zero,
+                        $"projectFrameCut cannot run in AppContainer. Launch app from start menu, 'pjfc gui' or file/project directly. \r\n" +
+                        $"If you have installed any plugin and get this message, please feedback this bug to us. \r\n" +
+                        $"Command line: {string.Join(", ", Environment.GetCommandLineArgs())}",
+                        "projectFrameCut",
+                        0x10 | 0x4);
+                        return 255;
+                }
 
                 try
                 {
