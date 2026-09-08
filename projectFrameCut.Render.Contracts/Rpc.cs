@@ -13,6 +13,20 @@ public interface IRenderTransport : IAsyncDisposable
     ValueTask<RenderResponseEnvelope> SendAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default);
 }
 
+public interface IRenderDuplexTransport : IRenderTransport
+{
+    IRenderService? CallbackService { get; set; }
+}
+
+public interface IExternalVideoSourceProvider
+{
+    IReadOnlyList<ExternalVideoSourceDescriptor> Sources { get; }
+    ValueTask<ExternalVideoSourceInstance> CreateAsync(ExternalVideoSourceCreateRequest request, CancellationToken cancellationToken = default);
+    ValueTask<ExternalVideoSourceInstance> InitializeAsync(ExternalVideoSourceStateRequest request, CancellationToken cancellationToken = default);
+    ValueTask<ExternalVideoFrame> ReadFrameAsync(ExternalVideoSourceReadRequest request, CancellationToken cancellationToken = default);
+    ValueTask ReleaseAsync(ExternalVideoSourceStateRequest request, CancellationToken cancellationToken = default);
+}
+
 public interface IRenderClient : IAsyncDisposable
 {
     string ClientId { get; }
@@ -26,6 +40,9 @@ public interface IRenderClient : IAsyncDisposable
     ValueTask<CreateAdditionalPipeResponse> CreateAdditionalPipeAsync(CancellationToken cancellationToken = default);
     ValueTask<PendingExternalRpcRequest> GetExternalRpcRequestAsync(CancellationToken cancellationToken = default);
     ValueTask ResolveExternalRpcRequestAsync(ResolveExternalRpcRequest request, CancellationToken cancellationToken = default);
+    ValueTask RegisterExternalVideoSourcesAsync(RegisterExternalVideoSourcesRequest request, CancellationToken cancellationToken = default);
+    ValueTask UnregisterExternalVideoSourcesAsync(CancellationToken cancellationToken = default);
+    ValueTask<ExternalVideoSourceCatalog> ListExternalVideoSourcesAsync(CancellationToken cancellationToken = default);
     ValueTask<RenderCapabilities> GetCapabilitiesAsync(CancellationToken cancellationToken = default);
     ValueTask<RenderSession> OpenProjectAsync(OpenProjectRequest request, CancellationToken cancellationToken = default);
     ValueTask CloseProjectAsync(Guid sessionId, CancellationToken cancellationToken = default);
@@ -75,8 +92,24 @@ public sealed class DirectRenderTransport(IRenderService service) : IRenderTrans
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
 
-public sealed class RenderClient(IRenderTransport transport, string? clientId = null) : IRenderClient
+public sealed class RenderClient : IRenderClient
 {
+    private readonly IRenderTransport _transport;
+    private readonly ExternalVideoSourceCallbackService? _callbackService;
+
+    public RenderClient(IRenderTransport transport, string? clientId = null, IExternalVideoSourceProvider? externalVideoSourceProvider = null)
+    {
+        _transport = transport ?? throw new ArgumentNullException(nameof(transport));
+        ClientId = string.IsNullOrWhiteSpace(clientId) ? $"client-{Guid.NewGuid():N}" : clientId;
+        if (externalVideoSourceProvider is not null)
+        {
+            if (transport is not IRenderDuplexTransport duplex)
+                throw new NotSupportedException("External video sources require a duplex render transport.");
+            _callbackService = new(externalVideoSourceProvider);
+            duplex.CallbackService = _callbackService;
+        }
+    }
+
     public ValueTask<GuiProjectSession> RegisterGuiProjectAsync(GuiProjectSession request, CancellationToken ct = default) => SendAsync<GuiProjectSession, GuiProjectSession>(RenderOperation.RegisterGuiProject, request, ct);
     public ValueTask<EmptyResponse> UnregisterGuiProjectAsync(GuiProjectSession request, CancellationToken ct = default) => SendAsync<GuiProjectSession, EmptyResponse>(RenderOperation.UnregisterGuiProject, request, ct);
     public ValueTask<GuiProjectWork> GetGuiProjectWorkAsync(GuiProjectSession request, CancellationToken ct = default) => SendAsync<GuiProjectSession, GuiProjectWork>(RenderOperation.GetGuiProjectWork, request, ct);
@@ -84,11 +117,13 @@ public sealed class RenderClient(IRenderTransport transport, string? clientId = 
     public ValueTask<GuiProjectResult> InvokeGuiProjectAsync(GuiProjectRequest request, CancellationToken ct = default) => SendAsync<GuiProjectRequest, GuiProjectResult>(RenderOperation.InvokeGuiProject, request, ct);
     public ValueTask<GuiProjectSession> GetGuiProjectSessionAsync(EmptyRequest request, CancellationToken ct = default) => SendAsync<EmptyRequest, GuiProjectSession>(RenderOperation.GetGuiProjectSession, request, ct);
     public ValueTask<CreateAdditionalPipeResponse> CreateGuiProjectPipeAsync(GuiProjectSession request, CancellationToken ct = default) => SendAsync<GuiProjectSession, CreateAdditionalPipeResponse>(RenderOperation.CreateGuiProjectPipe, request, ct);
-    public ValueTask<CreateAdditionalPipeResponse> CreateAdditionalPipeAsync(CancellationToken ct = default) => SendAsync<CreateAdditionalPipeRequest, CreateAdditionalPipeResponse>(RenderOperation.CreateAdditionalPipe, new(), ct);
+    public ValueTask<CreateAdditionalPipeResponse> CreateAdditionalPipeAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, CreateAdditionalPipeResponse>(RenderOperation.CreateAdditionalPipe, new(), ct);
     public ValueTask<PendingExternalRpcRequest> GetExternalRpcRequestAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, PendingExternalRpcRequest>(RenderOperation.GetExternalRpcRequest, new(), ct);
     public async ValueTask ResolveExternalRpcRequestAsync(ResolveExternalRpcRequest request, CancellationToken ct = default) => _ = await SendAsync<ResolveExternalRpcRequest, EmptyResponse>(RenderOperation.ResolveExternalRpcRequest, request, ct).ConfigureAwait(false);
-    private readonly IRenderTransport _transport = transport ?? throw new ArgumentNullException(nameof(transport));
-    public string ClientId { get; } = string.IsNullOrWhiteSpace(clientId) ? $"client-{Guid.NewGuid():N}" : clientId;
+    public async ValueTask RegisterExternalVideoSourcesAsync(RegisterExternalVideoSourcesRequest request, CancellationToken ct = default) => _ = await SendAsync<RegisterExternalVideoSourcesRequest, EmptyResponse>(RenderOperation.RegisterExternalVideoSources, request, ct).ConfigureAwait(false);
+    public async ValueTask UnregisterExternalVideoSourcesAsync(CancellationToken ct = default) => _ = await SendAsync<EmptyRequest, EmptyResponse>(RenderOperation.UnregisterExternalVideoSources, new(), ct).ConfigureAwait(false);
+    public ValueTask<ExternalVideoSourceCatalog> ListExternalVideoSourcesAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, ExternalVideoSourceCatalog>(RenderOperation.ListExternalVideoSources, new(), ct);
+    public string ClientId { get; }
 
     public ValueTask<RenderCapabilities> GetCapabilitiesAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, RenderCapabilities>(RenderOperation.GetCapabilities, new(), ct);
     public ValueTask<RenderSession> OpenProjectAsync(OpenProjectRequest request, CancellationToken ct = default) => SendAsync<OpenProjectRequest, RenderSession>(RenderOperation.OpenProject, request, ct);
@@ -136,6 +171,39 @@ public sealed class RenderClient(IRenderTransport transport, string? clientId = 
     }
 
     public ValueTask DisposeAsync() => _transport.DisposeAsync();
+
+    private sealed class ExternalVideoSourceCallbackService(IExternalVideoSourceProvider provider) : IRenderService
+    {
+        public async ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                byte[] payload = request.Operation switch
+                {
+                    RenderOperation.ExternalVideoSourceCreate => RenderRpcSerializer.Serialize(await provider.CreateAsync(RenderRpcSerializer.Deserialize<ExternalVideoSourceCreateRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
+                    RenderOperation.ExternalVideoSourceInitialize => RenderRpcSerializer.Serialize(await provider.InitializeAsync(RenderRpcSerializer.Deserialize<ExternalVideoSourceStateRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
+                    RenderOperation.ExternalVideoSourceReadFrame => RenderRpcSerializer.Serialize(await provider.ReadFrameAsync(RenderRpcSerializer.Deserialize<ExternalVideoSourceReadRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
+                    RenderOperation.ExternalVideoSourceRelease => await ReleaseAsync(request, cancellationToken).ConfigureAwait(false),
+                    _ => throw new NotSupportedException($"Render callback operation '{request.Operation}' is not supported."),
+                };
+                return new() { RequestId = request.RequestId, Payload = payload };
+            }
+            catch (OperationCanceledException ex)
+            {
+                return new() { RequestId = request.RequestId, Error = new(ex, RenderErrorCode.Canceled) };
+            }
+            catch (Exception ex)
+            {
+                return new() { RequestId = request.RequestId, Error = new(ex) };
+            }
+        }
+
+        private async ValueTask<byte[]> ReleaseAsync(RenderRequestEnvelope request, CancellationToken cancellationToken)
+        {
+            await provider.ReleaseAsync(RenderRpcSerializer.Deserialize<ExternalVideoSourceStateRequest>(request.Payload), cancellationToken).ConfigureAwait(false);
+            return RenderRpcSerializer.Serialize(new EmptyResponse());
+        }
+    }
 }
 
 public sealed class RenderRpcException : Exception

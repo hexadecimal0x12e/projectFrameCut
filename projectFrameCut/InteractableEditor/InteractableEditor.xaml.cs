@@ -233,6 +233,22 @@ namespace projectFrameCut.InteractableEditor
             }
         } = false;
 
+        public bool UseCheckerboardBackground
+        {
+            get;
+            set
+            {
+                if (field == value)
+                {
+                    return;
+                }
+
+                field = value;
+                OnPropertyChanged();
+                CheckerboardBackgroundView.Invalidate();
+            }
+        }
+
         public Color DefaultReferenceLineColor
         {
             get => _defaultReferenceLineColor;
@@ -948,6 +964,7 @@ namespace projectFrameCut.InteractableEditor
         {
             BindingContext = this;
             InitializeComponent();
+            CheckerboardBackgroundView.Drawable = new CheckerboardDrawable();
             ThicknessEntry.Text = DefaultReferenceLineThickness.ToString("F1");
 
             var canvasTap = new TapGestureRecognizer();
@@ -964,6 +981,29 @@ namespace projectFrameCut.InteractableEditor
             infoHoverPointer.PointerExited += OnInfoIndicatorExited;
             InfoIndicatorHost.GestureRecognizers.Add(infoHoverPointer);
 
+        }
+
+        private sealed class CheckerboardDrawable : IDrawable
+        {
+            private const float CellSize = 12;
+
+            public void Draw(ICanvas canvas, RectF dirtyRect)
+            {
+                canvas.FillColor = Color.FromArgb("#E0E0E0");
+                canvas.FillRectangle(dirtyRect);
+                canvas.FillColor = Color.FromArgb("#B8B8B8");
+
+                for (float y = 0; y < dirtyRect.Bottom; y += CellSize)
+                {
+                    for (float x = 0; x < dirtyRect.Right; x += CellSize)
+                    {
+                        if (((int)(x / CellSize) + (int)(y / CellSize)) % 2 == 0)
+                        {
+                            canvas.FillRectangle(x, y, CellSize, CellSize);
+                        }
+                    }
+                }
+            }
         }
 
 

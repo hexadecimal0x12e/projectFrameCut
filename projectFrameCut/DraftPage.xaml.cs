@@ -9885,13 +9885,13 @@ public partial class DraftPage : ContentPage, IDraftPage
                 var pending = await client.GetExternalRpcRequestAsync(timeout.Token).ConfigureAwait(false);
                 if (pending.ClaimId == Guid.Empty) continue;
                 var request = JsonSerializer.Deserialize<ExternalRpcRequest>(pending.Json)!;
-                var approved = await MainThread.InvokeOnMainThreadAsync(async () =>
-                {
-                    if (AlreadyDisappeared || ct.IsCancellationRequested) return false;
-                    return await DisplayAlertAsync(Localized.DraftPage_ExternalRpcAuthorization_Title(request.AppName),
-                        Localized.DraftPage_ExternalRpcAuthorization(request.AppName, request.Author, request.Purpose),
-                        Localized._OK, Localized._Cancel);
-                }).WaitAsync(ct).ConfigureAwait(false);
+                var approved = request.IsPersistent || await MainThread.InvokeOnMainThreadAsync(async () =>
+                    {
+                        if (AlreadyDisappeared || ct.IsCancellationRequested) return false;
+                        return await DisplayAlertAsync(Localized.DraftPage_ExternalRpcAuthorization_Title(request.AppName),
+                            Localized.DraftPage_ExternalRpcAuthorization(request.AppName, request.Author, request.Purpose),
+                            Localized._OK, Localized._Cancel);
+                    }).WaitAsync(ct).ConfigureAwait(false);
                 if (AlreadyDisappeared || ct.IsCancellationRequested) return;
                 using var responseTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 responseTimeout.CancelAfter(TimeSpan.FromSeconds(10));

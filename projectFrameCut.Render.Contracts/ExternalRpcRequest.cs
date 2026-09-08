@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using ProtoBuf;
 
@@ -7,7 +8,11 @@ namespace projectFrameCut.Render.Contracts;
 public sealed class ExternalRpcRequest
 {
     public int Version { get; set; } = 1;
+    public string Mode { get; set; } = "one-time";
     public Guid RequestId { get; set; } = Guid.NewGuid();
+    public Guid ClientId { get; set; }
+    public string ServiceId { get; set; } = "";
+    public bool LaunchClient { get; set; }
     public string AppName { get; set; } = "";
     public string Author { get; set; } = "";
     public string Purpose { get; set; } = "";
@@ -15,15 +20,46 @@ public sealed class ExternalRpcRequest
     public DateTimeOffset ExpiresAt { get; set; } = DateTimeOffset.UtcNow.AddMinutes(5);
     public string Status { get; set; } = "pending";
     public string EncryptedConnection { get; set; } = "";
+    public string Signature { get; set; } = "";
+
+    public bool IsPersistent => Mode == "persistent";
 
     public void Validate()
     {
-        if (Version != 1 || RequestId == Guid.Empty || Status != "pending" || EncryptedConnection != "")
+        if ((Version != 1 && Version != 2) || RequestId == Guid.Empty || Status != "pending" || EncryptedConnection != "")
             throw new ArgumentException("Invalid RPC request state.");
-        foreach (var s in new[] { AppName, Author, Purpose })
-            if (string.IsNullOrWhiteSpace(s) || s.Length > 2048 || s.Any(c => char.IsControl(c) && c != '\n' && c != '\r'))
-                throw new ArgumentException("Invalid RPC application description.");
+        if (IsPersistent)
+        {
+            if (Version != 2 || ClientId == Guid.Empty || string.IsNullOrWhiteSpace(ServiceId) || ServiceId.Length > 24 || string.IsNullOrWhiteSpace(Signature) || Signature.Length > 16384)
+                throw new ArgumentException("Invalid persistent RPC request.");
+        }
+        else
+        {
+            if (Mode != "one-time" || Version != 1 || ClientId != Guid.Empty || ServiceId != "" || LaunchClient || Signature != "")
+                throw new ArgumentException("Invalid one-time RPC request.");
+            foreach (var s in new[] { AppName, Author, Purpose })
+                if (string.IsNullOrWhiteSpace(s) || s.Length > 2048 || s.Any(c => char.IsControl(c) && c != '\n' && c != '\r'))
+                    throw new ArgumentException("Invalid RPC application description.");
+        }
         using var rsa = OpenPublicKey();
+    }
+
+    public byte[] GetSignaturePayload() => Encoding.UTF8.GetBytes(string.Join('\n',
+        Version.ToString(System.Globalization.CultureInfo.InvariantCulture), Mode, RequestId.ToString("D"), ClientId.ToString("D"),
+        ServiceId, LaunchClient ? "1" : "0", PublicKey,
+        ExpiresAt.ToUniversalTime().ToString("O", System.Globalization.CultureInfo.InvariantCulture)));
+
+    public void Sign(RSA rsa) => Signature = Convert.ToBase64String(rsa.SignData(GetSignaturePayload(), HashAlgorithmName.SHA256, RSASignaturePadding.Pss));
+
+    public bool VerifySignature()
+    {
+        try
+        {
+            using var rsa = OpenPublicKey();
+            return rsa.VerifyData(GetSignaturePayload(), Convert.FromBase64String(Signature), HashAlgorithmName.SHA256, RSASignaturePadding.Pss);
+        }
+        catch (FormatException) { return false; }
+        catch (CryptographicException) { return false; }
     }
 
     public RSA OpenPublicKey()
@@ -54,8 +90,25 @@ public sealed class ExternalRpcRequest
 public sealed class ExternalRpcConnection
 {
     public Guid RequestId { get; set; }
+    public Guid ClientId { get; set; }
+    public string ServiceId { get; set; } = "";
     public string PipeName { get; set; } = "";
     public string Token { get; set; } = "";
+}
+
+public sealed class ExternalRpcClientAuthorization
+{
+    public Guid ClientId { get; set; } = Guid.NewGuid();
+    public string AppName { get; set; } = "";
+    public string Author { get; set; } = "";
+    public string Purpose { get; set; } = "";
+    public string PublicKey { get; set; } = "";
+    public string PublicKeyFingerprint { get; set; } = "";
+    public string? ExecutablePath { get; set; }
+    public string? LaunchArguments { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? LastUsedAt { get; set; }
+    public bool Revoked { get; set; }
 }
 
 [ProtoContract]

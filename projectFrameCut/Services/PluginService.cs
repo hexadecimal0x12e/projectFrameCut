@@ -11,6 +11,13 @@ using System.Threading.Tasks;
 
 namespace projectFrameCut.Services
 {
+    public enum PluginIsolationMode
+    {
+        Containerized,
+        Process,
+        None,
+    }
+
     public static class PluginService
     {
         public const int PluginAPIVersion = IPluginBase.CurrentPluginAPIVersion;
@@ -148,6 +155,7 @@ namespace projectFrameCut.Services
                 List<PluginItem> items = File.Exists(itemsPath)
                     ? JsonSerializer.Deserialize<List<PluginItem>>(await File.ReadAllTextAsync(itemsPath)) ?? []
                     : [];
+                var isolationMode = items.FirstOrDefault(item => item.Id == metadata.PluginID)?.IsolationMode;
                 items.RemoveAll(item => item.Id == metadata.PluginID);
                 items.Add(new PluginItem
                 {
@@ -159,7 +167,8 @@ namespace projectFrameCut.Services
                     Version = metadata.Version,
                     PackageFormatVersion = metadata.PackageFormatVersion,
                     PublisherId = metadata.PublisherId,
-                    SigningCertificateFingerprint = metadata.SigningCertificateFingerprint
+                    SigningCertificateFingerprint = metadata.SigningCertificateFingerprint,
+                    IsolationMode = isolationMode ?? GetDefaultIsolationMode()
                 });
                 await File.WriteAllTextAsync(itemsPath, JsonSerializer.Serialize(items));
 
@@ -207,7 +216,7 @@ namespace projectFrameCut.Services
             return result.Plugin;
         }
 
-        private static async Task<(IPluginBase? Plugin, string FailReason)> CreateFromIDCoreAsync(string pluginID)
+        private static async Task<(IPluginBase? Plugin, string FailReason)> CreateFromIDCoreAsync(string pluginID, PluginIsolationMode? isolationMode = null)
         {
             var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
             if (!Directory.Exists(pluginRoot))
@@ -294,7 +303,11 @@ namespace projectFrameCut.Services
                     return (null, onLoadedFailure);
                 }
 
-                plugin = await PluginIsolationFactory.CreateAsync(plugin, verification, pluginRoot);
+                plugin = await PluginIsolationFactory.CreateAsync(
+                    plugin,
+                    verification,
+                    pluginRoot,
+                    NormalizeIsolationMode(isolationMode ?? GetConfiguredIsolationMode(pluginID)));
 
                 return (plugin, string.Empty);
             }
@@ -443,7 +456,11 @@ namespace projectFrameCut.Services
                     }
 #endif
                     Log($"Loading userPlugin: {item.Id}");
-                    var p = CreateFromID(item.Id, out string fail);
+                    var result = TaskHelper.SyncWait(
+                        () => CreateFromIDCoreAsync(item.Id, ResolveIsolationMode(item)),
+                        CancellationToken.None);
+                    var p = result.Plugin;
+                    var fail = result.FailReason;
                     if (p is not null)
                     {
                         if (p is IApplicationPluginBase b) b.OnApplicationPluginLoaded();
@@ -506,6 +523,47 @@ namespace projectFrameCut.Services
             return items.Where(c => !c.Enabled).ToList();
         }
 
+        public static bool TryGetPluginItem(string pluginID, out PluginItem? plugin)
+        {
+            plugin = ReadPluginItems().FirstOrDefault(c => c.Id == pluginID);
+            return plugin is not null;
+        }
+
+        public static PluginIsolationMode GetConfiguredIsolationMode(string pluginID) =>
+            TryGetPluginItem(pluginID, out var plugin) ? ResolveIsolationMode(plugin!) : GetDefaultIsolationMode();
+
+        public static void SetPluginIsolationMode(string pluginID, PluginIsolationMode mode)
+        {
+            var path = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
+            var items = ReadPluginItems();
+            var plugin = items.FirstOrDefault(c => c.Id == pluginID)
+                ?? throw new KeyNotFoundException($"Plugin '{pluginID}' is not installed.");
+            plugin.IsolationMode = NormalizeIsolationMode(mode);
+            File.WriteAllText(path, JsonSerializer.Serialize(items));
+            Log($"Plugin '{pluginID}' isolation mode changed to {plugin.IsolationMode}.");
+        }
+
+        public static PluginIsolationMode GetDefaultIsolationMode() =>
+            OperatingSystem.IsWindows() ? PluginIsolationMode.Containerized : PluginIsolationMode.None;
+
+        public static PluginIsolationMode NormalizeIsolationMode(PluginIsolationMode mode)
+        {
+            if (!Enum.IsDefined(mode)) return GetDefaultIsolationMode();
+            if (mode == PluginIsolationMode.Containerized && !OperatingSystem.IsWindows()) return PluginIsolationMode.None;
+            if (mode == PluginIsolationMode.Process && !DesktopPluginIsolationPlatform.IsSupported) return PluginIsolationMode.None;
+            return mode;
+        }
+
+        private static PluginIsolationMode ResolveIsolationMode(PluginItem plugin) =>
+            NormalizeIsolationMode(plugin.IsolationMode ?? GetDefaultIsolationMode());
+
+        private static List<PluginItem> ReadPluginItems()
+        {
+            var path = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
+            if (!File.Exists(path)) return [];
+            return JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(path)) ?? [];
+        }
+
         public static void EnablePlugin(string pluginID)
         {
             var path = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
@@ -550,6 +608,7 @@ namespace projectFrameCut.Services
             public string SigningCertificateFingerprint { get; set; } = string.Empty;
             public bool Enabled { get; set; }
             public bool ShouldRemove { get; set; } = false;
+            public PluginIsolationMode? IsolationMode { get; set; }
         }
     }
 

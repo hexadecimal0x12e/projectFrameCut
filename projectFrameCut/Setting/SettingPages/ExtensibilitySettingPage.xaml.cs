@@ -5,6 +5,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationPluginBase;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Services;
 using System.Globalization;
 using System.Reflection;
@@ -15,12 +16,12 @@ using static projectFrameCut.Setting.SettingManager.SettingsManager;
 
 namespace projectFrameCut.Setting.SettingPages;
 
-public partial class PluginSettingPage : ContentPage
+public partial class ExtensibilitySettingPage : ContentPage
 {
     public PropertyPanelBuilder rootPPB;
     string AdvanceConfigPageViewing = "";
 
-    public PluginSettingPage()
+    public ExtensibilitySettingPage()
     {
         AdvanceConfigPageViewing = "";
         BuildPPB();
@@ -38,7 +39,7 @@ public partial class PluginSettingPage : ContentPage
         {
             await BuildAdvancedConfig(AdvanceConfigPageViewing);
         }
-        Title = Localized.MainSettingsPage_Tab_Plugin;
+        Title = Localized.MainSettingsPage_Tab_Extensibility;
         rootPPB = new();
         rootPPB
             .AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_ManagePlugins, 20))
@@ -122,6 +123,21 @@ public partial class PluginSettingPage : ContentPage
         })
         .AddCheckbox("DisablePluginEngine", SettingLocalizedResources.Advanced_DisablePluginEngine, IsBoolSettingTrue("DisablePluginEngine"));
 
+        rootPPB
+            .AddSeparator()
+            .AddText(new SingleLineLabel(SettingLocalizedResources.ExternalRpc_Clients, 25));
+        var clients = ExternalRpcAuthorizationStore.Read(ExternalRpcAuthorizationStore.GetPath(Path.Combine(CLIProgram.AppDataPath, "RpcRequest")))
+            .Where(c => !c.Revoked).OrderBy(c => c.AppName).ToArray();
+        if (clients.Length == 0)
+            rootPPB.AddText(new SingleLineLabel(SettingLocalizedResources.ExternalRpc_NoClients, 14));
+        foreach (var client in clients)
+        {
+            rootPPB
+                .AddText(new TitleAndDescriptionLineLabel(client.AppName, $"{client.Author} ({client.ClientId})"))
+                .AddText($"{Localized.VideoCacheManagePage_LastAccessIn}{client.LastUsedAt?.ToLocalTime().ToString("g") ?? "-"}")
+                .AddButton($"ExternalRpcRevoke,{client.ClientId}", SettingLocalizedResources.ExternalRpc_Revoke);
+        }
+
         var scv = rootPPB.AddSeparator().ListenToChanges((e) => SettingInvoker(e, this)).Build();
         DropGestureRecognizer drop = new();
         drop.AllowDrop = true;
@@ -169,8 +185,25 @@ public partial class PluginSettingPage : ContentPage
         var page = new ContentPage { };
         var name = plugin.ReadLocalizationItem("_PluginBase_Name_", Localized._LocaleId_) ?? plugin.Name;
         var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", Localized._LocaleId_) ?? plugin.Description;
-        var ppb = new PropertyPanelBuilder()
-            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_DetailConfig(name), SettingLocalizedResources.Plugin_DetailConfig_Subtitle(name)));
+        var ppb = new PropertyPanelBuilder();
+
+        Dictionary<string, PluginIsolationMode> isolationModes = [];
+        if (PluginService.TryGetPluginItem(id, out _) && DesktopPluginIsolationPlatform.IsSupported)
+        {
+            if (OperatingSystem.IsWindows())
+                isolationModes[SettingLocalizedResources.Plugin_IsolationMode_Containerized] = PluginIsolationMode.Containerized;
+            isolationModes[SettingLocalizedResources.Plugin_IsolationMode_Process] = PluginIsolationMode.Process;
+            isolationModes[SettingLocalizedResources.Plugin_IsolationMode_None] = PluginIsolationMode.None;
+            var currentMode = PluginService.GetConfiguredIsolationMode(id);
+            ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailConfig(name), 25))
+                .AddPicker("PluginIsolationMode", SettingLocalizedResources.Plugin_IsolationMode, isolationModes.Keys.ToArray(), isolationModes.First(c => c.Value == currentMode).Key)
+               .AddSeparator()
+               .AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailConfig_Subtitle(name), 14));
+        }
+        else
+        {
+            ppb.AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_DetailConfig(name), SettingLocalizedResources.Plugin_DetailConfig_Subtitle(name)));
+        }
 
         if (plugin is IApplicationPluginBase appBase)
         {
@@ -209,8 +242,9 @@ public partial class PluginSettingPage : ContentPage
             ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailConfig_None(name), 16, FontAttributes.None, Colors.Gray));
         }
 
-        ppb.AddText(new SingleLineLabel(Localized.HomePage_ProjectContextMenu(name), 20, FontAttributes.None))
-            .AddButton($"ViewProvided,{id}", SettingLocalizedResources.Plugin_ViewWhatProvided(plugin.Name));
+        ppb.AddSeparator()
+           .AddText(new SingleLineLabel(Localized.HomePage_ProjectContextMenu(name), 20, FontAttributes.None))
+           .AddButton($"ViewProvided,{id}", SettingLocalizedResources.Plugin_ViewWhatProvided(plugin.Name));
         if (plugin.Properties.TryGetValue("IsInternalPlugin", out var isInternal) && bool.TryParse(isInternal, out var result) && result)
         {
             ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_CannotRemoveInternalPlugin, 14, default, Colors.Grey));
@@ -226,9 +260,18 @@ public partial class PluginSettingPage : ContentPage
         }
 
 
-        ppb.ListenToChanges((e) =>
+        ppb.ListenToChanges(async (e) =>
         {
-            if (e.Id.StartsWith("PluginCfg,"))
+            if (e.Id == "PluginIsolationMode" && e.Value is string selectedMode && isolationModes.TryGetValue(selectedMode, out var mode) && mode != PluginService.GetConfiguredIsolationMode(id))
+            {
+                if (mode != PluginIsolationMode.Containerized)
+                {
+                    if (!await page.DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_IsolationMode_LowLevelWarn, Localized._Confirm, Localized._Cancel)) return;
+                }
+                PluginService.SetPluginIsolationMode(id, mode);
+                _ = MainSettingsPage.RebootApp(page);
+            }
+            else if (e.Id.StartsWith("PluginCfg,"))
             {
                 var cfgKey = e.Id.Split(',')[1];
                 var newCfg = plugin.Configuration.ToDictionary(c => c.Key, c => c.Key == cfgKey ? e.Value?.ToString() ?? "" : c.Value);
@@ -274,6 +317,17 @@ public partial class PluginSettingPage : ContentPage
         try
         {
             currentPage ??= this;
+            if (args.Id.StartsWith("ExternalRpcRevoke,", StringComparison.Ordinal))
+            {
+                var eid = Guid.Parse(args.Id.Split(',', 2)[1]);
+                if (await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.ExternalRpc_RevokePrompt, Localized._Confirm, Localized._Cancel))
+                {
+                    ExternalRpcAuthorizationStore.Revoke(ExternalRpcAuthorizationStore.GetPath(Path.Combine(CLIProgram.AppDataPath, "RpcRequest")), eid);
+                    Log($"Persistent external RPC client authorization revoked: {eid}.");
+                    BuildPPB();
+                }
+                return;
+            }
             if (args.Id == "addButton")
             {
                 await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_LoadWarn, Localized._OK);

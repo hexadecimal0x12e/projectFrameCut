@@ -42,7 +42,7 @@ namespace projectFrameCut
 #endif
             VersionLabel.Text = $"{Localized.AppBrand} v{Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}{channelStr}";
             CopyrightText.Text += DateTime.Now.Year.ToString();
-            if (MauiProgram.IsStoreMode) PluginSettingButton.IsVisible = false; //plugin could broke store review
+            if (MauiProgram.IsStoreMode) ExtensibilitySettingButton.IsVisible = false; //plugin could broke store review
             if (IsBoolSettingTrue("DeveloperMode"))
             {
                 TestPageButton.IsVisible = true;
@@ -74,9 +74,9 @@ namespace projectFrameCut
         {
             await NavigateAsync(new MiscSettingPage());
         }
-        private async void OnPluginSettingClicked(object sender, EventArgs e)
+        private async void OnExtensibilitySettingClicked(object sender, EventArgs e)
         {
-            await NavigateAsync(new PluginSettingPage());
+            await NavigateAsync(new ExtensibilitySettingPage());
         }
         private async void OnAboutSettingClicked(object sender, EventArgs e)
         {

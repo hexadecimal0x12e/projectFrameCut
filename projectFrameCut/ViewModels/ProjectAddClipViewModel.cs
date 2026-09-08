@@ -8,6 +8,7 @@ using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -556,6 +557,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ObservableCollection<AssetItemViewModel> LocalAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> SharedAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> ReuseableAssets { get; } = new();
+    public ObservableCollection<RpcVideoSourceItemViewModel> RpcVideoSources { get; } = new();
     public ObservableCollection<TemplateItemViewModel> AvailableTemplates { get; } = new();
     public ObservableCollection<TransformItemViewModel> AvailableTransforms { get; } = new();
     public ObservableCollection<TextStyleItemViewModel> AvailableTextStyles { get; } = new();
@@ -564,6 +566,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ObservableCollection<AssetItemViewModel> FilteredLocalAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> FilteredSharedAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> FilteredReuseableAssets { get; } = new();
+    public ObservableCollection<RpcVideoSourceItemViewModel> FilteredRpcVideoSources { get; } = new();
     public ObservableCollection<TemplateItemViewModel> FilteredAvailableTemplates { get; } = new();
     public ObservableCollection<TransformItemViewModel> FilteredAvailableTransforms { get; } = new();
     public ObservableCollection<TextStyleItemViewModel> FilteredAvailableTextStyles { get; } = new();
@@ -581,6 +584,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ICommand AddAssetClipCommand { get; set; } = null!;
     public ICommand AddTemplateCommand { get; set; } = null!;
     public ICommand AddReuseableAssetClipCommand { get; set; } = null!;
+    public ICommand RefreshRpcVideoSourcesCommand { get; set; } = null!;
     public ICommand AddTransformClipCommand { get; set; } = null!;
     public ICommand AddTransformClipInLeftCommand { get; set; } = null!;
     public ICommand AddTransformClipInRightCommand { get; set; } = null!;
@@ -610,6 +614,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         GenerateTextPreviewCommand = new Command(async () => InitializeTextStyles(string.IsNullOrWhiteSpace(TextToAdd) ? null : TextToAdd));
         AddAlternativeSourceClipCommand = new Command(async () => await AddAlternativeSourceClip());
         AddAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddAssetClip(asset));
+        RefreshRpcVideoSourcesCommand = new Command(async () => await LoadRpcVideoSources());
         AddTemplateCommand = new Command<TemplateItemViewModel>(async (template) => await AddTemplate(template));
         AddTransformClipCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, false));
         AddTransformClipInLeftCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, true, false));
@@ -644,6 +649,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         RegisterCommands();
         await LoadAssets();
+        await LoadRpcVideoSources();
         LoadTemplates();
         LoadTransforms();
         InitializeTextStyles();
@@ -783,6 +789,24 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         */
     }
 
+    public async Task LoadRpcVideoSources()
+    {
+        RpcVideoSources.Clear();
+        if (RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
+        {
+            try
+            {
+                foreach (var source in (await client.ListExternalVideoSourcesAsync()).Sources.OrderBy(x => x.ClientName).ThenBy(x => x.Name))
+                    RpcVideoSources.Add(new(this, source));
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Load external RPC video sources", this);
+            }
+        }
+        await FilterAssets();
+    }
+
     #endregion
 
     #region asset
@@ -806,6 +830,44 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }, name: assetViewModel.Name, useSubTrack: assetViewModel.OriginalAsset.AssetType == AssetType.Audio);
 
         ClipAdded?.Invoke(this, EventArgs.Empty);
+    }
+
+    public async Task AddRpcVideoSource(RpcVideoSourceItemViewModel? item)
+    {
+        if (item is null) return;
+        try
+        {
+            var source = item.Source;
+            var path = RemoteRpcVideoSource.CreatePath(source);
+            var asset = new AssetItem
+            {
+                AssetId = $"rpc:{source.ClientId:N}:{source.SourceId}",
+                Name = source.Name,
+                Path = path,
+                AssetType = AssetType.Video,
+                ClipType = ClipMode.VideoClip,
+                Duration = source.TotalFrames,
+                SecondPerFrame = source.Fps > 0 ? (float)(1d / source.Fps) : -1,
+                Width = source.Width,
+                Height = source.Height,
+                BitPerPixel = source.HasKnownResultBitsPerPixel ? source.ResultBitsPerPixel : 0,
+                CreatedAt = DateTime.UtcNow,
+            };
+            BeginTimelineClipPlacement((trackIndex, startX) =>
+            {
+                var clip = _draftPage.CreateFromAsset(asset, trackIndex, startX, InternalPluginBase.InternalPluginBaseID, path);
+                _draftPage.RegisterClip(clip, true);
+                _draftPage.AddAClip(clip);
+                return clip;
+            }, name: source.Name);
+            ClipAdded?.Invoke(this, EventArgs.Empty);
+            Log($"Added external RPC video source {source.ClientId}/{source.SourceId} to the timeline.");
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Add external RPC video source", this);
+            await _draftPage.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
     }
 
     public async Task AddTemplate(TemplateItemViewModel? templateViewModel)
@@ -1944,11 +2006,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         FilteredLocalAssets.Clear();
         FilteredSharedAssets.Clear();
         FilteredReuseableAssets.Clear();
+        FilteredRpcVideoSources.Clear();
         FilteredAvailableTemplates.Clear();
 
         List<AssetItemViewModel> localFiltered = new();
         List<AssetItemViewModel> sharedFiltered = new();
         List<AssetItemViewModel> reuseableFiltered = new();
+        List<RpcVideoSourceItemViewModel> rpcFiltered = new();
         List<TemplateItemViewModel> templateFiltered = new();
 
         if (string.IsNullOrWhiteSpace(SearchText))
@@ -1957,6 +2021,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             localFiltered.AddRange(LocalAssets);
             sharedFiltered.AddRange(SharedAssets);
             reuseableFiltered.AddRange(ReuseableAssets);
+            rpcFiltered.AddRange(RpcVideoSources);
             templateFiltered.AddRange(AvailableTemplates.Where(ShouldShowTemplateByScope));
         }
         else
@@ -1992,6 +2057,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     reuseableFiltered.Add(asset);
                 }
             }
+            rpcFiltered.AddRange(RpcVideoSources.Where(x => x.Name.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
+                || x.ClientName.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
+                || x.DecoderName.Contains(searchLower, StringComparison.OrdinalIgnoreCase)));
 
             foreach (var template in AvailableTemplates)
             {
@@ -2023,6 +2091,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             localFiltered = (await localFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
             sharedFiltered = (await sharedFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
             reuseableFiltered = (await reuseableFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
+            rpcFiltered = rpcFiltered.OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
             templateFiltered = (await templateFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
         }
 
@@ -2038,6 +2107,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             FilteredReuseableAssets.Add(asset);
         }
+        foreach (var source in rpcFiltered) FilteredRpcVideoSources.Add(source);
 
         foreach (var template in templateFiltered)
         {
@@ -3234,6 +3304,26 @@ public class AssetItemViewModel
     {
         AddAssetClipCommand = new Command(async () => await parent.AddAssetClip(this));
     }
+}
+
+public sealed class RpcVideoSourceItemViewModel
+{
+    public RpcVideoSourceItemViewModel(ProjectAddClipViewModel parent, ExternalVideoSourceDescriptor source)
+    {
+        Source = source;
+        AddCommand = new Command(async () => await parent.AddRpcVideoSource(this));
+    }
+
+    public ExternalVideoSourceDescriptor Source { get; }
+    public string Name => Source.Name;
+    public string ClientName => string.IsNullOrWhiteSpace(Source.ClientName) ? Source.ClientId.ToString("D") : Source.ClientName;
+    public string DecoderName => Source.DecoderName;
+    public string Resolution => Source.Width > 0 && Source.Height > 0 ? $"{Source.Width}×{Source.Height}" : "?";
+    public string FrameRate => Source.Fps > 0 ? $"{Source.Fps:0.###} FPS" : "? FPS";
+    public string Duration => Source.TotalFrames > 0 && Source.Fps > 0 ? TimeSpan.FromSeconds(Source.TotalFrames / Source.Fps).ToString("hh\\:mm\\:ss") : "--:--:--";
+    public string Capabilities => $"{(Source.HasKnownResultBitsPerPixel ? $"{Source.ResultBitsPerPixel}-bit" : "Variable bit depth")}{(Source.SupportsHdr ? " HDR" : "")}{(Source.SupportsAlpha ? " Alpha" : "")}";
+    public string ConnectionStatus => Localized.DraftPage_AssetPanel_RpcSourceConnected;
+    public Command AddCommand { get; }
 }
 
 public class TemplateItemViewModel

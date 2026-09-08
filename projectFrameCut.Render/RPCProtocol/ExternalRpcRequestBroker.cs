@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Diagnostics;
 using System.Text.Json;
 using projectFrameCut.Render.Contracts;
 
@@ -7,6 +8,7 @@ namespace projectFrameCut.Render.RPCProtocol;
 internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
 {
     private readonly string _directory;
+    private readonly string _authorizationPath;
     private readonly CancellationTokenSource _lifetime;
     private readonly SemaphoreSlim _gate = new(1);
     private readonly Task _poll;
@@ -18,6 +20,7 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
     public ExternalRpcRequestBroker(string directory, CancellationToken ct)
     {
         _directory = Path.GetFullPath(directory);
+        _authorizationPath = ExternalRpcAuthorizationStore.GetPath(_directory);
         _lifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
         Directory.CreateDirectory(_directory);
         _poll = PollAsync();
@@ -87,7 +90,7 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
     }
 
-    public async Task ResolveAsync(ResolveExternalRpcRequest decision, Func<Task<string>> createPipe, Action<string> revokePipe, CancellationToken ct)
+    public async Task ResolveAsync(ResolveExternalRpcRequest decision, Func<Guid, string, Task<string>> createPipe, Action<string> revokePipe, CancellationToken ct)
     {
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         string? token = null;
@@ -96,17 +99,41 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
             if (_request is null || decision.ClaimId != _claim) throw new ArgumentException("RPC authorization is no longer pending.");
             if (_request.ExpiresAt <= DateTimeOffset.UtcNow) { WriteResult("expired"); return; }
             if (!decision.Approved) { WriteResult("denied"); return; }
+            ExternalRpcClientAuthorization? authorization = null;
+            if (_request.IsPersistent)
+            {
+                authorization = ExternalRpcAuthorizationStore.Find(_authorizationPath, _request.ClientId)
+                    ?? throw new UnauthorizedAccessException("Persistent RPC client is not authorized.");
+                if (authorization.Revoked || authorization.PublicKey != _request.PublicKey)
+                    throw new UnauthorizedAccessException("Persistent RPC client is not authorized.");
+                if (!_request.VerifySignature()) throw new UnauthorizedAccessException("Persistent RPC request signature is invalid.");
+            }
             using var rsa = _request.OpenPublicKey();
-            token = await createPipe().ConfigureAwait(false);
+            token = await createPipe(authorization?.ClientId ?? Guid.Empty, authorization?.AppName ?? _request.AppName).ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
             _lifetime.Token.ThrowIfCancellationRequested();
             _request.EncryptedConnection = Convert.ToBase64String(rsa.Encrypt(JsonSerializer.SerializeToUtf8Bytes(new ExternalRpcConnection
             {
                 RequestId = _request.RequestId,
+                ClientId = _request.ClientId,
+                ServiceId = _request.ServiceId,
                 PipeName = RenderProtocol.AdditionalPipePrefix + token,
                 Token = token,
             }), RSAEncryptionPadding.OaepSHA256));
+            if (authorization is not null && _request.LaunchClient)
+            {
+                if (string.IsNullOrWhiteSpace(authorization.ExecutablePath) || !File.Exists(authorization.ExecutablePath))
+                    throw new FileNotFoundException("Authorized external RPC client executable was not found.", authorization.ExecutablePath);
+                _ = Process.Start(new ProcessStartInfo
+                {
+                    FileName = authorization.ExecutablePath,
+                    Arguments = authorization.LaunchArguments ?? "",
+                    UseShellExecute = true,
+                }) ?? throw new InvalidOperationException("Unable to start the authorized external RPC client.");
+                Log($"Started persistent external RPC client {authorization.ClientId} for service '{_request.ServiceId}'.");
+            }
             WriteResult("approved");
+            if (authorization is not null) ExternalRpcAuthorizationStore.MarkUsed(_authorizationPath, authorization.ClientId);
         }
         catch
         {

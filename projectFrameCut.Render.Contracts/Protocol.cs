@@ -7,8 +7,8 @@ namespace projectFrameCut.Render.Contracts;
 public static class RenderProtocol
 {
     public const string AdditionalPipePrefix = "projectFrameCut-rpc-";
-    public const int CurrentVersion = 3;
-    public const int MinimumSupportedVersion = 2;
+    public const int CurrentVersion = 1;
+    public const int MinimumSupportedVersion = 1;
     public const int PipeProtocolVersion = 1;
     public const int MaxPipeFrameBytes = 256 * 1024 * 1024;
 }
@@ -29,16 +29,6 @@ public enum RenderOperation
 {
     [ProtoEnum] Unknown = 0,
     [ProtoEnum] GetCapabilities = 1,
-    [ProtoEnum] CreateAdditionalPipe = 18,
-    [ProtoEnum] GetExternalRpcRequest = 19,
-    [ProtoEnum] ResolveExternalRpcRequest = 20,
-    [ProtoEnum] RegisterGuiProject = 30,
-    [ProtoEnum] UnregisterGuiProject = 31,
-    [ProtoEnum] GetGuiProjectWork = 32,
-    [ProtoEnum] CompleteGuiProjectWork = 33,
-    [ProtoEnum] InvokeGuiProject = 34,
-    [ProtoEnum] GetGuiProjectSession = 35,
-    [ProtoEnum] CreateGuiProjectPipe = 36,
     [ProtoEnum] OpenProject = 2,
     [ProtoEnum] CloseProject = 3,
     [ProtoEnum] GetProjectSnapshot = 4,
@@ -55,6 +45,24 @@ public enum RenderOperation
     [ProtoEnum] ReleaseArtifact = 15,
     [ProtoEnum] RenderAudioSegment = 16,
     [ProtoEnum] ListRenderJobs = 17,
+    [ProtoEnum] CreateAdditionalPipe = 18,
+    [ProtoEnum] GetExternalRpcRequest = 19,
+    [ProtoEnum] ResolveExternalRpcRequest = 20,
+    [ProtoEnum] RegisterExternalVideoSources = 21,
+    [ProtoEnum] UnregisterExternalVideoSources = 22,
+    [ProtoEnum] ListExternalVideoSources = 23,
+    [ProtoEnum] CompleteExternalVideoSourceCallback = 24,
+    [ProtoEnum] ExternalVideoSourceCreate = 25,
+    [ProtoEnum] ExternalVideoSourceInitialize = 26,
+    [ProtoEnum] ExternalVideoSourceReadFrame = 27,
+    [ProtoEnum] ExternalVideoSourceRelease = 28,
+    [ProtoEnum] RegisterGuiProject = 30,
+    [ProtoEnum] UnregisterGuiProject = 31,
+    [ProtoEnum] GetGuiProjectWork = 32,
+    [ProtoEnum] CompleteGuiProjectWork = 33,
+    [ProtoEnum] InvokeGuiProject = 34,
+    [ProtoEnum] GetGuiProjectSession = 35,
+    [ProtoEnum] CreateGuiProjectPipe = 36,
     [ProtoEnum] OpenHeadlessProject = 100,
     [ProtoEnum] GetHeadlessProjectSnapshot = 101,
     [ProtoEnum] ReloadHeadlessProject = 102,
@@ -179,6 +187,16 @@ public sealed class RemoteError
 }
 
 [ProtoContract]
+public sealed class EmptyRequest { }
+
+[ProtoContract]
+public sealed class EmptyResponse
+{
+    [ProtoMember(1)] public bool Success { get; set; } = true;
+}
+
+
+[ProtoContract]
 public sealed class RenderRequestEnvelope
 {
     [ProtoMember(1)] public int ProtocolVersion { get; set; } = RenderProtocol.CurrentVersion;
@@ -196,6 +214,7 @@ public sealed class RenderResponseEnvelope
     [ProtoMember(3)] public byte[] Payload { get; set; } = [];
     [ProtoMember(4)] public RemoteError? Error { get; set; }
     [ProtoMember(5)] public List<RemoteLogEntry> Logs { get; set; } = [];
+    [ProtoMember(6)] public RenderRequestEnvelope? CallbackRequest { get; set; }
 }
 
 [ProtoContract]
@@ -206,23 +225,9 @@ public sealed class RemoteLogEntry
 }
 
 [ProtoContract]
-public sealed class EmptyRequest
-{
-}
-
-[ProtoContract]
-public sealed class CreateAdditionalPipeRequest { }
-
-[ProtoContract]
 public sealed class CreateAdditionalPipeResponse
 {
     [ProtoMember(1)] public string Token { get; set; } = string.Empty;
-}
-
-[ProtoContract]
-public sealed class EmptyResponse
-{
-    [ProtoMember(1)] public bool Success { get; set; } = true;
 }
 
 [ProtoContract]

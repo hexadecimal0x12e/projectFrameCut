@@ -166,6 +166,9 @@ namespace projectFrameCut
                 case "sandbox_worker":
                     StartLog(args[0].ToLowerInvariant());
                     return RunSandboxWorker(args.Skip(1).ToArray());
+                case "plugin_worker":
+                    StartLog(args[0].ToLowerInvariant());
+                    return RunPluginWorker(args.Skip(1).ToArray());
                 case "about":
                     WriteAbout();
                     return 0;
@@ -739,6 +742,24 @@ namespace projectFrameCut
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[SandboxWorker/error] {ex.GetType().Name}: {ex.Message}");
+                return 1;
+            }
+        }
+
+        private static int RunPluginWorker(string[] args)
+        {
+            try
+            {
+#if WINDOWS || MACOS || LINUX
+                projectFrameCut.Render.PluginIsolation.PluginIsolationWorker.RunAsync(args).GetAwaiter().GetResult();
+                return SuccessExitCode;
+#else
+                throw new PlatformNotSupportedException("The plugin worker requires a desktop platform.");
+#endif
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[PluginWorker/error] {ex.GetType().Name}: {ex.Message}");
                 return 1;
             }
         }
@@ -1475,7 +1496,7 @@ namespace projectFrameCut
         private static async Task<int> RunRpcRequestAsync(string[] args)
         {
             if (args.Any(IsHelpOption)) { WriteRpcRequestHelp(); return 0; }
-            using var rsa = RSA.Create(3072);
+            using var rsa = RSA.Create();
             using var cancellation = new CancellationTokenSource();
             ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; cancellation.Cancel(); };
             Console.CancelKeyPress += cancel;
@@ -1484,19 +1505,40 @@ namespace projectFrameCut
             try
             {
                 var publicKeyPath = GetOption(args, "publicKey", false);
-                if (wait && publicKeyPath is not null) throw new ArgumentException("--wait generates its own in-memory key; do not supply --publicKey.");
-                if (!wait && publicKeyPath is null) throw new ArgumentException("Supply --publicKey=<public PEM file> or --wait.");
+                var privateKeyPath = GetOption(args, "privateKey", false);
+                var clientIdText = GetOption(args, "clientId", false);
+                var persistent = clientIdText is not null;
+                if (persistent)
+                {
+                    if (!Guid.TryParse(clientIdText, out _)) throw new ArgumentException("--clientId must be a GUID.");
+                    if (privateKeyPath is null) throw new ArgumentException("Persistent RPC requests require --privateKey=<private PEM file>.");
+                    if (publicKeyPath is not null) throw new ArgumentException("Do not supply --publicKey with --privateKey.");
+                    rsa.ImportFromPem(File.ReadAllText(privateKeyPath));
+                }
+                else
+                {
+                    if (privateKeyPath is not null) throw new ArgumentException("--privateKey requires --clientId.");
+                    if (wait && publicKeyPath is not null) throw new ArgumentException("One-time --wait generates its own in-memory key; do not supply --publicKey.");
+                    if (!wait && publicKeyPath is null) throw new ArgumentException("Supply --publicKey=<public PEM file> or --wait.");
+                    if (publicKeyPath is null) rsa.KeySize = 3072;
+                    else rsa.ImportFromPem(File.ReadAllText(publicKeyPath));
+                }
                 var seconds = int.Parse(GetOption(args, "timeout", false) ?? "300");
                 if (seconds < 5 || seconds > 3600) throw new ArgumentException("--timeout must be 5-3600 seconds.");
-                if (!wait) rsa.ImportFromPem(File.ReadAllText(publicKeyPath!));
                 var request = new ExternalRpcRequest
                 {
+                    Version = persistent ? 2 : 1,
+                    Mode = persistent ? "persistent" : "one-time",
+                    ClientId = persistent ? Guid.Parse(clientIdText!) : Guid.Empty,
+                    ServiceId = persistent ? GetOption(args, "service", false) ?? "rpc" : "",
+                    LaunchClient = persistent && args.Any(a => a.Equals("--launch", StringComparison.OrdinalIgnoreCase)),
                     AppName = GetOption(args, "name", false) ?? "",
                     Author = GetOption(args, "author", false) ?? "",
                     Purpose = GetOption(args, "purpose", false) ?? "",
                     PublicKey = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo()),
                     ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(seconds),
                 };
+                if (persistent) request.Sign(rsa);
                 request.Validate();
                 var directory = Path.GetFullPath(GetOption(args, "requestDir", false) ?? Path.Combine(AppDataPath, "RpcRequest"));
                 Directory.CreateDirectory(directory);
@@ -1530,7 +1572,8 @@ namespace projectFrameCut
                                 Convert.FromBase64String(response.EncryptedConnection), RSAEncryptionPadding.OaepSHA256))
                                 ?? throw new ArgumentException("Empty RPC connection.");
                             if (connection.RequestId != request.RequestId || connection.Token.Length != 64 ||
-                                !connection.Token.All(Uri.IsHexDigit) || connection.PipeName != RenderProtocol.AdditionalPipePrefix + connection.Token)
+                                !connection.Token.All(Uri.IsHexDigit) || connection.PipeName != RenderProtocol.AdditionalPipePrefix + connection.Token ||
+                                connection.ClientId != request.ClientId || connection.ServiceId != request.ServiceId)
                                 throw new ArgumentException("Invalid RPC connection response.");
                             Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "success", connection }));
                             return 0;
@@ -1720,7 +1763,7 @@ Commands:
   gui         Launch the projectFrameCut graphical interface.
   render      Run the built-in renderer.
   headless    Start the headless backend for remote access and automation.
-  rpc_request Request an external RPC pipe with interactive approval.
+  rpc_request Request a one-time or persistent-client external RPC pipe.
   mcp         Serve the user library or one project over MCP in HTTP/stdio.
   help        Show general help or detailed help for a command.
   about       Show version and build information.
@@ -1836,9 +1879,14 @@ The backend loads the project before accepting RPC requests and keeps running un
 Usage:
     pjfc rpc_request --name=<app> --author=<author> --purpose=<purpose> --wait
     pjfc rpc_request --name=<app> --author=<author> --purpose=<purpose> --publicKey=<public.pem>
+    pjfc rpc_request --clientId=<id> --service=<service> --privateKey=<private.pem> [--wait]
 
 --wait          Generate an ephemeral private key, wait for approval, and print connection JSON.
 --publicKey     Submit using the caller's RSA public PEM key; print request ID and file path.
+--clientId      Use an authorized persistent client ID without another approval prompt.
+--service       Request one authorized service (default: rpc).
+--privateKey    Persistent client's RSA private PEM key, used to sign and decrypt the request.
+--launch        Start the authorized client executable after the request is accepted.
 --timeout       Request lifetime in seconds (5-3600; default 300).
 --requestDir    Override the default AppData/RpcRequest directory (must match the target app).
 
@@ -1921,6 +1969,16 @@ Remote access:
                                   or provide it separately.
 
                                   In this case, --continue and target will be ignored.
+
+Persistent external RPC authorization:
+  --rpcAuthorize                  Request a persistent client authorization.
+  --rpcAppName=<name>             Client display name.
+  --rpcAuthor=<author>            Client author.
+  --rpcPurpose=<purpose>          Requested purpose.
+  --rpcPublicKey=<base64>         RSA SubjectPublicKeyInfo public key.
+  --rpcExecutable=<path>          Optional executable used by rpc_request --launch.
+  --rpcArguments=<arguments>      Optional fixed executable arguments.
+  --rpcResponse=<path>            Optional new response file inside AppData/RpcRequest.
 
 Protocol URI:
   pjfc:file:///C:/path/to/project.pjfc[?option[&option...]]

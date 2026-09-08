@@ -241,6 +241,11 @@ public partial class HomePage : ContentPage
             string path = "";
 
             var args = argsOverride ?? MauiProgram.CmdlineArgs.ToArray();
+            if (args.Any(c => c.Equals("--rpcAuthorize", StringComparison.OrdinalIgnoreCase)))
+            {
+                await AuthorizeExternalRpcClientAsync(args);
+                return;
+            }
             bool continueRequested = args.Any(c => c.Equals("--continue", StringComparison.OrdinalIgnoreCase));
             bool openRenderPage = args.Any(c => c.Equals("--render", StringComparison.OrdinalIgnoreCase));
             string? mcpMode = GetCommandLineOption(args, "--mcpMode");
@@ -454,6 +459,75 @@ public partial class HomePage : ContentPage
             {
                 Content = origCont;
             });
+        }
+    }
+
+    private async Task AuthorizeExternalRpcClientAsync(string[] args)
+    {
+        try
+        {
+            var appName = GetCommandLineOption(args, "--rpcAppName") ?? "";
+            var author = GetCommandLineOption(args, "--rpcAuthor") ?? "";
+            var purpose = GetCommandLineOption(args, "--rpcPurpose") ?? "";
+            var publicKey = GetCommandLineOption(args, "--rpcPublicKey") ?? "";
+            var executable = GetCommandLineOption(args, "--rpcExecutable");
+            var launchArguments = GetCommandLineOption(args, "--rpcArguments");
+            if (string.IsNullOrWhiteSpace(appName)) throw new ArgumentException("--rpcAppName is required.");
+            if (appName.Length > 2048) throw new ArgumentException("--rpcAppName cannot exceed 2048 characters.");
+            if (string.IsNullOrWhiteSpace(author)) throw new ArgumentException("--rpcAuthor is required.");
+            if (author.Length > 2048) throw new ArgumentException("--rpcAuthor cannot exceed 2048 characters.");
+            if (string.IsNullOrWhiteSpace(purpose)) throw new ArgumentException("--rpcPurpose is required.");
+            if (purpose.Length > 2048) throw new ArgumentException("--rpcPurpose cannot exceed 2048 characters.");
+            using (var requestKey = new ExternalRpcRequest { PublicKey = publicKey }.OpenPublicKey()) { }
+            if (!string.IsNullOrWhiteSpace(executable))
+            {
+                executable = Path.GetFullPath(executable);
+                if (!File.Exists(executable)) throw new FileNotFoundException("External RPC client executable was not found.", executable);
+            }
+
+            var requestDirectory = Path.Combine(CLIProgram.AppDataPath, "RpcRequest");
+            var storePath = ExternalRpcAuthorizationStore.GetPath(requestDirectory);
+            var existing = ExternalRpcAuthorizationStore.Read(storePath)
+                .FirstOrDefault(c => !c.Revoked && c.PublicKey == publicKey);
+            var client = existing ?? new ExternalRpcClientAuthorization
+            {
+                AppName = appName,
+                Author = author,
+                Purpose = purpose,
+                PublicKey = publicKey,
+                PublicKeyFingerprint = ExternalRpcAuthorizationStore.Fingerprint(publicKey),
+                ExecutablePath = executable,
+                LaunchArguments = launchArguments,
+            };
+            if (existing is null)
+            {
+                var approved = await MainThread.InvokeOnMainThreadAsync(() =>
+                    DisplayAlertAsync(
+                        Localized.DraftPage_ExternalRpcAuthorization_Title(appName),
+                        Localized.DraftPage_ExternalRpcAuthorization_Presist(appName, author, purpose),
+                        Localized._Confirm, Localized._Cancel));
+                if (!approved)
+                {
+                    Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "denied" }));
+                    Environment.Exit(255);
+                    return;
+                }
+                ExternalRpcAuthorizationStore.Add(storePath, client);
+                Log($"Persistent external RPC client authorized: {client.ClientId} ({client.PublicKeyFingerprint}).");
+                Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "granted", clientId = client.ClientId }));
+                Environment.Exit(0);
+            }
+            else
+            {
+                Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "already_granted", clientId = client.ClientId }));
+                Environment.Exit(0);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "grant external RPC");
+            Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "fail", error = ex.ToString() }));
+            Environment.Exit(65535);
         }
     }
 

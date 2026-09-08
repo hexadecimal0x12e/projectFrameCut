@@ -748,7 +748,7 @@ namespace projectFrameCut
 
                 Log("Everything ready!");
                 var app = builder.Build();
-                IntegratedPlugins = [app.Services.GetRequiredService<projectFrameCut.Services.AIComponent.IntegratedAIPlugin>()];
+                //IntegratedPlugins = [app.Services.GetRequiredService<projectFrameCut.Services.AIComponent.IntegratedAIPlugin>()];
                 Task.Run(async () =>
                 {
                     await Task.Delay(1000);
@@ -926,6 +926,102 @@ namespace projectFrameCut
         {
             Log("Start background init...");
 
+            try
+            {
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
+                if (!ffmpeg.Ready)
+                {
+                    try
+                    {
+                        if (Environment.GetCommandLineArgs().FirstOrDefault(c => c.StartsWith("--ffmpegRoot=")) is string ffPath)
+                        {
+                            var ffmpegRoot = ffPath.Substring("--ffmpegRoot=".Length);
+                            if (!string.IsNullOrWhiteSpace(ffmpegRoot) && Directory.Exists(ffmpegRoot))
+                            {
+                                ffmpeg.RootPath = ffmpegRoot;
+                                Log($"Using FFmpeg libraries from command line argument, path:{ffmpegRoot}");
+                            }
+                        }
+                        else if (SettingsManager.IsBoolSettingTrue("PluginProvidedFFmpeg_Enable"))
+                        {
+#if WINDOWS
+                            string? nativeLibDirOverride = null;
+                            var pluginId = SettingsManager.GetSetting("PluginProvidedFFmpeg_PluginID", "");
+                            if (pluginId == "external")
+                            {
+                                var ffmpegPath = SettingsManager.GetSetting("PluginProvidedFFmpeg_LibPath", "");
+                                if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
+                                {
+                                    Log($"Using external FFmpeg libraries, path:{ffmpegPath}");
+                                    nativeLibDirOverride = ffmpegPath;
+                                }
+                                else
+                                {
+                                    Log($"PluginProvidedFFmpeg_Enable is true, but invalid path provided:{ffmpegPath}");
+                                }
+                            }
+                            else if (!PluginManager.LoadedPlugins.TryGetValue(pluginId, out var value))
+                            {
+                                Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} is not loaded.");
+                            }
+                            else
+                            {
+                                var ffmpegPath = Path.Combine(BasicDataPath, "Plugins", value.PluginID, "FFmpeg", "windows");
+                                if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
+                                {
+                                    Log($"Using FFmpeg libraries provided by plugin {pluginId}, path:{ffmpegPath}");
+                                    nativeLibDirOverride = ffmpegPath;
+                                }
+                                else
+                                {
+                                    Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} provided invalid path:{ffmpegPath}");
+                                }
+                            }
+                            if (!string.IsNullOrWhiteSpace(nativeLibDirOverride) && Directory.Exists(nativeLibDirOverride))
+                            {
+                                ffmpeg.RootPath = nativeLibDirOverride;
+                            }
+                            else
+                            {
+                                ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
+                            }
+#elif ANDROID
+                            ffmpeg.RootPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+#endif
+                        }
+                        else
+                        {
+                            if (OperatingSystem.IsWindows())
+                            {
+                                ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                FFmpegRoot = ffmpeg.RootPath;
+                Log($"FFmpeg library root path: {FFmpegRoot}");
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+
+                try
+                {
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize(false, true);
+                    FFmpegHelper.SetupFFmpegLogging();
+                    Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}");
+                }
+                catch (Exception ex)
+                {
+                    ffmpegFailMessage = $"FFmpeg fail to load. {ex}";
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "init ffmpeg", CreateMauiApp);
+                ffmpegFailMessage = $"FFmpeg fail to init. {ex}";
+            }
+
 
             try
             {
@@ -987,100 +1083,6 @@ namespace projectFrameCut
                     Crash(new InvalidOperationException($"FATAL: The pluginBase cannot be loaded. projectFrameCut can't work without PluginEngine. \r\n{ex} \r\n{ex1}", new AggregateException(ex, ex1)));
 #pragma warning restore CS0618
                 }
-            }
-
-            try
-            {
-                FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
-
-                try
-                {
-                    if (Environment.GetCommandLineArgs().FirstOrDefault(c => c.StartsWith("--ffmpegRoot=")) is string ffPath)
-                    {
-                        var ffmpegRoot = ffPath.Substring("--ffmpegRoot=".Length);
-                        if (!string.IsNullOrWhiteSpace(ffmpegRoot) && Directory.Exists(ffmpegRoot))
-                        {
-                            ffmpeg.RootPath = ffmpegRoot;
-                            Log($"Using FFmpeg libraries from command line argument, path:{ffmpegRoot}");
-                        }
-                    }
-                    else if (SettingsManager.IsBoolSettingTrue("PluginProvidedFFmpeg_Enable"))
-                    {
-#if WINDOWS
-                        string? nativeLibDirOverride = null;
-                        var pluginId = SettingsManager.GetSetting("PluginProvidedFFmpeg_PluginID", "");
-                        if (pluginId == "external")
-                        {
-                            var ffmpegPath = SettingsManager.GetSetting("PluginProvidedFFmpeg_LibPath", "");
-                            if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
-                            {
-                                Log($"Using external FFmpeg libraries, path:{ffmpegPath}");
-                                nativeLibDirOverride = ffmpegPath;
-                            }
-                            else
-                            {
-                                Log($"PluginProvidedFFmpeg_Enable is true, but invalid path provided:{ffmpegPath}");
-                            }
-                        }
-                        else if (!PluginManager.LoadedPlugins.TryGetValue(pluginId, out var value))
-                        {
-                            Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} is not loaded.");
-                        }
-                        else
-                        {
-                            var ffmpegPath = Path.Combine(BasicDataPath, "Plugins", value.PluginID, "FFmpeg", "windows");
-                            if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
-                            {
-                                Log($"Using FFmpeg libraries provided by plugin {pluginId}, path:{ffmpegPath}");
-                                nativeLibDirOverride = ffmpegPath;
-                            }
-                            else
-                            {
-                                Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} provided invalid path:{ffmpegPath}");
-                            }
-                        }
-                        if (!string.IsNullOrWhiteSpace(nativeLibDirOverride) && Directory.Exists(nativeLibDirOverride))
-                        {
-                            ffmpeg.RootPath = nativeLibDirOverride;
-                        }
-                        else
-                        {
-                            ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
-                        }
-#elif ANDROID
-                        ffmpeg.RootPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
-#endif
-                    }
-                    else
-                    {
-                        if (OperatingSystem.IsWindows())
-                        {
-                            ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
-                        }
-                    }
-                }
-                catch { }
-                FFmpegRoot = ffmpeg.RootPath;
-                Log($"FFmpeg library root path: {FFmpegRoot}");
-                FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
-                FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
-
-                try
-                {
-                    FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize(OperatingSystem.IsWindows() || OperatingSystem.IsLinux(), true);
-                    FFmpegHelper.SetupFFmpegLogging();
-                    Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}");
-                }
-                catch (Exception ex)
-                {
-                    ffmpegFailMessage = $"FFmpeg fail to load. {ex}";
-                }
-
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "init ffmpeg", CreateMauiApp);
-                ffmpegFailMessage = $"FFmpeg fail to init. {ex}";
             }
 
             try

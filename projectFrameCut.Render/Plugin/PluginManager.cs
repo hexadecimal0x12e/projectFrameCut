@@ -358,9 +358,11 @@ namespace projectFrameCut.Render.Plugin
 
         public static IVideoSource CreateVideoSource(string filePath, IPicture.PicturePixelMode? PreferredTargetPPB = null)
         {
+            if (RemoteRpcVideoSource.IsPath(filePath)) return RemoteRpcVideoSource.Open(filePath);
             if (filePath.StartsWith("#"))
             {
                 var part = filePath.Substring(1).Split(',', 2);
+                if (part.Length != 2) throw new ArgumentException($"Invalid specified video decoder path '{filePath}'.", nameof(filePath));
                 var decoder = part[0];
                 var supportedPlugin = LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(decoder));
                 if (supportedPlugin is null) throw new NotSupportedException($"The specificed video decoder '{decoder}' was not found for the file '{filePath}'.");

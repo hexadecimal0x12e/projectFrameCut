@@ -9,15 +9,46 @@ namespace projectFrameCut.Services;
 
 internal static class PluginIsolationFactory
 {
-    public static async ValueTask<IPluginBase> CreateAsync(IPluginBase local, PluginPackageVerificationResult verification, string pluginRoot, CancellationToken cancellationToken = default)
+    public static async ValueTask<IPluginBase> CreateAsync(IPluginBase local, PluginPackageVerificationResult verification, string pluginRoot, PluginIsolationMode mode, CancellationToken cancellationToken = default)
     {
-#if WINDOWS
         bool hasPictureProviders = local.EffectProviderProvider.Values.Any(x => x().TypeOfEffect is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement);
-        if (!hasPictureProviders && local.VideoSourceProvider.Count == 0) return local;
-        var client = await StartClientAsync(local.PluginID, local.Configuration, verification, pluginRoot, cancellationToken);
+        if ((!hasPictureProviders && local.VideoSourceProvider.Count == 0) || mode == PluginIsolationMode.None) return local;
+        PluginIsolationClient client;
+        switch (mode)
+        {
+            case PluginIsolationMode.Containerized:
+#if WINDOWS
+                client = await StartClientAsync(
+                    new Platforms.Windows.WindowsPluginIsolationPlatform(),
+                    local.PluginID,
+                    local.Configuration,
+                    verification,
+                    pluginRoot,
+                    Platforms.Windows.WindowsPluginIsolationPlatform.PackageFamilyName,
+                    Path.Combine(Platforms.Windows.WindowsPluginIsolationPlatform.SessionDirectory, Guid.NewGuid().ToString("N")),
+                    cancellationToken);
+                break;
+#else
+                return local;
+#endif
+            case PluginIsolationMode.Process:
+                if (!DesktopPluginIsolationPlatform.IsSupported) return local;
+                client = await StartClientAsync(
+                    new DesktopPluginIsolationPlatform(),
+                    local.PluginID,
+                    local.Configuration,
+                    verification,
+                    pluginRoot,
+                    DesktopPluginIsolationPlatform.InstanceName,
+                    Path.Combine(DesktopPluginIsolationPlatform.SessionDirectory, Guid.NewGuid().ToString("N")),
+                    cancellationToken);
+                break;
+            default:
+                return local;
+        }
         try
         {
-            Logger.Log($"Plugin '{local.PluginID}' picture providers are running in an AppContainer isolation session.");
+            Logger.Log($"Plugin '{local.PluginID}' picture providers are running in {mode} isolation mode.");
             return local is IApplicationPluginBase app ? new IsolatedApplicationPluginProxy(app, client) : new IsolatedPluginProxy(local, client);
         }
         catch
@@ -25,10 +56,6 @@ internal static class PluginIsolationFactory
             await client.DisposeAsync().ConfigureAwait(false);
             throw;
         }
-#else
-        await Task.CompletedTask;
-        return local;
-#endif
     }
 
     public static async ValueTask<IPluginBase> CreateProjectPluginAsync(
@@ -39,7 +66,15 @@ internal static class PluginIsolationFactory
         CancellationToken cancellationToken = default)
     {
 #if WINDOWS
-        var client = await StartClientAsync(verification.Metadata.PluginID, configuration, verification, pluginRoot, cancellationToken);
+        var client = await StartClientAsync(
+            new Platforms.Windows.WindowsPluginIsolationPlatform(),
+            verification.Metadata.PluginID,
+            configuration,
+            verification,
+            pluginRoot,
+            Platforms.Windows.WindowsPluginIsolationPlatform.PackageFamilyName,
+            Path.Combine(Platforms.Windows.WindowsPluginIsolationPlatform.SessionDirectory, Guid.NewGuid().ToString("N")),
+            cancellationToken);
         try
         {
             Logger.Log($"Project plugin '{verification.Metadata.PluginID}' is running in an AppContainer isolation session.");
@@ -56,23 +91,24 @@ internal static class PluginIsolationFactory
 #endif
     }
 
-#if WINDOWS
     private static async ValueTask<PluginIsolationClient> StartClientAsync(
+        IPluginIsolationPlatform platform,
         string pluginId,
         Dictionary<string, string> configuration,
         PluginPackageVerificationResult verification,
         string pluginRoot,
+        string instanceName,
+        string sessionRoot,
         CancellationToken cancellationToken)
     {
-        var familyName = Platforms.Windows.WindowsPluginIsolationPlatform.PackageFamilyName;
-        var session = await new Platforms.Windows.WindowsPluginIsolationPlatform().StartAsync(new PluginIsolationLaunchContext
+        var session = await platform.StartAsync(new PluginIsolationLaunchContext
         {
             PluginId = pluginId,
             PluginRoot = pluginRoot,
-            SessionRoot = Path.Combine(Platforms.Windows.WindowsPluginIsolationPlatform.SessionDirectory, Guid.NewGuid().ToString("N")),
+            SessionRoot = sessionRoot,
             AuthenticationToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)),
             PluginEncryptionKey = PluginTrustValidator.DerivePluginEncryptionKey(verification.SigningCertificate),
-            InstancePackageName = familyName,
+            InstancePackageName = instanceName,
         }, cancellationToken).ConfigureAwait(false);
         try
         {
@@ -86,5 +122,4 @@ internal static class PluginIsolationFactory
             throw;
         }
     }
-#endif
 }

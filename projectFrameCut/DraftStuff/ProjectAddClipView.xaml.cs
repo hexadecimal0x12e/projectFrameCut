@@ -37,6 +37,7 @@ public partial class ProjectAddClipView : ContentView
         switch (e.Tag)
         {
             case "LocalAssets":
+            case "RpcSources":
             case "AIGC":
             case "SharedAssets":
             case "Templates":
@@ -50,6 +51,7 @@ public partial class ProjectAddClipView : ContentView
                     break;
                 }
         }
+        if (e.Tag == "RpcSources") _ = _viewModel.LoadRpcVideoSources();
         switch (e.Tag)
         {
             case "Sketch":

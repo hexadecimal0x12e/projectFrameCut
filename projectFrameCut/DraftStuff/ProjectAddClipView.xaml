@@ -274,6 +274,54 @@
                 </CollectionView.Footer>
             </CollectionView>
         </tv:TabbedViewItem>
+        <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_RpcSources}" Tag="RpcSources" x:Name="RpcSourcesTab" x:FieldModifier="public">
+            <Grid RowDefinitions="Auto,*" Margin="8">
+                <Button Grid.Row="0"
+                        Text="↻"
+                        FontSize="18"
+                        WidthRequest="40"
+                        HeightRequest="34"
+                        HorizontalOptions="End"
+                        Command="{Binding RefreshRpcVideoSourcesCommand}"/>
+                <CollectionView Grid.Row="1"
+                                ItemsSource="{Binding FilteredRpcVideoSources}"
+                                SelectionMode="None"
+                                SizeChanged="OnCollectionViewSizeChanged">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="viewmodels:RpcVideoSourceItemViewModel">
+                            <Border StrokeThickness="1"
+                                    Stroke="CornflowerBlue"
+                                    BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}"
+                                    HeightRequest="160"
+                                    WidthRequest="180"
+                                    StrokeShape="RoundRectangle 8">
+                                <Grid RowDefinitions="*,Auto" Padding="8">
+                                    <VerticalStackLayout Spacing="3">
+                                        <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation" MaxLines="1"/>
+                                        <Label Text="{Binding ClientName}" FontSize="11" Opacity="0.75" LineBreakMode="TailTruncation" MaxLines="1"/>
+                                        <Label Text="{Binding DecoderName}" FontSize="11" Opacity="0.75" LineBreakMode="TailTruncation" MaxLines="1"/>
+                                        <Label Text="{Binding ConnectionStatus}" TextColor="LimeGreen" FontSize="11"/>
+                                        <Label Text="{Binding Resolution}" FontSize="11"/>
+                                        <Label Text="{Binding FrameRate}" FontSize="11"/>
+                                        <Label Text="{Binding Capabilities}" FontSize="11"/>
+                                    </VerticalStackLayout>
+                                    <Grid Grid.Row="1" ColumnDefinitions="*,44">
+                                        <Label Text="{Binding Duration}" FontSize="12" VerticalOptions="Center"/>
+                                        <Button Grid.Column="1" Text="➕" FontSize="16" Padding="4" Command="{Binding AddCommand}"/>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                    <CollectionView.EmptyView>
+                        <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" HorizontalOptions="Center" VerticalOptions="Center" Margin="20"/>
+                    </CollectionView.EmptyView>
+                </CollectionView>
+            </Grid>
+        </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_Templates}" Tag="Templates" x:Name="TemplatesTab" x:FieldModifier="public">
             <Grid RowDefinitions="Auto,*">
                 <Border Grid.Row="0"

@@ -4,7 +4,7 @@ using projectFrameCut.Render.Contracts;
 
 namespace projectFrameCut.Render.RPCProtocol;
 
-public sealed class NamedPipeRenderClientTransport : IRenderTransport
+public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
 {
     private readonly string _pipeName;
     private readonly string _token;
@@ -12,10 +12,14 @@ public sealed class NamedPipeRenderClientTransport : IRenderTransport
     private readonly SemaphoreSlim _connectGate = new(1, 1);
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private readonly ConcurrentDictionary<Guid, TaskCompletionSource<RenderResponseEnvelope>> _pending = new();
+    private readonly CancellationTokenSource _lifetime = new();
     private NamedPipeClientStream? _pipe;
     private Task? _readerTask;
     private Exception? _connectionError;
     private int _disposed;
+    private readonly ConcurrentDictionary<Guid, Task> _callbacks = new();
+
+    public IRenderService? CallbackService { get; set; }
 
     public NamedPipeRenderClientTransport(string pipeName, string token, string clientId)
     {
@@ -114,6 +118,14 @@ public sealed class NamedPipeRenderClientTransport : IRenderTransport
                 var bytes = await RenderPipeFrame.ReadAsync(pipe, CancellationToken.None).ConfigureAwait(false);
                 if (bytes is null) break;
                 var response = RenderRpcSerializer.Deserialize<RenderResponseEnvelope>(bytes);
+                if (response.CallbackRequest is not null)
+                {
+                    var request = response.CallbackRequest;
+                    var task = HandleCallbackAsync(pipe, request);
+                    _callbacks[request.RequestId] = task;
+                    _ = task.ContinueWith(_ => _callbacks.TryRemove(request.RequestId, out var ignored), TaskScheduler.Default);
+                    continue;
+                }
                 if (_pending.TryRemove(response.RequestId, out var completion)) completion.TrySetResult(response);
             }
         }
@@ -130,15 +142,44 @@ public sealed class NamedPipeRenderClientTransport : IRenderTransport
         }
     }
 
+    private async Task HandleCallbackAsync(NamedPipeClientStream pipe, RenderRequestEnvelope request)
+    {
+        RenderResponseEnvelope response;
+        try
+        {
+            response = CallbackService is null
+                ? new() { RequestId = request.RequestId, Error = new() { Code = RenderErrorCode.Unsupported, Message = "This client does not provide RPC video sources." } }
+                : await CallbackService.DispatchAsync(request, _lifetime.Token).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            response = new() { RequestId = request.RequestId, Error = new(ex) };
+        }
+
+        var completion = new RenderRequestEnvelope
+        {
+            RequestId = Guid.NewGuid(),
+            ClientId = _clientId,
+            Operation = RenderOperation.CompleteExternalVideoSourceCallback,
+            Payload = RenderRpcSerializer.Serialize(response),
+        };
+        await _writeGate.WaitAsync().ConfigureAwait(false);
+        try { await RenderPipeFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(completion), CancellationToken.None).ConfigureAwait(false); }
+        finally { _writeGate.Release(); }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        _lifetime.Cancel();
         try { _pipe?.Dispose(); } catch { }
         if (_readerTask is not null)
         {
             try { await _readerTask.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false); } catch { }
         }
+        try { await Task.WhenAll(_callbacks.Values).WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false); } catch { }
         _connectGate.Dispose();
         _writeGate.Dispose();
+        _lifetime.Dispose();
     }
 }

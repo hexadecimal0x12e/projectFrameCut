@@ -7,7 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Management.Automation" Version="7.6.5" PrivateAssets="all" IncludeAssets="compile" />
-    <ProjectReference Include="..\..\projectFrameCut.Render.RPCProtocol\projectFrameCut.Render.RPCProtocol.csproj" />
+    <ProjectReference Include="..\..\projectFrameCut.Render.Contracts\projectFrameCut.Render.Contracts.csproj" />
     <None Update="projectFrameCut.PowerShell.psd1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

@@ -217,11 +217,10 @@ public partial class RenderSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle))
             .AddPicker("render_AndroidHWAccelType", SettingLocalizedResources.Render_AndroidHwAccleImpType, AndroidHWAccelImpTypeMapping.Keys.ToArray(), AndroidHWAccelImpTypeMapping.ReverseLookup(GetSetting("render_AndroidHWAccelType", "vulkan"), SettingLocalizedResources.Render_AndroidHwAccleImpType_Vulkan));
 #endif
-        rootPPB
-            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderEffectImplement, SettingLocalizedResources.Render_RenderEffectImplement_Subtitle))
-            .AddButton(SettingLocalizedResources.RenderEffectImplement_Title, async (s, e) => await Navigation.PushAsync(new EffectImplementPickerPage()), null)
-            .AddSeparator();
-
+        //rootPPB
+        //    .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderEffectImplement, SettingLocalizedResources.Render_RenderEffectImplement_Subtitle))
+        //    .AddButton(SettingLocalizedResources.RenderEffectImplement_Title, async (s, e) => await Navigation.PushAsync(new EffectImplementPickerPage()), null)
+        //    .AddSeparator();
 
         if (showMoreOpts)
         {

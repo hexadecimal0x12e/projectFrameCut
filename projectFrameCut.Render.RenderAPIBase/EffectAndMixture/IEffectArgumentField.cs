@@ -241,6 +241,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <remarks>
         /// Make sure you have a good reason to use this type, describe well in <see cref="IEffectArgumentField.Remarks"/> as it will make the effect bundle less portable and harder to use in other contexts.
         /// </remarks>
+        [Obsolete("This type will be removed in future as the RPC protocol cannot handle raw objects. Consider serialize the target object to JSON string instead.")]
         CustomType = 1 << 64,
     }
 

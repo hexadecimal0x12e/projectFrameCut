@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Runtime.Versioning;
 using FFmpeg.AutoGen;
 using projectFrameCut.Render.Contracts;
@@ -117,32 +116,25 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
 #else
         if (_independentWorker && TryConnectRegisteredWorker()) return;
         var enableHttp = SettingsManager.IsBoolSettingTrue("render_RpcServerEnableHttp");
+#if WINDOWS || MACOS || LINUX
+        List<Exception> failures = [];
+        foreach (var executable in CliProcessLauncher.GetExecutableCandidates())
+        {
+            try
+            {
+                StartProcess(executable, enableHttp);
+                return;
+            }
+            catch (Exception ex)
+            {
+                failures.Add(ex);
+            }
+        }
 #if WINDOWS
-        Exception? ex1 = null, ex2 = null;
-        try
-        {
-            StartProcess(Path.Combine(AppContext.BaseDirectory, $"pjfc-cli.exe"), enableHttp);
-            return;
-        }
-        catch (Exception ex)
-        {
-            ex1 = ex;
-        }
-        try
-        {
-            StartProcess($"projectFrameCutCompatible_{AppInfo.PackageName}_{Assembly.GetExecutingAssembly().GetName().Version}.exe", enableHttp);
-            return;
-        }
-        catch (Exception ex)
-        {
-            ex2 = ex;
-        }
-
-        throw new InvalidOperationException("Unable to start RPC server. Please ensure that the longer App alias is enabled in the Settings->Apps->Advanced->App execution alias.", new AggregateException(ex1, ex2));
-#elif MACOS
-        StartProcess(Path.Combine(Foundation.NSBundle.MainBundle.BundlePath, "Contents", "MacOS", "projectFrameCut_cli"), enableHttp);
-#elif LINUX
-        StartProcess(Path.Combine(AppContext.BaseDirectory, "projectFrameCut"), enableHttp);
+        throw new InvalidOperationException("Unable to start RPC server. Please ensure that the longer App alias is enabled in the Settings->Apps->Advanced->App execution alias.", new AggregateException(failures));
+#else
+        throw new InvalidOperationException("Unable to start RPC server. Please ensure that the application CLI executable is available.", new AggregateException(failures));
+#endif
 #else
         throw new PlatformNotSupportedException("The projectFrameCut Render RPC server is not supported on this platform. Use In-Process RPC Backend mode.");
 #endif
@@ -152,14 +144,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         {
             if (OperatingSystem.IsIOS() || OperatingSystem.IsAndroid()) throw new InvalidOperationException("RPC Worker process was not available on mobile.");
             var noConsole = !SettingsManager.IsBoolSettingTrue("render_RpcServerShowConsole");
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = execPath,
-                UseShellExecute = false,
-                CreateNoWindow = noConsole,
-                RedirectStandardError = noConsole,
-                RedirectStandardOutput = noConsole,
-            };
+            var startInfo = CliProcessLauncher.CreateStartInfo(execPath, noConsole);
             startInfo.ArgumentList.Add("rpc_server");
             startInfo.ArgumentList.Add($"--pipe={_pipeName}");
             startInfo.ArgumentList.Add($"--token={_token}");
@@ -400,18 +385,11 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     private void StartCliProcess(CliRenderProcessOptions options)
     {
         Exception? firstError = null;
-        foreach (var executable in GetCliExecutableCandidates())
+        foreach (var executable in CliProcessLauncher.GetExecutableCandidates())
         {
             try
             {
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = executable,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                };
+                var startInfo = CliProcessLauncher.CreateStartInfo(executable, true);
                 startInfo.ArgumentList.Add("render");
                 Add("project", options.ProjectRoot);
                 Add("output", options.OutputPath);
@@ -467,20 +445,6 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             }
         }
         throw new InvalidOperationException("Unable to start pjfc-cli in render mode.", firstError);
-    }
-
-    private static IEnumerable<string> GetCliExecutableCandidates()
-    {
-#if WINDOWS
-        yield return Path.Combine(AppContext.BaseDirectory, "pjfc-cli.exe");
-        yield return $"projectFrameCutCompatible_{AppInfo.PackageName}_{Assembly.GetExecutingAssembly().GetName().Version}.exe";
-#elif MACOS
-        yield return Path.Combine(Foundation.NSBundle.MainBundle.BundlePath, "Contents", "MacOS", "projectFrameCut_cli");
-#elif LINUX
-        yield return Path.Combine(AppContext.BaseDirectory, "projectFrameCut");
-#else
-        yield break;
-#endif
     }
 
     private static void AttachProcessLogging(Process process)

@@ -20,6 +20,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         private VideoDecoderPool? _decoderPool;
         private string? _decoderPoolKey;
+        private long _nextRemoteReconnectAttempt;
 
         public required Guid Id { get; init; }
         public required string Name { get; init; }
@@ -74,9 +75,17 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
         {
+            var now = Environment.TickCount64;
+            var retryAt = Volatile.Read(ref _nextRemoteReconnectAttempt);
+            if (_decoderPool is null && RemoteRpcVideoSource.IsPath(FilePath) && now >= retryAt
+                && Interlocked.CompareExchange(ref _nextRemoteReconnectAttempt, now + 2000, retryAt) == retryAt)
+            {
+                ((IClip)this).ReInit(targetPPB);
+                if (_decoderPool is not null) Volatile.Write(ref _nextRemoteReconnectAttempt, 0);
+            }
             if (_decoderPool is null)
             {
-                if (!File.Exists(FilePath))
+                if (!IsVirtualSourcePath(FilePath) && !File.Exists(FilePath))
                 {
                     ClipInitializationFailure.Mark(this, "SourceNotFound", new FileNotFoundException($"VideoClip {Name}'s source is not available: {FilePath}.", FilePath));
                     return ClipInitializationFailure.CreateFallbackFrame(targetWidth, targetHeight, targetPPB, "SourceNotFound", ClipInitializationFailure.GetDescription(ExtraData));
@@ -101,24 +110,34 @@ namespace projectFrameCut.Render.ClipsAndTracks
             int sourceWidth = Math.Max(1, decoder.Width - sourceX);
             int sourceHeight = Math.Max(1, decoder.Height - sourceY);
 
-            IPicture result;
-            if (decoder is IHDRVideoSource h)
+            try
             {
-                result = h.GetHDRFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
-                        targetWidth, targetHeight, hasAlpha: true)
-                    .SetBrightnessOffset(HDRBrightnessOffset)
-                    .ToBitPerPixel(targetPPB);
-            }
-            else
-            {
-                result = decoder.GetFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
-                    targetWidth, targetHeight).ToBitPerPixel(targetPPB);
-            }
+                IPicture result;
+                if (decoder is IHDRVideoSource h)
+                {
+                    result = h.GetHDRFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
+                            targetWidth, targetHeight, hasAlpha: true)
+                        .SetBrightnessOffset(HDRBrightnessOffset)
+                        .ToBitPerPixel(targetPPB);
+                }
+                else
+                {
+                    result = decoder.GetFrame(targetFrame, sourceX, sourceY, sourceWidth, sourceHeight,
+                        targetWidth, targetHeight).ToBitPerPixel(targetPPB);
+                }
 
-            // Only publish the position after a successful decode. Decoder.Index is a request
-            // counter, not a source-frame position, and must never be used for pool routing.
-            decoderLease.MarkPosition(targetFrame);
-            return result;
+                // Only publish the position after a successful decode. Decoder.Index is a request
+                // counter, not a source-frame position, and must never be used for pool routing.
+                decoderLease.MarkPosition(targetFrame);
+                if (decoder is RemoteRpcVideoSource) ClipInitializationFailure.Clear(this);
+                return result;
+            }
+            catch (Exception ex) when (decoder is RemoteRpcVideoSource)
+            {
+                ClipInitializationFailure.Mark(this, "SourceReading", ex);
+                Log(ex, $"Read external RPC video source for clip {Name}", this);
+                return ClipInitializationFailure.CreateFallbackFrame(targetWidth, targetHeight, targetPPB, "SourceReading", ClipInitializationFailure.GetDescription(ExtraData));
+            }
         }
 
         private uint ClampFrameToDecoderRange(IVideoSource? decoder, uint targetFrame)
@@ -141,7 +160,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
             if (string.IsNullOrWhiteSpace(FilePath)) throw new NullReferenceException($"VideoClip {Id}'s source path is null.");
-            if (!File.Exists(FilePath))
+            if (!IsVirtualSourcePath(FilePath) && !File.Exists(FilePath))
             {
                 ClipInitializationFailure.Mark(this, "SourceNotFound", new FileNotFoundException($"VideoClip {Name}'s source is not available: {FilePath}.", FilePath));
                 return;
@@ -179,6 +198,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
             }
 
         }
+
+        private static bool IsVirtualSourcePath(string? path) => path?.StartsWith('#') == true;
 
 
         void IDisposable.Dispose()
@@ -254,7 +275,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         private static string BuildDecoderPoolKey(string filePath, string targetDecoder)
         {
-            var normalizedPath = Path.GetFullPath(filePath);
+            var normalizedPath = IsVirtualSourcePath(filePath) ? filePath : Path.GetFullPath(filePath);
             var normalizedDecoder = string.IsNullOrWhiteSpace(targetDecoder) ? "auto" : targetDecoder.Trim();
             return $"{normalizedPath}::{normalizedDecoder}";
         }

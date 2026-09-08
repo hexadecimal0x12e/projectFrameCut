@@ -6,7 +6,7 @@
     Description = 'Edit the authorized projectFrameCut GUI project through RPC.'
     PowerShellVersion = '7.6.5'
     CompatiblePSEditions = @('Core')
-    RequiredAssemblies = @('protobuf-net.Core.dll', 'protobuf-net.dll', 'projectFrameCut.Render.Contracts.dll', 'projectFrameCut.Render.RPCProtocol.dll')
+    RequiredAssemblies = @('protobuf-net.Core.dll', 'protobuf-net.dll', 'projectFrameCut.Render.Contracts.dll')
     CmdletsToExport = @(
         'Connect-ProjectFrameCut',
         'Disconnect-ProjectFrameCut',

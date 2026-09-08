@@ -64,6 +64,10 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
     [Parameter(Mandatory = true, ParameterSetName = "Authorize")] public string Purpose { get; set; } = "";
     [Parameter(ParameterSetName = "Authorize")] public string ExecutablePath { get; set; } = "pjfc";
     [Parameter(ParameterSetName = "Authorize")] public string? RequestDirectory { get; set; }
+    [Parameter(Mandatory = true, ParameterSetName = "Persistent")] public Guid ClientId { get; set; }
+    [Parameter(Mandatory = true, ParameterSetName = "Persistent")] public string PrivateKey { get; set; } = "";
+    [Parameter(ParameterSetName = "Persistent")] public string Service { get; set; } = "rpc";
+    [Parameter(ParameterSetName = "Persistent")] public string? PersistentRequestDirectory { get; set; }
     [Parameter(Mandatory = true, ParameterSetName = "Id")] public string PipeId { get; set; } = "";
     [Parameter(Mandatory = true, ParameterSetName = "Pipe")] public string PipeName { get; set; } = "";
     [Parameter(Mandatory = true, ParameterSetName = "Pipe")] public string Token { get; set; } = "";
@@ -76,7 +80,7 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
         {
             Cancellation.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds));
             ExternalRpcConnection info;
-            if (ParameterSetName == "Authorize") info = RequestAsync().GetAwaiter().GetResult();
+            if (ParameterSetName is "Authorize" or "Persistent") info = RequestAsync().GetAwaiter().GetResult();
             else info = new()
             {
                 PipeName = ParameterSetName == "Id" ? RenderProtocol.AdditionalPipePrefix + PipeId : PipeName,
@@ -84,7 +88,7 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
             };
             if (info.Token.Length != 64 || !info.Token.All(Uri.IsHexDigit) || string.IsNullOrWhiteSpace(info.PipeName))
                 throw new ArgumentException("Expected a pipe name and a 64-character hexadecimal token.");
-            var clientId = $"powershell-{Guid.NewGuid():N}";
+            var clientId = info.ClientId == Guid.Empty ? $"powershell-{Guid.NewGuid():N}" : info.ClientId.ToString("D");
             client = new(new NamedPipeRenderClientTransport(info.PipeName, info.Token, clientId), clientId);
             var capabilities = client.GetCapabilitiesAsync(Cancellation.Token).AsTask().GetAwaiter().GetResult();
             if (!capabilities.Operations.Contains(nameof(RenderOperation.InvokeGuiProject)))
@@ -113,16 +117,34 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
         {
             "rpc_request",
             "--wait",
-            $"--name={Name}",
-            $"--author={Author}", 
-            $"--purpose={Purpose}", 
-            $"--timeout={TimeoutSeconds}" 
+            $"--timeout={TimeoutSeconds}"
         };
+        if (ParameterSetName == "Persistent")
+        {
+            cmdline =
+            [
+                ..cmdline,
+                $"--clientId={ClientId:D}",
+                $"--service={Service}",
+                $"--privateKey={GetUnresolvedProviderPathFromPSPath(PrivateKey)}"
+            ];
+        }
+        else
+        {
+            cmdline =
+            [
+                ..cmdline,
+                $"--name={Name}",
+                $"--author={Author}",
+                $"--purpose={Purpose}"
+            ];
+        }
         foreach (var arg in cmdline)
         {
             start.ArgumentList.Add(arg);
         }
-        if (RequestDirectory is not null) start.ArgumentList.Add($"--requestDir={GetUnresolvedProviderPathFromPSPath(RequestDirectory)}");
+        var requestDirectory = ParameterSetName == "Persistent" ? PersistentRequestDirectory : RequestDirectory;
+        if (requestDirectory is not null) start.ArgumentList.Add($"--requestDir={GetUnresolvedProviderPathFromPSPath(requestDirectory)}");
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Cannot start pjfc.");
         using var registration = Cancellation.Token.Register(() =>
         {
@@ -136,9 +158,11 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
         var output = process.StandardOutput.ReadToEndAsync(Cancellation.Token);
         var error = process.StandardError.ReadToEndAsync(Cancellation.Token);
         await process.WaitForExitAsync(Cancellation.Token).ConfigureAwait(false);
-        if (process.ExitCode != 0) throw new InvalidOperationException($"RPC authorization failed ({process.ExitCode}): {await error.ConfigureAwait(false)}");
-        await error.ConfigureAwait(false);
-        return JsonSerializer.Deserialize<RPCAuthResponse>(await error.ConfigureAwait(false), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })?.connection ?? throw new InvalidOperationException("Empty RPC connection response.");
+        var standardOutput = await output.ConfigureAwait(false);
+        var standardError = await error.ConfigureAwait(false);
+        if (process.ExitCode != 0) throw new InvalidOperationException($"RPC authorization failed ({process.ExitCode}): {standardError}");
+        return JsonSerializer.Deserialize<RPCAuthResponse>(standardError, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })?.connection
+            ?? throw new InvalidOperationException($"Empty RPC connection response. Output: {standardOutput}");
     }
 
     private class RPCAuthResponse
@@ -158,5 +182,3 @@ public sealed class ModuleLifecycle : IModuleAssemblyCleanup
 {
     public void OnRemove(PSModuleInfo module) => Connection.Disconnect();
 }
-
-

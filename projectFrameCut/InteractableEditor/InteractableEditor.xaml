@@ -36,6 +36,9 @@
                 InputTransparent="True"
                 ZIndex="100"
                 AbsoluteLayout.LayoutFlags="None">
+                <GraphicsView x:Name="CheckerboardBackgroundView"
+                              IsVisible="{Binding UseCheckerboardBackground}"
+                              InputTransparent="True" />
             </Border>
 
             <AbsoluteLayout x:Name="ClipStatesHost"
@@ -161,6 +164,10 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <Label Text="{l:Localized Key=InteractableEditor_ShowAllBorders}" VerticalOptions="Center" />
                             <Switch Grid.Column="1" IsToggled="{Binding ShowAllBorders}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{l:Localized Key=InteractableEditor_UseCheckerboardBackground}" VerticalOptions="Center" />
+                            <Switch Grid.Column="1" IsToggled="{Binding UseCheckerboardBackground}" />
                         </Grid>
                         <BoxView HeightRequest="1" BackgroundColor="#555555" />
                         <Label Text="{l:Localized Key=InteractableEditor_PreviewMode}" FontAttributes="Bold" FontSize="16" VerticalOptions="Center" />

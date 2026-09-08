@@ -93,8 +93,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         MinimumProtocolVersion = RenderProtocol.MinimumSupportedVersion,
         BackendVersion = typeof(Renderer).Assembly.GetName().Version?.ToString() ?? "unknown",
         Operations = Enum.GetValues<RenderOperation>()
-            .Where(static operation => operation != RenderOperation.Unknown && operation != RenderOperation.CreateAdditionalPipe
-                && operation != RenderOperation.GetExternalRpcRequest && operation != RenderOperation.ResolveExternalRpcRequest && (int)operation < 100 && ((int)operation < 30 || (int)operation > 36))
+            .Where(static operation => operation != RenderOperation.Unknown && (int)operation < 100
+                && ((int)operation < 18 || (int)operation > 36))
             .Select(static operation => operation.ToString())
             .ToList(),
         Encoders = ["libx264"],
@@ -1008,7 +1008,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         var path = clip.FilePath ?? dtoPath;
         if (path?.StartsWith('$') == true && assets.TryGetValue(path[1..], out var assetPath)) path = assetPath;
         path = ResolveProjectSourcePath(projectRoot, path);
-        if (!string.IsNullOrWhiteSpace(path) && !string.IsNullOrWhiteSpace(proxyRoot))
+        if (!string.IsNullOrWhiteSpace(path) && path[0] != '#' && !string.IsNullOrWhiteSpace(proxyRoot))
         {
             var proxy = Path.Combine(proxyRoot, $"{Path.GetFileNameWithoutExtension(path)}.proxy.mp4");
             if (File.Exists(proxy)) path = proxy;
@@ -1038,7 +1038,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
 
     private static string? ResolveProjectSourcePath(string projectRoot, string? path)
     {
-        if (string.IsNullOrWhiteSpace(path) || path.StartsWith('$')) return path;
+        if (string.IsNullOrWhiteSpace(path) || path.StartsWith('$') || path.StartsWith('#')) return path;
         return Path.IsPathRooted(path) ? Path.GetFullPath(path) : Path.GetFullPath(Path.Combine(projectRoot, path));
     }
 
