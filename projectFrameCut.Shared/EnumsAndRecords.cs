@@ -92,6 +92,9 @@ namespace projectFrameCut.Shared
         ContinuousResultGenerator,
     }
 
+    /// <summary>
+    /// <b>This system was deprecated in favor of a more modern approach provided by IEffectProvider.</b>
+    /// </summary>
     public enum EffectImplementType
     {
         None = -1,
@@ -140,6 +143,17 @@ namespace projectFrameCut.Shared
         Russian,
         Thai,
         Arabic
+    }
+
+    public enum ClipChangeOperatorKind
+    {
+        Unknown,
+        User,
+        AIAgent,
+        MCP,
+        ExternalApp,
+        ExternalRPC,
+        System,
     }
 
     [Obsolete("Use TextEntry (from projectFrameCut.Drawing.Text.Entry) instead. TextClipEntry is kept for backward compatibility with serialized data.")]

@@ -836,6 +836,9 @@ namespace projectFrameCut.InteractableEditor
 
                 switch (existing)
                 {
+                    case HdrPreviewView existingHdr when incoming is HdrPreviewView incomingHdr:
+                        existingHdr.Frame = incomingHdr.Frame;
+                        return true;
                     case Image existingImage when incoming is Image incomingImage:
                         existingImage.Aspect = incomingImage.Aspect;
                         existingImage.Source = incomingImage.Source;

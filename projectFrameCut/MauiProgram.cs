@@ -771,7 +771,7 @@ namespace projectFrameCut
         }
 
         [ModuleInitializerAttribute]
-        public static void LoadModuleeConfig()
+        public static void LoadModuleConfig()
         {
             try
             {

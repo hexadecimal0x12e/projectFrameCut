@@ -5,8 +5,10 @@ using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace projectFrameCut.Services
@@ -21,6 +23,9 @@ namespace projectFrameCut.Services
     public static class PluginService
     {
         public const int PluginAPIVersion = IPluginBase.CurrentPluginAPIVersion;
+        private const string IsolationOptionsStorageKey = "plugin_isolation_options_key";
+        private const string IsolationOptionsFileName = "plugin-isolation-options.dat";
+        private static readonly object IsolationOptionsLock = new();
 
         public static IPluginRevocationSource RevocationSource
         {
@@ -155,7 +160,6 @@ namespace projectFrameCut.Services
                 List<PluginItem> items = File.Exists(itemsPath)
                     ? JsonSerializer.Deserialize<List<PluginItem>>(await File.ReadAllTextAsync(itemsPath)) ?? []
                     : [];
-                var isolationMode = items.FirstOrDefault(item => item.Id == metadata.PluginID)?.IsolationMode;
                 items.RemoveAll(item => item.Id == metadata.PluginID);
                 items.Add(new PluginItem
                 {
@@ -168,7 +172,6 @@ namespace projectFrameCut.Services
                     PackageFormatVersion = metadata.PackageFormatVersion,
                     PublisherId = metadata.PublisherId,
                     SigningCertificateFingerprint = metadata.SigningCertificateFingerprint,
-                    IsolationMode = isolationMode ?? GetDefaultIsolationMode()
                 });
                 await File.WriteAllTextAsync(itemsPath, JsonSerializer.Serialize(items));
 
@@ -348,9 +351,8 @@ namespace projectFrameCut.Services
         {
             try
             {
-                var module = asb.GetModule(asb.GetName().Name + ".dll");
-                var types = module?.GetTypes();
-                var ldr = types?.FirstOrDefault(a => a.Name == "AppLevelPluginLoader", types?.FirstOrDefault(a => a.Name == "PluginLoader", null));
+                var types = asb.GetModules()?.SelectMany(m => m.GetTypes());
+                var ldr = types?.FirstOrDefault(a => a.Name == "PluginLoader", null);
                 if (ldr is null)
                 {
                     throw new EntryPointNotFoundException($"No suitable PluginLoader class found. Do you forget to add it?");
@@ -457,7 +459,7 @@ namespace projectFrameCut.Services
 #endif
                     Log($"Loading userPlugin: {item.Id}");
                     var result = TaskHelper.SyncWait(
-                        () => CreateFromIDCoreAsync(item.Id, ResolveIsolationMode(item)),
+                        () => CreateFromIDCoreAsync(item.Id, GetConfiguredIsolationMode(item.Id)),
                         CancellationToken.None);
                     var p = result.Plugin;
                     var fail = result.FailReason;
@@ -529,18 +531,32 @@ namespace projectFrameCut.Services
             return plugin is not null;
         }
 
-        public static PluginIsolationMode GetConfiguredIsolationMode(string pluginID) =>
-            TryGetPluginItem(pluginID, out var plugin) ? ResolveIsolationMode(plugin!) : GetDefaultIsolationMode();
+        public static PluginIsolationMode GetConfiguredIsolationMode(string pluginID)
+        {
+            if (!TryGetPluginItem(pluginID, out _))
+            {
+                return GetDefaultIsolationMode();
+            }
+
+            var modes = ReadIsolationModes();
+            return modes.TryGetValue(pluginID, out var mode)
+                ? NormalizeIsolationMode(mode)
+                : GetDefaultIsolationMode();
+        }
 
         public static void SetPluginIsolationMode(string pluginID, PluginIsolationMode mode)
         {
-            var path = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
             var items = ReadPluginItems();
-            var plugin = items.FirstOrDefault(c => c.Id == pluginID)
-                ?? throw new KeyNotFoundException($"Plugin '{pluginID}' is not installed.");
-            plugin.IsolationMode = NormalizeIsolationMode(mode);
-            File.WriteAllText(path, JsonSerializer.Serialize(items));
-            Log($"Plugin '{pluginID}' isolation mode changed to {plugin.IsolationMode}.");
+            if (items.All(c => c.Id != pluginID))
+            {
+                throw new KeyNotFoundException($"Plugin '{pluginID}' is not installed.");
+            }
+
+            var normalizedMode = NormalizeIsolationMode(mode);
+            var modes = ReadIsolationModes();
+            modes[pluginID] = normalizedMode;
+            WriteIsolationModes(modes);
+            Log($"Plugin '{pluginID}' isolation mode changed to {normalizedMode}.");
         }
 
         public static PluginIsolationMode GetDefaultIsolationMode() =>
@@ -554,15 +570,112 @@ namespace projectFrameCut.Services
             return mode;
         }
 
-        private static PluginIsolationMode ResolveIsolationMode(PluginItem plugin) =>
-            NormalizeIsolationMode(plugin.IsolationMode ?? GetDefaultIsolationMode());
-
         private static List<PluginItem> ReadPluginItems()
         {
             var path = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
             if (!File.Exists(path)) return [];
-            return JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(path)) ?? [];
+
+            var json = File.ReadAllText(path);
+            var items = JsonSerializer.Deserialize<List<PluginItem>>(json) ?? [];
+            MigrateLegacyIsolationModes(json, path, items);
+            return items;
         }
+
+        private static Dictionary<string, PluginIsolationMode> ReadIsolationModes()
+        {
+            lock (IsolationOptionsLock)
+            {
+                try
+                {
+                    var path = GetIsolationOptionsPath();
+                    if (!File.Exists(path)) return [];
+
+                    var keyText = TaskHelper.SyncWait(
+                        () => SecureStorage.Default.GetAsync(IsolationOptionsStorageKey),
+                        CancellationToken.None);
+                    if (string.IsNullOrWhiteSpace(keyText)) return [];
+
+                    var plaintext = FileCryptoService.Decrypt(
+                        Convert.FromBase64String(keyText),
+                        File.ReadAllBytes(path));
+                    return JsonSerializer.Deserialize<Dictionary<string, PluginIsolationMode>>(plaintext) ?? [];
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Read encrypted plugin isolation options");
+                    return [];
+                }
+            }
+        }
+
+        private static void WriteIsolationModes(Dictionary<string, PluginIsolationMode> modes)
+        {
+            lock (IsolationOptionsLock)
+            {
+                var keyText = TaskHelper.SyncWait(
+                    () => SecureStorage.Default.GetAsync(IsolationOptionsStorageKey),
+                    CancellationToken.None);
+                if (string.IsNullOrWhiteSpace(keyText))
+                {
+                    keyText = FileCryptoService.GenerateBase64Key();
+                    _ = TaskHelper.SyncWait(
+                        async () => { await SecureStorage.Default.SetAsync(IsolationOptionsStorageKey, keyText); return 1; },
+                        cancellationToken: CancellationToken.None);
+                }
+
+                var path = GetIsolationOptionsPath();
+                var tempPath = path + ".tmp";
+                var encrypted = FileCryptoService.Encrypt(
+                    Convert.FromBase64String(keyText),
+                    JsonSerializer.SerializeToUtf8Bytes(modes));
+                File.WriteAllBytes(tempPath, encrypted);
+                File.Move(tempPath, path, true);
+            }
+        }
+
+        private static void MigrateLegacyIsolationModes(string json, string pluginItemsPath, List<PluginItem> items)
+        {
+            try
+            {
+                if (File.Exists(GetIsolationOptionsPath())) return;
+
+                using var document = JsonDocument.Parse(json);
+                if (document.RootElement.ValueKind != JsonValueKind.Array) return;
+
+                var modes = ReadIsolationModes();
+                var changed = false;
+                foreach (var item in document.RootElement.EnumerateArray())
+                {
+                    var id = item.TryGetProperty(nameof(PluginItem.Id), out var idElement)
+                        ? idElement.GetString()
+                        : null;
+                    if (!item.TryGetProperty(nameof(PluginItem.IsolationMode), out var modeElement) ||
+                        string.IsNullOrWhiteSpace(id) ||
+                        !modeElement.TryGetInt32(out var modeValue) ||
+                        !Enum.IsDefined((PluginIsolationMode)modeValue) ||
+                        modes.ContainsKey(id!))
+                    {
+                        continue;
+                    }
+
+                    modes[id!] = (PluginIsolationMode)modeValue;
+                    changed = true;
+                }
+
+                if (changed)
+                {
+                    WriteIsolationModes(modes);
+                    File.WriteAllText(pluginItemsPath, JsonSerializer.Serialize(items));
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Migrate legacy plugin isolation options");
+            }
+        }
+
+        private static string GetIsolationOptionsPath() =>
+            Path.Combine(MauiProgram.BasicDataPath, IsolationOptionsFileName);
 
         public static void EnablePlugin(string pluginID)
         {
@@ -608,6 +721,7 @@ namespace projectFrameCut.Services
             public string SigningCertificateFingerprint { get; set; } = string.Empty;
             public bool Enabled { get; set; }
             public bool ShouldRemove { get; set; } = false;
+            [JsonIgnore]
             public PluginIsolationMode? IsolationMode { get; set; }
         }
     }

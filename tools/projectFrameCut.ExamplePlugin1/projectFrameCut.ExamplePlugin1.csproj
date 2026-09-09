@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\projectFrameCut.Render.RenderAPIBase\projectFrameCut.Render.RenderAPIBase.csproj" />
+    <ProjectReference Include="..\..\projectFrameCut.PluginBasePackage\projectFrameCut.PluginBasePackage.csproj" />
   </ItemGroup>
 
 </Project>

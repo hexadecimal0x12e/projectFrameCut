@@ -37,6 +37,10 @@ public interface IRenderClient : IAsyncDisposable
     ValueTask<GuiProjectResult> InvokeGuiProjectAsync(GuiProjectRequest request, CancellationToken cancellationToken = default);
     ValueTask<GuiProjectSession> GetGuiProjectSessionAsync(EmptyRequest request, CancellationToken cancellationToken = default);
     ValueTask<CreateAdditionalPipeResponse> CreateGuiProjectPipeAsync(GuiProjectSession request, CancellationToken cancellationToken = default);
+    ValueTask<ProjectHistory> GetProjectHistoryAsync(ProjectHistoryRequest request, CancellationToken cancellationToken = default);
+    ValueTask<ProjectHistoryState> UndoProjectHistoryAsync(ProjectHistoryRequest request, CancellationToken cancellationToken = default);
+    ValueTask<ProjectHistoryState> RedoProjectHistoryAsync(ProjectHistoryRequest request, CancellationToken cancellationToken = default);
+    ValueTask<ProjectHistoryState> RestoreProjectHistoryAsync(RestoreProjectHistoryRequest request, CancellationToken cancellationToken = default);
     ValueTask<CreateAdditionalPipeResponse> CreateAdditionalPipeAsync(CancellationToken cancellationToken = default);
     ValueTask<PendingExternalRpcRequest> GetExternalRpcRequestAsync(CancellationToken cancellationToken = default);
     ValueTask ResolveExternalRpcRequestAsync(ResolveExternalRpcRequest request, CancellationToken cancellationToken = default);
@@ -117,6 +121,10 @@ public sealed class RenderClient : IRenderClient
     public ValueTask<GuiProjectResult> InvokeGuiProjectAsync(GuiProjectRequest request, CancellationToken ct = default) => SendAsync<GuiProjectRequest, GuiProjectResult>(RenderOperation.InvokeGuiProject, request, ct);
     public ValueTask<GuiProjectSession> GetGuiProjectSessionAsync(EmptyRequest request, CancellationToken ct = default) => SendAsync<EmptyRequest, GuiProjectSession>(RenderOperation.GetGuiProjectSession, request, ct);
     public ValueTask<CreateAdditionalPipeResponse> CreateGuiProjectPipeAsync(GuiProjectSession request, CancellationToken ct = default) => SendAsync<GuiProjectSession, CreateAdditionalPipeResponse>(RenderOperation.CreateGuiProjectPipe, request, ct);
+    public ValueTask<ProjectHistory> GetProjectHistoryAsync(ProjectHistoryRequest request, CancellationToken ct = default) => SendAsync<ProjectHistoryRequest, ProjectHistory>(RenderOperation.GetProjectHistory, request, ct);
+    public ValueTask<ProjectHistoryState> UndoProjectHistoryAsync(ProjectHistoryRequest request, CancellationToken ct = default) => SendAsync<ProjectHistoryRequest, ProjectHistoryState>(RenderOperation.UndoProjectHistory, request, ct);
+    public ValueTask<ProjectHistoryState> RedoProjectHistoryAsync(ProjectHistoryRequest request, CancellationToken ct = default) => SendAsync<ProjectHistoryRequest, ProjectHistoryState>(RenderOperation.RedoProjectHistory, request, ct);
+    public ValueTask<ProjectHistoryState> RestoreProjectHistoryAsync(RestoreProjectHistoryRequest request, CancellationToken ct = default) => SendAsync<RestoreProjectHistoryRequest, ProjectHistoryState>(RenderOperation.RestoreProjectHistory, request, ct);
     public ValueTask<CreateAdditionalPipeResponse> CreateAdditionalPipeAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, CreateAdditionalPipeResponse>(RenderOperation.CreateAdditionalPipe, new(), ct);
     public ValueTask<PendingExternalRpcRequest> GetExternalRpcRequestAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, PendingExternalRpcRequest>(RenderOperation.GetExternalRpcRequest, new(), ct);
     public async ValueTask ResolveExternalRpcRequestAsync(ResolveExternalRpcRequest request, CancellationToken ct = default) => _ = await SendAsync<ResolveExternalRpcRequest, EmptyResponse>(RenderOperation.ResolveExternalRpcRequest, request, ct).ConfigureAwait(false);

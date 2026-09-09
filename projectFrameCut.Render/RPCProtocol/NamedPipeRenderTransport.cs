@@ -321,6 +321,8 @@ public sealed class NamedPipeRenderServer(IRenderService service, bool allowAddi
             try
             {
                 IRenderService pipeService = guiSessionId == Guid.Empty ? service : _gui.Bind(guiSessionId);
+                if (!string.IsNullOrWhiteSpace(clientName))
+                    pipeService = new ExternalRpcMetadataPipeService(pipeService, clientName);
                 if (externalClientId != Guid.Empty)
                     pipeService = new ExternalVideoSourcePipeService(this, pipeService, externalClientId, clientName);
                 // Only the internal listener receives this management service.
@@ -356,6 +358,20 @@ public sealed class NamedPipeRenderServer(IRenderService service, bool allowAddi
                     response.Payload = RenderRpcSerializer.Serialize(capabilities);
                 }
                 return response;
+            }
+        }
+
+        private sealed class ExternalRpcMetadataPipeService(IRenderService inner, string clientName) : IRenderService
+        {
+            public ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
+            {
+                if (request.Operation == RenderOperation.InvokeGuiProject)
+                {
+                    var projectRequest = RenderRpcSerializer.Deserialize<GuiProjectRequest>(request.Payload);
+                    projectRequest.ClientName = clientName;
+                    request.Payload = RenderRpcSerializer.Serialize(projectRequest);
+                }
+                return inner.DispatchAsync(request, cancellationToken);
             }
         }
 

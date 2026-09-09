@@ -38,6 +38,39 @@ internal sealed class Connection : IDisposable
         if (Connections.TryGetValue(Runspace.DefaultRunspace, out var c)) c.Dispose();
     }
 
+    internal static Guid Open(ExternalRpcConnection info, CancellationToken cancellationToken)
+    {
+        if (info.Token.Length != 64 || !info.Token.All(Uri.IsHexDigit) || string.IsNullOrWhiteSpace(info.PipeName))
+        {
+            throw new ArgumentException("Expected a pipe name and a 64-character hexadecimal token.");
+        }
+        var clientId = info.ClientId == Guid.Empty ? $"powershell-{Guid.NewGuid():N}" : info.ClientId.ToString("D");
+        RenderClient? client = new(new NamedPipeRenderClientTransport(info.PipeName, info.Token, clientId), clientId);
+        try
+        {
+            var capabilities = client.GetCapabilitiesAsync(cancellationToken).AsTask().GetAwaiter().GetResult();
+            if (!capabilities.Operations.Contains(nameof(RenderOperation.InvokeGuiProject)))
+            {
+                throw new NotSupportedException("This pipe does not support GUI project operations. Create a new pipe from the target project window.");
+            }
+            var session = client.GetGuiProjectSessionAsync(new(), cancellationToken).AsTask().GetAwaiter().GetResult();
+            if (session.SessionId == Guid.Empty)
+            {
+                throw new InvalidOperationException("No GUI project is bound to this pipe.");
+            }
+            Replace(new(client, session.SessionId, Runspace.DefaultRunspace));
+            client = null;
+            return session.SessionId;
+        }
+        finally
+        {
+            if (client is not null)
+            {
+                client.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+        }
+    }
+
     public void Dispose()
     {
         _runspace.StateChanged -= StateChanged;
@@ -62,11 +95,13 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
     [Parameter(Mandatory = true, ParameterSetName = "Authorize")] public string Name { get; set; } = "";
     [Parameter(Mandatory = true, ParameterSetName = "Authorize")] public string Author { get; set; } = "";
     [Parameter(Mandatory = true, ParameterSetName = "Authorize")] public string Purpose { get; set; } = "";
-    [Parameter(ParameterSetName = "Authorize")] public string ExecutablePath { get; set; } = "pjfc";
+    [Parameter(ParameterSetName = "Authorize")]
+    [Parameter(ParameterSetName = "Persistent")]
+    public string ExecutablePath { get; set; } = "pjfc";
     [Parameter(ParameterSetName = "Authorize")] public string? RequestDirectory { get; set; }
     [Parameter(Mandatory = true, ParameterSetName = "Persistent")] public Guid ClientId { get; set; }
     [Parameter(Mandatory = true, ParameterSetName = "Persistent")] public string PrivateKey { get; set; } = "";
-    [Parameter(ParameterSetName = "Persistent")] public string Service { get; set; } = "rpc";
+    [Parameter(ParameterSetName = "Persistent")][ValidatePattern("^[A-Za-z0-9._-]{1,24}$")] public string Service { get; set; } = "rpc";
     [Parameter(ParameterSetName = "Persistent")] public string? PersistentRequestDirectory { get; set; }
     [Parameter(Mandatory = true, ParameterSetName = "Id")] public string PipeId { get; set; } = "";
     [Parameter(Mandatory = true, ParameterSetName = "Pipe")] public string PipeName { get; set; } = "";
@@ -75,7 +110,6 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
 
     protected override void ProcessRecord()
     {
-        RenderClient? client = null;
         try
         {
             Cancellation.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds));
@@ -86,67 +120,57 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
                 PipeName = ParameterSetName == "Id" ? RenderProtocol.AdditionalPipePrefix + PipeId : PipeName,
                 Token = ParameterSetName == "Id" ? PipeId : Token
             };
-            if (info.Token.Length != 64 || !info.Token.All(Uri.IsHexDigit) || string.IsNullOrWhiteSpace(info.PipeName))
-                throw new ArgumentException("Expected a pipe name and a 64-character hexadecimal token.");
-            var clientId = info.ClientId == Guid.Empty ? $"powershell-{Guid.NewGuid():N}" : info.ClientId.ToString("D");
-            client = new(new NamedPipeRenderClientTransport(info.PipeName, info.Token, clientId), clientId);
-            var capabilities = client.GetCapabilitiesAsync(Cancellation.Token).AsTask().GetAwaiter().GetResult();
-            if (!capabilities.Operations.Contains(nameof(RenderOperation.InvokeGuiProject)))
-                throw new NotSupportedException("This pipe does not support GUI project operations. Create a new pipe from the target project window.");
-            var session = client.GetGuiProjectSessionAsync(new(), Cancellation.Token).AsTask().GetAwaiter().GetResult();
-            if (session.SessionId == Guid.Empty) throw new InvalidOperationException("No GUI project is bound to this pipe.");
-            Connection.Replace(new(client, session.SessionId, Runspace.DefaultRunspace));
-            client = null;
-            WriteVerbose($"Connected to GUI project session {session.SessionId}.");
-            WriteObject(new PSObject(new { session.SessionId, Connected = true }));
+            var sessionId = Connection.Open(info, Cancellation.Token);
+            WriteVerbose($"Connected to GUI project session {sessionId}.");
+            WriteObject(new PSObject(new { SessionId = sessionId, Connected = true }));
         }
         catch (Exception ex) { Fail(ex); }
-        finally { if (client is not null) client.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
     }
 
     private async Task<ExternalRpcConnection> RequestAsync()
     {
-        var start = new ProcessStartInfo(ExecutablePath)
+        if (ParameterSetName == "Persistent")
+            return await RequestPersistentAsync(ExecutablePath, ClientId, GetUnresolvedProviderPathFromPSPath(PrivateKey), Service,
+                PersistentRequestDirectory is null ? null : GetUnresolvedProviderPathFromPSPath(PersistentRequestDirectory), TimeoutSeconds, Cancellation.Token).ConfigureAwait(false);
+        return await RequestCoreAsync(ExecutablePath,
+        [
+            "rpc_request",
+            "--wait",
+            $"--timeout={TimeoutSeconds}",
+            $"--name={Name}",
+            $"--author={Author}",
+            $"--purpose={Purpose}",
+        ], RequestDirectory is null ? null : GetUnresolvedProviderPathFromPSPath(RequestDirectory), Cancellation.Token).ConfigureAwait(false);
+    }
+
+    internal static Task<ExternalRpcConnection> RequestPersistentAsync(string executablePath, Guid clientId, string privateKey,
+        string service, string? requestDirectory, int timeoutSeconds, CancellationToken cancellationToken) => RequestCoreAsync(executablePath,
+        [
+            "rpc_request",
+            "--wait",
+            $"--timeout={timeoutSeconds}",
+            $"--clientId={clientId:D}",
+            $"--service={service}",
+            $"--privateKey={privateKey}"
+        ], requestDirectory, cancellationToken);
+
+    private static async Task<ExternalRpcConnection> RequestCoreAsync(string executablePath, string[] cmdline,
+        string? requestDirectory, CancellationToken cancellationToken)
+    {
+        var start = new ProcessStartInfo(executablePath)
         {
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
-        var cmdline = new[]
-        {
-            "rpc_request",
-            "--wait",
-            $"--timeout={TimeoutSeconds}"
-        };
-        if (ParameterSetName == "Persistent")
-        {
-            cmdline =
-            [
-                ..cmdline,
-                $"--clientId={ClientId:D}",
-                $"--service={Service}",
-                $"--privateKey={GetUnresolvedProviderPathFromPSPath(PrivateKey)}"
-            ];
-        }
-        else
-        {
-            cmdline =
-            [
-                ..cmdline,
-                $"--name={Name}",
-                $"--author={Author}",
-                $"--purpose={Purpose}"
-            ];
-        }
         foreach (var arg in cmdline)
         {
             start.ArgumentList.Add(arg);
         }
-        var requestDirectory = ParameterSetName == "Persistent" ? PersistentRequestDirectory : RequestDirectory;
-        if (requestDirectory is not null) start.ArgumentList.Add($"--requestDir={GetUnresolvedProviderPathFromPSPath(requestDirectory)}");
+        if (requestDirectory is not null) start.ArgumentList.Add($"--requestDir={requestDirectory}");
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Cannot start pjfc.");
-        using var registration = Cancellation.Token.Register(() =>
+        using var registration = cancellationToken.Register(() =>
         {
             try
             {
@@ -155,9 +179,9 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
             }
             catch (InvalidOperationException) { }
         });
-        var output = process.StandardOutput.ReadToEndAsync(Cancellation.Token);
-        var error = process.StandardError.ReadToEndAsync(Cancellation.Token);
-        await process.WaitForExitAsync(Cancellation.Token).ConfigureAwait(false);
+        var output = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var error = process.StandardError.ReadToEndAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
         var standardOutput = await output.ConfigureAwait(false);
         var standardError = await error.ConfigureAwait(false);
         if (process.ExitCode != 0) throw new InvalidOperationException($"RPC authorization failed ({process.ExitCode}): {standardError}");
@@ -169,6 +193,33 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
     {
         public string status { get; set; } = "";
         public ExternalRpcConnection connection { get; set; }
+    }
+}
+
+[Cmdlet(VerbsCommunications.Connect, "ProjectFrameCutPersistent")]
+public sealed class ConnectProjectFrameCutPersistentCommand : CancellableCmdlet
+{
+    [Parameter(Mandatory = true)] public Guid ClientId { get; set; }
+    [Parameter(Mandatory = true)] public string PrivateKey { get; set; } = "";
+    [Parameter][ValidatePattern("^[A-Za-z0-9._-]{1,24}$")] public string Service { get; set; } = "rpc";
+    [Parameter] public string ExecutablePath { get; set; } = "pjfc";
+    [Parameter] public string? RequestDirectory { get; set; }
+    [Parameter][ValidateRange(5, 3600)] public int TimeoutSeconds { get; set; } = 300;
+
+    protected override void ProcessRecord()
+    {
+        try
+        {
+            Cancellation.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds));
+            var info = ConnectProjectFrameCutCommand.RequestPersistentAsync(ExecutablePath, ClientId,
+                GetUnresolvedProviderPathFromPSPath(PrivateKey), Service,
+                RequestDirectory is null ? null : GetUnresolvedProviderPathFromPSPath(RequestDirectory),
+                TimeoutSeconds, Cancellation.Token).GetAwaiter().GetResult();
+            var sessionId = Connection.Open(info, Cancellation.Token);
+            WriteVerbose($"Connected persistent client {ClientId:D} to GUI project session {sessionId}.");
+            WriteObject(new PSObject(new { SessionId = sessionId, ClientId, Service, Connected = true }));
+        }
+        catch (Exception ex) { Fail(ex); }
     }
 }
 

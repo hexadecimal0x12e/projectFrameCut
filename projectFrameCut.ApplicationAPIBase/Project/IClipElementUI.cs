@@ -119,9 +119,15 @@ namespace projectFrameCut.ApplicationAPIBase.Project
 
         public string? DetailInfo { get; set; }
 
+        public string? ChangeReason { get; set; }
+
         public Guid? ChangedClipID { get; set; } = null;
 
         public bool NoSave { get; set; } = false;
+
+        public ClipChangeOperatorKind Operator { get; set; } = ClipChangeOperatorKind.User;
+
+        public string OperatorDetailName { get; set; } = string.Empty;
 
         public static string BuildChangeReason(ClipUpdateReason? reason, string? sourceName = null, string? details = null)
         {
@@ -155,7 +161,9 @@ namespace projectFrameCut.ApplicationAPIBase.Project
             };
         }
 
-        public override string ToString() => BuildChangeReason(Reason, SourceName, DetailInfo);
+        public override string ToString() => string.IsNullOrWhiteSpace(ChangeReason)
+            ? BuildChangeReason(Reason, SourceName, DetailInfo)
+            : ChangeReason.Trim();
     }
 
     public enum ClipUpdateReason

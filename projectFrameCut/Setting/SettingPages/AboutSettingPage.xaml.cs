@@ -1,6 +1,7 @@
 using Microsoft.Maui.Controls;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
@@ -57,7 +58,7 @@ public partial class AboutSettingPage : ContentPage
 
             AppDetailVersionLabel.Text =
                 $"""
-                IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+                IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion} | RPC Protocol: v{RenderProtocol.CurrentVersion} ({RenderProtocol.PipeProtocolVersion}, {RenderProtocol.MinimumSupportedVersion})
                 {renderType.GetName().Name}: v{renderType.GetName().Version} hash:{renderHash}
                 {drawingType.GetName().Name}: v{drawingType.GetName().Version}({drawingCommit}) hash:{drawingHash}
                 Package: {AppInfo.PackageName} | Channel: {channel} | Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")}

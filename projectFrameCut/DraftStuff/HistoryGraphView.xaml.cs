@@ -27,8 +27,8 @@ public partial class HistoryGraphView : ContentView
         public int Depth { get; set; }
         public View? View { get; set; }
 
-        public double NodeWidth => 220;
-        public double NodeHeight => 68;
+        public double NodeWidth => 260;
+        public double NodeHeight => 76;
 
         public string DisplayLabel => IsCurrentSnapshot ? $"* {ChangeReason}" : ChangeReason;
 
@@ -48,7 +48,6 @@ public partial class HistoryGraphView : ContentView
         public List<(HistoryGraphNodeViewModel From, HistoryGraphNodeViewModel To)> Connections = new();
         public double PanX, PanY, Scale = 1.0;
 
-        static readonly Color MainChainColor = Color.FromArgb("#4A9EFF");
         static readonly Color BranchColor = Color.FromArgb("#666666");
         static readonly Color CurrentPathColor = Color.FromArgb("#66BB6A");
 
@@ -60,12 +59,9 @@ public partial class HistoryGraphView : ContentView
 
             foreach (var (from, to) in Connections)
             {
-                bool isCurrentPath = from.IsCurrentSnapshot || to.IsCurrentSnapshot;
-                bool isMainChain = from.Depth == 0 && to.Depth == 0;
+                bool isCurrentPath = from.Depth == 0 && to.Depth == 0;
 
-                canvas.StrokeColor = isCurrentPath ? CurrentPathColor
-                                    : isMainChain ? MainChainColor
-                                    : BranchColor;
+                canvas.StrokeColor = isCurrentPath ? CurrentPathColor : BranchColor;
                 canvas.StrokeSize = (float)(isCurrentPath ? 3 * Scale : 2 * Scale);
 
                 var start = new Point(
@@ -115,10 +111,9 @@ public partial class HistoryGraphView : ContentView
     // Canvas state
     private double _panStartX, _panStartY;
     private double _startScale = 1.0;
-    private const double MinScale = 0.1;
+    private bool _pendingInitialFocus;
+    private const double MinScale = 0.04;
     private const double MaxScale = 5.0;
-    private const double CanvasWidth = 2600;
-    private const double CanvasHeight = 1600;
 
     #endregion
 
@@ -204,7 +199,7 @@ public partial class HistoryGraphView : ContentView
         _currentNodes = nodes;
 
         // ── Build graph view ──
-        BuildGraphView(nodes, edges, currentSnapshotId);
+        BuildGraphView(nodes, currentSnapshotId);
 
         // ── Build list view ──
         BuildListView(nodes, edges);
@@ -215,8 +210,9 @@ public partial class HistoryGraphView : ContentView
 
         UpdateViewMode();
 
-        // Fit all after layout settles
-        Dispatcher.Dispatch(() => OnFitAll(null, EventArgs.Empty));
+        // Keep nodes readable on first open and start around the active snapshot.
+        _pendingInitialFocus = true;
+        Dispatcher.Dispatch(TryApplyInitialView);
     }
 
     public void RefreshSelection()
@@ -263,7 +259,6 @@ public partial class HistoryGraphView : ContentView
 
     private void BuildGraphView(
         List<HistoryGraphNode> nodes,
-        List<HistoryGraphEdge> edges,
         Guid currentSnapshotId)
     {
         // Convert to viewmodels
@@ -286,8 +281,8 @@ public partial class HistoryGraphView : ContentView
             nodeDict[vm.SnapshotID] = vm;
         }
 
-        // Compute 2D layout
-        ComputeLayout(_nodeViewModels, nodeDict);
+        var parentByNode = BuildParentMap(_nodeViewModels, nodeDict);
+        ComputeLayout(_nodeViewModels, nodeDict, parentByNode, currentSnapshotId);
 
         // Create MAUI views
         foreach (var vm in _nodeViewModels)
@@ -298,14 +293,11 @@ public partial class HistoryGraphView : ContentView
             AbsoluteLayout.SetLayoutBounds(view, new Rect(vm.X, vm.Y, vm.NodeWidth, vm.NodeHeight));
         }
 
-        // Build connections
-        foreach (var edge in edges)
+        // Draw the same validated parent links used by the layout. Snapshot Previous links
+        // are authoritative; stale or differently ordered Next lists must not move edges.
+        foreach (var (childId, parentId) in parentByNode)
         {
-            if (nodeDict.TryGetValue(edge.FromSnapshotID, out var fromVm)
-                && nodeDict.TryGetValue(edge.ToSnapshotID, out var toVm))
-            {
-                _connectionsDrawable.Connections.Add((fromVm, toVm));
-            }
+            _connectionsDrawable.Connections.Add((nodeDict[parentId], nodeDict[childId]));
         }
 
         ConnectionsLayer.Invalidate();
@@ -437,100 +429,124 @@ public partial class HistoryGraphView : ContentView
 
     private void ComputeLayout(
         List<HistoryGraphNodeViewModel> nodes,
-        Dictionary<Guid, HistoryGraphNodeViewModel> nodeDict)
+        Dictionary<Guid, HistoryGraphNodeViewModel> nodeDict,
+        Dictionary<Guid, Guid> parentByNode,
+        Guid currentSnapshotId)
     {
         if (nodes.Count == 0) return;
 
         const double xPadding = 80;
         const double yPadding = 40;
-        const double columnSpacing = 280;
-        const double rowSpacing = 100;
+        const double columnSpacing = 340;
+        const double rowSpacing = 124;
 
-        // 1. Find roots (nodes with no parent in this graph)
-        var roots = nodes.Where(n =>
-            n.PreviousSnapshotID == Guid.Empty
-            || !nodeDict.ContainsKey(n.PreviousSnapshotID)).ToList();
+        var currentPath = new HashSet<Guid>();
+        for (var id = currentSnapshotId; id != Guid.Empty && currentPath.Add(id)
+             && parentByNode.TryGetValue(id, out var parentId); id = parentId) { }
 
-        if (roots.Count == 0) return;
+        var children = nodes.ToDictionary(n => n.SnapshotID, _ => new List<HistoryGraphNodeViewModel>());
+        foreach (var (childId, parentId) in parentByNode)
+            children[parentId].Add(nodeDict[childId]);
 
-        // 2. Identify main chain for styling (follow first child from first root)
-        var mainChain = new HashSet<Guid>();
-        var cursor = roots[0].SnapshotID;
-        while (cursor != Guid.Empty && mainChain.Add(cursor) && nodeDict.TryGetValue(cursor, out var chainNode))
-            cursor = chainNode.NextSnapshotIDs.FirstOrDefault();
-
-        // 3. BFS to assign topological layers (column index for X axis)
-        var layerOf = new Dictionary<Guid, int>();
-        var queue = new Queue<Guid>();
-        foreach (var r in roots)
+        static int CompareNodes(HistoryGraphNodeViewModel a, HistoryGraphNodeViewModel b)
         {
-            layerOf[r.SnapshotID] = 0;
-            queue.Enqueue(r.SnapshotID);
+            int byTime = a.SavedAt.CompareTo(b.SavedAt);
+            return byTime != 0 ? byTime : a.SnapshotID.CompareTo(b.SnapshotID);
         }
 
-        int maxLayer = 0;
-        while (queue.Count > 0)
-        {
-            var id = queue.Dequeue();
-            if (!nodeDict.TryGetValue(id, out var node)) continue;
-            foreach (var nextId in node.NextSnapshotIDs)
+        foreach (var list in children.Values)
+            list.Sort((a, b) =>
             {
-                if (!layerOf.ContainsKey(nextId))
+                int byPath = currentPath.Contains(b.SnapshotID).CompareTo(currentPath.Contains(a.SnapshotID));
+                return byPath != 0 ? byPath : CompareNodes(a, b);
+            });
+
+        var roots = nodes.Where(n => !parentByNode.ContainsKey(n.SnapshotID)).ToList();
+        roots.Sort((a, b) =>
+        {
+            int byPath = currentPath.Contains(b.SnapshotID).CompareTo(currentPath.Contains(a.SnapshotID));
+            return byPath != 0 ? byPath : CompareNodes(a, b);
+        });
+
+        int lane = 0;
+        var positioned = new HashSet<Guid>();
+
+        double LayoutNode(HistoryGraphNodeViewModel node, int column)
+        {
+            positioned.Add(node.SnapshotID);
+            node.X = xPadding + column * columnSpacing;
+            node.Depth = currentPath.Contains(node.SnapshotID) ? 0 : 1;
+
+            var childList = children[node.SnapshotID];
+            if (childList.Count == 0)
+            {
+                node.Y = yPadding + lane++ * rowSpacing;
+                return node.Y;
+            }
+
+            // The current path (or the first stable child) stays on the parent's lane;
+            // every additional branch receives its own non-overlapping subtree lanes.
+            node.Y = LayoutNode(childList[0], column + 1);
+            for (int i = 1; i < childList.Count; i++)
+                LayoutNode(childList[i], column + 1);
+            return node.Y;
+        }
+
+        foreach (var root in roots)
+            LayoutNode(root, 0);
+
+        // Corrupt cyclic data has no root. Keep those records visible without drawing
+        // misleading cyclic links.
+        foreach (var node in nodes.OrderBy(n => n.SavedAt).ThenBy(n => n.SnapshotID))
+            if (!positioned.Contains(node.SnapshotID))
+                LayoutNode(node, 0);
+    }
+
+    private static Dictionary<Guid, Guid> BuildParentMap(
+        List<HistoryGraphNodeViewModel> nodes,
+        Dictionary<Guid, HistoryGraphNodeViewModel> nodeDict)
+    {
+        var result = nodes
+            .Where(n => n.PreviousSnapshotID != Guid.Empty
+                        && n.PreviousSnapshotID != n.SnapshotID
+                        && nodeDict.ContainsKey(n.PreviousSnapshotID))
+            .ToDictionary(n => n.SnapshotID, n => n.PreviousSnapshotID);
+
+        var cyclic = new HashSet<Guid>();
+        foreach (var node in nodes)
+        {
+            var path = new List<Guid>();
+            var indices = new Dictionary<Guid, int>();
+            var id = node.SnapshotID;
+            while (result.TryGetValue(id, out var parentId))
+            {
+                if (indices.TryGetValue(id, out int cycleStart))
                 {
-                    layerOf[nextId] = layerOf[id] + 1;
-                    if (layerOf[nextId] > maxLayer) maxLayer = layerOf[nextId];
-                    queue.Enqueue(nextId);
+                    for (int i = cycleStart; i < path.Count; i++)
+                        cyclic.Add(path[i]);
+                    break;
                 }
+                indices[id] = path.Count;
+                path.Add(id);
+                id = parentId;
             }
         }
 
-        foreach (var n in nodes)
+        foreach (var id in cyclic)
+            result.Remove(id);
+
+        foreach (var node in nodes)
         {
-            if (!layerOf.ContainsKey(n.SnapshotID))
-                layerOf[n.SnapshotID] = 0;
+            node.NextSnapshotIDs = [];
+            node.IsHead = true;
+        }
+        foreach (var (childId, parentId) in result)
+        {
+            nodeDict[parentId].NextSnapshotIDs.Add(childId);
+            nodeDict[parentId].IsHead = false;
         }
 
-        // 4. Group nodes by layer
-        var layerGroups = new Dictionary<int, List<HistoryGraphNodeViewModel>>();
-        for (int i = 0; i <= maxLayer; i++)
-            layerGroups[i] = new List<HistoryGraphNodeViewModel>();
-        foreach (var n in nodes)
-            layerGroups[layerOf[n.SnapshotID]].Add(n);
-
-        // 5. Assign Y positions within each layer (barycenter sort to reduce edge crossings)
-        var nodeY = new Dictionary<Guid, double>();
-
-        for (int l = 0; l <= maxLayer; l++)
-        {
-            var layerNodes = layerGroups[l];
-            layerNodes.Sort((a, b) =>
-            {
-                double ay = GetParentAvgY(a, nodeDict, nodeY);
-                double by = GetParentAvgY(b, nodeDict, nodeY);
-                return ay.CompareTo(by);
-            });
-
-            for (int i = 0; i < layerNodes.Count; i++)
-                nodeY[layerNodes[i].SnapshotID] = yPadding + i * rowSpacing;
-        }
-
-        // 6. Apply positions
-        foreach (var n in nodes)
-        {
-            n.X = xPadding + layerOf[n.SnapshotID] * columnSpacing;
-            n.Y = nodeY[n.SnapshotID];
-            n.Depth = mainChain.Contains(n.SnapshotID) ? 0 : 1;
-        }
-    }
-
-    private static double GetParentAvgY(
-        HistoryGraphNodeViewModel node,
-        Dictionary<Guid, HistoryGraphNodeViewModel> nodeDict,
-        Dictionary<Guid, double> nodeY)
-    {
-        if (node.PreviousSnapshotID == Guid.Empty || !nodeDict.ContainsKey(node.PreviousSnapshotID))
-            return 0;
-        return nodeY.TryGetValue(node.PreviousSnapshotID, out double y) ? y : 0;
+        return result;
     }
 
     #endregion
@@ -539,14 +555,6 @@ public partial class HistoryGraphView : ContentView
 
     private View CreateNodeView(HistoryGraphNodeViewModel vm)
     {
-        var container = new VerticalStackLayout
-        {
-            Spacing = 0,
-            HorizontalOptions = LayoutOptions.Start,
-            VerticalOptions = LayoutOptions.Start,
-            InputTransparent = false
-        };
-
         var frame = new Border
         {
             Stroke = Colors.Gray,
@@ -590,8 +598,6 @@ public partial class HistoryGraphView : ContentView
         bodyGrid.Add(timeLabel, 1, 0);
 
         frame.Content = bodyGrid;
-        container.Add(frame);
-
         UpdateNodeBorderStyle(frame, vm);
 
         var tapGesture = new TapGestureRecognizer();
@@ -601,7 +607,7 @@ public partial class HistoryGraphView : ContentView
 
         ToolTipProperties.SetText(frame, $"{vm.DisplayLabel}\n{vm.TimeDisplay}");
 
-        return container;
+        return frame;
     }
 
     private static void UpdateNodeBorderStyle(Border border, HistoryGraphNodeViewModel vm)
@@ -869,8 +875,8 @@ public partial class HistoryGraphView : ContentView
         double targetScale = Math.Clamp(NodesContainer.Scale * scaleFactor, MinScale, MaxScale);
 
         // Use center of canvas as focal point for Ctrl+Scroll zoom
-        double focalX = Width / 2;
-        double focalY = Height / 2;
+        double focalX = GraphViewContainer.Width / 2;
+        double focalY = GraphViewContainer.Height / 2;
 
         ApplyZoom(targetScale, focalX, focalY);
 
@@ -885,24 +891,18 @@ public partial class HistoryGraphView : ContentView
     private void OnZoomIn(object? sender, EventArgs e)
     {
         double targetScale = Math.Clamp(NodesContainer.Scale * 1.25, MinScale, MaxScale);
-        ApplyZoom(targetScale, Width / 2, Height / 2);
+        ApplyZoom(targetScale, GraphViewContainer.Width / 2, GraphViewContainer.Height / 2);
     }
 
     private void OnZoomOut(object? sender, EventArgs e)
     {
         double targetScale = Math.Clamp(NodesContainer.Scale / 1.25, MinScale, MaxScale);
-        ApplyZoom(targetScale, Width / 2, Height / 2);
+        ApplyZoom(targetScale, GraphViewContainer.Width / 2, GraphViewContainer.Height / 2);
     }
 
     private void OnResetView(object? sender, EventArgs e)
     {
-        NodesContainer.Scale = 1.0;
-        NodesContainer.TranslationX = 0;
-        NodesContainer.TranslationY = 0;
-        NodesContainer.AnchorX = 0;
-        NodesContainer.AnchorY = 0;
-        SyncDrawableTransform();
-        ConnectionsLayer.Invalidate();
+        FocusSnapshot(_nodeViewModels.FirstOrDefault(n => n.IsCurrentSnapshot) ?? _nodeViewModels.FirstOrDefault());
     }
 
     private void OnFitAll(object? sender, EventArgs e)
@@ -919,8 +919,8 @@ public partial class HistoryGraphView : ContentView
 
         if (contentW <= 0 || contentH <= 0) return;
 
-        double viewW = Width > 0 ? Width : 800;
-        double viewH = Height > 0 ? Height : 400;
+        double viewW = GraphViewContainer.Width > 0 ? GraphViewContainer.Width : 800;
+        double viewH = GraphViewContainer.Height > 0 ? GraphViewContainer.Height : 400;
 
         double scaleX = viewW / contentW;
         double scaleY = viewH / contentH;
@@ -936,6 +936,35 @@ public partial class HistoryGraphView : ContentView
         NodesContainer.AnchorX = 0;
         NodesContainer.AnchorY = 0;
 
+        SyncDrawableTransform();
+        ConnectionsLayer.Invalidate();
+    }
+
+    private void OnGraphViewSizeChanged(object? sender, EventArgs e)
+    {
+        if (_pendingInitialFocus)
+            TryApplyInitialView();
+    }
+
+    private void TryApplyInitialView()
+    {
+        if (!_pendingInitialFocus || GraphViewContainer.Width <= 0 || GraphViewContainer.Height <= 0)
+            return;
+
+        _pendingInitialFocus = false;
+        FocusSnapshot(_nodeViewModels.FirstOrDefault(n => n.IsCurrentSnapshot) ?? _nodeViewModels.FirstOrDefault());
+    }
+
+    private void FocusSnapshot(HistoryGraphNodeViewModel? node)
+    {
+        if (node is null) return;
+
+        const double scale = 1.0;
+        double viewW = GraphViewContainer.Width > 0 ? GraphViewContainer.Width : 800;
+        double viewH = GraphViewContainer.Height > 0 ? GraphViewContainer.Height : 400;
+        NodesContainer.Scale = scale;
+        NodesContainer.TranslationX = viewW / 2 - (node.X + node.NodeWidth / 2) * scale;
+        NodesContainer.TranslationY = viewH / 2 - (node.Y + node.NodeHeight / 2) * scale;
         SyncDrawableTransform();
         ConnectionsLayer.Invalidate();
     }

@@ -94,7 +94,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         BackendVersion = typeof(Renderer).Assembly.GetName().Version?.ToString() ?? "unknown",
         Operations = Enum.GetValues<RenderOperation>()
             .Where(static operation => operation != RenderOperation.Unknown && (int)operation < 100
-                && ((int)operation < 18 || (int)operation > 36))
+                && ((int)operation < 18 || (int)operation > 40))
             .Select(static operation => operation.ToString())
             .ToList(),
         Encoders = ["libx264"],

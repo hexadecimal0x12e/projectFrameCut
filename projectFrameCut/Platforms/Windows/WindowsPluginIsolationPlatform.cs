@@ -46,7 +46,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         if (!NativeMethods.GetTokenInformation(identity.AccessToken, 29, out var isAppContainer, sizeof(int), out _))
             throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
         if (isAppContainer == 0)
-            throw new UnauthorizedAccessException("sandbox_worker must be activated through InSandboxWorker in an AppContainer.");
+            throw new UnauthorizedAccessException("plugin_worker with --appContainer parameter must be activated through InSandboxWorker in an AppContainer.");
         Log($"AppContainer verified for process {Environment.ProcessId}.");
     }
 
@@ -81,7 +81,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
             Log($"Created isolation pipe '\\\\.\\pipe\\{pipeName}' for AppContainer SID '{appContainerSid.Value}'.");
             List<string> args = 
                 [
-                    "sandbox_worker",
+                    "plugin_worker",
                     $"--pipe={pipeName}",
                     $"--token={context.AuthenticationToken}",
                     $"--sessionRoot={sessionRoot}",
@@ -90,16 +90,18 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
                     $"--pluginRoot={pluginDirectory}",
                     $"--instancePackageName={familyName}",
                     "--forceRouteToCLI",
-                    "--consoleLog",
+                    "--appContainer",
                 ];
             if (MyLoggerExtensions.LoggingDiagnosticInfo)
             {
                 args.Add("--logDiagnostic");
             }
+            if (SettingsManager.IsBoolSettingTrue("plugin_IsolationShowConsole"))
+            {
+                args.Add("--consoleLog");
+            }
             var arguments = string.Join(" ", args.Select(Quote));
-            var workerEntryPoint = SettingsManager.IsBoolSettingTrue("plugin_IsolationShowConsole")
-                ? "InSandboxWorkerConsole"
-                : "InSandboxWorkerNoConsole";
+            var workerEntryPoint = SettingsManager.IsBoolSettingTrue("plugin_IsolationShowConsole")  ? "InSandboxWorkerConsole" : "InSandboxWorkerNoConsole";
             var processId = ActivateRuntime($"{familyName}!{workerEntryPoint}", arguments);
             process = Process.GetProcessById(processId);
             Log($"Activated InSandboxWorker {processId} for plugin '{context.PluginId}'.");

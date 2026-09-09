@@ -67,6 +67,12 @@ public class DraftSettingPage
             });
             tabView.TabItems.Add(new TabbedViewItem
             {
+                Header = Localized.DraftSettingPage_Tab_Statistics,
+                Tag = "statistics",
+                Content = BuildStatisticsTab()
+            });
+            tabView.TabItems.Add(new TabbedViewItem
+            {
                 Header = Localized.MainSettingsPage_Tab_Misc,
                 Content = BuildAdvancedTab()
             });
@@ -88,15 +94,21 @@ public class DraftSettingPage
         });
         tabView.TabItems.Add(new TabbedViewItem
         {
+            Header = Localized.DraftSettingPage_Tab_Statistics,
+            Tag = "statistics",
+            Content = BuildStatisticsTab()
+        });
+        tabView.TabItems.Add(new TabbedViewItem
+        {
             Header = Localized.DraftSettingPage_Tab_Messages,
             Tag = "messages",
             Content = BuildHistoryLogsTab()
         });
-        tabView.TabItems.Add(new TabbedViewItem
-        {
-            Header = Localized.DraftSettingPage_Tab_Compatibility,
-            Content = BuildCompatibilityTab()
-        });
+        //tabView.TabItems.Add(new TabbedViewItem
+        //{
+        //    Header = Localized.DraftSettingPage_Tab_Compatibility,
+        //    Content = BuildCompatibilityTab()
+        //});
         tabView.TabItems.Add(new TabbedViewItem
         {
             Header = Localized.MainSettingsPage_Tab_Misc,
@@ -123,7 +135,11 @@ public class DraftSettingPage
                             Title = Localized.DraftSettingPage_Tab_History,
                             Content = BuildHistoryGraphTab(),
                             IsNavigationVisible = false,
-                            IsPopOutVisible = true
+                            IsPopOutVisible = true,
+                            WidthRequest = 880,
+                            HeightRequest = 620,
+                            MinimumWindowWidth = 560,
+                            MinimumWindowHeight = 400
                         };
                         parent.MainMultiWindowView.AddWindow(w);
                         await Task.Delay(50);
@@ -349,6 +365,21 @@ public class DraftSettingPage
     #endregion
 
     #region history
+
+    private View BuildStatisticsTab()
+    {
+        string projectPath = IsStandaloneJsonMode ? standaloneProjectPath! : parent.WorkingPath;
+        Guid currentSnapshotId = IsStandaloneJsonMode ? Guid.Empty : parent.CurrentSnapshotID;
+        double frameRate = IsStandaloneJsonMode ? 30 : parent.ProjectInfo.TargetFrameRate;
+
+        if (IsStandaloneJsonMode && TryLoadStandaloneProjectInfo(out var info, out _))
+        {
+            currentSnapshotId = info.LastSnapshotID;
+            frameRate = info.TargetFrameRate;
+        }
+
+        return new DraftStatisticsView(projectPath, currentSnapshotId, frameRate);
+    }
 
     public View BuildClassicHistoryTab()
     {

@@ -143,7 +143,6 @@ namespace projectFrameCut
                     }
                 }
             }
-
             InitializeCliLocalization(args);
 
 
@@ -163,12 +162,16 @@ namespace projectFrameCut
                 case "render":
                     StartLog(args[0].ToLowerInvariant());
                     return RunRender(args.Skip(1).ToArray());
-                case "sandbox_worker":
-                    StartLog(args[0].ToLowerInvariant());
-                    return RunSandboxWorker(args.Skip(1).ToArray());
                 case "plugin_worker":
                     StartLog(args[0].ToLowerInvariant());
                     return RunPluginWorker(args.Skip(1).ToArray());
+                case "user_data_root":
+                    {
+                        using Stream output = Console.OpenStandardError();
+                        output.Write(System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(ResolveDataRoot(null)) + Environment.NewLine));
+                        output.Flush();
+                        return SuccessExitCode;
+                    }
                 case "about":
                     WriteAbout();
                     return 0;
@@ -214,6 +217,12 @@ namespace projectFrameCut
 
         private static int WriteCommandHelp(string command)
         {
+            if (command.Equals("user_data_root", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("Usage: pjfc user_data_root [--quiet]\nReturns the resolved projectFrameCut user data root.");
+                return SuccessExitCode;
+            }
+
             if (command.Equals("rpc_request", StringComparison.OrdinalIgnoreCase))
             {
                 WriteRpcRequestHelp();
@@ -727,35 +736,29 @@ namespace projectFrameCut
             }
         }
 
-        private static int RunSandboxWorker(string[] args)
-        {
-            try
-            {
-#if WINDOWS
-                Platforms.Windows.WindowsPluginIsolationPlatform.ValidateWorkerProcess();
-                projectFrameCut.Render.PluginIsolation.PluginIsolationWorker.RunAsync(args).GetAwaiter().GetResult();
-                return SuccessExitCode;
-#else
-                throw new PlatformNotSupportedException("The sandbox worker requires Windows AppContainer activation.");
-#endif
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[SandboxWorker/error] {ex.GetType().Name}: {ex.Message}");
-                return 1;
-            }
-        }
-
         private static int RunPluginWorker(string[] args)
         {
             try
             {
-#if WINDOWS || MACOS || LINUX
+#if WINDOWS
+                if(args.Contains("--appContainer"))
+                {
+                    Platforms.Windows.WindowsPluginIsolationPlatform.ValidateWorkerProcess();
+                }
+#endif
+                var pluginIdParam = args.FirstOrDefault(arg => arg.StartsWith("--pluginId="));
+                if (!string.IsNullOrWhiteSpace(pluginIdParam))
+                {
+                    var pluginId = pluginIdParam.Substring("--pluginId=".Length);
+                    if (string.IsNullOrWhiteSpace(pluginId))
+                    {
+                        Console.Error.WriteLine("Invalid --pluginId parameter: cannot be empty.");
+                        return InvalidCommandExitCode;
+                    }
+                    StartLog($"plugin_worker_{pluginId}");
+                }
                 projectFrameCut.Render.PluginIsolation.PluginIsolationWorker.RunAsync(args).GetAwaiter().GetResult();
                 return SuccessExitCode;
-#else
-                throw new PlatformNotSupportedException("The plugin worker requires a desktop platform.");
-#endif
             }
             catch (Exception ex)
             {
@@ -1900,14 +1903,22 @@ Exit codes: 0 success/submitted, 1 failure, 2 invalid arguments, 3 denied, 4 exp
         private static void WriteGuiHelp()
         {
             Console.WriteLine(
-@"
-
-Launch the projectFrameCut Application
+$@"
+Launch the {MauiProgram.AssemblyName}
 
 Usage:
-  pjfc gui [<target>] [options]
+  pjfc gui [target] [options]
+
+Examples:
+  pjfc gui <project path> [options]
+
   pjfc gui --continue [options]
-  pjfc gui --render {<target>|--continue} [options]
+
+  pjfc gui --render {{<target>|--continue}} [options]
+
+  pjfc gui --remote=<address>[?token=<RPC_TOKEN>] [--remoteToken=<RPC_TOKEN>] [options]
+
+  pjfc gui --rpcAuthorize --rpcAppName=<name> --rpcAuthor=<author> --rpcPublicKey=<key> [options]
 
   pjfc:[<target>][?<option>[&<option>...]] 
 
@@ -1926,6 +1937,17 @@ Target:
                                    project will be opened and directly open the render page.
 
                                    To implement automatic rendering, please use 'render' mode. 
+
+  --remote                         Enter remote access mode. The GUI will connect to the specified 
+                                   RPC server and open the project remotely. 
+                                   The <target> is ignored in this mode.
+
+  --rpcAuthorize                   Enter RPC authorization mode. The GUI will request a persistent client authorization 
+                                   from the specified RPC server. The <target> is ignored in this mode.
+                                   
+                                   After authorization, the GUI will generate a 'client ID' and output it into stderr.
+                                   You'll need this, with the pairing private key to connect later on without user interaction.
+                                   output is like this: {{""status"":""granted"",""clientId"":""19f846b5-2cc1-4f96-bd63-53f2867eb716""}}
 
 Application options:
   --noSplash                       Do not display the startup splash screen.
@@ -2002,7 +2024,6 @@ Examples:
         {
             var ProgramConfig = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config";
             var ProgramCommit = (Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last();
-            var AssemblyName = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut";
             var renderType = typeof(Renderer).Assembly;
             var drawingType = typeof(Drawing.Base.IPicture).Assembly;
             string renderHash = "", drawingHash = "", drawingCommit = "unknown", programDate = "?";

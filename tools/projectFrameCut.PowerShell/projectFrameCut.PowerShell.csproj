@@ -1,9 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net10.0;net10.0-windows10.0.19041.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Management.Automation" Version="7.6.5" PrivateAssets="all" IncludeAssets="compile" />
@@ -13,7 +18,7 @@
   </ItemGroup>
   <Target Name="FilterModulePublish" AfterTargets="ComputeFilesToPublish">
     <ItemGroup>
-      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)' != 'projectFrameCut.PowerShell' and '%(ResolvedFileToPublish.Filename)' != 'projectFrameCut.Render.Contracts' and '%(ResolvedFileToPublish.Filename)' != 'projectFrameCut.Render.RPCProtocol' and '%(ResolvedFileToPublish.Filename)' != 'protobuf-net' and '%(ResolvedFileToPublish.Filename)' != 'protobuf-net.Core' and '%(ResolvedFileToPublish.Filename)' != 'README'" />
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)' != 'projectFrameCut.PowerShell' and '%(ResolvedFileToPublish.Filename)' != 'projectFrameCut.Render.Contracts' and '%(ResolvedFileToPublish.Filename)' != 'projectFrameCut.Render.RPCProtocol' and '%(ResolvedFileToPublish.Filename)' != 'protobuf-net' and '%(ResolvedFileToPublish.Filename)' != 'protobuf-net.Core' and '%(ResolvedFileToPublish.Filename)' != 'Microsoft.Windows.SDK.NET' and '%(ResolvedFileToPublish.Filename)' != 'WinRT.Runtime' and '%(ResolvedFileToPublish.Filename)' != 'README'" />
     </ItemGroup>
   </Target>
 </Project>

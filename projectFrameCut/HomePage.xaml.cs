@@ -2043,6 +2043,7 @@ public partial class HomePage : ContentPage
 
             if (Directory.Exists(pvm._projectPath))
             {
+                ClearReadOnlyAttributes(pvm._projectPath);
                 Directory.Delete(pvm._projectPath, true);
             }
             await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
@@ -2198,33 +2199,31 @@ public partial class HomePage : ContentPage
         {
             var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, vmItem.Name, 1024, null, vmItem.Name);
             if (projName is null) return;
+            if (Path.GetInvalidPathChars().Any(projName.Contains) || Path.GetInvalidFileNameChars().Any(projName.Contains))
+            {
+                await DisplayAlertAsync(Localized._Error, GetInvalidFileNameWarn(), Localized._OK);
+                return;
+            }
             var newPath = Path.Combine(Path.GetDirectoryName(vmItem._projectPath) ?? "", projName + ".pjfc");
             if (Directory.Exists(newPath))
             {
                 await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
                 return;
             }
-            if (Path.GetInvalidPathChars().Any(projName.Contains) || Path.GetInvalidFileNameChars().Any(projName.Contains))
-            {
-                await DisplayAlertAsync(Localized._Error, GetInvalidFileNameWarn(), Localized._OK);
-                return;
-            }
-            var projInfoPath = Path.Combine(newPath, "project.pjfc");
-            if (!File.Exists(projInfoPath)) projInfoPath = Path.Combine(newPath, "project.json");
+
+            ClearReadOnlyAttributes(vmItem._projectPath);
+            var projInfoPath = Path.Combine(vmItem._projectPath, "project.pjfc");
+            if (!File.Exists(projInfoPath)) projInfoPath = Path.Combine(vmItem._projectPath, "project.json");
             var info = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(projInfoPath), DraftPage.DraftJSONOption);
             if (info is not null)
             {
                 info.ProjectName = projName;
                 File.WriteAllText(
-                    Path.Combine(newPath, "project.pjfc"),
+                    Path.Combine(vmItem._projectPath, "project.pjfc"),
                     JsonSerializer.Serialize(info));
             }
 
-            try
-            {
-                Directory.Move(Path.GetDirectoryName(vmItem._projectPath) ?? throw new InvalidOperationException("Cannot find project root."), newPath);
-            }
-            catch { } //ignore the exception, because we already changed the project name in the project.pjfc file, so it won't affect the draft itself.
+            Directory.Move(vmItem._projectPath, newPath);
 
             await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
         }
@@ -2233,6 +2232,29 @@ public partial class HomePage : ContentPage
             Log(ex, "rename project", this);
             await DisplayAlertAsync(Localized._Error, Localized.HomePage_ProjectContextMenu_Rename_Fail(vmItem.Name, ex), Localized._OK);
         }
+    }
+
+    private static void ClearReadOnlyAttributes(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.SetAttributes(path, File.GetAttributes(path) & ~FileAttributes.ReadOnly);
+            return;
+        }
+
+        if (!Directory.Exists(path)) return;
+
+        foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+        {
+            File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+        }
+
+        foreach (var directory in Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories))
+        {
+            File.SetAttributes(directory, File.GetAttributes(directory) & ~FileAttributes.ReadOnly);
+        }
+
+        File.SetAttributes(path, File.GetAttributes(path) & ~FileAttributes.ReadOnly);
     }
 
     public async Task ManageProject(ProjectsViewModel vmItem)
@@ -2695,7 +2717,7 @@ public class ProjectsListViewModel
                 }
 
             fail:
-                failedProjects.Add(new ProjectsViewModel(proj?.ProjectName ?? "Unknown project", null, "")
+                failedProjects.Add(new ProjectsViewModel(proj?.ProjectName ?? new DirectoryInfo(item).Name, null, "")
                 {
                     _projectPath = item
                 });

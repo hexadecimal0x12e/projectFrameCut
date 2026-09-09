@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Json;
 using System.Threading.Channels;
 using projectFrameCut.Render.Contracts;
 
@@ -51,7 +52,8 @@ public sealed class GuiProjectBroker : IDisposable
     {
         var session = Get(id);
         if (!Enum.IsDefined(request.Operation) || request.RequestId == Guid.Empty || request.TimeoutSeconds is < 1 or > 3600
-            || request.ParametersJson.Length > 1024 * 1024)
+            || request.ParametersJson is null || request.ParametersJson.Length > 1024 * 1024
+            || request.ChangeReason is null || request.ChangeReason.Length > 512 || request.ClientName is null || request.ClientName.Length > 128)
             throw new ArgumentException("Invalid GUI project request.");
         var completion = new TaskCompletionSource<GuiProjectResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         if (!session.Pending.TryAdd(request.RequestId, completion)) throw new ArgumentException("Duplicate GUI request.");
@@ -100,18 +102,54 @@ public sealed class GuiProjectBroker : IDisposable
             broker.Get(id);
             if (request.ProtocolVersion < RenderProtocol.MinimumSupportedVersion || request.ProtocolVersion > RenderProtocol.CurrentVersion)
                 throw new ArgumentException("Unsupported RPC version.");
+            if (request.Operation is RenderOperation.GetProjectHistory or RenderOperation.UndoProjectHistory
+                or RenderOperation.RedoProjectHistory or RenderOperation.RestoreProjectHistory)
+                return await DispatchHistoryAsync(request, cancellationToken).ConfigureAwait(false);
             byte[] payload = request.Operation switch
             {
                 RenderOperation.GetCapabilities => RenderRpcSerializer.Serialize(new RenderCapabilities
                 {
                     ProtocolVersion = RenderProtocol.CurrentVersion, MinimumProtocolVersion = RenderProtocol.MinimumSupportedVersion,
-                    Operations = [nameof(RenderOperation.GetGuiProjectSession), nameof(RenderOperation.InvokeGuiProject)],
+                    Operations = [nameof(RenderOperation.GetGuiProjectSession), nameof(RenderOperation.InvokeGuiProject),
+                        nameof(RenderOperation.GetProjectHistory), nameof(RenderOperation.UndoProjectHistory),
+                        nameof(RenderOperation.RedoProjectHistory), nameof(RenderOperation.RestoreProjectHistory)],
                 }),
                 RenderOperation.GetGuiProjectSession => RenderRpcSerializer.Serialize(new GuiProjectSession { SessionId = id }),
                 RenderOperation.InvokeGuiProject => RenderRpcSerializer.Serialize(await broker.InvokeAsync(id,
                     RenderRpcSerializer.Deserialize<GuiProjectRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
                 _ => throw new UnauthorizedAccessException("Operation is unavailable on a GUI project connection."),
             };
+            return new() { RequestId = request.RequestId, Payload = payload };
+        }
+
+        private async ValueTask<RenderResponseEnvelope> DispatchHistoryAsync(RenderRequestEnvelope request, CancellationToken cancellationToken)
+        {
+            var restore = request.Operation == RenderOperation.RestoreProjectHistory
+                ? RenderRpcSerializer.Deserialize<RestoreProjectHistoryRequest>(request.Payload) : null;
+            var timeoutSeconds = restore?.TimeoutSeconds
+                ?? RenderRpcSerializer.Deserialize<ProjectHistoryRequest>(request.Payload).TimeoutSeconds;
+            if (timeoutSeconds is < 1 or > 3600) throw new ArgumentException("Invalid history request timeout.");
+
+            var result = await broker.InvokeAsync(id, new GuiProjectRequest
+            {
+                Operation = request.Operation switch
+                {
+                    RenderOperation.GetProjectHistory => GuiProjectOperation.GetProjectHistory,
+                    RenderOperation.UndoProjectHistory => GuiProjectOperation.UndoProjectHistory,
+                    RenderOperation.RedoProjectHistory => GuiProjectOperation.RedoProjectHistory,
+                    RenderOperation.RestoreProjectHistory => GuiProjectOperation.RestoreProjectHistory,
+                    _ => throw new ArgumentOutOfRangeException(nameof(request.Operation)),
+                },
+                ParametersJson = restore is null ? "{}" : JsonSerializer.Serialize(new { restore.SnapshotId }),
+                TimeoutSeconds = timeoutSeconds,
+            }, cancellationToken).ConfigureAwait(false);
+            if (result.Error is not null) return new() { RequestId = request.RequestId, Error = result.Error };
+
+            var payload = request.Operation == RenderOperation.GetProjectHistory
+                ? RenderRpcSerializer.Serialize(JsonSerializer.Deserialize<ProjectHistory>(result.Json)
+                    ?? throw new InvalidOperationException("GUI returned an invalid project history."))
+                : RenderRpcSerializer.Serialize(JsonSerializer.Deserialize<ProjectHistoryState>(result.Json)
+                    ?? throw new InvalidOperationException("GUI returned an invalid project history state."));
             return new() { RequestId = request.RequestId, Payload = payload };
         }
     }

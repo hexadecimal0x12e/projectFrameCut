@@ -19,12 +19,20 @@ public abstract class ProjectCmdlet : CancellableCmdlet
             var connection = Connection.Current;
             if (IsWrite && !ShouldProcess($"Project session {connection.SessionId}", MyInvocation.MyCommand.Name)) return;
             var parameters = MyInvocation.BoundParameters
-                .Where(x => x.Key is not ("PassThru" or "TimeoutSeconds" or "WhatIf" or "Confirm" or "Verbose" or "Debug" or "ErrorAction"
+                .Where(x => x.Key is not ("PassThru" or "ChangeReason" or "TimeoutSeconds" or "WhatIf" or "Confirm" or "Verbose" or "Debug" or "ErrorAction"
                     or "WarningAction" or "InformationAction" or "ProgressAction" or "ErrorVariable" or "WarningVariable" or "InformationVariable"
                     or "OutVariable" or "OutBuffer" or "PipelineVariable"))
                 .ToDictionary(x => x.Key, x => x.Key == "FilePath"
                     ? (object?)GetUnresolvedProviderPathFromPSPath((string)x.Value) : Normalize(x.Value));
-            var request = new GuiProjectRequest { Operation = Operation, ParametersJson = JsonSerializer.Serialize(parameters), TimeoutSeconds = TimeoutSeconds };
+            var request = new GuiProjectRequest
+            {
+                Operation = Operation,
+                ParametersJson = JsonSerializer.Serialize(parameters),
+                TimeoutSeconds = TimeoutSeconds,
+                ChangeReason = this is ProjectWriteCmdlet write
+                    ? string.IsNullOrWhiteSpace(write.ChangeReason) ? MyInvocation.MyCommand.Name : write.ChangeReason.Trim()
+                    : string.Empty,
+            };
             WriteVerbose($"GUI RPC {Operation}, request {request.RequestId}.");
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(Cancellation.Token);
             timeout.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds + 2));
@@ -71,6 +79,7 @@ public abstract class ProjectCmdlet : CancellableCmdlet
 public abstract class ProjectWriteCmdlet : ProjectCmdlet
 {
     [Parameter] public SwitchParameter PassThru { get; set; }
+    [Parameter][ValidateLength(1, 512)] public string? ChangeReason { get; set; }
     protected override bool IsWrite => true;
     protected override bool ReturnResult => PassThru;
 }

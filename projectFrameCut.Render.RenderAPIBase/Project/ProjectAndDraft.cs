@@ -300,18 +300,33 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public DateTime SavedAt { get; set; } = DateTime.MinValue;
 
         /// <summary>
+        /// The user's ID which make this change.  Used in history management and undo/redo system.
+        /// </summary>
+        public Guid ChangedByUser { get; set; } = Guid.Empty;
+        /// <summary>
+        /// The user's nickname who made the change. Used in history management and undo/redo system.
+        /// </summary>
+        public string ChangedByUserDisplayName { get; set; } = string.Empty;
+
+        /// <summary>
         /// Indicates why the draft was changed. 
         /// Used in history management and undo/redo system.
         /// </summary>
         public string ChangeReason { get; set; } = string.Empty;
         /// <summary>
-        /// The user's nickname who made the change. Used in history management and undo/redo system.
+        /// Indicates the detailed reason for the draft change.
         /// </summary>
-        public string ChangedByUserDisplayName { get; set; } = string.Empty;
+        public string DetailedChangeReason { get; set; } = string.Empty;
+
         /// <summary>
-        /// The user's ID which make this change.  Used in history management and undo/redo system.
+        /// Indicates the type of operation that caused the draft change. Used in history management and undo/redo system.
         /// </summary>
-        public Guid ChangedByUser { get; set; } = Guid.Empty;
+        public ClipChangeOperatorKind Operator { get; set; } = ClipChangeOperatorKind.User;
+
+        /// <summary>
+        /// Indicates the detail name of the operator that caused the draft change. Used in history management and undo/redo system.
+        /// </summary>
+        public string OperatorDetailName { get; set; } = string.Empty;
 
         /// <summary>
         /// The unique identifier of the previous draft snapshot. Used in branch/edition management.

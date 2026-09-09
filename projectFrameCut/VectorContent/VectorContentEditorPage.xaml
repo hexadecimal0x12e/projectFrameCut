@@ -530,8 +530,10 @@
                             IsClosable="True"
                             IsPopOutVisible="True"
                             IsResizable="True"
-                            WidthRequest="380"
-                            HeightRequest="500">
+                            WidthRequest="880"
+                            HeightRequest="620"
+                            MinimumWindowWidth="560"
+                            MinimumWindowHeight="400">
         </mw:MultiWindowItem>
     </mw:MultiWindowView>
 </ContentPage>

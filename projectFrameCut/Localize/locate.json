@@ -2375,6 +2375,22 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_AssetPanel_RpcSourceConnected",
+        "Value": "\u5DF2\u8FDE\u63A5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_RpcSources",
+        "Value": "RPC \u5916\u90E8\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_AssetPanel_SharedAssets",
         "Value": "\u5171\u4EAB\u7D20\u6750",
         "Mode": "ConstString",
@@ -2786,6 +2802,40 @@
       {
         "Id": "DraftPage_ExternalRpcAuthorization",
         "Value": "\u4F5C\u8005\uFF1A{author}\r\u7528\u9014\uFF1A{usage}\r\r\u4EE5\u4E0A\u4FE1\u606F\u7531\u8BF7\u6C42\u65B9\u63D0\u4F9B\uFF0C\u53EF\u80FD\u672A\u7ECF\u9A8C\u8BC1\u3002\r\r\u300C{app}\u300D\u80FD\u591F\u5728\u65E0\u9700\u4F60\u540C\u610F\u7684\u60C5\u51B5\u4E0B\uFF0C\u8FDB\u884C\u4EFB\u610F\u7684\u9879\u76EE\u64CD\u4F5C\uFF0C\u76F4\u5230\u540E\u7AEF\u88AB\u5173\u95ED/\u91CD\u542F\u3002\r\r\u8FD9\u53EF\u80FD\u5E26\u6765\u5B89\u5168\u98CE\u9669\uFF0C\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "app"
+          },
+          {
+            "Key": "string",
+            "Value": "author"
+          },
+          {
+            "Key": "string",
+            "Value": "usage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "app",
+            "Value": ""
+          },
+          {
+            "Key": "author",
+            "Value": ""
+          },
+          {
+            "Key": "usage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExternalRpcAuthorization_Presist",
+        "Value": "\u4F5C\u8005\uFF1A{author}\r\u7528\u9014\uFF1A{usage}\r\r\u4EE5\u4E0A\u4FE1\u606F\u7531\u8BF7\u6C42\u65B9\u63D0\u4F9B\uFF0C\u53EF\u80FD\u672A\u7ECF\u9A8C\u8BC1\u3002\r\r\u300C{app}\u300D\u53EF\u4EE5\u5728\u672A\u6765\uFF0C\u65E0\u9700\u4F60\u6388\u6743\u7684\u60C5\u51B5\u4E0B\u8FDB\u884C\u542F\u52A8App\u3001\u8FDE\u63A5\u5230\u5E94\u7528\u7A0B\u5E8F\u3001\u63D0\u4F9B\u989D\u5916\u7EC4\u4EF6\uFF0C\u6216\u8005\u4EE3\u66FF\u4F60\u5B8C\u6210\u9879\u76EE\u64CD\u4F5C\u3002\r\r\u4F60\u53EF\u4EE5\u968F\u65F6\u5728\u8BBE\u7F6E -\u003E \u53EF\u6269\u5C55\u6027\u91CC\u53D6\u6D88\u6B64\u6388\u6743\u3002\r\r\u8FD9\u53EF\u80FD\u5E26\u6765\u5B89\u5168\u98CE\u9669\uFF0C\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4171,6 +4221,218 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "\u6D3B\u8DC3\u5929\u6570",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Banner",
+        "Value": "\u6570\u636E\u6765\u6E90\u4E8E\u5386\u53F2\u8BB0\u5F55\uFF0C\u53EF\u80FD\u4E0D\u51C6\u786E\u5E76\u4E14\u4F1A\u5728\u6E05\u7406\u5386\u53F2\u8BB0\u5F55\u65F6\u4E22\u5931\u4E00\u4E9B\u6570\u636E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "{count} \u6B21\u66F4\u6539 ({percentage:P1})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "\u53C2\u4E0E\u8005",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreatedOn",
+        "Value": "\u9879\u76EE\u521B\u5EFA\u4E8E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreatedOn_Estimated",
+        "Value": "\u6570\u636E\u6765\u81EA\u4E8E\u6587\u4EF6\u7CFB\u7EDF\uFF0C\u53EF\u80FD\u4E0D\u6B63\u786E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "\u521B\u4F5C\u8DE8\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "\u5F53\u524D\u526A\u8F91\u6570",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "\u5F53\u524D\u97F3\u8F68\u6570",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "\u6BCF\u65E5\u7F16\u8F91\u6B21\u6570",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} \u5929",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "\u6682\u65E0\u7EDF\u8BA1\u6570\u636E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "\u9879\u76EE\u4FDD\u5B58\u7F16\u8F91\u5386\u53F2\u540E\uFF0C\u8FD9\u91CC\u4F1A\u5C55\u793A\u521B\u4F5C\u8FC7\u7A0B\u7EDF\u8BA1\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "\u5386\u53F2\u53C2\u4E0E\u8005",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "\u5DF2\u8DF3\u8FC7 {count} \u4E2A\u65E0\u6548\u6216\u635F\u574F\u7684\u5386\u53F2\u5FEB\u7167\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "\u64CD\u4F5C\u7C7B\u578B\u5206\u5E03",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "\u5176\u4ED6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "\u9879\u76EE\u65F6\u957F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "\u5237\u65B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "\u5386\u53F2\u5FEB\u7167",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "\u526A\u8F91\u6570\u91CF\u4E0E\u9879\u76EE\u65F6\u957F\u8D8B\u52BF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "\u672A\u77E5\u53C2\u4E0E\u8005",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "\u672A\u77E5\u64CD\u4F5C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftSettingPage_Tab_ClipMgnt",
         "Value": "\u7247\u6BB5\u7BA1\u7406",
         "Mode": "ConstString",
@@ -4590,6 +4852,14 @@
       {
         "Id": "DraftSettingPage_Tab_Messages",
         "Value": "\u6D88\u606F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "\u7EDF\u8BA1\u6570\u636E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9231,50 +9501,56 @@
         "DontTranslate": false
       },
       {
-        "Id": "DraftPage_ExternalRpcAuthorization_Presist",
-        "Value": "\u4F5C\u8005\uFF1A{author}\r\u7528\u9014\uFF1A{usage}\r\r\u4EE5\u4E0A\u4FE1\u606F\u7531\u8BF7\u6C42\u65B9\u63D0\u4F9B\uFF0C\u53EF\u80FD\u672A\u7ECF\u9A8C\u8BC1\u3002\r\r\u300C{app}\u300D\u53EF\u4EE5\u5728\u672A\u6765\uFF0C\u65E0\u9700\u4F60\u6388\u6743\u7684\u60C5\u51B5\u4E0B\u8FDB\u884C\u542F\u52A8App\u3001\u8FDE\u63A5\u5230\u5E94\u7528\u7A0B\u5E8F\u3001\u63D0\u4F9B\u989D\u5916\u7EC4\u4EF6\uFF0C\u6216\u8005\u4EE3\u66FF\u4F60\u5B8C\u6210\u9879\u76EE\u64CD\u4F5C\u3002\r\r\u4F60\u53EF\u4EE5\u968F\u65F6\u5728\u8BBE\u7F6E -\u003E \u53EF\u6269\u5C55\u6027\u91CC\u53D6\u6D88\u6B64\u6388\u6743\u3002\r\r\u8FD9\u53EF\u80FD\u5E26\u6765\u5B89\u5168\u98CE\u9669\uFF0C\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "app"
-          },
-          {
-            "Key": "string",
-            "Value": "author"
-          },
-          {
-            "Key": "string",
-            "Value": "usage"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "app",
-            "Value": ""
-          },
-          {
-            "Key": "author",
-            "Value": ""
-          },
-          {
-            "Key": "usage",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_AssetPanel_RpcSources",
-        "Value": "RPC \u5916\u90E8\u6E90",
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "\u672A\u77E5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       },
       {
-        "Id": "DraftPage_AssetPanel_RpcSourceConnected",
-        "Value": "\u5DF2\u8FDE\u63A5",
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "\u7528\u6237",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "AI \u667A\u80FD\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "MCP \u5BA2\u6237\u7AEF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "\u5916\u90E8\u5E94\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "\u5916\u90E8 RPC \u5BA2\u6237\u7AEF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "\u7CFB\u7EDF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -19119,6 +19395,258 @@
       {
         "Id": "DraftPage_AssetPanel_RpcSourceConnected",
         "Value": "Connected",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "Statistics",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "Refresh",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "No statistics available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "Creation statistics will appear after the project has saved edit history.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "Skipped {count} invalid or damaged history snapshots.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "History snapshots",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "Active days",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "Creation span",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} days",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "Current clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "Current audio tracks",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "Project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "Edits by day",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "Operation distribution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "Clip count and project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "Unknown operation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "Other",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "Contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_ContributorChanges(int count: {count}, double percentage: {percentage})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "Historical contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "Unknown contributor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "Unknown",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "User",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "AI agent",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "MCP client",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "External app",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "External RPC client",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "System",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28991,6 +29519,258 @@
       {
         "Id": "DraftPage_AssetPanel_RpcSourceConnected",
         "Value": "Unset localization item:DraftPage_AssetPanel_RpcSourceConnected()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "\u7D71\u8A08\u8CC7\u6599",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "\u91CD\u65B0\u6574\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "\u66AB\u7121\u7D71\u8A08\u8CC7\u6599",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "\u5C08\u6848\u5132\u5B58\u7DE8\u8F2F\u6B77\u53F2\u5F8C\uFF0C\u9019\u88E1\u6703\u986F\u793A\u5275\u4F5C\u904E\u7A0B\u7D71\u8A08\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "\u5DF2\u7565\u904E {count} \u500B\u7121\u6548\u6216\u640D\u58DE\u7684\u6B77\u53F2\u5FEB\u7167\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "\u6B77\u53F2\u5FEB\u7167",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "\u6D3B\u8E8D\u5929\u6578",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "\u5275\u4F5C\u8DE8\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} \u5929",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "\u76EE\u524D\u526A\u8F2F\u6578",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "\u76EE\u524D\u97F3\u8ECC\u6578",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "\u5C08\u6848\u6642\u9577",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "\u6BCF\u65E5\u7DE8\u8F2F\u6B21\u6578",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "\u64CD\u4F5C\u985E\u578B\u5206\u5E03",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "\u526A\u8F2F\u6578\u91CF\u8207\u5C08\u6848\u6642\u9577\u8DA8\u52E2",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "\u672A\u77E5\u64CD\u4F5C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "\u5176\u4ED6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "\u53C3\u8207\u8005",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_ContributorChanges(int count: {count}, double percentage: {percentage})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_HistoricalContributors()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_UnknownContributor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "\u672A\u77E5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "\u4F7F\u7528\u8005",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "AI \u4EE3\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "MCP \u7528\u6236\u7AEF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "\u5916\u90E8\u61C9\u7528\u7A0B\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "\u5916\u90E8 RPC \u7528\u6236\u7AEF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "\u7CFB\u7D71",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -38874,6 +39654,258 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "Statistics",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "Refresh",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "No statistics available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "Creation statistics will appear after the project has saved edit history.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "Skipped {count} invalid or damaged history snapshots.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "History snapshots",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "Active days",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "Creation span",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} days",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "Current clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "Current audio tracks",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "Project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "Edits by day",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "Operation distribution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "Clip count and project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "Unknown operation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "Other",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "Contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_ContributorChanges(int count: {count}, double percentage: {percentage})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "Historical contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "Unknown contributor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "\u4E0D\u660E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "\u30E6\u30FC\u30B6\u30FC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "AI\u30A8\u30FC\u30B8\u30A7\u30F3\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "MCP\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "\u5916\u90E8\u30A2\u30D7\u30EA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "\u5916\u90E8RPC\u30AF\u30E9\u30A4\u30A2\u30F3\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "\u30B7\u30B9\u30C6\u30E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -48737,6 +49769,258 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "Statistics",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "Refresh",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "No statistics available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "Creation statistics will appear after the project has saved edit history.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "Skipped {count} invalid or damaged history snapshots.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "History snapshots",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "Active days",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "Creation span",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} days",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "Current clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "Current audio tracks",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "Project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "Edits by day",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "Operation distribution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "Clip count and project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "Unknown operation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "Other",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "Contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_ContributorChanges(int count: {count}, double percentage: {percentage})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "Historical contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "Unknown contributor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "\uC54C \uC218 \uC5C6\uC74C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "\uC0AC\uC6A9\uC790",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "AI \uC5D0\uC774\uC804\uD2B8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "MCP \uD074\uB77C\uC774\uC5B8\uD2B8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "\uC678\uBD80 \uC571",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "\uC678\uBD80 RPC \uD074\uB77C\uC774\uC5B8\uD2B8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "\uC2DC\uC2A4\uD15C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -58594,6 +59878,258 @@
       {
         "Id": "DraftPage_AssetPanel_RpcSourceConnected",
         "Value": "Unset localization item:DraftPage_AssetPanel_RpcSourceConnected()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "Statistics",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "Refresh",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "No statistics available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "Creation statistics will appear after the project has saved edit history.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "Skipped {count} invalid or damaged history snapshots.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "History snapshots",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "Active days",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "Creation span",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} days",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "Current clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "Current audio tracks",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "Project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "Edits by day",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "Operation distribution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "Clip count and project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "Unknown operation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "Other",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "Contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_ContributorChanges(int count: {count}, double percentage: {percentage})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_HistoricalContributors()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_UnknownContributor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "Inconnu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "Utilisateur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "Agent IA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "Client MCP",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "Application externe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "Client RPC externe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "Syst\u00E8me",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -68468,6 +70004,258 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "Statistics",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "Refresh",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "No statistics available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "Creation statistics will appear after the project has saved edit history.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "Skipped {count} invalid or damaged history snapshots.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "History snapshots",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "Active days",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "Creation span",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} days",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "Current clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "Current audio tracks",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "Project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "Edits by day",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "Operation distribution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "Clip count and project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "Unknown operation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "Other",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "Contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_ContributorChanges(int count: {count}, double percentage: {percentage})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "Historical contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "Unknown contributor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "\u0648\u0643\u064A\u0644 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "\u0639\u0645\u064A\u0644 MCP",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "\u062A\u0637\u0628\u064A\u0642 \u062E\u0627\u0631\u062C\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "\u0639\u0645\u064A\u0644 RPC \u062E\u0627\u0631\u062C\u064A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "\u0627\u0644\u0646\u0638\u0627\u0645",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -78337,6 +80125,258 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "Statistics",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "Refresh",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "No statistics available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "Creation statistics will appear after the project has saved edit history.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "Skipped {count} invalid or damaged history snapshots.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "History snapshots",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "Active days",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "Creation span",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} days",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "Current clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "Current audio tracks",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "Project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "Edits by day",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "Operation distribution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "Clip count and project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "Unknown operation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "Other",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "Contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_ContributorChanges(int count: {count}, double percentage: {percentage})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "Historical contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "Unknown contributor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "Unbekannt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "Benutzer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "KI-Agent",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "MCP-Client",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "Externe App",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "Externer RPC-Client",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "System",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -88198,6 +90238,258 @@
       {
         "Id": "DraftPage_AssetPanel_RpcSourceConnected",
         "Value": "Unset localization item:DraftPage_AssetPanel_RpcSourceConnected()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "Statistics",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "Refresh",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "No statistics available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "Creation statistics will appear after the project has saved edit history.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "Skipped {count} invalid or damaged history snapshots.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "History snapshots",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "Active days",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "Creation span",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} days",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "Current clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "Current audio tracks",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "Project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "Edits by day",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "Operation distribution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "Clip count and project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "Unknown operation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "Other",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_Contributors()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_ContributorChanges(int count: {count}, double percentage: {percentage})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "Historical contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "Unknown contributor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "Desconocido",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "Usuario",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "Agente de IA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "Cliente MCP",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "Aplicaci\u00F3n externa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "Cliente RPC externo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "Sistema",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -98072,6 +100364,258 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "Statistics",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "Refresh",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "No statistics available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "Creation statistics will appear after the project has saved edit history.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "Skipped {count} invalid or damaged history snapshots.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "History snapshots",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "Active days",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "Creation span",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} days",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "Current clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "Current audio tracks",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "Project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "Edits by day",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "Operation distribution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "Clip count and project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "Unknown operation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "Other",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "Contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_ContributorChanges(int count: {count}, double percentage: {percentage})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "Historical contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "Unknown contributor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "Sconosciuto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "Utente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "Agente IA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "Client MCP",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "App esterna",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "Client RPC esterno",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "Sistema",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -107932,6 +110476,258 @@
       {
         "Id": "DraftPage_AssetPanel_RpcSourceConnected",
         "Value": "Unset localization item:DraftPage_AssetPanel_RpcSourceConnected()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "Statistics",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "Refresh",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "No statistics available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "Creation statistics will appear after the project has saved edit history.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "Skipped {count} invalid or damaged history snapshots.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "History snapshots",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "Active days",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "Creation span",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} days",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "Current clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "Current audio tracks",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "Project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "Edits by day",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "Operation distribution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "Clip count and project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "Unknown operation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "Other",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_Contributors()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_ContributorChanges(int count: {count}, double percentage: {percentage})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "Historical contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "Unknown contributor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "Nieznany",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "U\u017Cytkownik",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "Agent AI",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "Klient MCP",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "Aplikacja zewn\u0119trzna",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "Zewn\u0119trzny klient RPC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "System",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -117797,6 +120593,258 @@
       {
         "Id": "DraftPage_AssetPanel_RpcSourceConnected",
         "Value": "Unset localization item:DraftPage_AssetPanel_RpcSourceConnected()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "Statistics",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "Refresh",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "No statistics available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "Creation statistics will appear after the project has saved edit history.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "Skipped {count} invalid or damaged history snapshots.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "History snapshots",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "Active days",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "Creation span",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} days",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "Current clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "Current audio tracks",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "Project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "Edits by day",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "Operation distribution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "Clip count and project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "Unknown operation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "Other",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "Contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_ContributorChanges(int count: {count}, double percentage: {percentage})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_HistoricalContributors()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "Unknown contributor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "Desconhecido",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "Usu\u00E1rio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "Agente de IA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "Cliente MCP",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "Aplicativo externo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "Cliente RPC externo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "Sistema",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -127670,6 +130718,258 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "Statistics",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "Refresh",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "No statistics available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "Creation statistics will appear after the project has saved edit history.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "Skipped {count} invalid or damaged history snapshots.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "History snapshots",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "Active days",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "Creation span",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} days",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "Current clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "Current audio tracks",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "Project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "Edits by day",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "Operation distribution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "Clip count and project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "Unknown operation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "Other",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "Contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_ContributorChanges(int count: {count}, double percentage: {percentage})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "Historical contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "Unknown contributor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "\u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "\u0418\u0418-\u0430\u0433\u0435\u043D\u0442",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "\u041A\u043B\u0438\u0435\u043D\u0442 MCP",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "\u0412\u043D\u0435\u0448\u043D\u0435\u0435 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "\u0412\u043D\u0435\u0448\u043D\u0438\u0439 \u043A\u043B\u0438\u0435\u043D\u0442 RPC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "\u0421\u0438\u0441\u0442\u0435\u043C\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -137530,6 +140830,258 @@
       {
         "Id": "DraftPage_AssetPanel_RpcSourceConnected",
         "Value": "Unset localization item:DraftPage_AssetPanel_RpcSourceConnected()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Tab_Statistics",
+        "Value": "Statistics",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Refresh",
+        "Value": "Refresh",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty",
+        "Value": "No statistics available",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Empty_Subtitle",
+        "Value": "Creation statistics will appear after the project has saved edit history.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_InvalidSnapshots",
+        "Value": "Skipped {count} invalid or damaged history snapshots.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Snapshots",
+        "Value": "History snapshots",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ActiveDays",
+        "Value": "Active days",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CreationSpan",
+        "Value": "Creation span",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Days",
+        "Value": "{count} days",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentClips",
+        "Value": "Current clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_CurrentSoundtracks",
+        "Value": "Current audio tracks",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ProjectDuration",
+        "Value": "Project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_DailyActivity",
+        "Value": "Edits by day",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operations",
+        "Value": "Operation distribution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Trend",
+        "Value": "Clip count and project duration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownOperation",
+        "Value": "Unknown operation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Other",
+        "Value": "Other",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Contributors",
+        "Value": "Contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_ContributorChanges",
+        "Value": "Unset localization item:DraftSettingPage_Statistics_ContributorChanges(int count: {count}, double percentage: {percentage})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          },
+          {
+            "Key": "double",
+            "Value": "percentage"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "count",
+            "Value": ""
+          },
+          {
+            "Key": "percentage",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_HistoricalContributors",
+        "Value": "Historical contributors",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_UnknownContributor",
+        "Value": "Unknown contributor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_Unknown",
+        "Value": "Bilinmeyen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_User",
+        "Value": "Kullan\u0131c\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_AIAgent",
+        "Value": "Yapay zek\u00E2 arac\u0131s\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_MCP",
+        "Value": "MCP istemcisi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalApp",
+        "Value": "Harici uygulama",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_ExternalRPC",
+        "Value": "Harici RPC istemcisi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Statistics_Operator_System",
+        "Value": "Sistem",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

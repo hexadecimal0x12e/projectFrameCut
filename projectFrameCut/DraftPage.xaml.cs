@@ -1404,7 +1404,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     WindowKey = "history.main", ModuleId = HistoryModule.ModuleId, Title = Localized.DraftPage_MenuBar_Edit_History,
                     IsInitiallyVisible = false, IsNavigationVisible = false,  CreateContent = () => new DraftSettingPage(this).HistoryTabContent,
-                    DefaultPlacement = new WorkspaceWindowPlacement { Width = 400, Height = 500, X = 40, Y = 40 }
+                    DefaultPlacement = new WorkspaceWindowPlacement { Width = 880, Height = 620, X = 40, Y = 40 }
                 }
             ]),
             new DraftWorkspaceExperienceProvider(AssistanceModule.ModuleId,
@@ -1427,6 +1427,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         AddClipSubwindow = _workspaceWindowHost.GetWindow("clips.add");
         AssetSubwindow = _workspaceWindowHost.GetWindow("assets.browser");
         HistorySubWindow = _workspaceWindowHost.GetWindow("history.main");
+        HistorySubWindow.MinimumWindowWidth = 560;
+        HistorySubWindow.MinimumWindowHeight = 400;
         AssisstantSubWindow = _workspaceWindowHost.GetWindow("assistance.chat");
 
         // A fresh workspace starts with the media/add panel docked into the editor.
@@ -9101,7 +9103,10 @@ public partial class DraftPage : ContentPage, IDraftPage
                 if (args is not null)
                 {
                     draft.ChangeReason = args.ToString();
+                    draft.DetailedChangeReason = args.DetailInfo ?? string.Empty;
                 }
+                draft.Operator = args?.Operator ?? ClipChangeOperatorKind.User;
+                draft.OperatorDetailName = args?.OperatorDetailName ?? string.Empty;
                 draft.ChangedByUserDisplayName = SettingsManager.GetSetting("UserName", "User");
                 draft.ChangedByUser = SettingsManager.GetSettingAs("UserID", Guid.Empty, Guid.Empty);
                 draft.PreviousSnapshot = PreviousSnapshotID;
@@ -9383,6 +9388,53 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
+    private ProjectHistoryState GetProjectHistoryState()
+    {
+        var previous = GetPreviousSlot();
+        return new()
+        {
+            CurrentSnapshotId = CurrentSnapshotID,
+            CanUndo = previous is not null && FindSlotDirectory(previous.SnapshotID) is not null,
+            CanRedo = GetNextSlots().Any(x => FindSlotDirectory(x.SnapshotID) is not null),
+        };
+    }
+
+    private ProjectHistory GetProjectHistory()
+    {
+        var (nodes, _) = HistoryGraphDataBuilder.BuildFromDraftPage(this);
+        return new()
+        {
+            State = GetProjectHistoryState(),
+            Nodes = nodes.Select(x => new ProjectHistoryNode
+            {
+                SnapshotId = x.SnapshotID,
+                PreviousSnapshotId = x.PreviousSnapshotID,
+                NextSnapshotIds = x.NextSnapshotIDs.ToList(),
+                SavedAtUtc = x.SavedAt == default ? DateTime.MinValue : x.SavedAt.Kind switch
+                {
+                    DateTimeKind.Utc => x.SavedAt,
+                    DateTimeKind.Local => x.SavedAt.ToUniversalTime(),
+                    _ => DateTime.SpecifyKind(x.SavedAt, DateTimeKind.Local).ToUniversalTime(),
+                },
+                ChangeReason = x.ChangeReason,
+                ChangedBy = x.ChangedByUserDisplayName,
+                ChangedByUserId = x.ChangedByUser,
+                IsCurrentSnapshot = x.IsCurrentSnapshot,
+            }).ToList(),
+        };
+    }
+
+    private async Task<ProjectHistoryState> ApplyProjectHistorySnapshotAsync(Guid snapshotId, bool navigatedByUndoRedo)
+    {
+        if (snapshotId == Guid.Empty) throw new ArgumentException("SnapshotId is required.");
+        if (snapshotId == CurrentSnapshotID) return GetProjectHistoryState();
+        if (FindSlotDirectory(snapshotId) is null) throw new KeyNotFoundException("Project history snapshot not found.");
+        await ApplySlot(snapshotId);
+        if (CurrentSnapshotID != snapshotId) throw new InvalidOperationException("Project history snapshot could not be restored.");
+        if (navigatedByUndoRedo) _historyNavigatedByUndoRedo = true;
+        return GetProjectHistoryState();
+    }
+
     /// <summary>
     /// Registers an <see cref="IHistoryGraphProvider"/> for this DraftPage session.
     /// The provider's <see cref="IHistoryGraphProvider.CurrentSnapshotChanged"/> event
@@ -9659,7 +9711,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             TrackCount = Tracks.Count,
             AssetCount = Assets.Count,
             WorkingPath,
-            CurrentFrame
+            CurrentFrame,
+            CurrentSnapshotId = CurrentSnapshotID,
         };
         foreach (var key in new[] { "StartFrame", "SourceStartFrame", "DurationFrames", "TrackId" })
             if (Has(key) && (U(key) > int.MaxValue || (key == "DurationFrames" && U(key) == 0)))
@@ -9672,9 +9725,23 @@ public partial class DraftPage : ContentPage, IDraftPage
         object? result;
         switch (operation)
         {
+            case GuiProjectOperation.GetProjectHistory:
+                return GetProjectHistory();
+            case GuiProjectOperation.UndoProjectHistory:
+                return await ApplyProjectHistorySnapshotAsync(GetPreviousSlot()?.SnapshotID
+                    ?? throw new InvalidOperationException("No earlier project history snapshot is available."), true);
+            case GuiProjectOperation.RedoProjectHistory:
+                {
+                    var next = GetNextSlots().Where(x => FindSlotDirectory(x.SnapshotID) is not null)
+                        .OrderByDescending(x => x.SavedAtUtc).FirstOrDefault()
+                        ?? throw new InvalidOperationException("No later project history snapshot is available.");
+                    return await ApplyProjectHistorySnapshotAsync(next.SnapshotID, true);
+                }
+            case GuiProjectOperation.RestoreProjectHistory:
+                return await ApplyProjectHistorySnapshotAsync(G("SnapshotId"), false);
             case GuiProjectOperation.GetInfo: return Info();
             case GuiProjectOperation.Save:
-                await Save(throwOnFailure: true);
+                await Save(args: CreateGuiProjectChange(request), throwOnFailure: true);
                 return Info();
             case GuiProjectOperation.GetClip:
                 return Clips.Values.Where(c => (!Has("ClipId") || c.Id == G("ClipId"))
@@ -9806,12 +9873,19 @@ public partial class DraftPage : ContentPage, IDraftPage
                 result = null; break;
             default: throw new NotSupportedException("Unknown GUI project operation.");
         }
-        var change = new ClipUpdateEventArgs { Reason = ClipUpdateReason.PropertyChanged, DetailInfo = $"RPC {operation}" };
+        var change = CreateGuiProjectChange(request);
         ForwardClipChangeToWorkspace(this, change);
-        change.NoSave = true;
         await DraftChangedAsync(this, change);
         return result;
     }
+
+    private static ClipUpdateEventArgs CreateGuiProjectChange(GuiProjectRequest request) => new()
+    {
+        ChangeReason = string.IsNullOrWhiteSpace(request.ChangeReason) ? $"RPC {request.Operation}" : request.ChangeReason.Trim(),
+        DetailInfo = $"RPC {request.Operation}",
+        Operator = ClipChangeOperatorKind.ExternalRPC,
+        OperatorDetailName = string.IsNullOrWhiteSpace(request.ClientName) ? "RPC client" : request.ClientName.Trim(),
+    };
 
     private ClipElementUI ApplyGuiClipParameters(ClipElementUI clip, JsonElement parameters)
     {
