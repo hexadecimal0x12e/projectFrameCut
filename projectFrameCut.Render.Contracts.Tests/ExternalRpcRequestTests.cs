@@ -60,12 +60,12 @@ public sealed class ExternalRpcRequestTests
             Assert.AreEqual("external-source", connection.ServiceId);
             Assert.IsNotNull(ExternalRpcAuthorizationStore.Find(ExternalRpcAuthorizationStore.GetPath(directory), clientId)!.LastUsedAt);
 
-            await using (var impostor = new RenderClient(new NamedPipeRenderClientTransport(connection.PipeName, connection.Token, Guid.NewGuid().ToString("D"))))
+            await using (var impostor = new RenderClient(new NamedPipeRenderClientTransport(connection.PipeName, Guid.NewGuid().ToString("D"))))
                 await Assert.ThrowsAsync<RenderPipeException>(async () => await impostor.GetCapabilitiesAsync(lifetime.Token));
 
             var provider = new TestVideoSourceProvider();
             await using var external = new RenderClient(
-                new NamedPipeRenderClientTransport(connection.PipeName, connection.Token, clientId.ToString("D")),
+                new NamedPipeRenderClientTransport(connection.PipeName, clientId.ToString("D")),
                 clientId.ToString("D"), provider);
             await external.RegisterExternalVideoSourcesAsync(new() { Sources = provider.Sources.ToList() }, lifetime.Token);
             var catalog = await owner.ListExternalVideoSourcesAsync(lifetime.Token);
@@ -149,10 +149,10 @@ public sealed class ExternalRpcRequestTests
                 var connection = JsonSerializer.Deserialize<ExternalRpcConnection>(rsa.Decrypt(
                     Convert.FromBase64String(response.EncryptedConnection), RSAEncryptionPadding.OaepSHA256))!;
                 Assert.AreEqual(request.RequestId, connection.RequestId);
-                Assert.IsFalse(File.ReadAllText(path).Contains(connection.Token));
+                Assert.IsFalse(File.ReadAllText(path).Contains(connection.PipeName));
                 using var otherKey = RSA.Create(3072);
                 Assert.Throws<CryptographicException>(() => otherKey.Decrypt(Convert.FromBase64String(response.EncryptedConnection), RSAEncryptionPadding.OaepSHA256));
-                await using var external = new RenderClient(new NamedPipeRenderClientTransport(connection.PipeName, connection.Token, "external"));
+                await using var external = new RenderClient(new NamedPipeRenderClientTransport(connection.PipeName, "external"));
                 Assert.IsTrue((await external.GetCapabilitiesAsync(lifetime.Token)).Operations.Contains(nameof(RenderOperation.InvokeGuiProject)));
                 Assert.AreEqual(sessionId, (await external.GetGuiProjectSessionAsync(new(), lifetime.Token)).SessionId);
                 await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => { await external.GetExternalRpcRequestAsync(lifetime.Token); });

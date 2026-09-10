@@ -40,12 +40,12 @@ internal sealed class Connection : IDisposable
 
     internal static Guid Open(ExternalRpcConnection info, CancellationToken cancellationToken)
     {
-        if (info.Token.Length != 64 || !info.Token.All(Uri.IsHexDigit) || string.IsNullOrWhiteSpace(info.PipeName))
+        if (string.IsNullOrWhiteSpace(info.PipeName))
         {
-            throw new ArgumentException("Expected a pipe name and a 64-character hexadecimal token.");
+            throw new ArgumentException("Expected a pipe name.");
         }
         var clientId = info.ClientId == Guid.Empty ? $"powershell-{Guid.NewGuid():N}" : info.ClientId.ToString("D");
-        RenderClient? client = new(new NamedPipeRenderClientTransport(info.PipeName, info.Token, clientId), clientId);
+        RenderClient? client = new(new NamedPipeRenderClientTransport(info.PipeName, clientId), clientId);
         try
         {
             var capabilities = client.GetCapabilitiesAsync(cancellationToken).AsTask().GetAwaiter().GetResult();
@@ -105,7 +105,6 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
     [Parameter(ParameterSetName = "Persistent")] public string? PersistentRequestDirectory { get; set; }
     [Parameter(Mandatory = true, ParameterSetName = "Id")] public string PipeId { get; set; } = "";
     [Parameter(Mandatory = true, ParameterSetName = "Pipe")] public string PipeName { get; set; } = "";
-    [Parameter(Mandatory = true, ParameterSetName = "Pipe")] public string Token { get; set; } = "";
     [Parameter][ValidateRange(5, 3600)] public int TimeoutSeconds { get; set; } = 300;
 
     protected override void ProcessRecord()
@@ -118,7 +117,6 @@ public sealed class ConnectProjectFrameCutCommand : CancellableCmdlet
             else info = new()
             {
                 PipeName = ParameterSetName == "Id" ? RenderProtocol.AdditionalPipePrefix + PipeId : PipeName,
-                Token = ParameterSetName == "Id" ? PipeId : Token
             };
             var sessionId = Connection.Open(info, Cancellation.Token);
             WriteVerbose($"Connected to GUI project session {sessionId}.");

@@ -166,13 +166,14 @@ public sealed class PreparedPreview
     private readonly Func<View>? _viewFactory;
     private View? _materializedView;
 
-    public PreparedPreview(Guid clipId, Func<View>? viewFactory, string? errorMessage, IClip? source, bool isCanvasPreview = false)
+    public PreparedPreview(Guid clipId, Func<View>? viewFactory, string? errorMessage, IClip? source, bool isCanvasPreview = false, Func<double, double, bool>? isTransparentAt = null)
     {
         ClipId = clipId;
         _viewFactory = viewFactory;
         ErrorMessage = errorMessage;
         Source = source;
         IsCanvasPreview = isCanvasPreview;
+        IsTransparentAt = isTransparentAt;
     }
 
     /// <summary>Gets the element or clip identifier associated with the preview.</summary>
@@ -187,6 +188,8 @@ public sealed class PreparedPreview
     public IClip? Source { get; }
     /// <summary>Gets whether this preview paints the complete project canvas.</summary>
     public bool IsCanvasPreview { get; }
+    /// <summary>Gets whether a normalized preview coordinate is fully transparent.</summary>
+    public Func<double, double, bool>? IsTransparentAt { get; }
 }
 
 /// <summary>A view providing interactive editing capabilities for a set of elements on the UI.</summary>
@@ -226,6 +229,8 @@ public interface IInteractableEditor : IView, IContentView, ICrossPlatformLayout
     void RestoreReferenceLines(string? json);
     /// <summary>Configures the preview refresh callback.</summary>
     IInteractableEditor ConfigurePreviewRefresh(Func<Task>? callback);
+    /// <summary>Configures the complete-canvas image provider used by the overview navigator.</summary>
+    IInteractableEditor ConfigureOverviewImageSource(Func<Task<ImageSource?>>? provider);
     /// <summary>Configures the visibility and detail message of the editor information indicator.</summary>
     /// <param name="isVisible">Whether the information indicator participates in the bottom control strip.</param>
     /// <param name="message">Detailed information shown while the pointer is over the indicator.</param>

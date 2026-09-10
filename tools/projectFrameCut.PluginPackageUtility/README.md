@@ -43,10 +43,16 @@ dotnet run --project tools/PluginPackageUtility -- pack `
   --name "Example Plugin" `
   --author "Example Author" `
   --description "An example plugin" `
+  --app-level `
+  --maximum-isolation-mode Process `
   --certificate .\publisher-plugin-signing.pfx `
   --chain .\publisher-chain.pem `
   --password-env PJFC_PLUGIN_PFX_PASSWORD
 ```
+
+`--app-level` declares that the assembly implements the application-level plugin
+API. `--maximum-isolation-mode` accepts `Containerized`, `Process`, or `None` and
+defaults to `Containerized`.
 
 Use `--password-stdin` in CI when an environment variable is not appropriate.
 `--force` is required to replace an existing output file.

@@ -489,6 +489,15 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// </summary>
         public int PluginAPIMinorVersion { get; set; } = 0;
         /// <summary>
+        /// Whether the plugin implements the application-level plugin API. Null for legacy metadata that did not declare it.
+        /// </summary>
+        public bool? IsAppLevelPlugin { get; set; }
+        /// <summary>
+        /// The strongest isolation mode supported by the plugin.
+        /// </summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public PluginIsolationMode MaximumSupportedIsolationMode { get; set; } = PluginIsolationMode.Containerized;
+        /// <summary>
         /// The plugin's name.
         /// </summary>
         public string Name { get; set; }
@@ -627,6 +636,29 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
 
             return providedContent.ToString();
         }
+    }
+
+
+    /// <summary>
+    /// Plugin isolation modes ordered from strongest to weakest isolation.
+    /// </summary>
+    public enum PluginIsolationMode
+    {
+        /// <summary>
+        /// Isolating the plugin and a simple worker inside a container provided by OS, 
+        /// with a limited size of user resources (like file) access.
+        /// </summary>
+        Containerized = 0,
+        /// <summary>
+        /// Isolating the plugin inside a separate process with same permission level with main application, 
+        /// but without any containerization or resource limitation.
+        /// </summary>
+        ProcessIsolation = 1,
+        /// <summary>
+        /// Attach the plugin assembly directly to the main application process, with no isolation at all. 
+        /// This is the weakest isolation mode and should be avoided if possible except your plugin is App-Level.
+        /// </summary>
+        None = 2,
     }
 #pragma warning restore CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
 

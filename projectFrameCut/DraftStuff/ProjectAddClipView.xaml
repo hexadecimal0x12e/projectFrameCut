@@ -302,10 +302,7 @@
                                     <VerticalStackLayout Spacing="3">
                                         <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation" MaxLines="1"/>
                                         <Label Text="{Binding ClientName}" FontSize="11" Opacity="0.75" LineBreakMode="TailTruncation" MaxLines="1"/>
-                                        <Label Text="{Binding DecoderName}" FontSize="11" Opacity="0.75" LineBreakMode="TailTruncation" MaxLines="1"/>
-                                        <Label Text="{Binding ConnectionStatus}" TextColor="LimeGreen" FontSize="11"/>
-                                        <Label Text="{Binding Resolution}" FontSize="11"/>
-                                        <Label Text="{Binding FrameRate}" FontSize="11"/>
+                                        <Label Text="{Binding SourceInfoDisplay}" FontSize="11"/>
                                         <Label Text="{Binding Capabilities}" FontSize="11"/>
                                     </VerticalStackLayout>
                                     <Grid Grid.Row="1" ColumnDefinitions="*,44">
@@ -317,7 +314,7 @@
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                     <CollectionView.EmptyView>
-                        <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" HorizontalOptions="Center" VerticalOptions="Center" Margin="20"/>
+                        <Label Text="{l:Localized Key=DraftPage_AssetPanel_RpcSources_None}" HorizontalOptions="Center" VerticalOptions="Center" Margin="20"/>
                     </CollectionView.EmptyView>
                 </CollectionView>
             </Grid>

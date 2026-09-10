@@ -8,25 +8,35 @@
              xmlns:l="clr-namespace:LocalizedResources"
              x:DataType="local:InteractableEditor.InteractableEditor"
              InputTransparent="False">
-    <Grid BackgroundColor="Transparent"
+    <Grid x:Name="ViewportRoot"
+          BackgroundColor="Transparent"
           InputTransparent="False"
           IsClippedToBounds="True">
-        <Image x:Name="PreviewOverlayImage"
-             x:FieldModifier="public"
-               Aspect="AspectFit"
-               InputTransparent="True"
-               IsVisible="True"
-               HorizontalOptions="Fill"
-               VerticalOptions="Fill" />
+        <Grid.GestureRecognizers>
+            <PinchGestureRecognizer PinchUpdated="OnViewportPinchUpdated" />
+        </Grid.GestureRecognizers>
 
-        <ContentView x:Name="LivePreviewerHost"
-                x:FieldModifier="public"
-                     HorizontalOptions="Fill"
-                     VerticalOptions="Fill"
-                     BackgroundColor="Transparent"
-                     InputTransparent="True" />
+        <Grid x:Name="ZoomContent"
+              AnchorX="0"
+              AnchorY="0"
+              BackgroundColor="Transparent"
+              InputTransparent="False">
+            <Image x:Name="PreviewOverlayImage"
+                   x:FieldModifier="public"
+                   Aspect="AspectFit"
+                   InputTransparent="True"
+                   IsVisible="True"
+                   HorizontalOptions="Fill"
+                   VerticalOptions="Fill" />
 
-        <AbsoluteLayout x:Name="EditorCanvas" BackgroundColor="Transparent" InputTransparent="False" ZIndex="100" HorizontalOptions="Fill" VerticalOptions="Fill">
+            <ContentView x:Name="LivePreviewerHost"
+                         x:FieldModifier="public"
+                         HorizontalOptions="Fill"
+                         VerticalOptions="Fill"
+                         BackgroundColor="Transparent"
+                         InputTransparent="True" />
+
+            <AbsoluteLayout x:Name="EditorCanvas" BackgroundColor="Transparent" InputTransparent="False" ZIndex="100" HorizontalOptions="Fill" VerticalOptions="Fill">
             <Border x:Name="RenderRectVisual"
                 IsVisible="False"
                 Stroke="#80ffffff"
@@ -73,41 +83,99 @@
                     MaxLines="20" />
             </Border>
 
-        </AbsoluteLayout>
-        <Border x:Name="InfoIndicatorHost"
-                IsVisible="False"
-                WidthRequest="44"
-                HeightRequest="44"
-                Margin="8"
-                Padding="0"
-                Opacity="0.45"
-                BackgroundColor="#CC202020"
-                Stroke="#B0FFFFFF"
-                StrokeThickness="1"
-                StrokeShape="RoundRectangle 22"
-                HorizontalOptions="Start"
-                VerticalOptions="End"
-                ZIndex="9999">
-            <Label Text="i"
-                   TextColor="White"
-                   FontSize="20"
-                   FontAttributes="Bold"
-                   HorizontalTextAlignment="Center"
-                   VerticalTextAlignment="Center"
-                   InputTransparent="True" />
-        </Border>
+            </AbsoluteLayout>
+        </Grid>
+        <VerticalStackLayout x:Name="LeftControlsHost"
+                             HorizontalOptions="Start"
+                             VerticalOptions="End"
+                             Margin="8"
+                             Spacing="8"
+                             InputTransparent="True"
+                             CascadeInputTransparent="False"
+                             ZIndex="9999">
+            <Border x:Name="InfoIndicatorHost"
+                    IsVisible="False"
+                    WidthRequest="44"
+                    HeightRequest="44"
+                    Padding="0"
+                    Opacity="0.45"
+                    BackgroundColor="#CC202020"
+                    Stroke="#B0FFFFFF"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 22"
+                    HorizontalOptions="Start">
+                <Label Text="i"
+                       TextColor="White"
+                       FontSize="20"
+                       FontAttributes="Bold"
+                       HorizontalTextAlignment="Center"
+                       VerticalTextAlignment="Center"
+                       InputTransparent="True" />
+            </Border>
 
-        <HorizontalStackLayout x:Name="BottomControlsHost"
-                               HorizontalOptions="End"
-                               VerticalOptions="End"
-                               Margin="8"
-                               Spacing="8"
-                               InputTransparent="False"
-                               SizeChanged="OnBottomControlsHostSizeChanged"
-                               ZIndex="9999">
-            <Button x:Name="OptionsButton" Text="&#xe8b8;" FontFamily="Icons" Clicked="OptionsButton_Clicked" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_ConfigurePreview}" />
-            <Button x:Name="RefreshButton" Text="&#xe5d5;" FontFamily="Icons" Clicked="RefreshButton_Clicked" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_Refersh}" />
-        </HorizontalStackLayout>
+            <HorizontalStackLayout x:Name="ZoomControlsHost"
+                                   HorizontalOptions="Start"
+                                   Spacing="8"
+                                   InputTransparent="False"
+                                   SizeChanged="OnZoomControlsHostSizeChanged">
+                <Button x:Name="ZoomOutButton"
+                        Text="&#xe900;"
+                        FontFamily="Icons"
+                        Clicked="ZoomOutButton_Clicked"
+                        ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomOut}" />
+                <Button x:Name="ZoomInButton"
+                        Text="&#xe8ff;"
+                        FontFamily="Icons"
+                        Clicked="ZoomInButton_Clicked"
+                        ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomIn}" />
+            </HorizontalStackLayout>
+
+            <Border x:Name="OverviewHost"
+                    IsVisible="False"
+                    WidthRequest="180"
+                    HeightRequest="110"
+                    Padding="4"
+                    BackgroundColor="#D0202020"
+                    Stroke="#B0FFFFFF"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 6">
+                <AbsoluteLayout x:Name="OverviewCanvas"
+                                BackgroundColor="Black"
+                                SizeChanged="OnOverviewCanvasSizeChanged">
+                    <Image x:Name="OverviewImage"
+                           Aspect="AspectFit"
+                           InputTransparent="True"
+                           AbsoluteLayout.LayoutFlags="All"
+                           AbsoluteLayout.LayoutBounds="0,0,1,1" />
+                    <Border x:Name="OverviewViewportIndicator"
+                            InputTransparent="True"
+                            BackgroundColor="#20FFFFFF"
+                            Stroke="#FFFFFFFF"
+                            StrokeThickness="1.5"
+                            AbsoluteLayout.LayoutFlags="None" />
+                </AbsoluteLayout>
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnOverviewTapped" />
+                    <PanGestureRecognizer PanUpdated="OnOverviewPanUpdated" />
+                </Border.GestureRecognizers>
+            </Border>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout HorizontalOptions="End"
+                             VerticalOptions="End"
+                             Margin="8"
+                             Spacing="8"
+                             InputTransparent="False"
+                             ZIndex="9999">
+            <HorizontalStackLayout x:Name="BottomControlsHost"
+                                   HorizontalOptions="End"
+                                   Spacing="8"
+                                   InputTransparent="False"
+                                   SizeChanged="OnBottomControlsHostSizeChanged">
+                <Button x:Name="OptionsButton" Text="&#xe8b8;" FontFamily="Icons" Clicked="OptionsButton_Clicked" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_ConfigurePreview}" />
+                <Button x:Name="RefreshButton" Text="&#xe5d5;" FontFamily="Icons" Clicked="RefreshButton_Clicked" ToolTipProperties.Text="{l:Localized Key=InteractableEditor_Refersh}" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
 
         <Border x:Name="InfoDetailsOverlay"
                 IsVisible="False"

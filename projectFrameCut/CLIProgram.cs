@@ -1574,8 +1574,10 @@ namespace projectFrameCut
                             var connection = JsonSerializer.Deserialize<ExternalRpcConnection>(rsa.Decrypt(
                                 Convert.FromBase64String(response.EncryptedConnection), RSAEncryptionPadding.OaepSHA256))
                                 ?? throw new ArgumentException("Empty RPC connection.");
-                            if (connection.RequestId != request.RequestId || connection.Token.Length != 64 ||
-                                !connection.Token.All(Uri.IsHexDigit) || connection.PipeName != RenderProtocol.AdditionalPipePrefix + connection.Token ||
+                            var pipeToken = connection.PipeName.StartsWith(RenderProtocol.AdditionalPipePrefix, StringComparison.Ordinal)
+                                ? connection.PipeName[RenderProtocol.AdditionalPipePrefix.Length..] : "";
+                            if (connection.RequestId != request.RequestId || pipeToken.Length != 64 ||
+                                !pipeToken.All(Uri.IsHexDigit) ||
                                 connection.ClientId != request.ClientId || connection.ServiceId != request.ServiceId)
                                 throw new ArgumentException("Invalid RPC connection response.");
                             Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "success", connection }));
@@ -1895,7 +1897,7 @@ Usage:
 
 Open a local project in projectFrameCut to authorize. No callback command is executed.
 Responses replace the request file; EncryptedConnection uses RSA-OAEP-SHA256.
---wait prints PipeName and Token in plaintext to stdout for the calling program only.
+--wait prints the encrypted connection information for the calling program only.
 Exit codes: 0 success/submitted, 1 failure, 2 invalid arguments, 3 denied, 4 expired, 130 canceled.
 """);
         }

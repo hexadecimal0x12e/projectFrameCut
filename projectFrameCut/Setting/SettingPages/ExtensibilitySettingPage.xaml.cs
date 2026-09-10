@@ -188,12 +188,14 @@ public partial class ExtensibilitySettingPage : ContentPage
         var ppb = new PropertyPanelBuilder();
 
         Dictionary<string, PluginIsolationMode> isolationModes = [];
-        if (PluginService.TryGetPluginItem(id, out _) && DesktopPluginIsolationPlatform.IsSupported)
+        if (PluginService.TryGetPluginItem(id, out var pluginItem) && DesktopPluginIsolationPlatform.IsSupported)
         {
-            if (OperatingSystem.IsWindows())
+            if (OperatingSystem.IsWindows() && PluginService.SupportsIsolationMode(PluginIsolationMode.Containerized, pluginItem!.MaximumSupportedIsolationMode))
                 isolationModes[SettingLocalizedResources.Plugin_IsolationMode_Containerized] = PluginIsolationMode.Containerized;
-            isolationModes[SettingLocalizedResources.Plugin_IsolationMode_Process] = PluginIsolationMode.Process;
-            isolationModes[SettingLocalizedResources.Plugin_IsolationMode_None] = PluginIsolationMode.None;
+            if (PluginService.SupportsIsolationMode(PluginIsolationMode.ProcessIsolation, pluginItem.MaximumSupportedIsolationMode))
+                isolationModes[SettingLocalizedResources.Plugin_IsolationMode_Process] = PluginIsolationMode.ProcessIsolation;
+            if (PluginService.SupportsIsolationMode(PluginIsolationMode.None, pluginItem.MaximumSupportedIsolationMode))
+                isolationModes[SettingLocalizedResources.Plugin_IsolationMode_None] = PluginIsolationMode.None;
             var currentMode = PluginService.GetConfiguredIsolationMode(id);
             ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailConfig(name), 25))
                 .AddPicker("PluginIsolationMode", SettingLocalizedResources.Plugin_IsolationMode, isolationModes.Keys.ToArray(), isolationModes.First(c => c.Value == currentMode).Key)

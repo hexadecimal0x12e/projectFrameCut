@@ -25,6 +25,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Buffers.Binary;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -586,7 +587,9 @@ public sealed class DynamicPreview : IDisposable
                         HorizontalOptions = LayoutOptions.Fill,
                         VerticalOptions = LayoutOptions.Fill,
                         AutomationId = $"hdr-clip={request.Clip.ClipType},id={request.Clip.Id}",
-                    }, null, request.Clip);
+                    }, null, request.Clip, isTransparentAt: displayFrame.ScRgbPath is null
+                        ? null
+                        : CreateScRgbTransparencyHitTest(displayFrame.ScRgbPath, displayFrame.Width, displayFrame.Height, displayFrame.Stride));
                 }
 #endif
                 var artifactPath = displayFrame.FallbackImagePath
@@ -597,6 +600,15 @@ public sealed class DynamicPreview : IDisposable
                 source = _previewer.ArtifactResolver is not null
                     ? CreateFileStreamImageSource(artifactPath)
                     : ImageSource.FromFile(artifactPath);
+
+                return new PreparedPreview(request.Clip.Id, () => new Image
+                {
+                    Source = source,
+                    Aspect = Aspect.Fill,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Fill,
+                    AutomationId = $"clip={request.Clip.ClipType},id={request.Clip.Id}",
+                }, null, request.Clip, isTransparentAt: CreatePngTransparencyHitTest(artifactPath));
             }
             else
             {
@@ -607,18 +619,23 @@ public sealed class DynamicPreview : IDisposable
                 {
                     return new PreparedPreview(request.Clip.Id, null, "Failed to render preview source.", request.Clip);
                 }
-                try { source = rendered.ToImageSource(); }
+                Func<double, double, bool>? isTransparentAt;
+                try
+                {
+                    source = rendered.ToImageSource();
+                    isTransparentAt = CreateTransparencyHitTest(rendered);
+                }
                 finally { try { rendered.Dispose(); } catch { } }
-            }
 
-            return new PreparedPreview(request.Clip.Id, () => new Image
-            {
-                Source = source,
-                Aspect = Aspect.Fill,
-                HorizontalOptions = LayoutOptions.Fill,
-                VerticalOptions = LayoutOptions.Fill,
-                AutomationId = $"clip={request.Clip.ClipType},id={request.Clip.Id}",
-            }, null, request.Clip);
+                return new PreparedPreview(request.Clip.Id, () => new Image
+                {
+                    Source = source,
+                    Aspect = Aspect.Fill,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Fill,
+                    AutomationId = $"clip={request.Clip.ClipType},id={request.Clip.Id}",
+                }, null, request.Clip, isTransparentAt: isTransparentAt);
+            }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -729,6 +746,90 @@ public sealed class DynamicPreview : IDisposable
             try { frame.Dispose(); } catch { }
             throw;
         }
+    }
+
+    private static Func<double, double, bool>? CreatePngTransparencyHitTest(string path)
+    {
+        try
+        {
+            using var picture = new Picture8bpp(path);
+            return CreateTransparencyHitTest(picture);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Read preview transparency from {path}", typeof(DynamicPreview));
+            return null;
+        }
+    }
+
+    private static Func<double, double, bool>? CreateTransparencyHitTest(IPicture picture)
+    {
+        if (!picture.HasAlphaChannel
+            || picture.GetSpecificChannel(IPicture.ChannelId.Alpha) is not float[] alpha)
+        {
+            return null;
+        }
+
+        return CreateTransparencyHitTest(picture.Width, picture.Height, i => i < alpha.Length && float.IsFinite(alpha[i]) && alpha[i] == 0f);
+    }
+
+    private static Func<double, double, bool>? CreateScRgbTransparencyHitTest(string path, int width, int height, int stride)
+    {
+        try
+        {
+            width = Math.Max(1, width);
+            height = Math.Max(1, height);
+            stride = stride > 0 ? stride : checked(width * 8);
+            var bytes = File.ReadAllBytes(path);
+            return CreateTransparencyHitTest(width, height, i =>
+            {
+                var y = i / width;
+                var x = i - y * width;
+                var offset = checked(y * stride + x * 8 + 6);
+                return offset + 2 <= bytes.Length
+                    && (BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(offset, 2)) & 0x7fff) == 0;
+            });
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Read HDR preview transparency from {path}", typeof(DynamicPreview));
+            return null;
+        }
+    }
+
+    private static Func<double, double, bool>? CreateTransparencyHitTest(int width, int height, Func<int, bool> isTransparent)
+    {
+        var pixelCount = checked(width * height);
+        var mask = new byte[(pixelCount + 7) / 8];
+        var hasTransparency = false;
+        for (var i = 0; i < pixelCount; i++)
+        {
+            if (!isTransparent(i))
+            {
+                continue;
+            }
+
+            mask[i >> 3] |= (byte)(1 << (i & 7));
+            hasTransparency = true;
+        }
+
+        if (!hasTransparency)
+        {
+            return null;
+        }
+
+        return (x, y) =>
+        {
+            if (!double.IsFinite(x) || !double.IsFinite(y) || x < 0 || y < 0 || x > 1 || y > 1)
+            {
+                return true;
+            }
+
+            var px = Math.Min(width - 1, (int)(x * width));
+            var py = Math.Min(height - 1, (int)(y * height));
+            var i = py * width + px;
+            return (mask[i >> 3] & (1 << (i & 7))) != 0;
+        };
     }
 
     private static View CreateSwapChainErrorView(string message)

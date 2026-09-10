@@ -69,7 +69,7 @@ Connect-ProjectFrameCutPersistent -ClientId '<ClientId>' -PrivateKey '.\pjfc-cli
 ```powershell
 Connect-ProjectFrameCut -PipeId $pipeId
 # 或使用 rpc_request 返回的信息：
-Connect-ProjectFrameCut -PipeName $connection.PipeName -Token $connection.Token
+Connect-ProjectFrameCut -PipeName $connection.PipeName
 ```
 
 `PipeId` 是 64 位十六进制令牌，对应 `projectFrameCut-rpc-<PipeId>`。不要公开令牌。每个运行空间拥有一个当前连接；新连接验证失败会保留原连接。

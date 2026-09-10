@@ -3321,8 +3321,9 @@ public sealed class RpcVideoSourceItemViewModel
     public string Resolution => Source.Width > 0 && Source.Height > 0 ? $"{Source.Width}×{Source.Height}" : "?";
     public string FrameRate => Source.Fps > 0 ? $"{Source.Fps:0.###} FPS" : "? FPS";
     public string Duration => Source.TotalFrames > 0 && Source.Fps > 0 ? TimeSpan.FromSeconds(Source.TotalFrames / Source.Fps).ToString("hh\\:mm\\:ss") : "--:--:--";
-    public string Capabilities => $"{(Source.HasKnownResultBitsPerPixel ? $"{Source.ResultBitsPerPixel}-bit" : "Variable bit depth")}{(Source.SupportsHdr ? " HDR" : "")}{(Source.SupportsAlpha ? " Alpha" : "")}";
-    public string ConnectionStatus => Localized.DraftPage_AssetPanel_RpcSourceConnected;
+
+    public string Capabilities => $"{(Source.HasKnownResultBitsPerPixel ? $"{Source.ResultBitsPerPixel}-bit" : "Variable bit depth")} RGB{(Source.SupportsAlpha ? "A" : "")}{(Source.SupportsHdr ? " (HDR)" : "")}";
+    public string SourceInfoDisplay => $"{Resolution} {FrameRate} ({Duration})";
     public Command AddCommand { get; }
 }
 

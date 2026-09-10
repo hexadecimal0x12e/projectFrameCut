@@ -16,6 +16,7 @@
 		<PackageProjectUrl>hexadecimal0x12e.com</PackageProjectUrl>
 		<Title>projectFrameCut Helper component</Title>
 		<PublishSingleFile>true</PublishSingleFile>
+		<SelfContained>false</SelfContained>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$(Configuration) == 'Release'">

@@ -31,7 +31,7 @@ internal static class PluginIsolationFactory
 #else
                 return local;
 #endif
-            case PluginIsolationMode.Process:
+            case PluginIsolationMode.ProcessIsolation:
                 if (!DesktopPluginIsolationPlatform.IsSupported) return local;
                 client = await StartClientAsync(
                     new DesktopPluginIsolationPlatform(),
@@ -65,6 +65,10 @@ internal static class PluginIsolationFactory
         Dictionary<string, string> configuration,
         CancellationToken cancellationToken = default)
     {
+        if (verification.Metadata.IsAppLevelPlugin == true)
+            throw new NotSupportedException("Application-level plugins cannot run as project plugins.");
+        if (!PluginService.SupportsIsolationMode(PluginIsolationMode.Containerized, verification.Metadata.MaximumSupportedIsolationMode))
+            throw new NotSupportedException($"Project plugins require {PluginIsolationMode.Containerized} isolation, which this plugin does not support.");
 #if WINDOWS
         var client = await StartClientAsync(
             new Platforms.Windows.WindowsPluginIsolationPlatform(),

@@ -31,6 +31,20 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
         _clientId = clientId;
     }
 
+    public NamedPipeRenderClientTransport(string pipeName, string clientId)
+        : this(pipeName, GetAdditionalPipeToken(pipeName), clientId) { }
+
+    private static string GetAdditionalPipeToken(string pipeName)
+    {
+        if (string.IsNullOrWhiteSpace(pipeName) ||
+            !pipeName.StartsWith(RenderProtocol.AdditionalPipePrefix, StringComparison.Ordinal))
+            throw new ArgumentException("An additional render pipe name is required.", nameof(pipeName));
+        var token = pipeName[RenderProtocol.AdditionalPipePrefix.Length..];
+        if (token.Length != 64 || !token.All(Uri.IsHexDigit))
+            throw new ArgumentException("The additional render pipe name has an invalid identifier.", nameof(pipeName));
+        return token;
+    }
+
     public async ValueTask<RenderResponseEnvelope> SendAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
     {
         await EnsureConnectedAsync(cancellationToken).ConfigureAwait(false);

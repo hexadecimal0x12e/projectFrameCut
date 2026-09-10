@@ -133,6 +133,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     ClipElementUI? _selected = null;
     readonly HashSet<Guid> _selectedClipIds = [];
     readonly ConcurrentDictionary<Guid, Brush?> _selectedOrigColorByClipId = new();
+    private long _selectionUiVersion;
     private readonly List<TimelineClipboardItem> _timelineClipboard = [];
     private bool _timelineClipboardFromCut = false;
     private double _currentFrame = 0;
@@ -164,6 +165,12 @@ public partial class DraftPage : ContentPage, IDraftPage
     private MultiWindowItem TimelineSubwindow = null!;
     private MultiWindowItem AssetSubwindow = null!;
     private MultiWindowItem AddClipSubwindow = null!;
+    private bool _isFixedLayout;
+    private bool _fixedLayoutInitialized;
+    private TabbedView? _fixedClipInfoTabs;
+    private const string FixedToolbarCommandsSetting = "Edit_FixedToolbarCommands";
+    private TabbedView? _fixedClipInfoPopupTabs;
+    private bool _syncingFixedClipInfoTabs;
 
 
 
@@ -363,6 +370,16 @@ public partial class DraftPage : ContentPage, IDraftPage
     public double PreviewAreaHeight { get; set; } = 250;
     public bool AutoSavePreviewAreaHeight { get; set; } = true;
     public bool? UseCompactLayout { get; set; } = null;
+    public bool IsFixedLayout
+    {
+        get => _isFixedLayout;
+        private set
+        {
+            if (_isFixedLayout == value) return;
+            _isFixedLayout = value;
+            OnPropertyChanged();
+        }
+    }
     public bool LockScrollViewAfterSelection { get; set; }
     public bool EnableClipInfoPopup { get; set; }
     public bool UseCommunityToolkitPopupInsteadOfOverlayLayer { get { return (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS()) || field; } set; }
@@ -396,6 +413,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.SetAssets(Assets);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
+        ClipEditor.ConfigureOverviewImageSource(RenderOverviewImageSourceAsync);
         ClipEditor.ConfigureManageReferenceLinesRequested(() =>
         {
             ShowManageReferenceLinesPopup(ClipEditor, async (v) => await Dispatcher.DispatchAsync(async () => await ShowAPopup(new ScrollView { Content = v }, mode: "dialog")), async () => await Dispatcher.DispatchAsync(async () => await HidePopup()));
@@ -459,6 +477,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync)
+                  .ConfigureOverviewImageSource(RenderOverviewImageSourceAsync)
                   .ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync)
                   .ConfigureOverlayClipDoubleTap(OnClipEditorOverlayDoubleTappedAsync)
                   .ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync)
@@ -970,6 +989,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         OnPropertyChanged(nameof(UnNullUseCompactLayout));
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
+        await SwitchEditorLayoutAsync(UseCompactLayout == true ? "fixed" : "workspace");
         RestoreInteractableEditorState();
         StartRenderBackendWatchdog();
         await DraftChangedAsync(sender, new ClipUpdateEventArgs { NoSave = true });
@@ -2672,12 +2692,15 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task RefreshSelectionUiAsync()
     {
+        var version = Interlocked.Increment(ref _selectionUiVersion);
+
         if (_selectedClipIds.Count == 0)
         {
             SetStatusText(Localized.DraftPage_EverythingFine);
             ClipEditor.SetClip(null, null);
             if (LockScrollViewAfterSelection) SetTimelineScrollEnabled(true);
             RightContentBorder.Content = CreatePropertiesPlaceholder(Localized.DraftPage_PropertyPanel_SelectToContinue);
+            await RefreshFixedClipInfoAsync(null);
             SelectedClipChanged?.Invoke(this, EventArgs.Empty);
             return;
         }
@@ -2692,16 +2715,42 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (_selectedClipIds.Count == 1 && _selected is not null)
         {
             var clip = _selected;
+            var sw = Stopwatch.StartNew();
             SetStatusText(Localized.DraftPage_Selected(clip.DisplayName));
             if (LockScrollViewAfterSelection) SetTimelineScrollEnabled(false);
-            RightContentBorder.Content = await BuildPropertyPanel(clip);
             SelectedClipChanged?.Invoke(this, EventArgs.Empty);
             if (clip.ClipType != ClipMode.AudioClip
                 && clip.ClipType != ClipMode.MarkingClip
                 && clip.ClipType != ClipMode.Special)
             {
                 ClipEditor.SetClip(clip, Assets.TryGetValue(clip.Id.ToString(), out var asset) ? asset : null);
-                await RefreshPreviewFromCurrentProviderAsync();
+            }
+            else
+            {
+                ClipEditor.SetClip(null, null);
+            }
+
+            await Task.Yield();
+            if (version != Volatile.Read(ref _selectionUiVersion) || _selected?.Id != clip.Id) return;
+
+            var previewTask = clip.ClipType != ClipMode.AudioClip
+                && clip.ClipType != ClipMode.MarkingClip
+                && clip.ClipType != ClipMode.Special
+                ? RefreshPreviewFromCurrentProviderAsync()
+                : Task.CompletedTask;
+            if (IsFixedLayout)
+            {
+                await RefreshFixedClipInfoAsync(clip);
+            }
+            else
+            {
+                RightContentBorder.Content = await BuildPropertyPanel(clip);
+            }
+            if (version != Volatile.Read(ref _selectionUiVersion) || _selected?.Id != clip.Id) return;
+            await previewTask;
+            if (version == Volatile.Read(ref _selectionUiVersion) && _selected?.Id == clip.Id)
+            {
+                LogDiagnostic($"Refreshed selection UI for clip {clip.Id} in {sw.ElapsedMilliseconds}ms");
             }
             return;
         }
@@ -2715,6 +2764,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center
         };
+        await RefreshFixedClipInfoAsync(null);
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
         OnPropertyChanged(nameof(SelectedAnyClip));
@@ -7544,6 +7594,219 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
+    private async Task SwitchEditorLayoutAsync(string? mode)
+    {
+        bool fixedLayout = string.Equals(mode, "fixed", StringComparison.OrdinalIgnoreCase);
+        if (fixedLayout == IsFixedLayout && _fixedLayoutInitialized) return;
+
+        if (fixedLayout)
+        {
+            DetachViewFromParent(ClipEditorHost);
+            DetachViewFromParent(LowerContent);
+            DetachViewFromParent(AddClipView);
+
+            FixedPreviewHost.Content = ClipEditorHost;
+            FixedTimelineHost.Content = LowerContent;
+            PlayingControlLayout.HorizontalOptions = LayoutOptions.Fill;
+            PlayingControlLayout.Margin = new(4, 2, 0, 3);
+            MainMultiWindowView.IsVisible = false;
+            UpperContent.IsVisible = false;
+            MainControlGrid.IsVisible = false;
+            FixedLayoutRoot.IsVisible = true;
+            IsFixedLayout = true;
+            RebuildFixedToolbarButtons();
+            await RefreshFixedClipInfoAsync(_selectedClipIds.Count == 1 ? _selected : null);
+        }
+        else
+        {
+            DetachViewFromParent(AddClipView);
+            FixedPreviewHost.Content = null;
+            FixedTimelineHost.Content = null;
+            FixedClipInfoHost.Content = null;
+            if (AddClipSubwindow is not null)
+            {
+                _workspaceWindowHost?.OpenWindow("clips.add");
+            }
+            PreviewSubwindow.Content = ClipEditorHost;
+            TimelineSubwindow.Content = LowerContent;
+            AddClipHost.Content = AddClipView;
+            PlayingControlLayout.HorizontalOptions = UseCompactLayout == true ? LayoutOptions.End : LayoutOptions.Fill;
+            PlayingControlLayout.Margin = UseCompactLayout == true ? new(0, 0, 8, 0) : new(4, 2, 0, 3);
+            FixedLayoutRoot.IsVisible = false;
+            UpperContent.IsVisible = true;
+            MainControlGrid.IsVisible = true;
+            MainMultiWindowView.IsVisible = true;
+            IsFixedLayout = false;
+            _fixedClipInfoTabs = null;
+            _fixedClipInfoPopupTabs = null;
+        }
+
+        _fixedLayoutInitialized = true;
+        await Dispatcher.DispatchAsync(() => UpdatePlayheadPosition());
+    }
+
+    private static void DetachViewFromParent(View? view)
+    {
+        if (view?.Parent is ContentView contentView && contentView.Content == view)
+        {
+            contentView.Content = null;
+        }
+        else if (view?.Parent is Border border && border.Content == view)
+        {
+            border.Content = null;
+        }
+        else if (view?.Parent is Layout layout)
+        {
+            layout.Remove(view);
+        }
+    }
+
+    private List<(string Key, string Text, ICommand Command, object? Argument)> GetFixedToolbarCommands()
+    {
+        return MenuBarItems
+            .SelectMany(menu => menu.OfType<MenuFlyoutItem>()
+                .Where(item => item.Command is not null)
+                .Select(item => (
+                    Key: $"{menu.Text} -> {item.Text} -> {item.CommandParameter}",
+                    Text: item.Text ?? menu.Text ?? "Command",
+                    Command: item.Command!,
+                    Argument: item.CommandParameter)))
+            .GroupBy(item => item.Key)
+            .Select(group => group.First())
+            .ToList();
+    }
+
+    private HashSet<string> GetFixedToolbarSelection()
+    {
+        var raw = SettingsManager.GetSetting(FixedToolbarCommandsSetting, string.Empty);
+        if (!string.IsNullOrWhiteSpace(raw))
+        {
+            try
+            {
+                return JsonSerializer.Deserialize<HashSet<string>>(raw) ?? [];
+            }
+            catch { }
+        }
+
+        return GetFixedToolbarCommands()
+            .Where(item => item.Text.Contains("撤销", StringComparison.OrdinalIgnoreCase)
+                || item.Text.Contains("Undo", StringComparison.OrdinalIgnoreCase)
+                || item.Text.Contains("保存", StringComparison.OrdinalIgnoreCase)
+                || item.Text.Contains("Save", StringComparison.OrdinalIgnoreCase))
+            .Select(item => item.Key)
+            .ToHashSet();
+    }
+
+    private void RebuildFixedToolbarButtons()
+    {
+        FixedToolbarButtons.Children.Clear();
+        if (!IsFixedLayout) return;
+
+        var selected = GetFixedToolbarSelection();
+        foreach (var item in GetFixedToolbarCommands().Where(item => selected.Contains(item.Key)).Take(5))
+        {
+            var button = new Button
+            {
+                Text = "\ue8b8",
+                FontFamily = MaterialIconFontFamily,
+                FontSize = 20,
+                Padding = new Thickness(7, 0),
+                MinimumWidthRequest = 38,
+                Command = item.Command,
+                CommandParameter = item.Argument
+            };
+            SemanticProperties.SetDescription(button, item.Text);
+            ToolTipProperties.SetText(button, item.Text);
+            FixedToolbarButtons.Children.Add(button);
+        }
+    }
+
+    private async Task ConfigureFixedToolbarAsync()
+    {
+        var commands = GetFixedToolbarCommands();
+        var selected = GetFixedToolbarSelection();
+        while (true)
+        {
+            var options = commands.Select(item => $"{(selected.Contains(item.Key) ? "✓ " : "  ")}{item.Text}").ToArray();
+            var choice = await DisplayActionSheetAsync("固定工具栏", Localized._Cancel, null, options);
+            if (string.IsNullOrWhiteSpace(choice) || choice == Localized._Cancel) break;
+            var index = Array.IndexOf(options, choice);
+            if (index < 0) continue;
+            if (!selected.Add(commands[index].Key)) selected.Remove(commands[index].Key);
+            SettingsManager.WriteSetting(FixedToolbarCommandsSetting, JsonSerializer.Serialize(selected));
+            RebuildFixedToolbarButtons();
+        }
+    }
+
+    private async Task RefreshFixedClipInfoAsync(ClipElementUI? clip)
+    {
+        if (!IsFixedLayout) return;
+        if (popupShowingDirection != "none") await HidePopup(true);
+        DetachViewFromParent(AddClipView);
+        _fixedClipInfoPopupTabs = await infoBuilder.BuildFixed(clip, OnClipPropertiesChanged, AddClipView);
+        _fixedClipInfoPopupTabs.HeaderRightContent = new Button
+        {
+            Text = MaterialIconClose,
+            FontFamily = MaterialIconFontFamily,
+            WidthRequest = 42,
+            Command = new Command(async () => await HidePopup(true))
+        };
+        _fixedClipInfoTabs = new TabbedView { Background = Background };
+        foreach (var item in _fixedClipInfoPopupTabs.TabItems)
+        {
+            _fixedClipInfoTabs.TabItems.Add(new TabbedViewItem
+            {
+                Header = item.Header,
+                Tag = item.Tag,
+                Content = new Grid { HeightRequest = 1 }
+            });
+        }
+        _fixedClipInfoPopupTabs.OnTabSwitched += (_, selectedItem) =>
+        {
+            if (_syncingFixedClipInfoTabs) return;
+            _syncingFixedClipInfoTabs = true;
+            _fixedClipInfoTabs?.SelectByTag(selectedItem.Tag);
+            _syncingFixedClipInfoTabs = false;
+        };
+        _fixedClipInfoTabs.OnTabSwitched += FixedClipInfoTabSwitched;
+        FixedClipInfoHost.Content = _fixedClipInfoTabs;
+        FixedClipInfoHost.IsVisible = true;
+        FixedClipInfoHost.HeightRequest = 48;
+    }
+
+    private async void FixedClipInfoTabSwitched(object? sender, TabbedViewItem item)
+    {
+        if (_fixedClipInfoPopupTabs is null) return;
+        _syncingFixedClipInfoTabs = true;
+        _fixedClipInfoPopupTabs.SelectByTag(item.Tag);
+        _syncingFixedClipInfoTabs = false;
+        if (item.Tag == "add")
+        {
+            DetachViewFromParent(AddClipView);
+            await ShowAPopup(content: AddClipView);
+            return;
+        }
+        await ShowAPopup(content: _fixedClipInfoPopupTabs);
+    }
+
+    private async Task<ImageSource?> RenderOverviewImageSourceAsync()
+    {
+        if (AlreadyDisappeared || previewer.Clips is null) return null;
+
+        var frame = (uint)Math.Clamp(_currentFrame, 0d, uint.MaxValue);
+        var projectWidth = Math.Max(1, ProjectInfo.RelativeWidth);
+        var projectHeight = Math.Max(1, ProjectInfo.RelativeHeight);
+        var scale = (double)InitialStaticPreviewLongEdge / Math.Max(projectWidth, projectHeight);
+        var width = Math.Max(1, (int)Math.Round(projectWidth * scale));
+        var height = Math.Max(1, (int)Math.Round(projectHeight * scale));
+        var path = await Task.Run(() => previewer.RenderFrame(frame, width, height));
+        if (!File.Exists(path)) return null;
+
+        var content = await File.ReadAllBytesAsync(path);
+        LogDiagnostic($"Rendered overview frame {frame} at {width}x{height}");
+        return ImageSource.FromStream(() => new MemoryStream(content, writable: false));
+    }
+
     private async Task RenderOneFrame(uint duration, int? width = null, int? height = null)
     {
         // Supersede any in-flight render BEFORE waiting on the lock so the current holder aborts and
@@ -8982,12 +9245,14 @@ public partial class DraftPage : ContentPage, IDraftPage
     }
 
     [DebuggerNonUserCode()] //too annoying in step-through debugging
-    private IClip? OnGetClipInstanceCallback(ClipElementUI element)
+    internal IClip? GetLoadedClipInstance(Guid clipId)
     {
-        if (previewer?.Clips is not null && previewer.Clips.Length > 0)
-        {
-            if (previewer.Clips.FirstOrDefault(c => c.Id == element.Id, null) is IClip c) return c;
-        }
+        return previewer?.Clips?.FirstOrDefault(c => c.Id == clipId);
+    }
+
+    internal IClip? GetOrCreateClipInstance(ClipElementUI element)
+    {
+        if (GetLoadedClipInstance(element.Id) is IClip c) return c;
         try
         {
             return PluginManager.CreateClip(JsonSerializer.SerializeToElement(DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, element)));
@@ -8998,6 +9263,9 @@ public partial class DraftPage : ContentPage, IDraftPage
             return null;
         }
     }
+
+    [DebuggerNonUserCode()]
+    private IClip? OnGetClipInstanceCallback(ClipElementUI element) => GetOrCreateClipInstance(element);
 
     #endregion
 
@@ -10295,6 +10563,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async void ShowMoreOptionsMenu(object? sender, EventArgs e)
     {
+        const string fixedToolbarOption = "固定工具栏...";
         Dictionary<string, (ICommand? command, object? argument)> actionsPair = MenuBarItems
             .SelectMany(menuBarItem =>
                 menuBarItem.OfType<MenuFlyoutItem>()
@@ -10377,9 +10646,18 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
         };
 
-        var option = await DisplayActionSheetAsync(Localized._Info, Localized._Cancel, null, actionsPair.Keys.Concat(SettingsManager.IsBoolSettingTrue("DeveloperMode") ? debugActionsPair.Keys : new List<string>()).ToArray());
+        var option = await DisplayActionSheetAsync(Localized._Info, Localized._Cancel, null, actionsPair.Keys
+            .Concat(new[] { fixedToolbarOption })
+            .Concat(SettingsManager.IsBoolSettingTrue("DeveloperMode") ? debugActionsPair.Keys : new List<string>())
+            .ToArray());
 
         if (string.IsNullOrWhiteSpace(option)) return;
+
+        if (option == fixedToolbarOption)
+        {
+            await ConfigureFixedToolbarAsync();
+            return;
+        }
 
         if (actionsPair.TryGetValue(option, out var cmd))
         {

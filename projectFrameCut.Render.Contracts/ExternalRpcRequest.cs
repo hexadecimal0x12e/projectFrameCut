@@ -93,7 +93,6 @@ public sealed class ExternalRpcConnection
     public Guid ClientId { get; set; }
     public string ServiceId { get; set; } = "";
     public string PipeName { get; set; } = "";
-    public string Token { get; set; } = "";
 }
 
 public sealed class ExternalRpcClientAuthorization

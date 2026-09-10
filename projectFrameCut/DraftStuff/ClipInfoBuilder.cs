@@ -24,6 +24,7 @@ using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.ClipsAndTracks.Text;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
@@ -233,6 +234,21 @@ namespace projectFrameCut.DraftStuff
             return tabbedView;
         }
 
+        public async Task<TabbedView> BuildFixed(
+            ClipElementUI? clip,
+            EventHandler<PropertyPanelPropertyChangedEventArgs> handler,
+            ProjectAddClipView addClipView)
+        {
+            var result = clip is null ? new TabbedView { Background = page.Background } : await Build(clip, handler);
+            result.TabItems.Add(new TabbedViewItem
+            {
+                Header = Localized.DraftPage_CenterMenuBar_AddClip,
+                Content = addClipView,
+                Tag = "add"
+            });
+            return result;
+        }
+
         public View CurrentContent => tabbedView;
 
         #endregion
@@ -242,17 +258,7 @@ namespace projectFrameCut.DraftStuff
         public View BuildGeneralTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             string currentColorHex = clip.ClipColor ?? GetDefaultColorHex(clip.ClipType);
-            IClip? TargetInstance = null;
-            VideoClip? TargetVideoClip = null;
-            try
-            {
-                TargetInstance = DraftImportAndExportHelper.JSONToIClips(new DraftStructureJSON { Clips = [DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip)] }, true, 8).FirstOrDefault();
-                TargetVideoClip = TargetInstance as VideoClip;
-            }
-            catch
-            {
-
-            }
+            var targetVideoClip = page.GetLoadedClipInstance(clip.Id) as VideoClip;
             string ToArgbHex(Color color)
             {
                 var a = (int)Math.Round(color.Alpha * 255);
@@ -346,6 +352,48 @@ namespace projectFrameCut.DraftStuff
                 }
 
                 return raw?.ToString() ?? "auto";
+            }
+
+            string GetVideoSourceText()
+            {
+                if (string.IsNullOrWhiteSpace(clip.SourcePath))
+                {
+                    return "Unknown";
+                }
+
+                if (RemoteRpcVideoSource.TryGetDescriptor(clip.SourcePath, out ExternalVideoSourceDescriptor descriptor))
+                {
+                    string clientName = string.IsNullOrWhiteSpace(descriptor.ClientName)
+                        ? descriptor.ClientId.ToString("D")
+                        : descriptor.ClientName;
+                    string resolution = descriptor.Width > 0 && descriptor.Height > 0
+                        ? $"{descriptor.Width}×{descriptor.Height}"
+                        : "Unknown resolution";
+                    string fps = descriptor.Fps > 0 ? $"{descriptor.Fps:0.###} fps" : "Unknown fps";
+                    string frames = descriptor.TotalFrames >= 0 ? $"{descriptor.TotalFrames} frames" : "Unknown length";
+                    string capabilities = string.Join(", ", new[]
+                    {
+                        descriptor.SupportsHdr ? "HDR" : null,
+                        descriptor.SupportsAlpha ? "Alpha" : null,
+                        descriptor.HasKnownResultBitsPerPixel ? $"{descriptor.ResultBitsPerPixel} bpp" : null
+                    }.Where(x => x is not null).Select(x => x!));
+                    string metadata = descriptor.Metadata is not { Count: > 0 }
+                        ? string.Empty
+                        : $"\nMetadata: {string.Join(", ", descriptor.Metadata.Select(x => $"{x.Key}={x.Value}"))}";
+
+                    return $"RPC client: {clientName}\nClient ID: {descriptor.ClientId:D}\nSource: {descriptor.Name} ({descriptor.SourceId})\nDecoder: {descriptor.DecoderName}\nFormat: {resolution}, {fps}, {frames}"
+                        + (string.IsNullOrEmpty(capabilities) ? string.Empty : $"\nCapabilities: {capabilities}")
+                        + metadata;
+                }
+
+                if (clip.SourcePath.StartsWith("$"))
+                {
+                    return AssetDatabase.Assets.TryGetValue(clip.SourcePath.Substring(1), out var asset)
+                        ? $"{Localized.DraftPage_CenterMenuBar_Asset}: {asset.Name}({asset.Path})"
+                        : $"Unknown asset: {clip.SourcePath.Substring(1)}";
+                }
+
+                return System.IO.Path.GetFullPath(clip.SourcePath);
             }
 
             string currentSolidColorHex = clip.ClipType == ClipMode.SolidColorClip
@@ -654,28 +702,27 @@ namespace projectFrameCut.DraftStuff
             .AppendWhen(clip.ClipType == ClipMode.VideoClip,
             (c) =>
                 c.AddText(new SingleLineLabel(PPLocalizedResources.General_VideoCodec, 20))
-                 .AppendWhen(!(TargetInstance?.FilePath?.StartsWith("#") ?? false),
+                 .AppendWhen(!(clip.SourcePath?.StartsWith("#") ?? false),
                      cc => cc.AddPicker(
                              "videoTargetDecoderMode",
                              PPLocalizedResources.General_VideoCodec_TargetMode,
                              videoDecoderOptionLabelToId.Keys.ToArray(),
                              selectedVideoDecoderLabel)
-                             .AppendWhen((TargetVideoClip is not null && TargetVideoClip?.Decoder?.GetType() == typeof(HDRDecoderContext)),
-                                cc1 => cc1.AddSlider("hdrBrightnessOffset", PPLocalizedResources.General_VideoCodec_HDRBrightnessOffset, -1, 1, TargetVideoClip?.HDRBrightnessOffset ?? 0, eventCallMode: SliderUpdateEventCallMode.OnMouseUp)),
-                      cc => cc.AddCustomChild(PPLocalizedResources.General_VideoCodec_TargetMode, new Label { Text = allVideoDecoderOptionLabelToId.ReverseLookup(TargetVideoClip?.DecoderName ?? "Unknown", PPLocalizedResources.General_VideoCodec_TargetMode_Unknown(TargetVideoClip?.DecoderName ?? "Unknown")) }))
+                             .AppendWhen(targetVideoClip?.Decoder?.GetType() == typeof(HDRDecoderContext),
+                                cc1 => cc1.AddSlider("hdrBrightnessOffset", PPLocalizedResources.General_VideoCodec_HDRBrightnessOffset, -1, 1, targetVideoClip?.HDRBrightnessOffset ?? 0, eventCallMode: SliderUpdateEventCallMode.OnMouseUp)),
+                      cc => cc.AddCustomChild(PPLocalizedResources.General_VideoCodec_TargetMode, new Label { Text = allVideoDecoderOptionLabelToId.ReverseLookup(targetVideoClip?.DecoderName ?? "Unknown", PPLocalizedResources.General_VideoCodec_TargetMode_Unknown(targetVideoClip?.DecoderName ?? "Unknown")) }))
                  .AppendWhen(
                     clip is not null && !string.IsNullOrWhiteSpace(clip.SourcePath),
-                        pp => pp.AppendWhen(clip.SourcePath.StartsWith("$"),
-                            pp1 => pp1.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label
-                            {
-                                Text = AssetDatabase.Assets.TryGetValue(clip.SourcePath.Substring(1), out var asset) ? $"{Localized.DraftPage_CenterMenuBar_Asset}: {asset.Name}({asset.Path})" : $"Unknown asset: {clip.SourcePath.Substring(1)}"
-                            }),
-                            pp1 => pp1.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label { Text = System.IO.Path.GetFullPath(clip.SourcePath) })),
+                        pp => pp.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label
+                        {
+                            Text = GetVideoSourceText(),
+                            LineBreakMode = LineBreakMode.WordWrap
+                        }),
                     pp => pp.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label { Text = "Unknown" })
                 )
             .AppendWhen(clip.ClipType == ClipMode.MarkingClip,
                 c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip))))
-            .AppendWhen(TargetInstance is IVectorContentClip vc,
+            .AppendWhen(clip.ClipType is ClipMode.TextClip or ClipMode.SubtitleClip or ClipMode.VectorCanvasClip,
                 c =>
                 {
                     string currentVectorAaLabel = PPLocalizedResources.General_VectorClip_AAMode_None;
@@ -709,7 +756,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     c.AddButton(PPLocalizedResources.General_VectorCanvas_OpenEditor, async (s, e) =>
                     {
-                        if (TargetInstance is not VectorCanvasClip vecClip)
+                        if (page.GetOrCreateClipInstance(clip) is not VectorCanvasClip vecClip)
                         {
                             page.SetStateFail("Target clip is invalid.");
                             return;

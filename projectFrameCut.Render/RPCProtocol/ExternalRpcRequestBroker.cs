@@ -118,7 +118,6 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
                 ClientId = _request.ClientId,
                 ServiceId = _request.ServiceId,
                 PipeName = RenderProtocol.AdditionalPipePrefix + token,
-                Token = token,
             }), RSAEncryptionPadding.OaepSHA256));
             if (authorization is not null && _request.LaunchClient)
             {

@@ -32,6 +32,7 @@ public sealed class NamedPipeRenderServer(IRenderService service, bool allowAddi
     {
         try
         {
+            var connected = false;
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -67,6 +68,7 @@ public sealed class NamedPipeRenderServer(IRenderService service, bool allowAddi
                     };
                     await RenderPipeFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(handshakeResponse), handshakeTimeout.Token).ConfigureAwait(false);
                     if (!accepted) continue;
+                    connected = true;
 
                     using var connectionCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     var writeGate = new SemaphoreSlim(1, 1);
@@ -110,6 +112,7 @@ public sealed class NamedPipeRenderServer(IRenderService service, bool allowAddi
                 {
                     Log($"Render pipe connection failed ({ex.GetType().Name}).", "warn");
                 }
+                if (connected) break;
             }
         }
         catch (Exception ex)

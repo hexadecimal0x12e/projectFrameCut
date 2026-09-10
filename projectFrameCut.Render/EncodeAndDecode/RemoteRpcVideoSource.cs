@@ -46,6 +46,21 @@ public class RemoteRpcVideoSource : IVideoSource
 
     public static bool IsPath(string? path) => path?.StartsWith($"#{DecoderTypeName}:", StringComparison.Ordinal) == true;
 
+    public static bool TryGetDescriptor(string path, out ExternalVideoSourceDescriptor descriptor)
+    {
+        descriptor = null!;
+        try
+        {
+            var source = ParsePath(path);
+            descriptor = ExternalVideoSourceRegistry.Find(source) ?? source.Descriptor;
+            return true;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidDataException or FormatException)
+        {
+            return false;
+        }
+    }
+
     public static IVideoSource Open(string path)
     {
         var source = ParsePath(path);

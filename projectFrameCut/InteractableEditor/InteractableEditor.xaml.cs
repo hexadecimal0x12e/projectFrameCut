@@ -100,6 +100,9 @@ namespace projectFrameCut.InteractableEditor
         private readonly Dictionary<Guid, InteractiveRect> _genericLastRects = new();
         private ClipOverlayState? _activeState;
         private Func<Task>? _previewRefreshCallback;
+        private Func<Task<ImageSource?>>? _overviewImageSourceProvider;
+        private bool _overviewImageSourceRequested;
+        private int _overviewImageSourceVersion;
         private Func<Guid, Task>? _overlayClipTappedCallback;
         private Func<Guid, Task>? _overlayClipDoubleTappedCallback;
         private Func<Task>? _blankAreaTappedCallback;
@@ -131,11 +134,14 @@ namespace projectFrameCut.InteractableEditor
         private readonly object _commitUpdateDebounceLock = new();
         private bool _autoHideBottomControls;
         private bool _isPointerOverBottomControls;
+        private bool _autoHideZoomControls;
+        private bool _isPointerOverZoomControls;
         private bool _autoHideInfoIndicator;
         private bool _isPointerOverInfoIndicator;
         private string? _infoIndicatorMessage;
         private long _infoIndicatorRevealUntilTick;
         private CancellationTokenSource? _hideBottomControlsCts;
+        private CancellationTokenSource? _hideZoomControlsCts;
         private CancellationTokenSource? _hideInfoIndicatorCts;
 
         private const int PreviewRefreshThrottleMs = 180;
@@ -143,6 +149,20 @@ namespace projectFrameCut.InteractableEditor
         private const int OverlayTapBlankSuppressMs = 180;
         private const int InfoIndicatorRevealMs = 5_000;
         private const double InfoIndicatorIdleOpacity = 0.45d;
+        private const double MinZoomScale = 1d;
+        private const double MaxZoomScale = 8d;
+        private double _zoomScale = 1d;
+        private double _pinchStartScale = 1d;
+        private bool _isViewportPinching;
+        private double _overviewPanStartX;
+        private double _overviewPanStartY;
+#if WINDOWS
+        private Microsoft.UI.Xaml.UIElement? _windowsZoomTarget;
+#endif
+#if LINUX
+        private Gtk.Widget? _linuxZoomTarget;
+        private Gtk.EventControllerScroll? _linuxScrollController;
+#endif
 
         #endregion
 
@@ -306,6 +326,7 @@ namespace projectFrameCut.InteractableEditor
         public ContentView RealtimePreviewHost => LivePreviewerHost;
         public Image StaticPreviewOverlayImage => PreviewOverlayImage;
         public bool IsPlacingReferenceLine => _isPlacingReferenceLine && _pendingReferenceLineOrientation != null;
+        private double ZoomScale => Math.Max(MinZoomScale, _zoomScale);
 
         public void SetRealtimePreviewContent(View? content)
         {
@@ -416,11 +437,11 @@ namespace projectFrameCut.InteractableEditor
                 BrPan.PanUpdated += (_, e) => _owner.OnResizePanUpdated(this, ResizeHandle.BottomRight, e);
 
                 var rootTap = new TapGestureRecognizer();
-                rootTap.Tapped += (_, _) => _owner.OnClipOverlayTapped(this);
+                rootTap.Tapped += (_, e) => _owner.OnClipOverlayTapped(this, e);
                 Root.GestureRecognizers.Add(rootTap);
 
                 var rootDoubleTap = new TapGestureRecognizer { NumberOfTapsRequired = 2 };
-                rootDoubleTap.Tapped += (_, _) => _owner.OnClipOverlayDoubleTapped(this);
+                rootDoubleTap.Tapped += (_, e) => _owner.OnClipOverlayDoubleTapped(this, e);
                 Root.GestureRecognizers.Add(rootDoubleTap);
 
                 ClipVisual.GestureRecognizers.Add(ClipPan);
@@ -470,6 +491,7 @@ namespace projectFrameCut.InteractableEditor
             private Image? _imageBufferA;
             private Image? _imageBufferB;
             private Image? _activeImageBuffer;
+            public Func<double, double, bool>? IsTransparentAt { get; private set; }
 
             private static BoxView CreateHandle()
             {
@@ -571,6 +593,7 @@ namespace projectFrameCut.InteractableEditor
                 Root.IsVisible = false;
                 PreviewHost.IsVisible = false;
                 PreviewHost.Content = null;
+                IsTransparentAt = null;
                 SizeLabel.IsVisible = false;
                 DebugLabel.IsVisible = false;
                 ClearCustomHandles();
@@ -637,8 +660,8 @@ namespace projectFrameCut.InteractableEditor
                                     startHy = handle.TranslationY;
                                     break;
                                 case GestureStatus.Running:
-                                    handle.TranslationX = startHx + e.TotalX;
-                                    handle.TranslationY = startHy + e.TotalY;
+                                    handle.TranslationX = startHx + e.TotalX / _owner.ZoomScale;
+                                    handle.TranslationY = startHy + e.TotalY / _owner.ZoomScale;
                                     break;
                                 case GestureStatus.Completed:
                                 case GestureStatus.Canceled:
@@ -680,13 +703,15 @@ namespace projectFrameCut.InteractableEditor
 
             public bool HasPreviewView => PreviewHost.Content is not null;
 
-            public void SetPreviewView(View? view, bool keepExistingWhenNull = false)
+            public void SetPreviewView(View? view, bool keepExistingWhenNull = false, Func<double, double, bool>? isTransparentAt = null)
             {
                 if (view is null && keepExistingWhenNull)
                 {
                     UpdatePreviewHostVisibility();
                     return;
                 }
+
+                IsTransparentAt = view is null ? null : isTransparentAt;
 
                 if (view is null)
                 {
@@ -942,6 +967,7 @@ namespace projectFrameCut.InteractableEditor
 
         public void SelectClip(Guid? clipId)
         {
+            var previousClipId = _currentClip?.Id;
             CancelPendingCommitUpdate();
             _isClipPanInProgress = false;
             _isHandleResizeInProgress = false;
@@ -951,13 +977,15 @@ namespace projectFrameCut.InteractableEditor
             {
                 _currentClip = null;
                 SetActiveState(null);
-                UpdateVisuals();
+                UpdateVisuals(clipFilter: previousClipId.HasValue ? new HashSet<Guid> { previousClipId.Value } : null);
                 return;
             }
 
             _currentClip = clip;
             SetActiveState(GetOrCreateClipState(clip));
-            UpdateVisuals();
+            var clipFilter = new HashSet<Guid> { clip.Id };
+            if (previousClipId.HasValue) clipFilter.Add(previousClipId.Value);
+            UpdateVisuals(clipFilter: clipFilter);
         }
 
         #endregion
@@ -979,11 +1007,326 @@ namespace projectFrameCut.InteractableEditor
             hoverPointer.PointerExited += OnBottomControlsHostExited;
             BottomControlsHost.GestureRecognizers.Add(hoverPointer);
 
+            var zoomHoverPointer = new PointerGestureRecognizer();
+            zoomHoverPointer.PointerEntered += OnZoomControlsHostEntered;
+            zoomHoverPointer.PointerExited += OnZoomControlsHostExited;
+            ZoomControlsHost.GestureRecognizers.Add(zoomHoverPointer);
+
             var infoHoverPointer = new PointerGestureRecognizer();
             infoHoverPointer.PointerEntered += OnInfoIndicatorEntered;
             infoHoverPointer.PointerExited += OnInfoIndicatorExited;
             InfoIndicatorHost.GestureRecognizers.Add(infoHoverPointer);
 
+            UpdateZoomControls();
+
+        }
+
+        protected override void OnHandlerChanged()
+        {
+            base.OnHandlerChanged();
+#if WINDOWS
+            if (_windowsZoomTarget is not null)
+            {
+                _windowsZoomTarget.PointerWheelChanged -= OnWindowsPointerWheelChanged;
+            }
+
+            _windowsZoomTarget = Handler?.PlatformView as Microsoft.UI.Xaml.UIElement;
+            if (_windowsZoomTarget is not null)
+            {
+                _windowsZoomTarget.PointerWheelChanged += OnWindowsPointerWheelChanged;
+            }
+#endif
+#if LINUX
+            if (_linuxZoomTarget is not null && _linuxScrollController is not null)
+            {
+                _linuxZoomTarget.RemoveController(_linuxScrollController);
+                _linuxScrollController.Dispose();
+            }
+
+            _linuxZoomTarget = Handler?.PlatformView as Gtk.Widget;
+            _linuxScrollController = null;
+            if (_linuxZoomTarget is not null)
+            {
+                _linuxScrollController = Gtk.EventControllerScroll.New(
+                    Gtk.EventControllerScrollFlags.Vertical | Gtk.EventControllerScrollFlags.Discrete);
+                _linuxScrollController.OnScroll += OnLinuxPointerWheelChanged;
+                _linuxZoomTarget.AddController(_linuxScrollController);
+            }
+#endif
+        }
+
+        private void OnViewportPinchUpdated(object? sender, PinchGestureUpdatedEventArgs e)
+        {
+            switch (e.Status)
+            {
+                case GestureStatus.Started:
+                    _isViewportPinching = true;
+                    _pinchStartScale = ZoomScale;
+                    CancelElementInteractionForViewportGesture();
+                    break;
+                case GestureStatus.Running:
+                    ApplyZoom(
+                        Math.Clamp(_pinchStartScale * e.Scale, MinZoomScale, MaxZoomScale),
+                        e.ScaleOrigin.X * _canvasWidth,
+                        e.ScaleOrigin.Y * _canvasHeight);
+                    break;
+                case GestureStatus.Completed:
+                case GestureStatus.Canceled:
+                    _isViewportPinching = false;
+                    LogDiagnostic($"[Zoom] Pinch completed at {ZoomScale:F2}x");
+                    break;
+            }
+        }
+
+        private void CancelElementInteractionForViewportGesture()
+        {
+            if (!_isClipPanInProgress && !_isHandleResizeInProgress && !_isShapeHandleDragInProgress) return;
+            var wasResize = _isHandleResizeInProgress;
+            _isClipPanInProgress = false;
+            _isHandleResizeInProgress = false;
+            _isShapeHandleDragInProgress = false;
+            _panPreviewRect = null;
+            if (_activeState is not null)
+            {
+                _activeState.Root.TranslationX = 0d;
+                _activeState.Root.TranslationY = 0d;
+                if (wasResize)
+                {
+                    _activeState.Root.ScaleX = _stateOrigScaleX;
+                    _activeState.Root.ScaleY = _stateOrigScaleY;
+                    _activeState.SizeLabel.ScaleX = 1d;
+                    _activeState.SizeLabel.ScaleY = 1d;
+                    _activeState.ClipVisual.StrokeThickness = _stateOrigThickness;
+                }
+            }
+            UpdateVisuals(true);
+            RequestInteractivePreviewRefresh();
+        }
+
+#if WINDOWS
+        private void OnWindowsPointerWheelChanged(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            var ctrlState = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(
+                Windows.System.VirtualKey.Control);
+            if ((ctrlState & Windows.UI.Core.CoreVirtualKeyStates.Down) == 0) return;
+
+            var point = e.GetCurrentPoint(_windowsZoomTarget);
+            if (point.Properties.IsHorizontalMouseWheel) return;
+
+            ApplyZoom(
+                Math.Clamp(ZoomScale * Math.Pow(1.15d, point.Properties.MouseWheelDelta / 120d), MinZoomScale, MaxZoomScale),
+                point.Position.X,
+                point.Position.Y);
+            e.Handled = true;
+            LogDiagnostic($"[Zoom] Ctrl+wheel changed zoom to {ZoomScale:F2}x");
+        }
+#endif
+
+#if LINUX
+        private bool OnLinuxPointerWheelChanged(Gtk.EventControllerScroll sender, Gtk.EventControllerScroll.ScrollSignalArgs e)
+        {
+            if (!sender.GetCurrentEventState().HasFlag(Gdk.ModifierType.ControlMask)) return false;
+
+            var currentEvent = sender.GetCurrentEvent();
+            if (!currentEvent.GetPosition(out var x, out var y))
+            {
+                x = _canvasWidth / 2d;
+                y = _canvasHeight / 2d;
+            }
+            else if (_linuxZoomTarget?.Root is Gtk.Widget root
+                && root.TranslateCoordinates(_linuxZoomTarget, x, y, out var localX, out var localY))
+            {
+                x = localX;
+                y = localY;
+            }
+            else
+            {
+                x = _canvasWidth / 2d;
+                y = _canvasHeight / 2d;
+            }
+
+            ApplyZoom(
+                Math.Clamp(ZoomScale * Math.Pow(1.15d, -e.Dy), MinZoomScale, MaxZoomScale),
+                x,
+                y);
+            LogDiagnostic($"[Zoom] Ctrl+wheel changed zoom to {ZoomScale:F2}x");
+            return true;
+        }
+#endif
+
+        private void ApplyZoom(double targetScale, double focalX, double focalY)
+        {
+            var oldScale = ZoomScale;
+            var contentX = (focalX - ZoomContent.TranslationX) / oldScale;
+            var contentY = (focalY - ZoomContent.TranslationY) / oldScale;
+
+            _zoomScale = Math.Clamp(targetScale, MinZoomScale, MaxZoomScale);
+            ZoomContent.Scale = _zoomScale;
+            ZoomContent.TranslationX = focalX - contentX * _zoomScale;
+            ZoomContent.TranslationY = focalY - contentY * _zoomScale;
+            ClampViewportTranslation();
+            if (ZoomScale > MinZoomScale)
+            {
+                EnsureOverviewImageSource();
+            }
+            else
+            {
+                ReleaseOverviewImageSource();
+            }
+            UpdateZoomControls();
+            UpdateOverviewViewport();
+        }
+
+        private void UpdateZoomControls()
+        {
+            ZoomOutButton.IsEnabled = ZoomScale > MinZoomScale;
+            ZoomInButton.IsEnabled = ZoomScale < MaxZoomScale;
+        }
+
+        private void ZoomOutButton_Clicked(object? sender, EventArgs e)
+        {
+            ApplyZoom(
+                Math.Max(MinZoomScale, ZoomScale / 1.25d),
+                _canvasWidth / 2d,
+                _canvasHeight / 2d);
+            LogDiagnostic($"[Zoom] Zoom-out button changed zoom to {ZoomScale:F2}x");
+        }
+
+        private void ZoomInButton_Clicked(object? sender, EventArgs e)
+        {
+            ApplyZoom(
+                Math.Min(MaxZoomScale, ZoomScale * 1.25d),
+                _canvasWidth / 2d,
+                _canvasHeight / 2d);
+            LogDiagnostic($"[Zoom] Zoom-in button changed zoom to {ZoomScale:F2}x");
+        }
+
+        private void EnsureOverviewImageSource()
+        {
+            if (_overviewImageSourceRequested || _overviewImageSourceProvider is null) return;
+            _overviewImageSourceRequested = true;
+            _ = LoadOverviewImageSourceAsync(_overviewImageSourceProvider, _overviewImageSourceVersion);
+        }
+
+        private async Task LoadOverviewImageSourceAsync(Func<Task<ImageSource?>> provider, int version)
+        {
+            try
+            {
+                var source = await provider();
+                if (version != Volatile.Read(ref _overviewImageSourceVersion)
+                    || ZoomScale <= MinZoomScale
+                    || !ReferenceEquals(provider, _overviewImageSourceProvider)) return;
+
+                await Dispatcher.DispatchAsync(() =>
+                {
+                    OverviewImage.Source = source;
+                    OverviewHost.IsVisible = source is not null;
+                    UpdateOverviewViewport();
+                    UpdateBottomControlsVisibility(GetRenderRect());
+                });
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Get overview image source", this);
+            }
+        }
+
+        private void ReleaseOverviewImageSource()
+        {
+            if (!_overviewImageSourceRequested && !OverviewHost.IsVisible) return;
+            Interlocked.Increment(ref _overviewImageSourceVersion);
+            _overviewImageSourceRequested = false;
+            OverviewImage.Source = null;
+            OverviewHost.IsVisible = false;
+            UpdateBottomControlsVisibility(GetRenderRect());
+        }
+
+        private void ClampViewportTranslation()
+        {
+            ZoomContent.TranslationX = Math.Clamp(
+                ZoomContent.TranslationX,
+                _canvasWidth * (1d - ZoomScale),
+                0d);
+            ZoomContent.TranslationY = Math.Clamp(
+                ZoomContent.TranslationY,
+                _canvasHeight * (1d - ZoomScale),
+                0d);
+        }
+
+        private Point GetViewportCenterNormalized()
+        {
+            if (_canvasWidth <= 0d || _canvasHeight <= 0d) return new Point(0.5d, 0.5d);
+            return new Point(
+                Math.Clamp((-ZoomContent.TranslationX + _canvasWidth / 2d) / (_canvasWidth * ZoomScale), 0d, 1d),
+                Math.Clamp((-ZoomContent.TranslationY + _canvasHeight / 2d) / (_canvasHeight * ZoomScale), 0d, 1d));
+        }
+
+        private void SetViewportCenter(double normalizedX, double normalizedY)
+        {
+            ZoomContent.TranslationX = _canvasWidth / 2d - Math.Clamp(normalizedX, 0d, 1d) * _canvasWidth * ZoomScale;
+            ZoomContent.TranslationY = _canvasHeight / 2d - Math.Clamp(normalizedY, 0d, 1d) * _canvasHeight * ZoomScale;
+            ClampViewportTranslation();
+            UpdateOverviewViewport();
+        }
+
+        private Rect GetOverviewImageRect()
+        {
+            var width = OverviewCanvas.Width;
+            var height = OverviewCanvas.Height;
+            if (width <= 0d || height <= 0d || _videoWidth <= 0d || _videoHeight <= 0d)
+                return Rect.Zero;
+
+            var scale = Math.Min(width / _videoWidth, height / _videoHeight);
+            var imageWidth = _videoWidth * scale;
+            var imageHeight = _videoHeight * scale;
+            return new Rect((width - imageWidth) / 2d, (height - imageHeight) / 2d, imageWidth, imageHeight);
+        }
+
+        private void UpdateOverviewViewport()
+        {
+            var imageRect = GetOverviewImageRect();
+            if (imageRect.Width <= 0d || imageRect.Height <= 0d) return;
+
+            var viewportWidth = imageRect.Width / ZoomScale;
+            var viewportHeight = imageRect.Height / ZoomScale;
+            var x = imageRect.X - ZoomContent.TranslationX / (_canvasWidth * ZoomScale) * imageRect.Width;
+            var y = imageRect.Y - ZoomContent.TranslationY / (_canvasHeight * ZoomScale) * imageRect.Height;
+            AbsoluteLayout.SetLayoutBounds(OverviewViewportIndicator, new Rect(x, y, viewportWidth, viewportHeight));
+        }
+
+        private void OnOverviewCanvasSizeChanged(object? sender, EventArgs e) => UpdateOverviewViewport();
+
+        private void OnOverviewTapped(object? sender, TappedEventArgs e)
+        {
+            if (e.GetPosition(OverviewCanvas) is not Point point) return;
+            var imageRect = GetOverviewImageRect();
+            if (imageRect.Width <= 0d || imageRect.Height <= 0d) return;
+            SetViewportCenter(
+                (point.X - imageRect.X) / imageRect.Width,
+                (point.Y - imageRect.Y) / imageRect.Height);
+        }
+
+        private void OnOverviewPanUpdated(object? sender, PanUpdatedEventArgs e)
+        {
+            var imageRect = GetOverviewImageRect();
+            if (imageRect.Width <= 0d || imageRect.Height <= 0d) return;
+
+            switch (e.StatusType)
+            {
+                case GestureStatus.Started:
+                    var center = GetViewportCenterNormalized();
+                    _overviewPanStartX = center.X;
+                    _overviewPanStartY = center.Y;
+                    break;
+                case GestureStatus.Running:
+                    SetViewportCenter(
+                        _overviewPanStartX + e.TotalX / imageRect.Width,
+                        _overviewPanStartY + e.TotalY / imageRect.Height);
+                    break;
+                case GestureStatus.Completed:
+                    LogDiagnostic($"[Zoom] Overview moved viewport at {ZoomScale:F2}x");
+                    break;
+            }
         }
 
         private sealed class CheckerboardDrawable : IDrawable
@@ -1020,6 +1363,21 @@ namespace projectFrameCut.InteractableEditor
         public InteractableEditor ConfigurePreviewRefresh(Func<Task>? refreshCallback)
         {
             _previewRefreshCallback = refreshCallback;
+            return this;
+        }
+
+        public InteractableEditor ConfigureOverviewImageSource(Func<Task<ImageSource?>>? provider)
+        {
+            Interlocked.Increment(ref _overviewImageSourceVersion);
+            _overviewImageSourceProvider = provider;
+            _overviewImageSourceRequested = false;
+            OverviewImage.Source = null;
+            OverviewHost.IsVisible = false;
+            if (provider is not null && ZoomScale > MinZoomScale)
+            {
+                EnsureOverviewImageSource();
+            }
+            UpdateBottomControlsVisibility(GetRenderRect());
             return this;
         }
 
@@ -1204,6 +1562,8 @@ namespace projectFrameCut.InteractableEditor
         void IInteractableEditor.RestoreReferenceLines(string? json) => RestoreReferenceLinesFromJson(json);
         IInteractableEditor IInteractableEditor.ConfigurePreviewRefresh(Func<Task>? callback)
             => ConfigurePreviewRefresh(callback);
+        IInteractableEditor IInteractableEditor.ConfigureOverviewImageSource(Func<Task<ImageSource?>>? provider)
+            => ConfigureOverviewImageSource(provider);
         IInteractableEditor IInteractableEditor.ConfigureInfoIndicator(bool isVisible, string? message)
             => ConfigureInfoIndicator(isVisible, message);
         IInteractableEditor IInteractableEditor.ConfigureElementClicked(InteractiveElementClickedHandler? callback)
@@ -1244,6 +1604,7 @@ namespace projectFrameCut.InteractableEditor
 
         public void UpdateCanvasSize(double width, double height, bool ignorePositionProvider = false)
         {
+            var viewportCenter = GetViewportCenterNormalized();
             // Round to integer pixels to match the canvas dimensions DynamicPreview
             // uses when it calls providers. If _canvasWidth/_canvasHeight keep
             // sub-pixel values while DynamicPreview rounds away, the two scales
@@ -1267,6 +1628,7 @@ namespace projectFrameCut.InteractableEditor
             // can't drag EditorCanvas's measure away from the real canvas size.
             AbsoluteLayout.SetLayoutBounds(DebugOverlay, new Rect(8, 8, 380, 240));
 
+            SetViewportCenter(viewportCenter.X, viewportCenter.Y);
             UpdateVisuals(ignorePositionProvider);
         }
 
@@ -1274,6 +1636,7 @@ namespace projectFrameCut.InteractableEditor
         {
             _videoWidth = width;
             _videoHeight = height;
+            UpdateOverviewViewport();
             UpdateVisuals(ignorePositionProvider);
         }
 
@@ -1369,27 +1732,19 @@ namespace projectFrameCut.InteractableEditor
             return !ShouldSuppressPreviewForResize(state.ClipId);
         }
 
-        private void OnClipOverlayTapped(ClipOverlayState state)
+        private void OnClipOverlayTapped(ClipOverlayState state, TappedEventArgs e)
         {
             if (!ShouldAllowOverlayTapSelection(state))
             {
                 return;
             }
 
-            SelectClip(state.ClipId);
-
-            var callback = _overlayClipTappedCallback;
-            if (callback is null)
-            {
-                return;
-            }
-
             Interlocked.Exchange(ref _lastOverlayTapTick, Environment.TickCount64);
-
-            _ = InvokeOverlayClipTappedAsync(callback, state.ClipId);
+            var tapPoint = e.GetPosition(EditorCanvas);
+            ActivateClipAtPoint(tapPoint, state);
         }
 
-        private void OnClipOverlayDoubleTapped(ClipOverlayState state)
+        private void OnClipOverlayDoubleTapped(ClipOverlayState state, TappedEventArgs e)
         {
             var callback = _overlayClipDoubleTappedCallback;
             if (callback is null)
@@ -1397,7 +1752,15 @@ namespace projectFrameCut.InteractableEditor
                 return;
             }
 
-            _ = InvokeOverlayClipDoubleTappedAsync(callback, state.ClipId);
+            Interlocked.Exchange(ref _lastOverlayTapTick, Environment.TickCount64);
+            var target = e.GetPosition(EditorCanvas) is Point tapPoint
+                ? ResolveClipAtPoint(tapPoint)
+                : state;
+            if (target is not null)
+            {
+                SelectClip(target.ClipId);
+                _ = InvokeOverlayClipDoubleTappedAsync(callback, target.ClipId);
+            }
         }
 
         private void OnEditorCanvasTapped(object? sender, TappedEventArgs e)
@@ -1452,20 +1815,48 @@ namespace projectFrameCut.InteractableEditor
                 return;
             }
 
-            if (IsPointInsideAnyVisibleClipState(tapPoint.Value))
+            var target = ResolveClipAtPoint(tapPoint.Value);
+            if (target is not null)
             {
+                ActivateClip(target);
                 return;
             }
 
             _ = InvokeBlankAreaTappedAsync(callback);
         }
 
-        private bool IsPointInsideAnyVisibleClipState(Point tapPoint)
+        private void ActivateClipAtPoint(Point? tapPoint, ClipOverlayState fallback)
+        {
+            var target = tapPoint is Point point ? ResolveClipAtPoint(point) : fallback;
+            if (target is not null)
+            {
+                ActivateClip(target);
+                return;
+            }
+
+            if (_blankAreaTappedCallback is not null)
+            {
+                _ = InvokeBlankAreaTappedAsync(_blankAreaTappedCallback);
+            }
+        }
+
+        private void ActivateClip(ClipOverlayState state)
+        {
+            SelectClip(state.ClipId);
+            if (_overlayClipTappedCallback is not null)
+            {
+                _ = InvokeOverlayClipTappedAsync(_overlayClipTappedCallback, state.ClipId);
+            }
+        }
+
+        private ClipOverlayState? ResolveClipAtPoint(Point tapPoint)
         {
             var hostOffsetX = ClipStatesHost.X;
             var hostOffsetY = ClipStatesHost.Y;
 
-            foreach (var state in _clipStates.Values)
+            foreach (var state in _clipStates.Values
+                .OrderByDescending(state => state.Root.ZIndex)
+                .ThenByDescending(state => ClipStatesHost.Children.IndexOf(state.Root)))
             {
                 if (!state.Root.IsVisible)
                 {
@@ -1483,13 +1874,31 @@ namespace projectFrameCut.InteractableEditor
                 var right = left + bounds.Width;
                 var bottom = top + bounds.Height;
 
-                if (tapPoint.X >= left && tapPoint.X <= right && tapPoint.Y >= top && tapPoint.Y <= bottom)
+                if (tapPoint.X < left || tapPoint.X > right || tapPoint.Y < top || tapPoint.Y > bottom)
                 {
-                    return true;
+                    continue;
+                }
+
+                if (state.IsTransparentAt is null)
+                {
+                    return state;
+                }
+
+                try
+                {
+                    if (!state.IsTransparentAt((tapPoint.X - left) / bounds.Width, (tapPoint.Y - top) / bounds.Height))
+                    {
+                        return state;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Resolve transparent hit for clip {state.ClipId}", this);
+                    return state;
                 }
             }
 
-            return false;
+            return null;
         }
 
         private async Task InvokeOverlayClipTappedAsync(Func<Guid, Task> callback, Guid clipId)
@@ -1601,6 +2010,7 @@ namespace projectFrameCut.InteractableEditor
 
         private void OnCustomHandlePanUpdated(Guid clipId, string handleId, PanUpdatedEventArgs e)
         {
+            if (_isViewportPinching) return;
             switch (e.StatusType)
             {
                 case GestureStatus.Started:
@@ -1634,8 +2044,8 @@ namespace projectFrameCut.InteractableEditor
             {
                 ClipId = clipId,
                 HandleId = handleId,
-                DisplayW = rootBounds.Width,
-                DisplayH = rootBounds.Height,
+                DisplayW = rootBounds.Width * ZoomScale,
+                DisplayH = rootBounds.Height * ZoomScale,
                 LogicalW = logicalW,
                 LogicalH = logicalH,
             };
@@ -1900,6 +2310,7 @@ namespace projectFrameCut.InteractableEditor
 
         public void SetClip(projectFrameCut.DraftStuff.ClipElementUI? clip, AssetItem? asset)
         {
+            var previousClipId = _currentClip?.Id;
             CancelPendingCommitUpdate();
 
             _currentClip = clip;
@@ -1910,6 +2321,10 @@ namespace projectFrameCut.InteractableEditor
             if (clip == null)
             {
                 SetActiveState(null);
+                if (previousClipId.HasValue)
+                {
+                    UpdateVisuals(clipFilter: new HashSet<Guid> { previousClipId.Value });
+                }
                 //this.IsVisible = false;
                 //this.InputTransparent = true;
                 //RenderRectVisual.IsVisible = false;
@@ -1921,6 +2336,10 @@ namespace projectFrameCut.InteractableEditor
             if (IsNonVisualClipType(clip.ClipType))
             {
                 SetActiveState(null);
+                if (previousClipId.HasValue)
+                {
+                    UpdateVisuals(clipFilter: new HashSet<Guid> { previousClipId.Value });
+                }
                 Interlocked.Exchange(ref _hasPendingPreviewRefresh, 0);
                 return;
             }
@@ -1936,7 +2355,9 @@ namespace projectFrameCut.InteractableEditor
             _baseRect = new Rect(0, 0, baseW, baseH);
 
             SetActiveState(GetOrCreateClipState(clip));
-            UpdateVisuals();
+            var clipFilter = new HashSet<Guid> { clip.Id };
+            if (previousClipId.HasValue) clipFilter.Add(previousClipId.Value);
+            UpdateVisuals(clipFilter: clipFilter);
 
             // 确保手势识别器在新的容器环境中正确工作。
             // 但如果正在交互中（拖拽/缩放），跳过刷新以避免销毁正在活跃的 GestureRecognizer，
@@ -2111,7 +2532,7 @@ namespace projectFrameCut.InteractableEditor
             return new Rect(offX, offY, drawW, drawH);
         }
 
-        private void UpdateVisuals(bool ignorePositionProvider = false)
+        private void UpdateVisuals(bool ignorePositionProvider = false, IReadOnlySet<Guid>? clipFilter = null)
         {
             if (_videoWidth <= 0 || _videoHeight <= 0 || _canvasWidth <= 0 || _canvasHeight <= 0)
                 return;
@@ -2144,13 +2565,14 @@ namespace projectFrameCut.InteractableEditor
                 // 当使用DraftPage中的所有clips时，先处理多clips模式
                 if (_allClips is not null)
                 {
-                    UpdateVisualsForMultipleClips(renderRect, scale, ignorePositionProvider);
+                    UpdateVisualsForMultipleClips(renderRect, scale, ignorePositionProvider, clipFilter);
                     return;
                 }
 
                 foreach (var entry in _clipStates)
                 {
                     var clipId = entry.Key;
+                    if (clipFilter is not null && !clipFilter.Contains(clipId)) continue;
                     var state = entry.Value;
                     Stopwatch sw = Stopwatch.StartNew();
 
@@ -2461,7 +2883,7 @@ namespace projectFrameCut.InteractableEditor
                     }
                     else
                     {
-                        state.SetPreviewView(prepared.View);
+                        state.SetPreviewView(prepared.View, isTransparentAt: prepared.IsTransparentAt);
                         hasVisiblePreview = true;
                     }
                 }
@@ -2646,7 +3068,7 @@ namespace projectFrameCut.InteractableEditor
             RenderRectVisual.IsVisible = true;
         }
 
-        private void UpdateVisualsForMultipleClips(Rect renderRect, double scale, bool ignorePositionProvider)
+        private void UpdateVisualsForMultipleClips(Rect renderRect, double scale, bool ignorePositionProvider, IReadOnlySet<Guid>? clipFilter)
         {
             //LogDiagnostic($"Updating visuals for {_allClips.Count} clips, scale: {scale}");
             if (_allClips is null || _allClips.Count == 0)
@@ -2655,7 +3077,10 @@ namespace projectFrameCut.InteractableEditor
                 return;
             }
 
-            var activeClips = _allClips.Values.Where(IsClipVisibleInCurrentFrame);
+            var activeClips = _allClips.Values
+                .Where(IsClipVisibleInCurrentFrame)
+                .Where(c => clipFilter is null || clipFilter.Contains(c.Id))
+                .ToList();
             var activeClipIds = activeClips.Select(c => c.Id).ToHashSet();
 
             // 遍历所有clips，筛选出在当前帧范围内的clips
@@ -2777,18 +3202,20 @@ namespace projectFrameCut.InteractableEditor
             }
 
             // 隐藏不再活跃的clips
-            var inactiveIds = _clipStates.Keys.Except(activeClipIds).ToList();
-            MainThread.BeginInvokeOnMainThread(() =>
+            if (clipFilter is null)
             {
-                foreach (var inactiveId in inactiveIds)
+                var inactiveIds = _clipStates.Keys.Except(activeClipIds).ToList();
+                MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    if (_clipStates.TryGetValue(inactiveId, out var state))
+                    foreach (var inactiveId in inactiveIds)
                     {
-                        state.Hide();
+                        if (_clipStates.TryGetValue(inactiveId, out var state))
+                        {
+                            state.Hide();
+                        }
                     }
-                }
-
-            });
+                });
+            }
 
 
             ReorderClipStateRootsByZIndex();
@@ -2937,6 +3364,7 @@ namespace projectFrameCut.InteractableEditor
 
         private void OnClipPanUpdated(ClipOverlayState state, PanUpdatedEventArgs e)
         {
+            if (_isViewportPinching) return;
             if (LockLayout) return;
             LogDiagnostic($"[Pan] OnClipPanUpdated fired, id:{e.GestureId}, StatusType:{e.StatusType}, last update:{_panTimer.ElapsedTicks - _lastPanUpdateTicks}");
 
@@ -2980,12 +3408,12 @@ namespace projectFrameCut.InteractableEditor
 
                 case GestureStatus.Running:
                     {
-                        _activeState.Root.TranslationX = _stateOrigX + e.TotalX;
-                        _activeState.Root.TranslationY = _stateOrigY + e.TotalY;
+                        _activeState.Root.TranslationX = _stateOrigX + e.TotalX / ZoomScale;
+                        _activeState.Root.TranslationY = _stateOrigY + e.TotalY / ZoomScale;
                         if (_panTimer.ElapsedTicks - _lastPanUpdateTicks < 200) return;
 
                         Rect renderRect = GetRenderRect();
-                        double scale = Math.Max(renderRect.Width, 0.001) / _videoWidth;
+                        double scale = Math.Max(renderRect.Width, 0.001) / _videoWidth * ZoomScale;
                         if (renderRect.Width <= 0 || renderRect.Height <= 0 || scale <= 0.001) break;
                         double deltaX = e.TotalX / scale;
                         double deltaY = e.TotalY / scale;
@@ -2999,8 +3427,8 @@ namespace projectFrameCut.InteractableEditor
                         _panPreviewRect = ApplyClipSnapping(unsnapped, snapThresholdVideo, handle: null);
 
                         // Snap visual to the snapped preview rect for magnetic feel
-                        _activeState.Root.TranslationX = _stateOrigX + (_panPreviewRect.Value.X - _startX) * scale;
-                        _activeState.Root.TranslationY = _stateOrigY + (_panPreviewRect.Value.Y - _startY) * scale;
+                        _activeState.Root.TranslationX = _stateOrigX + (_panPreviewRect.Value.X - _startX) * scale / ZoomScale;
+                        _activeState.Root.TranslationY = _stateOrigY + (_panPreviewRect.Value.Y - _startY) * scale / ZoomScale;
 
                         LogDiagnostic($"[Pan] Updated: triggered {_panEventTriggerCounter} times, Pos=({_panPreviewRect.Value.X:F1}, {_panPreviewRect.Value.Y:F1}), Delta=({deltaX:F1}, {deltaY:F1}) , elapsed:{_panTimer.Elapsed}, last update: {_panTimer.ElapsedTicks - _lastPanUpdateTicks}");
                         _lastPanUpdateTicks = _panTimer.ElapsedTicks;
@@ -3045,6 +3473,7 @@ namespace projectFrameCut.InteractableEditor
 
         private void OnResizePanUpdated(ClipOverlayState state, ResizeHandle handle, PanUpdatedEventArgs e)
         {
+            if (_isViewportPinching) return;
             if (LockLayout) return;
             LogDiagnostic($"[Pan] OnResizePanUpdated fired, last update:{_panTimer.ElapsedTicks - _lastPanUpdateTicks}");
 
@@ -3095,7 +3524,7 @@ namespace projectFrameCut.InteractableEditor
                     Rect renderRect = GetRenderRect();
                     if (renderRect.Width <= 0 || renderRect.Height <= 0) break;
 
-                    double scale = Math.Max(renderRect.Width, 0.001) / _videoWidth;
+                    double scale = Math.Max(renderRect.Width, 0.001) / _videoWidth * ZoomScale;
                     if (scale <= 0.001) break;
 
                     double dx = e.TotalX / scale;
@@ -3168,8 +3597,8 @@ namespace projectFrameCut.InteractableEditor
                     double sy = newH / Math.Max(_startH, 0.001);
                     _activeState.Root.ScaleX = _stateOrigScaleX * sx;
                     _activeState.Root.ScaleY = _stateOrigScaleY * sy;
-                    _activeState.Root.TranslationX = _stateOrigX + scale * ((newX - _startX) + (newW - _startW) / 2);
-                    _activeState.Root.TranslationY = _stateOrigY + scale * ((newY - _startY) + (newH - _startH) / 2);
+                    _activeState.Root.TranslationX = _stateOrigX + scale / ZoomScale * ((newX - _startX) + (newW - _startW) / 2);
+                    _activeState.Root.TranslationY = _stateOrigY + scale / ZoomScale * ((newY - _startY) + (newH - _startH) / 2);
                     _activeState.HandleBL.ScaleX = 1 / (_stateOrigScaleX * sx);
                     _activeState.HandleBL.ScaleY = 1 / (_stateOrigScaleY * sy);
                     _activeState.HandleBR.ScaleX = 1 / (_stateOrigScaleX * sx);
@@ -4447,7 +4876,17 @@ namespace projectFrameCut.InteractableEditor
             var rightGap = _canvasWidth - (renderRect.X + renderRect.Width);
             var controlsWidth = BottomControlsHost.Width;
             var hasControlsHorizontalRoom = controlsWidth > 0d
-                && rightGap >= controlsWidth + BottomControlsHost.Margin.Right;
+                && rightGap >= controlsWidth + 8d;
+            var zoomControlsWidth = Math.Max(
+                ZoomControlsHost.Width,
+                OverviewHost.IsVisible ? OverviewHost.WidthRequest : 0d);
+            var zoomControlsHeight = ZoomControlsHost.Height;
+            var zoomStackHeight = zoomControlsHeight
+                + (OverviewHost.IsVisible ? OverviewHost.HeightRequest + 8d : 0d);
+            var hasZoomHorizontalRoom = zoomControlsWidth > 0d
+                && leftGap >= zoomControlsWidth + LeftControlsHost.Margin.Left;
+            var hasZoomVerticalRoom = zoomControlsHeight > 0d
+                && bottomGap >= zoomStackHeight + LeftControlsHost.Margin.Bottom;
             var infoIndicatorWidth = InfoIndicatorHost.Width > 0d
                 ? InfoIndicatorHost.Width
                 : InfoIndicatorHost.WidthRequest;
@@ -4455,17 +4894,20 @@ namespace projectFrameCut.InteractableEditor
                 ? InfoIndicatorHost.Height
                 : InfoIndicatorHost.HeightRequest;
             var hasInfoHorizontalRoom = infoIndicatorWidth > 0d
-                && leftGap >= infoIndicatorWidth + InfoIndicatorHost.Margin.Left;
+                && leftGap >= Math.Max(infoIndicatorWidth, zoomControlsWidth) + LeftControlsHost.Margin.Left;
             var hasInfoVerticalRoom = infoIndicatorHeight > 0d
-                && bottomGap >= infoIndicatorHeight + InfoIndicatorHost.Margin.Bottom;
+                && bottomGap >= infoIndicatorHeight + zoomStackHeight + 16d;
 
             // Keep the controls visible whenever they fit beside or below the preview.
             // Only fall back to hover-to-show when both directions would overlap it.
-            _autoHideBottomControls = bottomGap < 35d && !hasControlsHorizontalRoom;
+            var controlsHeight = BottomControlsHost.Height;
+            _autoHideBottomControls = bottomGap < controlsHeight + 8d && !hasControlsHorizontalRoom;
+            _autoHideZoomControls = !hasZoomVerticalRoom && !hasZoomHorizontalRoom;
             _autoHideInfoIndicator = !hasInfoVerticalRoom && !hasInfoHorizontalRoom;
 
             Dispatcher.Dispatch(() =>
             {
+                InfoDetailsOverlay.Margin = new Thickness(8d, 8d, 8d, Math.Max(64d, zoomStackHeight + 16d));
                 if (!_autoHideBottomControls)
                 {
                     CancelHideBottomControlsDebounce();
@@ -4474,6 +4916,16 @@ namespace projectFrameCut.InteractableEditor
                 else if (!_isPointerOverBottomControls)
                 {
                     BottomControlsHost.Opacity = 0d;
+                }
+
+                if (!_autoHideZoomControls)
+                {
+                    CancelHideZoomControlsDebounce();
+                    ZoomControlsHost.Opacity = 1d;
+                }
+                else if (!_isPointerOverZoomControls)
+                {
+                    ZoomControlsHost.Opacity = 0d;
                 }
 
                 if (!InfoIndicatorHost.IsVisible)
@@ -4510,6 +4962,14 @@ namespace projectFrameCut.InteractableEditor
             }
         }
 
+        private void OnZoomControlsHostSizeChanged(object? sender, EventArgs e)
+        {
+            if (_videoWidth > 0d && _videoHeight > 0d && _canvasWidth > 0d && _canvasHeight > 0d)
+            {
+                UpdateBottomControlsVisibility(GetRenderRect());
+            }
+        }
+
         private void OnBottomControlsHostEntered(object? sender, PointerEventArgs e)
         {
             _isPointerOverBottomControls = true;
@@ -4526,6 +4986,22 @@ namespace projectFrameCut.InteractableEditor
             }
 
             ScheduleBottomControlsHide(250);
+        }
+
+        private void OnZoomControlsHostEntered(object? sender, PointerEventArgs e)
+        {
+            _isPointerOverZoomControls = true;
+            CancelHideZoomControlsDebounce();
+            ZoomControlsHost.Opacity = 1d;
+        }
+
+        private void OnZoomControlsHostExited(object? sender, PointerEventArgs e)
+        {
+            _isPointerOverZoomControls = false;
+            if (_autoHideZoomControls)
+            {
+                ScheduleZoomControlsHide(250);
+            }
         }
 
         private void OnInfoIndicatorEntered(object? sender, PointerEventArgs e)
@@ -4558,6 +5034,14 @@ namespace projectFrameCut.InteractableEditor
             _ = HideBottomControlsAfterDelayAsync(delayMs, cts);
         }
 
+        private void ScheduleZoomControlsHide(int delayMs)
+        {
+            CancelHideZoomControlsDebounce();
+            var cts = new CancellationTokenSource();
+            _hideZoomControlsCts = cts;
+            _ = HideZoomControlsAfterDelayAsync(delayMs, cts);
+        }
+
         private async Task HideBottomControlsAfterDelayAsync(int delayMs, CancellationTokenSource cts)
         {
             try
@@ -4575,6 +5059,28 @@ namespace projectFrameCut.InteractableEditor
             finally
             {
                 if (ReferenceEquals(Interlocked.CompareExchange(ref _hideBottomControlsCts, null, cts), cts))
+                {
+                    cts.Dispose();
+                }
+            }
+        }
+
+        private async Task HideZoomControlsAfterDelayAsync(int delayMs, CancellationTokenSource cts)
+        {
+            try
+            {
+                await Task.Delay(Math.Max(0, delayMs), cts.Token);
+                if (!_isPointerOverZoomControls && _autoHideZoomControls)
+                {
+                    ZoomControlsHost.Opacity = 0d;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            finally
+            {
+                if (ReferenceEquals(Interlocked.CompareExchange(ref _hideZoomControlsCts, null, cts), cts))
                 {
                     cts.Dispose();
                 }
@@ -4616,6 +5122,16 @@ namespace projectFrameCut.InteractableEditor
         private void CancelHideBottomControlsDebounce()
         {
             var cts = Interlocked.Exchange(ref _hideBottomControlsCts, null);
+            if (cts is not null)
+            {
+                cts.Cancel();
+                cts.Dispose();
+            }
+        }
+
+        private void CancelHideZoomControlsDebounce()
+        {
+            var cts = Interlocked.Exchange(ref _hideZoomControlsCts, null);
             if (cts is not null)
             {
                 cts.Cancel();

@@ -1,0 +1,4 @@
+interface:
+  display_name: "projectFrameCut PowerShell"
+  short_description: "Operate projectFrameCut projects through PowerShell"
+  default_prompt: "Use $projectframecut-powershell to open, connect to, inspect, edit, and save a projectFrameCut project through the PowerShell module."

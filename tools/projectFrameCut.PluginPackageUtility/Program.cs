@@ -63,6 +63,8 @@ internal static class PluginPackageCli
         string? mainAssembly = null;
         int? pluginApiVersion = null;
         int? pluginApiMinorVersion = null;
+        var isAppLevelPlugin = false;
+        var maximumSupportedIsolationMode = PluginIsolationMode.Containerized;
         var passwordFromStandardInput = false;
         var force = false;
 
@@ -122,6 +124,16 @@ internal static class PluginPackageCli
                 case "--api-minor-version":
                     pluginApiMinorVersion = ReadIntValue(args, ref index, argument);
                     break;
+                case "--app-level":
+                    isAppLevelPlugin = true;
+                    break;
+                case "--maximum-isolation-mode":
+                    if (!Enum.TryParse<PluginIsolationMode>(ReadValue(args, ref index, argument), true, out maximumSupportedIsolationMode) ||
+                        !Enum.IsDefined(maximumSupportedIsolationMode))
+                    {
+                        throw new ArgumentException($"Option '{argument}' must be Containerized, Process, or None.");
+                    }
+                    break;
                 case "--force":
                     force = true;
                     break;
@@ -176,6 +188,8 @@ internal static class PluginPackageCli
             MainAssemblyPath = mainAssembly,
             PluginApiVersion = pluginApiVersion,
             PluginApiMinorVersion = pluginApiMinorVersion,
+            IsAppLevelPlugin = isAppLevelPlugin,
+            MaximumSupportedIsolationMode = maximumSupportedIsolationMode,
             Force = force
         };
     }
@@ -210,6 +224,7 @@ internal static class PluginPackageCli
         Console.WriteLine("The staging directory must contain <PluginID>.dll.");
         Console.WriteLine("If metadata.json is absent, generate it with --plugin-id and --version.");
         Console.WriteLine("Use --main-assembly when the assembly file name differs from the plugin ID.");
+        Console.WriteLine("Use --app-level and --maximum-isolation-mode to declare plugin runtime requirements.");
         Console.WriteLine("metadata.json and hashtable.json are generated in the package.");
         Console.WriteLine("All files outside data/ and option.json are immutable and are covered by the manifest.");
     }
@@ -232,6 +247,8 @@ public sealed class PluginPackageOptions
     public string? MainAssemblyPath { get; init; }
     public int? PluginApiVersion { get; init; }
     public int? PluginApiMinorVersion { get; init; }
+    public bool IsAppLevelPlugin { get; init; }
+    public PluginIsolationMode MaximumSupportedIsolationMode { get; init; } = PluginIsolationMode.Containerized;
     public bool Force { get; init; }
 }
 
@@ -302,6 +319,10 @@ public static class PluginPackageBuilder
                 : CreateMetadata(options);
 
             ValidatePluginId(metadata.PluginID);
+            if (!Enum.IsDefined(metadata.MaximumSupportedIsolationMode))
+            {
+                throw new InvalidDataException("metadata.json contains an invalid MaximumSupportedIsolationMode.");
+            }
             var assemblyPath = ResolveAssemblyPath(inputDirectory, metadata.PluginID, options.MainAssemblyPath);
             if (!File.Exists(assemblyPath))
             {
@@ -469,6 +490,8 @@ public static class PluginPackageBuilder
             PluginID = pluginId,
             PluginAPIVersion = options.PluginApiVersion ?? IPluginBase.CurrentPluginAPIVersion,
             PluginAPIMinorVersion = options.PluginApiMinorVersion ?? 0,
+            IsAppLevelPlugin = options.IsAppLevelPlugin,
+            MaximumSupportedIsolationMode = options.MaximumSupportedIsolationMode,
             Name = options.Name ?? pluginId,
             Author = options.Author ?? string.Empty,
             Description = options.Description ?? string.Empty,

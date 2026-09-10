@@ -13,13 +13,6 @@ using System.Threading.Tasks;
 
 namespace projectFrameCut.Services
 {
-    public enum PluginIsolationMode
-    {
-        Containerized,
-        Process,
-        None,
-    }
-
     public static class PluginService
     {
         public const int PluginAPIVersion = IPluginBase.CurrentPluginAPIVersion;
@@ -172,6 +165,8 @@ namespace projectFrameCut.Services
                     PackageFormatVersion = metadata.PackageFormatVersion,
                     PublisherId = metadata.PublisherId,
                     SigningCertificateFingerprint = metadata.SigningCertificateFingerprint,
+                    IsAppLevelPlugin = metadata.IsAppLevelPlugin,
+                    MaximumSupportedIsolationMode = metadata.MaximumSupportedIsolationMode,
                 });
                 await File.WriteAllTextAsync(itemsPath, JsonSerializer.Serialize(items));
 
@@ -274,6 +269,12 @@ namespace projectFrameCut.Services
                     return (null, "The plugin assembly id does not match the signed package metadata.");
                 }
 
+                if (verification.Metadata.IsAppLevelPlugin is bool isAppLevelPlugin &&
+                    isAppLevelPlugin != (plugin is IApplicationPluginBase))
+                {
+                    return (null, "The plugin application-level declaration does not match the signed package metadata.");
+                }
+
                 if (plugin is IApplicationPluginBase applicationPlugin &&
                     applicationPlugin.AppLevelPluginAPIVersion != IApplicationPluginBase.CurrentAppLevelPluginAPIVersion)
                 {
@@ -306,11 +307,20 @@ namespace projectFrameCut.Services
                     return (null, onLoadedFailure);
                 }
 
+                var requestedIsolationMode = isolationMode ?? GetConfiguredIsolationMode(pluginID);
+                var isolationModeToUse = ConstrainIsolationMode(
+                    requestedIsolationMode,
+                    verification.Metadata.MaximumSupportedIsolationMode);
+                if (isolationModeToUse != requestedIsolationMode)
+                {
+                    Log($"Plugin '{pluginID}' requested {requestedIsolationMode} isolation, using supported mode {isolationModeToUse}.");
+                }
+
                 plugin = await PluginIsolationFactory.CreateAsync(
                     plugin,
                     verification,
                     pluginRoot,
-                    NormalizeIsolationMode(isolationMode ?? GetConfiguredIsolationMode(pluginID)));
+                    isolationModeToUse);
 
                 return (plugin, string.Empty);
             }
@@ -533,15 +543,15 @@ namespace projectFrameCut.Services
 
         public static PluginIsolationMode GetConfiguredIsolationMode(string pluginID)
         {
-            if (!TryGetPluginItem(pluginID, out _))
+            if (!TryGetPluginItem(pluginID, out var plugin))
             {
                 return GetDefaultIsolationMode();
             }
 
             var modes = ReadIsolationModes();
-            return modes.TryGetValue(pluginID, out var mode)
+            return ConstrainIsolationMode(modes.TryGetValue(pluginID, out var mode)
                 ? NormalizeIsolationMode(mode)
-                : GetDefaultIsolationMode();
+                : GetDefaultIsolationMode(), plugin!.MaximumSupportedIsolationMode);
         }
 
         public static void SetPluginIsolationMode(string pluginID, PluginIsolationMode mode)
@@ -552,7 +562,12 @@ namespace projectFrameCut.Services
                 throw new KeyNotFoundException($"Plugin '{pluginID}' is not installed.");
             }
 
+            var item = items.First(c => c.Id == pluginID);
             var normalizedMode = NormalizeIsolationMode(mode);
+            if (ConstrainIsolationMode(normalizedMode, item.MaximumSupportedIsolationMode) != normalizedMode)
+            {
+                throw new NotSupportedException($"Plugin '{pluginID}' does not support {normalizedMode} isolation.");
+            }
             var modes = ReadIsolationModes();
             modes[pluginID] = normalizedMode;
             WriteIsolationModes(modes);
@@ -566,9 +581,21 @@ namespace projectFrameCut.Services
         {
             if (!Enum.IsDefined(mode)) return GetDefaultIsolationMode();
             if (mode == PluginIsolationMode.Containerized && !OperatingSystem.IsWindows()) return PluginIsolationMode.None;
-            if (mode == PluginIsolationMode.Process && !DesktopPluginIsolationPlatform.IsSupported) return PluginIsolationMode.None;
+            if (mode == PluginIsolationMode.ProcessIsolation && !DesktopPluginIsolationPlatform.IsSupported) return PluginIsolationMode.None;
             return mode;
         }
+
+        public static PluginIsolationMode ConstrainIsolationMode(PluginIsolationMode mode, PluginIsolationMode maximumSupportedMode)
+        {
+            if (!Enum.IsDefined(maximumSupportedMode)) maximumSupportedMode = PluginIsolationMode.Containerized;
+            var normalizedMode = NormalizeIsolationMode(mode);
+            return (int)normalizedMode < (int)maximumSupportedMode
+                ? NormalizeIsolationMode(maximumSupportedMode)
+                : normalizedMode;
+        }
+
+        public static bool SupportsIsolationMode(PluginIsolationMode mode, PluginIsolationMode maximumSupportedMode) =>
+            Enum.IsDefined(mode) && Enum.IsDefined(maximumSupportedMode) && (int)mode >= (int)maximumSupportedMode;
 
         private static List<PluginItem> ReadPluginItems()
         {
@@ -719,6 +746,8 @@ namespace projectFrameCut.Services
             public int PackageFormatVersion { get; set; }
             public string PublisherId { get; set; } = string.Empty;
             public string SigningCertificateFingerprint { get; set; } = string.Empty;
+            public bool? IsAppLevelPlugin { get; set; }
+            public PluginIsolationMode MaximumSupportedIsolationMode { get; set; } = PluginIsolationMode.Containerized;
             public bool Enabled { get; set; }
             public bool ShouldRemove { get; set; } = false;
             [JsonIgnore]

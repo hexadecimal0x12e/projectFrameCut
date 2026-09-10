@@ -425,6 +425,7 @@ internal static class PluginPackageSecurityService
             metadata.PluginID != Path.GetFileName(metadata.PluginID) ||
             metadata.PluginID.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
             metadata.PluginAPIVersion != PluginService.PluginAPIVersion ||
+            !Enum.IsDefined(metadata.MaximumSupportedIsolationMode) ||
             !string.Equals(metadata.PluginID, manifest.PluginId, StringComparison.Ordinal) ||
             !string.Equals(metadata.PublisherId, manifest.PublisherId, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(metadata.SigningCertificateFingerprint, manifest.SigningCertificateFingerprint, StringComparison.OrdinalIgnoreCase) ||

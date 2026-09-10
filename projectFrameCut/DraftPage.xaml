@@ -325,6 +325,33 @@
             </Grid>
         </Grid>
 
+        <Grid x:Name="FixedLayoutRoot"
+              Grid.Row="0"
+              Grid.RowSpan="2"
+              IsVisible="False"
+              ZIndex="20"
+              BackgroundColor="{DynamicResource MultiWindowViewBackgroundColor}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="0.42*" />
+                <RowDefinition Height="0.58*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Margin="8,8,8,4" Stroke="{DynamicResource MultiWindowViewSnapPreviewBorderColor}" StrokeThickness="2" BackgroundColor="{DynamicResource MultiWindowViewBackgroundColor}">
+                <ContentView x:Name="FixedPreviewHost" Padding="4" BackgroundColor="{DynamicResource MultiWindowViewBackgroundColor}" />
+            </Border>
+
+            <ContentView Grid.Row="1" x:Name="FixedTimelineHost" />
+
+            <Border Grid.Row="2"
+                    x:Name="FixedClipInfoHost"
+                    IsVisible="False"
+                    StrokeThickness="0"
+                    BackgroundColor="{DynamicResource MultiWindowViewBackgroundColor}"
+                    HeightRequest="48"
+                    VerticalOptions="End" />
+        </Grid>
+
         <Grid Grid.Row="1"
               Margin="0,8,0,8"
               x:Name="MainControlGrid"
@@ -414,6 +441,10 @@
                 </HorizontalStackLayout>
 
                 <HorizontalStackLayout HorizontalOptions="End" Spacing="0">
+                    <HorizontalStackLayout x:Name="FixedToolbarButtons"
+                                           IsVisible="{Binding IsFixedLayout}"
+                                           Spacing="2"
+                                           VerticalOptions="Center" />
                     <controls:ToggleButton x:Name="MultiSelectToggleButton"
                                            Text="{l:Localized Key=DraftPage_CenterMenuBar_MultiSelect}"
                                            Toggled="MultiSelectToggleButton_Toggled"

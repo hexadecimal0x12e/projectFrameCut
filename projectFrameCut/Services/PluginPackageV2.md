@@ -20,6 +20,11 @@ becomes trusted; trust anchors are supplied by the application.
 certificate DER certificate. The signing certificate must use RSA (at least 2048 bits),
 Digital Signature key usage, and the Code Signing EKU (`1.3.6.1.5.5.7.3.3`).
 
+`IsAppLevelPlugin` declares whether the assembly implements the application-level plugin
+API. `MaximumSupportedIsolationMode` declares the strongest supported mode as
+`Containerized`, `Process`, or `None`. Legacy packages may omit the first field;
+the maximum isolation mode defaults to `Containerized` when omitted.
+
 The encryption password in `PluginKey` is the lowercase hexadecimal SHA-512 hash of the
 signing certificate's RSA SubjectPublicKeyInfo DER. `<PluginID>.dll.enc` uses the existing
 `FileCryptoService.EncryptToFileWithPassword` format. `PluginHash` is the lowercase

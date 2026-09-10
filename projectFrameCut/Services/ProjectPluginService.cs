@@ -152,6 +152,10 @@ public static class ProjectPluginService
 
         var pluginId = options.Metadata.PluginID;
         ValidatePluginId(pluginId);
+        if (options.Metadata.IsAppLevelPlugin == true)
+            throw new NotSupportedException("Application-level plugins cannot be packaged as project plugins.");
+        if (!PluginService.SupportsIsolationMode(PluginIsolationMode.Containerized, options.Metadata.MaximumSupportedIsolationMode))
+            throw new NotSupportedException($"Project plugins require {PluginIsolationMode.Containerized} isolation, which this plugin does not support.");
         var stagingRoot = Path.GetFullPath(options.StagingDirectory);
         var assemblyPath = Path.Combine(stagingRoot, pluginId + ".dll");
         if (!Directory.Exists(stagingRoot)) throw new DirectoryNotFoundException(stagingRoot);
