@@ -154,6 +154,9 @@ namespace projectFrameCut.InteractableEditor
         private double _zoomScale = 1d;
         private double _pinchStartScale = 1d;
         private bool _isViewportPinching;
+        private bool _isViewportPanning;
+        private double _viewportPanStartX;
+        private double _viewportPanStartY;
         private double _overviewPanStartX;
         private double _overviewPanStartY;
 #if WINDOWS
@@ -1078,6 +1081,34 @@ namespace projectFrameCut.InteractableEditor
             }
         }
 
+        private void OnViewportPanUpdated(object? sender, PanUpdatedEventArgs e)
+        {
+            if (ZoomScale <= MinZoomScale || _isViewportPinching) return;
+
+            switch (e.StatusType)
+            {
+                case GestureStatus.Started:
+                    _isViewportPanning = true;
+                    _viewportPanStartX = ZoomContent.TranslationX;
+                    _viewportPanStartY = ZoomContent.TranslationY;
+                    CancelElementInteractionForViewportGesture();
+                    break;
+                case GestureStatus.Running:
+                    ZoomContent.TranslationX = _viewportPanStartX + e.TotalX;
+                    ZoomContent.TranslationY = _viewportPanStartY + e.TotalY;
+                    ClampViewportTranslation();
+                    UpdateOverviewViewport();
+                    break;
+                case GestureStatus.Completed:
+                case GestureStatus.Canceled:
+                    _isViewportPanning = false;
+                    ClampViewportTranslation();
+                    UpdateOverviewViewport();
+                    LogDiagnostic($"[Zoom] Two-finger panned viewport at {ZoomScale:F2}x");
+                    break;
+            }
+        }
+
         private void CancelElementInteractionForViewportGesture()
         {
             if (!_isClipPanInProgress && !_isHandleResizeInProgress && !_isShapeHandleDragInProgress) return;
@@ -1108,9 +1139,27 @@ namespace projectFrameCut.InteractableEditor
         {
             var ctrlState = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(
                 Windows.System.VirtualKey.Control);
-            if ((ctrlState & Windows.UI.Core.CoreVirtualKeyStates.Down) == 0) return;
-
             var point = e.GetCurrentPoint(_windowsZoomTarget);
+            if ((ctrlState & Windows.UI.Core.CoreVirtualKeyStates.Down) == 0)
+            {
+                if (ZoomScale <= MinZoomScale || point.Properties.MouseWheelDelta == 0) return;
+
+                var delta = point.Properties.MouseWheelDelta / 120d * 48d;
+                if (point.Properties.IsHorizontalMouseWheel)
+                {
+                    ZoomContent.TranslationX += delta;
+                }
+                else
+                {
+                    ZoomContent.TranslationY -= delta;
+                }
+
+                ClampViewportTranslation();
+                UpdateOverviewViewport();
+                e.Handled = true;
+                return;
+            }
+
             if (point.Properties.IsHorizontalMouseWheel) return;
 
             ApplyZoom(

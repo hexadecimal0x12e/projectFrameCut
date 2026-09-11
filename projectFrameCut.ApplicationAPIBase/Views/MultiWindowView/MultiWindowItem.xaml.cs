@@ -518,7 +518,17 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             NortheastSouthwest
         }
 
-        static partial void ConfigureResizeCursor(View handle, ResizeCursorKind cursorKind);
+        private static void ConfigureResizeCursor(View handle, ResizeCursorKind cursorKind)
+        {
+            PointerCursorHelper.SetCursor(handle, cursorKind switch
+            {
+                ResizeCursorKind.Horizontal => PointerCursorKind.HorizontalResize,
+                ResizeCursorKind.Vertical => PointerCursorKind.VerticalResize,
+                ResizeCursorKind.NorthwestSoutheast => PointerCursorKind.NorthwestSoutheastResize,
+                ResizeCursorKind.NortheastSouthwest => PointerCursorKind.NortheastSouthwestResize,
+                _ => throw new ArgumentOutOfRangeException(nameof(cursorKind))
+            });
+        }
 
         private void SetupResizeHandle(
             string name,

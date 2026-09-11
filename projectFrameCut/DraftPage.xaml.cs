@@ -2,6 +2,8 @@ using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
 using Microsoft.Maui.Storage;
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -105,6 +107,10 @@ public partial class DraftPage : ContentPage, IDraftPage
     const string MaterialIconClose = "\ue5cd";
     public const int SubTrackOffset = 10000;
 
+    private const string QuickCommandsSetting = "Edit_QuickCommands";
+    private const string EnableQuickCommandShortcutsSetting = "Edit_EnableQuickCommandShortcuts";
+    public const string DefaultQuickCommandOption = @"[""menu:1/0/4:Microsoft.Maui.Controls.Command:"",""menu:1/0/5:Microsoft.Maui.Controls.Command:"",""menu:2/0/0:Microsoft.Maui.Controls.Command:"",""menu:1/0/0:Microsoft.Maui.Controls.Command:"",""menu:1/0/2:Microsoft.Maui.Controls.Command:"",""menu:2/0/4:Microsoft.Maui.Controls.Command:"",""toggle:multiselect"",""toggle:keyframe""]";
+
     public readonly string[] DirectoriesNeeded =
     [
         "saveSlots",
@@ -150,7 +156,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     // Parameters for resizing popup when window size changes
     private double _popupHeightRatio = 0;
     private double _popupWidthRatio = 0;
-    private View? _popupAnchorView = null;
 
 
     private Size WindowSize = new(500, 500);
@@ -165,10 +170,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     private MultiWindowItem TimelineSubwindow = null!;
     private MultiWindowItem AssetSubwindow = null!;
     private MultiWindowItem AddClipSubwindow = null!;
-    private bool _isFixedLayout;
     private bool _fixedLayoutInitialized;
     private TabbedView? _fixedClipInfoTabs;
-    private const string FixedToolbarCommandsSetting = "Edit_FixedToolbarCommands";
     private TabbedView? _fixedClipInfoPopupTabs;
     private bool _syncingFixedClipInfoTabs;
 
@@ -321,8 +324,16 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand ManageReferenceLinesCommand { get; private set; }
     public ICommand ZoomCommand { get; private set; }
     public ICommand SetTimelineScrollLockCommand { get; private set; }
+    public ICommand ToggleKeyframeRecordingCommand { get; private set; }
+    public ICommand ToggleLockScrollViewAfterSelectionCommand { get; private set; }
+    public ICommand ToggleMultiSelectCommand { get; private set; }
+    public ICommand ToggleReverseScrollLockKeyBehaviorCommand { get; private set; }
     public ICommand TimelineScrollCommand { get; private set; }
     public ICommand FollowPlayheadCommand { get; private set; }
+    public ICommand ConfigureQuickCommandSlotCommand { get; private set; }
+    public ICommand ShowCommandPanelCommand { get; private set; }
+    public ObservableCollection<QuickCommandItem> QuickCommands { get; } = [];
+    public ObservableCollection<QuickCommandSlot> QuickCommandSlots { get; } = [];
 
     public bool _ShouldShowClipMoveControlInCenterInfoBar => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is null : true;
     public bool _ShouldShowCenterCompactControlGrid => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is not null : false;
@@ -345,7 +356,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public event EventHandler? SelectedClipChanged;
     public bool UnNullUseCompactLayout => UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone;
     public bool IsPopupShowing => Popup.IsVisible;
-    public bool IsTimelineScrollEnabled { get; set { field = value; OnPropertyChanged(nameof(IsTimelineScrollEnabled)); } }
+    public bool IsTimelineScrollEnabled { get; set { if (field == value) return; field = value; OnPropertyChanged(nameof(IsTimelineScrollEnabled)); RefreshToggleCommandStates(); } }
     public bool AllowExit { get; set; } = true;
     #endregion
 
@@ -358,7 +369,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     public Guid CurrentSnapshotID { get; set; } = Guid.Empty;
     public bool IsReadonly { get; set; } = false;
     public bool IsRemoteProject => _remoteProjectSession is not null;
-    public string PreferredPopupMode { get; set; } = "bottom";
     public TimeSpan SyncCooldown { get; set; } = TimeSpan.FromMilliseconds(500);
     public bool AlwaysShowToolbarBtns { get; set; }
     public bool ShowBackendConsole { get; set; } = false;
@@ -372,23 +382,35 @@ public partial class DraftPage : ContentPage, IDraftPage
     public bool? UseCompactLayout { get; set; } = null;
     public bool IsFixedLayout
     {
-        get => _isFixedLayout;
+        get => field;
         private set
         {
-            if (_isFixedLayout == value) return;
-            _isFixedLayout = value;
+            if (field == value) return;
+            field = value;
             OnPropertyChanged();
         }
     }
-    public bool LockScrollViewAfterSelection { get; set; }
+    public int QuickCommandSlotCount { get; set; } = 8;
+    public bool LockScrollViewAfterSelection { get { return field; } set { if (field == value) return; field = value; OnPropertyChanged(nameof(LockScrollViewAfterSelection)); RefreshToggleCommandStates(); } }
     public bool EnableClipInfoPopup { get; set; }
     public bool UseCommunityToolkitPopupInsteadOfOverlayLayer { get { return (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS()) || field; } set; }
-    public bool MultiSelectEnabled { get; set; }
+    public bool MultiSelectEnabled { get { return field; } set { if (field == value) return; field = value; OnPropertyChanged(nameof(MultiSelectEnabled)); RefreshToggleCommandStates(); } }
     public bool IsPopupClosableByTapBackground { get; set; } = true;
     public bool UseDynamicPreview { get; set; } = true;
     public int DynamicPreviewTimeout { get; set; } = 4096;
     public int DynamicPreviewResolutionDivisor { get => DynamicPreviewProvider?.PreviewResolutionDivisor ?? 1; set { DynamicPreviewProvider?.PreviewResolutionDivisor = value; } }
-    public bool ReverseScrollLockKeyBehavior { get; set; } = false;
+    public bool ReverseScrollLockKeyBehavior { get { return field; } set { if (field == value) return; field = value; OnPropertyChanged(nameof(ReverseScrollLockKeyBehavior)); RefreshToggleCommandStates(); } } = false;
+    public bool IsKeyframeRecordingEnabled
+    {
+        get => ClipEditor?.EnableKeyframeRecording ?? false;
+        set
+        {
+            if (ClipEditor is null || ClipEditor.EnableKeyframeRecording == value) return;
+            ClipEditor.EnableKeyframeRecording = value;
+            OnPropertyChanged();
+            RefreshToggleCommandStates();
+        }
+    }
 
     #endregion
 
@@ -398,6 +420,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         RegisterCommands();
         InitializeComponent();
+        BindingContext = this;
+        InitializeQuickCommands();
         DisableTabFocusOnWindows(AddTrackButton);
         SetPlayPauseIconToPlay();
         SetStateBusy();
@@ -465,6 +489,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (Directory.Exists(workingDir)) Environment.CurrentDirectory = workingDir;
         RegisterCommands();
         InitializeComponent();
+        InitializeQuickCommands();
         DisableTabFocusOnWindows(AddTrackButton);
         SetPlayPauseIconToPlay();
         SetStateBusy();
@@ -628,13 +653,19 @@ public partial class DraftPage : ContentPage, IDraftPage
         });
         ClearReferenceLinesCommand = new Command(() => ClipEditor.ClearReferenceLines());
         ManageReferenceLinesCommand = new Command(() => { ShowManageReferenceLinesPopup(ClipEditor, async (v) => await Dispatcher.DispatchAsync(async () => await ShowAPopup(new ScrollView { Content = v }, mode: "dialog")), async () => await Dispatcher.DispatchAsync(async () => await HidePopup())); });
-        SetTimelineScrollLockCommand = new Command(() => SetTimelineScrollEnabled(!IsTimelineScrollEnabled));
+        SetTimelineScrollLockCommand = new Command(() => ToggleTimelineScroll());
+        ToggleKeyframeRecordingCommand = new Command(() => IsKeyframeRecordingEnabled = !IsKeyframeRecordingEnabled);
+        ToggleLockScrollViewAfterSelectionCommand = new Command(() => LockScrollViewAfterSelection = !LockScrollViewAfterSelection);
+        ToggleMultiSelectCommand = new Command(() => MultiSelectEnabled = !MultiSelectEnabled);
+        ToggleReverseScrollLockKeyBehaviorCommand = new Command(() => ReverseScrollLockKeyBehavior = !ReverseScrollLockKeyBehavior);
         TimelineScrollCommand = new Command<string>(async (i) =>
         {
             if (double.TryParse(i, out var offset))
                 await HandleMoveArrowAsync(offset, 0, invertScrollLockBehavior: true);
         });
         FollowPlayheadCommand = new Command(async () => await ScrollTimelineToPlayhead());
+        ConfigureQuickCommandSlotCommand = new Command<int>(async index => await ConfigureQuickCommandSlotAsync(index));
+        ShowCommandPanelCommand = new Command(async () => await ShowCommandPanelAsync());
 
         EscapeCommand =
             new Command(async () =>
@@ -848,7 +879,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
         PlayheadLine.TranslationX = TrackHeadLayout.Width;
-        if (AlwaysShowToolbarBtns || !OperatingSystem.IsWindows()) AddToolbarBtns();
+        RegisterQuickCommandShortcuts();
         if (Width < Height) RightMenuBar.IsVisible = false;
 
         RulerLayout.GestureRecognizers.Add(rulerTapGesture);
@@ -859,6 +890,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         bgTap.Tapped += async (s, e) => await HidePopup();
         OverlayLayer.GestureRecognizers.Clear();
         OverlayLayer.GestureRecognizers.Add(bgTap);
+        OverlayLayer.SizeChanged -= OverlayLayer_SizeChanged;
+        OverlayLayer.SizeChanged += OverlayLayer_SizeChanged;
 
         var previewResolutionOptions = new List<string> {
                 Localized.DraftPage_DynamicPreview,
@@ -918,15 +951,29 @@ public partial class DraftPage : ContentPage, IDraftPage
             RightMenuBar.IsVisible = true;
             RightContentBorder.IsVisible = true;
             (Content as Grid)?.Remove(MainControlGrid);
+            ToolbarItems.Clear();
 
             foreach (var item in MainMultiWindowView.Windows)
             {
-                ViewMenuBarItem.Insert(0, new MenuFlyoutItem { Text = item.Title, Command = ManageWindowCommand, CommandParameter = item.WindowID.ToString() });
+                ViewMenuBarItem.Insert(0, new MenuFlyoutItem
+                {
+                    Text = item.Title,
+                    IconImageSource = new FontImageSource { FontFamily = MaterialIconFontFamily, Glyph = "\uf71b" },
+                    Command = ManageWindowCommand,
+                    CommandParameter = item.WindowID.ToString()
+                });
 
             }
             MainMultiWindowView.WindowAdded += (s, e) =>
             {
-                ViewMenuBarItem.Insert(0, new MenuFlyoutItem { Text = e.Title, Command = ManageWindowCommand, CommandParameter = e.WindowID.ToString() });
+                ViewMenuBarItem.Insert(0, new MenuFlyoutItem
+                {
+                    Text = e.Title,
+                    IconImageSource = new FontImageSource { FontFamily = MaterialIconFontFamily, Glyph = "\uf71b" },
+                    Command = ManageWindowCommand,
+                    CommandParameter = e.WindowID.ToString()
+                });
+                RefreshQuickCommands();
             };
             MainMultiWindowView.WindowClosed += (s, e) =>
             {
@@ -939,6 +986,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         {
                             ViewMenuBarItem.Remove(item);
                         }
+                        RefreshQuickCommands();
                     }
                 }
                 catch (Exception ex)
@@ -1033,8 +1081,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (ProjectInfo.Properties.TryGetValue("InteractableEditor_EnableKeyframeRecording", out var enableKeyframeRecordingStr) &&
             bool.TryParse(enableKeyframeRecordingStr, out var enableKeyframeRecording))
         {
-            ClipEditor.EnableKeyframeRecording = enableKeyframeRecording;
-            KeyframeRecordingToggleButton.IsToggled = enableKeyframeRecording;
+            IsKeyframeRecordingEnabled = enableKeyframeRecording;
         }
     }
 
@@ -1605,6 +1652,14 @@ public partial class DraftPage : ContentPage, IDraftPage
         return clip.Clip.Content as View ?? clip.Clip;
     }
 
+    private static void RegisterClipCursor(View view, Func<PointerCursorKind> cursorKindGetter)
+    {
+        var pointerGesture = new PointerGestureRecognizer();
+        pointerGesture.PointerEntered += (_, _) => PointerCursorHelper.SetCursor(view, cursorKindGetter());
+        pointerGesture.PointerExited += (_, _) => PointerCursorHelper.SetCursor(view, null);
+        view.GestureRecognizers.Add(pointerGesture);
+    }
+
 #if WINDOWS
     private static bool IsPointerWithinBorderBounds(Border border, PointerEventArgs e)
     {
@@ -1742,6 +1797,15 @@ public partial class DraftPage : ContentPage, IDraftPage
 #if WINDOWS
         RegisterClipPanAuthorization(clipInteractionTarget, element);
 #endif
+
+        RegisterClipCursor(clipInteractionTarget, () => element.MovingStatus switch
+        {
+            ClipMovingStatus.Move => PointerCursorKind.Move,
+            ClipMovingStatus.Resize => PointerCursorKind.HorizontalResize,
+            _ => PointerCursorKind.Hand
+        });
+        RegisterClipCursor(element.LeftHandle, () => PointerCursorKind.HorizontalResize);
+        RegisterClipCursor(element.RightHandle, () => PointerCursorKind.HorizontalResize);
 
 
 
@@ -2500,7 +2564,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                 SetPlayPauseIconToClose();
                 CurrentPlayheadLabel.IsVisible = false;
             }
-            MultiSelectToggleButton.IsVisible = false;
         });
 
         LeftInfoLabel.Text = (UseCompactLayout ?? false) ? Localized.DraftPage_AddClipView_ClickToPlace_Compact(name ?? "Clip") : Localized.DraftPage_AddClipView_ClickToPlace(name ?? "Clip");
@@ -2525,13 +2588,11 @@ public partial class DraftPage : ContentPage, IDraftPage
             LeftInfoLabel.Text = "";
             AddClip.IsVisible = true;
             AssetPanelButton.IsVisible = true;
-            //SpiltButton.IsVisible = !(UseCompactLayout ?? false);
             if (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
             {
                 SetPlayPauseIconToPlay();
                 CurrentPlayheadLabel.IsVisible = true;
             }
-            MultiSelectToggleButton.IsVisible = true;
         });
     }
 
@@ -2618,10 +2679,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                     SetPlayPauseIconToPlay();
                     CurrentPlayheadLabel.IsVisible = true;
                 }
-                MultiSelectToggleButton.IsVisible = true;
                 AddClip.IsVisible = true;
                 AssetPanelButton.IsVisible = true;
-                //SpiltButton.IsVisible = !(UseCompactLayout ?? false);
                 LeftInfoLabel.Text = "";
             });
 
@@ -2801,11 +2860,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void KeyframeRecordingToggleButton_Toggled(object sender, ToggledEventArgs e)
     {
-        if (ClipEditor is not null)
-        {
-            ClipEditor.EnableKeyframeRecording = e.Value;
-        }
+        IsKeyframeRecordingEnabled = e.Value;
     }
+
+    private void ToggleTimelineScroll()
+        => SetTimelineScrollEnabled(!IsTimelineScrollEnabled);
 
 
     private static bool IsTapWithinBorderInteractiveBounds(Border border, TappedEventArgs? e)
@@ -5106,6 +5165,338 @@ public partial class DraftPage : ContentPage, IDraftPage
     }
     #endregion
 
+    #region commands
+    public async Task ShowCommandPanelAsync()
+    {
+        RefreshQuickCommands();
+
+        var commandRows = new VerticalStackLayout { Spacing = 8 };
+        var emptyLabel = new Label
+        {
+            Text = Localized.DraftPage_CommandPanel_NoResults,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center,
+            Margin = new Thickness(12, 32),
+            IsVisible = false
+        };
+        var rows = new List<(QuickCommandItem Item, Border View, string SearchText)>();
+        var commands = QuickCommands.ToList();
+        if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+        {
+            commands.AddRange(GetDebugCommands().Select(x =>
+                new QuickCommandItem($"debug:{x.Key}", x.Key, x.Value, "\ue868")));
+        }
+
+        async Task InvokeAsync(QuickCommandItem item)
+        {
+            if (!item.Command.CanExecute(item.Parameter)) return;
+            await HidePopup(true);
+            try
+            {
+                item.Command.Execute(item.Parameter);
+                item.RefreshToggleState();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Invoke command panel command", item.Key);
+            }
+        }
+
+        foreach (var item in commands.OrderBy(x => x.Title, StringComparer.CurrentCultureIgnoreCase))
+        {
+            var type = item.IsToggle ? Localized.DraftPage_CommandPanel_ToggleCommand : Localized.DraftPage_CommandPanel_NormalCommand;
+            var icon = new Label
+            {
+                Text = item.IconGlyph,
+                FontFamily = item.FontFamily,
+                FontSize = 24,
+                HorizontalTextAlignment = TextAlignment.Center,
+                VerticalTextAlignment = TextAlignment.Center,
+                WidthRequest = 40
+            };
+            var title = new Label { Text = item.Title, FontSize = 16, FontAttributes = FontAttributes.Bold };
+            var key = new Label { Text = item.Key, FontSize = 11, Opacity = 0.7, LineBreakMode = LineBreakMode.TailTruncation };
+            var metadata = new Label
+            {
+                Text = $"{Localized.DraftPage_CommandPanel_Type}: {type}",
+                FontSize = 12,
+                Opacity = 0.8,
+                LineBreakMode = LineBreakMode.WordWrap
+            };
+            var details = new VerticalStackLayout { Spacing = 2, Children = { title, key, metadata } };
+            var invokeButton = new Button
+            {
+                Text = Localized.DraftPage_CommandPanel_Invoke,
+                Padding = new Thickness(12, 6),
+                VerticalOptions = LayoutOptions.Center,
+                IsEnabled = item.IsEnabled
+            };
+            invokeButton.Clicked += async (_, _) => await InvokeAsync(item);
+
+            var row = new Grid
+            {
+                ColumnSpacing = 10,
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto)
+                }
+            };
+            row.Add(icon, 0, 0);
+            row.Add(details, 1, 0);
+            row.Add(invokeButton, 2, 0);
+
+            var border = new Border
+            {
+                Padding = 10,
+                StrokeThickness = 1,
+                Stroke = Application.Current?.RequestedTheme == AppTheme.Dark ? Colors.DimGray : Colors.LightGray,
+                StrokeShape = new RoundRectangle { CornerRadius = 8 },
+                Content = row
+            };
+            commandRows.Children.Add(border);
+            rows.Add((item, border, $"{item.Title}\n{item.Key}\n{type}"));
+        }
+
+        void Filter(string? query)
+        {
+            var hasQuery = !string.IsNullOrWhiteSpace(query);
+            var visibleCount = 0;
+            foreach (var row in rows)
+            {
+                row.View.IsVisible = !hasQuery || row.SearchText.Contains(query!, StringComparison.CurrentCultureIgnoreCase);
+                if (row.View.IsVisible) visibleCount++;
+            }
+            emptyLabel.IsVisible = visibleCount == 0;
+        }
+
+        var search = new SearchBar { Placeholder = Localized.DraftPage_CommandPanel_Search };
+        search.TextChanged += (_, e) => Filter(e.NewTextValue);
+        search.SearchButtonPressed += async (_, _) =>
+        {
+            var first = rows.FirstOrDefault(x => x.View.IsVisible && x.Item.IsEnabled);
+            if (first.Item is not null) await InvokeAsync(first.Item);
+        };
+
+        var panel = new Grid
+        {
+            RowSpacing = 10,
+            HeightRequest = Math.Max(240, Math.Min(WindowSize.Height * 0.65, 640)),
+            RowDefinitions =
+            {
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Star)
+            }
+        };
+        panel.Add(new Label
+        {
+            Text = Localized.DraftPage_CommandPanel,
+            Margin = new(0, 8, 0, 0),
+            FontSize = 22,
+            FontAttributes = FontAttributes.Bold
+        }, 0, 0);
+        panel.Add(search, 0, 1);
+        panel.Add(new ScrollView
+        {
+            Content = new VerticalStackLayout
+            {
+                Spacing = 0,
+                Children = { commandRows, emptyLabel }
+            }
+        }, 0, 2);
+
+        await ShowAPopup(panel, mode: "dialog");
+        search.Focus();
+    }
+
+    private void RefreshToggleCommandStates()
+    {
+        foreach (var command in QuickCommands.Where(x => x.IsToggle)) command.RefreshToggleState();
+    }
+
+    private void RegisterQuickCommandShortcuts()
+    {
+#if WINDOWS
+        if (Handler?.PlatformView is Microsoft.UI.Xaml.FrameworkElement element)
+        {
+            element.KeyDown -= QuickCommandShortcuts_KeyDown;
+            element.KeyDown += QuickCommandShortcuts_KeyDown;
+        }
+#endif
+    }
+
+#if WINDOWS
+    private void QuickCommandShortcuts_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (!SettingsManager.IsBoolSettingTrue(EnableQuickCommandShortcutsSetting)) return;
+
+        var state = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Control);
+        if (!state.HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down)) return;
+
+        var index = e.Key switch
+        {
+            Windows.System.VirtualKey.Number1 => 0,
+            Windows.System.VirtualKey.Number2 => 1,
+            Windows.System.VirtualKey.Number3 => 2,
+            Windows.System.VirtualKey.Number4 => 3,
+            Windows.System.VirtualKey.Number5 => 4,
+            Windows.System.VirtualKey.Number6 => 5,
+            Windows.System.VirtualKey.Number7 => 6,
+            Windows.System.VirtualKey.Number8 => 7,
+            _ => -1
+        };
+        if (index < 0) return;
+
+        var slot = QuickCommandSlots[index];
+        if (slot.Item is null || !slot.Command.CanExecute(slot.CommandParameter)) return;
+        slot.Command.Execute(slot.CommandParameter);
+        e.Handled = true;
+    }
+#endif
+
+    public void RegisterQuickCommand(string key, string title, ICommand command, object? parameter = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentNullException.ThrowIfNull(command);
+
+        var item = new QuickCommandItem($"manual:{key}", title, command, "\ue8b8", parameter);
+        var existing = QuickCommands.FirstOrDefault(x => x.Key == item.Key);
+        if (existing is not null) QuickCommands.Remove(existing);
+        QuickCommands.Add(item);
+        RebuildQuickCommandSlots();
+    }
+
+    private IEnumerable<(string Key, string Text, ICommand Command, string IconGlyph, object? Argument)> EnumerateMenuCommands()
+    {
+        for (var menuIndex = 0; menuIndex < MenuBarItems.Count; menuIndex++)
+        {
+            var menu = MenuBarItems[menuIndex];
+            foreach (var item in EnumerateMenuItems((System.Collections.IEnumerable)menu, "0"))
+            {
+                if (item.Item.Command is null) continue;
+                yield return ($"menu:{menuIndex}/{item.Path}:{item.Item.Command.GetType().FullName}:{item.Item.CommandParameter}",
+                    item.Item.Text ?? menu.Text ?? "Command", item.Item.Command,
+                    (item.Item.IconImageSource as FontImageSource)?.Glyph ?? "\ue8b8", item.Item.CommandParameter);
+            }
+        }
+    }
+
+    private static IEnumerable<(string Path, MenuFlyoutItem Item)> EnumerateMenuItems(System.Collections.IEnumerable items, string path)
+    {
+        var index = 0;
+        foreach (var child in items)
+        {
+            var childPath = $"{path}/{index++}";
+            if (child is MenuFlyoutItem flyoutItem) yield return (childPath, flyoutItem);
+            if (child is MenuFlyoutSubItem subItem)
+            {
+                foreach (var nested in EnumerateMenuItems((System.Collections.IEnumerable)subItem, childPath)) yield return nested;
+            }
+        }
+    }
+
+    private IEnumerable<(string Key, string Text, ICommand Command, string IconGlyph, object? Argument)> EnumerateToggleCommands()
+    {
+        yield return ("toggle:multiselect", Localized.DraftPage_CenterMenuBar_MultiSelect, ToggleMultiSelectCommand, "\ue162", null);
+        yield return ("toggle:keyframe", Localized.InteractableEditor_KeyFrame, ToggleKeyframeRecordingCommand, "\ue697", null);
+        yield return ("toggle:timeline-scroll", Localized.DraftPage_MenuBar_View_Timeline_LockScroll, SetTimelineScrollLockCommand, "\ue897", null);
+        yield return ("toggle:lock-after-selection", Localized.DraftPage_MenuBar_View_Timeline_LockScrollWhenSelected, ToggleLockScrollViewAfterSelectionCommand, "\ue897", null);
+        yield return ("toggle:reverse-scroll-key", Localized.DraftPage_MenuBar_View_Timeline_ReverseScrollBehavior, ToggleReverseScrollLockKeyBehaviorCommand, "\ue8d4", null);
+    }
+
+    private Func<bool>? GetToggleState(string key) => key switch
+    {
+        "toggle:multiselect" => () => MultiSelectEnabled,
+        "toggle:keyframe" => () => IsKeyframeRecordingEnabled,
+        "toggle:lock-after-selection" => () => LockScrollViewAfterSelection,
+        "toggle:timeline-scroll" => () => IsTimelineScrollEnabled,
+        "toggle:reverse-scroll-key" => () => ReverseScrollLockKeyBehavior,
+        _ => null
+    };
+
+    private void InitializeQuickCommands()
+    {
+        QuickCommands.Clear();
+        foreach (var command in EnumerateMenuCommands().Concat(EnumerateToggleCommands()).GroupBy(x => x.Key).Select(x => x.First()))
+        {
+            QuickCommands.Add(new QuickCommandItem(command.Key, command.Text, command.Command, command.IconGlyph, command.Argument, GetToggleState(command.Key)));
+        }
+        for (var index = QuickCommandSlots.Count; index < QuickCommandSlotCount; index++) QuickCommandSlots.Add(new QuickCommandSlot(this, index));
+        RebuildQuickCommandSlots();
+    }
+
+    private void RefreshQuickCommands()
+    {
+        var manualCommands = QuickCommands.Where(x => x.Key.StartsWith("manual:")).ToList();
+        QuickCommands.Clear();
+        foreach (var command in EnumerateMenuCommands().Concat(EnumerateToggleCommands()).GroupBy(x => x.Key).Select(x => x.First()))
+        {
+            QuickCommands.Add(new QuickCommandItem(command.Key, command.Text, command.Command, command.IconGlyph, command.Argument, GetToggleState(command.Key)));
+        }
+        foreach (var command in manualCommands) QuickCommands.Add(command);
+        RebuildQuickCommandSlots();
+    }
+
+    private string?[] GetQuickCommandSelection()
+    {
+        var raw = SettingsManager.GetSetting(QuickCommandsSetting, DefaultQuickCommandOption);
+        if (string.IsNullOrWhiteSpace(raw)) raw = DefaultQuickCommandOption;
+        try
+        {
+            var values = JsonSerializer.Deserialize<string?[]>(raw) ?? [];
+            return values.Take(QuickCommandSlotCount).Concat(Enumerable.Repeat<string?>(null, QuickCommandSlotCount)).Take(QuickCommandSlotCount).ToArray();
+        }
+        catch { return new string?[QuickCommandSlotCount]; }
+    }
+
+    private void RebuildQuickCommandSlots()
+    {
+        if (QuickCommandSlots.Count == 0) return;
+        var selection = GetQuickCommandSelection();
+        for (var index = 0; index < QuickCommandSlots.Count; index++) QuickCommandSlots[index].Item = QuickCommands.FirstOrDefault(x => x.Key == selection[index]);
+    }
+
+    private async Task ConfigureQuickCommandSlotAsync(int index)
+    {
+        if (index < 0 || index >= QuickCommandSlots.Count) return;
+        var options = QuickCommands.Select(x => x.Title).ToList();
+        options.Insert(0, Localized.TemplateExtractPage_Clear);
+        var choice = await DisplayActionSheetAsync($"{Localized.DraftPage_QuickCommand} #{index + 1}", Localized._Cancel, null, options.ToArray());
+        if (string.IsNullOrWhiteSpace(choice) || choice == Localized._Cancel) return;
+        var selection = GetQuickCommandSelection();
+        var commandIndex = options.IndexOf(choice) - 1;
+        selection[index] = commandIndex < 0 || commandIndex >= QuickCommands.Count ? null : QuickCommands[commandIndex].Key;
+        SettingsManager.WriteSetting(QuickCommandsSetting, JsonSerializer.Serialize(selection));
+        RebuildQuickCommandSlots();
+    }
+
+    private void QuickCommandButton_Loaded(object? sender, EventArgs e)
+    {
+        if (sender is not Border border) return;
+        foreach (var gesture in border.GestureRecognizers.ToList()) border.GestureRecognizers.Remove(gesture);
+        UIServices.RegisterSelectOrContextMenu(border, OnContextMenuClick: async () =>
+        {
+            if (border.BindingContext is not QuickCommandSlot slot) return;
+            RefreshQuickCommands();
+            await ConfigureQuickCommandSlotAsync(slot.Index);
+        });
+    }
+
+    private async Task ConfigureQuickCommandsAsync()
+    {
+        while (true)
+        {
+            var slots = QuickCommandSlots.Where(c => !string.IsNullOrWhiteSpace(c.Item?.Title)).Select((x, i) => $"{i + 1}: {x.Item?.Title}").ToArray();
+            var choice = await DisplayActionSheetAsync(Localized.DraftPage_QuickCommand, Localized._Cancel, null, slots);
+            if (string.IsNullOrWhiteSpace(choice) || choice == Localized._Cancel) return;
+            if (int.TryParse(choice.Split(':')[0], out var index)) await ConfigureQuickCommandSlotAsync(index - 1);
+        }
+    }
+    #endregion
+
     #region adjust track and clip
     public async Task CombineClipsAsGroupAsync(IEnumerable<ClipElementUI> clips)
     {
@@ -5921,68 +6312,36 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    public async Task ShowAPopup(View? content = null, View? border = null, ClipElementUI? clip = null, string mode = "")
+    public async Task ShowAPopup(View? content = null, View? border = null, ClipElementUI? clip = null, string mode = "bottom")
     {
         content ??= (border != null && clip != null) ? await BuildPropertyPanel(clip) : new Label { Text = $"No content to show. This SHOULD is a bug, please feedback.\r\n{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}" };
         bool disablePopupScrollWrapping = clip?.ClipType == ClipMode.VideoClip || clip?.ClipType == ClipMode.PhotoClip;
 
         OverlayLayer.IsVisible = true;
         OverlayLayer.InputTransparent = false;
+        var popupHostSize = GetPopupHostSize();
 
         if (DeviceInfo.Idiom == DeviceIdiom.Phone)
         {
-            await ShowAFullscreenPopupInBottom(WindowSize.Height * 0.75, content);
+            await ShowAFullscreenPopupInBottom(popupHostSize.Height * 0.75, content);
             return;
         }
 
-        if (!SettingsManager.IsSettingExists("PreferredPopupMode"))
-        {
-            SettingsManager.WriteSetting("PreferredPopupMode", "bottom");
-        }
         try
         {
-            switch (!string.IsNullOrWhiteSpace(mode) ? mode : SettingsManager.GetSetting("PreferredPopupMode"))
+            switch (mode)
             {
-                case "right":
-                    {
-                        await ShowAFullscreenPopupInRight(WindowSize.Height * 0.75, content, disablePopupScrollWrapping);
-                        break;
-                    }
-                case "bottom":
-                    {
-                        await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, content, disablePopupScrollWrapping);
-                        break;
-                    }
                 case "dialog":
-                    {
-                        await ShowACenteredPopup(WindowSize.Height / 1.5, WindowSize.Width / 2, content, disablePopupScrollWrapping);
-                        break;
-                    }
-                case "window":
-                    {
-                        var w = new MultiWindowItem
-                        {
-                            Content = content,
-                            Title = "",
-                            IsNavigationVisible = false
-                        };
-                        MainMultiWindowView.AddWindow(w);
-                        await w.OpenInNewWindow();
-                        break;
-                    }
-                case "clip":
-                    {
-                        if (border is not null)
-                            await ShowClipPopup(border, content, clip);
-                        else
-                            await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, content, disablePopupScrollWrapping);
-                        break;
-                    }
+                    await ShowACenteredPopup(popupHostSize.Height / 1.5, popupHostSize.Width / 2, content, disablePopupScrollWrapping);
+                    break;
+                default:
+                    await ShowAFullscreenPopupInBottom(popupHostSize.Height / 1.2, content, disablePopupScrollWrapping);
+                    break;
             }
         }
         catch (Exception ex)
         {
-            Log(ex, "ShowClipPopup", clip);
+            Log(ex, "ShowAPopup", clip);
             throw;
         }
 
@@ -5990,238 +6349,12 @@ public partial class DraftPage : ContentPage, IDraftPage
     }
 
 
-    private async Task ShowClipPopup(View anchorView, View popupContent, ClipElementUI? clip = null)
-    {
-        popupShowingDirection = "clip";
-        _popupHeightRatio = 0;
-        _popupWidthRatio = 0;
-        _popupAnchorView = anchorView;
-
-        var existing = OverlayLayer.Children.FirstOrDefault(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle");
-        if (existing != null)
-        {
-            var toRemove = OverlayLayer.Children.Where(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle").ToList();
-            foreach (var r in toRemove)
-                OverlayLayer.Children.Remove(r);
-        }
-
-
-        double desiredPopupWidth = 500;
-        double desiredPopupHeight = 400;
-        double arrowSize = 20;
-        double spacing = 8;
-        double minPopupWidth = 200;
-        double minPopupHeight = 120;
-        double margin = 8;
-
-        Point clipAbs = GetAbsolutePosition(anchorView, null);
-        Point overlayAbs = GetAbsolutePosition(OverlayLayer, null);
-
-        int retries = 0;
-        while ((OverlayLayer.Width <= 0 || OverlayLayer.Height <= 0 || double.IsNaN(clipAbs.Y) || clipAbs.Y <= 0) && retries < 6)
-        {
-            await Task.Delay(30);
-            clipAbs = GetAbsolutePosition(anchorView, null);
-            overlayAbs = GetAbsolutePosition(OverlayLayer, null);
-            retries++;
-        }
-
-        double cumulativeScrollY = 0;
-        VisualElement? parent = anchorView.Parent as VisualElement;
-        while (parent != null && parent != OverlayLayer)
-        {
-            if (parent is ScrollView sv)
-            {
-                cumulativeScrollY += sv.ScrollY;
-            }
-            parent = parent.Parent as VisualElement;
-        }
-        double clipWidth = (anchorView.Width > 0) ? anchorView.Width : anchorView.WidthRequest;
-        double clipHeight = (anchorView.Height > 0) ? anchorView.Height : anchorView.HeightRequest;
-
-        Point abs = new Point(clipAbs.X - overlayAbs.X, clipAbs.Y - overlayAbs.Y - cumulativeScrollY);
-
-        // for fallback 
-        double overlayW = OverlayLayer.Width > 0 ? OverlayLayer.Width : this.Width;
-        double overlayH = OverlayLayer.Height > 0 ? OverlayLayer.Height : this.Height;
-        if (double.IsNaN(overlayW) || overlayW <= 0) overlayW = 1000;
-        if (double.IsNaN(overlayH) || overlayH <= 0) overlayH = 1000;
-
-        double availableBelow = overlayH - (abs.Y + clipHeight) - spacing - arrowSize - margin;
-        double availableAbove = abs.Y - spacing - arrowSize - margin;
-        if (availableBelow < 0) availableBelow = 0;
-        if (availableAbove < 0) availableAbove = 0;
-
-        double popupWidth = Math.Min(desiredPopupWidth, Math.Max(minPopupWidth, overlayW - margin * 2));
-        double popupHeight;
-        bool popupBelow;
-
-        if (availableBelow >= desiredPopupHeight)
-        {
-            popupBelow = true;
-            popupHeight = desiredPopupHeight;
-        }
-        else if (availableAbove >= desiredPopupHeight)
-        {
-            popupBelow = false;
-            popupHeight = desiredPopupHeight;
-        }
-        else
-        {
-            if (availableBelow >= availableAbove)
-            {
-                popupBelow = true;
-                popupHeight = Math.Max(minPopupHeight, Math.Min(desiredPopupHeight, availableBelow));
-            }
-            else
-            {
-                popupBelow = false;
-                popupHeight = Math.Max(minPopupHeight, Math.Min(desiredPopupHeight, availableAbove));
-            }
-
-            popupHeight = Math.Min(popupHeight, Math.Max(minPopupHeight, overlayH - margin * 2));
-        }
-
-        double clipCenterX = abs.X + (clipWidth / 2.0);
-        double popupX = clipCenterX - (popupWidth / 2.0);
-        if (popupX < margin) popupX = margin;
-        if (popupX + popupWidth + margin > overlayW) popupX = Math.Max(margin, overlayW - popupWidth - margin);
-
-        double popupY;
-        if (popupBelow)
-        {
-            popupY = abs.Y + clipHeight + spacing + arrowSize;
-            if (popupY + popupHeight + margin > overlayH)
-            {
-                popupY = Math.Max(margin, overlayH - popupHeight - margin);
-            }
-        }
-        else
-        {
-            popupY = abs.Y - popupHeight - arrowSize - spacing;
-            if (popupY < margin)
-            {
-                popupY = margin;
-            }
-        }
-
-        double triangleLeft = clipCenterX - (arrowSize / 2.0);
-        double triangleMin = popupX + 6;
-        double triangleMax = popupX + popupWidth - arrowSize - 6;
-        triangleLeft = Math.Clamp(triangleLeft, triangleMin, triangleMax);
-        double triangleTop;
-
-        Polygon triangle;
-        if (popupBelow)
-        {
-            triangle = new Polygon
-            {
-                StyleId = "ClipPopupTriangle",
-                Fill = Colors.Grey,
-                Points = new PointCollection
-                {
-                    new Point(0, arrowSize),
-                    new Point(arrowSize / 2.0, 0),
-                    new Point(arrowSize, arrowSize)
-                }
-            };
-            triangleTop = popupY - arrowSize;
-        }
-        else
-        {
-            triangle = new Polygon
-            {
-                StyleId = "ClipPopupTriangle",
-                Fill = Colors.Grey,
-                Points = new PointCollection
-                {
-                    new Point(0, 0),
-                    new Point(arrowSize / 2.0, arrowSize),
-                    new Point(arrowSize, 0)
-                },
-                Opacity = 0.75
-            };
-            triangleTop = popupY + popupHeight;
-        }
-
-        AbsoluteLayout.SetLayoutBounds(triangle, new Rect(triangleLeft, triangleTop, arrowSize, arrowSize));
-
-        var frame = new Border
-        {
-            StyleId = "ClipPopupFrame",
-            Background = new SolidColorBrush(Colors.Grey),
-            Stroke = Colors.Black,
-            StrokeThickness = 1,
-            StrokeShape = new RoundRectangle { CornerRadius = 4 },
-            Padding = new Thickness(2),
-            Opacity = 0.95,
-            Content = popupContent
-        };
-
-        frame.GestureRecognizers.Add(nopGesture);
-
-        AbsoluteLayout.SetLayoutBounds(frame, new Rect(popupX, popupY, popupWidth, popupHeight));
-
-        frame.Opacity = 0;
-        frame.Scale = 0.95;
-        frame.TranslationY = 5;
-
-        triangle.Opacity = 0;
-        triangle.Scale = 0.95;
-        triangle.TranslationY = 5;
-
-        if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
-        {
-            // 使用 CommunityToolkit Popup
-            var toolkitPopupContent = new AbsoluteLayout
-            {
-                WidthRequest = popupWidth,
-                HeightRequest = popupHeight + arrowSize,
-                Children = { triangle, frame }
-            };
-
-            // 调整布局为相对于 popup 内容的坐标
-            AbsoluteLayout.SetLayoutBounds(triangle, new Rect(triangleLeft - popupX, popupBelow ? 0 : popupHeight, arrowSize, arrowSize));
-            AbsoluteLayout.SetLayoutBounds(frame, new Rect(0, popupBelow ? arrowSize : 0, popupWidth, popupHeight));
-
-            _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
-            {
-                Content = toolkitPopupContent,
-                CanBeDismissedByTappingOutsideOfPopup = true
-            };
-
-            ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
-        }
-        else
-        {
-            OverlayLayer.IsVisible = true;
-            OverlayLayer.InputTransparent = false;
-            OverlayLayer.Children.Add(frame);
-            OverlayLayer.Children.Add(triangle);
-        }
-
-
-        const uint entranceMs = 220u;
-        try
-        {
-            await Task.WhenAll(
-                frame.FadeToAsync(0.9, entranceMs, Easing.CubicOut),
-                frame.ScaleToAsync(1, entranceMs, Easing.CubicOut),
-                frame.TranslateToAsync(0, 0, entranceMs, Easing.CubicOut),
-                triangle.FadeToAsync(0.9, entranceMs, Easing.CubicOut),
-                triangle.ScaleToAsync(1, entranceMs, Easing.CubicOut),
-                triangle.TranslateToAsync(0, 0, entranceMs, Easing.CubicOut)
-            );
-        }
-        catch { }
-    }
-
     private void ReAdjustPopupForWindowSize()
     {
         if (popupShowingDirection == "none") return;
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer) return;
 
-        var size = WindowSize;
+        var size = GetPopupHostSize();
         if (size.Width <= 0 || size.Height <= 0) return;
 
         try
@@ -6239,20 +6372,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         Popup.TranslationY = size.Height - newHeight;
                     }
                     break;
-                case "right":
-                    if (_popupWidthRatio > 0)
-                    {
-                        double newLeftMargin = size.Height * _popupWidthRatio;
-                        double newWidth = size.Width - newLeftMargin;
-                        if (newWidth < 200) newWidth = 200;
-                        Popup.WidthRequest = newWidth;
-                        Popup.HeightRequest = size.Height * 0.85;
-                        Popup.TranslationX = newLeftMargin;
-                        Popup.TranslationY = 20;
-                    }
-                    break;
                 case "dialog":
-                case "center":
                     if (_popupHeightRatio > 0 && _popupWidthRatio > 0)
                     {
                         double desiredHeight = size.Height * _popupHeightRatio;
@@ -6270,18 +6390,16 @@ public partial class DraftPage : ContentPage, IDraftPage
                         Popup.TranslationY = targetY;
                     }
                     break;
-                case "clip":
-                    if (_popupAnchorView is not null)
-                    {
-                        _ = Dispatcher.Dispatch(async () =>
-                        {
-                            await HidePopup(true);
-                        });
-                    }
-                    break;
             }
         }
         catch { }
+    }
+
+    private Size GetPopupHostSize()
+    {
+        return new(
+            OverlayLayer.Width > 0 ? OverlayLayer.Width : Width > 0 ? Width : WindowSize.Width,
+            OverlayLayer.Height > 0 ? OverlayLayer.Height : Height > 0 ? Height : WindowSize.Height);
     }
 
     public async Task HidePopup(bool force = false)
@@ -6302,7 +6420,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         else
         {
             OverlayLayer.InputTransparent = true;
-            await Task.WhenAll(HideClipPopup(), HideFullscreenPopup());
+            await HideFullscreenPopup();
 
             OverlayLayer.IsVisible = false;
             OverlayLayer.InputTransparent = true;
@@ -6311,35 +6429,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         popupShowingDirection = "none";
         _popupHeightRatio = 0;
         _popupWidthRatio = 0;
-        _popupAnchorView = null;
-    }
-
-    private async Task HideClipPopup()
-    {
-        var toRemove = OverlayLayer.Children.Where(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle").ToList();
-
-        // Animate out (run all animations in parallel)
-        const uint exitMs = 220u;
-        var visuals = toRemove.OfType<VisualElement>().ToList();
-        var tasks = new List<Task>();
-        foreach (var v in visuals)
-        {
-            try
-            {
-                var t = Task.WhenAll(
-                    v.FadeToAsync(0, exitMs, Easing.CubicIn),
-                    v.ScaleToAsync(0.95, exitMs, Easing.CubicIn),
-                    v.TranslateToAsync(0, 10, exitMs, Easing.CubicIn)
-                );
-                tasks.Add(t);
-            }
-            catch { }
-        }
-        try { await Task.WhenAll(tasks); } catch { }
-
-        foreach (var r in toRemove)
-            OverlayLayer.Children.Remove(r);
-
+        OverlayLayer.BackgroundColor = Colors.Transparent;
     }
 
     private async Task ShowAFullscreenPopupInBottom(double height, View content, bool disableScrollWrapping = false)
@@ -6348,8 +6438,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         OverlayLayer.IsVisible = true;
         OverlayLayer.InputTransparent = false;
+        OverlayLayer.BackgroundColor = Colors.Transparent;
 
-        var size = WindowSize;
+        var size = GetPopupHostSize();
         _popupHeightRatio = size.Height > 0 ? height / size.Height : 0;
         _popupWidthRatio = 0;
 
@@ -6359,16 +6450,17 @@ public partial class DraftPage : ContentPage, IDraftPage
             HeightRequest = height,
             TranslationX = 15,
             TranslationY = size.Height + 10,
-            Background = new SolidColorBrush(Colors.Grey),
+            BackgroundColor = Color.FromArgb("#FF2D2D30"),
+            Stroke = Color.FromArgb("#FF3E3E42"),
 
             StrokeShape = new RoundRectangle
             {
                 CornerRadius = 8,
-                StrokeThickness = 8
+                StrokeThickness = 1
             },
             Padding = 12,
             Content = content,
-            Opacity = 0.95
+            Opacity = 1.0
         };
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
@@ -6409,79 +6501,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             var targetY = height;
             try
             {
-                await Popup.TranslateToAsync(Popup.TranslationX, size.Height - targetY, 300, Easing.SinOut);
-            }
-            catch { }
-        }
-    }
-
-    private async Task ShowAFullscreenPopupInRight(double width, View content, bool disableScrollWrapping = false)
-    {
-        popupShowingDirection = "right";
-
-        OverlayLayer.IsVisible = true;
-        OverlayLayer.InputTransparent = false;
-
-        var size = WindowSize;
-        _popupHeightRatio = 0;
-        _popupWidthRatio = size.Height > 0 ? width / size.Height : 0;
-
-        Popup = new Border
-        {
-            WidthRequest = size.Width - width,
-            HeightRequest = size.Height * 0.85,
-            TranslationX = size.Width + 20,
-            TranslationY = 20,
-            Background = new SolidColorBrush(Colors.Grey),
-
-            StrokeShape = new RoundRectangle
-            {
-                CornerRadius = 8,
-                StrokeThickness = 8
-            },
-            Padding = 12,
-            Content = content,
-            Opacity = 0.95
-        };
-        if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
-        {
-            // 使用 CommunityToolkit Popup
-            View popupContentView = disableScrollWrapping
-                ? content
-                : new ScrollView
-                {
-                    Content = content
-                };
-
-            popupContentView.WidthRequest = size.Width - width;
-            popupContentView.HeightRequest = size.Height * 0.85;
-
-            _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
-            {
-                Content = popupContentView,
-                CanBeDismissedByTappingOutsideOfPopup = true,
-                HorizontalOptions = LayoutOptions.End
-            };
-
-            ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
-        }
-        else
-        {
-            try
-            {
-                OverlayLayer.InputTransparent = false;
-                Popup.GestureRecognizers.Add(nopGesture);
-                OverlayLayer.Add(Popup);
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Show popup", this);
-                await DisplayAlertAsync(Localized._Error, "Cannot show a popup.", Localized._OK);
-            }
-            var targetX = width;
-            try
-            {
-                await Popup.TranslateToAsync(width, Popup.TranslationY, 300, Easing.SinOut);
+                await Task.WhenAll(Popup.TranslateToAsync(Popup.TranslationX, size.Height - targetY, 300, Easing.SinOut), AnimatePopupScrimAsync(300));
             }
             catch { }
         }
@@ -6493,6 +6513,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         OverlayLayer.IsVisible = true;
         OverlayLayer.InputTransparent = false;
+        OverlayLayer.BackgroundColor = Colors.Transparent;
 
 
         var size = new Size(OverlayLayer.Width, OverlayLayer.Height);
@@ -6532,18 +6553,23 @@ public partial class DraftPage : ContentPage, IDraftPage
             HeightRequest = popupHeight,
             TranslationX = targetX,
             TranslationY = size.Height + 10,
-            Background = new SolidColorBrush(Colors.Grey),
+            BackgroundColor = Color.FromArgb("#FF2D2D30"),
+            Stroke = Color.FromArgb("#FF3E3E42"),
             StrokeShape = new RoundRectangle
             {
                 CornerRadius = 8,
-                StrokeThickness = 8
+                StrokeThickness = 1
             },
             Padding = 12,
+            Shadow = new Shadow
+            {
+                Radius = 0,
+                Brush = Colors.Transparent
+            },
             Content = content,
             Opacity = 0.0,
             Scale = 0.97
         };
-
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
             // 使用 CommunityToolkit Popup
@@ -6585,48 +6611,61 @@ public partial class DraftPage : ContentPage, IDraftPage
             try
             {
                 await Task.WhenAll(
-                    Popup.FadeToAsync(0.95, entranceMs, Easing.CubicOut),
+                    Popup.FadeToAsync(1.0, entranceMs, Easing.CubicOut),
                     Popup.ScaleToAsync(1, entranceMs, Easing.CubicOut),
-                    Popup.TranslateToAsync(targetX, targetY, entranceMs, Easing.CubicOut)
+                    Popup.TranslateToAsync(targetX, targetY, entranceMs, Easing.CubicOut),
+                    AnimatePopupScrimAsync(entranceMs)
                 );
             }
             catch
             {
                 try
                 {
-                    Popup.Opacity = 0.95;
+                    Popup.Opacity = 1.0;
                     Popup.Scale = 1;
                     Popup.TranslationX = targetX;
                     Popup.TranslationY = targetY;
+                    OverlayLayer.BackgroundColor = Color.FromArgb("#55000000");
                 }
                 catch { }
             }
+
         }
+    }
+
+
+    private Task AnimatePopupScrimAsync(uint length)
+    {
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        new Animation(progress =>
+        {
+            OverlayLayer.BackgroundColor = Color.FromRgba(0, 0, 0, 0.33 * progress);
+        }).Commit(
+            OverlayLayer,
+            "PopupScrim",
+            16,
+            length,
+            Easing.CubicOut,
+            (_, _) => completion.TrySetResult(true));
+        return completion.Task;
     }
 
     private async Task HideFullscreenPopup()
     {
-        var size = WindowSize;
+        var size = GetPopupHostSize();
         try
         {
             switch (popupShowingDirection)
             {
-                case "right":
-                    await Popup.TranslateToAsync(size.Width + 20, Popup.TranslationY, 300, Easing.SinIn);
-                    break;
                 case "bottom":
                     await Popup.TranslateToAsync(Popup.TranslationX, size.Height + 10, 300, Easing.SinIn);
                     break;
                 case "dialog":
-                case "center":
                     await Task.WhenAll(
                         Popup.FadeToAsync(0, 180u, Easing.CubicIn),
                         Popup.ScaleToAsync(0.97, 180u, Easing.CubicIn),
                         Popup.TranslateToAsync(Popup.TranslationX, size.Height + 10, 220u, Easing.CubicIn)
                     );
-                    break;
-                default:
-                    await Popup.TranslateToAsync(Popup.TranslationX, size.Height + 10, 300, Easing.SinIn);
                     break;
             }
         }
@@ -6635,7 +6674,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         Popup.Content = null;
         OverlayLayer.Remove(Popup);
         OverlayLayer.InputTransparent = true;
-
+        OverlayLayer.BackgroundColor = Colors.Transparent;
         popupShowingDirection = "none";
 
     }
@@ -7614,7 +7653,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             MainControlGrid.IsVisible = false;
             FixedLayoutRoot.IsVisible = true;
             IsFixedLayout = true;
-            RebuildFixedToolbarButtons();
+            RebuildQuickCommandSlots();
             await RefreshFixedClipInfoAsync(_selectedClipIds.Count == 1 ? _selected : null);
         }
         else
@@ -7658,83 +7697,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         else if (view?.Parent is Layout layout)
         {
             layout.Remove(view);
-        }
-    }
-
-    private List<(string Key, string Text, ICommand Command, object? Argument)> GetFixedToolbarCommands()
-    {
-        return MenuBarItems
-            .SelectMany(menu => menu.OfType<MenuFlyoutItem>()
-                .Where(item => item.Command is not null)
-                .Select(item => (
-                    Key: $"{menu.Text} -> {item.Text} -> {item.CommandParameter}",
-                    Text: item.Text ?? menu.Text ?? "Command",
-                    Command: item.Command!,
-                    Argument: item.CommandParameter)))
-            .GroupBy(item => item.Key)
-            .Select(group => group.First())
-            .ToList();
-    }
-
-    private HashSet<string> GetFixedToolbarSelection()
-    {
-        var raw = SettingsManager.GetSetting(FixedToolbarCommandsSetting, string.Empty);
-        if (!string.IsNullOrWhiteSpace(raw))
-        {
-            try
-            {
-                return JsonSerializer.Deserialize<HashSet<string>>(raw) ?? [];
-            }
-            catch { }
-        }
-
-        return GetFixedToolbarCommands()
-            .Where(item => item.Text.Contains("撤销", StringComparison.OrdinalIgnoreCase)
-                || item.Text.Contains("Undo", StringComparison.OrdinalIgnoreCase)
-                || item.Text.Contains("保存", StringComparison.OrdinalIgnoreCase)
-                || item.Text.Contains("Save", StringComparison.OrdinalIgnoreCase))
-            .Select(item => item.Key)
-            .ToHashSet();
-    }
-
-    private void RebuildFixedToolbarButtons()
-    {
-        FixedToolbarButtons.Children.Clear();
-        if (!IsFixedLayout) return;
-
-        var selected = GetFixedToolbarSelection();
-        foreach (var item in GetFixedToolbarCommands().Where(item => selected.Contains(item.Key)).Take(5))
-        {
-            var button = new Button
-            {
-                Text = "\ue8b8",
-                FontFamily = MaterialIconFontFamily,
-                FontSize = 20,
-                Padding = new Thickness(7, 0),
-                MinimumWidthRequest = 38,
-                Command = item.Command,
-                CommandParameter = item.Argument
-            };
-            SemanticProperties.SetDescription(button, item.Text);
-            ToolTipProperties.SetText(button, item.Text);
-            FixedToolbarButtons.Children.Add(button);
-        }
-    }
-
-    private async Task ConfigureFixedToolbarAsync()
-    {
-        var commands = GetFixedToolbarCommands();
-        var selected = GetFixedToolbarSelection();
-        while (true)
-        {
-            var options = commands.Select(item => $"{(selected.Contains(item.Key) ? "✓ " : "  ")}{item.Text}").ToArray();
-            var choice = await DisplayActionSheetAsync("固定工具栏", Localized._Cancel, null, options);
-            if (string.IsNullOrWhiteSpace(choice) || choice == Localized._Cancel) break;
-            var index = Array.IndexOf(options, choice);
-            if (index < 0) continue;
-            if (!selected.Add(commands[index].Key)) selected.Remove(commands[index].Key);
-            SettingsManager.WriteSetting(FixedToolbarCommandsSetting, JsonSerializer.Serialize(selected));
-            RebuildFixedToolbarButtons();
         }
     }
 
@@ -10471,99 +10433,81 @@ public partial class DraftPage : ContentPage, IDraftPage
     }
 
     ToolbarItem RunningTaskToolbarItem = new();
-
-    void AddToolbarBtns()
+    private Dictionary<string, ICommand> GetDebugCommands() => new()
     {
-        LogDiagnostic("Adding toolbars buttons...");
-        try
         {
-            ToolbarItems.Clear();
-            ToolbarItems.Add(new ToolbarItem
+            "Debug_ToggleDebugViewForInteractableEditor", new Command(async () =>
             {
-                Text = Localized.DraftPage_MenuBar_Edit_Undo,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 0,
-                Command = UndoCommand
-            });
-            ToolbarItems.Add(new ToolbarItem
+                ClipEditor.ShowPreviewDebugOverlay = !ClipEditor.ShowPreviewDebugOverlay;
+            })
+        },
+        {
+            "Debug_ReRenderLivePreview", new Command(async () =>
             {
-                Text = Localized.DraftPage_MenuBar_Edit_Redo,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 0,
-                Command = RedoCommand
-            });
-            ToolbarItems.Add(new ToolbarItem
+                var token = ResetDynamicPreviewToken();
+                var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, previewWidth, previewHeight, token);
+                token.ThrowIfCancellationRequested();
+                ClipEditor.ApplyPreparedPreviews(preparedPreviews);
+            })
+        },
+        {
+            "Debug_CreatePopup", new Command(async () =>
             {
-                Text = Localized.DraftPage_MenuBar_Edit_History,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 0,
-                Command = ManageWindowCommand,
-                CommandParameter = "history"
-            });
-            ToolbarItems.Add(new ToolbarItem
+                string[] type = ["bottom", "dialog"];
+                var select = await DisplayActionSheetAsync("info", "select", null, type);
+                await ShowAPopup(content: await BuildPropertyPanel(_selected), border: _selected?.Clip, clip: _selected, mode: select);
+            })
+        },
+        {
+            "Debug_DumpProcessStack", new Command(async () =>
             {
-                Text = Localized.DraftPage_MenuBar_Edit_ConfigurePreview,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 0,
-                Command = new Command(async () =>
+                var f = previewer.GetFrame((uint)_currentFrame, previewWidth, previewHeight);
+                var text = PictureProcessStack.FormatProcessStackForLog(f.ProcessStack);
+                await Microsoft.Maui.ApplicationModel.DataTransfer.Clipboard.Default.SetTextAsync(text);
+            })
+        },
+        {
+            "Debug_OpenAWindow", new Command(async () =>
+            {
+                var page = new TestPage();
+                var wd = new MultiWindowItem
                 {
-                    var option = await DisplayActionSheetAsync(Localized.DraftPage_MenuBar_Edit_ConfigurePreview, Localized._Cancel, null, ClipEditor.PreviewResolutionOptions.ToArray());
-                    if (!string.IsNullOrWhiteSpace(option)) ClipEditor.SelectPreviewResolution(option);
-                })
-            });
-
-            //RunningTaskToolbarItem = new ToolbarItem
-            //{
-            //    Text = Localized.DraftPage_MenuBar_Jobs_ManageJobs,
-            //    Order = ToolbarItemOrder.Primary,
-            //    Priority = 0,
-            //    Command = ManageJobsCommand
-            //};
-            //ToolbarItems.Add(RunningTaskToolbarItem);
-
-            ToolbarItems.Add(new ToolbarItem
-            {
-                Text = Localized.DraftPage_GoRender,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 0,
-                Command = GoRenderCommand
-            });
-
-            ToolbarItems.Add(new ToolbarItem
-            {
-                Text = Localized.DraftPage_MenuBar_Project_Save,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 0,
-                Command = SaveCommand
-            });
-
-            ToolbarItems.Add(new ToolbarItem
-            {
-                Text = Localized._Settings,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 1,
-                Command = SettingsCommand
-            });
-
-            var MoreOptionButton = new ToolbarItem
-            {
-                Text = Localized.HomePage_MenuBar_MoreOptions,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 1
-            };
-
-            MoreOptionButton.Clicked += ShowMoreOptionsMenu;
-            ToolbarItems.Add(MoreOptionButton);
-
-        }
-        catch
+                    Content = page.Content,
+                    Title = "Test Window"
+                };
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    MainMultiWindowView.AddWindow(wd);
+                });
+            })
+        },
         {
+            "Debug_Crash", new Command(async () =>
+            {
+                var type = await DisplayActionSheetAsync("Choose a favor you'd like", "Cancel", null, "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)");
+                switch (type)
+                {
+                    case "Native(null pointer)":
+#if ANDROID
+                        throw new Java.Lang.NullPointerException("test crash from native code");
+#elif WINDOWS
+                        IntPtr ptr = IntPtr.Zero;
+                        Marshal.WriteInt32(ptr, 42);
+#endif
+                        break;
+                    case "Managed(NullReferenceException)":
+                        throw new NullReferenceException("test crash");
+                    case "Environment.FailFast":
+                        Environment.FailFast("test crash");
+                        break;
+                }
+            })
         }
-    }
+    };
 
     private async void ShowMoreOptionsMenu(object? sender, EventArgs e)
     {
-        const string fixedToolbarOption = "固定工具栏...";
+        RefreshQuickCommands();
         Dictionary<string, (ICommand? command, object? argument)> actionsPair = MenuBarItems
             .SelectMany(menuBarItem =>
                 menuBarItem.OfType<MenuFlyoutItem>()
@@ -10574,90 +10518,13 @@ public partial class DraftPage : ContentPage, IDraftPage
                     ))
             )
             .ToDictionary(x => x.Key, x => x.Value);
-        Dictionary<string, ICommand?> debugActionsPair = new Dictionary<string, ICommand?>
-        {
-            {
-                "Debug_ToggleDebugViewForInteractableEditor" ,new Command(async () =>
-                {
-                    ClipEditor.ShowPreviewDebugOverlay = !ClipEditor.ShowPreviewDebugOverlay;
-                })
-            },
-            {
-                "Debug_ReRenderLivePreview", new Command(async () =>
-                {
-                    var token = ResetDynamicPreviewToken();
-                    var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, previewWidth, previewHeight, token);
-                    token.ThrowIfCancellationRequested();
-                    ClipEditor.ApplyPreparedPreviews(preparedPreviews);
-                })
-            },
-            {
-                "Debug_CreatePopup" ,new Command(async () =>
-                {
-                    string[] type = ["right", "bottom","center","dialog"];
-                    var select = await DisplayActionSheetAsync("info", "select", null, type);
-                    await ShowAPopup(content: await BuildPropertyPanel(_selected), border: _selected?.Clip, clip:_selected, mode: select);
-                })
-            },
-            {
-                "Debug_DumpProcessStack", new Command(async () =>
-                {
-                    var f = previewer.GetFrame((uint)_currentFrame, previewWidth, previewHeight);
-                    var text = PictureProcessStack.FormatProcessStackForLog(f.ProcessStack);
-                    await Microsoft.Maui.ApplicationModel.DataTransfer.Clipboard.Default.SetTextAsync(text);
-                })
-            },
-            {
-                "Debug_OpenAWindow", new Command(async () =>
-                {
-                    var page = new TestPage();
-                    var wd = new MultiWindowItem()
-                    {
-                        Content = page.Content,
-                        Title = "Test Window",
-                    };
-                    await Dispatcher.DispatchAsync(async () =>
-                    {
-                        MainMultiWindowView.AddWindow(wd);
-                    });
-                })
-            },
-            {
-                "Debug_Crash", new Command(async () =>
-                {
-                    var type = await DisplayActionSheetAsync("Choose a favor you'd like", "Cancel", null, "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)");
-                    switch (type)
-                    {
-                        case "Native(null pointer)":
-#if ANDROID
-                            throw new Java.Lang.NullPointerException("test crash from native code");
-#elif WINDOWS
-                            IntPtr ptr = IntPtr.Zero;
-                            Marshal.WriteInt32(ptr, 42);
-#endif
-                            break;
-                        case "Managed(NullReferenceException)":
-                            throw new NullReferenceException("test crash");
-                        case "Environment.FailFast":
-                            Environment.FailFast("test crash");
-                            break;
-                    }
-                })
-            }
-        };
+        var debugActionsPair = GetDebugCommands();
 
         var option = await DisplayActionSheetAsync(Localized._Info, Localized._Cancel, null, actionsPair.Keys
-            .Concat(new[] { fixedToolbarOption })
             .Concat(SettingsManager.IsBoolSettingTrue("DeveloperMode") ? debugActionsPair.Keys : new List<string>())
             .ToArray());
 
         if (string.IsNullOrWhiteSpace(option)) return;
-
-        if (option == fixedToolbarOption)
-        {
-            await ConfigureFixedToolbarAsync();
-            return;
-        }
 
         if (actionsPair.TryGetValue(option, out var cmd))
         {
@@ -10955,6 +10822,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             this.Window.SizeChanged -= Window_SizeChanged;
         }
+        OverlayLayer.SizeChanged -= OverlayLayer_SizeChanged;
         MyLoggerExtensions.OnExceptionLog -= MyLoggerExtensions_OnExceptionLog;
 
         foreach (var item in PluginManager.LoadedPlugins)
@@ -11078,6 +10946,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         UpdateTimelineWidth();
         UpdatePlayheadPosition();
         ApplyDefaultMainMultiWindowLayout();
+    }
+
+    private void OverlayLayer_SizeChanged(object? sender, EventArgs e)
+    {
+        ReAdjustPopupForWindowSize();
     }
 
     private bool ignoreRunningTasks = false;
@@ -11440,6 +11313,89 @@ public partial class DraftPage : ContentPage, IDraftPage
         public string Level { get; set; } = "Info";
         public bool AlreadyRead { get; set; } = false;
     }
+
+    public sealed class QuickCommandItem : BindableObject
+    {
+        public QuickCommandItem(string key, string title, ICommand command, string iconGlyph, object? parameter = null, Func<bool>? toggleState = null)
+        {
+            Key = key;
+            Title = title;
+            Command = command;
+            IconGlyph = iconGlyph;
+            Parameter = parameter;
+            ToggleState = toggleState;
+            Command.CanExecuteChanged += OnCanExecuteChanged;
+        }
+
+        public string Key { get; }
+        public string Title { get; }
+        public ICommand Command { get; }
+        public string IconGlyph { get; }
+        public string FontFamily => "Icons";
+        public object? Parameter { get; }
+        public bool IsToggle => ToggleState is not null;
+        public bool IsToggled => ToggleState?.Invoke() ?? false;
+        private Func<bool>? ToggleState { get; }
+        public bool IsEnabled => Command.CanExecute(Parameter);
+
+        public void RefreshToggleState() => OnPropertyChanged(nameof(IsToggled));
+        private void OnCanExecuteChanged(object? sender, EventArgs e) => OnPropertyChanged(nameof(IsEnabled));
+    }
+
+    public sealed class QuickCommandSlot : BindableObject
+    {
+        private readonly DraftPage _page;
+        private QuickCommandItem? _item;
+
+        public QuickCommandSlot(DraftPage page, int index)
+        {
+            _page = page;
+            Index = index;
+        }
+
+        public int Index { get; }
+        public QuickCommandItem? Item
+        {
+            get => _item;
+            set
+            {
+                if (ReferenceEquals(_item, value)) return;
+                if (_item is not null) _item.PropertyChanged -= ItemPropertyChanged;
+                _item = value;
+                if (_item is not null) _item.PropertyChanged += ItemPropertyChanged;
+                OnPropertyChanged(nameof(Item));
+                OnPropertyChanged(nameof(Text));
+                OnPropertyChanged(nameof(FontFamily));
+                OnPropertyChanged(nameof(Command));
+                OnPropertyChanged(nameof(CommandParameter));
+                OnPropertyChanged(nameof(IsToggled));
+                OnPropertyChanged(nameof(IsEnabled));
+                OnPropertyChanged(nameof(Description));
+            }
+        }
+
+        public string Text => Item?.IconGlyph ?? "+";
+        public string? FontFamily => Item?.FontFamily;
+        public ICommand Command => Item?.Command ?? _page.ConfigureQuickCommandSlotCommand;
+        public object CommandParameter => Item?.Parameter ?? Index;
+        public bool IsToggled => Item?.IsToggled ?? false;
+        public bool IsEnabled => Item?.IsEnabled ?? true;
+        public string Description => Item?.Title ?? "Unknown command";
+
+        private void ItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(QuickCommandItem.IsToggled) or null)
+            {
+                OnPropertyChanged(nameof(IsToggled));
+            }
+
+            if (e.PropertyName is nameof(QuickCommandItem.IsEnabled) or null)
+            {
+                OnPropertyChanged(nameof(IsEnabled));
+            }
+        }
+    }
+
     #endregion
 
 }

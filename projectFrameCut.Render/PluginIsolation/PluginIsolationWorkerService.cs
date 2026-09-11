@@ -19,6 +19,7 @@ internal sealed class PluginIsolationWorkerService(
     string decryptionKey,
     IIsolationPayloadExchange payloads,
     IIsolationResourceBroker resources,
+    NamedPipePluginCommunicationService communication,
     CancellationTokenSource lifetime) : IRenderService, IDisposable
 {
     private readonly string _authenticationToken = authenticationToken;
@@ -30,6 +31,7 @@ internal sealed class PluginIsolationWorkerService(
     private readonly IIsolationPayloadExchange _payloads = payloads;
     private readonly IIsolationResourceBroker _resources = resources;
     private readonly CancellationTokenSource _lifetime = lifetime;
+    private readonly NamedPipePluginCommunicationService _communication = communication;
     private readonly ConcurrentDictionary<long, object> _objects = new();
     private long _nextObjectId;
     private IPluginBase? _plugin;
@@ -71,6 +73,8 @@ internal sealed class PluginIsolationWorkerService(
                     RenderOperation.IsolationReadVideoFrame => await ReadVideoFrameAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationInvokeProjectTool => await InvokeProjectToolAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationUpdateProjectPluginConfiguration => UpdateProjectPluginConfiguration(request),
+                    RenderOperation.IsolationCreatePluginChannel => await CreatePluginChannelAsync(request, cancellationToken).ConfigureAwait(false),
+                    RenderOperation.IsolationRegisterPluginChannel => RegisterPluginChannel(request),
                     RenderOperation.IsolationShutdown => Shutdown(request),
                     _ => Failure(request, RenderErrorCode.Unsupported, $"Unsupported isolation operation '{request.Operation}'."),
                 };
@@ -85,6 +89,24 @@ internal sealed class PluginIsolationWorkerService(
         _currentRequest.Value = null;
         Logger.Log($"Isolation operation '{request.Operation}' ({request.RequestId}) completed.");
         return response;
+    }
+
+    private async ValueTask<RenderResponseEnvelope> CreatePluginChannelAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
+    {
+        var request = Read<IsolationCreatePluginChannelRequest>(envelope);
+        if (!string.Equals(request.TargetPluginId, _authorizedPluginId, StringComparison.Ordinal))
+            return Failure(envelope, RenderErrorCode.Unauthorized, "The channel target must be the loaded plugin.");
+        return Success(envelope, await _communication.CreateListenerAsync(request.SourcePluginId, request.TargetPluginId, cancellationToken).ConfigureAwait(false));
+    }
+
+    private RenderResponseEnvelope RegisterPluginChannel(RenderRequestEnvelope envelope)
+    {
+        var request = Read<IsolationRegisterPluginChannelRequest>(envelope);
+        if (!string.Equals(request.Descriptor.SourcePluginId, request.SourcePluginId, StringComparison.Ordinal)
+            || !string.Equals(request.Descriptor.TargetPluginId, _authorizedPluginId, StringComparison.Ordinal))
+            return Failure(envelope, RenderErrorCode.Unauthorized, "The channel participants do not match the isolation session.");
+        _communication.RegisterDescriptor(request.Descriptor);
+        return Success(envelope, new EmptyResponse());
     }
 
     private RenderResponseEnvelope Negotiate(RenderRequestEnvelope envelope)

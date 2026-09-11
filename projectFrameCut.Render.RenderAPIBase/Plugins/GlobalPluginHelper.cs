@@ -83,6 +83,17 @@
             }
         } = null;
 
+        public static IPluginCommunicationService? PluginCommunicationService
+        {
+            get;
+            internal set
+            {
+                if (PluginCommunicationService is not null)
+                    throw new InvalidOperationException("PluginCommunicationService is already initialized.");
+                field = value;
+            }
+        } = null;
+
         /// <summary>
         /// Get the specific plugin by its ID.
         /// </summary>

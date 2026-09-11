@@ -101,6 +101,8 @@ public enum RenderOperation
     [ProtoEnum] IsolationAuthorizePlugin = 2015,
     [ProtoEnum] IsolationInvokeProjectTool = 2016,
     [ProtoEnum] IsolationUpdateProjectPluginConfiguration = 2017,
+    [ProtoEnum] IsolationCreatePluginChannel = 2018,
+    [ProtoEnum] IsolationRegisterPluginChannel = 2019,
 }
 
 [ProtoContract]

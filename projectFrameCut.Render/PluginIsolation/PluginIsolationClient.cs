@@ -56,6 +56,20 @@ public sealed class PluginIsolationClient : IAsyncDisposable
             new() { Configuration = new(configuration) },
             cancellationToken).ConfigureAwait(false);
 
+    public async ValueTask CreateChannelToAsync(PluginIsolationClient target, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        if (ReferenceEquals(this, target) || string.Equals(PluginId, target.PluginId, StringComparison.Ordinal))
+            throw new InvalidOperationException("A plugin cannot create a channel to itself.");
+        var descriptor = await target._session.InvokeAsync<IsolationCreatePluginChannelRequest, PluginChannelDescriptor>(
+            RenderOperation.IsolationCreatePluginChannel,
+            new() { SourcePluginId = PluginId, TargetPluginId = target.PluginId }, cancellationToken).ConfigureAwait(false);
+        await _session.InvokeAsync<IsolationRegisterPluginChannelRequest, EmptyResponse>(
+            RenderOperation.IsolationRegisterPluginChannel,
+            new() { SourcePluginId = PluginId, Descriptor = descriptor }, cancellationToken).ConfigureAwait(false);
+        projectFrameCut.Shared.Logger.Log($"Authorized isolated plugin channel '{PluginId}' -> '{target.PluginId}'.");
+    }
+
     internal TResponse Invoke<TRequest, TResponse>(RenderOperation operation, TRequest request)
         => _session.InvokeAsync<TRequest, TResponse>(operation, request).AsTask().GetAwaiter().GetResult();
 

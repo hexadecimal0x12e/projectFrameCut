@@ -1401,11 +1401,8 @@ public partial class HomePage : ContentPage
                 //                        }
                 //                    });
                 //                }
-                if (!SettingsManager.IsSettingExists("Edit_PreferredPopupMode"))
-                {
-                    SettingsManager.WriteSetting("Edit_PreferredPopupMode", "bottom");
-                }
                 if (!(SettingsManager.IsSettingExists("Edit_UseDynamicPreview") || SettingsManager.IsSettingExists("Edit_LiveVideoPreviewDefaultResolution"))) SettingsManager.WriteSetting("Edit_UseDynamicPreview", true.ToString());
+                var startRenderRpcTask = Task.Run(() => RenderRpcBootstrap.Initialize(draftSourcePath, false, projectName: project?.ProjectName ?? "Project"));
                 DraftPage? createdPage = null;
                 bool pageCreationCancelled = false;
                 await Dispatcher.DispatchAsync(async () =>
@@ -1421,7 +1418,6 @@ public partial class HomePage : ContentPage
                                 ProjectName = project?.ProjectName ?? "?",
                                 IsReadonly = isReadonly,
                                 Denoise = SettingsManager.IsBoolSettingTrue("Edit_Denoise"),
-                                PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "bottom"),
                                 MaximumSaveSlot = SettingsManager.GetSettingAs("Edit_MaximumSaveSlot", 50, 50),
                                 AlwaysShowToolbarBtns = SettingsManager.IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons"),
                                 ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole"),
@@ -1453,9 +1449,10 @@ public partial class HomePage : ContentPage
                                 }
                             }
                             await p.PostInit();
-                            var projectPluginsItem = new MenuFlyoutItem { Text = "Project plugins" };
-                            projectPluginsItem.Clicked += async (_, _) => await p.Navigation.PushAsync(new ProjectPluginPage(p));
-                            p.ExtensionsMenuBar.Add(projectPluginsItem);
+                            //var projectPluginsItem = new MenuFlyoutItem { Text = "Project plugins" };
+                            //projectPluginsItem.Clicked += async (_, _) => await p.Navigation.PushAsync(new ProjectPluginPage(p));
+                            //p.ExtensionsMenuBar.Add(projectPluginsItem);\
+                            bool hasAddItems = false;
                             foreach (var plugin in PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>())
                             {
                                 try
@@ -1463,6 +1460,7 @@ public partial class HomePage : ContentPage
                                     plugin.InjectUI(p);
                                     var name = plugin.ReadLocalizationItem("_PluginBase_Name_", Localized._LocaleId_) ?? plugin.Name;
                                     var items = plugin.GetMenuItems(p);
+                                    if (items.Any()) hasAddItems = true;
                                     var sub = new MenuFlyoutSubItem { Text = name, IsEnabled = items.Any() };
                                     items.ForEach(c => sub.Add(c));
                                     p.ExtensionsMenuBar.Add(sub);
@@ -1477,7 +1475,14 @@ public partial class HomePage : ContentPage
                                         return;
                                     }
                                 }
+
                             }
+
+                            if (!hasAddItems)
+                            {
+                                p.MenuBarItems.Remove(p.ExtensionsMenuBar);
+                            }
+
                             createdPage = p;
                             break;
                         }
@@ -1494,6 +1499,7 @@ public partial class HomePage : ContentPage
                         }
                     }
                 });
+                await startRenderRpcTask;
                 if (pageCreationCancelled)
                 {
                     page = null;

@@ -14,6 +14,7 @@
           IsClippedToBounds="True">
         <Grid.GestureRecognizers>
             <PinchGestureRecognizer PinchUpdated="OnViewportPinchUpdated" />
+            <PanGestureRecognizer TouchPoints="2" PanUpdated="OnViewportPanUpdated" />
         </Grid.GestureRecognizers>
 
         <Grid x:Name="ZoomContent"

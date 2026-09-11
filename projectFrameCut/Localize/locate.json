@@ -2390,6 +2390,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_AssetPanel_RpcSources_None",
+        "Value": "\u5F53\u524D\u6CA1\u6709\u53EF\u7528\u7684\u5916\u7F6E\u6E90\u3002\r\u8BF7\u5728\u8FDE\u63A5\u4E4B\u540E\u70B9\u51FB\u201D\u5237\u65B0\u201C\u6309\u94AE\u6765\u66F4\u65B0\u5217\u8868\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_AssetPanel_SharedAssets",
         "Value": "\u5171\u4EAB\u7D20\u6750",
         "Mode": "ConstString",
@@ -2569,6 +2577,70 @@
             "Value": ""
           }
         ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel",
+        "Value": "\u547D\u4EE4\u9762\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "\u8C03\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "\u6CA1\u6709\u5339\u914D\u7684\u547D\u4EE4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "\u641C\u7D22\u547D\u4EE4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "\u6765\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "\u83DC\u5355\u680F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "\u5207\u6362\u547D\u4EE4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "\u7C7B\u578B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {
@@ -3506,6 +3578,22 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_MenuBar_View_Timeline_LockScrollWhenSelected",
+        "Value": "\u9009\u62E9\u65F6\u9501\u5B9A\u6EDA\u52A8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Timeline_ReverseScrollBehavior",
+        "Value": "\u53CD\u8F6C\u65B9\u5411\u952E\u884C\u4E3A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_MenuBar_View_Timeline_ScrollLeft",
         "Value": "\u5411\u5DE6\u6EDA\u52A8\u65F6\u95F4\u7EBF",
         "Mode": "ConstString",
@@ -3662,6 +3750,14 @@
       {
         "Id": "DraftPage_PropertyPanel_SelectToContinue",
         "Value": "\u9009\u62E9\u4E00\u4E2A\u7247\u6BB5\u6765\u7F16\u8F91\u5B83\u7684\u5C5E\u6027\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_QuickCommand",
+        "Value": "\u5FEB\u6377\u547D\u4EE4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9556,8 +9652,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "DraftPage_AssetPanel_RpcSources_None",
-        "Value": "\u5F53\u524D\u6CA1\u6709\u53EF\u7528\u7684\u5916\u7F6E\u6E90\u3002\r\u8BF7\u5728\u8FDE\u63A5\u4E4B\u540E\u70B9\u51FB\u201D\u5237\u65B0\u201C\u6309\u94AE\u6765\u66F4\u65B0\u5217\u8868\u3002",
+        "Id": "DraftPage_CommandPanel_NormalCommand",
+        "Value": "\u6807\u51C6\u547D\u4EE4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12584,15 +12680,6 @@
       {
         "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
         "Value": "Scroll timeline to current playhead position",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
-        "Value": "Lock Timeline",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -19658,6 +19745,62 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "Unset localization item:DraftPage_CommandPanel_NoResults()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Type()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Source()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Invoke()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "Unset localization item:DraftPage_CommandPanel_ToggleCommand()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "Unset localization item:DraftPage_CommandPanel_SourceMenu()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -22580,15 +22723,6 @@
       {
         "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
         "Value": "\u6EFE\u52D5\u6642\u9593\u8EF8\u81F3\u76EE\u524D\u64AD\u653E\u4F4D\u7F6E",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
-        "Value": "\u9396\u5B9A\u6642\u9593\u7DDA",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29782,6 +29916,62 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "Unset localization item:DraftPage_CommandPanel_NoResults()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Type()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Source()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Invoke()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "Unset localization item:DraftPage_CommandPanel_ToggleCommand()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "Unset localization item:DraftPage_CommandPanel_SourceMenu()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ja-JP": [
@@ -32707,15 +32897,6 @@
       {
         "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
         "Value": "\u30BF\u30A4\u30E0\u30E9\u30A4\u30F3\u3092\u73FE\u5728\u306E\u518D\u751F\u4F4D\u7F6E\u306B\u30B9\u30AF\u30ED\u30FC\u30EB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
-        "Value": "\u30BF\u30A4\u30E0\u30E9\u30A4\u30F3\u3092\u56FA\u5B9A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39913,6 +40094,62 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "Unset localization item:DraftPage_CommandPanel_NoResults()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Type()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Source()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Invoke()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "Unset localization item:DraftPage_CommandPanel_ToggleCommand()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "Unset localization item:DraftPage_CommandPanel_SourceMenu()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -42837,15 +43074,6 @@
       {
         "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
         "Value": "\uD0C0\uC784\uB77C\uC778\uC744 \uD604\uC7AC \uC7AC\uC0DD \uC704\uCE58\uB85C \uC2A4\uD06C\uB864",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
-        "Value": "\uD0C0\uC784\uB77C\uC778 \uC7A0\uAE08",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -50028,6 +50256,62 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "Unset localization item:DraftPage_CommandPanel_NoResults()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Type()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Source()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Invoke()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "Unset localization item:DraftPage_CommandPanel_ToggleCommand()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "Unset localization item:DraftPage_CommandPanel_SourceMenu()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -52955,15 +53239,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u83DC\u5355\u9879\uFF1A\u5C06\u65F6\u95F4\u7EBF\u6EDA\u52A8\u5230\u5F53\u524D\u64AD\u653E\u4F4D\u7F6E",
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
-        "Value": "Verrouiller la chronologie",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -60141,6 +60416,62 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "Unset localization item:DraftPage_CommandPanel_NoResults()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Type()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Source()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Invoke()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "Unset localization item:DraftPage_CommandPanel_ToggleCommand()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "Unset localization item:DraftPage_CommandPanel_SourceMenu()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -63064,15 +63395,6 @@
       {
         "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
         "Value": "\u062A\u0645\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0637\u0637 \u0627\u0644\u0632\u0645\u0646\u064A \u0625\u0644\u0649 \u0645\u0648\u0636\u0639 \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u062D\u0627\u0644\u064A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
-        "Value": "\u062A\u0623\u0645\u064A\u0646 \u0627\u0644\u062C\u062F\u0648\u0644 \u0627\u0644\u0632\u0645\u0646\u064A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -70263,6 +70585,62 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "Unset localization item:DraftPage_CommandPanel_NoResults()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Type()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Source()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Invoke()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "Unset localization item:DraftPage_CommandPanel_ToggleCommand()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "Unset localization item:DraftPage_CommandPanel_SourceMenu()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -73191,15 +73569,6 @@
       {
         "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
         "Value": "Zeitleiste zur aktuellen Wiedergabeposition scrollen",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
-        "Value": "Zeitleiste sperren",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -80384,6 +80753,62 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "Unset localization item:DraftPage_CommandPanel_NoResults()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Type()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Source()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Invoke()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "Unset localization item:DraftPage_CommandPanel_ToggleCommand()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "Unset localization item:DraftPage_CommandPanel_SourceMenu()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -83308,15 +83733,6 @@
       {
         "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
         "Value": "Desplazar la l\u00EDnea de tiempo a la posici\u00F3n de reproducci\u00F3n actual",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
-        "Value": "Bloquear l\u00EDnea de tiempo",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -90501,6 +90917,62 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "Unset localization item:DraftPage_CommandPanel_NoResults()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Type()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Source()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Invoke()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "Unset localization item:DraftPage_CommandPanel_ToggleCommand()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "Unset localization item:DraftPage_CommandPanel_SourceMenu()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -93425,15 +93897,6 @@
       {
         "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
         "Value": "Scorri la timeline alla posizione di riproduzione corrente",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
-        "Value": "Blocca timeline",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -100623,6 +101086,62 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "Unset localization item:DraftPage_CommandPanel_NoResults()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Type()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Source()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Invoke()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "Unset localization item:DraftPage_CommandPanel_ToggleCommand()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "Unset localization item:DraftPage_CommandPanel_SourceMenu()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -103551,15 +104070,6 @@
       {
         "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
         "Value": "Przewi\u0144 o\u015B czasu do bie\u017C\u0105cej pozycji odtwarzania",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
-        "Value": "Zablokuj o\u015B czasu",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -110739,6 +111249,62 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "Unset localization item:DraftPage_CommandPanel_NoResults()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Type()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Source()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Invoke()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "Unset localization item:DraftPage_CommandPanel_ToggleCommand()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "Unset localization item:DraftPage_CommandPanel_SourceMenu()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -113665,15 +114231,6 @@
       {
         "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
         "Value": "Rolar a linha do tempo para a posi\u00E7\u00E3o atual de reprodu\u00E7\u00E3o",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
-        "Value": "Bloquear linha do tempo",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -120856,6 +121413,62 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "Unset localization item:DraftPage_CommandPanel_NoResults()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Type()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Source()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Invoke()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "Unset localization item:DraftPage_CommandPanel_ToggleCommand()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "Unset localization item:DraftPage_CommandPanel_SourceMenu()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ru-RU": [
@@ -123784,15 +124397,6 @@
       {
         "Id": "DraftPage_MenuBar_View_Timeline_FollowPlayhead",
         "Value": "\u041F\u0440\u043E\u043A\u0440\u0443\u0442\u0438\u0442\u044C \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E \u0448\u043A\u0430\u043B\u0443 \u043A \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043F\u043E\u0437\u0438\u0446\u0438\u0438 \u0432\u043E\u0441\u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u044F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
-        "Value": "\u0417\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u0443\u044E \u0448\u043A\u0430\u043B\u0443",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -130977,6 +131581,62 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "Unset localization item:DraftPage_CommandPanel_NoResults()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Type()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Source()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Invoke()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "Unset localization item:DraftPage_CommandPanel_ToggleCommand()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "Unset localization item:DraftPage_CommandPanel_SourceMenu()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -133908,15 +134568,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Timeline_LockScroll",
-        "Value": "Zaman \u00C7izelgesini Kilitle",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u9501\u5B9A\u65F6\u95F4\u7EBF",
         "DontTranslate": false
       },
       {
@@ -141089,6 +141740,62 @@
       {
         "Id": "DraftSettingPage_Statistics_Operator_System",
         "Value": "Sistem",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Search",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_NoResults",
+        "Value": "Unset localization item:DraftPage_CommandPanel_NoResults()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Type",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Type()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Source",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Source()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_Invoke",
+        "Value": "Unset localization item:DraftPage_CommandPanel_Invoke()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_ToggleCommand",
+        "Value": "Unset localization item:DraftPage_CommandPanel_ToggleCommand()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_CommandPanel_SourceMenu",
+        "Value": "Unset localization item:DraftPage_CommandPanel_SourceMenu()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

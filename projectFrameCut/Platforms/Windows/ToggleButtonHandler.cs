@@ -58,11 +58,12 @@ internal sealed class ToggleButtonHandler : ViewHandler<MauiToggleButton, WinUIT
 
     private static void MapFont(ToggleButtonHandler handler, MauiToggleButton view)
     {
-        handler.PlatformView.FontSize = view.FontSize > 0 ? view.FontSize : 14;
-        if (!string.IsNullOrWhiteSpace(view.FontFamily))
-        {
-            handler.PlatformView.FontFamily = new FontFamily(view.FontFamily);
-        }
+        var fontManager = handler.MauiContext?.Services.GetService(typeof(IFontManager)) as IFontManager;
+        if (fontManager is null) return;
+
+        var font = Microsoft.Maui.Font.OfSize(view.FontFamily, view.FontSize);
+        handler.PlatformView.FontFamily = fontManager.GetFontFamily(font);
+        handler.PlatformView.FontSize = fontManager.GetFontSize(font, view.FontSize);
     }
 
     private static void MapPadding(ToggleButtonHandler handler, MauiToggleButton view)

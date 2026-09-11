@@ -16,6 +16,9 @@ public class ToggleButton : Button
         BindingMode.TwoWay,
         propertyChanged: OnIsToggledChanged);
 
+    public static readonly BindableProperty IsTogglebaleProperty = BindableProperty.Create(
+        nameof(IsTogglebale), typeof(bool), typeof(ToggleButton), true);
+
     public static readonly BindableProperty OnBackgroundColorProperty = BindableProperty.Create(
         nameof(OnBackgroundColor),
         typeof(Color),
@@ -46,7 +49,11 @@ public class ToggleButton : Button
 
     public ToggleButton()
     {
-        Clicked += (_, _) => IsToggled = !IsToggled;
+        Clicked += (_, _) =>
+        {
+            if (IsTogglebale) IsToggled = !IsToggled;
+            else SyncPlatformToggleState();
+        };
         UpdateStateAppearance();
     }
 
@@ -54,6 +61,12 @@ public class ToggleButton : Button
     {
         get => (bool)GetValue(IsToggledProperty);
         set => SetValue(IsToggledProperty, value);
+    }
+
+    public bool IsTogglebale
+    {
+        get => (bool)GetValue(IsTogglebaleProperty);
+        set => SetValue(IsTogglebaleProperty, value);
     }
 
     public Color OnBackgroundColor
@@ -108,7 +121,24 @@ public class ToggleButton : Button
 
     private void SyncPlatformToggleState()
     {
-#if LINUX
+#if WINDOWS
+        if (Handler?.PlatformView is Microsoft.UI.Xaml.Controls.Primitives.ToggleButton platformButton
+            && platformButton.IsChecked != IsToggled)
+        {
+            platformButton.IsChecked = IsToggled;
+        }
+#elif ANDROID
+        if (Handler?.PlatformView is Google.Android.Material.Button.MaterialButton platformButton
+            && platformButton.Checked != IsToggled)
+        {
+            platformButton.Checked = IsToggled;
+        }
+#elif IOS || MACCATALYST
+        if (Handler?.PlatformView is UIKit.UIButton platformButton && platformButton.Selected != IsToggled)
+        {
+            platformButton.Selected = IsToggled;
+        }
+#elif LINUX
         if (Handler?.PlatformView is Gtk.ToggleButton platformButton && platformButton.Active != IsToggled)
         {
             platformButton.Active = IsToggled;

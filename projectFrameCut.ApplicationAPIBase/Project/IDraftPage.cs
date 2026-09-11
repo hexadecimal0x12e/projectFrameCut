@@ -259,6 +259,6 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// <param name="clip">Optional clip associated with the popup.</param>
         /// <param name="mode">The popup display mode identifier.</param>
         /// <returns>A task representing the asynchronous popup operation.</returns>
-        Task ShowAPopup(View? content = null, View? border = null, IClipElementUI? clip = null, string mode = "");
+        Task ShowAPopup(View? content = null, View? border = null, IClipElementUI? clip = null, string mode = "bottom");
     }
 }

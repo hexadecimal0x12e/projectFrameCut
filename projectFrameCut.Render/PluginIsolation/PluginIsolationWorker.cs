@@ -1,4 +1,5 @@
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Shared;
 using System.Diagnostics;
 using System.IO.Pipes;
@@ -58,7 +59,9 @@ public static class PluginIsolationWorker
 
             await using var payloads = new SessionPayloadExchange(options.SessionRoot);
             await using var resources = new SessionResourceBroker(options.SessionRoot);
-            using var service = new PluginIsolationWorkerService(options.AuthenticationToken, options.ParentProcessId, options.SessionRoot, options.PluginId, options.PluginRoot, authorization.DecryptionKey, payloads, resources, lifetime);
+            await using var communication = new NamedPipePluginCommunicationService(options.PluginId, lifetime.Token);
+            GlobalPluginHelper.PluginCommunicationService = communication;
+            using var service = new PluginIsolationWorkerService(options.AuthenticationToken, options.ParentProcessId, options.SessionRoot, options.PluginId, options.PluginRoot, authorization.DecryptionKey, payloads, resources, communication, lifetime);
             await StreamIsolationRequestDispatcher.RunAsync(pipe, service, lifetime.Token);
             Logger.Log("Plugin isolation runtime stopped.");
         }
@@ -148,4 +151,3 @@ internal sealed partial class RuntimeOptions
     private static partial Regex CliArgumentRegex();
 
 }
-
