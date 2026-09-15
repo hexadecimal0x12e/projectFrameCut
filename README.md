@@ -21,7 +21,7 @@
 
 众所周知，某个剪辑软件的越来越多基础的功能要VIP了（比如生成字幕）~~就差直接先开VIP再用了~~ ，很多人都忍不了做了一些开源的替代品，包括我。
 
-
+在AI的技术发展下，现有的视频剪辑软件要么太复杂，Agent用起来太吃力；要么太不可扩展，Agent无法很好的控制它。所以，projectFrameCut即提供了相当高的易用性，也保留了极大的可扩展性。
 
 ### 路线图
 
@@ -71,7 +71,7 @@ projectFrameCut性能的差异不会随着CPU或者GPU的变化而差异很大�
 对于MacCatalyst目标，我们支持MacOS 14.0\(macOS Sonoma\) 或者更新的系统上运行，同时支持Intel或者Apple芯片的Mac。**我们建议使用至少有16GB的统一内存Apple芯片的Mac。**
 
 ### AI支持
-我们知道，现在什么软件都在搞AI集成。
+我们知道，现在什么软件都在搞AI集成和扩展。
 
 软件支持基础的AI聊天、Agent、图片与视频生成。所有的服务你都需要自备一个API Key。
 软件内有一个基础的AI Agent，叫做'Assistant P'，它可以帮助你完成一些基础的操作（比如剪辑管理，效果管理，甚至是一些简单的编辑任务）。你可以直接和它对话来让它帮你完成一些任务。
@@ -81,9 +81,13 @@ projectFrameCut性能的差异不会随着CPU或者GPU的变化而差异很大�
 * 第三方API要求使用兼容OpenAI API的接口（比如Azure OpenAI），但是我们不保证所有的API都能正常工作。
 
 ### Agent 自动化
+外部的AI Agent也可以使用脚本引擎 (详见[projectFrameCut.PowerShell](tools/projectFrameCut.PowerShell/README.md))和 MCP 服务，允许他们（例如Codex，Claude Code等）为你自动完成一些任务，甚至帮你完成整个视频创作。
+
 软件内的AI支持ToolCall，允许让AI代替你完成项目编辑和一些操作。你可以直接询问'Assistant P' “你能用ToolCall干什么”，来了解他们能做什么。
 
-AI Agent也可以使用脚本引擎 (详见下文[自动化](#自动化))，允许 Assistant P 为你自动完成一些批量处理任务。
+#### 脚本引擎
+[projectFrameCut.PowerShell](tools/projectFrameCut.PowerShell/README.md) 提供了一组PowerShell脚本接口，允许你使用PowerShell连接到客户端，并且完成一些任务。
+按照指南连接到客户端后，你可以直接使用PowerShell来完成一些任务。
 
 #### 软件内AI Skill
 软件内支持AI Skill，并且内置了几个简单的skill，允许你在软件内使用AI来完成一些任务。
@@ -92,25 +96,41 @@ AI Agent也可以使用脚本引擎 (详见下文[自动化](#自动化))，允�
 我们还支持自定义的Claude风格的Skill，你只需要把他们放在`<用户数据>\My Skills`目录下，软件会自动加载他们。
 
 #### MCP Server
-想要在第三方Agent里使用软件的功能？没问题，我们提供了一个MCP Server，通过WebSocket连接到软件来实现对软件的控制。
+> [!NOTE]
+> 由于工具切换可能带来的兼容性问题，我们建议在可用的情况下，优先考虑使用PowerShell集成而不是MCP服务。
+> 一部分Agent可能会在使用 MCP 服务时遇到一些问题，如果你遇到了问题，请尝试使用PowerShell集成。
+想要在第三方Agent里使用软件的功能？没问题，我们提供了一个MCP Server，通过WebSocket连接到软件，和STDIO/HTTP连接到Agent应用程序来实现对软件的控制。
 
 你可以在Release里找到它。MCP服务器和软件内AI ToolCall使用了同一套接口，它也可以实现大部分的功能。
 
-关于MCP Server、Skill和AI ToolCall的更多信息，你可以[去这里看看](./projectFrameCut.McpServer/README.md)
+关于MCP Server、Skill和AI ToolCall的更多信息，你可以[去这里看看](./projectFrameCut.IntegratedAPIServer/README.md)
 
-### 插件
-你可以使用插件来自定义projectFrameCut。
+### 可扩展性
+你可以使用插件来扩展projectFrameCut，
+也可以使用 RPC 服务来控制projectFrameCut，实现连接到其他应用程序（包括脚本引擎和扩展源）。
 
-要开发插件，如果你感兴趣[这里有教程](https://github.com/hexadecimal0x12e/projectFrameCut.PluginTemplate)
+#### 插件
 
-### 自动化
-项目中内置了一个基于 PowerShell Core SDK 的脚本引擎，它可以将时间线暴露给 PowerShell 脚本执行。
-这意味着你可以使用PowerShell脚本来控制项目，甚至可以让软件自动化完成一些任务。
+插件可以为 projectFrameCut 增加新的效果、视频源、音频源、音轨、Transform、Computer、VideoWriter 等渲染能力，也可以提供应用级的菜单、设置页和其他 UI 扩展。插件通过 `projectFrameCut.Render.Contracts` 访问公开接口；应用会根据插件声明生成能力目录，并在运行时检查插件实际提供的能力。
 
-目前，项目中支持“基于脚本的模板”，允许模板作者使用PowerShell脚本来控制模板的行为。
-你可以在模板中使用脚本来实现一些复杂的逻辑，比如根据视频内容自动生成字幕，或者根据用户的操作自动调整特效参数。
+插件通常以 `.pjfc-plugin` 包分发。包内的元数据、依赖文件和程序集会经过发布者签名，托管程序集还会以加密形式存储；导入时 projectFrameCut 会校验签名、证书链、文件哈希和插件声明。发布者私钥应保留在插件开发者或发布环境中，不应随插件包分发。可以使用仓库中的 [PluginPackageUtility](tools/projectFrameCut.PluginPackageUtility/README.md) 创建插件包，示例实现位于 `tools` 目录下的插件项目中。
 
-在开发者模式下，项目UI的工具栏里会出现“脚本引擎”选项，允许你直接在软件内运行PowerShell脚本来测试你的脚本的行为。
+插件的执行方式可以按平台和插件声明选择：在 Windows 上支持 AppContainer 容器隔离，也支持独立进程隔离；不需要隔离的插件可以直接加载。图片效果和视频源等渲染能力可以通过隔离协议运行，而应用级 UI 和非可序列化的主程序能力仍由主进程承载。插件声明的最高隔离级别会限制用户可选择的运行模式。
+
+除了全局插件，还支持随项目保存的项目级插件（实验性功能）。项目级插件位于项目的 `projectPlugins` 目录，只在打开对应项目时加载，在关闭项目时卸载，并要求项目、插件和发布者之间的信任绑定。项目级插件在 AppContainer worker 中运行，主进程不会直接加载其程序集；它适合随项目一起交付的专用效果、工具和设置。详细的能力声明和项目插件格式见 [项目级插件说明](docs/project-plugins.md)，包格式见 [PluginPackageV2](docs/PluginPackageV2.md)。
+
+
+#### 远程过程调用(RPC)服务
+
+RPC 服务用于把 projectFrameCut 的项目编辑、渲染和媒体能力提供给其他应用程序。调用方可以使用公开的 protobuf 合同实现自己的客户端，也可以直接使用仓库提供的 [projectFrameCut.PowerShell](tools/projectFrameCut.PowerShell/README.md) 模块。PowerShell 模块既能离线创建、查询和管理项目，也能在获得授权后操作当前已打开的 GUI 项目；GUI 项目的修改支持查询历史、Undo、Redo、Restore 和显式保存。
+
+GUI RPC 使用命名管道连接。调用方可以发起一次性授权请求，由用户在草稿窗口中确认；也可以使用 RSA 公钥申请持久客户端授权，之后按需申请新的服务管道。请求文件只用于传递授权状态和加密结果，连接凭据通过公钥加密后返回，调用方需要自行保护私钥。管道和授权均绑定到具体的客户端、服务和项目会话，项目关闭或授权撤销后连接不能继续使用。完整的请求字段、状态和安全边界见 [外部 RPC 授权请求](docs/external-rpc-requests.md)。
+
+RPC 还支持外部视频源：外部程序保持运行并注册视频源目录，projectFrameCut 在读取素材帧时通过同一条双工命名管道向调用方请求创建、初始化、读取和释放。协议支持 8/16 位数据、Alpha 和 HDR 帧，项目中保存的是虚拟源引用而不是管道凭据，因此外部程序可以在重新授权并重新注册后恢复源的读取。
+
+MCP Server 和软件内 AI ToolCall 使用同一套项目接口；如果目标是让第三方 Agent 编辑项目，可以根据使用场景选择 MCP、PowerShell 或直接实现 Render RPC 客户端。
+
+
 
 ### 如何编译
 
