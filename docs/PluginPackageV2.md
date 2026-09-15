@@ -56,3 +56,29 @@ dependencies must always be present in the signed file list.
 
 The reference packer is `tools/PluginPackageUtility`. It keeps the signing private key
 outside the application and generates the package files and signatures described above.
+
+## External backend package v3
+
+Format version 3 represents a pure external backend and does not contain an encrypted
+plugin assembly. Its metadata sets `BackendKind` to `External`, sets
+`IsAppLevelPlugin` to `false`, leaves `PluginKey` and `PluginHash` empty, and declares
+at least one platform launch target under `ExternalBackend.Windows`,
+`ExternalBackend.MacOS`, or `ExternalBackend.Linux`. Each target contains only
+`EntryPoint`, `UseShellExecute`, and `CreateNoWindow`. `ExternalBackend.Capabilities` is the signed
+capability-group declaration and must exactly match the catalog returned by the backend.
+
+When `UseShellExecute` is false, an entry point must be absolute or a package-relative
+file covered by the signed manifest. When it is true, the entry point is passed to the
+platform shell unchanged and can identify an executable, URI handler, or supported
+packaged-app activation target. The host app appends the standard plugin worker
+arguments and authenticates the backend over a per-session named pipe.
+
+A .NET backend can pass its activation arguments directly to
+`ExternalPluginBackend.RunAsync(args, context => CreatePlugin(context))`. The runner parses
+the same `plugin_worker`, pipe, token, session, parent-process, plugin-root, plugin-id, and
+instance arguments used by the built-in worker. Other runtimes can implement the public
+protobuf contracts from `projectFrameCut.Render.Contracts` directly.
+
+The v3 canonical manifest inserts `backendKind` after `pluginId` and omits
+`pluginHash` for external backends. Version 2 canonical manifests and their required
+encrypted assembly files remain unchanged.

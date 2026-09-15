@@ -183,7 +183,7 @@ public static class ProjectPluginService
         var signingFingerprint = PluginTrustValidator.GetCertificateSha256Fingerprint(signingCertificate);
         var encryptionKey = PluginTrustValidator.DerivePluginEncryptionKey(signingCertificate);
         var metadata = options.Metadata;
-        metadata.PackageFormatVersion = PluginPackageManifest.CurrentFormatVersion;
+        metadata.PackageFormatVersion = PluginPackageManifest.ManagedAssemblyFormatVersion;
         metadata.PublisherId = publisherFingerprint;
         metadata.SigningCertificateFingerprint = signingFingerprint;
         metadata.PluginKey = encryptionKey;
@@ -215,7 +215,7 @@ public static class ProjectPluginService
 
         var manifest = new PluginPackageManifest
         {
-            FormatVersion = PluginPackageManifest.CurrentFormatVersion,
+            FormatVersion = PluginPackageManifest.ManagedAssemblyFormatVersion,
             PluginId = pluginId,
             PublisherId = publisherFingerprint,
             SigningCertificateFingerprint = signingFingerprint,

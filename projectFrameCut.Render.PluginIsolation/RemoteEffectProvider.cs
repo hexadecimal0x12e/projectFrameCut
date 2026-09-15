@@ -46,8 +46,16 @@ public sealed class RemoteEffectProvider : IEffectProvider
 
     public IEffect[] Build()
     {
-        var response = Invoke<IsolationBuildProviderRequest, IsolationEffectList>(RenderOperation.IsolationBuildProvider, new() { Provider = CreateState() });
-        return response.Effects.Select(x => RemoteEffectFactory.Create(_session, x)).ToArray();
+        var leases = new List<IsolationPayloadLease>();
+        try
+        {
+            var response = Invoke<IsolationBuildProviderRequest, IsolationEffectList>(RenderOperation.IsolationBuildProvider, new() { Provider = CreateState(leases) });
+            return response.Effects.Select(x => RemoteEffectFactory.Create(_session, x)).ToArray();
+        }
+        finally
+        {
+            foreach (var lease in leases) lease.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
     }
 
     public IEffect RestoreInstance(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
@@ -59,14 +67,15 @@ public sealed class RemoteEffectProvider : IEffectProvider
         return Build().First();
     }
 
-    private IsolationProviderState CreateState()
+    private IsolationProviderState CreateState(List<IsolationPayloadLease> leases)
     {
         var fields = new List<IsolationFieldDescriptor>();
         foreach (var item in Fields)
         {
             if (item.Value.FieldType.HasFlag(EffectArgumentFieldType.CustomType)) throw new NotSupportedException($"Custom effect field '{item.Key}' cannot run in isolation.");
             var dynamic = item.Value as DynamicEffectParamField;
-            fields.Add(new()
+            var value = dynamic?.StaticFallbackValue ?? item.Value.GetGetter()();
+            var descriptor = new IsolationFieldDescriptor
             {
                 Id = item.Key,
                 TypeName = item.Value.TypeName,
@@ -79,8 +88,15 @@ public sealed class RemoteEffectProvider : IEffectProvider
                 Remarks = item.Value.Remarks ?? string.Empty,
                 IsDynamic = item.Value.IsDynamic,
                 BoundProviderId = dynamic?.BoundProviderId ?? string.Empty,
-                Value = IsolationValueConverter.FromObject(dynamic?.StaticFallbackValue ?? item.Value.GetGetter()()),
-            });
+            };
+            if (value is projectFrameCut.Drawing.Base.IPicture picture)
+            {
+                var lease = PicturePayloadCodec.WriteAsync(picture, _session.Payloads, _session.PreferredPayloadKind, CancellationToken.None).AsTask().GetAwaiter().GetResult();
+                leases.Add(lease);
+                descriptor.PictureValue = lease.Reference;
+            }
+            else descriptor.Value = IsolationValueConverter.FromObject(value);
+            fields.Add(descriptor);
         }
 
         return new()

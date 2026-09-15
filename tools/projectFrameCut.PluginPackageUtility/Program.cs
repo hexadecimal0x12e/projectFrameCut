@@ -65,6 +65,14 @@ internal static class PluginPackageCli
         int? pluginApiMinorVersion = null;
         var isAppLevelPlugin = false;
         var maximumSupportedIsolationMode = PluginIsolationMode.Containerized;
+        PluginBackendKind? backendKind = null;
+        string? windowsEntry = null;
+        string? macOSEntry = null;
+        string? linuxEntry = null;
+        var windowsUseShellExecute = false;
+        var macOSUseShellExecute = false;
+        var linuxUseShellExecute = false;
+        var externalCapabilities = ExternalPluginCapabilities.None;
         var passwordFromStandardInput = false;
         var force = false;
 
@@ -134,6 +142,34 @@ internal static class PluginPackageCli
                         throw new ArgumentException($"Option '{argument}' must be Containerized, Process, or None.");
                     }
                     break;
+                case "--backend":
+                    if (!Enum.TryParse<PluginBackendKind>(ReadValue(args, ref index, argument), true, out var parsedBackend) || !Enum.IsDefined(parsedBackend))
+                        throw new ArgumentException($"Option '{argument}' must be ManagedAssembly or External.");
+                    backendKind = parsedBackend;
+                    break;
+                case "--windows-entry":
+                    windowsEntry = ReadValue(args, ref index, argument);
+                    break;
+                case "--macos-entry":
+                    macOSEntry = ReadValue(args, ref index, argument);
+                    break;
+                case "--linux-entry":
+                    linuxEntry = ReadValue(args, ref index, argument);
+                    break;
+                case "--windows-use-shell-execute":
+                    windowsUseShellExecute = true;
+                    break;
+                case "--macos-use-shell-execute":
+                    macOSUseShellExecute = true;
+                    break;
+                case "--linux-use-shell-execute":
+                    linuxUseShellExecute = true;
+                    break;
+                case "--external-capabilities":
+                    if (!Enum.TryParse<ExternalPluginCapabilities>(ReadValue(args, ref index, argument), true, out externalCapabilities)
+                        || (externalCapabilities & ~ExternalPluginCapabilities.All) != 0)
+                        throw new ArgumentException($"Option '{argument}' contains invalid external plugin capabilities.");
+                    break;
                 case "--force":
                     force = true;
                     break;
@@ -190,8 +226,19 @@ internal static class PluginPackageCli
             PluginApiMinorVersion = pluginApiMinorVersion,
             IsAppLevelPlugin = isAppLevelPlugin,
             MaximumSupportedIsolationMode = maximumSupportedIsolationMode,
+            BackendKind = backendKind,
+            ExternalBackend = backendKind == PluginBackendKind.External ? new()
+            {
+                Windows = CreateLaunch(windowsEntry, windowsUseShellExecute),
+                MacOS = CreateLaunch(macOSEntry, macOSUseShellExecute),
+                Linux = CreateLaunch(linuxEntry, linuxUseShellExecute),
+                Capabilities = externalCapabilities,
+            } : null,
             Force = force
         };
+
+        static ExternalPluginBackendLaunchOption? CreateLaunch(string? entryPoint, bool useShellExecute) =>
+            string.IsNullOrWhiteSpace(entryPoint) ? null : new() { EntryPoint = entryPoint, UseShellExecute = useShellExecute };
     }
 
     private static string ReadValue(ReadOnlySpan<string> args, ref int index, string option)
@@ -221,10 +268,13 @@ internal static class PluginPackageCli
         Console.WriteLine("       --certificate <signing-leaf.pfx> --chain <leaf-to-root.pem>");
         Console.WriteLine("       [--password <value> | --password-env <NAME> | --password-stdin] [--force]");
         Console.WriteLine();
-        Console.WriteLine("The staging directory must contain <PluginID>.dll.");
+        Console.WriteLine("Managed packages require <PluginID>.dll; external packages do not contain a managed assembly.");
         Console.WriteLine("If metadata.json is absent, generate it with --plugin-id and --version.");
         Console.WriteLine("Use --main-assembly when the assembly file name differs from the plugin ID.");
         Console.WriteLine("Use --app-level and --maximum-isolation-mode to declare plugin runtime requirements.");
+        Console.WriteLine("Use --backend External with --windows-entry/--macos-entry/--linux-entry for a v3 external backend.");
+        Console.WriteLine("Add the matching --<platform>-use-shell-execute flag for an exe, URI, or APPX Shell target.");
+        Console.WriteLine("Use --external-capabilities with a comma-separated capability list declared by the backend.");
         Console.WriteLine("metadata.json and hashtable.json are generated in the package.");
         Console.WriteLine("All files outside data/ and option.json are immutable and are covered by the manifest.");
     }
@@ -249,6 +299,8 @@ public sealed class PluginPackageOptions
     public int? PluginApiMinorVersion { get; init; }
     public bool IsAppLevelPlugin { get; init; }
     public PluginIsolationMode MaximumSupportedIsolationMode { get; init; } = PluginIsolationMode.Containerized;
+    public PluginBackendKind? BackendKind { get; init; }
+    public ExternalPluginBackendMetadata? ExternalBackend { get; init; }
     public bool Force { get; init; }
 }
 
@@ -319,23 +371,33 @@ public static class PluginPackageBuilder
                 : CreateMetadata(options);
 
             ValidatePluginId(metadata.PluginID);
-            if (!Enum.IsDefined(metadata.MaximumSupportedIsolationMode))
+            metadata.BackendKind = options.BackendKind ?? metadata.BackendKind;
+            if (metadata.BackendKind == PluginBackendKind.External && options.ExternalBackend is not null) metadata.ExternalBackend = options.ExternalBackend;
+            if (metadata.BackendKind == PluginBackendKind.ManagedAssembly) metadata.ExternalBackend = null;
+            if (metadata.BackendKind == PluginBackendKind.ManagedAssembly && !Enum.IsDefined(metadata.MaximumSupportedIsolationMode))
             {
                 throw new InvalidDataException("metadata.json contains an invalid MaximumSupportedIsolationMode.");
             }
-            var assemblyPath = ResolveAssemblyPath(inputDirectory, metadata.PluginID, options.MainAssemblyPath);
-            if (!File.Exists(assemblyPath))
+            if (metadata.BackendKind == PluginBackendKind.External && (metadata.IsAppLevelPlugin != false || metadata.ExternalBackend is null ||
+                new[] { metadata.ExternalBackend.Windows, metadata.ExternalBackend.MacOS, metadata.ExternalBackend.Linux }.All(x => x is null)))
+                throw new InvalidDataException("An external backend package must be non-AppLevel and declare at least one desktop entry point.");
+            var assemblyPath = metadata.BackendKind == PluginBackendKind.ManagedAssembly
+                ? ResolveAssemblyPath(inputDirectory, metadata.PluginID, options.MainAssemblyPath)
+                : null;
+            if (assemblyPath is not null && !File.Exists(assemblyPath))
             {
                 throw new FileNotFoundException($"The main plugin assembly '{Path.GetRelativePath(inputDirectory, assemblyPath)}' was not found.", assemblyPath);
             }
 
             var publisherId = PluginTrustValidator.GetCertificateSha256Fingerprint(chainCertificates[1]);
             var signingFingerprint = PluginTrustValidator.GetCertificateSha256Fingerprint(signingCertificate);
-            var encryptionKey = PluginTrustValidator.DerivePluginEncryptionKey(signingCertificate);
-            var assemblyBytes = await File.ReadAllBytesAsync(assemblyPath, cancellationToken);
-            var assemblyHash = PluginTrustValidator.ComputeSha256Hex(assemblyBytes);
+            var encryptionKey = metadata.BackendKind == PluginBackendKind.ManagedAssembly ? PluginTrustValidator.DerivePluginEncryptionKey(signingCertificate) : string.Empty;
+            var assemblyBytes = assemblyPath is null ? [] : await File.ReadAllBytesAsync(assemblyPath, cancellationToken);
+            var assemblyHash = assemblyPath is null ? string.Empty : PluginTrustValidator.ComputeSha256Hex(assemblyBytes);
 
-            metadata.PackageFormatVersion = PluginPackageManifest.CurrentFormatVersion;
+            metadata.PackageFormatVersion = metadata.BackendKind == PluginBackendKind.External
+                ? PluginPackageManifest.ExternalBackendFormatVersion
+                : PluginPackageManifest.ManagedAssemblyFormatVersion;
             metadata.PublisherId = publisherId;
             metadata.SigningCertificateFingerprint = signingFingerprint;
             metadata.PluginKey = encryptionKey;
@@ -346,21 +408,32 @@ public static class PluginPackageBuilder
                 metadata.PluginID,
                 assemblyPath,
                 cancellationToken);
+            if (metadata.ExternalBackend is not null)
+            {
+                foreach (var launch in new[] { metadata.ExternalBackend.Windows, metadata.ExternalBackend.MacOS, metadata.ExternalBackend.Linux }.OfType<ExternalPluginBackendLaunchOption>())
+                {
+                    if (string.IsNullOrWhiteSpace(launch.EntryPoint)) throw new InvalidDataException("External backend entry points cannot be empty.");
+                    if (launch.UseShellExecute || Path.IsPathRooted(launch.EntryPoint)) continue;
+                    var path = PluginTrustValidator.NormalizeManifestPath(launch.EntryPoint);
+                    if (!packageFiles.ContainsKey(path))
+                        throw new InvalidDataException($"External backend entry point '{launch.EntryPoint}' was not found in the staging directory.");
+                }
+            }
             packageFiles[MetadataFileName] = JsonSerializer.SerializeToUtf8Bytes(metadata, MetadataJsonOptions);
             packageFiles[PublisherChainFileName] = ExportCertificateChainPem(chainCertificates);
 
-            var encryptedAssembly = FileCryptoService.EncryptToFileWithPassword(encryptionKey, assemblyBytes);
-            var encryptedAssemblyName = metadata.PluginID + ".dll.enc";
-            var assemblySignatureName = metadata.PluginID + ".dll.sig";
-            packageFiles[encryptedAssemblyName] = encryptedAssembly;
-            packageFiles[assemblySignatureName] = Encoding.UTF8.GetBytes(
-                Convert.ToBase64String(Sign(signingCertificate, assemblyBytes)));
+            if (metadata.BackendKind == PluginBackendKind.ManagedAssembly)
+            {
+                packageFiles[metadata.PluginID + ".dll.enc"] = FileCryptoService.EncryptToFileWithPassword(encryptionKey, assemblyBytes);
+                packageFiles[metadata.PluginID + ".dll.sig"] = Encoding.UTF8.GetBytes(Convert.ToBase64String(Sign(signingCertificate, assemblyBytes)));
+            }
             packageFiles[HashtableFileName] = CreateHashtable(packageFiles);
 
             var manifest = new PluginPackageManifest
             {
-                FormatVersion = PluginPackageManifest.CurrentFormatVersion,
+                FormatVersion = metadata.PackageFormatVersion,
                 PluginId = metadata.PluginID,
+                BackendKind = metadata.BackendKind,
                 PublisherId = publisherId,
                 SigningCertificateFingerprint = signingFingerprint,
                 PluginHash = assemblyHash,
@@ -492,6 +565,8 @@ public static class PluginPackageBuilder
             PluginAPIMinorVersion = options.PluginApiMinorVersion ?? 0,
             IsAppLevelPlugin = options.IsAppLevelPlugin,
             MaximumSupportedIsolationMode = options.MaximumSupportedIsolationMode,
+            BackendKind = options.BackendKind ?? PluginBackendKind.ManagedAssembly,
+            ExternalBackend = options.ExternalBackend,
             Name = options.Name ?? pluginId,
             Author = options.Author ?? string.Empty,
             Description = options.Description ?? string.Empty,
@@ -533,7 +608,7 @@ public static class PluginPackageBuilder
     private static async Task<Dictionary<string, byte[]>> ReadImmutableStagingFilesAsync(
         string inputDirectory,
         string pluginId,
-        string assemblyPath,
+        string? assemblyPath,
         CancellationToken cancellationToken)
     {
         var files = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
@@ -549,8 +624,9 @@ public static class PluginPackageBuilder
 
             var relativePath = PluginTrustValidator.NormalizeManifestPath(
                 Path.GetRelativePath(root, filePath).Replace('\\', '/'));
-            if (string.Equals(Path.GetFullPath(filePath), assemblyPath, StringComparison.OrdinalIgnoreCase) ||
-                relativePath.Equals(pluginId + ".dll", StringComparison.OrdinalIgnoreCase))
+            if (assemblyPath is not null &&
+                (string.Equals(Path.GetFullPath(filePath), assemblyPath, StringComparison.OrdinalIgnoreCase) ||
+                 relativePath.Equals(pluginId + ".dll", StringComparison.OrdinalIgnoreCase)))
             {
                 continue;
             }
@@ -587,13 +663,9 @@ public static class PluginPackageBuilder
 
     private static void EnsureRequiredManifestFiles(PluginPackageManifest manifest, string pluginId)
     {
-        var required = new[]
-        {
-            MetadataFileName,
-            PublisherChainFileName,
-            pluginId + ".dll.enc",
-            pluginId + ".dll.sig"
-        };
+        var required = manifest.BackendKind == PluginBackendKind.External
+            ? new[] { MetadataFileName, PublisherChainFileName }
+            : new[] { MetadataFileName, PublisherChainFileName, pluginId + ".dll.enc", pluginId + ".dll.sig" };
         var paths = manifest.Files.Select(file => file.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var path in required)
         {

@@ -268,14 +268,14 @@
 
         </MenuBarItem>
 
-        <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs}">
-            <MenuFlyoutItem x:Name="JobRunningIndicator" Text="{l:Localized Key=DraftPage_NoJobRunning}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe86f;}" IsEnabled="False" />
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs_ManageJobs}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8b8;}" Command="{Binding ManageJobsCommand}">
+        <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Command}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_CommandPanel}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe9a9;}" Command="{Binding ShowCommandPanelCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}" Key="T" />
+                    <KeyboardAccelerator Key="{OnPlatform WinUI=F12, MacCatalyst=UIKeyInputF12}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutSeparator/>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_QuickCommand}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8b8;}" Command="{Binding ManageQuickCommandsCommand}" />
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Conform}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe5ca;}" Command="{Binding ReturnCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator  Key="{OnPlatform MacCatalyst=Return, Default=Enter}" />
@@ -284,11 +284,6 @@
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Escape}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14c;}" Command="{Binding EscapeCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Key="{OnPlatform WinUI=Escape, MacCatalyst=UIKeyInputEscape}" />
-                </MenuFlyoutItem.KeyboardAccelerators>
-            </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_CommandPanel}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe9a9;}" Command="{Binding ShowCommandPanelCommand}">
-                <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator Key="{OnPlatform WinUI=F12, MacCatalyst=UIKeyInputF12}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
         </MenuBarItem>

@@ -490,6 +490,7 @@ namespace projectFrameCut
                     handlers.AddHandler<projectFrameCut.Controls.HdrPreviewView, projectFrameCut.Platforms.Windows.HdrPreviewViewHandler>();
 #elif ANDROID
                     handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Android.ToggleButtonHandler>();
+                    handlers.AddHandler<projectFrameCut.InteractableEditor.InteractableEditor, projectFrameCut.Platforms.Android.InteractableEditorHandler>();
 #elif IOS
                     handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.iOS.ToggleButtonHandler>();
 #elif LINUX
@@ -553,10 +554,6 @@ namespace projectFrameCut
                 builder.Services.AddSingleton<UIThreadWatchdogService>();
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
-                builder.Services.AddSingleton<projectFrameCut.Services.AIComponent.IAIComponentClient, projectFrameCut.Services.AIComponent.WindowsAIComponentClient>();
-                builder.Services.AddSingleton<projectFrameCut.Services.AIComponent.WindowsVideoSuperResolutionProcessor>();
-                builder.Services.AddSingleton<projectFrameCut.Services.AIComponent.IIntegratedAIComponent>(services =>
-                    services.GetRequiredService<projectFrameCut.Services.AIComponent.WindowsVideoSuperResolutionProcessor>());
 #elif ANDROID
                 builder.ConfigureMauiHandlers(handlers =>
                 {
@@ -644,11 +641,6 @@ namespace projectFrameCut
                     });
                 });
 #endif
-                builder.Services.AddSingleton<projectFrameCut.Services.AIComponent.IntegratedAIPlugin>();
-#if !WINDOWS
-                builder.Services.AddSingleton<projectFrameCut.Services.AIComponent.IAIComponentClient, projectFrameCut.Services.AIComponent.AIComponentUnavailableClient>();
-#endif
-
                 try
                 {
                     if (!SettingsManager.IsBoolSettingTrue("UseSystemFont")) ConfigFontFromCulture(builder, ReadCultureFromSetting(locate, culture));
@@ -748,7 +740,6 @@ namespace projectFrameCut
 
                 Log("Everything ready!");
                 var app = builder.Build();
-                //IntegratedPlugins = [app.Services.GetRequiredService<projectFrameCut.Services.AIComponent.IntegratedAIPlugin>()];
                 Task.Run(async () =>
                 {
                     await Task.Delay(1000);

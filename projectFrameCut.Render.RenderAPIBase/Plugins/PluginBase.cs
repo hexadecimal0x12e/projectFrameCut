@@ -467,6 +467,19 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public int PackageFormatVersion { get; set; }
 
         /// <summary>
+        /// Selects whether the package contains a managed plugin assembly or launches an external backend.
+        /// </summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public PluginBackendKind BackendKind { get; set; } = PluginBackendKind.ManagedAssembly;
+
+        /// <summary>
+        /// Per-platform launch targets for an external backend package.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public ExternalPluginBackendMetadata? ExternalBackend { get; set; }
+
+        /// <summary>
         /// SHA-256 fingerprint of the publisher CA certificate.
         /// </summary>
         public string PublisherId { get; set; } = string.Empty;

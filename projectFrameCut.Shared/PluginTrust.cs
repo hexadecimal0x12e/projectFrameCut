@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Shared;
 
@@ -57,12 +58,57 @@ public sealed class PluginManifestFile
     public string Sha256 { get; set; } = string.Empty;
 }
 
+public enum PluginBackendKind
+{
+    ManagedAssembly,
+    External,
+}
+
+public sealed class ExternalPluginBackendLaunchOption
+{
+    public string EntryPoint { get; set; } = string.Empty;
+    public bool UseShellExecute { get; set; } = false;
+    public bool CreateNoWindow { get; set; } = true;
+}
+
+public sealed class ExternalPluginBackendMetadata
+{
+    public ExternalPluginBackendLaunchOption? Windows { get; set; }
+    public ExternalPluginBackendLaunchOption? MacOS { get; set; }
+    public ExternalPluginBackendLaunchOption? Linux { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public ExternalPluginCapabilities Capabilities { get; set; }
+
+    public ExternalPluginBackendLaunchOption? GetCurrentPlatform() =>
+        OperatingSystem.IsWindows() ? Windows : OperatingSystem.IsMacOS() ? MacOS : OperatingSystem.IsLinux() ? Linux : null;
+}
+
+[Flags]
+public enum ExternalPluginCapabilities
+{
+    None = 0,
+    Effects = 1 << 0,
+    VideoSources = 1 << 1,
+    AudioSources = 1 << 2,
+    SoundTracks = 1 << 3,
+    Transforms = 1 << 4,
+    Computers = 1 << 5,
+    VideoWriters = 1 << 6,
+    Clips = 1 << 7,
+    VectorComponents = 1 << 8,
+    All = Effects | VideoSources | AudioSources | SoundTracks | Transforms | Computers | VideoWriters | Clips | VectorComponents,
+}
+
 public sealed class PluginPackageManifest
 {
-    public const int CurrentFormatVersion = 2;
+    public const int ManagedAssemblyFormatVersion = 2;
+    public const int ExternalBackendFormatVersion = 3;
+    public const int CurrentFormatVersion = ExternalBackendFormatVersion;
 
     public int FormatVersion { get; set; }
     public string PluginId { get; set; } = string.Empty;
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public PluginBackendKind BackendKind { get; set; } = PluginBackendKind.ManagedAssembly;
     public string PublisherId { get; set; } = string.Empty;
     public string SigningCertificateFingerprint { get; set; } = string.Empty;
     public string PluginHash { get; set; } = string.Empty;
@@ -257,9 +303,12 @@ public static class PluginTrustValidator
             writer.WriteStartObject();
             writer.WriteNumber("formatVersion", manifest.FormatVersion);
             writer.WriteString("pluginId", manifest.PluginId);
+            if (manifest.FormatVersion >= PluginPackageManifest.ExternalBackendFormatVersion)
+                writer.WriteString("backendKind", manifest.BackendKind.ToString());
             writer.WriteString("publisherId", NormalizeFingerprint(manifest.PublisherId));
             writer.WriteString("signingCertificateFingerprint", NormalizeFingerprint(manifest.SigningCertificateFingerprint));
-            writer.WriteString("pluginHash", NormalizeFingerprint(manifest.PluginHash));
+            if (manifest.FormatVersion == PluginPackageManifest.ManagedAssemblyFormatVersion || !string.IsNullOrWhiteSpace(manifest.PluginHash))
+                writer.WriteString("pluginHash", NormalizeFingerprint(manifest.PluginHash));
             writer.WritePropertyName("files");
             writer.WriteStartArray();
             foreach (var file in manifest.Files

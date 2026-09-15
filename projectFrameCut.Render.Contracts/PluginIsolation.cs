@@ -6,7 +6,7 @@ namespace projectFrameCut.Render.Contracts;
 
 public static class PluginIsolationProtocol
 {
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 1;
     public const long DefaultMaximumPayloadBytes = 2L * 1024 * 1024 * 1024;
 }
 
@@ -85,6 +85,7 @@ public sealed class PluginIsolationTransportOptions
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(30);
     public int MaximumInlineBytes { get; init; } = 64 * 1024;
     public long MaximumPayloadBytes { get; init; } = PluginIsolationProtocol.DefaultMaximumPayloadBytes;
+    public bool TerminateOnRemoteError { get; init; }
 }
 
 public sealed class PluginIsolationLaunchContext

@@ -96,10 +96,7 @@ public static class PluginIsolationWorker
                 }
             }
             catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
-            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 5)
-            {
-                Logger.Log("AppContainer cannot open the host process; using control pipe closure to detect host exit.", "warning");
-            }
+            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 5) { } //known bug when using AppContainer, ignore safely
             catch (ArgumentException ex)
             {
                 // The host can be transitioning between packaged activations when the
@@ -134,7 +131,7 @@ internal sealed partial class RuntimeOptions
 #if DEBUG
         foreach (var item in values)
         {
-            Log($"Param {item.Key}: {item.Value}");
+            Log($"Param {item.Key}: {(item.Key == "token" ? "<redacted>" : item.Value)}");
         }
 #endif
         if (!values.TryGetValue("pipe", out var pipe) || string.IsNullOrWhiteSpace(pipe)) throw new ArgumentException("--pipe is required.");

@@ -7,6 +7,7 @@ using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Services;
+using projectFrameCut.Shared;
 using System.Globalization;
 using System.Reflection;
 using System.Text;
@@ -188,7 +189,7 @@ public partial class ExtensibilitySettingPage : ContentPage
         var ppb = new PropertyPanelBuilder();
 
         Dictionary<string, PluginIsolationMode> isolationModes = [];
-        if (PluginService.TryGetPluginItem(id, out var pluginItem) && DesktopPluginIsolationPlatform.IsSupported)
+        if (PluginService.TryGetPluginItem(id, out var pluginItem) && pluginItem!.BackendKind == PluginBackendKind.ManagedAssembly && DesktopPluginIsolationPlatform.IsSupported)
         {
             if (OperatingSystem.IsWindows() && PluginService.SupportsIsolationMode(PluginIsolationMode.Containerized, pluginItem!.MaximumSupportedIsolationMode))
                 isolationModes[SettingLocalizedResources.Plugin_IsolationMode_Containerized] = PluginIsolationMode.Containerized;

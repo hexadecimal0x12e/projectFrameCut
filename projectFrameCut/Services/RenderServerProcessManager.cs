@@ -152,7 +152,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             {
                 startInfo.ArgumentList.Add($"--parentPid={Environment.ProcessId}");
             }
-            startInfo.ArgumentList.Add($"--dataRoot={GlobalPluginHelper.PluginsDataRootPath}");
+            startInfo.ArgumentList.Add($"--dataRoot={MauiProgram.BasicDataPath}");
             if (_projectRoot is not null)
             {
                 startInfo.ArgumentList.Add($"--projectRoot={_projectRoot}");
@@ -293,7 +293,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     private void StartAndroidEditorWorker()
     {
         _pipeName = AndroidRenderWorkerController.CreateSocketPath();
-        var dataRoot = GlobalPluginHelper.PluginsDataRootPath ?? MauiProgram.BasicDataPath;
+        var dataRoot = MauiProgram.BasicDataPath;
         try
         {
             _androidWorker = AndroidRenderWorkerController.StartEditorWorker(
@@ -319,7 +319,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     private void StartAndroidRenderTask(CliRenderProcessOptions options)
     {
         _pipeName = AndroidRenderWorkerController.CreateSocketPath();
-        var dataRoot = GlobalPluginHelper.PluginsDataRootPath ?? MauiProgram.BasicDataPath;
+        var dataRoot = MauiProgram.BasicDataPath;
         try
         {
             _androidWorker = AndroidRenderWorkerController.StartRenderTask(
@@ -396,6 +396,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("output_options", $"{options.Width},{options.Height},{options.FrameRate},{options.PixelFormat},{options.Encoder}");
                 Add("target", options.WriteToVoid ? "void" : "all");
                 Add("assetDbFile", options.AssetDatabasePath);
+                Add("dataRoot", MauiProgram.BasicDataPath);
                 Add("FFmpegLibraryPath", options.FFmpegLibraryPath);
                 Add("maxParallelThreads", Math.Max(1, options.MaxParallelThreads).ToString());
                 Add("oneByOneRender", options.OneByOneRender.ToString());
@@ -461,7 +462,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         process.BeginOutputReadLine();
     }
 
-    private string RegistrationPath => Path.Combine(GlobalPluginHelper.PluginsDataRootPath ?? AppContext.BaseDirectory, "RenderJobs", "worker.json");
+    private string RegistrationPath => Path.Combine(MauiProgram.BasicDataPath, "RenderJobs", "worker.json");
 
     private bool TryConnectRegisteredWorker()
     {

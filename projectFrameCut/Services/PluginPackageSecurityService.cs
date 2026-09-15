@@ -157,6 +157,24 @@ internal static class PluginPackageSecurityService
 
             await ValidateManifestFilesAsync(pluginRoot, manifest, cancellationToken);
 
+            if (projectPublisherCertificateDer is not null && metadata.BackendKind == PluginBackendKind.External)
+                throw new NotSupportedException("External backend packages cannot be installed as project plugins.");
+
+            if (metadata.BackendKind == PluginBackendKind.External)
+            {
+                return new PluginPackageVerificationResult
+                {
+                    Metadata = metadata,
+                    Manifest = manifest,
+                    TrustReport = certificateValidation.Report with
+                    {
+                        Level = publisherTrusted ? PluginTrustLevel.PublisherTrusted : PluginTrustLevel.ChainValid
+                    },
+                    AssemblyBytes = [],
+                    SigningCertificate = X509CertificateLoader.LoadCertificate(certificateValidation.SigningCertificate.RawData)
+                };
+            }
+
             var expectedEncryptionKey = PluginTrustValidator.DerivePluginEncryptionKey(certificateValidation.SigningCertificate);
             if (!string.Equals(metadata.PluginKey, expectedEncryptionKey, StringComparison.OrdinalIgnoreCase))
             {
@@ -364,13 +382,9 @@ internal static class PluginPackageSecurityService
             }
         }
 
-        var requiredFiles = new[]
-        {
-            "metadata.json",
-            PublisherChainFileName,
-            manifest.PluginId + ".dll.enc",
-            manifest.PluginId + ".dll.sig"
-        };
+        var requiredFiles = manifest.BackendKind == PluginBackendKind.External
+            ? new[] { "metadata.json", PublisherChainFileName }
+            : new[] { "metadata.json", PublisherChainFileName, manifest.PluginId + ".dll.enc", manifest.PluginId + ".dll.sig" };
         foreach (var requiredFile in requiredFiles)
         {
             if (!entries.ContainsKey(requiredFile))
@@ -414,27 +428,48 @@ internal static class PluginPackageSecurityService
 
     private static void ValidateManifestAndMetadata(PluginMetadata metadata, PluginPackageManifest manifest)
     {
-        if (metadata.PackageFormatVersion != PluginPackageManifest.CurrentFormatVersion ||
-            manifest.FormatVersion != PluginPackageManifest.CurrentFormatVersion)
+        if (metadata.PackageFormatVersion != manifest.FormatVersion ||
+            manifest.FormatVersion is not (PluginPackageManifest.ManagedAssemblyFormatVersion or PluginPackageManifest.ExternalBackendFormatVersion))
         {
-            throw new NotSupportedException("Legacy plugin packages are no longer supported. A certificate-chain package with format version 2 is required.");
+            throw new NotSupportedException("Only managed plugin package v2 and external backend package v3 are supported.");
         }
 
-        if (string.IsNullOrWhiteSpace(metadata.PluginID) ||
+        var external = manifest.FormatVersion == PluginPackageManifest.ExternalBackendFormatVersion;
+        if (metadata.BackendKind != manifest.BackendKind ||
+            external != (metadata.BackendKind == PluginBackendKind.External) ||
+            string.IsNullOrWhiteSpace(metadata.PluginID) ||
             metadata.PluginID is "." or ".." ||
             metadata.PluginID != Path.GetFileName(metadata.PluginID) ||
             metadata.PluginID.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
             metadata.PluginAPIVersion != PluginService.PluginAPIVersion ||
-            !Enum.IsDefined(metadata.MaximumSupportedIsolationMode) ||
+            !Enum.IsDefined(metadata.BackendKind) ||
+            (!external && !Enum.IsDefined(metadata.MaximumSupportedIsolationMode)) ||
             !string.Equals(metadata.PluginID, manifest.PluginId, StringComparison.Ordinal) ||
             !string.Equals(metadata.PublisherId, manifest.PublisherId, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(metadata.SigningCertificateFingerprint, manifest.SigningCertificateFingerprint, StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(metadata.PluginHash, manifest.PluginHash, StringComparison.OrdinalIgnoreCase) ||
+            (!external && !string.Equals(metadata.PluginHash, manifest.PluginHash, StringComparison.OrdinalIgnoreCase)) ||
             !IsSha256Fingerprint(manifest.PublisherId) ||
             !IsSha256Fingerprint(manifest.SigningCertificateFingerprint) ||
-            !IsSha256Fingerprint(manifest.PluginHash))
+            (!external && !IsSha256Fingerprint(manifest.PluginHash)))
         {
             throw new InvalidDataException("metadata.json does not match the signed plugin manifest.");
+        }
+
+        if (!external) return;
+        if (metadata.IsAppLevelPlugin != false || metadata.ExternalBackend is null ||
+            new[] { metadata.ExternalBackend.Windows, metadata.ExternalBackend.MacOS, metadata.ExternalBackend.Linux }.All(x => x is null))
+            throw new InvalidDataException("An external backend package must be non-AppLevel and declare at least one desktop entry point.");
+        if ((metadata.ExternalBackend.Capabilities & ~ExternalPluginCapabilities.All) != 0)
+            throw new InvalidDataException("The external backend capability declaration is invalid.");
+        if (!string.IsNullOrWhiteSpace(metadata.PluginHash) || !string.IsNullOrWhiteSpace(metadata.PluginKey) || !string.IsNullOrWhiteSpace(manifest.PluginHash))
+            throw new InvalidDataException("An external backend package cannot declare a managed assembly hash or encryption key.");
+        foreach (var launch in new[] { metadata.ExternalBackend.Windows, metadata.ExternalBackend.MacOS, metadata.ExternalBackend.Linux }.OfType<ExternalPluginBackendLaunchOption>())
+        {
+            if (string.IsNullOrWhiteSpace(launch.EntryPoint)) throw new InvalidDataException("External backend entry points cannot be empty.");
+            if (launch.UseShellExecute || Path.IsPathRooted(launch.EntryPoint)) continue;
+            var normalized = PluginTrustValidator.NormalizeManifestPath(launch.EntryPoint);
+            if (!manifest.Files.Any(x => string.Equals(PluginTrustValidator.NormalizeManifestPath(x.Path), normalized, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidDataException($"External backend entry point '{launch.EntryPoint}' is not covered by the signed manifest.");
         }
     }
 

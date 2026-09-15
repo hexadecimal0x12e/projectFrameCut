@@ -152,7 +152,7 @@
       },
       {
         "Id": "ClipFallback_ClipInit",
-        "Value": "\u6B64Clip\u7684\u914D\u7F6E\u5B58\u5728\u4E00\u4E2A\u6216\u591A\u4E2A\u95EE\u9898\uFF0C\u8BF7\u73B0\u5728\u5C5E\u6027\u9762\u677F\u4E2D\u89E3\u51B3\u3002",
+        "Value": "\u6B64Clip\u7684\u914D\u7F6E\u5B58\u5728\u4E00\u4E2A\u6216\u591A\u4E2A\u95EE\u9898\uFF0C\u8BF7\u5148\u5728\u5C5E\u6027\u9762\u677F\u4E2D\u89E3\u51B3\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -178,7 +178,7 @@
       },
       {
         "Id": "ClipFallback_ResolveBinding",
-        "Value": "\u6B64Clip\u7684\u6548\u679C\u7ED1\u5B9A\u5B58\u5728\u95EE\u9898\uFF0C\u8BF7\u73B0\u5728\u5C5E\u6027\u9762\u677F-\u6548\u679C\u4E2D\u89E3\u51B3\u3002",
+        "Value": "\u6B64Clip\u7684\u6548\u679C\u7ED1\u5B9A\u5B58\u5728\u95EE\u9898\uFF0C\u8BF7\u5148\u5728\u5C5E\u6027\u9762\u677F-\u6548\u679C\u4E2D\u89E3\u51B3\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -186,7 +186,7 @@
       },
       {
         "Id": "ClipFallback_ResolveEffect",
-        "Value": "\u6B64Clip\u7684\u6548\u679C\u914D\u7F6E\u5B58\u5728\u95EE\u9898\uFF0C\u8BF7\u73B0\u5728\u5C5E\u6027\u9762\u677F-\u6548\u679C\u4E2D\u89E3\u51B3\u3002",
+        "Value": "\u6B64Clip\u7684\u6548\u679C\u914D\u7F6E\u5B58\u5728\u95EE\u9898\uFF0C\u8BF7\u5148\u5728\u5C5E\u6027\u9762\u677F-\u6548\u679C\u4E2D\u89E3\u51B3\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -958,6 +958,14 @@
             "Value": ""
           }
         ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "\u9759\u6001\u503C\uFF08\u65AD\u5F00\u8FDE\u63A5\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {
@@ -2615,14 +2623,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "EffectBindView_BoundSource_Disconnect",
-        "Value": "\u9759\u6001\u503C\uFF08\u65AD\u5F00\u8FDE\u63A5\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -5334,6 +5334,151 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ClipInit",
+        "Value": "This Clip has one or more configuration issues. Please resolve them in the Properties panel first.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_NotSpecified",
+        "Value": "Sorry, an unknown error ({id}) occurred, so this Clip cannot be rendered.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveBinding",
+        "Value": "There is a problem with this Clip\u0027s effect binding. Please resolve it in the Properties panel - Effects first.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveEffect",
+        "Value": "There is a problem with this Clip\u0027s effect configuration. Please resolve it in the Properties panel \u003E Effects first.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_Source",
+        "Value": "This clip\u0027s source video is corrupted or unreadable. Please check whether your source file is corrupted.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotFound",
+        "Value": "The media file is unavailable. Please check whether your storage device is properly connected and whether the file exists.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotMatch",
+        "Value": "The source file on disk does not match. Please resolve this issue in the Assets panel and try again.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_Bound",
+        "Value": "Bound parameter \u0022{a}\u0022 to \u0022{b}\u0022.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "Static Value (Disconnect)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_FrameIndex",
+        "Value": "Frame Index (Built-in)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Progress",
+        "Value": "Percentage Progress (Built-in)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "Global Binding Sources",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "Cannot connect: Incompatible port types.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -8034,6 +8179,151 @@
       {
         "Id": "VectorContentHandler_SVGImage_DisplayName",
         "Value": "SVG \u5716\u7247",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_NotSpecified",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C\u767C\u751F\u4E86\u4E00\u500B\u672A\u77E5\u932F\u8AA4 ({id})\uFF0C\u5C0E\u81F4\u9019\u500B Clip \u7121\u6CD5\u88AB\u6E32\u67D3\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ClipInit",
+        "Value": "\u6B64 Clip \u7684\u8A2D\u5B9A\u6709\u4E00\u6216\u591A\u500B\u554F\u984C\uFF0C\u8ACB\u5148\u5728\u5C6C\u6027\u9762\u677F\u4E2D\u89E3\u6C7A\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveBinding",
+        "Value": "\u6B64 Clip \u7684\u6548\u679C\u7E6B\u7D50\u6709\u554F\u984C\uFF0C\u8ACB\u5148\u5728\u5C6C\u6027\u9762\u677F\uFF0D\u6548\u679C\u4E2D\u89E3\u6C7A\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotFound",
+        "Value": "\u5A92\u9AD4\u6A94\u6848\u7121\u6CD5\u4F7F\u7528\uFF0C\u8ACB\u6AA2\u67E5\u60A8\u7684\u5132\u5B58\u88DD\u7F6E\u662F\u5426\u5DF2\u6B63\u78BA\u9023\u63A5\uFF0C\u4EE5\u53CA\u6A94\u6848\u662F\u5426\u5B58\u5728\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotMatch",
+        "Value": "\u78C1\u789F\u4E0A\u7684\u4F86\u6E90\u6A94\u6848\u4E0D\u76F8\u7B26\uFF0C\u8ACB\u5728\u7D20\u6750\u9762\u677F\u89E3\u6C7A\u9019\u500B\u554F\u984C\u5F8C\u518D\u8A66\u4E00\u6B21\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveEffect",
+        "Value": "\u6B64 Clip \u7684\u6548\u679C\u8A2D\u5B9A\u6709\u554F\u984C\uFF0C\u8ACB\u7ACB\u5373\u65BC\u5C6C\u6027\u9762\u677F-\u6548\u679C\u4E2D\u89E3\u6C7A\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_FrameIndex",
+        "Value": "\u5E40\u5E8F\u865F\uFF08\u5167\u5EFA\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "\u975C\u614B\u503C\uFF08\u4E2D\u65B7\u9023\u7DDA\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_Bound",
+        "Value": "\u5DF2\u5C07\u53C3\u6578\u300C{a}\u300D\u7D81\u5B9A\u81F3\u300C{b}\u300D\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Progress",
+        "Value": "\u767E\u5206\u6BD4\u9032\u5EA6\uFF08\u5167\u5EFA\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "\u5168\u57DF\u7E6B\u7D50\u4F86\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "\u7121\u6CD5\u9023\u63A5\uFF1A\u9023\u63A5\u57E0\u985E\u578B\u4E0D\u76F8\u5BB9\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_Source",
+        "Value": "\u6B64\u7247\u6BB5\u7684\u4F86\u6E90\u5F71\u7247\u5DF2\u640D\u6BC0\u6216\u7121\u6CD5\u8B80\u53D6\uFF0C\u8ACB\u5617\u8A66\u6AA2\u67E5\u60A8\u7684\u4F86\u6E90\u6A94\u6848\u662F\u5426\u640D\u6BC0\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10744,6 +11034,150 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ClipInit",
+        "Value": "\u3053\u306E\u30AF\u30EA\u30C3\u30D7\u306E\u8A2D\u5B9A\u306B1\u3064\u4EE5\u4E0A\u306E\u554F\u984C\u304C\u3042\u308A\u307E\u3059\u3002\u5148\u306B\u30D7\u30ED\u30D1\u30C6\u30A3\u30D1\u30CD\u30EB\u3067\u89E3\u6C7A\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u300C1\u3064\u4EE5\u4E0A\u300D\u3067\u539F\u6587\u306E\u300C\u4E00\u4E2A\u6216\u591A\u4E2A\u300D\u3092\u8868\u73FE\u3002\u30AB\u30BF\u30AB\u30CA\u8A9E\u306F\u300C\u30AF\u30EA\u30C3\u30D7\u300D\u300C\u30D7\u30ED\u30D1\u30C6\u30A3\u30D1\u30CD\u30EB\u300D\u306E\u307F\u306B\u6291\u3048\u3001\u7C21\u6F54\u306B\u307E\u3068\u3081\u305F\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_NotSpecified",
+        "Value": "\u7533\u3057\u8A33\u3042\u308A\u307E\u305B\u3093\u3002\u4E0D\u660E\u306A\u30A8\u30E9\u30FC ({id}) \u304C\u767A\u751F\u3057\u305F\u305F\u3081\u3001\u3053\u306EClip\u3092\u63CF\u753B\u3067\u304D\u307E\u305B\u3093\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveEffect",
+        "Value": "\u3053\u306EClip\u306E\u52B9\u679C\u8A2D\u5B9A\u306B\u554F\u984C\u304C\u3042\u308A\u307E\u3059\u3002\u5148\u306B\u30D7\u30ED\u30D1\u30C6\u30A3\u306E\u300C\u52B9\u679C\u300D\u3067\u89E3\u6C7A\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_Source",
+        "Value": "\u3053\u306E\u30AF\u30EA\u30C3\u30D7\u306E\u5143\u52D5\u753B\u306F\u7834\u640D\u3057\u3066\u3044\u308B\u304B\u3001\u8AAD\u307F\u53D6\u308C\u307E\u305B\u3093\u3002\u5143\u30D5\u30A1\u30A4\u30EB\u304C\u7834\u640D\u3057\u3066\u3044\u306A\u3044\u304B\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveBinding",
+        "Value": "\u3053\u306EClip\u306E\u52B9\u679C\u306E\u7D10\u4ED8\u3051\u306B\u554F\u984C\u304C\u3042\u308A\u307E\u3059\u3002\u30D7\u30ED\u30D1\u30C6\u30A3\u30D1\u30CD\u30EB\u306E\u52B9\u679C\u3067\u5148\u306B\u89E3\u6C7A\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotFound",
+        "Value": "\u30E1\u30C7\u30A3\u30A2\u30D5\u30A1\u30A4\u30EB\u3092\u5229\u7528\u3067\u304D\u307E\u305B\u3093\u3002\u4FDD\u5B58\u5148\u306E\u6A5F\u5668\u304C\u6B63\u3057\u304F\u63A5\u7D9A\u3055\u308C\u3066\u3044\u308B\u304B\u3001\u30D5\u30A1\u30A4\u30EB\u304C\u5B58\u5728\u3059\u308B\u304B\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_Bound",
+        "Value": "\u30D1\u30E9\u30E1\u30FC\u30BF\u300C{a}\u300D\u3092\u300C{b}\u300D\u306B\u7D10\u4ED8\u3051\u307E\u3057\u305F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotMatch",
+        "Value": "\u30C7\u30A3\u30B9\u30AF\u4E0A\u306E\u5143\u30D5\u30A1\u30A4\u30EB\u304C\u4E00\u81F4\u3057\u307E\u305B\u3093\u3002\u7D20\u6750\u30D1\u30CD\u30EB\u3067\u89E3\u6C7A\u3057\u3066\u304B\u3089\u3001\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "\u9759\u7684\u5024\uFF08\u5207\u65AD\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Progress",
+        "Value": "\u9032\u6357\u7387\uFF08\u5185\u8535\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "\u63A5\u7D9A\u3067\u304D\u307E\u305B\u3093\uFF1A\u30DD\u30FC\u30C8\u7A2E\u5225\u304C\u4E0D\u4E00\u81F4\u3067\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "\u5168\u4F53\u30D0\u30A4\u30F3\u30C9\u5143",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_FrameIndex",
+        "Value": "\u30D5\u30EC\u30FC\u30E0\u756A\u53F7\uFF08\u5185\u8535\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -13447,6 +13881,151 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveEffect",
+        "Value": "\uC774 \uD074\uB9BD\uC758 \uD6A8\uACFC \uC124\uC815\uC5D0 \uBB38\uC81C\uAC00 \uC788\uC2B5\uB2C8\uB2E4. \uC18D\uC131 \uD328\uB110 - \uD6A8\uACFC\uC5D0\uC11C \uBA3C\uC800 \uD574\uACB0\uD574 \uC8FC\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveBinding",
+        "Value": "\uC774 Clip\uC758 \uD6A8\uACFC \uBC14\uC778\uB529\uC5D0 \uBB38\uC81C\uAC00 \uC788\uC2B5\uB2C8\uB2E4. \uC9C0\uAE08 \uC18D\uC131 \uD328\uB110 - \uD6A8\uACFC\uC5D0\uC11C \uD574\uACB0\uD574 \uC8FC\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_NotSpecified",
+        "Value": "\uC8C4\uC1A1\uD569\uB2C8\uB2E4. \uC54C \uC218 \uC5C6\uB294 \uC624\uB958({id})\uAC00 \uBC1C\uC0DD\uD558\uC5EC \uC774 \uD074\uB9BD\uC744 \uB80C\uB354\uB9C1\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_Source",
+        "Value": "\uC774 \uD074\uB9BD\uC758 \uC6D0\uBCF8 \uB3D9\uC601\uC0C1\uC774 \uC190\uC0C1\uB418\uC5C8\uAC70\uB098 \uC77D\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC6D0\uBCF8 \uD30C\uC77C\uC774 \uC190\uC0C1\uB418\uC9C0 \uC54A\uC558\uB294\uC9C0 \uD655\uC778\uD574 \uC8FC\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u63D0\u793A\u7528\u6237\u8BE5 Clip \u7684\u6E90\u89C6\u9891\u5DF2\u635F\u574F\u6216\u65E0\u6CD5\u8BFB\u53D6\uFF0C\u5E76\u5EFA\u8BAE\u68C0\u67E5\u6E90\u6587\u4EF6\u662F\u5426\u635F\u574F\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_Bound",
+        "Value": "\u300C{a}\u300D \uB9E4\uAC1C\uBCC0\uC218\uB97C \u300C{b}\u300D\uC5D0 \uBC14\uC778\uB529\uD588\uC2B5\uB2C8\uB2E4.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "\uC815\uC801 \uAC12(\uC5F0\uACB0 \uB04A\uAE30)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotFound",
+        "Value": "\uBBF8\uB514\uC5B4 \uD30C\uC77C\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC800\uC7A5 \uC7A5\uCE58\uAC00 \uC62C\uBC14\uB974\uAC8C \uC5F0\uACB0\uB418\uC5B4 \uC788\uB294\uC9C0, \uD30C\uC77C\uC774 \uC874\uC7AC\uD558\uB294\uC9C0 \uD655\uC778\uD558\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Progress",
+        "Value": "\uBC31\uBD84\uC728 \uC9C4\uD589\uB960(\uB0B4\uC7A5)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5185\u7F6E\u7684\u767E\u5206\u6BD4\u8FDB\u5EA6\u7ED1\u5B9A\u6E90\u6807\u7B7E",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "\uC804\uC5ED \uBC14\uC778\uB529 \uC18C\uC2A4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "\uC5F0\uACB0\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4: \uD3EC\uD2B8 \uC720\uD615\uC774 \uD638\uD658\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotMatch",
+        "Value": "\uB514\uC2A4\uD06C\uC758 \uC18C\uC2A4 \uD30C\uC77C\uC774 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC5D0\uC14B \uD328\uB110\uC5D0\uC11C \uC774 \uBB38\uC81C\uB97C \uD574\uACB0\uD55C \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD558\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_FrameIndex",
+        "Value": "\uD504\uB808\uC784 \uC778\uB371\uC2A4(\uB0B4\uC7A5)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ClipInit",
+        "Value": "\uC774 \uD074\uB9BD\uC758 \uC124\uC815\uC5D0 \uD558\uB098 \uC774\uC0C1\uC758 \uBB38\uC81C\uAC00 \uC788\uC73C\uBBC0\uB85C \uBA3C\uC800 \uC18D\uC131 \uD328\uB110\uC5D0\uC11C \uD574\uACB0\uD558\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -16140,6 +16719,151 @@
       {
         "Id": "VectorContentHandler_SVGImage_DisplayName",
         "Value": "Image SVG",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ClipInit",
+        "Value": "La configuration de ce Clip pr\u00E9sente un ou plusieurs probl\u00E8mes. Veuillez d\u0027abord les r\u00E9soudre dans le panneau des propri\u00E9t\u00E9s.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveBinding",
+        "Value": "Ce clip pr\u00E9sente un probl\u00E8me de liaison d\u0027effets. Veuillez d\u0027abord le r\u00E9soudre dans le panneau Propri\u00E9t\u00E9s - Effets.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveEffect",
+        "Value": "La configuration des effets de ce clip pr\u00E9sente un probl\u00E8me. Veuillez d\u0027abord le r\u00E9soudre dans le panneau Propri\u00E9t\u00E9s - Effets.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_NotSpecified",
+        "Value": "D\u00E9sol\u00E9, une erreur inconnue ({id}) s\u0027est produite, ce qui a emp\u00EAch\u00E9 ce clip d\u0027\u00EAtre rendu.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotMatch",
+        "Value": "Le fichier source sur le disque ne correspond pas. Veuillez r\u00E9soudre ce probl\u00E8me dans le panneau des ressources, puis r\u00E9essayer.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotFound",
+        "Value": "Le fichier multim\u00E9dia est indisponible. Veuillez v\u00E9rifier que votre p\u00E9riph\u00E9rique de stockage est correctement connect\u00E9 et que le fichier existe.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "Valeur statique (d\u00E9connect\u00E9e)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_FrameIndex",
+        "Value": "Num\u00E9ro de trame (int\u00E9gr\u00E9)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "Sources de liaison globales",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Progress",
+        "Value": "Progression en pourcentage (int\u00E9gr\u00E9e)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_Bound",
+        "Value": "Param\u00E8tre \u00AB {a} \u00BB li\u00E9 \u00E0 \u00AB {b} \u00BB.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "Connexion impossible : types de ports incompatibles.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_Source",
+        "Value": "La vid\u00E9o source de ce Clip est corrompue ou illisible. Veuillez v\u00E9rifier si votre fichier source est endommag\u00E9.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18853,6 +19577,151 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ClipInit",
+        "Value": "\u062A\u062D\u062A\u0648\u064A \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0647\u0630\u0627 \u0627\u0644\u0645\u0642\u0637\u0639 \u0639\u0644\u0649 \u0645\u0634\u0643\u0644\u0629 \u0648\u0627\u062D\u062F\u0629 \u0623\u0648 \u0623\u0643\u062B\u0631\u060C \u064A\u064F\u0631\u062C\u0649 \u062D\u0644\u0647\u0627 \u0623\u0648\u0644\u0627\u064B \u0641\u064A \u0644\u0648\u062D\u0629 \u0627\u0644\u062E\u0635\u0627\u0626\u0635.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_NotSpecified",
+        "Value": "\u0639\u0630\u0631\u064B\u0627\u060C \u062D\u062F\u062B \u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641 ({id})\u060C \u0645\u0645\u0627 \u0623\u062F\u0649 \u0625\u0644\u0649 \u062A\u0639\u0630\u0631 \u062A\u0635\u064A\u064A\u0631 \u0647\u0630\u0627 \u0627\u0644\u0645\u0642\u0637\u0639.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveBinding",
+        "Value": "\u062A\u0648\u062C\u062F \u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0631\u0628\u0637 \u0627\u0644\u062A\u0623\u062B\u064A\u0631\u0627\u062A \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0642\u0637\u0639\u060C \u064A\u064F\u0631\u062C\u0649 \u062D\u0644\u0647\u0627 \u0623\u0648\u0644\u0627\u064B \u0645\u0646 \u0644\u0648\u062D\u0629 \u0627\u0644\u062E\u0635\u0627\u0626\u0635 - \u0627\u0644\u062A\u0623\u062B\u064A\u0631\u0627\u062A.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_Source",
+        "Value": "\u0627\u0644\u0641\u064A\u062F\u064A\u0648 \u0627\u0644\u0645\u0635\u062F\u0631 \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0642\u0637\u0639 \u062A\u0627\u0644\u0641 \u0623\u0648 \u063A\u064A\u0631 \u0642\u0627\u0628\u0644 \u0644\u0644\u0642\u0631\u0627\u0621\u0629\u060C \u064A\u064F\u0631\u062C\u0649 \u0645\u062D\u0627\u0648\u0644\u0629 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0645\u0627 \u0625\u0630\u0627 \u0643\u0627\u0646 \u0645\u0644\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u062A\u0627\u0644\u0641\u064B\u0627.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotFound",
+        "Value": "\u0645\u0644\u0641 \u0627\u0644\u0648\u0633\u0627\u0626\u0637 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u062A\u0635\u0627\u0644 \u062C\u0647\u0627\u0632 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0644\u062F\u064A\u0643 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D \u0648\u0645\u0646 \u0648\u062C\u0648\u062F \u0627\u0644\u0645\u0644\u0641.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_Bound",
+        "Value": "\u062A\u0645 \u0631\u0628\u0637 \u0627\u0644\u0645\u0639\u0627\u0645\u0644 \u00AB{a}\u00BB \u0628\u0640 \u00AB{b}\u00BB.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "\u0642\u064A\u0645\u0629 \u062B\u0627\u0628\u062A\u0629 (\u0642\u0637\u0639 \u0627\u0644\u0627\u062A\u0635\u0627\u0644)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_FrameIndex",
+        "Value": "\u0641\u0647\u0631\u0633 \u0627\u0644\u0625\u0637\u0627\u0631 (\u0645\u0636\u0645\u0646)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Progress",
+        "Value": "\u062A\u0642\u062F\u0645 \u0627\u0644\u0646\u0633\u0628\u0629 \u0627\u0644\u0645\u0626\u0648\u064A\u0629 (\u0645\u062F\u0645\u062C)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotMatch",
+        "Value": "\u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0645\u0635\u062F\u0631 \u0639\u0644\u0649 \u0627\u0644\u0642\u0631\u0635 \u063A\u064A\u0631 \u0645\u062A\u0637\u0627\u0628\u0642\u060C \u064A\u0631\u062C\u0649 \u062D\u0644 \u0647\u0630\u0647 \u0627\u0644\u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0644\u0648\u062D\u0629 \u0627\u0644\u0623\u0635\u0648\u0644 \u062B\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "\u0645\u0635\u0627\u062F\u0631 \u0627\u0644\u0631\u0628\u0637 \u0627\u0644\u0639\u0627\u0645\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "\u062A\u0639\u0630\u0651\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644: \u0646\u0648\u0639 \u0627\u0644\u0645\u0646\u0641\u0630 \u063A\u064A\u0631 \u0645\u062A\u0648\u0627\u0641\u0642.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveEffect",
+        "Value": "\u0647\u0646\u0627\u0643 \u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062A\u0623\u062B\u064A\u0631 \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0642\u0637\u0639. \u064A\u064F\u0631\u062C\u0649 \u062D\u0644\u0647\u0627 \u0623\u0648\u0644\u0627\u064B \u0641\u064A \u0644\u0648\u062D\u0629 \u0627\u0644\u062E\u0635\u0627\u0626\u0635 - \u0627\u0644\u062A\u0623\u062B\u064A\u0631\u0627\u062A.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -21548,6 +22417,151 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ClipInit",
+        "Value": "Dieser Clip hat ein oder mehrere Konfigurationsprobleme. Bitte beheben Sie diese zuerst im Eigenschaftenbereich.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveEffect",
+        "Value": "Die Effektkonfiguration dieses Clips ist fehlerhaft. Bitte beheben Sie das Problem zuerst im Eigenschaftenbereich unter Effekte.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveBinding",
+        "Value": "Bei diesem Clip gibt es ein Problem mit der Effektbindung. Bitte beheben Sie es zuerst im Eigenschaftenbereich \u2013 Effekte.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_NotSpecified",
+        "Value": "Leider ist ein unbekannter Fehler ({id}) aufgetreten, sodass dieser Clip nicht gerendert werden kann.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotFound",
+        "Value": "Mediendatei nicht verf\u00FCgbar. Bitte pr\u00FCfen Sie, ob Ihr Speicherger\u00E4t korrekt angeschlossen ist und die Datei vorhanden ist.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_Source",
+        "Value": "Das Quellvideo dieses Clips ist besch\u00E4digt oder nicht lesbar. Bitte \u00FCberpr\u00FCfen Sie, ob Ihre Quelldatei besch\u00E4digt ist.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Progress",
+        "Value": "Prozentualer Fortschritt (integriert)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "Statischer Wert (getrennt)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_FrameIndex",
+        "Value": "Frame-Index (integriert)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "Verbindung nicht m\u00F6glich: Inkompatible Porttypen.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "Globale Bindungsquellen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotMatch",
+        "Value": "Die Quelldatei auf dem Datentr\u00E4ger stimmt nicht \u00FCberein. Bitte beheben Sie dieses Problem im Bedienfeld \u201EAssets\u201C und versuchen Sie es erneut.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_Bound",
+        "Value": "Parameter \u201E{a}\u201C wurde an \u201E{b}\u201C gebunden.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -24241,6 +25255,151 @@
       {
         "Id": "VectorContentHandler_SVGImage_DisplayName",
         "Value": "Imagen SVG",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ClipInit",
+        "Value": "La configuraci\u00F3n de este clip presenta uno o varios problemas. Resu\u00E9lvalos primero en el panel de propiedades.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveBinding",
+        "Value": "Hay un problema con la vinculaci\u00F3n de efectos de este Clip. Resu\u00E9lvalo primero en el Panel de propiedades - Efectos.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveEffect",
+        "Value": "La configuraci\u00F3n de efectos de este Clip tiene un problema. Resu\u00E9lvalo ahora en Propiedades \u003E Efectos.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_Source",
+        "Value": "El v\u00EDdeo de origen de este clip est\u00E1 da\u00F1ado o no se puede leer. Comprueba si tu archivo de origen est\u00E1 da\u00F1ado.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotFound",
+        "Value": "El archivo multimedia no est\u00E1 disponible. Comprueba que tu dispositivo de almacenamiento est\u00E9 conectado correctamente y que el archivo exista.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotMatch",
+        "Value": "El archivo de origen del disco no coincide. Resuelve este problema en el panel de recursos y vuelve a intentarlo.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_NotSpecified",
+        "Value": "Lo sentimos, se ha producido un error desconocido ({id}) que ha impedido que este clip se renderice.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_Bound",
+        "Value": "Se ha vinculado el par\u00E1metro \u00AB{a}\u00BB a \u00AB{b}\u00BB.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "Valor est\u00E1tico (desconectar)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_FrameIndex",
+        "Value": "\u00CDndice de fotograma (integrado)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Progress",
+        "Value": "Porcentaje de progreso (integrado)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "Or\u00EDgenes de enlace globales",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "No se puede conectar: tipo de puerto incompatible.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26950,6 +28109,151 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ClipInit",
+        "Value": "La configurazione di questo Clip presenta uno o pi\u00F9 problemi. Risolvili prima nel pannello delle propriet\u00E0.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_NotSpecified",
+        "Value": "Siamo spiacenti, si \u00E8 verificato un errore sconosciuto ({id}) che ha impedito il rendering di questo Clip.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveBinding",
+        "Value": "Questa Clip presenta un problema di associazione degli effetti, risolvilo ora nel pannello Propriet\u00E0 - Effetti.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotFound",
+        "Value": "Il file multimediale non \u00E8 disponibile. Verifica che il dispositivo di archiviazione sia collegato correttamente e che il file esista.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_Source",
+        "Value": "Il video sorgente di questa clip \u00E8 danneggiato o non leggibile. Prova a verificare se il file di origine \u00E8 danneggiato.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveEffect",
+        "Value": "La configurazione degli effetti di questa Clip presenta un problema. Risolvilo ora nel pannello Propriet\u00E0 - Effetti.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_Bound",
+        "Value": "Il parametro \u00AB{a}\u00BB \u00E8 stato associato a \u00AB{b}\u00BB.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotMatch",
+        "Value": "Il file di origine su disco non corrisponde. Risolvi il problema nel pannello delle risorse e riprova.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7FFB\u8BD1\u4E3A\u610F\u5927\u5229\u8BED\uFF0C\u4FDD\u6301\u8F6F\u4EF6\u63D0\u793A\u8BED\u6C14\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_FrameIndex",
+        "Value": "Indice frame (integrato)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Progress",
+        "Value": "Avanzamento percentuale (integrato)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "Sorgenti di binding globali",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "Impossibile connettersi: tipi di porta incompatibili.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "Valore statico (Disconnetti)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -29649,6 +30953,151 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ClipInit",
+        "Value": "Konfiguracja tego klipu zawiera jeden lub wi\u0119cej problem\u00F3w. Najpierw rozwi\u0105\u017C je w panelu w\u0142a\u015Bciwo\u015Bci.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_NotSpecified",
+        "Value": "Przepraszamy, wyst\u0105pi\u0142 nieznany b\u0142\u0105d ({id}), przez co ten klip nie mo\u017Ce zosta\u0107 wyrenderowany.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveBinding",
+        "Value": "Wyst\u0105pi\u0142 problem z powi\u0105zaniem efekt\u00F3w tego klipu. Rozwi\u0105\u017C go teraz w panelu W\u0142a\u015Bciwo\u015Bci \u2014 Efekty.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_Source",
+        "Value": "Wideo \u017Ar\u00F3d\u0142owe tego klipu jest uszkodzone lub nie mo\u017Cna go odczyta\u0107. Sprawd\u017A, czy plik \u017Ar\u00F3d\u0142owy jest uszkodzony.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveEffect",
+        "Value": "Wyst\u0119puje problem z konfiguracj\u0105 efekt\u00F3w tego klipu. Rozwi\u0105\u017C go teraz w panelu W\u0142a\u015Bciwo\u015Bci - Efekty.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotMatch",
+        "Value": "Plik \u017Ar\u00F3d\u0142owy na dysku nie jest zgodny. Rozwi\u0105\u017C ten problem w panelu materia\u0142\u00F3w i spr\u00F3buj ponownie.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotFound",
+        "Value": "Plik multimedialny jest niedost\u0119pny. Sprawd\u017A, czy twoje urz\u0105dzenie pami\u0119ci masowej jest prawid\u0142owo pod\u0142\u0105czone i czy plik istnieje.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_Bound",
+        "Value": "Powi\u0105zano parametr \u201E{a}\u201D z \u201E{b}\u201D.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "Warto\u015B\u0107 statyczna (roz\u0142\u0105cz)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Progress",
+        "Value": "Post\u0119p procentowy (wbudowany)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "Globalne \u017Ar\u00F3d\u0142a powi\u0105za\u0144",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_FrameIndex",
+        "Value": "Indeks klatki (wbudowany)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "Nie mo\u017Cna po\u0142\u0105czy\u0107: typy port\u00F3w s\u0105 niezgodne.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -32340,6 +33789,151 @@
       {
         "Id": "VectorContentHandler_SVGImage_DisplayName",
         "Value": "Imagem SVG",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ClipInit",
+        "Value": "A configura\u00E7\u00E3o deste Clip cont\u00E9m um ou mais problemas. Resolva-os primeiro no painel de propriedades.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_NotSpecified",
+        "Value": "Desculpe, ocorreu um erro desconhecido ({id}), o que impediu a renderiza\u00E7\u00E3o deste Clip.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveEffect",
+        "Value": "H\u00E1 um problema na configura\u00E7\u00E3o de efeitos deste clipe. Resolva agora no painel Propriedades \u003E Efeitos.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveBinding",
+        "Value": "H\u00E1 um problema na vincula\u00E7\u00E3o de efeitos deste Clipe. Resolva agora no painel Propriedades - Efeitos.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotFound",
+        "Value": "O arquivo de m\u00EDdia n\u00E3o est\u00E1 dispon\u00EDvel. Verifique se o dispositivo de armazenamento est\u00E1 conectado corretamente e se o arquivo existe.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotMatch",
+        "Value": "O arquivo de origem no disco n\u00E3o corresponde. Resolva esse problema no painel de m\u00EDdia e tente novamente.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_Source",
+        "Value": "O v\u00EDdeo de origem deste Clip est\u00E1 corrompido ou n\u00E3o pode ser lido. Tente verificar se o arquivo de origem est\u00E1 corrompido.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_Bound",
+        "Value": "Par\u00E2metro \u201C{a}\u201D vinculado a \u201C{b}\u201D.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Progress",
+        "Value": "Percentual de progresso (interno)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "Fontes de Vincula\u00E7\u00E3o Globais",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "Valor est\u00E1tico (Desconectado)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_FrameIndex",
+        "Value": "\u00CDndice de quadro (interno)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "N\u00E3o foi poss\u00EDvel conectar: tipos de porta incompat\u00EDveis.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -35051,6 +36645,151 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ClipInit",
+        "Value": "\u041A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u044F \u044D\u0442\u043E\u0433\u043E \u043A\u043B\u0438\u043F\u0430 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u0442 \u043E\u0434\u043D\u0443 \u0438\u043B\u0438 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u0440\u043E\u0431\u043B\u0435\u043C. \u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0443\u0441\u0442\u0440\u0430\u043D\u0438\u0442\u0435 \u0438\u0445 \u043D\u0430 \u043F\u0430\u043D\u0435\u043B\u0438 \u0441\u0432\u043E\u0439\u0441\u0442\u0432.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_NotSpecified",
+        "Value": "\u0418\u0437\u0432\u0438\u043D\u0438\u0442\u0435, \u043F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u0430 \u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430 ({id}), \u0438\u0437-\u0437\u0430 \u043A\u043E\u0442\u043E\u0440\u043E\u0439 \u043D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u0440\u0438\u0441\u043E\u0432\u0430\u0442\u044C \u044D\u0442\u043E\u0442 \u043A\u043B\u0438\u043F.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveBinding",
+        "Value": "\u0423 \u044D\u0442\u043E\u0433\u043E \u043A\u043B\u0438\u043F\u0430 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430 \u0441 \u043F\u0440\u0438\u0432\u044F\u0437\u043A\u043E\u0439 \u044D\u0444\u0444\u0435\u043A\u0442\u0430. \u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u0441\u043D\u0430\u0447\u0430\u043B\u0430 \u0443\u0441\u0442\u0440\u0430\u043D\u0438\u0442\u0435 \u0435\u0451 \u0432 \u043F\u0430\u043D\u0435\u043B\u0438 \u0441\u0432\u043E\u0439\u0441\u0442\u0432, \u0432 \u0440\u0430\u0437\u0434\u0435\u043B\u0435 \u00AB\u042D\u0444\u0444\u0435\u043A\u0442\u044B\u00BB.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_Source",
+        "Value": "\u0418\u0441\u0445\u043E\u0434\u043D\u043E\u0435 \u0432\u0438\u0434\u0435\u043E \u044D\u0442\u043E\u0433\u043E \u043A\u043B\u0438\u043F\u0430 \u043F\u043E\u0432\u0440\u0435\u0436\u0434\u0435\u043D\u043E \u0438\u043B\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E \u0434\u043B\u044F \u0447\u0442\u0435\u043D\u0438\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435, \u043D\u0435 \u043F\u043E\u0432\u0440\u0435\u0436\u0434\u0451\u043D \u043B\u0438 \u0432\u0430\u0448 \u0438\u0441\u0445\u043E\u0434\u043D\u044B\u0439 \u0444\u0430\u0439\u043B.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotFound",
+        "Value": "\u041C\u0435\u0434\u0438\u0430\u0444\u0430\u0439\u043B \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435, \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E \u043B\u0438 \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u0432\u0430\u0448\u0435 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u043E \u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F \u0434\u0430\u043D\u043D\u044B\u0445 \u0438 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442 \u043B\u0438 \u0444\u0430\u0439\u043B.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotMatch",
+        "Value": "\u0418\u0441\u0445\u043E\u0434\u043D\u044B\u0439 \u0444\u0430\u0439\u043B \u043D\u0430 \u0434\u0438\u0441\u043A\u0435 \u043D\u0435 \u0441\u043E\u0432\u043F\u0430\u0434\u0430\u0435\u0442. \u0423\u0441\u0442\u0440\u0430\u043D\u0438\u0442\u0435 \u044D\u0442\u0443 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0443 \u043D\u0430 \u043F\u0430\u043D\u0435\u043B\u0438 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B\u043E\u0432 \u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u043F\u043E\u043F\u044B\u0442\u043A\u0443.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveEffect",
+        "Value": "\u0412 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445 \u044D\u0444\u0444\u0435\u043A\u0442\u043E\u0432 \u044D\u0442\u043E\u0433\u043E \u043A\u043B\u0438\u043F\u0430 \u0435\u0441\u0442\u044C \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430. \u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0443\u0441\u0442\u0440\u0430\u043D\u0438\u0442\u0435 \u0435\u0451 \u043D\u0430 \u043F\u0430\u043D\u0435\u043B\u0438 \u0441\u0432\u043E\u0439\u0441\u0442\u0432 \u0432 \u0440\u0430\u0437\u0434\u0435\u043B\u0435 \u00AB\u042D\u0444\u0444\u0435\u043A\u0442\u044B\u00BB.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_Bound",
+        "Value": "\u041F\u0430\u0440\u0430\u043C\u0435\u0442\u0440 \u00AB{a}\u00BB \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D \u043A \u00AB{b}\u00BB.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Progress",
+        "Value": "\u041F\u0440\u043E\u0433\u0440\u0435\u0441\u0441 \u0432 \u043F\u0440\u043E\u0446\u0435\u043D\u0442\u0430\u0445 (\u0432\u0441\u0442\u0440\u043E\u0435\u043D\u043D\u044B\u0439)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "\u0413\u043B\u043E\u0431\u0430\u043B\u044C\u043D\u044B\u0435 \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0438 \u043F\u0440\u0438\u0432\u044F\u0437\u043A\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C\u0441\u044F: \u0442\u0438\u043F \u043F\u043E\u0440\u0442\u0430 \u043D\u0435\u0441\u043E\u0432\u043C\u0435\u0441\u0442\u0438\u043C.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_FrameIndex",
+        "Value": "\u0418\u043D\u0434\u0435\u043A\u0441 \u043A\u0430\u0434\u0440\u0430 (\u0432\u0441\u0442\u0440\u043E\u0435\u043D\u043D\u044B\u0439)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "\u0421\u0442\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 (\u043E\u0442\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -37743,6 +39482,150 @@
       {
         "Id": "VectorContentHandler_SVGImage_DisplayName",
         "Value": "SVG g\u00F6r\u00FCnt\u00FCs\u00FC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ClipInit",
+        "Value": "Bu Clip\u0027in yap\u0131land\u0131rmas\u0131nda bir veya daha fazla sorun var; l\u00FCtfen \u00F6nce \u00F6zellikler panelinde \u00E7\u00F6z\u00FCn.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_NotSpecified",
+        "Value": "\u00DCzg\u00FCn\u00FCz, bilinmeyen bir hata ({id}) olu\u015Ftu ve bu klibin render edilmesini engelledi.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveBinding",
+        "Value": "Bu klibin efekt ba\u011Flamas\u0131nda bir sorun var; l\u00FCtfen \u00F6nce \u00D6zellikler paneli - Efektler b\u00F6l\u00FCm\u00FCnde \u00E7\u00F6z\u00FCn.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ResolveEffect",
+        "Value": "Bu klibin efekt yap\u0131land\u0131rmas\u0131nda bir sorun var; l\u00FCtfen \u00F6nce \u00D6zellikler paneli - Efektler b\u00F6l\u00FCm\u00FCnden d\u00FCzeltin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_Bound",
+        "Value": "Parametre {a}, {b} \u00F6\u011Fesine ba\u011Fland\u0131.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotMatch",
+        "Value": "Diskteki kaynak dosya e\u015Fle\u015Fmiyor. L\u00FCtfen bu sorunu Varl\u0131klar panelinde \u00E7\u00F6zd\u00FCkten sonra tekrar deneyin.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Disconnect",
+        "Value": "Statik de\u011Fer (ba\u011Flant\u0131 kesildi)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_FrameIndex",
+        "Value": "Kare \u0130ndeksi (Yerle\u015Fik)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_BoundSource_Progress",
+        "Value": "Y\u00FCzde \u0130lerleme (Yerle\u015Fik)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_TypeMismatch",
+        "Value": "Ba\u011Flan\u0131lam\u0131yor: Ba\u011Flant\u0131 noktas\u0131 t\u00FCr\u00FC uyumsuz.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBindView_GlobalSources",
+        "Value": "Global Ba\u011Flama Kaynaklar\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_SourceNotFound",
+        "Value": "Medya dosyas\u0131 kullan\u0131lam\u0131yor. L\u00FCtfen depolama ayg\u0131t\u0131n\u0131z\u0131n do\u011Fru \u015Fekilde ba\u011Fl\u0131 oldu\u011Fundan ve dosyan\u0131n mevcut oldu\u011Fundan emin olun.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_Source",
+        "Value": "Bu klibin kaynak videosu bozuk veya okunam\u0131yor. L\u00FCtfen kaynak dosyan\u0131z\u0131n bozuk olup olmad\u0131\u011F\u0131n\u0131 kontrol etmeyi deneyin.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

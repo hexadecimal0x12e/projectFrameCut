@@ -30,7 +30,7 @@ internal sealed class SnapshotClip : IClip
         StartingY = source.StartingY;
         FrameTime = source.FrameTime;
         ExtendToWholeDraft = source.ExtendToWholeDraft;
-        FilePath = string.IsNullOrWhiteSpace(source.FileName) ? null : source.FileName;
+        FilePath = string.IsNullOrWhiteSpace(source.FilePath) ? (string.IsNullOrWhiteSpace(source.FileName) ? null : source.FileName) : source.FilePath;
         NeedFilePath = source.NeedFilePath;
         ExtraData = source.Metadata.ToDictionary(x => x.Key, x => IsolationValueConverter.ToObject(x.Value)!);
     }

@@ -2,6 +2,7 @@
 {
     public static class GlobalPluginHelper
     {
+        private static readonly AsyncLocal<IPluginCommunicationService?> ScopedCommunicationService = new();
         /// <summary>
         /// Get the data root path for the plugin.
         /// </summary>
@@ -85,7 +86,7 @@
 
         public static IPluginCommunicationService? PluginCommunicationService
         {
-            get;
+            get => ScopedCommunicationService.Value ?? field;
             internal set
             {
                 if (PluginCommunicationService is not null)
@@ -93,6 +94,19 @@
                 field = value;
             }
         } = null;
+
+        public static IDisposable BeginPluginCommunicationScope(IPluginCommunicationService service)
+        {
+            ArgumentNullException.ThrowIfNull(service);
+            var previous = ScopedCommunicationService.Value;
+            ScopedCommunicationService.Value = service;
+            return new CommunicationScope(previous);
+        }
+
+        private sealed class CommunicationScope(IPluginCommunicationService? previous) : IDisposable
+        {
+            public void Dispose() => ScopedCommunicationService.Value = previous;
+        }
 
         /// <summary>
         /// Get the specific plugin by its ID.

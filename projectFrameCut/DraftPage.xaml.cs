@@ -300,7 +300,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand DuplicateCommand { get; private set; }
     public ICommand SaveCommand { get; private set; }
     public ICommand GotoCommand { get; private set; }
-    public ICommand ManageJobsCommand { get; private set; }
     public ICommand EscapeCommand { get; private set; }
     public ICommand PlayPauseCommand { get; private set; }
     public ICommand PreviousFrameCommand { get; private set; }
@@ -331,6 +330,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand TimelineScrollCommand { get; private set; }
     public ICommand FollowPlayheadCommand { get; private set; }
     public ICommand ConfigureQuickCommandSlotCommand { get; private set; }
+    public ICommand ManageQuickCommandsCommand { get; private set; }
     public ICommand ShowCommandPanelCommand { get; private set; }
     public ObservableCollection<QuickCommandItem> QuickCommands { get; } = [];
     public ObservableCollection<QuickCommandSlot> QuickCommandSlots { get; } = [];
@@ -390,7 +390,13 @@ public partial class DraftPage : ContentPage, IDraftPage
             OnPropertyChanged();
         }
     }
-    public int QuickCommandSlotCount { get; set; } = 8;
+    public int QuickCommandSlotCount { get; set; } = DeviceInfo.Idiom switch
+    {
+        var t when t == DeviceIdiom.Desktop => 8,
+        var t when t == DeviceIdiom.Tablet => 6,
+        var t when t == DeviceIdiom.Phone => 3,
+        _ => 8
+    };
     public bool LockScrollViewAfterSelection { get { return field; } set { if (field == value) return; field = value; OnPropertyChanged(nameof(LockScrollViewAfterSelection)); RefreshToggleCommandStates(); } }
     public bool EnableClipInfoPopup { get; set; }
     public bool UseCommunityToolkitPopupInsteadOfOverlayLayer { get { return (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS()) || field; } set; }
@@ -474,6 +480,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ArgumentNullException.ThrowIfNull(clips, nameof(clips));
         BindingContext = this;
         ProjectInfo = info;
+        ProjectInfo.NormallyExited = false;
         ProjectInfo.UserDefinedProperties ??= new();
         ProjectInfo.SnapshotIDMapping = ProjectJSONStructure.LoadSnapshotMapping(workingDir, savingOpts);
         if (ProjectInfo.SnapshotIDMapping.Count == 0)
@@ -625,7 +632,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         DuplicateCommand = new Command(async () => await DuplicateSelectionAsync());
         SaveCommand = new Command(() => OnRefreshButtonClicked(this, EventArgs.Empty));
         GotoCommand = new Command(async () => await GotoButtonClicked());
-        ManageJobsCommand = new Command(async () => await OnManageJobsClicked());
         PlayPauseCommand = new Command(async () => PlayPauseButton_Clicked(this, EventArgs.Empty));
         PreviousFrameCommand = new Command(async () => await MovePlayhead(-1));
         NextFrameCommand = new Command(async () => await MovePlayhead(1));
@@ -665,6 +671,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         });
         FollowPlayheadCommand = new Command(async () => await ScrollTimelineToPlayhead());
         ConfigureQuickCommandSlotCommand = new Command<int>(async index => await ConfigureQuickCommandSlotAsync(index));
+        ManageQuickCommandsCommand = new Command(async () => await ShowQuickCommandManagerAsync());
         ShowCommandPanelCommand = new Command(async () => await ShowCommandPanelAsync());
 
         EscapeCommand =
@@ -776,8 +783,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             ClipEditor.RestoreReferenceLinesFromJson(refLinesJson);
         }
-
-        ProjectInfo.NormallyExited = false;
 
         nopGesture.Tapped += (s, e) =>
         {
@@ -934,7 +939,6 @@ public partial class DraftPage : ContentPage, IDraftPage
             PreviewSubwindow.Maximize();
             RightMenuBar.IsVisible = false;
             RightContentBorder.IsVisible = false;
-            //SpiltButton.IsVisible = false;
             PlayingControlLayout.HorizontalOptions = LayoutOptions.End;
             MainControlGrid.ColumnDefinitions = new ColumnDefinitionCollection
             {
@@ -1076,6 +1080,12 @@ public partial class DraftPage : ContentPage, IDraftPage
             bool.TryParse(showReferenceLinesStr, out var showReferenceLines))
         {
             ClipEditor.ShowReferenceLines = showReferenceLines;
+        }
+
+        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_UseCheckerboardBackground", out var useCheckerboardBackgroundStr) &&
+            bool.TryParse(useCheckerboardBackgroundStr, out var useCheckerboardBackground))
+        {
+            ClipEditor.UseCheckerboardBackground = useCheckerboardBackground;
         }
 
         if (ProjectInfo.Properties.TryGetValue("InteractableEditor_EnableKeyframeRecording", out var enableKeyframeRecordingStr) &&
@@ -1266,82 +1276,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         ClipEditor.ShowRenderRectOverlay = UseDynamicPreview;
         ClipEditor.ShowClipPreviewOverlays = UseDynamicPreview;
-    }
-
-    private string? GetMainMultiWindowItemKey(MultiWindowItem window)
-    {
-        if (ReferenceEquals(window, PreviewSubwindow)) return nameof(PreviewSubwindow);
-        if (ReferenceEquals(window, PropertiesSubwindow)) return nameof(PropertiesSubwindow);
-        if (ReferenceEquals(window, AssisstantSubWindow)) return nameof(AssisstantSubWindow);
-        return null;
-    }
-
-    private bool TryGetMainMultiWindowItemByKey(string? key, out MultiWindowItem window)
-    {
-        switch (key)
-        {
-            case nameof(PreviewSubwindow):
-                window = PreviewSubwindow;
-                return true;
-            case nameof(PropertiesSubwindow):
-                window = PropertiesSubwindow;
-                return true;
-            case nameof(AssisstantSubWindow):
-                window = AssisstantSubWindow;
-                return true;
-            default:
-                window = PreviewSubwindow;
-                return false;
-        }
-    }
-
-    private static bool IsWindowLikelyMinimized(MultiWindowItem window)
-        => window.HeightRequest > 0 && window.HeightRequest <= 40;
-
-    private static bool IsWindowLikelyMaximized(MultiWindowItem window)
-        => window.HorizontalOptions.Alignment == LayoutAlignment.Fill
-           && window.VerticalOptions.Alignment == LayoutAlignment.Fill
-           && window.WidthRequest <= 0
-           && window.HeightRequest <= 0;
-
-    private MainMultiWindowStateEnvelope CaptureMainMultiWindowState()
-    {
-        var state = new MainMultiWindowStateEnvelope();
-        var windows = new[] { PreviewSubwindow, PropertiesSubwindow, AssisstantSubWindow };
-
-        foreach (var window in windows)
-        {
-            var key = GetMainMultiWindowItemKey(window);
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                continue;
-            }
-
-            var isOpen = MainMultiWindowView.Children.Contains(window);
-            state.Windows.Add(new MainMultiWindowWindowState
-            {
-                WindowKey = key,
-                IsOpen = isOpen,
-                IsVisible = window.IsVisible,
-                IsMaximized = IsWindowLikelyMaximized(window),
-                IsMinimized = IsWindowLikelyMinimized(window),
-                TranslationX = window.TranslationX,
-                TranslationY = window.TranslationY,
-                WidthRequest = window.WidthRequest,
-                HeightRequest = window.HeightRequest,
-                Column = Grid.GetColumn(window),
-                Row = Grid.GetRow(window),
-                ColumnSpan = Grid.GetColumnSpan(window),
-                RowSpan = Grid.GetRowSpan(window),
-                ZIndex = window.ZIndex
-            });
-        }
-
-        state.ActiveWindowKey = MainMultiWindowView.ActiveWindow is MultiWindowItem active
-            ? GetMainMultiWindowItemKey(active)
-            : null;
-
-        return state;
     }
 
     private void ApplyDefaultMainMultiWindowLayout()
@@ -5088,83 +5022,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     }
     #endregion
 
-    #region task
-    public async Task<ScrollView> CreateJobsPanel()
-    {
-        var ppb = new PropertyPanelBuilder().AddText(new SingleLineLabel(Localized.DraftPage_Tasks_Title, 20));
-        if (RunningTasks.IsEmpty)
-        {
-            ppb.AddText(Localized.DraftPage_Tasks_NoneTasks);
-        }
-        else
-        {
-            foreach (var item in RunningTasks)
-            {
-                ppb.AddSeparator();
-                var task = item.Value;
-                ppb.AddText(new TitleAndDescriptionLineLabel(item.Value.Name, item.Value.Description))
-                    .AddText(item.Value.IsRunningDisplay);
-                if (task.InnerTask.IsCompleted)
-                {
-                    ppb.AddButton($"Remove,{item.Key}", Localized._Remove);
-                }
-                else
-                {
-                    ppb.AddButton($"Cancel,{item.Key}", Localized._Cancel);
-
-                }
-
-            }
-        }
-#if DEBUG
-        ppb.AddButton("Add some task", async (s, e) =>
-        {
-            var t = new DraftTasks("123", (c) => Thread.Sleep(9999), "A sleeping thread", "nothing here");
-            RunningTasks.TryAdd(t.Id, t);
-            var t1 = new DraftTasks("456", (c) => Task.Delay(99999, c), "A sleeping task with cts", "nothing here");
-            RunningTasks.TryAdd(t1.Id, t1);
-            Popup.Content = await CreateJobsPanel();
-
-        });
-#endif
-        ppb.ListenToChanges(async (a) =>
-        {
-            var action = a.Id.Split(',')[0];
-            var id = a.Id.Split(',', 2)[1];
-            if (!RunningTasks.TryGetValue(id, out var task))
-            {
-                await DisplayAlertAsync(Localized._Error, $"Task {id} not found in Tasks.", Localized._OK);
-                return;
-            }
-            switch (action)
-            {
-                case "Cancel":
-                    {
-                        var sure = await DisplayAlertAsync(Localized._Warn, Localized.DraftPage_Tasks_CancelWarn(task.Name), Localized._Confirm, Localized._Cancel);
-                        if (sure) task.Cancel();
-                        break;
-                    }
-                case "Remove":
-                    {
-                        RunningTasks.Remove(id, out _);
-                        break;
-                    }
-                default:
-                    break;
-            }
-
-            Popup.Content = await CreateJobsPanel();
-        });
-        return ppb.BuildWithScrollView();
-    }
-
-    public async Task OnManageJobsClicked()
-    {
-        await HidePopup();
-        await ShowAPopup(await CreateJobsPanel());
-    }
-    #endregion
-
     #region commands
     public async Task ShowCommandPanelAsync()
     {
@@ -5282,22 +5139,30 @@ public partial class DraftPage : ContentPage, IDraftPage
         var panel = new Grid
         {
             RowSpacing = 10,
-            HeightRequest = Math.Max(240, Math.Min(WindowSize.Height * 0.65, 640)),
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
             RowDefinitions =
             {
-                new RowDefinition(GridLength.Auto),
                 new RowDefinition(GridLength.Auto),
                 new RowDefinition(GridLength.Star)
             }
         };
-        panel.Add(new Label
+        panel.Add(new VerticalStackLayout
         {
-            Text = Localized.DraftPage_CommandPanel,
-            Margin = new(0, 8, 0, 0),
-            FontSize = 22,
-            FontAttributes = FontAttributes.Bold
+            Spacing = 6,
+            MinimumHeightRequest = 86,
+            Children =
+            {
+                new Label
+                {
+                    Text = Localized.DraftPage_CommandPanel,
+                    Margin = new(0, 8, 0, 0),
+                    FontSize = 22,
+                    FontAttributes = FontAttributes.Bold
+                },
+                search
+            }
         }, 0, 0);
-        panel.Add(search, 0, 1);
         panel.Add(new ScrollView
         {
             Content = new VerticalStackLayout
@@ -5305,9 +5170,9 @@ public partial class DraftPage : ContentPage, IDraftPage
                 Spacing = 0,
                 Children = { commandRows, emptyLabel }
             }
-        }, 0, 2);
+        }, 0, 1);
 
-        await ShowAPopup(panel, mode: "dialog");
+        await ShowAPopup(panel, mode: "dialog", disableScrollWrapping: true);
         search.Focus();
     }
 
@@ -5459,18 +5324,102 @@ public partial class DraftPage : ContentPage, IDraftPage
         for (var index = 0; index < QuickCommandSlots.Count; index++) QuickCommandSlots[index].Item = QuickCommands.FirstOrDefault(x => x.Key == selection[index]);
     }
 
-    private async Task ConfigureQuickCommandSlotAsync(int index)
+    private async Task ConfigureQuickCommandSlotAsync(int index, Func<Task>? afterSelected = null)
     {
         if (index < 0 || index >= QuickCommandSlots.Count) return;
-        var options = QuickCommands.Select(x => x.Title).ToList();
-        options.Insert(0, Localized.TemplateExtractPage_Clear);
-        var choice = await DisplayActionSheetAsync($"{Localized.DraftPage_QuickCommand} #{index + 1}", Localized._Cancel, null, options.ToArray());
-        if (string.IsNullOrWhiteSpace(choice) || choice == Localized._Cancel) return;
+        RefreshQuickCommands();
+
+        var commands = QuickCommands.ToList();
+        var rows = new List<(QuickCommandItem? Item, Border View, string SearchText)>();
+        var commandRows = new VerticalStackLayout { Spacing = 8 };
+        var emptyRow = new Border
+        {
+            Padding = 12,
+            StrokeThickness = 1,
+            Stroke = Application.Current?.RequestedTheme == AppTheme.Dark ? Colors.DimGray : Colors.LightGray,
+            StrokeShape = new RoundRectangle { CornerRadius = 8 },
+            Content = new Label { Text = Localized.TemplateExtractPage_Clear, FontSize = 16 }
+        };
+        emptyRow.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(async () => await SelectQuickCommandAsync(index, null, afterSelected)) });
+        commandRows.Children.Add(emptyRow);
+        rows.Add((null, emptyRow, Localized.TemplateExtractPage_Clear));
+
+        foreach (var item in commands)
+        {
+            var grid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star)
+                },
+                ColumnSpacing = 10
+            };
+            grid.Add(new Label { Text = item.IconGlyph, FontFamily = item.FontFamily, FontSize = 24, WidthRequest = 40, HorizontalTextAlignment = TextAlignment.Center }, 0, 0);
+            grid.Add(new VerticalStackLayout
+            {
+                Spacing = 2,
+                Children =
+                {
+                    new Label { Text = item.Title, FontSize = 16, FontAttributes = FontAttributes.Bold },
+                    new Label { Text = item.Key, FontSize = 11, Opacity = 0.7 }
+                }
+            }, 1, 0);
+            var row = new Border
+            {
+                Padding = 10,
+                StrokeThickness = 1,
+                Stroke = Application.Current?.RequestedTheme == AppTheme.Dark ? Colors.DimGray : Colors.LightGray,
+                StrokeShape = new RoundRectangle { CornerRadius = 8 },
+                Content = grid
+            };
+            row.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(async () => await SelectQuickCommandAsync(index, item, afterSelected)) });
+            commandRows.Children.Add(row);
+            rows.Add((item, row, $"{item.Title}\n{item.Key}"));
+        }
+
+        var emptyLabel = new Label { Text = Localized.DraftPage_CommandPanel_NoResults, HorizontalOptions = LayoutOptions.Center, Margin = new Thickness(12, 32), IsVisible = false };
+        var search = new SearchBar { Placeholder = Localized.DraftPage_CommandPanel_Search };
+        search.TextChanged += (_, e) =>
+        {
+            var visible = 0;
+            foreach (var row in rows)
+            {
+                row.View.IsVisible = string.IsNullOrWhiteSpace(e.NewTextValue) || row.SearchText.Contains(e.NewTextValue, StringComparison.CurrentCultureIgnoreCase);
+                if (row.View.IsVisible) visible++;
+            }
+            emptyLabel.IsVisible = visible == 0;
+        };
+        var panel = new Grid
+        {
+            RowSpacing = 10,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+            RowDefinitions = { new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star) }
+        };
+        panel.Add(new VerticalStackLayout
+        {
+            Spacing = 6,
+            MinimumHeightRequest = 78,
+            Children =
+            {
+                new Label { Text = $"{Localized.DraftPage_QuickCommand} #{index + 1}", FontSize = 22, FontAttributes = FontAttributes.Bold },
+                search
+            }
+        }, 0, 0);
+        panel.Add(new ScrollView { Content = new VerticalStackLayout { Spacing = 0, Children = { commandRows, emptyLabel } } }, 0, 1);
+        await ShowAPopup(panel, mode: "dialog", disableScrollWrapping: true);
+        search.Focus();
+    }
+
+    private async Task SelectQuickCommandAsync(int index, QuickCommandItem? item, Func<Task>? afterSelected = null)
+    {
         var selection = GetQuickCommandSelection();
-        var commandIndex = options.IndexOf(choice) - 1;
-        selection[index] = commandIndex < 0 || commandIndex >= QuickCommands.Count ? null : QuickCommands[commandIndex].Key;
+        selection[index] = item?.Key;
         SettingsManager.WriteSetting(QuickCommandsSetting, JsonSerializer.Serialize(selection));
         RebuildQuickCommandSlots();
+        await HidePopup(true);
+        if (afterSelected is not null) await afterSelected();
     }
 
     private void QuickCommandButton_Loaded(object? sender, EventArgs e)
@@ -5485,15 +5434,64 @@ public partial class DraftPage : ContentPage, IDraftPage
         });
     }
 
-    private async Task ConfigureQuickCommandsAsync()
+    private async Task ShowQuickCommandManagerAsync()
     {
-        while (true)
+        RefreshQuickCommands();
+        var configuredCount = QuickCommandSlots.Count(x => x.Item is not null);
+        var rows = new VerticalStackLayout { Spacing = 8 };
+        foreach (var slot in QuickCommandSlots)
         {
-            var slots = QuickCommandSlots.Where(c => !string.IsNullOrWhiteSpace(c.Item?.Title)).Select((x, i) => $"{i + 1}: {x.Item?.Title}").ToArray();
-            var choice = await DisplayActionSheetAsync(Localized.DraftPage_QuickCommand, Localized._Cancel, null, slots);
-            if (string.IsNullOrWhiteSpace(choice) || choice == Localized._Cancel) return;
-            if (int.TryParse(choice.Split(':')[0], out var index)) await ConfigureQuickCommandSlotAsync(index - 1);
+            var item = slot.Item;
+            var details = new VerticalStackLayout
+            {
+                Spacing = 2,
+                Children =
+                {
+                    new Label { Text = $"#{slot.Index + 1}  {item?.Title ?? Localized.TemplateExtractPage_Clear}", FontSize = 16, FontAttributes = FontAttributes.Bold },
+                    new Label { Text = item?.Key ?? "", FontSize = 11, Opacity = 0.7 }
+                }
+            };
+            var configure = new Button
+            {
+                Text = Localized.DraftPage_QuickCommand,
+                Padding = new Thickness(10, 5),
+                Command = new Command(async () =>
+            {
+                await HidePopup(true);
+                await ConfigureQuickCommandSlotAsync(slot.Index, ShowQuickCommandManagerAsync);
+            })
+            };
+            var grid = new Grid { ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) }, ColumnSpacing = 10 };
+            grid.Add(details, 0, 0);
+            grid.Add(configure, 1, 0);
+            rows.Children.Add(new Border
+            {
+                Padding = 10,
+                StrokeThickness = 1,
+                Stroke = Application.Current?.RequestedTheme == AppTheme.Dark ? Colors.DimGray : Colors.LightGray,
+                StrokeShape = new RoundRectangle { CornerRadius = 8 },
+                Content = grid
+            });
         }
+        var panel = new Grid
+        {
+            RowSpacing = 10,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+            RowDefinitions = { new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star) }
+        };
+        panel.Add(new VerticalStackLayout
+        {
+            Spacing = 4,
+            MinimumHeightRequest = 58,
+            Children =
+            {
+                new Label { Text = Localized.DraftPage_QuickCommand, FontSize = 22, FontAttributes = FontAttributes.Bold },
+                new Label { Text = $"{configuredCount}/{QuickCommandSlots.Count}  |  {QuickCommands.Count}", Opacity = 0.8 }
+            }
+        }, 0, 0);
+        panel.Add(new ScrollView { Content = rows }, 0, 1);
+        await ShowAPopup(panel, mode: "dialog", disableScrollWrapping: true);
     }
     #endregion
 
@@ -6312,30 +6310,24 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    public async Task ShowAPopup(View? content = null, View? border = null, ClipElementUI? clip = null, string mode = "bottom")
+    public async Task ShowAPopup(View? content = null, View? border = null, ClipElementUI? clip = null, string mode = "bottom", bool disableScrollWrapping = false)
     {
         content ??= (border != null && clip != null) ? await BuildPropertyPanel(clip) : new Label { Text = $"No content to show. This SHOULD is a bug, please feedback.\r\n{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}" };
-        bool disablePopupScrollWrapping = clip?.ClipType == ClipMode.VideoClip || clip?.ClipType == ClipMode.PhotoClip;
+        disableScrollWrapping |= clip?.ClipType == ClipMode.VideoClip || clip?.ClipType == ClipMode.PhotoClip;
 
         OverlayLayer.IsVisible = true;
         OverlayLayer.InputTransparent = false;
         var popupHostSize = GetPopupHostSize();
-
-        if (DeviceInfo.Idiom == DeviceIdiom.Phone)
-        {
-            await ShowAFullscreenPopupInBottom(popupHostSize.Height * 0.75, content);
-            return;
-        }
 
         try
         {
             switch (mode)
             {
                 case "dialog":
-                    await ShowACenteredPopup(popupHostSize.Height / 1.5, popupHostSize.Width / 2, content, disablePopupScrollWrapping);
+                    await ShowACenteredPopup(popupHostSize.Height / 1.5, popupHostSize.Width / 2, content, disableScrollWrapping);
                     break;
                 default:
-                    await ShowAFullscreenPopupInBottom(popupHostSize.Height / 1.2, content, disablePopupScrollWrapping);
+                    await ShowAFullscreenPopupInBottom(popupHostSize.Height / 1.2, content, disableScrollWrapping);
                     break;
             }
         }
@@ -6482,7 +6474,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 VerticalOptions = LayoutOptions.End
             };
 
-            ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
+            await ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
         }
         else
         {
@@ -6591,7 +6583,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 VerticalOptions = LayoutOptions.Center
             };
 
-            ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
+            await ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
         }
         else
         {
@@ -11281,30 +11273,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         public required double StartPx { get; init; }
         public required double WidthPx { get; init; }
         public required int TrackIndex { get; init; }
-    }
-
-    private sealed class MainMultiWindowWindowState
-    {
-        public required string WindowKey { get; init; }
-        public bool IsOpen { get; init; }
-        public bool IsVisible { get; init; }
-        public bool IsMaximized { get; init; }
-        public bool IsMinimized { get; init; }
-        public double TranslationX { get; init; }
-        public double TranslationY { get; init; }
-        public double WidthRequest { get; init; }
-        public double HeightRequest { get; init; }
-        public int Column { get; init; }
-        public int Row { get; init; }
-        public int ColumnSpan { get; init; }
-        public int RowSpan { get; init; }
-        public int ZIndex { get; init; }
-    }
-
-    private sealed class MainMultiWindowStateEnvelope
-    {
-        public List<MainMultiWindowWindowState> Windows { get; init; } = [];
-        public string? ActiveWindowKey { get; set; }
     }
 
     public class DraftPageLogItem

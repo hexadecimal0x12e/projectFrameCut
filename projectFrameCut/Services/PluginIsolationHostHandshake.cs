@@ -7,6 +7,49 @@ namespace projectFrameCut.Services;
 
 internal static class PluginIsolationHostHandshake
 {
+    public static async Task AuthorizeExternalBackendAsync(Stream stream, PluginIsolationLaunchContext context, CancellationToken cancellationToken)
+    {
+        var data = await IsolationFrame.ReadAsync(stream, cancellationToken).ConfigureAwait(false)
+            ?? throw new EndOfStreamException("The external backend closed the pipe before authorization.");
+        var request = RenderRpcSerializer.Deserialize<RenderRequestEnvelope>(data);
+        if (request.Operation != RenderOperation.IsolationAuthorizeExternalBackend)
+            throw new UnauthorizedAccessException("The external backend did not send an authorization request.");
+
+        var authorization = RenderRpcSerializer.Deserialize<IsolationExternalBackendAuthorizationRequest>(request.Payload);
+        var suppliedToken = Encoding.UTF8.GetBytes(authorization.AuthenticationToken);
+        var expectedToken = Encoding.UTF8.GetBytes(context.AuthenticationToken);
+        var valid = request.ProtocolVersion == RenderProtocol.CurrentVersion
+            && authorization.ProtocolVersion == PluginIsolationProtocol.CurrentVersion
+            && string.Equals(authorization.PluginId, context.PluginId, StringComparison.Ordinal)
+            && string.Equals(authorization.InstancePackageName, context.InstancePackageName, StringComparison.Ordinal)
+            && authorization.Challenge.Length >= 16
+            && suppliedToken.Length == expectedToken.Length
+            && CryptographicOperations.FixedTimeEquals(suppliedToken, expectedToken);
+        var response = valid
+            ? new RenderResponseEnvelope
+            {
+                RequestId = request.RequestId,
+                Payload = RenderRpcSerializer.Serialize(new IsolationExternalBackendAuthorizationResponse
+                {
+                    PluginId = context.PluginId,
+                    Challenge = authorization.Challenge,
+                }),
+            }
+            : new RenderResponseEnvelope
+            {
+                RequestId = request.RequestId,
+                Error = new()
+                {
+                    Code = RenderErrorCode.Unauthorized,
+                    Message = "External backend authorization was rejected.",
+                    Details = "The external backend authorization data did not match the installed plugin.",
+                },
+            };
+        if (valid) projectFrameCut.Shared.Logger.Log($"Authorized external backend plugin '{context.PluginId}' for instance '{context.InstancePackageName}'.");
+        await IsolationFrame.WriteAsync(stream, RenderRpcSerializer.Serialize(response), cancellationToken).ConfigureAwait(false);
+        if (response.Error is not null) response.Error.ThrowAsException();
+    }
+
     public static async Task AuthorizeRuntimeAsync(Stream stream, PluginIsolationLaunchContext context, CancellationToken cancellationToken)
     {
         var data = await IsolationFrame.ReadAsync(stream, cancellationToken).ConfigureAwait(false)

@@ -33,6 +33,11 @@ internal class IsolatedPluginProxy : IPluginBase
             .ToDictionary();
         foreach (var item in client.CreateEffectProviders()) EffectProviderProvider[item.Key] = item.Value;
         VideoSourceProvider = client.CreateVideoSources();
+        AudioSourceProvider = client.CreateAudioSources();
+        VideoWriterProvider = client.CreateVideoWriters();
+        TransformProvider = client.CreateTransforms();
+        ComputerProvider = client.CreateComputers();
+        SoundTrackProvider = client.CreateSoundTracks();
     }
 
     public string PluginID => Inner.PluginID;
@@ -47,20 +52,20 @@ internal class IsolatedPluginProxy : IPluginBase
     public IReadOnlyDictionary<string, string> Properties => Inner.Properties;
     public Dictionary<string, Dictionary<string, string>> LocalizationProvider => Inner.LocalizationProvider;
     public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
-    public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => Inner.SoundTrackProvider;
-    public Dictionary<string, Func<Guid, Guid, RenderTransform>> TransformProvider => Inner.TransformProvider;
-    public Dictionary<string, Func<IComputer>> ComputerProvider => [];
+    public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
+    public Dictionary<string, Func<Guid, Guid, RenderTransform>> TransformProvider { get; }
+    public Dictionary<string, Func<IComputer>> ComputerProvider { get; }
     public Dictionary<string, IVideoSource> VideoSourceProvider { get; }
-    public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => Inner.AudioSourceProvider;
-    public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => Inner.VideoWriterProvider;
+    public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; }
+    public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; }
     public Dictionary<string, string> Configuration { get => Inner.Configuration; set => Inner.Configuration = value; }
     public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString => Inner.ConfigurationDisplayString;
 
     public string? ReadLocalizationItem(string key, string locate) => Inner.ReadLocalizationItem(key, locate);
-    public IClip ClipCreator(JsonElement element) => Inner.ClipCreator(element);
-    public ISoundTrack SoundTrackCreator(JsonElement element) => Inner.SoundTrackCreator(element);
-    public RenderTransform TransformCreator(JsonElement element) => Inner.TransformCreator(element);
-    public IVectorComponent VectComponentCreator(JsonElement element) => Inner.VectComponentCreator(element);
+    public IClip ClipCreator(JsonElement element) => _client.CreateClip(element);
+    public ISoundTrack SoundTrackCreator(JsonElement element) => _client.RestoreSoundTrack(element);
+    public RenderTransform TransformCreator(JsonElement element) => _client.RestoreTransform(element);
+    public IVectorComponent VectComponentCreator(JsonElement element) => _client.CreateVectorComponent(element);
     public IEffect EffectCreator(EffectAndMixtureJSONStructure structure, EffectImplementType implementType = EffectImplementType.NotSpecified)
     {
         if (!EffectProviderProvider.TryGetValue(structure.TypeName, out var factory)) throw new KeyNotFoundException($"Remote effect provider '{structure.TypeName}' was not found.");
@@ -113,6 +118,97 @@ internal class IsolatedPluginProxy : IPluginBase
             source?.Dispose();
         }
         throw new NotSupportedException(decoder is null ? $"No isolated video source supports '{path}'." : $"Isolated video source '{decoder}' was not found or failed to initialize.");
+    }
+}
+
+internal sealed class ExternalPluginProxy : IPluginBase
+{
+    private readonly PluginMetadata _metadata;
+    private readonly PluginIsolationClient _client;
+    private Dictionary<string, string> _configuration;
+
+    public ExternalPluginProxy(PluginMetadata metadata, PluginIsolationClient client)
+    {
+        _metadata = metadata;
+        _client = client;
+        var descriptor = client.Descriptor;
+        if (!string.Equals(descriptor.PluginId, metadata.PluginID, StringComparison.Ordinal) ||
+            descriptor.PluginApiVersion != metadata.PluginAPIVersion ||
+            descriptor.PluginApiMinorVersion != metadata.PluginAPIMinorVersion ||
+            !Version.TryParse(descriptor.Version, out var version) || version != metadata.Version ||
+            !string.Equals(descriptor.Name, metadata.Name, StringComparison.Ordinal) ||
+            !string.Equals(descriptor.Author, metadata.Author, StringComparison.Ordinal) ||
+            !string.Equals(descriptor.Description, metadata.Description, StringComparison.Ordinal) ||
+            !string.Equals(descriptor.AuthorUrl, metadata.AuthorUrl, StringComparison.Ordinal) ||
+            !string.Equals(string.IsNullOrEmpty(descriptor.PublishingUrl) ? null : descriptor.PublishingUrl, metadata.PublishingUrl, StringComparison.Ordinal))
+            throw new InvalidDataException("The external backend descriptor does not match the signed plugin metadata.");
+        var capabilities = ExternalPluginCapabilities.None;
+        if (descriptor.Providers.Count > 0) capabilities |= ExternalPluginCapabilities.Effects;
+        if (descriptor.VideoSources.Count > 0) capabilities |= ExternalPluginCapabilities.VideoSources;
+        if (descriptor.AudioSources.Count > 0) capabilities |= ExternalPluginCapabilities.AudioSources;
+        if (descriptor.SoundTracks.Count > 0) capabilities |= ExternalPluginCapabilities.SoundTracks;
+        if (descriptor.Transforms.Count > 0) capabilities |= ExternalPluginCapabilities.Transforms;
+        if (descriptor.Computers.Count > 0) capabilities |= ExternalPluginCapabilities.Computers;
+        if (descriptor.VideoWriters.Count > 0) capabilities |= ExternalPluginCapabilities.VideoWriters;
+        if (descriptor.ProvidesClips) capabilities |= ExternalPluginCapabilities.Clips;
+        if (descriptor.ProvidesVectorComponents) capabilities |= ExternalPluginCapabilities.VectorComponents;
+        if (capabilities != metadata.ExternalBackend!.Capabilities)
+            throw new InvalidDataException($"The external backend capabilities '{capabilities}' do not match the signed declaration '{metadata.ExternalBackend.Capabilities}'.");
+        Properties = descriptor.Properties;
+        LocalizationProvider = descriptor.Localization.ToDictionary(x => x.Key, x => x.Value.Values);
+        ConfigurationDisplayString = descriptor.ConfigurationDisplayStrings.ToDictionary(x => x.Key, x => x.Value.Values);
+        _configuration = descriptor.Configuration;
+        EffectProviderProvider = client.CreateEffectProviders();
+        VideoSourceProvider = client.CreateVideoSources();
+        AudioSourceProvider = client.CreateAudioSources();
+        VideoWriterProvider = client.CreateVideoWriters();
+        TransformProvider = client.CreateTransforms();
+        ComputerProvider = client.CreateComputers();
+        SoundTrackProvider = client.CreateSoundTracks();
+    }
+
+    public string PluginID => _metadata.PluginID;
+    public int PluginAPIVersion => _metadata.PluginAPIVersion;
+    public int PluginAPIMinorVersion => _metadata.PluginAPIMinorVersion;
+    public string Name => _metadata.Name;
+    public string Author => _metadata.Author;
+    public string Description => _metadata.Description;
+    public Version Version => _metadata.Version;
+    public string AuthorUrl => _metadata.AuthorUrl;
+    public string? PublishingUrl => _metadata.PublishingUrl;
+    public IReadOnlyDictionary<string, string> Properties { get; }
+    public Dictionary<string, Dictionary<string, string>> LocalizationProvider { get; }
+    public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
+    public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
+    public Dictionary<string, Func<Guid, Guid, RenderTransform>> TransformProvider { get; }
+    public Dictionary<string, Func<IComputer>> ComputerProvider { get; }
+    public Dictionary<string, IVideoSource> VideoSourceProvider { get; }
+    public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; }
+    public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; }
+    public Dictionary<string, string> Configuration
+    {
+        get => _configuration;
+        set
+        {
+            _configuration = value ?? [];
+            _client.UpdateConfigurationAsync(_configuration).AsTask().GetAwaiter().GetResult();
+        }
+    }
+    public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString { get; }
+
+    public ProjectJSONStructure? OnProjectLoad(ProjectJSONStructure project) => InvokeProject(RenderOperation.IsolationPluginProjectLoad, project);
+    public ProjectJSONStructure? OnProjectSave(ProjectJSONStructure project) => InvokeProject(RenderOperation.IsolationPluginProjectSave, project);
+    public ProjectJSONStructure? OnProjectClose(ProjectJSONStructure project) => InvokeProject(RenderOperation.IsolationPluginProjectClose, project);
+    public void OnClosing() => _client.DisposeAsync().AsTask().GetAwaiter().GetResult();
+    public IClip ClipCreator(JsonElement element) => _client.CreateClip(element);
+    public ISoundTrack SoundTrackCreator(JsonElement element) => _client.RestoreSoundTrack(element);
+    public RenderTransform TransformCreator(JsonElement element) => _client.RestoreTransform(element);
+    public IVectorComponent VectComponentCreator(JsonElement element) => _client.CreateVectorComponent(element);
+
+    private ProjectJSONStructure? InvokeProject(RenderOperation operation, ProjectJSONStructure project)
+    {
+        var json = _client.InvokeProjectLifecycleAsync(operation, JsonSerializer.Serialize(project)).AsTask().GetAwaiter().GetResult();
+        return json is null ? null : JsonSerializer.Deserialize<ProjectJSONStructure>(json);
     }
 }
 

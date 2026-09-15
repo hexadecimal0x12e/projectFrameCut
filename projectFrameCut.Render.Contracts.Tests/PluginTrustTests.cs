@@ -117,7 +117,7 @@ public sealed class PluginTrustTests
         using var certificates = TestCertificateChain.Create();
         var manifest = new PluginPackageManifest
         {
-            FormatVersion = PluginPackageManifest.CurrentFormatVersion,
+            FormatVersion = PluginPackageManifest.ManagedAssemblyFormatVersion,
             PluginId = "example.plugin",
             PublisherId = PluginTrustValidator.GetCertificateSha256Fingerprint(certificates.Publisher),
             SigningCertificateFingerprint = PluginTrustValidator.GetCertificateSha256Fingerprint(certificates.Leaf),
@@ -135,6 +135,45 @@ public sealed class PluginTrustTests
         Assert.IsTrue(PluginTrustValidator.VerifyManifestSignature(manifest, signature, certificates.Leaf));
         manifest.Files[0].Sha256 = new string('c', 64);
         Assert.IsFalse(PluginTrustValidator.VerifyManifestSignature(manifest, signature, certificates.Leaf));
+    }
+
+    [TestMethod]
+    public void ExternalManifestSignatureCoversBackendKind()
+    {
+        using var certificates = TestCertificateChain.Create();
+        var manifest = new PluginPackageManifest
+        {
+            FormatVersion = PluginPackageManifest.ExternalBackendFormatVersion,
+            BackendKind = PluginBackendKind.External,
+            PluginId = "example.external",
+            PublisherId = PluginTrustValidator.GetCertificateSha256Fingerprint(certificates.Publisher),
+            SigningCertificateFingerprint = PluginTrustValidator.GetCertificateSha256Fingerprint(certificates.Leaf),
+            Files = [new PluginManifestFile { Path = "metadata.json", Sha256 = new string('b', 64) }],
+        };
+        var signature = Convert.ToBase64String(certificates.LeafKey.SignData(
+            PluginTrustValidator.GetCanonicalManifestBytes(manifest), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1));
+
+        Assert.IsTrue(PluginTrustValidator.VerifyManifestSignature(manifest, signature, certificates.Leaf));
+        manifest.BackendKind = PluginBackendKind.ManagedAssembly;
+        Assert.IsFalse(PluginTrustValidator.VerifyManifestSignature(manifest, signature, certificates.Leaf));
+    }
+
+    [TestMethod]
+    public void ManagedV2CanonicalManifestDoesNotAddBackendFields()
+    {
+        var manifest = new PluginPackageManifest
+        {
+            FormatVersion = PluginPackageManifest.ManagedAssemblyFormatVersion,
+            PluginId = "example.plugin",
+            PublisherId = new string('a', 64),
+            SigningCertificateFingerprint = new string('b', 64),
+            PluginHash = new string('c', 64),
+            Files = [new() { Path = "metadata.json", Sha256 = new string('d', 64) }],
+        };
+
+        var canonical = System.Text.Encoding.UTF8.GetString(PluginTrustValidator.GetCanonicalManifestBytes(manifest));
+        Assert.IsFalse(canonical.Contains("backendKind", StringComparison.Ordinal));
+        StringAssert.Contains(canonical, "\"pluginHash\"");
     }
 
     [TestMethod]

@@ -80,6 +80,8 @@ namespace projectFrameCut.Services
                 pluginRoot,
                 requirePublisherTrust: true,
                 cancellationToken);
+            if (verification.Metadata.BackendKind == PluginBackendKind.External)
+                throw new NotSupportedException("External backend plugins do not contain an exportable managed assembly.");
             return [.. verification.AssemblyBytes];
         }
 
@@ -167,6 +169,7 @@ namespace projectFrameCut.Services
                     SigningCertificateFingerprint = metadata.SigningCertificateFingerprint,
                     IsAppLevelPlugin = metadata.IsAppLevelPlugin,
                     MaximumSupportedIsolationMode = metadata.MaximumSupportedIsolationMode,
+                    BackendKind = metadata.BackendKind,
                 });
                 await File.WriteAllTextAsync(itemsPath, JsonSerializer.Serialize(items));
 
@@ -232,6 +235,18 @@ namespace projectFrameCut.Services
                 using var verification = await PluginPackageSecurityService.VerifyExtractedPackageAsync(
                     pluginRoot,
                     requirePublisherTrust: true);
+
+                if (verification.Metadata.BackendKind == PluginBackendKind.External)
+                {
+                    Dictionary<string, string> configuration = [];
+                    var optionPath = Path.Combine(pluginRoot, "option.json");
+                    if (File.Exists(optionPath))
+                    {
+                        try { configuration = JsonSerializer.Deserialize<Dictionary<string, string>>(await File.ReadAllTextAsync(optionPath)) ?? []; }
+                        catch (Exception ex) { Log(ex, $"Failed to load plugin configuration from {optionPath}"); }
+                    }
+                    return (await PluginIsolationFactory.CreateExternalAsync(verification, pluginRoot, configuration), string.Empty);
+                }
 
                 string? loadFailReason = null;
                 ResolveEventHandler resolver = (s, e) =>
@@ -430,11 +445,52 @@ namespace projectFrameCut.Services
 
         public static Dictionary<string, string> FailedLoadPlugin = new();
 
+        private static void CleanupOrphanPluginPayloads(IEnumerable<PluginItem> items)
+        {
+            var pluginsRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins");
+            if (!Directory.Exists(pluginsRoot)) return;
+
+            var pluginIds = items
+                .Select(item => item.Id)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var path in Directory.EnumerateFileSystemEntries(pluginsRoot))
+            {
+                if (Directory.Exists(path)
+                    && pluginIds.Contains(Path.GetFileName(path)))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    if (Directory.Exists(path))
+                    {
+                        Directory.Delete(path, true);
+                    }
+                    else
+                    {
+                        File.Delete(path);
+                    }
+                    Log($"Removed orphaned plugin payload: {path}");
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Failed to remove orphaned plugin payload: {path}");
+                }
+            }
+        }
+
         public static List<IPluginBase> LoadUserPlugins(Func<string, string>? legacyPemGetter = null)
         {
             List<IPluginBase> plugins = new();
-            if (!File.Exists(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) return new();
-            var items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) ?? new();
+            var itemsPath = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
+            var items = File.Exists(itemsPath)
+                ? JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(itemsPath)) ?? new()
+                : [];
+            CleanupOrphanPluginPayloads(items);
+            if (!File.Exists(itemsPath)) return plugins;
             bool someRemoved = false;
             foreach (var item in items.Where(c => c.ShouldRemove))
             {
@@ -748,6 +804,7 @@ namespace projectFrameCut.Services
             public string SigningCertificateFingerprint { get; set; } = string.Empty;
             public bool? IsAppLevelPlugin { get; set; }
             public PluginIsolationMode MaximumSupportedIsolationMode { get; set; } = PluginIsolationMode.Containerized;
+            public PluginBackendKind BackendKind { get; set; } = PluginBackendKind.ManagedAssembly;
             public bool Enabled { get; set; }
             public bool ShouldRemove { get; set; } = false;
             [JsonIgnore]

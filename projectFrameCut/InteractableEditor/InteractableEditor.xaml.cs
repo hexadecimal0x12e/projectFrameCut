@@ -155,6 +155,9 @@ namespace projectFrameCut.InteractableEditor
         private double _pinchStartScale = 1d;
         private bool _isViewportPinching;
         private bool _isViewportPanning;
+        private double _androidViewportStartTranslationX;
+        private double _androidViewportStartTranslationY;
+        private Point _androidViewportStartFocalPoint;
         private double _viewportPanStartX;
         private double _viewportPanStartY;
         private double _overviewPanStartX;
@@ -1107,6 +1110,47 @@ namespace projectFrameCut.InteractableEditor
                     LogDiagnostic($"[Zoom] Two-finger panned viewport at {ZoomScale:F2}x");
                     break;
             }
+        }
+
+        internal void BeginAndroidViewportGesture(Point focalPoint)
+        {
+            _isViewportPinching = true;
+            _pinchStartScale = ZoomScale;
+            _androidViewportStartTranslationX = ZoomContent.TranslationX;
+            _androidViewportStartTranslationY = ZoomContent.TranslationY;
+            _androidViewportStartFocalPoint = focalPoint;
+            CancelElementInteractionForViewportGesture();
+        }
+
+        internal void UpdateAndroidViewportGesture(double scale, Point focalPoint)
+        {
+            if (!_isViewportPinching) return;
+
+            var targetScale = Math.Clamp(_pinchStartScale * scale, MinZoomScale, MaxZoomScale);
+            var contentX = (_androidViewportStartFocalPoint.X - _androidViewportStartTranslationX) / _pinchStartScale;
+            var contentY = (_androidViewportStartFocalPoint.Y - _androidViewportStartTranslationY) / _pinchStartScale;
+            _zoomScale = targetScale;
+            ZoomContent.Scale = targetScale;
+            ZoomContent.TranslationX = focalPoint.X - contentX * targetScale;
+            ZoomContent.TranslationY = focalPoint.Y - contentY * targetScale;
+            ClampViewportTranslation();
+            if (ZoomScale > MinZoomScale)
+            {
+                EnsureOverviewImageSource();
+            }
+            else
+            {
+                ReleaseOverviewImageSource();
+            }
+            UpdateZoomControls();
+            UpdateOverviewViewport();
+        }
+
+        internal void EndAndroidViewportGesture()
+        {
+            if (!_isViewportPinching) return;
+            _isViewportPinching = false;
+            LogDiagnostic($"[Zoom] Android pinch completed at {ZoomScale:F2}x");
         }
 
         private void CancelElementInteractionForViewportGesture()

@@ -143,8 +143,8 @@ namespace projectFrameCut
                     }
                 }
             }
-            InitializeCliLocalization(args);
 
+            InitializeCliLocalization(args);
 
             switch (args[0].ToLowerInvariant())
             {
@@ -163,7 +163,6 @@ namespace projectFrameCut
                     StartLog(args[0].ToLowerInvariant());
                     return RunRender(args.Skip(1).ToArray());
                 case "plugin_worker":
-                    StartLog(args[0].ToLowerInvariant());
                     return RunPluginWorker(args.Skip(1).ToArray());
                 case "user_data_root":
                     {
@@ -788,7 +787,9 @@ namespace projectFrameCut
                     if (pair.Length == 2) switches[pair[0].TrimStart('-', '/')] = pair[1];
                 }
 
-                var dataRoot = switches.TryGetValue("assetDbFile", out var db)
+                var dataRoot = switches.TryGetValue("dataRoot", out var specifiedDataRoot)
+                    ? Path.GetFullPath(specifiedDataRoot)
+                    : switches.TryGetValue("assetDbFile", out var db)
                     ? Path.GetFullPath(Path.Combine(Path.GetDirectoryName(db) ?? Environment.CurrentDirectory, "..", ".."))
                     : AppDataPath;
                 if (TryGetRenderRpcOptions(switches, out var rpcOptions))

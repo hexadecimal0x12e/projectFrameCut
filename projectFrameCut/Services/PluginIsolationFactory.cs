@@ -9,10 +9,47 @@ namespace projectFrameCut.Services;
 
 internal static class PluginIsolationFactory
 {
+    public static async ValueTask<IPluginBase> CreateExternalAsync(
+        PluginPackageVerificationResult verification,
+        string pluginRoot,
+        Dictionary<string, string> configuration,
+        CancellationToken cancellationToken = default)
+    {
+        var launch = verification.Metadata.ExternalBackend?.GetCurrentPlatform()
+            ?? throw new PlatformNotSupportedException("The external plugin package does not declare an entry point for this platform.");
+        var session = await new ExternalPluginBackendPlatform(launch).StartAsync(new PluginIsolationLaunchContext
+        {
+            PluginId = verification.Metadata.PluginID,
+            PluginRoot = pluginRoot,
+            SessionRoot = Path.Combine(ExternalPluginBackendPlatform.SessionDirectory, Guid.NewGuid().ToString("N")),
+            AuthenticationToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)),
+            PluginEncryptionKey = string.Empty,
+            InstancePackageName = ExternalPluginBackendPlatform.InstanceName,
+            Transport = new() { TerminateOnRemoteError = true },
+        }, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var client = new PluginIsolationClient(session);
+            await client.LoadAsync(Render.Plugin.PluginManager.CurrentLocale, configuration, cancellationToken).ConfigureAwait(false);
+            return new ExternalPluginProxy(verification.Metadata, client);
+        }
+        catch
+        {
+            await session.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
     public static async ValueTask<IPluginBase> CreateAsync(IPluginBase local, PluginPackageVerificationResult verification, string pluginRoot, PluginIsolationMode mode, CancellationToken cancellationToken = default)
     {
         bool hasPictureProviders = local.EffectProviderProvider.Values.Any(x => x().TypeOfEffect is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement);
-        if ((!hasPictureProviders && local.VideoSourceProvider.Count == 0) || mode == PluginIsolationMode.None) return local;
+        bool hasIsolatableCapabilities = hasPictureProviders || local.VideoSourceProvider.Count > 0 ||
+            local.AudioSourceProvider.Count > 0 || local.VideoWriterProvider.Count > 0 ||
+            local.TransformProvider.Count > 0 || local.ComputerProvider.Count > 0 ||
+            local.SoundTrackProvider.Count > 0 ||
+            HasCustomImplementation(local, nameof(IPluginBase.ClipCreator)) ||
+            HasCustomImplementation(local, nameof(IPluginBase.VectComponentCreator));
+        if (!hasIsolatableCapabilities || mode == PluginIsolationMode.None) return local;
         PluginIsolationClient client;
         switch (mode)
         {
@@ -126,4 +163,9 @@ internal static class PluginIsolationFactory
             throw;
         }
     }
+
+    private static bool HasCustomImplementation(IPluginBase plugin, string methodName) =>
+        typeof(IPluginBase).GetMethod(methodName) is { } method &&
+        plugin.GetType().GetInterfaceMap(typeof(IPluginBase)).TargetMethods
+            .Any(x => x.Name == method.Name && x.DeclaringType != typeof(IPluginBase));
 }

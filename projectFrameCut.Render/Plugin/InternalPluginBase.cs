@@ -99,7 +99,6 @@ public class InternalPluginBase : IPluginBase
         { "DarkenMixture", () => new BlendModeMixtureProvider { MixtureType = "Darken" } },
         { "LightenMixture", () => new BlendModeMixtureProvider { MixtureType = "Lighten" } },
         { "DifferenceMixture", () => new BlendModeMixtureProvider { MixtureType = "Difference" } },
-        { "WindowsVideoSuperResolution", () => new WindowsVideoSuperResolutionEffectProvider() },
     };
 
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>

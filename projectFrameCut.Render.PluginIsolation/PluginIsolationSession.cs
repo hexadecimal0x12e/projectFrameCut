@@ -55,37 +55,52 @@ public sealed class PluginIsolationSession : IPluginIsolationSession
             }, timeout.Token).ConfigureAwait(false);
             foreach (var log in response.Logs)
                 projectFrameCut.Shared.Logger.Log($"[PluginIsolation:{PluginId}/{operation}/{stopwatch.ElapsedMilliseconds}ms] {log.Message}", log.Level);
-            if (response.Error is not null) response.Error.ThrowAsException();
+            if (response.Error is not null)
+            {
+                var error = response.Error;
+                if (_options.TerminateOnRemoteError)
+                    await AbortAsync($"Operation {operation} failed in the external backend.").ConfigureAwait(false);
+                error.ThrowAsException();
+            }
             return RenderRpcSerializer.Deserialize<TResponse>(response.Payload);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            await TerminateAsync($"Operation {operation} exceeded {_options.RequestTimeout}.").ConfigureAwait(false);
+            await AbortAsync($"Operation {operation} exceeded {_options.RequestTimeout}.").ConfigureAwait(false);
             throw new TimeoutException($"Plugin '{PluginId}' did not complete {operation} within {_options.RequestTimeout}.");
         }
         catch (InvalidDataException)
         {
-            await TerminateAsync($"Operation {operation} returned an invalid protocol payload.").ConfigureAwait(false);
+            await AbortAsync($"Operation {operation} returned an invalid protocol payload.").ConfigureAwait(false);
             throw;
         }
         catch (ProtoBuf.ProtoException)
         {
-            await TerminateAsync($"Operation {operation} returned malformed protobuf data.").ConfigureAwait(false);
+            await AbortAsync($"Operation {operation} returned malformed protobuf data.").ConfigureAwait(false);
             throw;
         }
         catch (RenderPipeException)
         {
-            await TerminateAsync($"The isolation control channel failed during {operation}.").ConfigureAwait(false);
+            await AbortAsync($"The isolation control channel failed during {operation}.").ConfigureAwait(false);
             throw;
         }
         catch (IOException)
         {
-            await TerminateAsync($"The isolation runtime disconnected during {operation}.").ConfigureAwait(false);
+            await AbortAsync($"The isolation runtime disconnected during {operation}.").ConfigureAwait(false);
             throw;
         }
     }
 
-    public ValueTask TerminateAsync(string reason) => _terminate(reason);
+    public ValueTask TerminateAsync(string reason) => AbortAsync(reason);
+
+    private async ValueTask AbortAsync(string reason)
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        try { await Control.DisposeAsync().ConfigureAwait(false); } catch { }
+        try { await Resources.DisposeAsync().ConfigureAwait(false); } catch { }
+        try { await Payloads.DisposeAsync().ConfigureAwait(false); } catch { }
+        await _terminate(reason).ConfigureAwait(false);
+    }
 
     public async ValueTask DisposeAsync()
     {
