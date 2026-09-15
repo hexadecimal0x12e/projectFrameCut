@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -28,7 +28,7 @@ namespace projectFrameCut.Render.Compose
         public string Name { get; set; }
         public string Id { get; set; }
         public Dictionary<string, object> Parameters { get; set; }
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
         public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)
             => MixInternal(basePicture, topPicture, computer, targetPPB, true, 0, 0, basePicture.Width, basePicture.Height);
@@ -254,7 +254,7 @@ namespace projectFrameCut.Render.Compose
                     }
 
                     if (p16.HasAlphaChannel && p16.a is not null)
-                        SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, dstRow, w);
+                        SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, srcRow, dstRow, w);
                     else
                         SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, w);
                 }
@@ -275,7 +275,7 @@ namespace projectFrameCut.Render.Compose
                         srcRow, dstRow, w);
 
                     if (p8.HasAlphaChannel && p8.a is not null)
-                        SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, dstRow, w);
+                        SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, srcRow, dstRow, w);
                     else
                         SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, w);
                 }
@@ -306,16 +306,17 @@ namespace projectFrameCut.Render.Compose
                         srcRow, dstRow, w);
 
                     if (p16.HasAlphaChannel && p16.a is not null)
-                        SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, dstRow, w);
+                        SIMDAlphaProcessor.ClampAlphaOffset(p16.a, outA, srcRow, dstRow, w);
                     else
                         SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, w);
 
                     if (outBrightness != null)
                     {
                         if (baseBrightness != null)
-                            SIMDAlphaProcessor.ClampAlpha(baseBrightness, outBrightness, w);
+                            SIMDAlphaProcessor.ClampAlphaOffset(baseBrightness, outBrightness, srcRow, dstRow, w);
                         else
-                            SIMDAlphaProcessor.EstimateBrightnessFromUshort(p16.r, p16.g, p16.b, outBrightness, w);
+                            SIMDAlphaProcessor.EstimateBrightnessFromUshortOffset(
+                                p16.r, p16.g, p16.b, srcRow, outBrightness, dstRow, w);
                     }
                 }
                 return;
@@ -335,14 +336,14 @@ namespace projectFrameCut.Render.Compose
                         srcRow, dstRow, w);
 
                     if (p8.HasAlphaChannel && p8.a is not null)
-                        SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, dstRow, w);
+                        SIMDAlphaProcessor.ClampAlphaOffset(p8.a, outA, srcRow, dstRow, w);
                     else
                         SIMDAlphaProcessor.FillDefaultAlpha(outA, dstRow, w);
 
                     if (outBrightness != null)
                     {
                         if (baseBrightness != null)
-                            SIMDAlphaProcessor.ClampAlpha(baseBrightness, outBrightness, w);
+                            SIMDAlphaProcessor.ClampAlphaOffset(baseBrightness, outBrightness, srcRow, dstRow, w);
                         else
                             SIMDAlphaProcessor.EstimateBrightnessFromUshortOffset(
                                 outR, outG, outB, dstRow, outBrightness, dstRow, w);
@@ -1255,7 +1256,7 @@ namespace projectFrameCut.Render.Compose
         public IEffect WithParameters(Dictionary<string, object> parameters) => new ClassicOverlayMixture { Parameters = parameters };
     }
 
-    public class ClassicOverlayMixtureFactory : IEffectFactory
+    public class ClassicOverlayMixtureFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "ClassicOverlayMixture";
@@ -1270,6 +1271,41 @@ namespace projectFrameCut.Render.Compose
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
             return new ClassicOverlayMixture { };
+        }
+    }
+
+    /// <summary>
+    /// The Render-side provider of the ClassicOverlayMixture.
+    /// </summary>
+    public class ClassicOverlayMixtureProvider : EffectProviderBase
+    {
+        public ClassicOverlayMixtureProvider()
+        {
+            Name = "Classic Overlay";
+            SetField("AccuracyMode", "Accurate");
+        }
+
+        public override string TypeName => "ClassicOverlayMixture";
+
+        public override EffectType TypeOfEffect => EffectType.MixtureProvider;
+
+        public override EffectTarget Target => EffectTarget.Mixture;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("AccuracyMode", EffectArgumentFieldType.String, "Accurate", presetOptions: ["Accurate", "Approximate"])
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [new ClassicOverlayMixtureFactory().Build(implementType, parameters)];
         }
     }
 }

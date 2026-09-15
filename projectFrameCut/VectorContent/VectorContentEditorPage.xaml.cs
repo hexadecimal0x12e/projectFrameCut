@@ -160,7 +160,7 @@ public partial class VectorContentEditorPage : ContentPage, INotifyPropertyChang
             """;
 
         InteractiveEditor.ApplyPreparedPreviews(
-            [new DynamicPreview.PreparedPreview(Guid.Empty, () => new Label { Text = errorText, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center }, null, null)]);
+            [new projectFrameCut.ApplicationAPIBase.Interaction.PreparedPreview(Guid.Empty, () => new Label { Text = errorText, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center }, null, null)]);
 
     }
 
@@ -2611,7 +2611,7 @@ public partial class VectorContentEditorPage : ContentPage, INotifyPropertyChang
             int canvasW = Math.Max(1, PreviewWidth);
             int canvasH = Math.Max(1, PreviewHeight);
 
-            var previews = new DynamicPreview.PreparedPreview[_componentClips.Count];
+            var previews = new projectFrameCut.ApplicationAPIBase.Interaction.PreparedPreview[_componentClips.Count];
 
             for (int i = 0; i < _componentClips.Count; i++)
             {
@@ -2633,7 +2633,7 @@ public partial class VectorContentEditorPage : ContentPage, INotifyPropertyChang
 
                 if (elements is null || elements.Count == 0)
                 {
-                    previews[i] = new DynamicPreview.PreparedPreview(cc.Id, null, Localized.VectorContentEditorView_NoComponentsPreview, cc);
+                    previews[i] = new projectFrameCut.ApplicationAPIBase.Interaction.PreparedPreview(cc.Id, null, Localized.VectorContentEditorView_NoComponentsPreview, cc);
                     continue;
                 }
 
@@ -2647,7 +2647,7 @@ public partial class VectorContentEditorPage : ContentPage, INotifyPropertyChang
 
                 if (shouldRasterize)
                 {
-                    previews[i] = new DynamicPreview.PreparedPreview(
+                    previews[i] = new projectFrameCut.ApplicationAPIBase.Interaction.PreparedPreview(
                         cc.Id,
                         () => DynamicPreview.BuildRasterizedGroupPreviewView(
                             elements,
@@ -2659,7 +2659,7 @@ public partial class VectorContentEditorPage : ContentPage, INotifyPropertyChang
                 }
                 else
                 {
-                    previews[i] = new DynamicPreview.PreparedPreview(
+                    previews[i] = new projectFrameCut.ApplicationAPIBase.Interaction.PreparedPreview(
                         cc.Id,
                         () => DynamicPreview.BuildViewportVectorPreviewView(
                             elements,

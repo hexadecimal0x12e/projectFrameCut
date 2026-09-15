@@ -17,7 +17,6 @@ namespace projectFrameCut.Helper
     {
         static SplashForm splash;
         static LogForm log;
-        static FrozenForm froze;
         [STAThread]
         public static void SplashMain()
         {
@@ -62,20 +61,6 @@ namespace projectFrameCut.Helper
             Application.Run();
         }
 
-        [STAThread]
-        public static void FrozenMain()
-        {
-            SimpleLocalizerBaseGeneratedHelper.Localized ??= SimpleLocalizer_Helper.Init();
-
-            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-
-            froze = new FrozenForm();
-            froze.ShowInTaskbar = true;
-            froze.Show();
-            Application.Run();
-        }
 
         [STAThread]
         public static async Task Main(string[] args)
@@ -186,21 +171,11 @@ namespace projectFrameCut.Helper
             }
             catch { }
         }
-        public static void CloseFrozenDiag()
-        {
-            Thread.Sleep(1500);
-            try
-            {
-                froze?.Invoke(() => froze?.Close());
-            }
-            catch { }
-        }
 
         public static void Cleanup()
         {
             CloseSplash();
             CloseLog();
-            CloseFrozenDiag();
             Application.Exit();
         }
 

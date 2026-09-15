@@ -1,40 +1,41 @@
-﻿#pragma warning disable CS8974 //log a exception will cause this
-using System;
-using System.Diagnostics;
-using FFmpeg.AutoGen;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using Exception = System.Exception;
-using System.Text;
-using System.Text.Json;
-using System.Globalization;
+#pragma warning disable CS8974 //log a exception will cause this
 using CommunityToolkit.Maui;
-using projectFrameCut.Render.RenderAPIBase.Plugins;
-using projectFrameCut.Services;
-using Thread = System.Threading.Thread;
-using projectFrameCut.Render.Plugin;
-using Microsoft.Extensions.Logging;
-using projectFrameCut.Shared;
-using projectFrameCut.Asset;
-using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.ApplicationPluginBase;
-using LocalizedResources;
-using projectFrameCut.ApplicationAPIBase.Plugins;
-using projectFrameCut.Render.Effect;
-using Microsoft.Maui.LifecycleEvents;
 using CommunityToolkit.Maui.Core;
-using projectFrameCut.AIAssistance;
-using projectFrameCut.ApplicationAPIBase.Helpers;
-using projectFrameCut.Render.TemplateSystem;
-using projectFrameCut.Template;
-using projectFrameCut.Render.EncodeAndDecode;
+using FFmpeg.AutoGen;
 using FFmpeg.AutoGen.Native;
+using LocalizedResources;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Maui.LifecycleEvents;
+using projectFrameCut.AIAssistance;
+using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
+using projectFrameCut.ApplicationPluginBase;
+using projectFrameCut.Asset;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Render.ClipsAndTracks.Text;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
-
-
+using projectFrameCut.Render.TemplateSystem;
+using projectFrameCut.Services;
+using projectFrameCut.Shared;
+using projectFrameCut.Template;
+using System;
+using System.Diagnostics;
+using System.Globalization;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.Json;
+using Exception = System.Exception;
+using Thread = System.Threading.Thread;
+using System.Runtime.CompilerServices;
 
 #if ANDROID
 using projectFrameCut.Render.HwAccelEngine.Platforms.Android;
@@ -46,15 +47,27 @@ using Java.Lang;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
-using projectFrameCut.Render.ClipsAndTracks.Text;
-
 #endif
 
+#if LINUX
+using projectFrameCut.Platforms.Linux;
+using Microsoft.Maui.Platforms.Linux.Gtk4.Essentials.Hosting;
+using Microsoft.Maui.Platforms.Linux.Gtk4.Hosting;
+#endif
+
+#if IOS
+using projectFrameCut.Platforms.iOS;
+#endif
+
+#if MACOS
+using projectFrameCut.Platforms.MacOS;
+#endif
 
 namespace projectFrameCut
 {
     public static class MauiProgram
     {
+        internal static IReadOnlyList<IPluginBase> IntegratedPlugins { get; private set; } = [];
         public static StreamWriter LogWriter;
 
         public static string LogPath { get; private set; }
@@ -63,9 +76,18 @@ namespace projectFrameCut
 
         public static string BasicDataPath { get; private set; }
 
+        public static string CachePath { get; private set; }
+
         public static string FFmpegRoot { get; private set; }
 
         public static string ProgramConfig = "?", ProgramCommit = "?", AssemblyName = "projectFrameCut";
+
+        public static string AppIdentifier =>
+#if MAUISDK
+            AppInfo.PackageName;
+#else
+            "hexadecimal0x12e.projectFrameCut";
+#endif
 
         private static readonly string[] FoldersNeedInUserdata =
         [
@@ -81,7 +103,9 @@ namespace projectFrameCut
 #else
             "My Assets/.database",
             "My Assets/.thumbnails",
-            "My Assets/.perAssetThumb"
+            "My Assets/.perAssetThumb",
+            "Logs",
+            "AppData",
 #endif
         ];
 
@@ -91,6 +115,19 @@ namespace projectFrameCut
 
         public static MauiApp CreateMauiApp()
         {
+#if ANDROID
+            if (projectFrameCut.Platforms.Android.MainApplication.IsRenderWorkerProcess
+                || global::Android.App.Application.ProcessName?.EndsWith(":renderworker", StringComparison.Ordinal) == true)
+            {
+                DataPath = FileSystem.AppDataDirectory;
+                BasicDataPath = Path.Combine(FileSystem.AppDataDirectory, "AppData");
+                CachePath = FileSystem.CacheDirectory;
+                Directory.CreateDirectory(BasicDataPath);
+                return MauiApp.CreateBuilder()
+                    .UseMauiApp<projectFrameCut.Platforms.Android.RenderWorkerMauiApplication>()
+                    .Build();
+            }
+#endif
             if (CmdlineArgs is null || CmdlineArgs.Length == 0)
             {
                 try
@@ -99,12 +136,71 @@ namespace projectFrameCut
                 }
                 catch { } //safe to ignore it
             }
+#if WINDOWS || LINUX
+            if (CmdlineArgs.Contains("--allowCtrlCExit"))
+            {
+                PosixSignalRegistration.Create(PosixSignal.SIGINT, async ctx =>
+                {
+                    Console.Error.WriteLine("SIGINT received, trying to exit...");
+                    Task.Delay(10000).ContinueWith((_) => Task.Run(() => Environment.Exit(32767)));
+                    try
+                    {
+                        if (AppShell.instance?.CurrentPage is DraftPage pg)
+                        {
+                            try
+                            {
+                                pg.SaveProjectThumbnailBeforeExit();
+                                await pg.Save(true, new ApplicationAPIBase.Project.ClipUpdateEventArgs { Reason = ApplicationAPIBase.Project.ClipUpdateReason.Unknown, DetailInfo = "Auto-save when Ctrl-C Received" });
+                            }
+                            catch (Exception ex)
+                            {
+                                Log(ex, "Auto-saving project when closing", pg);
+                            }
+                        }
+                        RenderRpcBootstrap.DetachActiveCliRender();
+                    }
+                    catch { }
+                    Environment.Exit(32767);
+                });
+            }
+#endif
+
+#if MAUISDK
+            Log($"""
+                projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} 
+                                  {ProgramConfig}@{ProgramCommit},
+                                  on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture},
+                                  os version {Environment.OSVersion}/{DeviceInfo.Version},
+                                  clr version {Environment.Version},
+                                  cmdline: {Environment.CommandLine}
+                """);
+#else
+            Log($"""
+                projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} 
+                                  {ProgramConfig}@{ProgramCommit},
+                                  in cpu arch {RuntimeInformation.ProcessArchitecture},
+                                  os version {Environment.OSVersion},
+                                  clr version {Environment.Version},
+                                  cmdline: {Environment.CommandLine}
+                """);
+#endif
+            Log("Copyright (c) hexadecimal0x12e 2025-2026, and thanks to other open-source code's authors.");
+
             string loggingDir = "";
             try
             {
+#if MAUISDK
+                CachePath = FileSystem.CacheDirectory;
                 loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging");
                 DataPath = FileSystem.AppDataDirectory;
                 BasicDataPath = FileSystem.AppDataDirectory;
+#else
+                CachePath = GetInitialCachePath();
+                loggingDir = System.IO.Path.Combine(CachePath, "logging");
+                DataPath = CachePath;
+                BasicDataPath = CachePath;
+#endif
+
 #if ANDROID
                 try
                 {
@@ -146,8 +242,63 @@ namespace projectFrameCut
                 }
 
                 IsStoreMode = WinUI.Program.IsStoreModeEnabled;
+#elif IOS
+                DataPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                // iOS's Environment.GetFolderPath can return empty under hardened
+                // sandbox. Fall back to MAUI's FileSystem (Foundation NSSearchPath).
+                if (string.IsNullOrEmpty(DataPath))
+                {
+                    BasicDataPath = Path.Combine(DataPath, "AppData");
+                }
+                else
+                {
+                    DataPath = FileSystem.AppDataDirectory;
+                }
+                   
+                loggingDir = Path.Combine(DataPath, "Logs");
+                // iOS sandbox: POSIX stat through container root returns EPERM.
+                // .NET's Path.GetFullPath → realpath() resolves each component —
+                // including the protected root. Fall back to NSFileManager.
+                try
+                {
+                    Directory.CreateDirectory(BasicDataPath);
+                    Directory.CreateDirectory(loggingDir);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    Foundation.NSFileManager.DefaultManager.CreateDirectory(
+                        Foundation.NSUrl.FromFilename(loggingDir), true, null, out _);
+                    Foundation.NSFileManager.DefaultManager.CreateDirectory(
+                        Foundation.NSUrl.FromFilename(BasicDataPath), true, null, out _);
+                }
+
+#elif MACCATALYST
+                DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
+#elif LINUX
+                var homePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                Directory.CreateDirectory(Path.Combine(homePath, ".projectFrameCut"));
+                BasicDataPath = Path.Combine(homePath, ".projectFrameCut", "AppData");
+                DataPath = Path.Combine(homePath, ".projectFrameCut");
+                loggingDir = Path.Combine(homePath, ".projectFrameCut", "Logs");
+                Directory.CreateDirectory(BasicDataPath);
+
+                if (Program.UserDataPathOverride != null || Program.BasicDataPathOverride != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(Program.BasicDataPathOverride))
+                    {
+                        BasicDataPath = Program.BasicDataPathOverride;
+                    }
+                    if (!string.IsNullOrWhiteSpace(Program.UserDataPathOverride))
+                    {
+                        DataPath = Program.UserDataPathOverride;
+                    }
+                    loggingDir = System.IO.Path.Combine(BasicDataPath, "logging");
+                }
 #endif
+
+#if !iDevices
                 Directory.CreateDirectory(loggingDir);
+#endif
                 try
                 {
                     Directory.CreateDirectory(DataPath);
@@ -172,23 +323,6 @@ namespace projectFrameCut
                 Debug.WriteLine($"Failed to set up log file: {ex.Message}");
                 Crash(new InvalidOperationException($"projectFrameCut can't initialize BasicData. Try uninstall program, cleanup BasicData and reinstall program.", ex));
             }
-            try
-            {
-                ProgramConfig = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config";
-                ProgramCommit = (Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last();
-                AssemblyName = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut";
-            }
-            catch { }
-            Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} \r\n" +
-                $"                  {ProgramConfig}@{ProgramCommit},\r\n" +
-                $"                  on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture},\r\n" +
-                $"                  os version {Environment.OSVersion}/{DeviceInfo.Version},\r\n" +
-                $"                  clr version {Environment.Version},\r\n" +
-#if WINDOWS
-                $"                  PackageFullName: {WinUI.App.GetPackageFullName()},\r\n" +
-#endif
-                $"                  cmdline: {Environment.CommandLine}");
-            Log("Copyright (c) hexadecimal0x12e 2025-2026, and thanks to other open-source code's authors.");
             Log($"BasicDataPath:{BasicDataPath}, DataPath:{DataPath}");
             try
             {
@@ -283,11 +417,6 @@ namespace projectFrameCut
                 Priority = ThreadPriority.BelowNormal
             };
 
-            Task.Run(async () =>
-            {
-                await Task.Delay(1000);
-                backgroundInitThread.Start();
-            });
 #if WINDOWS
             try
             {
@@ -343,22 +472,61 @@ namespace projectFrameCut
             {
                 var builder = MauiApp.CreateBuilder();
 #pragma warning disable CA1416  //let VS shut up here
-                builder.UseMauiApp<App>()
+                builder
+#if MAUISDK
+                       .UseMauiApp<App>()
+#elif LINUX
+                       .UseMauiAppLinuxGtk4<App>()
+                       .AddLinuxGtk4Essentials()
+#endif
                        .UseMauiCommunityToolkit(options =>
                        {
                            options.SetShouldEnableSnackbarOnWindows(false);
-                       })
-#if ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER
-                       .UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
-                       {
-                           options.SetDefaultAndroidViewType(AndroidViewType.TextureView);
-                       })
-#endif
-                       .ConfigureEssentials(essentials =>
-                       {
-                           essentials.UseVersionTracking();
                        });
+                builder.ConfigureMauiHandlers(handlers =>
+                {
+#if WINDOWS
+                    handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Windows.ToggleButtonHandler>();
+                    handlers.AddHandler<projectFrameCut.Controls.HdrPreviewView, projectFrameCut.Platforms.Windows.HdrPreviewViewHandler>();
+#elif ANDROID
+                    handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Android.ToggleButtonHandler>();
+                    handlers.AddHandler<projectFrameCut.InteractableEditor.InteractableEditor, projectFrameCut.Platforms.Android.InteractableEditorHandler>();
+#elif IOS
+                    handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.iOS.ToggleButtonHandler>();
+#elif LINUX
+                    handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Linux.ToggleButtonHandler>();
+#endif
+                });
+#if MAUISDK && (ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER || IOS15_0_OR_GREATER)
+                builder.UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
+                {
+                    options.SetDefaultAndroidViewType(AndroidViewType.TextureView);
+                });
+#endif
+#if MAUISDK
+                builder.ConfigureEssentials(essentials =>
+                {
+                    essentials.UseVersionTracking();
+                });
+#endif
+
 #pragma warning restore CA1416
+                var lastPath = SettingsManager.GetSetting("General_LastOpenedProject", "");
+                if (!string.IsNullOrWhiteSpace(lastPath) && Directory.Exists(lastPath))
+                {
+#if MAUISDK
+                    try
+                    {
+                        var dirName = Path.GetFileName(Path.GetDirectoryName(lastPath).TrimEnd(Path.DirectorySeparatorChar));
+                        builder = builder.ConfigureEssentials(essentials =>
+                        {
+                            essentials.AddAppAction("--continue", Localized.HomePage_Continue(dirName?.Split('\\')?.Last() ?? "Project"), icon: "icon_project")
+                                      .OnAppAction(HomePage.HandleAppActionLaunch);
+                        });
+                    }
+                    catch { }
+#endif
+                }
                 try
                 {
                     Log($"StoreMode: {IsStoreMode}, StoreModeOverride: {SettingsManager.GetSetting("StoreModeOverride", "disable")}");
@@ -473,7 +641,6 @@ namespace projectFrameCut
                     });
                 });
 #endif
-
                 try
                 {
                     if (!SettingsManager.IsBoolSettingTrue("UseSystemFont")) ConfigFontFromCulture(builder, ReadCultureFromSetting(locate, culture));
@@ -489,6 +656,52 @@ namespace projectFrameCut
                         }
                         TextClipFontRegistry.Initialize();
                     }
+
+                    try
+                    {
+                        var emojiPath = Path.Combine(DataPath, "emoji.ttf");
+                        if (!File.Exists(emojiPath))
+                        {
+                            emojiPath = FileSystemService.GetAppPackageFileSync("NotoColorEmoji-Regular.ttf");
+                        }
+                        if (File.Exists(emojiPath))
+                        {
+                            var emojiFont = FontFace.AutoLoad(emojiPath).FirstOrDefault();
+                            if (emojiFont is not null)
+                            {
+                                projectFrameCut.Drawing.Text.FontHelper.FontFace.EmojiFont = emojiFont;
+                                LogDiagnostic($"Using font {emojiFont.DisplayName} for emoji rendering");
+                            }
+                        }
+                    }
+                    catch { }
+
+                    Microsoft.Maui.Handlers.LabelHandler.Mapper.AppendToMapping("EnableTextSelection", (handler, view) =>
+                    {
+                        if (view is Label l && (l.FontFamily == "MarkdownCodeBlock" || l.StyleId == "SelectableLabel"))
+                        {
+#if WINDOWS
+                            if (handler.PlatformView is Microsoft.UI.Xaml.Controls.TextBlock tb)
+                            {
+                                tb.IsTextSelectionEnabled = true;
+                            }
+#elif ANDROID
+                            if (handler.PlatformView is Android.Widget.TextView tv)
+                            {
+                                tv.SetTextIsSelectable(true);
+                            }
+#endif
+                        }
+                    });
+
+#if LINUX
+                    builder.ConfigureMauiHandlers(handlers =>
+                    {
+                        handlers.AddHandler<
+                            Border,
+                            projectFrameCut.Platforms.Linux.LinuxBorderHandler>();
+                    });
+#endif
 
                 }
                 catch
@@ -511,14 +724,14 @@ namespace projectFrameCut
 
                 try
                 {
-                    if (!File.Exists(Path.Combine(DataPath, $"{Localized.MainSettingsPage_Tab_About}.txt")))
+                    if (!File.Exists(Path.Combine(DataPath, $"{Localized.AboutAppData}.txt")))
                     {
-                        File.WriteAllText(Path.Combine(DataPath, $"{Localized.MainSettingsPage_Tab_About}.txt"), OperatingSystem.IsWindows() ? Localized.AboutAppData_Windows : Localized.AboutAppData_NotWindows);
+                        File.WriteAllText(Path.Combine(DataPath, $"{Localized.AboutAppData}.txt"), OperatingSystem.IsWindows() || OperatingSystem.IsMacCatalyst() ? Localized.AboutAppData_Windows : Localized.AboutAppData_NotWindows);
                     }
 
-                    if (!File.Exists(Path.Combine(BasicDataPath, $"{Localized.MainSettingsPage_Tab_About}.txt")))
+                    if (!File.Exists(Path.Combine(BasicDataPath, $"{Localized.AboutAppData}.txt")))
                     {
-                        File.WriteAllText(Path.Combine(BasicDataPath, $"{Localized.MainSettingsPage_Tab_About}.txt"), Localized.AboutAppData_BasicData);
+                        File.WriteAllText(Path.Combine(BasicDataPath, $"{Localized.AboutAppData}.txt"), Localized.AboutAppData_BasicData);
                     }
                 }
                 catch { }
@@ -527,6 +740,11 @@ namespace projectFrameCut
 
                 Log("Everything ready!");
                 var app = builder.Build();
+                Task.Run(async () =>
+                {
+                    await Task.Delay(1000);
+                    backgroundInitThread.Start();
+                });
                 Log("App is ready!");
                 return app;
             }
@@ -541,6 +759,32 @@ namespace projectFrameCut
 #endif
                 throw;
             }
+        }
+
+        [ModuleInitializerAttribute]
+        public static void LoadModuleConfig()
+        {
+            try
+            {
+                ProgramConfig = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config";
+                ProgramCommit = (Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last();
+                AssemblyName = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut";
+                CachePath = GetInitialCachePath();
+            }
+            catch { }
+        }
+
+        private static string GetInitialCachePath()
+        {
+#if WINDOWS
+            try
+            {
+                if (WinUI.App.IsPackaged())
+                    return Windows.Storage.ApplicationData.Current.LocalCacheFolder.Path;
+            }
+            catch { }
+#endif
+            return Path.Combine(Path.GetTempPath(), new string(AssemblyName.Select(t => char.IsAsciiLetterOrDigit(t) ? t : '_').ToArray()));
         }
 
         public static void InitLocate(ref string locate, ref CultureInfo culture)
@@ -572,6 +816,16 @@ namespace projectFrameCut
                     return Localized.IsItemExist(k) ? Localized.DynamicLookup(k, k) : null;
                 });
 
+                EffectProviderDisplayDefaults.AppPackageFileResolver = paths => FileSystemService.GetAppPackageFileSync(paths);
+                EffectProviderDisplayDefaults.TaggedLocalizedStringResolver = (key, fallback, locate) =>
+                {
+                    var map = ISimpleLocalizerBase_PropertyPanel.GetMapping();
+                    var loc = map.TryGetValue(locate, out var l) ? l
+                            : map.TryGetValue(PluginManager.CurrentLocale, out var c) ? c
+                            : SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources;
+                    return loc is not null && loc.IsItemExist(key) ? loc.DynamicLookup(key, key) : fallback;
+                };
+
 
 
                 Log($"OS default current culture: {culture.Name}, locate defined in settings:{locate} ");
@@ -598,6 +852,15 @@ namespace projectFrameCut
                 LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
                 PluginManager.CurrentLocale = "en-US";
                 PluginManager.ExtenedLocalizationGetter = new((k) => ISimpleLocalizerBase.GetMapping().First().Value.DynamicLookup(k));
+                EffectProviderDisplayDefaults.AppPackageFileResolver = paths => FileSystemService.GetAppPackageFileSync(paths);
+                EffectProviderDisplayDefaults.TaggedLocalizedStringResolver = (key, fallback, locate) =>
+                {
+                    var map = ISimpleLocalizerBase_PropertyPanel.GetMapping();
+                    var loc = map.TryGetValue(locate, out var l) ? l
+                            : map.TryGetValue(PluginManager.CurrentLocale, out var c) ? c
+                            : SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources;
+                    return loc is not null && loc.IsItemExist(key) ? loc.DynamicLookup(key, key) : fallback;
+                };
             }
         }
 
@@ -619,11 +882,6 @@ namespace projectFrameCut
                             {
                                 culture = CultureInfo.CreateSpecificCulture(locate);
                             }
-                            break;
-                        }
-                    case "文言文":
-                        {
-                            culture = CultureInfo.CreateSpecificCulture("zh-HK");
                             break;
                         }
                     default:
@@ -659,24 +917,122 @@ namespace projectFrameCut
         {
             Log("Start background init...");
 
+            try
+            {
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
+                if (!ffmpeg.Ready)
+                {
+                    try
+                    {
+                        if (Environment.GetCommandLineArgs().FirstOrDefault(c => c.StartsWith("--ffmpegRoot=")) is string ffPath)
+                        {
+                            var ffmpegRoot = ffPath.Substring("--ffmpegRoot=".Length);
+                            if (!string.IsNullOrWhiteSpace(ffmpegRoot) && Directory.Exists(ffmpegRoot))
+                            {
+                                ffmpeg.RootPath = ffmpegRoot;
+                                Log($"Using FFmpeg libraries from command line argument, path:{ffmpegRoot}");
+                            }
+                        }
+                        else if (SettingsManager.IsBoolSettingTrue("PluginProvidedFFmpeg_Enable"))
+                        {
+#if WINDOWS
+                            string? nativeLibDirOverride = null;
+                            var pluginId = SettingsManager.GetSetting("PluginProvidedFFmpeg_PluginID", "");
+                            if (pluginId == "external")
+                            {
+                                var ffmpegPath = SettingsManager.GetSetting("PluginProvidedFFmpeg_LibPath", "");
+                                if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
+                                {
+                                    Log($"Using external FFmpeg libraries, path:{ffmpegPath}");
+                                    nativeLibDirOverride = ffmpegPath;
+                                }
+                                else
+                                {
+                                    Log($"PluginProvidedFFmpeg_Enable is true, but invalid path provided:{ffmpegPath}");
+                                }
+                            }
+                            else if (!PluginManager.LoadedPlugins.TryGetValue(pluginId, out var value))
+                            {
+                                Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} is not loaded.");
+                            }
+                            else
+                            {
+                                var ffmpegPath = Path.Combine(BasicDataPath, "Plugins", value.PluginID, "FFmpeg", "windows");
+                                if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
+                                {
+                                    Log($"Using FFmpeg libraries provided by plugin {pluginId}, path:{ffmpegPath}");
+                                    nativeLibDirOverride = ffmpegPath;
+                                }
+                                else
+                                {
+                                    Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} provided invalid path:{ffmpegPath}");
+                                }
+                            }
+                            if (!string.IsNullOrWhiteSpace(nativeLibDirOverride) && Directory.Exists(nativeLibDirOverride))
+                            {
+                                ffmpeg.RootPath = nativeLibDirOverride;
+                            }
+                            else
+                            {
+                                ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
+                            }
+#elif ANDROID
+                            ffmpeg.RootPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+#endif
+                        }
+                        else
+                        {
+                            if (OperatingSystem.IsWindows())
+                            {
+                                ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                FFmpegRoot = ffmpeg.RootPath;
+                Log($"FFmpeg library root path: {FFmpegRoot}");
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+
+                try
+                {
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize(false, true);
+                    FFmpegHelper.SetupFFmpegLogging();
+                    Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}");
+                }
+                catch (Exception ex)
+                {
+                    ffmpegFailMessage = $"FFmpeg fail to load. {ex}";
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "init ffmpeg", CreateMauiApp);
+                ffmpegFailMessage = $"FFmpeg fail to init. {ex}";
+            }
+
 
             try
             {
                 PluginManager.InitGlobalGetter();
                 GlobalPluginHelper.PluginsDataRootPath = Path.Combine(BasicDataPath, "Plugins");
+                GlobalPluginHelper.CacheRootPath = CachePath;
                 var internalBase = new InternalApplicationPluginBase();
                 internalBase.locateId = SettingsManager.GetSetting("locate", "default");
                 (internalBase as IApplicationPluginBase).OnApplicationPluginLoaded();
-                List<IPluginBase> plugins = new()
-                    {
+                List<IPluginBase> plugins =
+                    [
                         internalBase,
                         new Render.HwAccelEngine.HwAccelEnginePlugin()
                         {
 #if ANDROID
                             DefaultComputeBackend = SettingsManager.GetSetting("render_AndroidHWAccelType", "vulkan")
 #endif
-                        }
-                    };
+                        },
+                        .. IntegratedPlugins,
+                    ];
                 try
                 {
                     if (!AdminServices.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine") && !File.Exists(Path.Combine(BasicDataPath, "noplugin.flag")))
@@ -718,88 +1074,6 @@ namespace projectFrameCut
                     Crash(new InvalidOperationException($"FATAL: The pluginBase cannot be loaded. projectFrameCut can't work without PluginEngine. \r\n{ex} \r\n{ex1}", new AggregateException(ex, ex1)));
 #pragma warning restore CS0618
                 }
-            }
-
-            try
-            {
-                FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false;
-
-                try
-                {
-                    if (SettingsManager.IsBoolSettingTrue("PluginProvidedFFmpeg_Enable"))
-                    {
-#if WINDOWS
-                        string? nativeLibDirOverride = null;
-                        var pluginId = SettingsManager.GetSetting("PluginProvidedFFmpeg_PluginID", "");
-                        if (pluginId == "external")
-                        {
-                            var ffmpegPath = SettingsManager.GetSetting("PluginProvidedFFmpeg_LibPath", "");
-                            if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
-                            {
-                                Log($"Using external FFmpeg libraries, path:{ffmpegPath}");
-                                nativeLibDirOverride = ffmpegPath;
-                            }
-                            else
-                            {
-                                Log($"PluginProvidedFFmpeg_Enable is true, but invalid path provided:{ffmpegPath}");
-                            }
-                        }
-                        else if (!PluginManager.LoadedPlugins.TryGetValue(pluginId, out var value))
-                        {
-                            Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} is not loaded.");
-                        }
-                        else
-                        {
-                            var ffmpegPath = Path.Combine(BasicDataPath, "Plugins", value.PluginID, "FFmpeg", "windows");
-                            if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
-                            {
-                                Log($"Using FFmpeg libraries provided by plugin {pluginId}, path:{ffmpegPath}");
-                                nativeLibDirOverride = ffmpegPath;
-                            }
-                            else
-                            {
-                                Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} provided invalid path:{ffmpegPath}");
-                            }
-                        }
-                        if (!string.IsNullOrWhiteSpace(nativeLibDirOverride) && Directory.Exists(nativeLibDirOverride))
-                        {
-                            ffmpeg.RootPath = nativeLibDirOverride;
-                        }
-                        else
-                        {
-                            ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
-                        }
-#elif ANDROID
-                        ffmpeg.RootPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
-#endif
-                    }
-                    else
-                    {
-                        if (OperatingSystem.IsWindows())
-                        {
-                            ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
-                        }
-                    }
-                }
-                catch { }
-                FFmpegRoot = ffmpeg.RootPath;
-                Log($"FFmpeg library root path: {FFmpegRoot}");
-                FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
-
-                try
-                {
-                    FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize(OperatingSystem.IsWindows() || OperatingSystem.IsLinux(), true);
-                }
-                catch (Exception ex)
-                {
-                    ffmpegFailMessage = $"FFmpeg fail to load. {ex}";
-                }
-
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "init ffmpeg", CreateMauiApp);
-                ffmpegFailMessage = $"FFmpeg fail to init. {ex}";
             }
 
             try
@@ -968,12 +1242,14 @@ namespace projectFrameCut
             Log("FATAL: unhandled exception happened.", "fatal");
             Log(ex, "Global crash");
             throw ex; //let Fishnet handle it
+#elif IOS || MACOS || LINUX
+            Program.Crash(ex);
 #endif
         }
 
         public static ITemplateStructure? LoadPjfcTemplateSync(string packagePath)
         {
-            var extractDir = Path.Combine(FileSystem.CacheDirectory, $"startup_extract_{Guid.NewGuid():N}");
+            var extractDir = Path.Combine(CachePath, $"startup_extract_{Guid.NewGuid():N}");
             try
             {
                 System.IO.Compression.ZipFile.ExtractToDirectory(packagePath, extractDir, overwriteFiles: true);
@@ -1077,6 +1353,56 @@ namespace projectFrameCut
 
 
         }
+
+        /// <summary>
+        /// Initializes the localization state needed by the Android render-worker
+        /// process. The worker has a deliberately minimal MAUI bootstrap and does
+        /// not execute the normal application initialization path, so it must
+        /// receive the already-selected locale through its start Intent.
+        /// </summary>
+        public static void InitializeWorkerLocalization(string? locate)
+        {
+            locate = string.IsNullOrWhiteSpace(locate) ? "en-US" : locate;
+            try
+            {
+                Localized = SimpleLocalizer.Init(locate);
+            }
+            catch
+            {
+                SimpleLocalizer.IsFallbackMatched = true;
+                Localized = ISimpleLocalizerBase.GetMapping().First().Value;
+            }
+
+            SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping()
+                .TryGetValue(Localized._LocaleId_, out var settingsLocalized)
+                ? settingsLocalized
+                : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+            SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping()
+                .TryGetValue(Localized._LocaleId_, out var propertyPanelLocalized)
+                ? propertyPanelLocalized
+                : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+            projectFrameCut.ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping()
+                .TryGetValue(Localized._LocaleId_, out var apiLocalized)
+                ? apiLocalized
+                : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+            PluginManager.CurrentLocale = Localized._LocaleId_;
+            PluginManager.ExtenedLocalizationGetter = key =>
+                Localized.IsItemExist(key) ? Localized.DynamicLookup(key, key) : null;
+
+            try
+            {
+                var culture = CultureInfo.CreateSpecificCulture(Localized._LocaleId_);
+                Thread.CurrentThread.CurrentCulture = culture;
+                Thread.CurrentThread.CurrentUICulture = culture;
+                CultureInfo.DefaultThreadCurrentCulture = culture;
+                CultureInfo.DefaultThreadCurrentUICulture = culture;
+            }
+            catch
+            {
+                // Localization must not prevent the worker service from starting.
+            }
+        }
+
 
     }
 

@@ -207,38 +207,45 @@ namespace projectFrameCut.Render.Effect
 
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
         public string OutputAnchorName => "Mask";
     }
 
-    public class SubjectMattingMaskGeneratorFactory : IEffectFactory
+    /// <summary>
+    /// The Render-side provider of the SubjectMattingMaskGenerator bindable mask source.
+    /// </summary>
+    public class SubjectMattingMaskGeneratorProvider : EffectProviderBase
     {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "SubjectMattingMaskGenerator";
-        public EffectTarget Target => EffectTarget.Video;
-        public List<string> ParametersNeeded => SubjectMattingMaskGenerator.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => SubjectMattingMaskGenerator.ParametersType;
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.NotSpecified };
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
+        public SubjectMattingMaskGeneratorProvider()
         {
-            return Build(SupportsImplementTypes[0], parameters);
+            Name = "Subject Matting";
         }
 
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            if (!SupportsImplementTypes.Contains(implementType))
-            {
-                throw new ArgumentException($"ImplementType {implementType} is not supported.", nameof(implementType));
-            }
+        public override string TypeName => "SubjectMattingMaskGenerator";
 
-            if (parameters != null)
-            {
-                return SubjectMattingMaskGenerator.FromParametersDictionary(parameters);
-            }
-            return new SubjectMattingMaskGenerator();
+        public override EffectType TypeOfEffect => EffectType.BindableEffect;
+
+        public override EffectTarget Target => EffectTarget.ValueProvider | EffectTarget.Video;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("KeyColor", EffectArgumentFieldType.String, "#00FF00"),
+                Field("Tolerance", EffectArgumentFieldType.Numeric, "0.1")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return parameters is { Count: > 0 }
+                ? [SubjectMattingMaskGenerator.FromParametersDictionary(parameters)]
+                : [new SubjectMattingMaskGenerator()];
         }
     }
 }

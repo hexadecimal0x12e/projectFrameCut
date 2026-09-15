@@ -42,7 +42,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public bool EnableLock { get; set; }
         public bool StrictMode { get; set; }
-        public bool EnableMemoryCache { get; set; }
         public bool EnableDiskCache { get; set; }
 
         public string ProjectRoot { get; private set; } = "";
@@ -51,6 +50,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         DraftStructureJSON timeline = new();
 
         public IVideoSource CreateNew(string newSource) => new DecoderContextPJFCProject(newSource);
+        public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) => new DecoderContextPJFCProject(source, length, leaveOpen);
 
         Renderer renderer;
         public IPicture.PicturePixelMode TargetPPB = IPicture.PicturePixelMode.BytePicture;
@@ -94,12 +94,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
+        public DecoderContextPJFCProject(Stream source, long length, bool leaveOpen = false)
+        {
+            if (!leaveOpen) source.Dispose();
+            throw new NotSupportedException("DecoderContextPJFCProject requires a project directory.");
+        }
+
         public void Dispose()
         {
             renderer.ClearCaches();
         }
 
-        public IPicture GetFrame(uint targetFrame, bool hasAlpha = false)
+        public IPicture GetFrame(uint targetFrame)
         {
             if (renderer is null) throw new ArgumentNullException("Render is not inited yet.");
             var cts = new CancellationTokenSource();

@@ -33,8 +33,21 @@ namespace projectFrameCut.Render.Effect
             { "EndY", EndY },
         };
 
-        public static List<string> ParametersNeeded { get; } = StraightLineMovementValueProducerFactory.s_ParametersNeeded;
-        public static Dictionary<string, string> ParametersType { get; } = StraightLineMovementValueProducerFactory.s_ParametersType;
+        public static List<string> ParametersNeeded { get; } = new List<string>
+        {
+            "StartX",
+            "StartY",
+            "EndX",
+            "EndY",
+        };
+
+        public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        {
+            {"StartX", "int" },
+            {"StartY", "int" },
+            {"EndX", "int" },
+            {"EndY", "int" },
+        };
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {
@@ -66,68 +79,67 @@ namespace projectFrameCut.Render.Effect
 
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
         public string OutputAnchorName => "Point";
     }
 
-    public class StraightLineMovementValueProducerFactory : IBindableEffectFactory
+    /// <summary>
+    /// The Render-side provider of the StraightLineMovementValueProducer bindable value source.
+    /// </summary>
+    public class StraightLineMovementValueProducerProvider : EffectProviderBase
     {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "StraightLineMovementValueProducer";
-        public EffectTarget Target => EffectTarget.Video;
-        public static List<string> s_ParametersNeeded = new List<string>
+        public StraightLineMovementValueProducerProvider()
         {
-            "StartX",
-            "StartY",
-            "EndX",
-            "EndY",
-        };
-
-        public static Dictionary<string, string> s_ParametersType = new Dictionary<string, string>
-        {
-            {"StartX", "int" },
-            {"StartY", "int" },
-            {"EndX", "int" },
-            {"EndY", "int" },
-        };
-        public List<string> ParametersNeeded => s_ParametersNeeded;
-        public Dictionary<string, string> ParametersType => s_ParametersType;
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.NotSpecified };
-
-
-        public string? ID { get; set; }
-        public string? BindedInputID { get; set; }
-        public string[]? BindedInputIDs { get; set; }
-
-        public IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
-        {
-            return Build(SupportsImplementTypes[0], ID, BindedInputID, BindedInputIDs, parameters);
+            Name = "Straight Line Movement";
+            SetField("StartX", 0);
+            SetField("StartY", 0);
+            SetField("EndX", 0);
+            SetField("EndY", 0);
         }
 
-        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
+        public override string TypeName => "StraightLineMovementValueProducer";
+
+        public override EffectType TypeOfEffect => EffectType.BindableEffect;
+
+        public override EffectTarget Target => EffectTarget.ValueProvider | EffectTarget.Video;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields()
         {
-            if (implementType != EffectImplementType.NotSpecified && !SupportsImplementTypes.Contains(implementType))
-            {
-                throw new ArgumentException($"ImplementType {implementType} is not supported.", nameof(implementType));
-            }
+            // A value provider has no picture input.
+            return new Dictionary<string, EffectArgumentFieldDescriptor>();
+        }
 
-            var e = parameters != null ? StraightLineMovementValueProducer.FromParametersDictionary(parameters) : new StraightLineMovementValueProducer();
-
-            if (e is IBindableArgumentEffect be)
+        protected override EffectArgumentFieldDescriptor DefineOutField()
+        {
+            return new EffectArgumentFieldDescriptor
             {
-                if (ID != null)
-                {
-                    be.Id = ID;
-                }
-                else if (parameters != null)
-                {
-                    throw new InvalidDataException("Invaild source ID.");
-                }
-                be.BindedArgumentProviderID = null!;
-            }
-            return e;
+                Id = OutputAnchorKey,
+                TypeName = "float",
+                FromPlugin = FromPlugin,
+                FieldType = EffectArgumentFieldType.Numeric,
+                DefaultValue = "0",
+            };
+        }
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("StartX", EffectArgumentFieldType.Integer, "0"),
+                Field("StartY", EffectArgumentFieldType.Integer, "0"),
+                Field("EndX", EffectArgumentFieldType.Integer, "0"),
+                Field("EndY", EffectArgumentFieldType.Integer, "0")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            return [StraightLineMovementValueProducer.FromParametersDictionary(parameters)];
         }
     }
 }

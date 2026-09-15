@@ -12,11 +12,17 @@ namespace projectFrameCut.Platforms.Android
     {
         [NotNull]
         public static Context? MainContext;
+        public static bool IsRenderWorkerProcess { get; private set; }
 
         public MainApplication(IntPtr handle, JniHandleOwnership ownership)
             : base(handle, ownership)
         {
             System.Threading.Thread.CurrentThread.Name = "App Main thread";
+            IsRenderWorkerProcess = global::Android.App.Application.ProcessName
+                ?.EndsWith(":renderworker", StringComparison.Ordinal) == true;
+            NativeLoader.Init();
+            if (IsRenderWorkerProcess) return;
+
             MainContext = this;
             string? loggingDir = null;
             var extFilesDir = GetExternalFilesDir(null);
@@ -43,8 +49,6 @@ namespace projectFrameCut.Platforms.Android
             }
             // use https://github.com/Kyant0/Fishnet to capture Android crashes
             Com.Kyant.Fishnet.Fishnet.Init(this, loggingDir ?? FileSystem.AppDataDirectory);
-
-            NativeLoader.Init();
 
         }
 
@@ -83,11 +87,17 @@ namespace projectFrameCut.Platforms.Android
                         return handle;
                     }
                 }
-                LogDiagnostic($"Failed to load native library {libraryName} from any known path.");
+                Log($"Failed to load native library {libraryName} from any known path. StackTrace: {Environment.NewLine}{Environment.StackTrace}", "error");
                 return IntPtr.Zero;
             }
 
             public static void Init() { }
         }
+    }
+
+    internal sealed class RenderWorkerMauiApplication : Microsoft.Maui.Controls.Application
+    {
+        protected override Microsoft.Maui.Controls.Window CreateWindow(IActivationState? activationState)
+            => new(new Microsoft.Maui.Controls.ContentPage() { Content = new Label { Text = " This page should NOT be displayed.", HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center } });
     }
 }

@@ -29,7 +29,7 @@ public partial class MiscSettingPage : ContentPage
             .AddCustomChild(SettingLocalizedResources.Misc_UserID, new Label { Text = GetSetting("UserID") })
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Misc_DiagOptions, SettingLocalizedResources.Misc_DiagOptions_Desc()))
-            .AddSwitch("LogDiagnostics", SettingLocalizedResources.Misc_LogDiagnostics, SettingsManager.IsBoolSettingTrue("LogDiagnostics"), null)
+            .AddCheckbox("LogDiagnostics", SettingLocalizedResources.Misc_LogDiagnostics, SettingsManager.IsBoolSettingTrue("LogDiagnostics"), null)
             .AddButton(Localized.BenchmarkPage_Title, async (s, e) => await Navigation.PushAsync(new BenchmarkPage()))
             .AddButton("makeDiagReport", SettingLocalizedResources.Misc_MakeDiagReport, null)
             .AddButton(Localized.MainSettingsPage_Tab_Advanced, async (s, e) => await Navigation.PushAsync(new SettingPages.AdvancedSettingPage()))

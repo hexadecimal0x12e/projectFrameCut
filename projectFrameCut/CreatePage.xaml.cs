@@ -187,7 +187,10 @@ public partial class CreatePage : ContentPage
         projectInfo.LastChanged = DateTime.Now;
         projectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
         projectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
+        projectInfo.LastOpenAppName = MauiProgram.AssemblyName; 
+        projectInfo.LastOpenAppIdentifier = MauiProgram.AppIdentifier;
         projectInfo.PluginUsed = [];
+        projectInfo.ProjectUniqueId = Guid.CreateVersion7();
 
         draft.SavedAt = DateTime.Now;
 
@@ -200,6 +203,7 @@ public partial class CreatePage : ContentPage
         File.WriteAllText(
             Path.Combine(projectDir, "assets.json"),
             JsonSerializer.Serialize(projectAssets, DraftPage.DraftJSONOption));
+        DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(projectDir);
 
         await Navigation.PushAsync(new HomePage(Path.Combine(projectDir, "project.pjfc"), true));
     }

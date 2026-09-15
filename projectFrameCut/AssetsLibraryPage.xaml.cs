@@ -104,7 +104,7 @@ public partial class AssetsLibraryPage : ContentPage
         catch (Exception ex)
         {
             Log(ex, "Add a asset", this);
-            AppShell.instance?.CurrentPage?.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            App.GetCurrentPage()?.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }
 
@@ -294,7 +294,7 @@ public partial class AssetsLibraryPage : ContentPage
 
                     try
                     {
-                        var frame = vidSrc.GetFrame((uint)f, false);
+                        var frame = vidSrc.GetFrame((uint)f);
                         var aspect = (double)frame.Height / frame.Width;
                         var targetHeight = (int)(AssetThumbTargetWidth * aspect);
                         var resized = frame.Resize(AssetThumbTargetWidth, targetHeight, false);

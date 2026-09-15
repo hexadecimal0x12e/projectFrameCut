@@ -45,7 +45,7 @@ public partial class ClipCropConfiguratorView : ContentView
 
     private int _effectIndex;
     private EffectImplementType _implementType = EffectImplementType.NotSpecified;
-    private Guid _bundleId = Guid.NewGuid();
+    private Guid _providerId = Guid.NewGuid();
 
     public static readonly BindableProperty EnabledProperty = BindableProperty.Create(
         nameof(Enabled),
@@ -129,7 +129,7 @@ public partial class ClipCropConfiguratorView : ContentView
         BindingMode.TwoWay,
         propertyChanged: OnAnyBindablePropertyChanged);
 
-    public event EventHandler<projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle>? ConfigurationChanged;
+    public event EventHandler<IEffectProvider>? ConfigurationChanged;
 
     public bool Enabled
     {
@@ -283,6 +283,15 @@ public partial class ClipCropConfiguratorView : ContentView
         return fallback;
     }
 
+    private static int ReadIntParameter(Dictionary<string, IEffectArgumentField>? fields, string key, int fallback)
+    {
+        if (fields != null && fields.TryGetValue(key, out var field) && field is StaticEffectArgumentField sf)
+        {
+            return ReadIntValue(sf.Value, fallback);
+        }
+        return fallback;
+    }
+
     private static float ReadFloatParameter(IReadOnlyDictionary<string, object>? parameters, string key, float fallback)
     {
         if (parameters != null && parameters.TryGetValue(key, out var raw))
@@ -293,26 +302,35 @@ public partial class ClipCropConfiguratorView : ContentView
         return fallback;
     }
 
-    public void LoadFromBundle(projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle? bundle, IEffect? fallbackEffect = null)
+    private static float ReadFloatParameter(Dictionary<string, IEffectArgumentField>? fields, string key, float fallback)
     {
-        if (bundle is null || !string.Equals(bundle.TypeName, "Crop", StringComparison.Ordinal))
+        if (fields != null && fields.TryGetValue(key, out var field) && field is StaticEffectArgumentField sf)
+        {
+            return ReadFloatValue(sf.Value, fallback);
+        }
+        return fallback;
+    }
+
+    public void LoadFromProvider(IEffectProvider? provider, IEffect? fallbackEffect = null)
+    {
+        if (provider is null || !string.Equals(provider.TypeName, "Crop", StringComparison.Ordinal))
         {
             LoadFromEffect(fallbackEffect);
             return;
         }
 
-        _bundleId = bundle.Id == Guid.Empty ? _bundleId : bundle.Id;
+        _providerId = provider.Id == Guid.Empty ? _providerId : provider.Id;
         _effectIndex = fallbackEffect?.Index ?? 0;
         _implementType = fallbackEffect?.ImplementType ?? EffectImplementType.NotSpecified;
 
-        Enabled = bundle.Enabled;
-        StartX = Math.Max(0, ReadIntParameter(bundle.Parameters, "StartX", 0));
-        StartY = Math.Max(0, ReadIntParameter(bundle.Parameters, "StartY", 0));
-        CropWidth = Math.Max(1, ReadIntParameter(bundle.Parameters, "Width", 1));
-        CropHeight = Math.Max(1, ReadIntParameter(bundle.Parameters, "Height", 1));
+        Enabled = provider.Enabled;
+        StartX = Math.Max(0, ReadIntParameter(provider.Fields, "StartX", 0));
+        StartY = Math.Max(0, ReadIntParameter(provider.Fields, "StartY", 0));
+        CropWidth = Math.Max(1, ReadIntParameter(provider.Fields, "Width", 1));
+        CropHeight = Math.Max(1, ReadIntParameter(provider.Fields, "Height", 1));
         RelativeWidth = Math.Max(0, fallbackEffect?.RelativeWidth ?? RelativeWidth);
         RelativeHeight = Math.Max(0, fallbackEffect?.RelativeHeight ?? RelativeHeight);
-        Angle = ReadFloatParameter(bundle.Parameters, "Angle", 0f);
+        Angle = ReadFloatParameter(provider.Fields, "Angle", 0f);
     }
 
     public void LoadFromEffect(IEffect? effect)
@@ -356,39 +374,39 @@ public partial class ClipCropConfiguratorView : ContentView
 
     public void LoadFromEffect(CropEffect_HwAccel? effect) => LoadFromEffect((IEffect?)effect);
 
-    public projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle BuildEffectBundle(Guid? bundleId = null)
+    public IEffectProvider BuildEffectProvider(Guid? providerId = null)
     {
-        _bundleId = bundleId ?? (_bundleId == Guid.Empty ? Guid.NewGuid() : _bundleId);
-        return new CropEffectBundle
+        _providerId = providerId ?? (_providerId == Guid.Empty ? Guid.NewGuid() : _providerId);
+        var provider = new CropEffectProvider
         {
-            Id = _bundleId,
+            Id = _providerId,
             Enabled = Enabled,
             Name = InternalCropKey,
-            BindedInputId = projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle.InputAnchorGUID,
-            BindedOutputId = projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle.OutputAnchorGUID,
-            Parameters = new Dictionary<string, object>
+            Fields = new Dictionary<string, IEffectArgumentField>
             {
-                { "StartX", Math.Max(0, StartX) },
-                { "StartY", Math.Max(0, StartY) },
-                { "Width", Math.Max(1, CropWidth) },
-                { "Height", Math.Max(1, CropHeight) },
-                { "Angle", Angle }
+                { "StartX", new StaticEffectArgumentField(Math.Max(0, StartX), EffectArgumentFieldType.Integer) },
+                { "StartY", new StaticEffectArgumentField(Math.Max(0, StartY), EffectArgumentFieldType.Integer) },
+                { "Width", new StaticEffectArgumentField(Math.Max(1, CropWidth), EffectArgumentFieldType.Integer) },
+                { "Height", new StaticEffectArgumentField(Math.Max(1, CropHeight), EffectArgumentFieldType.Integer) },
+                { "Angle", new StaticEffectArgumentField(Angle, EffectArgumentFieldType.Numeric) }
             }
         };
+        provider.SetMainInputSource(IEffectProvider.InputAnchorGUID);
+        provider.SetFinalOutputSource(true);
+        return provider;
     }
 
     public IEffect BuildEffect(EffectImplementType? implementType = null)
     {
-        var bundle = BuildEffectBundle();
-        var factory = new CropEffectFactory();
+        var provider = BuildEffectProvider();
         var actualImplementType = implementType ?? _implementType;
         if (actualImplementType != EffectImplementType.NotSpecified
-            && Array.IndexOf(factory.SupportsImplementTypes, actualImplementType) < 0)
+            && Array.IndexOf(provider.SupportsImplementTypes, actualImplementType) < 0)
         {
             actualImplementType = EffectImplementType.NotSpecified;
         }
 
-        var effect = factory.Build(actualImplementType, bundle.Parameters);
+        var effect = provider.RestoreInstance(actualImplementType);
         effect.Enabled = Enabled;
         effect.RelativeWidth = Math.Max(0, RelativeWidth);
         effect.RelativeHeight = Math.Max(0, RelativeHeight);
@@ -405,9 +423,21 @@ public partial class ClipCropConfiguratorView : ContentView
             return;
         }
 
-        view.SyncUiFromProperties();
-        view.UpdateCanvasVisuals();
-        view.InvokeConfigurationChanged();
+        try
+        {
+            view.SyncUiFromProperties();
+            view.UpdateCanvasVisuals();
+            view.InvokeConfigurationChanged();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "ClipCropConfiguratorView.OnAnyBindablePropertyChanged", view);
+            view.Dispatcher.Dispatch(() =>
+            {
+                view.SummaryLabel.TextColor = Colors.Red;
+                view.SummaryLabel.Text = Localized._ExceptionTemplate(ex);
+            });
+        }
     }
 
     private void SyncUiFromProperties()
@@ -443,7 +473,7 @@ public partial class ClipCropConfiguratorView : ContentView
         if (normalizedRelativeWidth != RelativeWidth) RelativeWidth = normalizedRelativeWidth;
         if (normalizedRelativeHeight != RelativeHeight) RelativeHeight = normalizedRelativeHeight;
         if (Math.Abs(normalizedAngle - Angle) > float.Epsilon) Angle = normalizedAngle;
-        ConfigurationChanged?.Invoke(this, BuildEffectBundle());
+        ConfigurationChanged?.Invoke(this, BuildEffectProvider());
     }
 
     private void EnabledSwitch_Toggled(object? sender, ToggledEventArgs e)

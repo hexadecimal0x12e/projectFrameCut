@@ -1,6 +1,8 @@
-﻿using System;
+﻿using projectFrameCut.Drawing.Base;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -42,9 +44,11 @@ namespace projectFrameCut.Shared
     {
         NormalEffect,
         ContinuousEffect,
+        [Obsolete("All BindableEffect is deprecated. Use EffectProvider, and mark a EffectProvider with a not IPicture output as NonIPictureOutputValueProvider.")]
         BindableEffect,
         AudioNormalEffect,
         AudioContinuousEffect,
+        [Obsolete("All BindableEffect is deprecated. Use EffectProvider, and mark a EffectProvider with a not IPicture output as NonIPictureOutputValueProvider.")]
         AudioBindableEffect,
         SpeedVarianceProvider,
         ClipPositionProvider,
@@ -53,6 +57,7 @@ namespace projectFrameCut.Shared
         TextEffect,
         ContinuousTextEffect,
         SourceReplacement,
+        NonIPictureOutputValueProvider,
         NotSpecified = -1,
     }
 
@@ -67,6 +72,7 @@ namespace projectFrameCut.Shared
         ColorAdjustment = 32,
         Text = 64,
         SourceReplacement = 128,
+        ValueProvider = 256,
 
         IsKeyFramed = 1 << 16,
         IsNotVisibleInEffectEditor = 1 << 17,
@@ -74,6 +80,7 @@ namespace projectFrameCut.Shared
         InternalUse = 1 << 19,
     }
 
+    [Obsolete("All BindableEffect is deprecated, no longer be processed and will be removed in API V9, please use EffectProvider with a dynamic EffectParamField instead.")]
     public enum BindableArgumentEffectType
     {
         ValueProvider,
@@ -85,6 +92,9 @@ namespace projectFrameCut.Shared
         ContinuousResultGenerator,
     }
 
+    /// <summary>
+    /// <b>This system was deprecated in favor of a more modern approach provided by IEffectProvider.</b>
+    /// </summary>
     public enum EffectImplementType
     {
         None = -1,
@@ -133,6 +143,17 @@ namespace projectFrameCut.Shared
         Russian,
         Thai,
         Arabic
+    }
+
+    public enum ClipChangeOperatorKind
+    {
+        Unknown,
+        User,
+        AIAgent,
+        MCP,
+        ExternalApp,
+        ExternalRPC,
+        System,
     }
 
     [Obsolete("Use TextEntry (from projectFrameCut.Drawing.Text.Entry) instead. TextClipEntry is kept for backward compatibility with serialized data.")]

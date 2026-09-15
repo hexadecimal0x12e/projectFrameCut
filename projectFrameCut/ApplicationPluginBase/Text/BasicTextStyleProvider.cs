@@ -1,16 +1,15 @@
 using Microsoft.Maui.Graphics;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
-using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Drawing.Text.Typology;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using Microsoft.Maui.Controls.Shapes;
@@ -109,7 +108,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 {
                     if (!_parameters.ContainsKey(WrappingWidthKey) || string.IsNullOrWhiteSpace(_parameters[WrappingWidthKey]))
                     {
-                        var measured = TextMeasureHelper.MeasureBounds(BuildEntries(), 1920, 1080);
+                        var measured = TextServices.MeasureBounds(BuildEntries(), 1920, 1080);
                         _parameters[WrappingWidthKey] = Math.Max(100, (int)Math.Ceiling(measured.Width)).ToString(CultureInfo.InvariantCulture);
                     }
                 }
@@ -117,19 +116,19 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 {
                     if (!_parameters.ContainsKey(FixedHeightValueKey) || string.IsNullOrWhiteSpace(_parameters[FixedHeightValueKey]))
                     {
-                        var measured = TextMeasureHelper.MeasureBounds(BuildEntries(), 1920, 1080);
+                        var measured = TextServices.MeasureBounds(BuildEntries(), 1920, 1080);
                         _parameters[FixedHeightValueKey] = Math.Max(20, (int)Math.Ceiling(measured.Height)).ToString(CultureInfo.InvariantCulture);
                     }
                 }
             }
         }
 
-        public Dictionary<string, EffectBundleSettableFields> SettableFields
+        public Dictionary<string, EffectArgumentFieldDescriptor> SettableFields
         {
             get
             {
                 var fontNames = TextStyleProviderSettableFieldHelper.GetAvailableFontNames();
-                return new Dictionary<string, EffectBundleSettableFields>
+                return new Dictionary<string, EffectArgumentFieldDescriptor>
                 {
                     [TextKey] = TextStyleProviderSettableFieldHelper.StringField(TextKey, "Text", "Text content", DefaultText),
                     [FontKey] = TextStyleProviderSettableFieldHelper.EnumField(FontKey, "Font Family", "Font used to render the text", "HarmonyOS Sans SC Medium", fontNames),
@@ -152,7 +151,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
         }
 
-        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        public bool HandleSettableFieldsChange(EffectArgumentFieldDescriptor field, object value, out string feedback)
         {
             if (field is null || !SettableFields.TryGetValue(field.Id, out var canonicalField))
             {
@@ -307,7 +306,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             panel.AddPicker(HorizontalAlignmentKey, PPLocalizedResources.TextOption_HorizonOption, new[] { ClipHorizontalAlignment.Left.ToString(), ClipHorizontalAlignment.Center.ToString(), ClipHorizontalAlignment.Right.ToString() }, GetOrDefault(HorizontalAlignmentKey, ClipHorizontalAlignment.Left.ToString()));
             panel.AddPicker(VerticalAlignmentKey, PPLocalizedResources.TextOption_VerticalOption, new[] { ClipVerticalAlignment.Top.ToString(), ClipVerticalAlignment.Center.ToString(), ClipVerticalAlignment.Bottom.ToString() }, GetOrDefault(VerticalAlignmentKey, ClipVerticalAlignment.Top.ToString()));
             panel.AddEntry(WrappingWidthKey, PPLocalizedResources.TextOption_WrapW, GetOrDefault(WrappingWidthKey, string.Empty), PPLocalizedResources.TextOption_WrapW_Hint);
-            panel.AddSwitch(ApplyKerningKey, PPLocalizedResources.TextOption_Kerning, ParseBool(GetOrDefault(ApplyKerningKey, bool.TrueString), true));
+            panel.AddCheckbox(ApplyKerningKey, PPLocalizedResources.TextOption_Kerning, ParseBool(GetOrDefault(ApplyKerningKey, bool.TrueString), true));
             panel.AddEntry(LineSpacingKey, PPLocalizedResources.TextOption_LineSpacing, GetOrDefault(LineSpacingKey, 1f.ToString(CultureInfo.InvariantCulture)), "1.0");
             panel.AddEntry(RotationKey, PPLocalizedResources.TextOption_Rotation, GetOrDefault(RotationKey, 0f.ToString(CultureInfo.InvariantCulture)), "0");
             panel.AddEntry(StrokeWidthKey, PPLocalizedResources.TextOption_Stroke, GetOrDefault(StrokeWidthKey, string.Empty), PPLocalizedResources.TextOption_Stroke_Hint);
@@ -316,8 +315,8 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                 GetOrDefault(StrokeColorKey, "#000000"),
                 invoker), StrokeColorKey, GetOrDefault(StrokeColorKey, "#000000"));
             panel.AddEntry(DpiKey, "DPI", GetOrDefault(DpiKey, string.Empty), string.Empty);
-            panel.AddSwitch(UseVerticalLayoutKey, PPLocalizedResources.TextOption_UseVerticalLayout, ParseBool(GetOrDefault(UseVerticalLayoutKey, bool.FalseString), false));
-            panel.AddSwitch(KeepNonCJKTextAsHorizontalKey, PPLocalizedResources.TextOption_KeepNonCJKHorizontal, ParseBool(GetOrDefault(KeepNonCJKTextAsHorizontalKey, bool.FalseString), false));
+            panel.AddCheckbox(UseVerticalLayoutKey, PPLocalizedResources.TextOption_UseVerticalLayout, ParseBool(GetOrDefault(UseVerticalLayoutKey, bool.FalseString), false));
+            panel.AddCheckbox(KeepNonCJKTextAsHorizontalKey, PPLocalizedResources.TextOption_KeepNonCJKHorizontal, ParseBool(GetOrDefault(KeepNonCJKTextAsHorizontalKey, bool.FalseString), false));
             return panel;
         }
 
@@ -389,7 +388,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                     _parameters[KeepNonCJKTextAsHorizontalKey] = ParseBool(args.Value, false).ToString();
                     break;
             }
-            var rect = TextMeasureHelper.MeasureBounds(BuildEntries(), 1920, 1080);
+            var rect = TextServices.MeasureBounds(BuildEntries(), 1920, 1080);
             var measuredW = Math.Max(1, (int)Math.Ceiling(rect.Width));
             var measuredH = Math.Max(1, (int)Math.Ceiling(rect.Height));
 
@@ -475,7 +474,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             {
                 // Entries are in project-pixel space. Measure them with the
                 // single canonical pipeline against the requested canvas.
-                var rect = TextMeasureHelper.MeasureBounds(entries, canvasWidth, canvasHeight);
+                var rect = TextServices.MeasureBounds(entries, canvasWidth, canvasHeight);
 
                 if (LayoutMode == TextClipLayoutMode.FixedWidth)
                 {
@@ -534,7 +533,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             try
             {
                 var entries = BuildEntries();
-                var rect = TextMeasureHelper.MeasureBounds(entries, 1920, 1080);
+                var rect = TextServices.MeasureBounds(entries, 1920, 1080);
                 return ((float)rect.Width, (float)rect.Height);
             }
             finally
@@ -551,7 +550,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             try
             {
                 var entries = BuildEntries();
-                var rect = TextMeasureHelper.MeasureBounds(entries, 1920, 1080);
+                var rect = TextServices.MeasureBounds(entries, 1920, 1080);
                 return (float)rect.Height;
             }
             finally
@@ -705,7 +704,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
                     okButton.Clicked += async (_, _) => { ApplyColor(picker.SelectedColor); await pickerPopup.CloseAsync(); };
                     cancelButton.Clicked += async (_, _) => await pickerPopup.CloseAsync();
 
-                    if (Shell.Current.CurrentPage is DraftPage d)
+                    if (App.GetCurrentPage() is DraftPage d)
                         await d.ShowAPopup(picker, null, null, "dialog");
                 }
             }

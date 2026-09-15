@@ -44,7 +44,7 @@ namespace projectFrameCut.Render.Effect
 
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
         public string InputAnchorName => "Mask";
 
@@ -56,43 +56,31 @@ namespace projectFrameCut.Render.Effect
         public string OutputAnchorName => "Mask";
     }
 
-    public class MaskApplierFactory : IBindableEffectFactory
+    /// <summary>
+    /// The Render-side provider of the MaskApplier bindable result generator.
+    /// </summary>
+    public class MaskApplierProvider : EffectProviderBase
     {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "MaskApplier";
-        public EffectTarget Target => EffectTarget.Video;
-        public List<string> ParametersNeeded => MaskApplier.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => MaskApplier.ParametersType;
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture };
-
-        public string? ID { get; set; }
-        public string? BindedInputID { get; set; }
-        public string[]? BindedInputIDs { get; set; }
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
+        public MaskApplierProvider()
         {
-            return Build(SupportsImplementTypes[0], parameters);
+            Name = "Mask Applier";
         }
 
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            if (!SupportsImplementTypes.Contains(implementType))
-            {
-                throw new ArgumentException($"ImplementType {implementType} is not supported.", nameof(implementType));
-            }
+        public override string TypeName => "MaskApplier";
 
-            return new MaskApplier { ImplementType = implementType };
-        }
+        public override EffectType TypeOfEffect => EffectType.BindableEffect;
 
-        public IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
-        {
-            return new MaskApplier { ImplementType = EffectImplementType.IPicture };
-        }
+        public override EffectTarget Target => EffectTarget.Video;
 
-        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => Array.Empty<EffectArgumentFieldDescriptor>();
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
-            return new MaskApplier { ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType };
+            return [new MaskApplier()];
         }
     }
 }

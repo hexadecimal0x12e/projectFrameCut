@@ -9,6 +9,7 @@ public partial class ProjectAddClipView : ContentView
 
     private readonly int ItemSize = 180;
     private readonly int ItemSpacing = 8;
+    private bool _isAddingAsset;
 
     public ProjectAddClipView(ref DraftPage draftPage)
     {
@@ -26,51 +27,124 @@ public partial class ProjectAddClipView : ContentView
             "name" => 1,
             _ => 0
         };
-        if (_page?.UseCompactLayout ?? false || DeviceInfo.Idiom == DeviceIdiom.Phone || Width < 400)
-        {
-            SearchInputEntry.IsVisible = false;
-            OrderOptionPicker.IsVisible = false;
-        }
+        CollapseHeaderControls();
     }
 
     private void MainTabView_OnTabSwitched(object? sender, ApplicationAPIBase.Views.TabbedView.TabbedViewItem e)
     {
+        CollapseHeaderControls();
+
         switch (e.Tag)
         {
             case "LocalAssets":
+            case "RpcSources":
             case "AIGC":
             case "SharedAssets":
             case "Templates":
                 {
-                    OrderOptionPicker.IsVisible = true;
+                    OrderOptionContainer.IsVisible = true;
                     break;
                 }
             default:
                 {
-                    OrderOptionPicker.IsVisible = false;
+                    OrderOptionContainer.IsVisible = false;
                     break;
                 }
         }
+        if (e.Tag == "RpcSources") _ = _viewModel.LoadRpcVideoSources();
         switch (e.Tag)
         {
             case "Sketch":
             case "AIGC":
             case "More":
                 {
-                    SearchInputEntry.IsVisible = false;
+                    SearchContainer.IsVisible = false;
                     break;
                 }
             default:
                 {
-                    SearchInputEntry.IsVisible = true;
+                    SearchContainer.IsVisible = true;
                     break;
                 }
         }
-        if (_page?.UseCompactLayout ?? false || DeviceInfo.Idiom == DeviceIdiom.Phone)
+    }
+
+    private async void OnAddAssetClicked(object? sender, EventArgs e)
+    {
+        if (_isAddingAsset || sender is not Button button) return;
+        _isAddingAsset = true;
+        button.IsEnabled = false;
+        try
         {
-            SearchInputEntry.IsVisible = false;
-            OrderOptionPicker.IsVisible = false;
+            var file = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = Localized.AssetPage_AddAAsset
+            });
+            if (file is null) return;
+
+            if (button.CommandParameter is "SharedAssets")
+                await Asset.AssetDatabase.Add(file.FullPath, _page);
+            else
+                await _page.AddAsset(file.FullPath, false);
+
+            await _viewModel.LoadAssets();
         }
+        catch (Exception ex)
+        {
+            Log(ex, "Add asset from clip panel", _page);
+            await _page.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
+        finally
+        {
+            _page.SetStateOK();
+            button.IsEnabled = true;
+            _isAddingAsset = false;
+        }
+    }
+
+    private void OnOrderOptionExpandButtonClicked(object? sender, EventArgs e)
+    {
+        CollapseSearch();
+        OrderOptionExpandButton.IsVisible = false;
+        OrderOptionPicker.IsVisible = true;
+        OrderOptionPicker.Focus();
+    }
+
+    private void OnOrderOptionPickerSelectedIndexChanged(object? sender, EventArgs e)
+    {
+        CollapseOrderOption();
+    }
+
+    private void OnSearchExpandButtonClicked(object? sender, EventArgs e)
+    {
+        CollapseOrderOption();
+        SearchExpandButton.IsVisible = false;
+        SearchInputEntry.IsVisible = true;
+        SearchInputEntry.Focus();
+    }
+
+    private void OnSearchInputSearchButtonPressed(object? sender, EventArgs e)
+    {
+        SearchInputEntry.Unfocus();
+        CollapseSearch();
+    }
+
+    private void CollapseHeaderControls()
+    {
+        CollapseOrderOption();
+        CollapseSearch();
+    }
+
+    private void CollapseOrderOption()
+    {
+        OrderOptionPicker.IsVisible = false;
+        OrderOptionExpandButton.IsVisible = true;
+    }
+
+    private void CollapseSearch()
+    {
+        SearchInputEntry.IsVisible = false;
+        SearchExpandButton.IsVisible = true;
     }
 
     public event EventHandler? ClipAdded

@@ -51,10 +51,16 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
-        public bool EnableMemoryCache { get; set; }
         public bool EnableDiskCache { get; set; }
 
         private readonly Lock _locker = new();
+
+        public FFmpegDeviceDecoderContext()
+        {
+            _sourceSpec = null!;
+            _inputFormatName = null!;
+            _inputSource = null!;
+        }
 
         public FFmpegDeviceDecoderContext(string sourceSpec)
         {
@@ -67,7 +73,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
+        public FFmpegDeviceDecoderContext(Stream source, long length, bool leaveOpen = false)
+        {
+            if (!leaveOpen) source.Dispose();
+            throw new NotSupportedException("FFmpegDeviceDecoderContext only supports FFmpeg input devices.");
+        }
+
         public IVideoSource CreateNew(string newSource) => new FFmpegDeviceDecoderContext(newSource);
+        public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) => new FFmpegDeviceDecoderContext(source, length, leaveOpen);
 
         public void Initialize()
         {
@@ -223,7 +236,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
-        public IPicture<byte> GetFrame(uint targetFrame, bool hasAlpha = false)
+        public IPicture<byte> GetFrame(uint targetFrame)
         {
             bool lockTaken = false;
             try
@@ -291,7 +304,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         {
                             if (_currentFrameNumber++ == targetFrame)
                             {
-                                return ConvertCurrentFrame(hasAlpha, targetFrame);
+                                return ConvertCurrentFrame(targetFrame);
                             }
                             continue;
                         }
@@ -302,7 +315,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         }
                         if (receiveRet == ffmpeg.AVERROR_EOF)
                         {
-                            return HandleFrameNotFound(targetFrame, hasAlpha);
+                            return HandleFrameNotFound(targetFrame);
                         }
 
                         throw new InvalidDataException($"Failed to receive frame from '{_sourceSpec}' (code {receiveRet}).");
@@ -310,7 +323,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                     if (_eof && _flushSent)
                     {
-                        return HandleFrameNotFound(targetFrame, hasAlpha);
+                        return HandleFrameNotFound(targetFrame);
                     }
                 }
             }
@@ -343,7 +356,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
-        private IPicture<byte> ConvertCurrentFrame(bool hasAlpha, uint targetFrame)
+        private IPicture<byte> ConvertCurrentFrame(uint targetFrame)
         {
             int scaledRows = ffmpeg.sws_scale(
                 _sws,
@@ -359,16 +372,16 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
 
             Index++;
-            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _sourceSpec, targetFrame);
+            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _sourceSpec, targetFrame);
         }
 
-        private IPicture<byte> HandleFrameNotFound(uint targetFrame, bool hasAlpha)
+        private IPicture<byte> HandleFrameNotFound(uint targetFrame)
         {
             if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
             {
                 uint fallbackFrame = targetFrame - 1;
                 Log($"[FFmpegDeviceDecoderContext] Frame {targetFrame} not found, fallback to {fallbackFrame}.");
-                return GetFrame(fallbackFrame, hasAlpha);
+                return GetFrame(fallbackFrame);
             }
 
             double fps = _fps > 0 ? _fps : 1.0;
@@ -377,7 +390,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
         [DebuggerNonUserCode]
-        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string source = "", uint frameIdx = 0)
+        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, string source = "", uint frameIdx = 0)
         {
             if (data == null) throw new ArgumentNullException(nameof(data));
             if (width <= 0 || height <= 0) throw new ArgumentException($"Invalid dimensions: {width}x{height}");

@@ -1,10 +1,11 @@
-﻿using FFmpeg.AutoGen;
+using FFmpeg.AutoGen;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace projectFrameCut.Render.EncodeAndDecode
@@ -90,6 +91,16 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
+        public long BitRate
+        {
+            get => _bitRate;
+            set
+            {
+                if (_inited) throw new InvalidOperationException("Cannot modify property after initialization");
+                _bitRate = value;
+            }
+        }
+
         private AVPixelFormat _pixelFormat;
         private AVFormatContext* _fmtCtx;
         private AVStream* _videoStream;
@@ -101,6 +112,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private bool _isHeaderWritten;
         private bool _isDisposed;
         private int colorDepth = 8;
+        private long _bitRate = 4_000_000;
         private bool _inited;
 
         public bool IsOpened => _fmtCtx != null;
@@ -113,6 +125,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public uint DurationWritten => Index;
 
         public IPicture.PicturePixelMode? TargetPPB => colorDepth;
+
+        public bool PreferToSpeed { get; set; }
 
         public static bool DetectCodec(string codec)
         {
@@ -130,7 +144,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (OutputPath is null || _inited == true) return;
             if (Width <= 0 || Height <= 0 || FramePerSecond <= 0) throw new ArgumentOutOfRangeException("You set an invalid width, height or fps.");
             if (Path.GetDirectoryName(OutputPath) is not string p || !Directory.Exists(p)) throw new DirectoryNotFoundException($"The target directory '{Path.GetDirectoryName(OutputPath)}' does not exist or it's invalid.");
-            if (File.Exists(OutputPath)) throw new InvalidOperationException($"Video file {OutputPath} already exists."); 
+            if (File.Exists(OutputPath)) throw new InvalidOperationException($"Video file {OutputPath} already exists.");
             if (!Enum.TryParse(PixelFormat, out _pixelFormat) || _pixelFormat == AVPixelFormat.AV_PIX_FMT_NONE)
             {
                 throw new ArgumentException($"The pixel format '{PixelFormat}' is not found. Please check the pixel format name.");
@@ -175,6 +189,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
             AVCodec* codec = ffmpeg.avcodec_find_encoder_by_name(CodecName);
             if (codec == null) throw new EntryPointNotFoundException($"Could not found the encoder '{CodecName}'. Try install codec extension-pack, or reinstall projectFrameCut.");
 
+            if (codec->id == AVCodecID.AV_CODEC_ID_MJPEG
+                && _pixelFormat == AVPixelFormat.AV_PIX_FMT_YUV420P)
+            {
+                _pixelFormat = AVPixelFormat.AV_PIX_FMT_YUVJ420P;
+            }
+
             _videoStream = ffmpeg.avformat_new_stream(_fmtCtx, codec);
             if (_videoStream == null) throw new InvalidOperationException("Failed to create a stream to write video.");
 
@@ -191,16 +211,20 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _codecCtx->framerate = new AVRational { num = FramePerSecond, den = 1 };
             _codecCtx->gop_size = 12;
             _codecCtx->max_b_frames = 2;
-            _codecCtx->bit_rate = 4_000_000;
+            _codecCtx->bit_rate = _bitRate;
 
             if ((_fmtCtx->oformat->flags & ffmpeg.AVFMT_GLOBALHEADER) != 0)
                 _codecCtx->flags |= ffmpeg.AV_CODEC_FLAG_GLOBAL_HEADER;
 
             AVDictionary* opts = null;
-            if (_codecCtx->codec_id == AVCodecID.AV_CODEC_ID_H264)
+            string encoderName = Marshal.PtrToStringAnsi((IntPtr)codec->name) ?? CodecName ?? string.Empty;
+            if (encoderName.Equals("libx264", StringComparison.OrdinalIgnoreCase))
+            {
+                ffmpeg.av_dict_set(&opts, "preset", PreferToSpeed ? "veryfast" : "medium", 0);
+            }
+            else if (PreferToSpeed && encoderName.Equals("libx265", StringComparison.OrdinalIgnoreCase))
             {
                 ffmpeg.av_dict_set(&opts, "preset", "veryfast", 0);
-                ffmpeg.av_dict_set(&opts, "tune", "zerolatency", 0);
             }
 
             FFmpegHelper.Throw(ffmpeg.avcodec_open2(_codecCtx, codec, &opts), "Open target codec stream");
@@ -223,6 +247,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             var srcPixFmt =
                 (_pixelFormat == AVPixelFormat.AV_PIX_FMT_GBRP16LE ||
                  _pixelFormat == AVPixelFormat.AV_PIX_FMT_YUV420P16LE ||
+                 _pixelFormat == AVPixelFormat.AV_PIX_FMT_GRAY16LE ||
                  _pixelFormat == AVPixelFormat.AV_PIX_FMT_RGBA64LE ||
                  _pixelFormat == AVPixelFormat.AV_PIX_FMT_BGRA64LE)
                 ? AVPixelFormat.AV_PIX_FMT_RGBA64LE
@@ -480,6 +505,20 @@ namespace projectFrameCut.Render.EncodeAndDecode
         {
             if (_isHeaderWritten) return;
 
+            if (_fmtCtx == null)
+            {
+                if (string.IsNullOrWhiteSpace(OutputPath))
+                    throw new InvalidOperationException(
+                        "Cannot write video header: OutputPath was not set. " +
+                        "The video writer was created without an output path (for codec probing) " +
+                        "but Append was called as if it were ready to write. " +
+                        "Set OutputPath and call Initialize() before writing frames.");
+                throw new InvalidOperationException(
+                    $"Cannot write video header: the video writer was not properly initialized " +
+                    $"(OutputPath='{OutputPath}', but the format context is null). " +
+                    "Ensure Initialize() completed successfully before calling Append.");
+            }
+
             if (_metadata != null && _metadata.Count > 0)
             {
                 foreach (var kv in _metadata)
@@ -500,8 +539,28 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private void EncodeFrame(AVFrame* frame)
         {
-            FFmpegHelper.Throw(ffmpeg.avcodec_send_frame(_codecCtx, frame), "avcodec_send_frame");
+            // 当编码器内部队列满时，avcodec_send_frame 会返回 AVERROR(EAGAIN)。
+            // 此时需要先取出已编码的包，然后重试发送同一帧，而不是直接报错。
+            while (true)
+            {
+                int sendRet = ffmpeg.avcodec_send_frame(_codecCtx, frame);
+                if (sendRet >= 0)
+                    break;
 
+                if (sendRet == ffmpeg.AVERROR(ffmpeg.EAGAIN))
+                {
+                    DrainEncodedPackets();
+                    continue;
+                }
+
+                FFmpegHelper.Throw(sendRet, "avcodec_send_frame");
+            }
+
+            DrainEncodedPackets();
+        }
+
+        private void DrainEncodedPackets()
+        {
             while (true)
             {
                 AVPacket* pkt = ffmpeg.av_packet_alloc();
@@ -517,7 +576,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 pkt->stream_index = _videoStream->index;
 
                 FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(_fmtCtx, pkt), "av_interleaved_write_frame");
-
                 ffmpeg.av_packet_free(&pkt);
             }
         }
@@ -527,21 +585,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (_isDisposed || Index <= 0) return;
 
             FFmpegHelper.Throw(ffmpeg.avcodec_send_frame(_codecCtx, null), "avcodec_send_frame(flush)");
-            while (true)
-            {
-                AVPacket* pkt = ffmpeg.av_packet_alloc();
-                int ret = ffmpeg.avcodec_receive_packet(_codecCtx, pkt);
-                if (ret == ffmpeg.AVERROR(ffmpeg.EAGAIN) || ret == ffmpeg.AVERROR_EOF)
-                {
-                    ffmpeg.av_packet_free(&pkt);
-                    break;
-                }
-                FFmpegHelper.Throw(ret, "avcodec_receive_packet(flush)");
-                ffmpeg.av_packet_rescale_ts(pkt, _codecCtx->time_base, _videoStream->time_base);
-                pkt->stream_index = _videoStream->index;
-                FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(_fmtCtx, pkt), "write_frame(flush)");
-                ffmpeg.av_packet_free(&pkt);
-            }
+            DrainEncodedPackets();
 
             if (_isHeaderWritten)
             {

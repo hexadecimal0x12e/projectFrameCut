@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
@@ -21,7 +21,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Get the current plugin API version.
         /// </summary>
-        public const int CurrentPluginAPIVersion = 7;
+        public const int CurrentPluginAPIVersion = 8;
 
         /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
@@ -90,13 +90,19 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public Dictionary<string, Dictionary<string, string>> LocalizationProvider { get; }
 
         /// <summary>
+        /// Create an <see cref="IEffectProvider"/> instance for the given effect type name (e.g. "Resize").
+        /// The provider owns both the property metadata (fields/parameters) and the effect factory capability
+        /// (<see cref="IEffectProvider.RestoreInstance(EffectImplementType, Dictionary{string, object})"/>).
+        /// </summary>
+        public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
+
+        /// <summary>
         /// Create an ISoundTrack instance from the given file path and JSON data.
         /// </summary>
         /// <remarks>
         /// The argument for value is Id of the sound track, and the second argument is the name of the sound track.
         /// </remarks>
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
-
 
         /// <summary>
         /// Create an IClip instance from the given file path and JSON data.
@@ -105,48 +111,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// The argument for value is Id of the previous clip, and the second argument is Id of the next clip
         /// </remarks>
         public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider { get; }
-
-        /// <summary>
-        /// Create an blank IEffect instance from the given id.
-        /// </summary>
-        /// <remarks>
-        /// Although we have <see cref="IEffectFactory"/>, but you STILL need to register ONE implementation of IEffect here for each effect type.
-        /// </remarks>
-        public Dictionary<string, Func<IEffect>> EffectProvider { get; }
-
-        /// <summary>
-        /// Create an <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
-        /// Key is effect type name (e.g. "Resize").
-        /// </summary>
-        /// <remarks>
-        /// This is also for the factory of <see cref="IColorAdjustEffect"/>, <see cref="IClipPositionProvider"/>, <see cref="IContinuousClipPositionProvider"/> and <see cref="ISpeedVarianceProvider"/>.
-        /// </remarks>
-        public Dictionary<string, IEffectFactory> EffectFactoryProvider { get; }
-        /// <summary>
-        /// Create an blank IEffect instance from the given id.
-        /// </summary>
-        /// <remarks>
-        /// <b>DO NOT register</b> <see cref="IContinuousTextEffect"/> here. Register it in <see cref="EffectProvider"/>
-        /// </remarks>
-        public Dictionary<string, Func<IEffect>> ContinuousEffectProvider { get; }
-
-        /// <summary>
-        /// Create a continuous <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
-        /// </summary>
-        /// <remarks>
-        /// <b>DO NOT register</b> <see cref="IContinuousTextEffect"/> here. Register it in <see cref="EffectFactoryProvider"/>
-        /// </remarks>
-        public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider { get; }
-
-        /// <summary>
-        /// Create an blank IEffect instance from the given id.
-        /// </summary>
-        public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider { get; }
-
-        /// <summary>
-        /// Create a variable-argument <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
-        /// </summary>
-        public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider { get; }
 
         /// <summary>
         /// Create an IComputer instance from the given JSON structure.
@@ -159,7 +123,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <remarks>
         /// When the argument is null or empty when creating a IVideoSource, the provider should return an instance that can be used to check for preferred extensions.
         /// </remarks>
-        public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider { get; }
+        public Dictionary<string, IVideoSource> VideoSourceProvider { get; }
 
         /// <summary>
         /// Create an IAudioSource instance from the given file path.
@@ -172,6 +136,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Create an IVideoWriter instance from the given file path.
         /// </summary>
+        /// <remarks>
+        /// The key of each item is NOT used in detect the video writer type from file extension. They can be 100% meaningless and doesn't need to be the same as the file extension. 
+        /// The value is a function that takes a file path and returns an IVideoWriter instance.
+        /// Implement <see cref="IVideoWriter.SupportCodec(string)"/> to allow render engine to check for preferred extensions.
+        /// </remarks>
         public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; }
 
 
@@ -264,7 +233,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Creates an effect instance from the given JSON structure.
         /// </summary>
         /// <remarks>
-        /// We provide you a default implement, which can cover 99% of purpose when you make factories correctly, so you probably don't need to override this method unless you have some special needs that cannot be achieved by factories, or you want to support some special effect types that are not covered by current implementation.
+        /// We provide you a default implement, which can cover 99% of purpose when you make providers correctly,
+        /// so you probably don't need to override this method unless you have some special needs that cannot be
+        /// achieved by providers, or you want to support some special effect types that are not covered by current implementation.
         /// </remarks>
         /// <param name="stru">the source structure</param>
         /// <returns>the effect</returns>
@@ -274,11 +245,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
 #pragma warning disable CS0618 // we need to handle fallback for deprecated implement types for compatibility, but we don't want to have Obsolete warning in the main logic.
             if (implementType == EffectImplementType.ImageSharp_Deprecated) implementType = EffectImplementType.IPicture;
             if (stru.ImplementType == EffectImplementType.ImageSharp_Deprecated) stru.ImplementType = EffectImplementType.IPicture;
-#pragma warning restore CS0618 
             static IEffect ApplyCommonProperties(IEffect effect, EffectAndMixtureJSONStructure s)
             {
                 effect.Name = s.Name;
-                effect.BindedEffectGroupID = s.BindedEffectGroupID;
+                effect.BindedEffectProvidingSystemID = s.BindedEffectGroupID;
                 if (effect.TypeOfEffect != EffectType.SpeedVarianceProvider)
                 {
                     effect.RelativeWidth = s.RelativeWidth;
@@ -308,83 +278,24 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 return EffectArgsHelper.ConvertElementDictToObjectDict(source, parameterTypes);
             }
 
+            if (!EffectProviderProvider.TryGetValue(stru.TypeName, out var creator))
+            {
+                throw new KeyNotFoundException($"No suitable effect provider found for the given type '{stru.TypeName}'. If you are trying to use a custom effect, make sure it is properly registered.");
+            }
+
+            var provider = creator();
+            var parameters = ConvertParams(stru.Parameters, provider.ParametersType);
+            // The continuous-Crop branch (and any future dual-mode provider) is driven by this reserved key.
             if (stru.IsContinuousEffect)
             {
-                if (ContinuousEffectFactoryProvider.TryGetValue(stru.TypeName, out var cFactory))
-                {
-                    if (implementType != EffectImplementType.NotSpecified && cFactory.SupportsImplementTypes.Contains(implementType))
-                    {
-                        return ApplyCommonProperties(cFactory.Build(implementType, ConvertParams(stru.Parameters, cFactory.ParametersType)), stru);
-                    }
-                    return ApplyCommonProperties(cFactory.BuildContinuousWithDefaultType(ConvertParams(stru.Parameters, cFactory.ParametersType)), stru);
-                }
-            }
-            else if (stru.IsVariableArgumentEffect)
-            {
-                if (BindableArgumentEffectFactoryProvider.TryGetValue(stru.TypeName, out var vFactory))
-                {
-                    if (vFactory is IBindableEffectFactory bef)
-                    {
-                        if (implementType != EffectImplementType.NotSpecified && bef.SupportsImplementTypes.Contains(implementType))
-                        {
-                            return ApplyCommonProperties(bef.Build(implementType, stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, vFactory.ParametersType)), stru);
-                        }
-                        return ApplyCommonProperties(bef.BuildWithDefaultType(stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, vFactory.ParametersType)), stru);
-                    }
-                    else
-                    {
-                        throw new InvalidDataException($"{stru.Name} is marked as a variable argument effect but does not implement IBindableEffectFactory.");
-                    }
-                }
-            }
-            else
-            {
-                if (EffectFactoryProvider.TryGetValue(stru.TypeName, out var factory))
-                {
-                    if (implementType != EffectImplementType.NotSpecified && factory.SupportsImplementTypes.Contains(implementType))
-                    {
-                        return ApplyCommonProperties(factory.Build(implementType, ConvertParams(stru.Parameters, factory.ParametersType)), stru);
-                    }
-                    return ApplyCommonProperties(factory.BuildWithDefaultType(ConvertParams(stru.Parameters, factory.ParametersType)), stru);
-                }
+                provider.MetaData[IEffectProvider.IsContinuousEffectParameterKey] = true;
             }
 
-            // Compatibility fallback: the serialized flags may be stale or inferred from interfaces.
-            // Resolve by TypeName across all factory registries before failing.
-            if (EffectFactoryProvider.TryGetValue(stru.TypeName, out var fallbackFactory))
-            {
-                if (implementType != EffectImplementType.NotSpecified && fallbackFactory.SupportsImplementTypes.Contains(implementType))
-                {
-                    return ApplyCommonProperties(fallbackFactory.Build(implementType, ConvertParams(stru.Parameters, fallbackFactory.ParametersType)), stru);
-                }
-
-                return ApplyCommonProperties(fallbackFactory.BuildWithDefaultType(ConvertParams(stru.Parameters, fallbackFactory.ParametersType)), stru);
-            }
-
-            if (ContinuousEffectFactoryProvider.TryGetValue(stru.TypeName, out var fallbackContinuousFactory))
-            {
-                if (implementType != EffectImplementType.NotSpecified && fallbackContinuousFactory.SupportsImplementTypes.Contains(implementType))
-                {
-                    return ApplyCommonProperties(fallbackContinuousFactory.Build(implementType, ConvertParams(stru.Parameters, fallbackContinuousFactory.ParametersType)), stru);
-                }
-
-                return ApplyCommonProperties(fallbackContinuousFactory.BuildContinuousWithDefaultType(ConvertParams(stru.Parameters, fallbackContinuousFactory.ParametersType)), stru);
-            }
-
-            if (BindableArgumentEffectFactoryProvider.TryGetValue(stru.TypeName, out var fallbackBindableFactory))
-            {
-                if (fallbackBindableFactory is IBindableEffectFactory fallbackBindable)
-                {
-                    if (implementType != EffectImplementType.NotSpecified && fallbackBindable.SupportsImplementTypes.Contains(implementType))
-                    {
-                        return ApplyCommonProperties(fallbackBindable.Build(implementType, stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, fallbackBindableFactory.ParametersType)), stru);
-                    }
-
-                    return ApplyCommonProperties(fallbackBindable.BuildWithDefaultType(stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, fallbackBindableFactory.ParametersType)), stru);
-                }
-            }
-
-            throw new NotSupportedException($"No suitable effect found for the given type '{stru.TypeName}'.");
+            var effect = (implementType != EffectImplementType.NotSpecified && provider.SupportsImplementTypes.Contains(implementType))
+                ? provider.RestoreInstance(implementType, parameters)
+                : provider.RestoreInstanceWithDefaultType(parameters);
+            return ApplyCommonProperties(effect, stru);
+#pragma warning restore CS0618
         }
 
 
@@ -397,16 +308,16 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <exception cref="NotSupportedException"></exception>
         public virtual IVideoSource VideoSourceCreator(string filePath)
         {
-            var prefered = VideoSourceProvider.Values.Where((k) => k(null!).PreferredExtension.Contains(Path.GetExtension(filePath)));
+            var prefered = VideoSourceProvider.Values.Where((k) => k.PreferredExtension.Contains(Path.GetExtension(filePath)));
             if (prefered.Any())
             {
-                return prefered.First()(null!).CreateNew(filePath);
+                return prefered.First().CreateNew(filePath);
             }
             else
             {
                 foreach (var provider in VideoSourceProvider.Values)
                 {
-                    var instance = provider(filePath);
+                    var instance = provider.CreateNew(filePath);
                     if (instance.TryInitialize())
                     {
                         return instance;
@@ -461,7 +372,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         {
             if (VideoSourceProvider.TryGetValue(decoderName, out var value))
             {
-                return value(filePath);
+                return value.CreateNew(filePath);
             }
             throw new NotSupportedException($"Video source '{decoderName}' not found.");
         }
@@ -544,18 +455,40 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         {
 
         }
-
-        /// <summary>
-        /// Represents the messaging queue provided by the host application.
-        /// </summary>
-        [Obsolete("Use GlobalPluginHelper.MessagingService instead. This property is no longer been assigned while initialization and it will be removed in next Plugin API version.", false)]
-        public virtual IMessagingService MessagingQueue { get => null; set { } }
     }
 
 #pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
 
     public class PluginMetadata
     {
+        /// <summary>
+        /// The package format version. External plugins must use version 2 or later.
+        /// </summary>
+        public int PackageFormatVersion { get; set; }
+
+        /// <summary>
+        /// Selects whether the package contains a managed plugin assembly or launches an external backend.
+        /// </summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public PluginBackendKind BackendKind { get; set; } = PluginBackendKind.ManagedAssembly;
+
+        /// <summary>
+        /// Per-platform launch targets for an external backend package.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public ExternalPluginBackendMetadata? ExternalBackend { get; set; }
+
+        /// <summary>
+        /// SHA-256 fingerprint of the publisher CA certificate.
+        /// </summary>
+        public string PublisherId { get; set; } = string.Empty;
+
+        /// <summary>
+        /// SHA-256 fingerprint of the end-entity certificate that signed this package.
+        /// </summary>
+        public string SigningCertificateFingerprint { get; set; } = string.Empty;
+
         /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
         /// </summary>
@@ -568,6 +501,15 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Get the minor version of plugin. Default to 0.
         /// </summary>
         public int PluginAPIMinorVersion { get; set; } = 0;
+        /// <summary>
+        /// Whether the plugin implements the application-level plugin API. Null for legacy metadata that did not declare it.
+        /// </summary>
+        public bool? IsAppLevelPlugin { get; set; }
+        /// <summary>
+        /// The strongest isolation mode supported by the plugin.
+        /// </summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public PluginIsolationMode MaximumSupportedIsolationMode { get; set; } = PluginIsolationMode.Containerized;
         /// <summary>
         /// The plugin's name.
         /// </summary>
@@ -645,31 +587,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             }
 
             // ----- Effects -----
-            var effectTypes = pluginBase.EffectFactoryProvider.Keys.Concat(pluginBase.EffectProvider.Keys).Distinct();
-            if (effectTypes.Any())
+            if (pluginBase.EffectProviderProvider.Any())
             {
                 providedContent.AppendLine("Effect:");
-                foreach (var key in effectTypes)
-                {
-                    providedContent.AppendLine($"- {key}");
-                }
-            }
-
-            var continuousEffectTypes = pluginBase.ContinuousEffectFactoryProvider.Keys.Concat(pluginBase.ContinuousEffectProvider.Keys).Distinct();
-            if (continuousEffectTypes.Any())
-            {
-                providedContent.AppendLine("ContinuousEffect:");
-                foreach (var key in continuousEffectTypes)
-                {
-                    providedContent.AppendLine($"- {key}");
-                }
-            }
-
-            var variableArgumentEffectTypes = pluginBase.BindableArgumentEffectFactoryProvider.Keys.Concat(pluginBase.BindableArgumentEffectProvider.Keys).Distinct();
-            if (variableArgumentEffectTypes.Any())
-            {
-                providedContent.AppendLine("VariableArgumentEffect:");
-                foreach (var key in variableArgumentEffectTypes)
+                foreach (var key in pluginBase.EffectProviderProvider.Keys)
                 {
                     providedContent.AppendLine($"- {key}");
                 }
@@ -728,6 +649,29 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
 
             return providedContent.ToString();
         }
+    }
+
+
+    /// <summary>
+    /// Plugin isolation modes ordered from strongest to weakest isolation.
+    /// </summary>
+    public enum PluginIsolationMode
+    {
+        /// <summary>
+        /// Isolating the plugin and a simple worker inside a container provided by OS, 
+        /// with a limited size of user resources (like file) access.
+        /// </summary>
+        Containerized = 0,
+        /// <summary>
+        /// Isolating the plugin inside a separate process with same permission level with main application, 
+        /// but without any containerization or resource limitation.
+        /// </summary>
+        ProcessIsolation = 1,
+        /// <summary>
+        /// Attach the plugin assembly directly to the main application process, with no isolation at all. 
+        /// This is the weakest isolation mode and should be avoided if possible except your plugin is App-Level.
+        /// </summary>
+        None = 2,
     }
 #pragma warning restore CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
 

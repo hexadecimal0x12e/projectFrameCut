@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Text;
+using projectFrameCut.Drawing.Text;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -29,7 +29,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
         public bool NeedFilePath => false;
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
@@ -66,11 +69,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
         public ISourceReplacementEffect? AlternativeSource { get; set; }
 
-        public IPicture GetContent(int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        public IPicture GetContent(int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
         {
             IPicture result = targetPPB.Value switch
             {
@@ -87,13 +92,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public SolidColorClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+           EffectHelper.ResolveClipEffects(this);
 
         }
 
         public void ReInit()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+           EffectHelper.ResolveClipEffects(this);
 
         }
 
@@ -189,7 +194,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get => 1; init { } }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
         public string? FilePath { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
@@ -201,6 +209,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
         public ISourceReplacementEffect? AlternativeSource { get; set; }
@@ -220,18 +230,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
-        {
-            throw new NotImplementedException();
-        }
-
         public void ReInit()
         {
-        }
-
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
-        {
-            throw new NotImplementedException();
         }
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)

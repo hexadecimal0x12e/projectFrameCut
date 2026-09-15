@@ -14,7 +14,13 @@ namespace projectFrameCut.Render.RenderAPIBase.Context
         /// <summary>
         /// A static property that holds the current render context. This property is used to access the current rendering state and settings.
         /// </summary>
-        public static IRenderContext? Current = null;
+        private static readonly AsyncLocal<IRenderContext?> _current = new();
+
+        public static IRenderContext? Current
+        {
+            get => _current.Value;
+            set => _current.Value = value;
+        }
 
         /// <summary>
         /// Gets the progress of the rendering operation as a double value between 0.0 and 1.0, where 0.0 represents no progress and 1.0 represents completion.
@@ -35,6 +41,19 @@ namespace projectFrameCut.Render.RenderAPIBase.Context
         /// Gets the composed audio source that represents the final audio output of the rendering operation. This property provides access to the combined audio from all clips and effects applied during rendering.
         /// </summary>
         public IAudioSource ComposedAudio { get; }
+
+        /// <summary>
+        /// The target width and height for the rendered output. These properties define the dimensions of the final video output, ensuring that all rendering operations adhere to the specified resolution.
+        /// </summary>
+        public int TargetWidth { get; }
+        /// <summary>
+        /// The target height for the rendered output. This property defines the vertical dimension of the final video output, ensuring that all rendering operations adhere to the specified resolution.
+        /// </summary>
+        public int TargetHeight { get; }
+        /// <summary>
+        /// Gets the target frame-time(spf) for the rendering operation. This property defines the playback speed of the final video output, ensuring that all rendering operations adhere to the specified frame rate.
+        /// </summary>
+        public double TargetSecondPerFrame { get; }
 
         /// <summary>
         /// AsyncLocal that holds per-worker rendering state.

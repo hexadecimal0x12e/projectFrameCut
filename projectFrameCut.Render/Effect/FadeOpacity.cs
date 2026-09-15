@@ -19,16 +19,13 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
 
         public float Opacity { get; init; } = 0.8f;
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "Opacity", Opacity }
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public bool IsReorderable => true;
+        bool IEffect.CanProcessFromCanvas => true;
 
         public static List<string> ParametersNeeded { get; } = ["Opacity"];
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
@@ -37,7 +34,7 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string TypeName => "FadeOpacity";
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.IPicture)
@@ -48,18 +45,21 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
 
-            return new FadeOpacityEffect_IPicture
+            var effect = new FadeOpacityEffect_IPicture
             {
-                Opacity = Convert.ToSingle(parameters["Opacity"]),
+                Opacity = DynamicParam.ToFloat(parameters.GetValueOrDefault("Opacity")),
                 ImplementType = implementType
             };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            return OpacityEffect.Process(source, Opacity);
+            float opacity = DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity);
+            return OpacityEffect.Process(source, opacity);
         }
     }
 
@@ -72,16 +72,13 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
 
         public float Opacity { get; init; } = 0.8f;
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "Opacity", Opacity }
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string? NeedComputer => "OpacityComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
+        bool IEffect.CanProcessFromCanvas => true;
 
         public static List<string> ParametersNeeded { get; } = ["Opacity"];
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
@@ -90,7 +87,7 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string TypeName => "FadeOpacity";
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
@@ -100,18 +97,21 @@ namespace projectFrameCut.Render.Effect
             {
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
-            return new FadeOpacityEffect_HwAccel
+            var effect = new FadeOpacityEffect_HwAccel
             {
-                Opacity = Convert.ToSingle(parameters["Opacity"])
+                Opacity = DynamicParam.ToFloat(parameters.GetValueOrDefault("Opacity"))
             };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
+            float opacity = DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity);
             if (computer is null)
-                return OpacityEffect.Process(source, Opacity);
+                return OpacityEffect.Process(source, opacity);
 
             var sw = Stopwatch.StartNew();
             var (r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
@@ -119,11 +119,11 @@ namespace projectFrameCut.Render.Effect
             FourChannelResult computeResult;
             if (computer is IOpacityComputer oc)
             {
-                computeResult = oc.ComputeOpacity(r, g, b, a, Opacity);
+                computeResult = oc.ComputeOpacity(r, g, b, a, opacity);
             }
             else
             {
-                var resultArr = computer.Compute([r, g, b, a, Opacity]);
+                var resultArr = computer.Compute([r, g, b, a, opacity]);
 
                 if (resultArr.Length != 4 ||
                     resultArr[0] is not float[] rOut ||
@@ -146,47 +146,54 @@ namespace projectFrameCut.Render.Effect
                 OperationDisplayName = "FadeOpacity (GPU)",
                 Operator = typeof(FadeOpacityEffect_HwAccel),
                 ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object> { { "Opacity", Opacity } }
+                Properties = new Dictionary<string, object> { { "Opacity", opacity } }
             }).ToList();
             return result;
         }
     }
 
-    public class FadeOpacityEffectFactory : IEffectFactory
+    /// <summary>
+    /// The Render-side provider of the FadeOpacity effect.
+    /// </summary>
+    public class FadeOpacityEffectProvider : EffectProviderBase
     {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "FadeOpacity";
-        public EffectTarget Target => EffectTarget.Video;
-        public List<string> ParametersNeeded { get; } = ["Opacity"];
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        public FadeOpacityEffectProvider()
         {
-            { "Opacity", "float" }
-        };
+            Name = "FadeOpacity";
+            SetField("Opacity", 0.8f);
+        }
 
-        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
+        public override string TypeName => "FadeOpacity";
 
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("Opacity", EffectArgumentFieldType.Numeric, "0.8", min: "0", max: "1")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
             if (implementType == EffectImplementType.NotSpecified)
             {
-                return BuildWithDefaultType(parameters);
+                if (!parameters.ContainsKey("Opacity")) parameters["Opacity"] = 0.8f;
+                return [FadeOpacityEffect_IPicture.FromParametersDictionary(parameters)];
             }
             return implementType switch
             {
-                EffectImplementType.IPicture => FadeOpacityEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
-                EffectImplementType.HwAcceleration => FadeOpacityEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>()),
+                EffectImplementType.IPicture => [FadeOpacityEffect_IPicture.FromParametersDictionary(parameters)],
+                EffectImplementType.HwAcceleration => [FadeOpacityEffect_HwAccel.FromParametersDictionary(parameters)],
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };
-        }
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
-        {
-            parameters ??= new Dictionary<string, object>
-            {
-                { "Opacity", 0.8f }
-            };
-            if (!parameters.ContainsKey("Opacity")) parameters["Opacity"] = 0.8f;
-            return FadeOpacityEffect_IPicture.FromParametersDictionary(parameters);
         }
     }
 }

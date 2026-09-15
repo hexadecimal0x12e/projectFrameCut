@@ -92,5 +92,26 @@ namespace projectFrameCut.Shared
             return input.OrderBy(x => rand.Next()).Take(count);
         }
 
+        /// <summary>
+        /// Compute a dictionary based on the conditions and values provided in the input dictionary.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the keys in the dictionary.</typeparam>
+        /// <typeparam name="TValue">The type of the values in the dictionary.</typeparam>
+        /// <param name="conditions">Source dictionary containing the conditions and values.</param>
+        /// <returns>A new dictionary with the filtered results.</returns>
+        [DebuggerNonUserCode()]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Dictionary<TKey, TValue> ComputeCondition<TKey, TValue>(this IDictionary<TKey, (Func<bool>, TValue)> conditions) where TKey : notnull
+        {
+            var result = new Dictionary<TKey, TValue>();
+            foreach (var (key, (condition, value)) in conditions)
+            {
+                if (condition())
+                {
+                    result[key] = value;
+                }
+            }
+            return result;
+        }
     }
 }

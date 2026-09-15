@@ -1,14 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net10.0-android</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net10.0-android;net10.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks>net10.0-android;net10.0_linux</TargetFrameworks>
+		<TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net11.0-ios</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
 
 		<!-- Note for MacCatalyst:
-		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
-		When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
-		The Mac App Store will NOT accept apps with ONLY maccatalyst-arm64 indicated;
-		either BOTH runtimes must be indicated or ONLY macatalyst-x64. -->
+			The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
+			When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
+			The Mac App Store will NOT accept apps with ONLY maccatalyst-arm64 indicated;
+			either BOTH runtimes must be indicated or ONLY macatalyst-x64. -->
 		<!-- For example: <RuntimeIdentifiers>maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers> -->
 		<RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst' and '$(Configuration)' == 'Release'">maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers>
 		<RuntimeIdentifier Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst' and '$(Configuration)' != 'Release' and '$(Platform)' == 'x64'">maccatalyst-x64</RuntimeIdentifier>
@@ -32,12 +33,12 @@
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
-		<ApplicationVersion>9</ApplicationVersion>
+		<ApplicationVersion>10</ApplicationVersion>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">13.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">13.1</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">30.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.19041.0</SupportedOSPlatformVersion>
 
 		<DefaultLanguage>zh-CN</DefaultLanguage>
 		<Platforms>AnyCPU;x64</Platforms>
@@ -47,8 +48,8 @@
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 		<WindowsPackageType>MSIX</WindowsPackageType>
 
-		<AssemblyVersion>1.6.0.0</AssemblyVersion>
-		<FileVersion>1.6.0.0</FileVersion>
+		<AssemblyVersion>1.7.0.0</AssemblyVersion>
+		<FileVersion>1.7.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>projectFrameCut</Product>
 		<Description>projectFrameCut Application</Description>
@@ -68,16 +69,6 @@
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 		<AppxPackageDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\AppPackages\</AppxPackageDir>
 
-		<PwshSDKVersion>7.6.3</PwshSDKVersion>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-		<BuildIpa>True</BuildIpa>
-		<MtouchNoSymbolStrip>True</MtouchNoSymbolStrip>
-		<MtouchDebug>True</MtouchDebug>
-		<IpaIncludeArtwork>False</IpaIncludeArtwork>
-		<DefineConstants>$(DefineConstants);iDevices</DefineConstants>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
@@ -92,9 +83,47 @@
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<ApplicationId>hexadecimal0x12e.projectframecut</ApplicationId>
 		<ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
-		<SelfContained>true</SelfContained>
+		<StartupObject>projectFrameCut.WinUI.Program</StartupObject>
+		<DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN;DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION;MAUISDK</DefineConstants>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
+		<ApplicationId>hexadecimal0x12e.projectframecut</ApplicationId>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
+		<CodesignKey>Apple Development: Created via API (UTKTS349ZC)</CodesignKey>
+		<CodesignProvision>VS: WildCard Development</CodesignProvision>
+		<MtouchNoSymbolStrip>True</MtouchNoSymbolStrip>
+		<MtouchDebug>True</MtouchDebug>
+		<IpaIncludeArtwork>False</IpaIncludeArtwork>
+		<MtouchUseLlvm>False</MtouchUseLlvm>
+		<MtouchLink>None</MtouchLink>
+		<MtouchNoSymbolStrip>True</MtouchNoSymbolStrip>
+		<MtouchDebug>True</MtouchDebug>
+		<IpaIncludeArtwork>False</IpaIncludeArtwork>
+		<ProvisioningType>manual</ProvisioningType>
+		<DefineConstants>$(DefineConstants);iDevices;MAUISDK</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
+		<CodesignKey>Apple Development: Created via API (UTKTS349ZC)</CodesignKey>
+		<CodesignProvision>VS: WildCard Development</CodesignProvision>
+		<MtouchNoSymbolStrip>True</MtouchNoSymbolStrip>
+		<MtouchDebug>True</MtouchDebug>
+		<IpaIncludeArtwork>False</IpaIncludeArtwork>
+		<MtouchUseLlvm>False</MtouchUseLlvm>
+		<MtouchLink>None</MtouchLink>
+		<MtouchNoSymbolStrip>True</MtouchNoSymbolStrip>
+		<MtouchDebug>True</MtouchDebug>
+		<IpaIncludeArtwork>False</IpaIncludeArtwork>
+		<ProvisioningType>manual</ProvisioningType>
+		<DefineConstants>$(DefineConstants);iDevices;MAUISDK</DefineConstants>
+		<MtouchInterpreter>all</MtouchInterpreter>
+		<PublishReadyToRun>false</PublishReadyToRun>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<!-- App Icon -->
@@ -113,12 +142,16 @@
 
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+		<MauiAsset Include="Resources\Styles\**" LogicalName="Styles\%(RecursiveDir)%(Filename)%(Extension)" />
+
+		<!-- Plugin trusting Root CA -->
+		<EmbeddedResource Include="Resources\PluginTrust\builtin-root-ca.cer" LogicalName="projectFrameCut.PluginTrust.builtin-root-ca.cer" Condition="Exists('Resources\PluginTrust\builtin-root-ca.cer')" />
 	</ItemGroup>
 
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.AI" Version="10.3.0" />
-		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
+		<PackageReference Include="Microsoft.Extensions.AI" Version="10.8.0" />
+		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.8.0" />
 		<PackageReference Include="OpenAI" Version="2.12.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
@@ -127,7 +160,6 @@
 		<PackageReference Include="CommunityToolkit.Maui" Version="14.2.0" />
 		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="10.0.0" />
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
-		<PackageReference Include="PowerShellStandard.Library" Version="5.1.1" />
 		<PackageReference Include="Kawazu" Version="1.1.4" ExcludeAssets="contentFiles" />
 	</ItemGroup>
 
@@ -139,36 +171,29 @@
 
 	<ItemGroup>
 		<!-- hide huge generated locate.sg.cs to stop Roslyn (devhub.exe) analyse it, and eating extreme large amount of memory -->
-		<Compile Update="Localize\locate.sg.cs" Visible="false" />
-		<!-- removing the annoying refs from Solution resource manager -->
-		<None Update="$(UserHome)\.nuget\packages\microsoft.powershell.sdk\*\contentFiles\**\*" Visible="false" />
+		<Compile Update="**\Localize\locate.sg.cs" Visible="false" />
+		<!-- removing the annoying refs from Solution resource manager and application package (we'll bundle them somewhere else) -->
+		<None Remove="$(UserHome)\.nuget\packages\microsoft.powershell.sdk\*\contentFiles\**\*" Visible="false" />
 		<None Remove="$(UserHome)\.nuget\packages\kawazu\*\contentFiles\**\*" />
+		<None Remove="Platforms\Windows\pjfc-cli.exe" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\projectFrameCut.ApplicationAPIBase\projectFrameCut.ApplicationAPIBase.csproj" />
+		<ProjectReference Include="..\projectFrameCut.IntegratedAPIServer\projectFrameCut.IntegratedAPIServer.csproj" />
+		<ProjectReference Include="..\projectFrameCut.Render.Contracts\projectFrameCut.Render.Contracts.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render.HwAccelEngine\projectFrameCut.Render.HwAccelEngine.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
 	</ItemGroup>
 
-	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
-		<DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN;DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION</DefineConstants>
-	</PropertyGroup>
-
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
-		<PackageReference Include="Microsoft.PowerShell.SDK" Version="$(PwshSDKVersion)" />
+		<PackageReference Include="Microsoft.Graphics.Win2D" Version="1.4.0" />
 		<PackageReference Include="Woohoo.Platform.Windows" Version="0.1.0" />
 		<PackageReference Include="System.Management" Version="*" /> <!-- pwsh SDK relys on this library so we don't fix the version -->
-		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
 		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
 		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
-		<Compile Update="AppShell_Windows.xaml.cs">
-			<DependentUpon>AppShell_Windows.xaml</DependentUpon>
-		</Compile>
-		<Compile Update="App.xaml.cs">
-			<DependentUpon>App.WinUI.xaml</DependentUpon>
-		</Compile>
+		<MauiAsset Include="Platforms\Windows\pjfc-cli.exe" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(BuildingInsideVisualStudio)' != 'true' and '$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">
@@ -177,16 +202,9 @@
 
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-		<PackageReference Include="Microsoft.PowerShell.SDK" Version="$(PwshSDKVersion)" ExcludeAssets="native" /> <!-- Microsoft.PowerShell.Native has a native lib which was not compactable with android, so we exclude it -->
 		<AndroidMavenLibrary Include="io.github.kyant0:fishnet" Version="1.1.0" />
 		<AndroidNativeLibrary Include="..\..\playground\FFmpeg\android\**\*.so" />
 		<AndroidNativeLibrary Include="Platforms\Android\nativeLibs\**\*.so" />
-		<Compile Update="AppShell_Android.xaml.cs">
-			<DependentUpon>AppShell_Android.xaml</DependentUpon>
-		</Compile>
-		<Compile Update="App.xaml.cs">
-			<DependentUpon>App.Default.xaml</DependentUpon>
-		</Compile>
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
@@ -195,6 +213,7 @@
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
 		<AndroidKeyStore>False</AndroidKeyStore>
+		<DefineConstants>$(DefineConstants);ANDROID;MAUISDK</DefineConstants>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Release|net10.0-android'">
@@ -204,8 +223,32 @@
 		<AndroidSigningKeyPass>123456</AndroidSigningKeyPass>
 		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
 		<AndroidCreatePackagePerAbi>True</AndroidCreatePackagePerAbi>
+		<DefineConstants>$(DefineConstants);ANDROID;MAUISDK</DefineConstants>
 	</PropertyGroup>
 
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+	</ItemGroup>
+
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+	</ItemGroup>
+
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
+		<TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
+		<TargetFrameworkVersion>v10.0</TargetFrameworkVersion>
+		<TargetFrameworkMoniker>.NETCoreApp,Version=v10.0</TargetFrameworkMoniker>
+		<DefineConstants>$(DefineConstants);LINUX</DefineConstants>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
+		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4" Version="0.1.0-preview.12.26368.2" />
+		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4.Essentials" Version="0.1.0-preview.12.26368.2" />
+	</ItemGroup>
+
+	<Target Name="RestorePlatformCompileItems" BeforeTargets="CoreCompile">
+		<ItemGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
+			<Compile Include="Platforms\Linux\**\*.cs" />
+		</ItemGroup>
+	</Target>
 
 	<ItemGroup>
 		<MauiXaml Update="AIAssistance\AssistanceChatView.xaml">
@@ -221,7 +264,7 @@
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="BenchmarkPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="CreatePage.xaml">
 			<Generator>MSBuild:Compile</Generator>
@@ -233,7 +276,7 @@
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="VectorContent\VectorContentEditorPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="HomePage.xaml">
 			<Generator>MSBuild:Compile</Generator>
@@ -245,12 +288,6 @@
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="RenderPage.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-		<MauiXaml Update="Resources\Styles\Styles.Default.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-		<MauiXaml Update="Resources\Styles\Styles.WinUI.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Setting\SettingPages\AboutSettingPage.xaml">
@@ -277,6 +314,15 @@
 		<MauiXaml Update="Views\OverlayView.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
+		<MauiXaml Update="Resources\Styles\Colors.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Resources\Styles\MultiWindowView.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Resources\Styles\Styles.Default.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 	</ItemGroup>
 
 
@@ -285,7 +331,6 @@
 		<Compile Update="InteractableEditor\InteractableEditor.xaml.cs">
 			<DependentUpon>DraftStuff\InteractableEditor\InteractableEditor.xaml</DependentUpon>
 		</Compile>
-
 		<Compile Update="Setting\SettingPages\AboutSettingPage.xaml.cs">
 			<DependentUpon>AboutSettingPage.xaml</DependentUpon>
 		</Compile>
@@ -297,7 +342,7 @@
 			<DependentUpon>TestPage.xaml</DependentUpon>
 		</Compile>
 		<Compile Update="VectorContent\VectorContentEditorPage.xaml.cs">
-		  <DependentUpon>VectorContentEditorPage.xaml</DependentUpon>
+			<DependentUpon>VectorContentEditorPage.xaml</DependentUpon>
 		</Compile>
 	</ItemGroup>
 
@@ -333,23 +378,4 @@
 			<Generator>MSBuild:Compile</Generator>
 		</None>
 	</ItemGroup>
-
-
-	<!-- Platform-specific: exclude Android AppShell from Windows builds and exclude Windows AppShell from Android builds -->
-	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
-		<MauiXaml Remove="AppShell_Android.xaml" />
-		<None Remove="AppShell_Android.xaml" />
-		<MauiXaml Remove="App.Default.xaml" />
-		<None Remove="App.Default.xaml" />
-		<Compile Remove="AppShell_Android.xaml.cs" />
-	</ItemGroup>
-
-	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-		<MauiXaml Remove="AppShell_Windows.xaml" />
-		<None Remove="AppShell_Windows.xaml" />
-		<MauiXaml Remove="App.WinUI.xaml" />
-		<None Remove="App.WinUI.xaml" />
-		<Compile Remove="AppShell_Windows.xaml.cs" />
-	</ItemGroup>
-
 </Project>

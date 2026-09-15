@@ -33,6 +33,6 @@ namespace projectFrameCut.Render.Transform
             source = PluginManager.CreateVideoSource(SourcePath);
         }
 
-        public IPicture GetFrame(IPicture left, IPicture right, double progress, IComputer? computer, int targetWidth, int targetHeight) => source.GetFrame((uint)(progress * source.TotalFrames), false).Resize(targetWidth, targetHeight, true);
+        public IPicture GetFrame(IPicture left, IPicture right, double progress, IComputer? computer, int targetWidth, int targetHeight) => source.GetFrame((uint)(progress * source.TotalFrames)).Resize(targetWidth, targetHeight, true);
     }
 }

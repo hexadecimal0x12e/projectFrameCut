@@ -1,6 +1,5 @@
-﻿using Microsoft.Extensions.AI;
+using Microsoft.Extensions.AI;
 using Microsoft.Maui.Controls.Handlers;
-using Microsoft.PowerShell;
 using OpenAI.Chat;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
@@ -8,17 +7,16 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
-using projectFrameCut.ScriptEngine;
 using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
 using System;
 using System.Collections.Generic;
-using System.Management.Automation;
-using System.Management.Automation.Runspaces;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -44,7 +42,6 @@ namespace projectFrameCut.AIAssistance
                 return null;
 
             bool allowModify = SettingsManager.IsBoolSettingTrueOrDefault("Security_AICapabilities_AllowModifyProject", true);
-            bool allowScript = SettingsManager.IsBoolSettingTrueOrDefault("Security_AICapabilities_AllowScript", true);
             bool allowSkill = SettingsManager.IsBoolSettingTrueOrDefault("Security_AICapabilities_AllowSkill", true);
 
             // 创建项目级的 SkillManager
@@ -95,58 +92,35 @@ namespace projectFrameCut.AIAssistance
                 AIFunctionFactory.Create(async (string clipId, string typeName) =>
                 {
                     if (currentPage is null) return null;
-                    var pageBundle = PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectBundleProvider).FirstOrDefault(c => c.Key == typeName).Value?.Invoke();
-                    if (pageBundle is null) return null;
-                    var added = TimelineMcpLiveService.AddEffectBundle(currentPage, clipId, pageBundle);
+                    if (!EffectServices.GetAvailableEffectProviders().TryGetValue(typeName, out var factory)) return null;
+                    var provider = factory();
+                    var added = TimelineMcpLiveService.AddEffectProvider(currentPage, clipId, provider);
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
-                    return added.GetEffectBundleItem();
-                }, "add_effect_bundle_to_clip","Add an effect bundle on the selected clip."),
-                AIFunctionFactory.Create((string clipId, Guid bundleId) =>
+                    return new { added.Id, added.Name, added.TypeName };
+                }, "add_effect_provider_to_clip","Add an effect provider on the selected clip."),
+                AIFunctionFactory.Create((string clipId, Guid providerId) =>
                 {
                     if (currentPage is null) return false;
-                    var removed = TimelineMcpLiveService.RemoveEffectBundle(currentPage, clipId, bundleId);
+                    var removed = TimelineMcpLiveService.RemoveEffectProvider(currentPage, clipId, providerId);
                     handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                     return removed;
-                }, "remove_effect_bundle_from_clip","Remove an effect bundle from a clip by id."),
-                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().Select(c => c.EffectBundleProvider).FirstOrDefault(c => c.ContainsKey(Type))?[Type]?.Invoke()?.GetEffectBundleItem(), "get_effect_bundle_info","Get a specific effect bundle's information."),
-                AIFunctionFactory.Create((string effectType) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.EffectBundleProvider).FirstOrDefault(c => c.Key == effectType).Value?.Invoke()?.SettableFields, "get_effect_bundle_settable_fields","Get a specific kind of effect bundle's SettableFields."),
-                AIFunctionFactory.Create((string clipId, Guid bundleId, Dictionary<string, object> fields) =>
+                }, "remove_effect_provider_from_clip","Remove an effect provider from a clip by id."),
+                AIFunctionFactory.Create((string Type) => EffectServices.GetAvailableEffectProviders().TryGetValue(Type, out var factory) ? DescribeEffectProvider(factory()) : null, "get_effect_provider_info","Get a specific effect provider's information, including its configurable fields."),
+                AIFunctionFactory.Create((string effectType) => EffectServices.GetAvailableEffectProviders().TryGetValue(effectType, out var factory) ? factory().Fields.Keys.ToArray() : null, "get_effect_provider_settable_fields","Get a specific kind of effect provider's settable field ids."),
+                AIFunctionFactory.Create((string clipId, Guid providerId, Dictionary<string, object> fields) =>
                 {
-                    if (currentPage is null) return "No project is loaded.";
-                    if (!Guid.TryParse(clipId, out var clipGuid))
-                        return $"Invalid clip id '{clipId}'.";
-                    if (!currentPage.Clips.TryGetValue(clipGuid, out var clip))
-                        return $"Clip '{clipId}' not found.";
-                    if (clip.EffectBundles is null || !clip.EffectBundles.TryGetValue(bundleId, out var bundle))
-                        return $"Effect bundle '{bundleId}' not found on clip '{clipId}'.";
-                    if (fields is null || fields.Count == 0)
-                        return "No fields were provided.";
-                    if (bundle.SettableFields is null || bundle.SettableFields.Count == 0)
-                        return $"Effect bundle '{bundle.TypeName}' has no settable fields.";
+                    if (currentPage is null) return new[] { "No project is loaded." };
+                    if (!Guid.TryParse(clipId, out var id) || !currentPage.Clips.TryGetValue(id, out var clip))
+                        return new[] { $"Clip '{clipId}' was not found." };
+                    if (clip.EffectProviders is null || !clip.EffectProviders.TryGetValue(providerId, out var provider))
+                        return new[] { $"Effect provider '{providerId}' was not found on clip '{clipId}'." };
 
-                    var result = new List<string>();
-                    foreach (var field in fields)
-                    {
-                        if (string.IsNullOrWhiteSpace(field.Key))
-                            continue;
-                        if (!bundle.SettableFields.TryGetValue(field.Key, out var fieldDefinition))
-                        {
-                            result.Add($"Warning: Field '{field.Key}' not found on effect bundle '{bundle.TypeName}'. " +
-                                       $"Available: {string.Join(", ", bundle.SettableFields.Keys)}");
-                            continue;
-                        }
-
-                        if (bundle.HandleSettableFieldsChange(fieldDefinition, field.Value, out var feedback))
-                            result.Add($"{field.Key} = {field.Value}");
-                        else
-                            result.Add($"Warning: Failed to set field '{field.Key}' on effect bundle '{bundle.TypeName}': {feedback}");
-                    }
-
+                    var feedback = ApplyEffectProviderFields(provider, fields);
                     ClipInfoBuilder.RebuildAllEffects(clip);
                     currentPage.RefreshPropertyPanel(clip);
-                    update();
-                    return result.Count > 0 ? string.Join("\n", result) : "No fields were changed.";
-                }, "set_effect_bundle_fields","Update an existing effect bundle on a clip using its SettableFields. Provide the clip id, bundle id, and a dictionary of field id -> value. Use get_draft_info to find bundle ids and get_effect_bundle_info to discover effect types."),
+                    handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                    return feedback;
+                }, "set_effect_provider_fields","Update an existing effect provider on a clip using its Fields. Provide the clip id, provider id, and a dictionary of field id -> value. Use get_draft_info to find provider ids and get_effect_provider_info to discover effect types."),
                 AIFunctionFactory.Create(GenerateImage, "create_an_AIGC_image","Add an AI generated image to the draft. Use param Prompt to define how the picture looks like and NegativePrompt to define what not in the picture. Use param Style to define the style of this image. Use param Width and Height to define the image size (default: 1024x1024)."),
                 AIFunctionFactory.Create(GenerateVideo, "create_an_AIGC_video","Add an AI generated video to the draft. Use param Prompt to define how the video looks like and NegativePrompt to define what not in the video. Use param Style to define the style of this video."),
 
@@ -173,8 +147,6 @@ namespace projectFrameCut.AIAssistance
                     }
                 }, "browse_webpage", "Open a webpage in a rendered browser, wait for dynamic content, and return the page's content. If detailed is true, this will return a structured JSON including: title, url, text, links (array of {url, text}), and images (array of {url, alt}); else, return the page's content as plain text. Use 'detailed' when you need to programmatically process links or images rather than just read text. The user must authorize each new domain."),
 
-                AIFunctionFactory.Create(InvokeInternalPowerShell, "run_command_in_internal_pwsh", "Run a command within a integrated PowerShell Core (aka `pwsh`) scripting engine which could interact with the whole system. See your system prompt fore more rules, usages and descriptions."),
-                AIFunctionFactory.Create(ResetInternalPowerShell, "reset_internal_pwsh_environment", "Reset the internal PowerShell scripting environment. If you found issue on scripting, try this. This will clear all variables, functions, and all files in workspace, and this command cannot be undone."),
 
                 AIFunctionFactory.Create((string key, string content) =>
                 {
@@ -187,6 +159,31 @@ namespace projectFrameCut.AIAssistance
                 }, "read_memory", "Read previously stored user memories. If 'key' is provided, read that specific memory; if 'key' is not provided, read all stored memories. Use this to recall user preferences and information that were saved with 'write_memory'."),
 
             };
+
+            var projectToolPlugins = PluginManager.ProjectPluginIds
+                .Select(id => PluginManager.LoadedPlugins.GetValueOrDefault(id))
+                .OfType<IRemoteProjectPluginTools>()
+                .ToArray();
+            if (projectToolPlugins.Length > 0)
+            {
+                toolCalls.Add(AIFunctionFactory.Create(() => projectToolPlugins.SelectMany(plugin =>
+                    plugin.ToolDeclarations.Select(tool => new
+                    {
+                        plugin = PluginManager.LoadedPlugins.First(x => ReferenceEquals(x.Value, plugin)).Key,
+                        tool.Id,
+                        tool.Name,
+                        tool.Description,
+                        tool.InputSchemaJson,
+                    })).ToArray(), "project_plugin_tools_list", "List the tools supplied by plugins embedded in the current project."));
+                toolCalls.Add(AIFunctionFactory.Create(async (string pluginId, string toolId, string inputJson) =>
+                {
+                    if (!PluginManager.ProjectPluginIds.Contains(pluginId) ||
+                        PluginManager.LoadedPlugins.GetValueOrDefault(pluginId) is not IRemoteProjectPluginTools plugin)
+                        return $"Project plugin '{pluginId}' was not found.";
+                    _ = JsonDocument.Parse(inputJson);
+                    return await plugin.InvokeProjectToolAsync(toolId, inputJson);
+                }, "project_plugin_tool_invoke", "Invoke a tool supplied by a trusted plugin embedded in the current project. Discover tool ids and JSON input schemas with project_plugin_tools_list."));
+            }
 
             if (allowSkill)
             {
@@ -225,18 +222,10 @@ namespace projectFrameCut.AIAssistance
                 {
                     "add_from_assets", "add_text_clip", "set_text_clip_style_fields", "set_propertypanel_selectedTab",
                     "set_propertypanel_properties", "remove_propertypanel_properties",
-                    "move_clip", "add_effect_bundle_to_clip", "set_effect_bundle_fields", "remove_effect_bundle_from_clip",
-                    "create_an_AIGC_image", "create_an_AIGC_video"
+                    "move_clip", "add_effect_provider_to_clip", "set_effect_provider_fields", "remove_effect_provider_from_clip",
+                    "create_an_AIGC_image", "create_an_AIGC_video", "project_plugin_tool_invoke"
                 };
                 toolCalls.RemoveAll(t => t.Name != null && modifyToolNames.Contains(t.Name));
-            }
-            if (!allowScript)
-            {
-                var scriptToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    "run_command_in_internal_pwsh", "reset_internal_pwsh_environment"
-                };
-                toolCalls.RemoveAll(t => t.Name != null && scriptToolNames.Contains(t.Name));
             }
 
             return new(() => toolCalls);
@@ -248,7 +237,6 @@ namespace projectFrameCut.AIAssistance
 
             currentPage = null;
 
-            bool allowScript = SettingsManager.IsBoolSettingTrueOrDefault("Security_AICapabilities_AllowScript", true);
             bool allowSkill = SettingsManager.IsBoolSettingTrueOrDefault("Security_AICapabilities_AllowSkill", true);
 
             var skillManager = SkillManager.ForProject(null);
@@ -259,7 +247,7 @@ namespace projectFrameCut.AIAssistance
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableEffects(), "environment_get_effects","Get all effects available in the user environment.", serializerOptions),
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailablePlugins(), "environment_get_plugins","Get all plugins loaded in the user environment.", serializerOptions),
                 AIFunctionFactory.Create(() => TimelineMcpLiveService.GetAllAvailableTextStyles(), "environment_get_textstyles","Get all Text clip style providers loaded in the user environment, including their settable fields.", serializerOptions),
-                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().Select(c => c.EffectBundleProvider).FirstOrDefault(c => c.ContainsKey(Type))?[Type]?.Invoke()?.GetEffectBundleItem(), "get_effect_bundle_info","Get a specific effect bundle's information."),
+                AIFunctionFactory.Create((string Type) => EffectServices.GetAvailableEffectProviders().TryGetValue(Type, out var factory) ? DescribeEffectProvider(factory()) : null, "get_effect_provider_info","Get a specific effect provider's information, including its configurable fields."),
                 AIFunctionFactory.Create(async (string url, int maximumCharacters = 30000) =>
                     await (WebBrowsingService.Current?.BrowseAsync(url, maximumCharacters)
                         ?? Task.FromResult("Error: webpage browsing is not available in the current chat view.")),
@@ -326,93 +314,101 @@ namespace projectFrameCut.AIAssistance
             return new(() => toolCalls);
         }
 
-        static async Task<string> InvokeInternalPowerShell(string Command)
+        private static object DescribeEffectProvider(IEffectProvider provider)
         {
-            if (currentPage?.ScriptEngine is not null)
+            return new
             {
-                return await currentPage.ScriptEngine.ExecuteAsync(Command);
-            }
-            else
+                provider.TypeName,
+                provider.Name,
+                provider.FromPlugin,
+                provider.TypeOfEffect,
+                provider.Target,
+                Fields = provider.Fields.Values.Select(field => new
+                {
+                    field.Id,
+                    FieldType = field.FieldType.ToString(),
+                    CurrentValue = GetEffectProviderFieldValue(field),
+                    BindingSource = field is DynamicEffectParamField dynamicField ? dynamicField.BoundProviderId : null,
+                    field.DefaultValue,
+                    field.MinValue,
+                    field.MaxValue,
+                    field.PresetOptions,
+                    field.Remarks,
+                }).ToArray(),
+            };
+        }
+
+        private static string[] ApplyEffectProviderFields(IEffectProvider provider, IReadOnlyDictionary<string, object> values)
+        {
+            var fields = provider.Fields;
+            var feedback = new List<string>();
+            foreach (var (fieldId, rawValue) in values)
             {
-                // 创建临时 CommandFilter 并设置项目路径
-                var filter = new CommandFilter();
-                if (AppShell.instance.CurrentPage is DraftPage dp)
-                    filter.WorkingPath = dp.WorkingPath;
-
-                // 预分析：检查混淆
-                var analysis = filter.AnalyzeScript(Command);
-                if (analysis.ThreatLevel >= ThreatLevel.Critical)
+                if (!fields.TryGetValue(fieldId, out var field))
                 {
-                    return $"错误：脚本因检测到危险模式被安全策略阻止。{analysis.Summary}";
+                    feedback.Add($"Unknown field '{fieldId}' for effect provider '{provider.TypeName}'.");
+                    continue;
                 }
-                if (analysis.IsSuspicious)
-                {
-                    Logger.Log($"[AITools.CommandFilter] 脚本威胁级别: {analysis.ThreatLevel}, " +
-                               $"标记: {string.Join(", ", analysis.Flags)}");
-                }
-
-                // 提取命令参数并注入 AsyncLocal
-                var cmdParams = filter.AnalyzeCommands(Command);
-                var currentPageDraft = AppShell.instance.CurrentPage as DraftPage;
-                ScriptCore.PendingCommandParameters.Value = cmdParams;
 
                 try
                 {
-                    var auth = new PSCommandAuthorizationHelper(Guid.NewGuid().ToString())
+                    fields[fieldId] = new StaticEffectArgumentField
                     {
-                        AuthorizationHandler = currentPageDraft != null
-                            ? DraftPage.CreatePowerShellAuthorizationHandler(currentPageDraft)
-                            : null,
-                        EnhancedAuthorizationHandler = currentPageDraft != null
-                            ? DraftPage.CreateEnhancedPowerShellAuthorizationHandler(currentPageDraft)
-                            : null,
-                        CommandFilter = filter,
+                        Id = fieldId,
+                        FieldType = field.FieldType,
+                        Value = ConvertEffectProviderFieldValue(field, rawValue),
+                        DefaultValue = field.DefaultValue,
+                        MinValue = field.MinValue,
+                        MaxValue = field.MaxValue,
+                        PresetOptions = field.PresetOptions,
+                        Remarks = field.Remarks,
                     };
-
-                    // 创建自定义的 InitialSessionState，注册所有 Cmdlet
-                    var iss = InitialSessionState.CreateDefault();
-                    iss.AuthorizationManager = auth;
-
-                    // 创建与应用程序同进程的 PowerShell 运行空间，命令持久化
-                    var runspace = RunspaceFactory.CreateRunspace(iss);
-                    runspace.Open();
-                    PowerShell pwsh = PowerShell.Create(runspace);
-
-                    pwsh.AddScript(Command).AddCommand("Out-String").AddParameter("Width", 4096);
-                    var results = await pwsh.InvokeAsync();
-
-                    if (!results.Any()) //in some cases pwsh command will return nothing, like when you call command like 'cls'
-                    {
-                        return "";
-                    }
-                    var output = string.Concat(results.Select(r => r?.ToString() ?? ""));
-                    if (pwsh.HadErrors)
-                    {
-                        var errors = string.Join(Environment.NewLine,
-                            pwsh.Streams.Error.Select(e => { Log(e.Exception, "exec pwsh command", pwsh); return $"ERROR: {e}"; }));
-                        if (!string.IsNullOrEmpty(output))
-                            output += Environment.NewLine + "---" + Environment.NewLine;
-                        output += errors;
-                    }
-                    return output.TrimEnd();
+                    provider.ClearFieldBinding(fieldId);
+                    feedback.Add($"Field '{fieldId}' updated.");
                 }
-                finally
+                catch (Exception ex) when (ex is ArgumentException or FormatException or InvalidCastException or OverflowException)
                 {
-                    ScriptCore.PendingCommandParameters.Value = null;
+                    feedback.Add($"Field '{fieldId}' was not changed: {ex.Message}");
                 }
-
             }
+
+            provider.Fields = fields;
+            return feedback.Count > 0 ? feedback.ToArray() : ["No fields were supplied."];
         }
 
-        static string ResetInternalPowerShell()
+        private static object? GetEffectProviderFieldValue(IEffectArgumentField field) => field switch
         {
-            if (currentPage?.ScriptEngine is not null)
+            StaticEffectArgumentField staticField => staticField.Value,
+            DynamicEffectParamField dynamicField => dynamicField.StaticFallbackValue,
+            _ => field.GetGetter()(),
+        };
+
+        private static object ConvertEffectProviderFieldValue(IEffectArgumentField field, object? rawValue)
+        {
+            rawValue = EffectParamConvert.Normalize(rawValue);
+            var baseType = field.FieldType & (EffectArgumentFieldType)0xFFFF;
+            object converted = baseType switch
             {
-                currentPage.ScriptEngine.Reset();
-                return "Success: Internal PowerShell environment has been reset.";
+                EffectArgumentFieldType.Integer when EffectParamConvert.TryConvertToInt(rawValue, out var intValue) => intValue,
+                EffectArgumentFieldType.UnsignedInteger when EffectParamConvert.TryConvertToUShort(rawValue, out var unsignedValue) => unsignedValue,
+                EffectArgumentFieldType.Numeric when EffectParamConvert.TryConvertToFloat(rawValue, out var numericValue) => numericValue,
+                EffectArgumentFieldType.Boolean when EffectParamConvert.TryConvertToBool(rawValue, out var boolValue) => boolValue,
+                EffectArgumentFieldType.Long => Convert.ToInt64(rawValue, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.UnsignedLong => Convert.ToUInt64(rawValue, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.String => rawValue?.ToString() ?? string.Empty,
+                _ when rawValue is not null => rawValue,
+                _ => throw new ArgumentException("The value cannot be null."),
+            };
+
+            if (field.PresetOptions is { Length: > 0 }
+                && converted is string text
+                && !field.PresetOptions.Contains(text, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException($"Value must be one of: {string.Join(", ", field.PresetOptions)}.");
             }
-            return "No project is loaded, so no internal PowerShell environment to reset.";
+            return converted;
         }
+
 
         static async Task GenerateImage(string Prompt, string NegativePrompt, ImageStyle Style = ImageStyle.Natural, int Width = 1024, int Height = 1024)
         {

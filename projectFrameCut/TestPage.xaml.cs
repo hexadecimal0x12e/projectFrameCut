@@ -1,7 +1,8 @@
-﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
 using FFmpeg.AutoGen;
 using Microsoft.Maui.ApplicationModel;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
@@ -42,7 +43,6 @@ using Path = System.IO.Path;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.Render.ClipsAndTracks.Text;
-using System.Management.Automation;
 
 
 
@@ -70,13 +70,13 @@ public partial class TestPage : ContentPage
 
 #if WINDOWS
         MultiWindowItem.ContextMenuProviderGetter = new(() => new WindowsContextMenuBuilder());
-
+#endif
+#if WINDOWS || LINUX
         // AcceleratorsManager was initialized during plugin load.
-        if (projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DefaultAccelerator is null)
+        if (projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.DefaultAccelerator is null)
         {
             Log("WARNING: No ILGPU accelerator found on this device. GPU-accelerated operations will fall back to software.");
         }
-
 #endif
     }
 
@@ -162,7 +162,7 @@ public partial class TestPage : ContentPage
                         denoiseDelta.Add(dn[i + 1] - dn[i]);
                     }
                     //await DisplayAlert("Info", $"avg delta: {delta.Average()}", "ok");
-                    var p = Path.Combine(FileSystem.CacheDirectory, $"dragtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.csv");
+                    var p = Path.Combine(MauiProgram.CachePath, $"dragtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.csv");
                     StreamWriter sw = new(p, append: false);
                     sw.WriteLine("i,PositionX,DenoisedX,DeltaX,DenoisedDeltaX");
                     for (int i = 0; i < delta.Count; i++)
@@ -662,7 +662,7 @@ public partial class TestPage : ContentPage
             var f = HDRPicture16bpp.GenerateSolidColor(2560, 1440, 32767, 32767, 32767, 1, 1, 10000);
             var w = new HDRVideoWriter
             {
-                OutputPath = Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
+                OutputPath = Path.Combine(MauiProgram.CachePath, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
                 Width = 2560,
                 Height = 1440,
                 FramePerSecond = 30,
@@ -700,18 +700,18 @@ public partial class TestPage : ContentPage
                     f.Brightness[idx] = 1f;
                 }
             }
-            f.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+            f.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
 
             for (int i = 0; i < 1; i++)
             {
                 c.TextEntries = [te with { Text = $"Frame {i}" }];
-                var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, false, 16);
-                textFrame.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+                var textFrame = c.GetFrameRelativeToStartPointOfSource(0U, 2560, 1440, 16);
+                textFrame.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-textFrame-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 var t = HDRPicture16bpp.ToHDRPictureBySignal(textFrame, 5000);
                 Log(t.GetDiagnosticsInfo());
-                t.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+                t.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 var r = ClassicOverlayMixture.Default.Mix(f, t, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
-                r.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+                r.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 w.Append(r);
                 Log($"Wrote frame {i}, r:{r.GetDiagnosticsInfo()}");
             }
@@ -738,9 +738,9 @@ public partial class TestPage : ContentPage
             b = f.b,
             a = f.a
         };
-        fThrowBrightness.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fThrowBrightness.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-throwBrightness-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fNormalizeBrigtnessToRGB = f.DegradeToSDR(HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB);
-        fNormalizeBrigtnessToRGB.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fNormalizeBrigtnessToRGB.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-normalizeBrightnessToRGB-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fReplaceAlpha = new Picture16bpp(f)
         {
             r = f.r,
@@ -748,7 +748,7 @@ public partial class TestPage : ContentPage
             b = f.b,
             a = f.Brightness
         };
-        fReplaceAlpha.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fReplaceAlpha.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-replaceAlpha-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var fReplaceAlphaAndComposeMask = ClassicOverlayMixture.Default.Mix(fThrowBrightness, new Picture16bpp(f)
         {
             r = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
@@ -756,10 +756,10 @@ public partial class TestPage : ContentPage
             b = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
             a = f.Brightness.Select(c => Math.Clamp(1 - c, 0, 1)).ToArray()
         }, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
-        fReplaceAlphaAndComposeMask.SaveToPng(Path.Combine(FileSystem.CacheDirectory, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
+        fReplaceAlphaAndComposeMask.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var w = new HDRVideoWriter
         {
-            OutputPath = Path.Combine(FileSystem.CacheDirectory, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
+            OutputPath = Path.Combine(MauiProgram.CachePath, $"hdrtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4"),
             Width = 2560,
             Height = 1440,
             FramePerSecond = 30,
@@ -831,7 +831,7 @@ public partial class TestPage : ContentPage
             {
                 var src = new HDRDecoderContext(vidFile);
                 src.Initialize();
-                var frame = src.GetFrame(idx, false);
+                var frame = src.GetFrame(idx);
                 if (frame is not HDRPicture16bpp h)
                 {
                     await DisplayAlertAsync(Title, "Failed to decode HDR frame, got non-HDR picture.", "ok");
@@ -864,7 +864,7 @@ public partial class TestPage : ContentPage
             else
             {
                 var src = PluginManager.CreateVideoSource(vidFile);
-                var frame = src.GetFrame(idx, false);
+                var frame = src.GetFrame(idx);
                 LogDiagnostic(frame.GetDiagnosticsInfo());
                 PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
                 {
@@ -932,6 +932,34 @@ public partial class TestPage : ContentPage
 
     }
 
+
+    private async void ReEncodeButton_Clicked(object sender, EventArgs e)
+    {
+        var vidFile = await FileSystemService.PickFileAsync();
+        if (string.IsNullOrWhiteSpace(vidFile)) vidFile = await DisplayPromptAsync("info", "input src path");
+        if (string.IsNullOrWhiteSpace(vidFile)) return;
+        var outputPath = Path.Combine(MauiProgram.CachePath, $"reencode-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.mp4");
+        var src = PluginManager.CreateVideoSource(vidFile);
+        var dest = new VideoWriterHWAccel
+        {
+            CodecName = "libx264",
+            FramePerSecond = (int)src.Fps,
+            Width = src.Width,
+            Height = src.Height,
+            PixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P.ToString(),
+            OutputPath = outputPath
+        };
+        dest.Initialize();
+        for(uint i = 0;i < src.TotalFrames; i++)
+        {
+            Log($"{i} of {src.TotalFrames} done");
+            dest.Append(src.GetFrame(i));
+        }
+        dest.Finish();
+        dest.Dispose();
+        src.Dispose();
+    }
+
     private async void BenchmarkButton_Clicked(object sender, EventArgs e)
     {
         await Navigation.PushAsync(new BenchmarkPage());
@@ -956,7 +984,7 @@ public partial class TestPage : ContentPage
         .AddSlider("testSlider", "Test Slider:", 0, 100, 50)
         .AddSeparator(null)
         .AddCheckbox("testCheckbox", "Test Checkbox:", false)
-        .AddSwitch("testSwitch", "Test Switch:", true)
+        .AddCheckbox("testSwitch", "Test Switch:", true)
         .AddSeparator(null)
         .AddButton("testButton", "Click me!")
         .AddText(new projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders.InfoSingleLineLabel("abcdef", "ghijklm"))
@@ -1217,184 +1245,6 @@ public partial class TestPage : ContentPage
     }
     #endregion
 
-    #region scripting
-    PowerShell? pwsh = null!;
-    private void ExecteCommandButton_Clicked(object sender, EventArgs e)
-    {
-#if DEBUG
-        pwsh ??= PowerShell.Create();
-        if (!string.IsNullOrWhiteSpace(ScriptInputEntry.Text))
-        {
-            try
-            {
-                pwsh.AddScript(ScriptInputEntry.Text);
-                var results = pwsh.Invoke();
-                ScriptOutputEditor.Text += results.Select(r => r.ToString()).Aggregate((a, b) => a + Environment.NewLine + b);
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "exec pwsh command");
-                ScriptOutputEditor.Text += $"{Environment.NewLine}Error: {ex}{Environment.NewLine}";
-            }
-        }
-#else
-        ScriptOutputEditor.Text += $"This is a development stage only feature.";
-
-#endif
-    }
-    private void InvokeNativeFuncButton_Clicked(object sender, EventArgs e)
-    {
-        SysLog(SysLogPriority.Info, "Test message to test libpsl-native");
-    }
-
-
-
-    [DllImport("libpsl-native", CharSet = CharSet.Ansi, EntryPoint = "Native_SysLog")] //testing native call of pwsh
-    private static extern void SysLog(SysLogPriority priority, string message);
-
-    [Flags]
-    private enum SysLogPriority : uint
-    {
-        // Priorities enum values.
-
-        /// <summary>
-        /// System is unusable.
-        /// </summary>
-        Emergency = 0,
-
-        /// <summary>
-        /// Action must be taken immediately.
-        /// </summary>
-        Alert = 1,
-
-        /// <summary>
-        /// Critical conditions.
-        /// </summary>
-        Critical = 2,
-
-        /// <summary>
-        /// Error conditions.
-        /// </summary>
-        Error = 3,
-
-        /// <summary>
-        /// Warning conditions.
-        /// </summary>
-        Warning = 4,
-
-        /// <summary>
-        /// Normal but significant condition.
-        /// </summary>
-        Notice = 5,
-
-        /// <summary>
-        /// Informational.
-        /// </summary>
-        Info = 6,
-
-        /// <summary>
-        /// Debug-level messages.
-        /// </summary>
-        Debug = 7,
-
-        // Facility enum values.
-
-        /// <summary>
-        /// Kernel messages.
-        /// </summary>
-        Kernel = (0 << 3),
-
-        /// <summary>
-        /// Random user-level messages.
-        /// </summary>
-        User = (1 << 3),
-
-        /// <summary>
-        /// Mail system.
-        /// </summary>
-        Mail = (2 << 3),
-
-        /// <summary>
-        /// System daemons.
-        /// </summary>
-        Daemon = (3 << 3),
-
-        /// <summary>
-        /// Authorization messages.
-        /// </summary>
-        Authorization = (4 << 3),
-
-        /// <summary>
-        /// Messages generated internally by syslogd.
-        /// </summary>
-        Syslog = (5 << 3),
-
-        /// <summary>
-        /// Line printer subsystem.
-        /// </summary>
-        Lpr = (6 << 3),
-
-        /// <summary>
-        /// Network news subsystem.
-        /// </summary>
-        News = (7 << 3),
-
-        /// <summary>
-        /// UUCP subsystem.
-        /// </summary>
-        Uucp = (8 << 3),
-
-        /// <summary>
-        /// Clock daemon.
-        /// </summary>
-        Cron = (9 << 3),
-
-        /// <summary>
-        /// Security/authorization messages (private)
-        /// </summary>
-        Authpriv = (10 << 3),
-
-        /// <summary>
-        /// FTP daemon.
-        /// </summary>
-        Ftp = (11 << 3),
-
-        // Reserved for system use
-
-        /// <summary>
-        /// Reserved for local use.
-        /// </summary>
-        Local0 = (16 << 3),
-        /// <summary>
-        /// Reserved for local use.
-        /// </summary>
-        Local1 = (17 << 3),
-        /// <summary>
-        /// Reserved for local use.
-        /// </summary>
-        Local2 = (18 << 3),
-        /// <summary>
-        /// Reserved for local use.
-        /// </summary>
-        Local3 = (19 << 3),
-        /// <summary>
-        /// Reserved for local use.
-        /// </summary>
-        Local4 = (20 << 3),
-        /// <summary>
-        /// Reserved for local use.
-        /// </summary>
-        Local5 = (21 << 3),
-        /// <summary>
-        /// Reserved for local use.
-        /// </summary>
-        Local6 = (22 << 3),
-        /// <summary>
-        /// Reserved for local use.
-        /// </summary>
-        Local7 = (23 << 3),
-    }
-#endregion
 
     #region misc
 
@@ -1442,11 +1292,11 @@ public partial class TestPage : ContentPage
     {
         if (isNavPaneVisible)
         {
-            AppShell.instance.HideNavView();
+            AppShell.instance?.HideNavView();
         }
         else
         {
-            AppShell.instance.ShowNavView();
+            AppShell.instance?.ShowNavView();
         }
         isNavPaneVisible = !isNavPaneVisible;
     }
@@ -1476,6 +1326,8 @@ public partial class TestPage : ContentPage
             await DisplayAlertAsync("Error", $"Failed to render XAML: {ex}", "OK");
         }
     }
+    
+
     private async void ShowModelPageButton_Clicked(object sender, EventArgs e)
     {
         await Navigation.PushModalAsync(new ContentPage { Content = new VerticalStackLayout { Children = { new Label { Text = "This is a modal page." }, new Button { Text = "Pop", Command = new Command(async () => await Navigation.PopModalAsync()) } }, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center } });

@@ -1,4 +1,5 @@
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -18,6 +19,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
     public sealed class VideoFrameDiskCache : IDisposable
     {
         public static string? CacheBaseDir = null;
+        internal static string DefaultCacheBaseDir => Path.Combine(GlobalPluginHelper.GetCacheRoot(), "VideoFrameCache");
         /// <summary>
         /// When true (default), cached frames are compressed with GZip.
         /// Set to false to skip compression for faster I/O at the cost of more disk space.
@@ -39,7 +41,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             try
             {
                 info = VideoFrameDiskCacheManager.TouchCache(videoPath);
-                _cacheDir = Path.Combine(CacheBaseDir ?? Path.Combine(Path.GetTempPath(), "projectFrameCutVideoCache"), info.MD5);
+                _cacheDir = Path.Combine(CacheBaseDir ?? DefaultCacheBaseDir, info.MD5);
             }
             catch (Exception ex)
             {
@@ -331,7 +333,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         {
             using (_fileLock.EnterScope())
             {
-                string metadataPath = Path.Combine(VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(Path.GetTempPath(), "projectFrameCutVideoCache"), "metadata.json");
+                string metadataPath = Path.Combine(VideoFrameDiskCache.CacheBaseDir ?? VideoFrameDiskCache.DefaultCacheBaseDir, "metadata.json");
                 if (File.Exists(metadataPath))
                 {
                     try
@@ -369,7 +371,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             using (_fileLock.EnterScope())
             {
-                File.WriteAllText(Path.Combine(VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(Path.GetTempPath(), "projectFrameCutVideoCache"), "metadata.json"), JsonSerializer.Serialize(_caches));
+            var baseDir = VideoFrameDiskCache.CacheBaseDir ?? VideoFrameDiskCache.DefaultCacheBaseDir;
+                Directory.CreateDirectory(baseDir);
+                File.WriteAllText(Path.Combine(baseDir, "metadata.json"), JsonSerializer.Serialize(_caches));
             }
 
             return _caches[hash];
@@ -389,7 +393,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             using (_fileLock.EnterScope())
             {
-                File.WriteAllText(Path.Combine(VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(Path.GetTempPath(), "projectFrameCutVideoCache"), "metadata.json"), JsonSerializer.Serialize(_caches));
+            var baseDir = VideoFrameDiskCache.CacheBaseDir ?? VideoFrameDiskCache.DefaultCacheBaseDir;
+                Directory.CreateDirectory(baseDir);
+                File.WriteAllText(Path.Combine(baseDir, "metadata.json"), JsonSerializer.Serialize(_caches));
             }
         }
 
@@ -397,7 +403,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         {
             try
             {
-                var baseDir = VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(Path.GetTempPath(), "projectFrameCutVideoCache");
+            var baseDir = VideoFrameDiskCache.CacheBaseDir ?? VideoFrameDiskCache.DefaultCacheBaseDir;
                 var dir = Path.Combine(baseDir, hash);
                 try
                 {
@@ -431,7 +437,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     for (uint i = 0; i < d.TotalFrames; i++)
                     {
                         if (token.IsCancellationRequested) return;
-                        d.GetFrame(i, false).Dispose();
+                        d.GetFrame(i).Dispose();
                         progress.Report((double)i / d.TotalFrames);
                     }
                 }
@@ -445,7 +451,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         for (uint i = 0; i < s.TotalFrames; i++)
                         {
                             if (token.IsCancellationRequested) return;
-                            s.GetFrame(i, false).Dispose();
+                            s.GetFrame(i).Dispose();
                             progress.Report((double)i / s.TotalFrames);
                         }
                     }
@@ -457,7 +463,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         for (uint i = 0; i < s.TotalFrames; i++)
                         {
                             if (token.IsCancellationRequested) return;
-                            s.GetFrame(i, false).Dispose();
+                            s.GetFrame(i).Dispose();
                             progress.Report((double)i / s.TotalFrames);
                         }
                     }

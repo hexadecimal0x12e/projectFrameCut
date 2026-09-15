@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 #if WINDOWS
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
@@ -89,7 +90,7 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
                                         if (string.IsNullOrEmpty(fileName))
                                             fileName = $"dropped_{Guid.NewGuid()}";
 
-                                        var cacheDir = context.CacheDir?.AbsolutePath ?? System.IO.Path.GetTempPath();
+                                        var cacheDir = System.IO.Directory.CreateDirectory(GlobalPluginHelper.GetCacheRoot()).FullName;
                                         var dest = System.IO.Path.Combine(cacheDir, fileName);
                                         using var outStream = System.IO.File.Create(dest);
                                         inStream.CopyTo(outStream);

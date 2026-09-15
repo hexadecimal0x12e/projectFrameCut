@@ -19,11 +19,13 @@ namespace projectFrameCut.Render.Benchmark
         public int FramePerSecond { get; set; }
         public string CodecName { get; set; }
         public string PixelFormat { get; set; }
+        public long BitRate { get; set; }
 
         public uint DurationWritten => _index;
 
         public IPicture.PicturePixelMode? TargetPPB => null;
         public Dictionary<string, string>? Metadata { get; set; }
+        public bool PreferToSpeed { get; set; }
 
         public event EventHandler<IPicture>? OnFrameWrite;
 

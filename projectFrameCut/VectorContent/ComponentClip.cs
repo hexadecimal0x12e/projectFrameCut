@@ -1,4 +1,4 @@
-﻿using projectFrameCut.DraftStuff;
+using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Vector;
@@ -185,14 +185,21 @@ public partial class VectorComponentWrapperClip : IClip
 
     public int TargetY { get; set; }
 
+    public int StartingX { get; set; }
+
+    public int StartingY { get; set; }
+
     public bool ShowDefaultClipBorder { get; set; } = true;
 
     // ── Effects / source (minimal — no effects for components) ──
 
     public EffectAndMixtureJSONStructure[]? Effects { get; init; } = Array.Empty<EffectAndMixtureJSONStructure>();
+    public EffectProviderJSONStructure[]? EffectProviders { get; init; } = Array.Empty<EffectProviderJSONStructure>();
 
     [JsonIgnore]
     public IEffect[]? EffectsInstances { get; set; } = Array.Empty<IEffect>();
+    [JsonIgnore]
+    public IEffectProvider[]? EffectProvidersInstances { get; set; } = Array.Empty<IEffectProvider>();
 
     public string? FilePath
     {
@@ -365,7 +372,6 @@ public partial class VectorComponentWrapperClip : IClip
         uint frameIndex,
         int requiredWidth,
         int requiredHeight,
-        bool forceResize,
         IPicture.PicturePixelMode targetPPB)
     {
         int w = Math.Max(1, requiredWidth);
@@ -1043,7 +1049,7 @@ public class DynamicPositionProviderEffect : IContinuousClipPositionProvider
 
     public bool IsReorderable => false;
 
-    public string? BindedEffectGroupID { get; set; }
+    public string? BindedEffectProvidingSystemID { get; set; }
 
     public DynamicPositionProviderEffect(Func<uint, ClipPositionTuple> callback)
     {

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using static projectFrameCut.ApplicationAPIBase.Localize.APIBaseLocalizedResources;
 
-namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
+namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML.Spans
 {
     public partial class HyperlinkSpan : Span
     {
@@ -17,6 +17,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
             set { SetValue(UrlProperty, value); }
         }
 
+        private bool isSafeToOpen = false;
+
         public HyperlinkSpan()
         {
             TextDecorations = TextDecorations.Underline;
@@ -28,41 +30,53 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML
                 // Launcher.OpenAsync is provided by Essentials.
                 Command = new Command(async () =>
                 {
+                    var url = Url.Split(' ', StringSplitOptions.TrimEntries)[0];
                     try
                     {
-                        Element parent = this.Parent;
-                        int i = 0;
-                        for (; i <= 64; i++)
+                        if (!isSafeToOpen)
                         {
-                            if (parent is null) break;
-                            if (parent is MultiWindowItem mvi)
+                            Element parent = this.Parent;
+                            int i = 0;
+                            for (; i <= 64; i++)
                             {
-                                if (!(await mvi.DisplayAlertAsync(Localized._Warn, Localized.MarkdownToXAML_HyperlinkSpan_SureOpen(Url), Localized._OK, Localized._Cancel))) return;
-                                break;
-                            }
-                            else if (parent is ContentPage p)
-                            {
-                                if (!(await p.DisplayAlertAsync(Localized._Warn, Localized.MarkdownToXAML_HyperlinkSpan_SureOpen(Url), Localized._OK, Localized._Cancel))) return;
-                                break;
-                            }
+                                if (parent is null) break;
+                                if (parent is MultiWindowItem mvi)
+                                {
+                                    if (!(await mvi.DisplayAlertAsync(Localized._Warn, Localized.MarkdownToXAML_HyperlinkSpan_SureOpen(url), Localized._OK, Localized._Cancel))) return;
+                                    break;
+                                }
+                                else if (parent is ContentPage p)
+                                {
+                                    if (!(await p.DisplayAlertAsync(Localized._Warn, Localized.MarkdownToXAML_HyperlinkSpan_SureOpen(url), Localized._OK, Localized._Cancel))) return;
+                                    break;
+                                }
 
-                            parent = parent?.Parent;
-                        }
-                        if (i >= 63)
-                        {
-                            if (!(await (Application.Current?.Windows?[0]?.Page?.DisplayAlertAsync(Localized._Warn, Localized.MarkdownToXAML_HyperlinkSpan_SureOpen(Url), Localized._OK, Localized._Cancel) ?? Task.FromResult(true)))) return;
+                                parent = parent?.Parent;
+                            }
+                            if (i >= 63)
+                            {
+                                if (!(await (Application.Current?.Windows?[0]?.Page?.DisplayAlertAsync(Localized._Warn, Localized.MarkdownToXAML_HyperlinkSpan_SureOpen(url), Localized._OK, Localized._Cancel) ?? Task.FromResult(true)))) return;
+                            }
                         }
                     }
                     catch
                     {
-                        if (!(await (Application.Current?.Windows?[0]?.Page?.DisplayAlertAsync(Localized._Warn, Localized.MarkdownToXAML_HyperlinkSpan_SureOpen(Url), Localized._OK, Localized._Cancel) ?? Task.FromResult(true)))) return;
+                        if (!(await (Application.Current?.Windows?[0]?.Page?.DisplayAlertAsync(Localized._Warn, Localized.MarkdownToXAML_HyperlinkSpan_SureOpen(url), Localized._OK, Localized._Cancel) ?? Task.FromResult(true)))) return;
                     }
 
-                    await Launcher.OpenAsync(Url.Split(' ', StringSplitOptions.TrimEntries)[0]);
-
+                    try
+                    {
+                        await Launcher.OpenAsync(url);
+                    }
+                    catch { }
 
                 })
             });
+        }
+
+        public HyperlinkSpan(bool safeToOpen) : this()
+        {
+            isSafeToOpen = safeToOpen;
         }
     }
 }

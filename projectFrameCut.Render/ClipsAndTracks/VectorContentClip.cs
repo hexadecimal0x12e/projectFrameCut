@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Render.Effect;
@@ -40,6 +40,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
         public float FrameTime { get; init; }
 
         [JsonIgnore]
@@ -51,9 +53,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public bool ExtendToWholeDraft { get; set; }
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
 
         [JsonIgnore]
         public IEffect[]? EffectsInstances { get; set; }
+        [JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
 
         public string? FilePath { get; set; }
         public bool NeedFilePath => true;
@@ -182,7 +187,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public IPicture GetFrameRelativeToStartPointOfSource(
             uint frameIndex, int requiredWidth, int requiredHeight,
-            bool forceResize, IPicture.PicturePixelMode targetPPB)
+            IPicture.PicturePixelMode targetPPB)
         {
             var vectorPicture = GetVectorPictureRelativeToStartPointOfSource(
                 frameIndex, requiredWidth, requiredHeight);
@@ -326,12 +331,17 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
         public float FrameTime { get; init; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
         public bool ExtendToWholeDraft { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
         public string? FilePath { get; set; }
 
         public bool NeedFilePath => true;
@@ -353,7 +363,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             if (FilePath is null) throw new NullReferenceException($"PhotoClip {Id}'s source path is null.");
             Picture = SVGToVectorElement.ImportFromFile(FilePath);
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+           EffectHelper.ResolveClipEffects(this);
         }
     }
 }

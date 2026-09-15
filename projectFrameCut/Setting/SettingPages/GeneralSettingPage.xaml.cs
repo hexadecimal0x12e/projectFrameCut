@@ -78,17 +78,17 @@ public partial class GeneralSettingPage : ContentPage
             .AddPicker("ui_defaultTheme", SettingLocalizedResources.GeneralUI_DefaultTheme, themeOpts.Values.ToArray(), themeOpts[GetSetting("ui_defaultTheme", "default")])
             .AddSlider("ui_defaultWidthOfContent", SettingLocalizedResources.GeneralUI_DefaultWidthOfContent, -10, 10, PropertyPanelBuilder.DefaultWidthOfContent)
             .AddPicker("Edit_AddView_DefaultOrderOption", SettingLocalizedResources.Edit_AddView_DefaultOrderOption, OrderOptionStringMapping.Keys.ToArray(), OrderOptionStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_AddView_DefaultOrderOption", "date"), new KeyValuePair<string, string>(Localized.AssetPage_OrderBy_AddDate, "date")).Key, null)
-            .AddSwitch("render_EnableScreenSaver", SettingLocalizedResources.Render_EnableScreenSaver, IsBoolSettingTrue("render_EnableScreenSaver"), null)
+            .AddCheckbox("render_EnableScreenSaver", SettingLocalizedResources.Render_EnableScreenSaver, IsBoolSettingTrue("render_EnableScreenSaver"), null)
 #if WINDOWS
-            .AddSwitch("General_NoRebootAfterCrash", SettingLocalizedResources.General_NoRebootAfterCrash(), IsBoolSettingTrue("General_NoRebootAfterCrash"), null)
+            .AddCheckbox("General_NoRebootAfterCrash", SettingLocalizedResources.General_NoRebootAfterCrash(), IsBoolSettingTrue("General_NoRebootAfterCrash"), null)
 #endif
             .AddButton("setUISafeZone", SettingLocalizedResources.GeneralUI_SetupSafeZone)
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralCodec_Title, SettingLocalizedResources.GeneralCodec_SubTitle, 20, 12))
             .AddPicker("codec_FFmpegProvider", SettingLocalizedResources.GeneralCodec_SelectProvider, FFmpegProviderDisplayNameMapping.Keys.ToArray(), FFmpegProviderDisplayNameMapping.FirstOrDefault(c => c.Value == GetSetting("PluginProvidedFFmpeg_PluginID", "disable"), new(SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable")).Key)
-            .AddSwitch("codec_PreferredHWAccel", SettingLocalizedResources.GeneralCodec_PreferredHWAccel, IsBoolSettingTrue("codec_PreferredHWAccel"))
-            .AddSwitch("codec_EnableMemoryCache", new InfoSingleLineLabel(SettingLocalizedResources.GeneralCodec_EnableMemoryCache, SettingLocalizedResources.GeneralCodec_EnableMemoryCache_Desc), IsBoolSettingTrue("codec_EnableMemoryCache"))
-            .AddSwitch("codec_EnableDiskCache", new InfoSingleLineLabel(SettingLocalizedResources.GeneralCodec_EnableDiskCache, SettingLocalizedResources.GeneralCodec_EnableDiskCache_Desc), IsBoolSettingTrue("codec_EnableDiskCache"))
+            .AddCheckbox("codec_PreferredHWAccelDecoding", SettingLocalizedResources.GeneralCodec_PreferredHWAccelDecoding, IsBoolSettingTrue("codec_PreferredHWAccelDecoding"))
+            .AddCheckbox("codec_PreferredHWAccelEncoding", SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding, IsBoolSettingTrue("codec_PreferredHWAccelEncoding"))
+            .AddCheckbox("codec_EnableDiskCache", new InfoSingleLineLabel(SettingLocalizedResources.GeneralCodec_EnableDiskCache, SettingLocalizedResources.GeneralCodec_EnableDiskCache_Desc), IsBoolSettingTrue("codec_EnableDiskCache"))
             .AddButton(SettingLocalizedResources.GeneralCodec_ManageDiskCache, async (s, e) => await Navigation.PushAsync(new VideoCacheManagePage()))
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.General_UserData, SettingLocalizedResources.General_UserData_Subtitle, 20, 12))
@@ -416,8 +416,13 @@ public partial class GeneralSettingPage : ContentPage
                     }
                     needReboot = true;
                     goto done;
+                case "codec_PreferredHWAccelDecoding":
+                case "codec_PreferredHWAccelEncoding":
+                    WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                    needReboot = true;
+                    break;
+
                 case "codec_EnableDiskCache":
-                case "codec_EnableMemoryCache":
                 case "codec_defaultResizeProvider":
                     WriteSetting(args.Id, args.Value?.ToString() ?? "");
                     return;

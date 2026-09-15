@@ -280,6 +280,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         /// </summary>
         /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
         /// <param name="defaultValue">The default value to assign to the property identified by <paramref name="Id"/>.</param>
+        [Obsolete("Use AddCheckbox instead, which is more consistent with our UI conventions.", false)]
         public PropertyPanelBuilder AddSwitch(string Id, PropertyPanelItemLabel title, bool defaultValue, Action<Switch>? SwitchSetter = null)
         {
             var swtch = new Switch

@@ -16,7 +16,7 @@ namespace projectFrameCut.Render.Effect
         public string TypeName => "TextFadeIn";
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public bool YieldProcessStep => false;
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; }
 
         public int RelativeWidth { get; set; } = -1;
@@ -25,7 +25,7 @@ namespace projectFrameCut.Render.Effect
         public int EndPoint { get; set; }
         public bool IsScoped { get; set; }
 
-        public Dictionary<string, object> Parameters => new();
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public bool IsReorderable => false;
 
@@ -61,38 +61,34 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class TextFadeInContinuousEffectFactory : IEffectFactory
+    /// <summary>
+    /// The Render-side provider of the TextFadeIn continuous text effect.
+    /// </summary>
+    public class TextFadeInEffectProvider : EffectProviderBase
     {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "TextFadeIn";
-        public EffectTarget Target => EffectTarget.Video;
-        public List<string> ParametersNeeded => new();
-        public Dictionary<string, string> ParametersType => new();
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture };
-
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
+        public TextFadeInEffectProvider()
         {
-            if (implementType == EffectImplementType.NotSpecified)
-                return BuildWithDefaultType(parameters);
-
-            return implementType switch
-            {
-                EffectImplementType.IPicture => BuildWithType(implementType, parameters),
-                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
-            };
+            Name = "TextFadeIn";
         }
 
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
+        public override string TypeName => "TextFadeIn";
+
+        public override EffectType TypeOfEffect => EffectType.ContinuousTextEffect;
+
+        public override EffectTarget Target => EffectTarget.Text;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {
-            return BuildWithType(EffectImplementType.IPicture, parameters);
+            return Array.Empty<EffectArgumentFieldDescriptor>();
         }
 
-        private static IEffect BuildWithType(EffectImplementType implementType, Dictionary<string, object>? parameters)
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
-            return new TextFadeInContinuousEffect
-            {
-                ImplementType = implementType,
-            };
+            return [new TextFadeInContinuousEffect { ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType }];
         }
     }
 }

@@ -34,5 +34,49 @@
 	</array>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+		<string>audio</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>For transferring assets between devices, or connect to a Central Asset Server.</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>zh-Hans</string>
+		<!-- zh-CN -->
+		<string>en</string>
+		<!-- en-US -->
+		<string>zh-Hant</string>
+		<!-- zh-TW -->
+		<string>ja</string>
+		<!-- ja-JP -->
+		<string>ko</string>
+		<!-- ko-KR -->
+		<string>fr</string>
+		<!-- fr-FR -->
+		<string>ar</string>
+		<!-- ar-SA -->
+		<string>de</string>
+		<!-- de-DE -->
+		<string>es</string>
+		<!-- es-ES -->
+		<string>it</string>
+		<!-- it-IT -->
+		<string>pl</string>
+		<!-- pl-PL -->
+		<string>pt</string>
+		<!-- pt-BR -->
+		<string>ru</string>
+		<!-- ru-RU -->
+		<string>tr</string>
+		<!-- tr-TR -->
+	</array>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>zh-Hans</string>
 </dict>
 </plist>

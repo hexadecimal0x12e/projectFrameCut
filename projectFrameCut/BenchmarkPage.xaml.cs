@@ -6,15 +6,12 @@ using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
 using IPicture = projectFrameCut.Drawing.Base.IPicture;
-
-#if WINDOWS
-using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
-#endif
 
 namespace projectFrameCut;
 
@@ -45,7 +42,7 @@ public partial class BenchmarkPage : ContentPage
         {
              SettingsManager.SettingLocalizedResources.Render_GCOption_LetCLRDoGC,
              SettingsManager.SettingLocalizedResources.Render_GCOption_DoNormalCollection,
-#if WINDOWS
+#if WINDOWS || LINUX
              SettingsManager.SettingLocalizedResources.Render_GCOption_DoLOHCompression 
 #endif
         };
@@ -60,8 +57,8 @@ public partial class BenchmarkPage : ContentPage
 #elif WINDOWS
         // AcceleratorsManager was initialized during plugin load.
         // Switch to rendering mode so all configured accelerators are used for benchmarking.
-        projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.IsRendering = true;
-        if (!projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.Accelerators.Any())
+        projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.IsRendering = true;
+        if (!projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.Accelerators.Any())
             throw new InvalidDataException("No valid ILGPU accelerators found.");
 #endif
     }
@@ -187,7 +184,7 @@ public partial class BenchmarkPage : ContentPage
             ? Localized.BenchmarkPage_Status_Cancelled
             : Localized.BenchmarkPage_Status_Complete;
 
-#if WINDOWS
+#if WINDOWS || LINUX
         AcceleratorsManager.IsRendering = false;
 #endif
     }
@@ -324,7 +321,7 @@ public partial class BenchmarkPage : ContentPage
         Log($"Boost mode: {_boostMode}");
 
         // ── 设置加速器 ─────────────────────────────────────
-#if WINDOWS
+#if WINDOWS || LINUX
         AcceleratorsManager.IsRendering = true;
         if (!AcceleratorsManager.Accelerators.Any())
         {

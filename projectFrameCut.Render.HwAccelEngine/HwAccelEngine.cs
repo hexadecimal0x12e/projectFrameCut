@@ -9,9 +9,8 @@ using System.Text.Json;
 
 
 
-#if WINDOWS
+#if WINDOWS || LINUX
 using projectFrameCut.Render.WindowsRender;
-using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
 using ILGPU;
 using ILGPU.Runtime;
 #elif ANDROID
@@ -52,7 +51,7 @@ namespace projectFrameCut.Render.HwAccelEngine
 
         };
 
-#if WINDOWS
+#if WINDOWS || LINUX
         static bool? forceSync = null;
         internal static bool disableWin2DRasterizer = false;
 
@@ -212,17 +211,12 @@ namespace projectFrameCut.Render.HwAccelEngine
         }
 
 
-        Dictionary<string, Func<IEffect>> IPluginBase.EffectProvider => new Dictionary<string, Func<IEffect>> { };
-        public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory> { };
-        public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>> { };
-        public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>> { };
+        public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider => new Dictionary<string, Func<IEffectProvider>> { };
 
-        Dictionary<string, Func<string, IVideoSource>> IPluginBase.VideoSourceProvider => new Dictionary<string, Func<string, IVideoSource>> { };
+        Dictionary<string, IVideoSource> IPluginBase.VideoSourceProvider => new();
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new Dictionary<string, Func<string, string, ISoundTrack>> { };
         public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => new Dictionary<string, Func<string, IAudioSource>> { };
         public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>> { };
-        public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider => new Dictionary<string, IEffectFactory> { };
-        public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider => new Dictionary<string, IEffectFactory> { };
         public IMessagingService MessagingQueue { get; set; }
 
         public Dictionary<string, Func<Guid, Guid, RenderAPIBase.ClipAndTrack.ITransform>> TransformProvider => new Dictionary<string, Func<Guid, Guid, RenderAPIBase.ClipAndTrack.ITransform>> { };
@@ -236,7 +230,7 @@ namespace projectFrameCut.Render.HwAccelEngine
         {
             throw new NotImplementedException();
         }
-#if WINDOWS
+#if WINDOWS || LINUX
 
         bool IPluginBase.OnLoaded(out string FailedReason)
         {
@@ -247,11 +241,10 @@ namespace projectFrameCut.Render.HwAccelEngine
         }
         private void ApplyConfiguration()
         {
-            AcceleratorsManager.InitializeAccelerators();
             forceSync = Configuration.TryGetValue("forceSync", out var forceSyncStr) && bool.TryParse(forceSyncStr, out var fs) ? fs : null;
             disableWin2DRasterizer = Configuration.TryGetValue("disableWin2DRasterizer", out var disableWin2DRasterizerStr) && bool.TryParse(disableWin2DRasterizerStr, out var r) && r;
 
-            Logger.Log($"[HwAccelEnginePlugin] ILGPU Main Accel:{AcceleratorsManager.DefaultAccelerator?.Name ?? "(null)"}, Rendering accel: {string.Join(", ", AcceleratorsManager.Accelerators.Select(a => a.Name))}");
+            Logger.Log("[HwAccelEnginePlugin] ILGPU accelerators will be initialized on first use.");
             Logger.Log($"[HwAccelEnginePlugin] ForceSync: {forceSync?.ToString() ?? "default"}, Disable Win2D Rasterizer: {disableWin2DRasterizer}");
         }
 #elif ANDROID

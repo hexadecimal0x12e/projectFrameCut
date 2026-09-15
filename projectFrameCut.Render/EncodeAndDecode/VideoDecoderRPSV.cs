@@ -36,7 +36,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public bool EnableLock { get; set; }
 
         public bool StrictMode { get; set; } = true;
-        public bool EnableMemoryCache { get; set; }
         public bool EnableDiskCache { get; set; }
         
         public string TypeName => "RawPictureSequenceStreamVideoDecoderContext";
@@ -126,6 +125,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private string? _tcpHost;
         private int _tcpPort;
 
+        public RawPictureSequenceStreamVideoDecoderContext()
+        {
+        }
+
         public RawPictureSequenceStreamVideoDecoderContext(string newSource)
         {
             if (newSource is null) return;
@@ -161,10 +164,19 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
+        public RawPictureSequenceStreamVideoDecoderContext(Stream source, long length, bool leaveOpen = false)
+        {
+            if (!leaveOpen) source.Dispose();
+            throw new NotSupportedException("RawPictureSequenceStreamVideoDecoderContext only supports RPSV transports.");
+        }
+
         public IVideoSource CreateNew(string newSource)
         {
             return new RawPictureSequenceStreamVideoDecoderContext(newSource);
         }
+
+        public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) =>
+            new RawPictureSequenceStreamVideoDecoderContext(source, length, leaveOpen);
 
         public void Dispose()
         {
@@ -172,7 +184,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _disposed = true;
         }
 
-        public IPicture GetFrame(uint targetFrame, bool hasAlpha = false)
+        public IPicture GetFrame(uint targetFrame)
         {
             ObjectDisposedException.ThrowIf(_disposed, typeof(RawPictureSequenceStreamVideoDecoderContext));
 
@@ -274,12 +286,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
             if (bytesPerPixel == 1)
             {
-                return CreatePictureFromData8bpp(pixelData, response.FrameWidth, response.FrameHeight, bytesPerPixel, alphaBits, pixelDataSize, response.FrameNumber, hasAlpha);
+                return CreatePictureFromData8bpp(pixelData, response.FrameWidth, response.FrameHeight, bytesPerPixel, alphaBits, response.FrameNumber);
 
             }
             else
             {
-                return CreatePictureFromData16bpp(pixelData, response.FrameWidth, response.FrameHeight, bytesPerPixel, alphaBits, pixelDataSize, response.FrameNumber, hasAlpha);
+                return CreatePictureFromData16bpp(pixelData, response.FrameWidth, response.FrameHeight, bytesPerPixel, alphaBits, response.FrameNumber);
 
 
             }
@@ -366,8 +378,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
         private Picture16bpp CreatePictureFromData16bpp(byte[] pixelData, ushort width, ushort height,
-                                               int bytesPerPixel, byte alphaBits, int pixelDataSize,
-                                               uint frameNumber, bool hasAlpha)
+                                               int bytesPerPixel, byte alphaBits, uint frameNumber)
         {
             int totalPixels = width * height;
             var picture = new Picture16bpp(width, height)
@@ -392,7 +403,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 offset += bytesPerPixel;
             }
 
-            // Read alpha channel if present
+            // Preserve alpha when the RPSV receive mode explicitly requests it.
             if (alphaBits != 0b000)
             {
                 picture.a = new float[totalPixels];
@@ -418,8 +429,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             };
         }
         private Picture8bpp CreatePictureFromData8bpp(byte[] pixelData, ushort width, ushort height,
-                                               int bytesPerPixel, byte alphaBits, int pixelDataSize,
-                                               uint frameNumber, bool hasAlpha)
+                                               int bytesPerPixel, byte alphaBits, uint frameNumber)
         {
             int totalPixels = width * height;
             var picture = new Picture8bpp(width, height)
@@ -444,7 +454,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 offset += bytesPerPixel;
             }
 
-            // Read alpha channel if present
+            // Preserve alpha when the RPSV receive mode explicitly requests it.
             if (alphaBits != 0b000)
             {
                 picture.a = new float[totalPixels];
@@ -460,16 +470,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
             return picture;
         }
 
-
         private float ReadAlphaValue(byte[] data, int offset, byte alphaBits)
         {
             return alphaBits switch
             {
-                0b001 => data[offset] / 255f,  // 8-bit to 0..1
-                0b010 => BitConverter.ToUInt16(data, offset) / 65535f,  // 16-bit to 0..1
-                0b011 => BitConverter.ToUInt32(data, offset) / 4294967295f,  // 32-bit to 0..1
-                0b110 => (float)BitConverter.ToHalf(data, offset),  // 16-bit float
-                0b111 => BitConverter.ToSingle(data, offset),  // 32-bit float
+                0b001 => data[offset] / 255f,
+                0b010 => BitConverter.ToUInt16(data, offset) / 65535f,
+                0b011 => BitConverter.ToUInt32(data, offset) / 4294967295f,
+                0b110 => (float)BitConverter.ToHalf(data, offset),
+                0b111 => BitConverter.ToSingle(data, offset),
                 _ => throw new NotSupportedException($"Unsupported alpha mode: {alphaBits}")
             };
         }

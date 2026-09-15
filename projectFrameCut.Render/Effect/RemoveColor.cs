@@ -25,22 +25,15 @@ namespace projectFrameCut.Render.Effect
         public ushort B { get; init; }
         public ushort A { get; init; }
         public ushort Tolerance { get; init; } = 0;
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "R", R },
-            { "G", G },
-            { "B", B },
-            { "A", A },
-            { "Tolerance", Tolerance },
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string NeedComputer => "RemoveColorComputer";
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
-        public string? BindedEffectGroupID { get; set; }
+        bool IEffect.CanProcessFromCanvas => true;
+        public string? BindedEffectProvidingSystemID { get; set; }
 
 
         public static List<string> ParametersNeeded { get; } = new List<string>
@@ -76,20 +69,27 @@ namespace projectFrameCut.Render.Effect
             }
 
 
-            return new RemoveColorEffect_HwAccel
+            var effect = new RemoveColorEffect_HwAccel
             {
-                R = Convert.ToUInt16(parameters["R"]),
-                G = Convert.ToUInt16(parameters["G"]),
-                B = Convert.ToUInt16(parameters["B"]),
-                A = Convert.ToUInt16(parameters["A"]),
-                Tolerance = Convert.ToUInt16(parameters["Tolerance"]),
+                R = DynamicParam.ToUShort(parameters.GetValueOrDefault("R")),
+                G = DynamicParam.ToUShort(parameters.GetValueOrDefault("G")),
+                B = DynamicParam.ToUShort(parameters.GetValueOrDefault("B")),
+                A = DynamicParam.ToUShort(parameters.GetValueOrDefault("A")),
+                Tolerance = DynamicParam.ToUShort(parameters.GetValueOrDefault("Tolerance")),
             };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
+            ushort colorR = DynamicParam.Resolve(Parameters.GetValueOrDefault("R"), R);
+            ushort colorG = DynamicParam.Resolve(Parameters.GetValueOrDefault("G"), G);
+            ushort colorB = DynamicParam.Resolve(Parameters.GetValueOrDefault("B"), B);
+            ushort colorA = DynamicParam.Resolve(Parameters.GetValueOrDefault("A"), A);
+            ushort colorTolerance = DynamicParam.Resolve(Parameters.GetValueOrDefault("Tolerance"), Tolerance);
             var sw = Stopwatch.StartNew();
             ArgumentNullException.ThrowIfNull(computer, nameof(computer));
             float[] r, g, b, a;
@@ -143,13 +143,13 @@ namespace projectFrameCut.Render.Effect
             float[] alpha;
             if (computer is IRemoveColorComputer rcc)
             {
-                alpha = rcc.ComputeRemoveColor(r, g, b, a, (float)R, (float)G, (float)B, Tolerance, source.Pixels);
+                alpha = rcc.ComputeRemoveColor(r, g, b, a, colorR, colorG, colorB, colorTolerance, source.Pixels);
             }
             else
             {
                 var alphaArr = computer.Compute(new object[] {
                     r, g, b, a,
-                    (float)R, (float)G, (float)B, (float)Tolerance, source.Pixels
+                    (float)colorR, (float)colorG, (float)colorB, (float)colorTolerance, source.Pixels
                 });
                 if (alphaArr[0] is not float[] alphaOut) throw new InvalidOperationException("The output data from computer is invaild.");
                 alpha = alphaOut;
@@ -185,11 +185,11 @@ namespace projectFrameCut.Render.Effect
                         ProcessingFuncStackTrace = new StackTrace(true),
                         Properties = new Dictionary<string, object>
                         {
-                            { "R", R },
-                            { "G", G },
-                            { "B", B },
-                            { "A", A },
-                            { "Tolerance", Tolerance },
+                            { "R", colorR },
+                            { "G", colorG },
+                            { "B", colorB },
+                            { "A", colorA },
+                            { "Tolerance", colorTolerance },
                         }
                     }
                 }).ToList();
@@ -226,11 +226,11 @@ namespace projectFrameCut.Render.Effect
                     ProcessingFuncStackTrace = new StackTrace(true),
                     Properties = new Dictionary<string, object>
                     {
-                        { "R", R },
-                        { "G", G },
-                        { "B", B },
-                        { "A", A },
-                        { "Tolerance", Tolerance },
+                        { "R", colorR },
+                        { "G", colorG },
+                        { "B", colorB },
+                        { "A", colorA },
+                        { "Tolerance", colorTolerance },
                     },
                     Elapsed = sw.Elapsed
                 }).ToList();
@@ -243,47 +243,53 @@ namespace projectFrameCut.Render.Effect
 
     }
 
-    public class RemoveColorEffectFactory : IEffectFactory
+    /// <summary>
+    /// The Render-side provider of the RemoveColor effect.
+    /// </summary>
+    public class RemoveColorEffectProvider : EffectProviderBase
     {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "RemoveColor";
-        public EffectTarget Target => EffectTarget.Video;
-        public List<string> ParametersNeeded { get; } = new List<string>
+        public RemoveColorEffectProvider()
         {
-            "R",
-            "G",
-            "B",
-            "A",
-            "Tolerance",
-        };
+            Name = string.Empty;
+            SetField("R", (ushort)0);
+            SetField("G", (ushort)0);
+            SetField("B", (ushort)0);
+            SetField("A", ushort.MaxValue);
+            SetField("Tolerance", (ushort)1200);
+        }
 
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        public override string TypeName => "RemoveColor";
+
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {
-            {"R", "ushort" },
-            {"G", "ushort" },
-            {"B", "ushort" },
-            {"A", "ushort" },
-            {"Tolerance", "ushort" },
-        };
+            return
+            [
+                Field("Color", EffectArgumentFieldType.CustomType, """{"r":0,"g":0,"b":0,"a":1.0}""", remarks: "Color to remove (16-bit RGBA)"),
+                // The R/G/B/A components are spread from the Color field; declared here so NormalizedParameters
+                // knows their param types.
+                Field("R", EffectArgumentFieldType.UnsignedInteger, "0"),
+                Field("G", EffectArgumentFieldType.UnsignedInteger, "0"),
+                Field("B", EffectArgumentFieldType.UnsignedInteger, "0"),
+                Field("A", EffectArgumentFieldType.UnsignedInteger, "65535"),
+                Field("Tolerance", EffectArgumentFieldType.UnsignedInteger, "1200", min: "0", max: "65535")
+            ];
+        }
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.HwAcceleration };
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration];
 
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
-            if (implementType == EffectImplementType.NotSpecified)
-            {
-                return BuildWithDefaultType(parameters);
-            }
             if (implementType != EffectImplementType.HwAcceleration)
             {
                 throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.");
             }
-            return RemoveColorEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
-        }
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
-        {
-            return RemoveColorEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
+            return [RemoveColorEffect_HwAccel.FromParametersDictionary(parameters)];
         }
     }
 }

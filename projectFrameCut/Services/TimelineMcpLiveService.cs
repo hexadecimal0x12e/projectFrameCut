@@ -1,4 +1,4 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Project;
@@ -42,9 +42,9 @@ public static class TimelineMcpLiveService
 
     public static IEnumerable GetAllAvailableEffects()
     {
-        var effects = EffectServices.GetAvailableEffectBundles();
+        var effects = EffectServices.GetAvailableEffectProviders();
         var locNames = EffectServices.GetLocalizedEffectNames();
-        return effects.Select(c => c.Value()).Select((e) => new { type = e.TypeName, localizedDisplayName = locNames.TryGetValue(e.TypeName, out var name) ? name : e.TypeName, effectTarget = e.Target, typeOfEffect = e.TypeOfEffect, @params = e.ParametersType, fromPlugin = e.FromPlugin });
+        return effects.Select(c => c.Value()).Select((e) => new { type = e.TypeName, localizedDisplayName = locNames.TryGetValue(e.TypeName, out var name) ? name : e.TypeName, effectTarget = e.Target, typeOfEffect = e.TypeOfEffect, @params = e.Fields.Keys.ToArray(), fromPlugin = e.FromPlugin });
     }
 
     public static IEnumerable GetAllAvailablePlugins()
@@ -182,10 +182,17 @@ public static class TimelineMcpLiveService
         return pvd.Value?.Invoke();
     }
 
-    internal static void ApplyTextStyleFields(ITextClipStyleProvider provider, Dictionary<string, object>? fields, List<string>? resultLog = null)
+    internal static void ApplyTextStyleFields(ITextClipStyleProvider provider, Dictionary<string, object>? fields, List<string>? resultLog = null, bool strict = false)
     {
         if (fields is null || fields.Count == 0) return;
-        if (provider.SettableFields is null || provider.SettableFields.Count == 0) return;
+        if (provider.SettableFields is null || provider.SettableFields.Count == 0)
+        {
+            if (strict) throw new ArgumentException("Text style has no settable fields.");
+            return;
+        }
+        if (strict)
+            foreach (var key in fields.Keys)
+                if (!provider.SettableFields.ContainsKey(key)) throw new ArgumentException($"Unknown text style field '{key}'.");
 
         foreach (var kv in fields)
         {
@@ -202,6 +209,7 @@ public static class TimelineMcpLiveService
             }
             else
             {
+                if (strict) throw new ArgumentException($"Cannot set text style field '{kv.Key}': {feedback}");
                 resultLog?.Add($"Warning: Failed to set field '{kv.Key}' on text style '{provider.TypeName}': {feedback}");
             }
         }
@@ -278,7 +286,7 @@ public static class TimelineMcpLiveService
     /// <summary>
     /// 同步创建并添加文本 Clip。调用方必须已在 UI 线程上。
     /// </summary>
-    internal static ClipElementUI AddTextClipToPage(DraftPage page, string styleId, string text, int startPosition, int track, Dictionary<string, object>? fields = null)
+    internal static ClipElementUI AddTextClipToPage(DraftPage page, string styleId, string text, int startPosition, int track, Dictionary<string, object>? fields = null, bool strictFields = false)
     {
         var providerItem = ResolveTextStyleProvider(styleId);
         if (providerItem is null)
@@ -290,7 +298,7 @@ public static class TimelineMcpLiveService
         provider.Parameters = new Dictionary<string, string>(providerItem.Parameters);
         provider.BasicText = text;
 
-        ApplyTextStyleFields(provider, fields);
+        ApplyTextStyleFields(provider, fields, strict: strictFields);
 
         var entries = BuildTextEntriesWithFontFallback(provider);
 
@@ -363,7 +371,7 @@ public static class TimelineMcpLiveService
         return provider;
     }
 
-    internal static List<string> SetTextClipStyleFields(DraftPage page, Guid clipId, Dictionary<string, object> fields)
+    internal static List<string> SetTextClipStyleFields(DraftPage page, Guid clipId, Dictionary<string, object> fields, bool strictFields = false)
     {
         if (!page.Clips.TryGetValue(clipId, out var clip))
         {
@@ -382,7 +390,7 @@ public static class TimelineMcpLiveService
         }
 
         var resultLog = new List<string>();
-        ApplyTextStyleFields(provider, fields, resultLog);
+        ApplyTextStyleFields(provider, fields, resultLog, strict: strictFields);
 
         var entries = BuildTextEntriesWithFontFallback(provider);
 
@@ -397,7 +405,7 @@ public static class TimelineMcpLiveService
         return resultLog;
     }
 
-    public static ClipElementUI MoveClip(DraftPage page, string clipId, uint layerIndex, uint startFrame)
+    public static ClipElementUI MoveClip(DraftPage page, string clipId, uint layerIndex, uint startFrame, uint? subLayerIndex = null)
     {
         if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip))
         {
@@ -416,7 +424,7 @@ public static class TimelineMcpLiveService
         }
 
         clip.origTrack = targetTrack;
-        clip.SubLayerIndex = targetTrack;
+        clip.SubLayerIndex = checked((int)(subLayerIndex ?? layerIndex));
         clip.Clip.TranslationX = page.FrameToPixel(startFrame);
         clip.origX = clip.Clip.TranslationX;
         page.Dispatcher.Dispatch(() =>
@@ -492,12 +500,12 @@ public static class TimelineMcpLiveService
         IEffect? created = null;
         if (effect.FromPlugin == InternalPluginBase.InternalPluginBaseID)
         {
-            created = EffectHelper.EffectsEnum.TryGetValue(effect.TypeName, out var creator) ? creator() : null;
+            created = EffectHelper.EffectsProviderEnum.TryGetValue(effect.TypeName, out var creator) ? creator().RestoreInstanceWithDefaultType() : null;
         }
         else
         {
             created = PluginManager.LoadedPlugins.TryGetValue(effect.FromPlugin, out var plugin)
-                ? plugin.EffectProvider.TryGetValue(effect.TypeName, out var creator) ? creator() : null
+                ? plugin.EffectProviderProvider.TryGetValue(effect.TypeName, out var creator) ? creator().RestoreInstanceWithDefaultType() : null
                 : null;
         }
 
@@ -506,9 +514,15 @@ public static class TimelineMcpLiveService
             throw new InvalidOperationException($"Failed to create effect '{effect.TypeName}'.");
         }
 
+        if (effect.Parameters is { Count: > 0 })
+        {
+            created = created.WithParameters(effect.Parameters);
+        }
         created.Name = string.IsNullOrWhiteSpace(effect.Name) ? effect.TypeName : effect.Name;
         created.Enabled = effect.Enabled;
         created.Index = effect.Index;
+        created.RelativeWidth = effect.RelativeWidth;
+        created.RelativeHeight = effect.RelativeHeight;
 
         if (clip.Effects.ContainsKey(created.Name))
         {
@@ -539,28 +553,29 @@ public static class TimelineMcpLiveService
         return removed;
     }
 
-    public static IEffectBundle AddEffectBundle(DraftPage page, string clipId, IEffectBundle bundle)
+    public static IEffectProvider AddEffectProvider(DraftPage page, string clipId, IEffectProvider provider)
     {
         if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip))
         {
             throw new KeyNotFoundException($"Clip '{clipId}' not found.");
         }
 
-        clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
-        clip.EffectBundles[bundle.Id] = bundle;
+        clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
+        clip.EffectProviders[provider.Id] = provider;
+        EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, provider, clip.GetEffectTarget());
         ClipInfoBuilder.RebuildAllEffects(clip);
         page.RefreshPropertyPanel(clip);
-        return bundle;
+        return provider;
     }
 
-    public static bool RemoveEffectBundle(DraftPage page, string clipId, Guid bundleId)
+    public static bool RemoveEffectProvider(DraftPage page, string clipId, Guid providerId)
     {
-        if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip) || clip.EffectBundles is null)
+        if (!Guid.TryParse(clipId, out var clipGuid) || !page.Clips.TryGetValue(clipGuid, out var clip) || clip.EffectProviders is null)
         {
             return false;
         }
 
-        bool removed = clip.EffectBundles.Remove(bundleId);
+        bool removed = EffectBindingHelper.RemoveProvider(clip.EffectProviders, providerId);
         if (removed)
         {
             ClipInfoBuilder.RebuildAllEffects(clip);
@@ -569,6 +584,9 @@ public static class TimelineMcpLiveService
 
         return removed;
     }
+
+    public static bool DeleteClip(DraftPage page, Guid clipId)
+        => page.DeleteClipForService(clipId);
 
     private static void UpsertClipElement(DraftPage page, ClipElementUI element)
     {

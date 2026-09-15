@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Render.ClipsAndTracks.Text;
@@ -30,7 +30,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
         public bool NeedFilePath => false;
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
@@ -108,7 +111,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             return TextLayoutPipeline.LayoutForRender(entriesToRender, ctx, targetWidth, targetHeight);
         }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
         {
             // Guard against unreasonable render dimensions
             if (targetWidth > 0 && targetHeight > 0)
@@ -127,7 +130,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             }
 
             var rawEntries = ResolveTextEntriesForRender(frameIndex);
-            long cacheKey = BuildFrameCacheKey(targetWidth, targetHeight, forceResize, targetPPB, rawEntries);
+            long cacheKey = BuildFrameCacheKey(targetWidth, targetHeight, targetPPB, rawEntries);
 
             if (TryGetFrameFromCache(cacheKey, out var cachedFrame))
             {
@@ -164,7 +167,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public TextClip()
         {
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+           EffectHelper.ResolveClipEffects(this);
         }
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
@@ -172,7 +175,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             ClearFrameCache();
             if (!string.IsNullOrWhiteSpace(FontPath))
                 TextClipFontRegistry.AddFont(FontPath);
-            (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource) = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
+           EffectHelper.ResolveClipEffects(this);
         }
 
         public void Dispose()
@@ -186,6 +189,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get => 0; set { if (value != 0) Log("Cannot modify StartingX for a TextClip.", "warn"); } }
+        public int StartingY { get => 0; set { if (value != 0) Log("Cannot modify StartingY for a TextClip.", "warn"); } }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
         public IMixture? MixtureInstance { get; set; }
         public AntiAliasMode? ClipAntiAliasMode { get; set; }
@@ -198,12 +203,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
         /// and a structural fingerprint of the entries. Avoids serialising the
         /// entire TextEntry payload to JSON for every cache lookup.
         /// </summary>
-        private long BuildFrameCacheKey(int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB, IReadOnlyList<TextEntry> entries)
+        private long BuildFrameCacheKey(int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB, IReadOnlyList<TextEntry> entries)
         {
             var hash = new HashCode();
             hash.Add(targetWidth);
             hash.Add(targetHeight);
-            hash.Add(forceResize);
             hash.Add(targetPPB.Value);
             hash.Add(FontPath);
             hash.Add(TargetWidth);

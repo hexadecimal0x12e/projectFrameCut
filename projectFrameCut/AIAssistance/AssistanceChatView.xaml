@@ -38,6 +38,7 @@
                                 <Label Text="{Binding Message}"
                                        IsVisible="{Binding IsUserMessageWithText}"
                                        LineBreakMode="WordWrap"
+                                       StyleId="SelectableLabel"                                   
                                        TextColor="{AppThemeBinding Light=#FF222222, Dark=#FFEEEEEE}"/>
 
 
@@ -307,6 +308,13 @@
                    Placeholder="{l:Localized Key=AIAssistant_ChatView_SendHint}"
                    ReturnType="Send"
                    Completed="AIInputButton_Completed"/>
+            <Editor x:Name="AIInputEditor"
+                    Grid.Column="1"
+                    HorizontalOptions="Fill"
+                    Placeholder="{l:Localized Key=AIAssistant_ChatView_SendHint}"
+                    IsVisible="False"
+                    AutoSize="TextChanges"
+                    MaximumHeightRequest="200"/>
             <Button Grid.Column="2"
                     x:Name="AISendButton"
                     HorizontalOptions="Center"

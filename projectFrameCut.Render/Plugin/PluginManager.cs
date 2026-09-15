@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -23,7 +23,11 @@ namespace projectFrameCut.Render.Plugin
     {
         public const int CurrentPluginAPIVersion = IPluginBase.CurrentPluginAPIVersion;
         private static Dictionary<string, IPluginBase> loadedPlugins = new();
+        private static readonly HashSet<string> projectPluginIds = new(StringComparer.Ordinal);
         public static IReadOnlyDictionary<string, IPluginBase> LoadedPlugins => loadedPlugins;
+        public static IReadOnlyCollection<string> ProjectPluginIds => projectPluginIds;
+        public static Func<string, ProjectJSONStructure, CancellationToken, Task>? ProjectPluginLoader { get; set; }
+        public static Func<Task>? ProjectPluginUnloader { get; set; }
         public static bool Inited { get; private set; } = false;
 
         public static Func<string, string?>? ExtenedLocalizationGetter = null;
@@ -52,6 +56,7 @@ namespace projectFrameCut.Render.Plugin
             if (Inited) throw new InvalidOperationException("PluginManager has already been initialized.");
             Inited = true;
             loadedPlugins.Clear();
+            projectPluginIds.Clear();
             foreach (var plugin in plugins)
             {
                 if (plugin.Properties.TryGetValue("IsInternalPlugin", out var value) && bool.TryParse(value, out var result) && result) plugin.OnLoaded(out _);
@@ -72,12 +77,14 @@ namespace projectFrameCut.Render.Plugin
                 }
                 catch { }
                 loadedPlugins.Remove(id);
+                projectPluginIds.Remove(id);
                 Logger.Log($"Plugin {id} unloaded.");
             }
         }
 
         public static void ForceUnloadAll()
         {
+            Inited = false;
             foreach (var item in loadedPlugins)
             {
                 try
@@ -87,7 +94,7 @@ namespace projectFrameCut.Render.Plugin
                 catch { }
             }
             loadedPlugins.Clear();
-            Inited = false;
+            projectPluginIds.Clear();
         }
 
         public static void LoadFrom(IPluginBase pluginInstance)
@@ -116,12 +123,32 @@ namespace projectFrameCut.Render.Plugin
 
         }
 
+        public static void LoadProjectPlugin(IPluginBase pluginInstance)
+        {
+            ArgumentNullException.ThrowIfNull(pluginInstance);
+            if (pluginInstance.PluginAPIVersion != CurrentPluginAPIVersion)
+                throw new InvalidProgramException($"Plugin {pluginInstance.Name} has incompatible API version {pluginInstance.PluginAPIVersion}, expected {CurrentPluginAPIVersion}.");
+            if (loadedPlugins.ContainsKey(pluginInstance.PluginID))
+                throw new InvalidOperationException($"Plugin id '{pluginInstance.PluginID}' is already loaded.");
+            loadedPlugins.Add(pluginInstance.PluginID, pluginInstance);
+            projectPluginIds.Add(pluginInstance.PluginID);
+            Logger.Log($"Project plugin {pluginInstance.PluginID} loaded.");
+        }
+
+        public static void UnloadProjectPlugins()
+        {
+            foreach (var id in projectPluginIds.ToArray())
+                Unload(id);
+            projectPluginIds.Clear();
+        }
+
         public static void UnloadPlugin(string id)
         {
             if (loadedPlugins.TryGetValue(id, out IPluginBase? value))
             {
                 value.OnClosing();
                 loadedPlugins.Remove(id);
+                projectPluginIds.Remove(id);
                 Logger.Log($"Plugin {id} unloaded.");
             }
         }
@@ -240,27 +267,41 @@ namespace projectFrameCut.Render.Plugin
             IEffect effect = null!;
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {
+                // Strip the reserved __Binding_* keys before the factory consumes the parameters
+                // (ConvertElementDictToObjectDict would throw on undefined parameter types), then
+                // restore the original dictionary so the binding state survives for later rebuilds.
+                var originalParameters = stru.Parameters;
+                var stripped = StripBindings(originalParameters ?? new Dictionary<string, object>());
+                bool replaced = !ReferenceEquals(stripped, originalParameters);
+                if (replaced) stru.Parameters = stripped;
                 try
-                {
-                    effect = plugin.EffectCreator(stru, type);
-                }
-                catch
                 {
                     try
                     {
-                        effect = plugin.EffectCreator(stru, EffectImplementType.NotSpecified);
+                        effect = plugin.EffectCreator(stru, type);
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        Log(ex, $"Create effect {stru.Name}/{stru.TypeName}", effect);
-                        throw;
+                        try
+                        {
+                            effect = plugin.EffectCreator(stru, EffectImplementType.NotSpecified);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, $"Create effect {stru.Name}/{stru.TypeName}", effect);
+                            throw;
+                        }
                     }
+                }
+                finally
+                {
+                    if (replaced) stru.Parameters = originalParameters;
                 }
                 try
                 {
                     effect.Index = stru.Index;
                     effect.Enabled = stru.Enabled;
-                    effect.BindedEffectGroupID = stru.BindedEffectGroupID;
+                    effect.BindedEffectProvidingSystemID = stru.BindedEffectGroupID;
                     effect.Initialize();
                 }
                 catch (Exception ex)
@@ -282,10 +323,22 @@ namespace projectFrameCut.Render.Plugin
             if (stru.RelativeHeight <= 0) stru.RelativeHeight = relativeHeight;
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {
-                var effect = plugin.EffectCreator(stru);
+                var originalParameters = stru.Parameters;
+                var stripped = StripBindings(originalParameters ?? new Dictionary<string, object>());
+                bool replaced = !ReferenceEquals(stripped, originalParameters);
+                if (replaced) stru.Parameters = stripped;
+                IEffect effect;
+                try
+                {
+                    effect = plugin.EffectCreator(stru);
+                }
+                finally
+                {
+                    if (replaced) stru.Parameters = originalParameters;
+                }
                 effect.Index = stru.Index;
                 effect.Enabled = stru.Enabled;
-                effect.BindedEffectGroupID = stru.BindedEffectGroupID;
+                effect.BindedEffectProvidingSystemID = stru.BindedEffectGroupID;
                 try
                 {
                     effect.Initialize();
@@ -305,13 +358,15 @@ namespace projectFrameCut.Render.Plugin
 
         public static IVideoSource CreateVideoSource(string filePath, IPicture.PicturePixelMode? PreferredTargetPPB = null)
         {
+            if (RemoteRpcVideoSource.IsPath(filePath)) return RemoteRpcVideoSource.Open(filePath);
             if (filePath.StartsWith("#"))
             {
                 var part = filePath.Substring(1).Split(',', 2);
+                if (part.Length != 2) throw new ArgumentException($"Invalid specified video decoder path '{filePath}'.", nameof(filePath));
                 var decoder = part[0];
                 var supportedPlugin = LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(decoder));
                 if (supportedPlugin is null) throw new NotSupportedException($"The specificed video decoder '{decoder}' was not found for the file '{filePath}'.");
-                return supportedPlugin.VideoSourceProvider[decoder](null!).CreateNew(part[1]);
+                return supportedPlugin.VideoSourceProvider[decoder].CreateNew(part[1]);
 
             }
             else if (!File.Exists(filePath) && !filePath.StartsWith("#"))
@@ -462,6 +517,7 @@ namespace projectFrameCut.Render.Plugin
                 case "avc":
                 case "avc1":
                 case "x264":
+                case "libx264":
                     AddCandidate("libx264");
                     AddCandidate("h264_nvenc");
                     AddCandidate("h264_qsv");
@@ -474,6 +530,7 @@ namespace projectFrameCut.Render.Plugin
                 case "hevc":
                 case "h265/hevc":
                 case "x265":
+                case "libx265":
                     AddCandidate("libx265");
                     AddCandidate("hevc_nvenc");
                     AddCandidate("hevc_qsv");
@@ -555,6 +612,34 @@ namespace projectFrameCut.Render.Plugin
                 }
             }
             throw new NotSupportedException($"No suitable computer found for the given type '{computerType}'.");
+        }
+
+        /// <summary>
+        /// Remove all reserved <c>__Binding_</c> keys and all raw <see cref="Func{T}"/> / <see cref="Lazy{T}"/>
+        /// dynamic values from the parameters.
+        /// </summary>
+        private static Dictionary<string, object> StripBindings(Dictionary<string, object> parameters)
+        {
+            if (parameters is null) return parameters;
+            bool needsStrip = false;
+            foreach (var kvp in parameters)
+            {
+                if (kvp.Key.StartsWith(DynamicParam.BindingPrefix, StringComparison.Ordinal) || DynamicParam.IsDynamicValue(kvp.Value))
+                {
+                    needsStrip = true;
+                    break;
+                }
+            }
+            if (!needsStrip) return parameters;
+
+            var result = new Dictionary<string, object>(parameters.Count);
+            foreach (var kvp in parameters)
+            {
+                if (kvp.Key.StartsWith(DynamicParam.BindingPrefix, StringComparison.Ordinal) || DynamicParam.IsDynamicValue(kvp.Value))
+                    continue;
+                result[kvp.Key] = kvp.Value;
+            }
+            return result;
         }
     }
 }

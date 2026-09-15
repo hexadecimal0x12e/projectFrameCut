@@ -2,6 +2,7 @@
 {
     public static class GlobalPluginHelper
     {
+        private static readonly AsyncLocal<IPluginCommunicationService?> ScopedCommunicationService = new();
         /// <summary>
         /// Get the data root path for the plugin.
         /// </summary>
@@ -13,6 +14,17 @@
             }
             return Path.Combine(PluginsDataRootPath, plugin.PluginID);
         }
+        /// <summary>
+        /// Get the shared cache root.
+        /// </summary>
+        public static string GetCacheRoot()
+        {
+            if (CacheRootPath is string path)
+                return path;
+            if (PluginsDataRootPath is string pluginsPath)
+                return Path.Combine(pluginsPath, "__Cache__");
+            throw new InvalidOperationException("CacheRootPath is not initialized.");
+        }
 
         internal static string? PluginsDataRootPath
         {
@@ -22,6 +34,19 @@
                 if (PluginsDataRootPath is not null)
                 {
                     throw new InvalidOperationException("PluginsDataRootPath is already initialized.");
+                }
+                field = value;
+            }
+        }
+
+        internal static string? CacheRootPath
+        {
+            get => field;
+            set
+            {
+                if (field is not null)
+                {
+                    throw new InvalidOperationException("CacheRootPath is already initialized.");
                 }
                 field = value;
             }
@@ -59,6 +84,30 @@
             }
         } = null;
 
+        public static IPluginCommunicationService? PluginCommunicationService
+        {
+            get => ScopedCommunicationService.Value ?? field;
+            internal set
+            {
+                if (PluginCommunicationService is not null)
+                    throw new InvalidOperationException("PluginCommunicationService is already initialized.");
+                field = value;
+            }
+        } = null;
+
+        public static IDisposable BeginPluginCommunicationScope(IPluginCommunicationService service)
+        {
+            ArgumentNullException.ThrowIfNull(service);
+            var previous = ScopedCommunicationService.Value;
+            ScopedCommunicationService.Value = service;
+            return new CommunicationScope(previous);
+        }
+
+        private sealed class CommunicationScope(IPluginCommunicationService? previous) : IDisposable
+        {
+            public void Dispose() => ScopedCommunicationService.Value = previous;
+        }
+
         /// <summary>
         /// Get the specific plugin by its ID.
         /// </summary>
@@ -69,6 +118,5 @@
         }
 
     }
-#pragma warning restore CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
 
 }

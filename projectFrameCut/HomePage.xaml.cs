@@ -1,14 +1,14 @@
-﻿using LocalizedResources;
+using LocalizedResources;
 using Microsoft.Maui.Dispatching;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Platform;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.InteractableEditor;
+using projectFrameCut.IntegratedAPIServer;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -33,6 +33,8 @@ using Application = Microsoft.Maui.Controls.Application;
 using IPicture = projectFrameCut.Drawing.Base.IPicture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Drawing.Vector.ImportExport;
@@ -40,21 +42,15 @@ using projectFrameCut.Drawing.Text.Typology;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
 using Microsoft.Win32;
-
-
-
-
-
-
-
+using System.Runtime;
 
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 using Windows.ApplicationModel.UserActivities;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml.Media;
 using winui = Microsoft.UI.Xaml.Controls;
-
-
+using WinRT.Interop;
 #endif
 
 namespace projectFrameCut;
@@ -62,7 +58,24 @@ namespace projectFrameCut;
 public partial class HomePage : ContentPage
 {
     private readonly ProjectsListViewModel _viewModel;
-    private string? _pendingMcpServerAddress;
+    private string? _pendingIntegratedMcpAddress;
+    private IntegratedApiServer? _integratedApiServer;
+    private IntegratedApiBackend? _integratedApiBackend;
+    private CancellationTokenSource? _mcpClientModeCancellation;
+    private IRenderClient? _mcpClientModeClient;
+    private Task? _mcpClientModeMonitor;
+    private DraftPage? _mcpClientModePage;
+    private Guid _mcpClientModeSessionId;
+    private long _mcpClientModeRevision;
+    private string _mcpClientModeSnapshotHash = string.Empty;
+    private long _mcpClientModeDeclinedRevision = -1;
+    private string _mcpClientModeDeclinedSnapshotHash = string.Empty;
+#if WINDOWS
+    private Microsoft.UI.Xaml.Window? _mcpClientNativeWindow;
+    private AppWindow? _mcpClientAppWindow;
+    private bool _mcpClientCloseConfirmed;
+    private bool _mcpClientClosePromptOpen;
+#endif
 
     private const string CreateButtonName = "!!CreateButton!!";
 
@@ -90,6 +103,16 @@ public partial class HomePage : ContentPage
             await projectFrameCut.WinUI.App.BringToForeground();
 
 #endif
+            if (string.Equals(
+                GetCommandLineOption(MauiProgram.CmdlineArgs, "--mcpMode"),
+                "client",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                if (!HasAlreadyLaunchedFromFile) await LaunchFromFile();
+                HasAlreadyLaunchedFromFile = true;
+                return;
+            }
+
             if (VersionTracking.Default.IsFirstLaunchEver)
             {
                 SettingsManager.WriteSetting("ui_ShowWelcomePage", "True");
@@ -102,8 +125,15 @@ public partial class HomePage : ContentPage
                 return;
             }
             await ShowManyAlertsAsync();
-            if (!HasAlreadyLaunchedFromFile) await LaunchFromFile();
-            HasAlreadyLaunchedFromFile = true;
+            try
+            {
+                if (!HasAlreadyLaunchedFromFile) await LaunchFromFile();
+                HasAlreadyLaunchedFromFile = true;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "post-dialogue init", this);
+            }
 
             try
             {
@@ -144,9 +174,6 @@ public partial class HomePage : ContentPage
 
             }
             catch { }
-
-
-
 #endif
         };
 
@@ -184,10 +211,22 @@ public partial class HomePage : ContentPage
 
     }
 
-    public async Task LaunchFromFile()
+    public static void HandleAppActionLaunch(AppAction appAction)
+    {
+        App.Current?.Dispatcher?.Dispatch(async () =>
+        {
+            if (Application.Current.Windows?[0]?.Page is HomePage p)
+            {
+                await p.LaunchFromFile([appAction.Id]);
+            }
+        });
+    }
+
+    public async Task LaunchFromFile(string[]? argsOverride = null)
     {
         HasAlreadyLaunchedFromFile = true;
         var origCont = Content;
+        bool restoreContent = true;
         Dispatcher.Dispatch(() =>
         {
             Content = new ActivityIndicator
@@ -201,50 +240,110 @@ public partial class HomePage : ContentPage
         {
             string path = "";
 
-            var args = MauiProgram.CmdlineArgs.ToArray();
-            //var mcpDraftArg = args.FirstOrDefault(c => c.StartsWith("--mcpDraft=", StringComparison.OrdinalIgnoreCase));
-            var mcpServerArg = args.FirstOrDefault(c => c.StartsWith("--mcpServer=", StringComparison.OrdinalIgnoreCase));
-            if (!string.IsNullOrWhiteSpace(mcpServerArg))
+            var args = argsOverride ?? MauiProgram.CmdlineArgs.ToArray();
+            if (args.Any(c => c.Equals("--rpcAuthorize", StringComparison.OrdinalIgnoreCase)))
             {
-                _pendingMcpServerAddress = mcpServerArg.Split('=', 2)[1];
+                await AuthorizeExternalRpcClientAsync(args);
+                return;
+            }
+            bool continueRequested = args.Any(c => c.Equals("--continue", StringComparison.OrdinalIgnoreCase));
+            bool openRenderPage = args.Any(c => c.Equals("--render", StringComparison.OrdinalIgnoreCase));
+            string? mcpMode = GetCommandLineOption(args, "--mcpMode");
+            if (string.Equals(mcpMode, "client", StringComparison.OrdinalIgnoreCase))
+            {
+                string? pipeName = GetCommandLineOption(args, "--mcpPipe");
+                string? pipeToken = GetCommandLineOption(args, "--mcpToken");
+                if (string.IsNullOrWhiteSpace(pipeName) || string.IsNullOrWhiteSpace(pipeToken))
+                    throw new ArgumentException("MCP client mode requires --mcpPipe and --mcpToken.");
+
+                await StartMcpClientModeAsync(pipeName, pipeToken);
+                restoreContent = false;
+                return;
+            }
+#if WINDOWS
+            var integratedMcpArg = args.FirstOrDefault(c => c.StartsWith("--mcp=", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(integratedMcpArg))
+            {
+                _pendingIntegratedMcpAddress = integratedMcpArg.Split('=', 2)[1];
+            }
+#endif
+
+            var remoteArg = args.FirstOrDefault(c => c.StartsWith("--remote=", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(remoteArg))
+            {
+                string remoteValue = remoteArg[(remoteArg.IndexOf('=') + 1)..];
+                if (!Uri.TryCreate(remoteValue, UriKind.Absolute, out var remoteUri))
+                {
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
+                        await DisplayAlertAsync(Localized._Info, "--remote must contain an absolute HTTP or HTTPS RPC server URL.", Localized._OK);
+                    });
+                    return;
+                }
+
+                string token = GetCommandLineOption(args, "--remoteToken")
+                    ?? GetRemoteUriValue(remoteUri, "token")
+                    ?? SettingsManager.GetSetting("RemoteRpcToken", string.Empty);
+                remoteUri = RemoveRemoteCredentials(remoteUri);
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
+                        token = await DisplayPromptAsync(Localized._Info, "Input the RPC token below:", Localized._OK, Localized._Cancel);
+                    });
+                    if (string.IsNullOrWhiteSpace(token)) return;
+                }
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - Remoting @ {remoteUri.Host}";
+                    var page = await DraftPage.OpenRemoteAsync(remoteUri, token);
+                    await page.PostInit();
+                    AppShell.instance?.HideNavView();
+                    Shell.SetTabBarIsVisible(page, false);
+                    Shell.SetNavBarIsVisible(page, true);
+                    lastPage = page;
+                    await Navigation.PushAsync(page);
+                });
+                return;
             }
 
             if (string.IsNullOrWhiteSpace(path) && args.ArrayAny())
             {
-                var maybePath = args.OrderByDescending(s => s.Length).First();
-                if (maybePath.Contains(':') && maybePath.Count(c => c == ':') >= 2)
+                //Only treat non-option arguments as path candidates, so switches like --log won't be mistaken as a path.
+                var maybePath = args.Where(c => !c.StartsWith("--", StringComparison.OrdinalIgnoreCase)).OrderByDescending(s => s.Length).FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(maybePath))
                 {
-                    path = maybePath.Split(":", 2, StringSplitOptions.RemoveEmptyEntries)[1] ?? maybePath;
-                }
-                else
-                {
-                    path = maybePath;
+                    if (maybePath.Contains(':') && maybePath.Count(c => c == ':') >= 2)
+                    {
+                        path = maybePath.Split(":", 2, StringSplitOptions.RemoveEmptyEntries)[1] ?? maybePath;
+                    }
+                    else
+                    {
+                        path = maybePath;
+                    }
                 }
             }
 
-            if (Preferences.ContainsKey("LaunchedPJFCUri"))
+            if (string.IsNullOrWhiteSpace(path) && Preferences.ContainsKey("LaunchedPJFCUri"))
             {
                 path = Preferences.Get("LaunchedPJFCUri", "");
-                //if (TryParseMcpLaunchUri(path, out var draftPath, out var serverAddress))
-                //{
-                //    path = draftPath;
-                //    _pendingMcpDraftPath = draftPath;
-                //    _pendingMcpServerAddress = serverAddress;
-                //}
             }
-            //else if (TryParseMcpLaunchUri(path, out var parsedDraftPath, out var parsedServerAddress))
-            //{
-            //    path = parsedDraftPath;
-            //    _pendingMcpDraftPath = parsedDraftPath;
-            //    _pendingMcpServerAddress = parsedServerAddress;
-            //}
-            LogDiagnostic($"Launch target from cli args:{path}");
+
+            //--continue: directly resume to the last opened project when no explicit path is given.
+            if (string.IsNullOrWhiteSpace(path) && continueRequested)
+            {
+                if (SettingsManager.IsSettingExists("General_LastOpenedProject"))
+                {
+                    path = SettingsManager.GetSetting("General_LastOpenedProject", "");
+                }
+                LogDiagnostic($"--continue requested, last opened project: {path}");
+            }
             if (string.IsNullOrWhiteSpace(path)) return;
             switch (Path.GetExtension(path))
             {
                 case ".pjfc":
                     {
-                        if (File.Exists(path) || Directory.Exists(path))
+                        if (Path.Exists(path))
                         {
                             if (Directory.Exists(path))
                             {
@@ -258,8 +357,16 @@ public partial class HomePage : ContentPage
                                 }
                                 else
                                 {
-                                    await DisplayAlertAsync(Localized._Error, $"Cannot find a valid project file in the directory '{path}'.", Localized._OK);
-                                    return;
+                                    var dirName = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar));
+                                    if (File.Exists(Path.Combine(path, $"{dirName}.pjfc")))
+                                    {
+                                        path = Path.Combine(path, $"{dirName}.pjfc");
+                                    }
+                                    else
+                                    {
+                                        await DisplayAlertAsync(Localized._Error, $"Cannot find a valid project file in the directory '{path}'.", Localized._OK);
+                                        return;
+                                    }
                                 }
                             }
 
@@ -270,7 +377,15 @@ public partial class HomePage : ContentPage
                                     var draft = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(path), DraftPage.DraftJSONOption);
                                     if (draft is ProjectJSONStructure && Path.GetDirectoryName(path) is string p)
                                     {
-                                        await GoDraft(p, draft.ProjectName ?? "Project", skipAskForRecover: args.Any(c => c.StartsWith("--fromCrashHandler")));
+                                        LogDiagnostic($"Launch target from cli args:{path}");
+                                        if (openRenderPage)
+                                        {
+                                            await GoRender(p);
+                                        }
+                                        else
+                                        {
+                                            await GoDraft(p, draft.ProjectName ?? "Project", skipAskForRecover: args.Any(c => c.StartsWith("--fromCrashHandler")));
+                                        }
                                         return;
 
                                     }
@@ -311,7 +426,14 @@ public partial class HomePage : ContentPage
                         {
                             if (File.Exists(Path.Combine(path, "project.json")) || File.Exists(Path.Combine(path, "project.pjfc")))
                             {
-                                await GoDraft(path, (Path.GetDirectoryName(path) ?? "Project").Split('.')?.FirstOrDefault("Project")!, false, false);
+                                if (openRenderPage)
+                                {
+                                    await GoRender(path);
+                                }
+                                else
+                                {
+                                    await GoDraft(path, (Path.GetDirectoryName(path) ?? "Project").Split('.')?.FirstOrDefault("Project")!, false, false);
+                                }
 
                             }
                         }
@@ -333,50 +455,378 @@ public partial class HomePage : ContentPage
         }
         finally
         {
-            Dispatcher.Dispatch(() =>
+            if (restoreContent) Dispatcher.Dispatch(() =>
             {
                 Content = origCont;
             });
         }
     }
 
-    //private static bool TryParseMcpLaunchUri(string raw, out string draftPath, out string serverAddress)
-    //{
-    //    draftPath = string.Empty;
-    //    serverAddress = string.Empty;
-    //    if (string.IsNullOrWhiteSpace(raw))
-    //    {
-    //        return false;
-    //    }
+    private async Task AuthorizeExternalRpcClientAsync(string[] args)
+    {
+        try
+        {
+            var appName = GetCommandLineOption(args, "--rpcAppName") ?? "";
+            var author = GetCommandLineOption(args, "--rpcAuthor") ?? "";
+            var purpose = GetCommandLineOption(args, "--rpcPurpose") ?? "";
+            var publicKey = GetCommandLineOption(args, "--rpcPublicKey") ?? "";
+            var executable = GetCommandLineOption(args, "--rpcExecutable");
+            var launchArguments = GetCommandLineOption(args, "--rpcArguments");
+            if (string.IsNullOrWhiteSpace(appName)) throw new ArgumentException("--rpcAppName is required.");
+            if (appName.Length > 2048) throw new ArgumentException("--rpcAppName cannot exceed 2048 characters.");
+            if (string.IsNullOrWhiteSpace(author)) throw new ArgumentException("--rpcAuthor is required.");
+            if (author.Length > 2048) throw new ArgumentException("--rpcAuthor cannot exceed 2048 characters.");
+            if (string.IsNullOrWhiteSpace(purpose)) throw new ArgumentException("--rpcPurpose is required.");
+            if (purpose.Length > 2048) throw new ArgumentException("--rpcPurpose cannot exceed 2048 characters.");
+            using (var requestKey = new ExternalRpcRequest { PublicKey = publicKey }.OpenPublicKey()) { }
+            if (!string.IsNullOrWhiteSpace(executable))
+            {
+                executable = Path.GetFullPath(executable);
+                if (!File.Exists(executable)) throw new FileNotFoundException("External RPC client executable was not found.", executable);
+            }
 
-    //    if (!raw.StartsWith("pjfc:mcp?", StringComparison.OrdinalIgnoreCase))
-    //    {
-    //        return false;
-    //    }
+            var requestDirectory = Path.Combine(CLIProgram.AppDataPath, "RpcRequest");
+            var storePath = ExternalRpcAuthorizationStore.GetPath(requestDirectory);
+            var existing = ExternalRpcAuthorizationStore.Read(storePath)
+                .FirstOrDefault(c => !c.Revoked && c.PublicKey == publicKey);
+            var client = existing ?? new ExternalRpcClientAuthorization
+            {
+                AppName = appName,
+                Author = author,
+                Purpose = purpose,
+                PublicKey = publicKey,
+                PublicKeyFingerprint = ExternalRpcAuthorizationStore.Fingerprint(publicKey),
+                ExecutablePath = executable,
+                LaunchArguments = launchArguments,
+            };
+            if (existing is null)
+            {
+                var approved = await MainThread.InvokeOnMainThreadAsync(() =>
+                    DisplayAlertAsync(
+                        Localized.DraftPage_ExternalRpcAuthorization_Title(appName),
+                        Localized.DraftPage_ExternalRpcAuthorization_Presist(appName, author, purpose),
+                        Localized._Confirm, Localized._Cancel));
+                if (!approved)
+                {
+                    Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "denied" }));
+                    Environment.Exit(255);
+                    return;
+                }
+                ExternalRpcAuthorizationStore.Add(storePath, client);
+                Log($"Persistent external RPC client authorized: {client.ClientId} ({client.PublicKeyFingerprint}).");
+                Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "granted", clientId = client.ClientId }));
+                Environment.Exit(0);
+            }
+            else
+            {
+                Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "already_granted", clientId = client.ClientId }));
+                Environment.Exit(0);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "grant external RPC");
+            Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "fail", error = ex.ToString() }));
+            Environment.Exit(65535);
+        }
+    }
 
-    //    var query = raw["pjfc:mcp?".Length..];
-    //    foreach (var segment in query.Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-    //    {
-    //        var idx = segment.IndexOf('=');
-    //        if (idx <= 0)
-    //        {
-    //            continue;
-    //        }
+    private async Task StartMcpClientModeAsync(string pipeName, string pipeToken)
+    {
+        if (_mcpClientModeMonitor is not null) return;
 
-    //        var key = Uri.UnescapeDataString(segment[..idx].Replace('+', ' '));
-    //        var value = Uri.UnescapeDataString(segment[(idx + 1)..].Replace('+', ' '));
-    //        if (string.Equals(key, "draft", StringComparison.OrdinalIgnoreCase))
-    //        {
-    //            draftPath = value;
-    //        }
-    //        else if (string.Equals(key, "server", StringComparison.OrdinalIgnoreCase))
-    //        {
-    //            serverAddress = value;
-    //        }
-    //    }
+#if WINDOWS
+        EnableMcpClientCloseConfirmation();
+#endif
 
-    //    return !string.IsNullOrWhiteSpace(draftPath) && !string.IsNullOrWhiteSpace(serverAddress);
-    //}
+        MenuBarItems.Clear();
+        ToolbarItems.Clear();
+        Title = "  ";
+        Application.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} (MCP)";
+
+        var cancellation = new CancellationTokenSource();
+        string clientId = $"projectFrameCut-mcp-editor-{Guid.NewGuid():N}";
+        var transport = new NamedPipeRenderClientTransport(
+            pipeName,
+            pipeToken,
+            clientId);
+        var client = new RenderClient(transport, clientId);
+        try
+        {
+            Exception? connectionError = null;
+            for (int attempt = 0; attempt < 10; attempt++)
+            {
+                try
+                {
+                    _ = await client.GetCapabilitiesAsync(cancellation.Token);
+                    connectionError = null;
+                    break;
+                }
+                catch (Exception ex) when (ex is IOException or TimeoutException or OperationCanceledException)
+                {
+                    connectionError = ex;
+                    await Task.Delay(200, cancellation.Token);
+                }
+            }
+            if (connectionError is not null)
+                throw new IOException("Could not connect to the MCP named pipe.", connectionError);
+
+            _mcpClientModeCancellation = cancellation;
+            _mcpClientModeClient = client;
+            ShowMcpWaitingState();
+            _mcpClientModeMonitor = MonitorMcpClientModeAsync(client, cancellation.Token);
+        }
+        catch
+        {
+            cancellation.Dispose();
+            await client.DisposeAsync();
+            throw;
+        }
+    }
+
+#if WINDOWS
+    private void EnableMcpClientCloseConfirmation()
+    {
+        if (_mcpClientAppWindow is not null || Window?.Handler?.PlatformView is not Microsoft.UI.Xaml.Window nativeWindow)
+            return;
+
+        nint windowHandle = WindowNative.GetWindowHandle(nativeWindow);
+        Microsoft.UI.WindowId windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(windowHandle);
+        _mcpClientNativeWindow = nativeWindow;
+        _mcpClientAppWindow = AppWindow.GetFromWindowId(windowId);
+        _mcpClientAppWindow.Closing += OnMcpClientWindowClosing;
+    }
+
+    private async void OnMcpClientWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
+    {
+        if (_mcpClientCloseConfirmed) return;
+
+        args.Cancel = true;
+        if (_mcpClientClosePromptOpen) return;
+
+        _mcpClientClosePromptOpen = true;
+        try
+        {
+            if (!await DisplayAlertAsync(
+                Localized._Warn,
+                Localized.McpClient_CloseWarning,
+                Localized._Confirm,
+                Localized._Cancel))
+                return;
+
+            _mcpClientCloseConfirmed = true;
+            _mcpClientNativeWindow?.Close();
+        }
+        finally
+        {
+            _mcpClientClosePromptOpen = false;
+        }
+    }
+#endif
+
+    private async Task MonitorMcpClientModeAsync(IRenderClient client, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                HeadlessProjectSnapshot? snapshot = null;
+                try
+                {
+                    snapshot = await client.GetHeadlessProjectSnapshotAsync(Guid.Empty, cancellationToken);
+                }
+                catch (Exception ex) when (HasRenderErrorCode(ex, RenderErrorCode.SessionNotFound))
+                {
+                }
+
+                bool transitioned = await ApplyMcpProjectStateAsync(client, snapshot);
+                await Task.Delay(transitioned ? 500 : 5000, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Monitor MCP client mode", this);
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                ShowMcpWaitingState(Localized._ExceptionTemplate(ex));
+                await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            });
+        }
+    }
+
+    private async Task<bool> ApplyMcpProjectStateAsync(
+        IRenderClient client,
+        HeadlessProjectSnapshot? snapshot)
+    {
+        bool transitioned = true;
+        await Dispatcher.DispatchAsync(async () =>
+        {
+            DraftPage? activePage = _mcpClientModePage;
+            if (activePage is not null && !Navigation.NavigationStack.Contains(activePage))
+            {
+                _mcpClientModePage = null;
+                activePage = null;
+            }
+
+            Guid targetSessionId = snapshot?.SessionId ?? Guid.Empty;
+            bool sameSession = _mcpClientModeSessionId == targetSessionId;
+            bool sameSnapshot = sameSession && snapshot is not null &&
+                _mcpClientModeRevision == snapshot.Revision &&
+                string.Equals(_mcpClientModeSnapshotHash, snapshot.SnapshotHash, StringComparison.Ordinal);
+            if (activePage is not null && sameSnapshot)
+            {
+                transitioned = false;
+                return;
+            }
+            if (activePage is null && targetSessionId != Guid.Empty && sameSnapshot)
+            {
+                transitioned = false;
+                return;
+            }
+            if (activePage is null && snapshot is null && _mcpClientModeSessionId == Guid.Empty)
+            {
+                transitioned = false;
+                return;
+            }
+
+            bool refreshingCurrentSession = activePage is not null && sameSession && snapshot is not null;
+            if (refreshingCurrentSession && activePage!.HasUnsavedRemoteChanges)
+            {
+                bool alreadyDeclined = _mcpClientModeDeclinedRevision == snapshot!.Revision &&
+                    string.Equals(_mcpClientModeDeclinedSnapshotHash, snapshot.SnapshotHash, StringComparison.Ordinal);
+                if (alreadyDeclined)
+                {
+                    transitioned = false;
+                    return;
+                }
+
+                bool sync = await DisplayAlertAsync(
+                    Localized._Info,
+                    Localized.DraftPage_RemoteProject_ModifiedOnServer,
+                    Localized.DraftPage_RemoteProject_SyncFromServer,
+                    Localized._Cancel);
+                if (!sync)
+                {
+                    _mcpClientModeDeclinedRevision = snapshot.Revision;
+                    _mcpClientModeDeclinedSnapshotHash = snapshot.SnapshotHash;
+                    transitioned = false;
+                    return;
+                }
+            }
+
+            if (activePage is not null && !refreshingCurrentSession)
+            {
+                try
+                {
+                    if (!await activePage.PrepareForMcpProjectReplacementAsync())
+                    {
+                        transitioned = false;
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    transitioned = false;
+                    Log(ex, "Save MCP project before replacement", this);
+                    await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+                    return;
+                }
+            }
+
+            if (snapshot is null)
+            {
+                try
+                {
+                    if (activePage is not null)
+                        await activePage.CompleteMcpProjectReplacementAsync();
+                    _mcpClientModePage = null;
+                    _mcpClientModeSessionId = Guid.Empty;
+                    _mcpClientModeRevision = 0;
+                    _mcpClientModeSnapshotHash = string.Empty;
+                    _mcpClientModeDeclinedRevision = -1;
+                    _mcpClientModeDeclinedSnapshotHash = string.Empty;
+                    if (activePage is not null) await Navigation.PopToRootAsync(false);
+                    ShowMcpWaitingState();
+                }
+                catch (Exception ex)
+                {
+                    transitioned = false;
+                    Log(ex, "Close MCP project page", this);
+                    await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+                }
+                return;
+            }
+
+            try
+            {
+                RemoteProjectSession session = RemoteProjectSession.CreateNamedPipeSession(client, snapshot);
+                DraftPage page = DraftPage.CreateFromRemoteSession(session);
+                page.AllowExit = false;
+                await page.PostInit();
+                if (activePage is not null)
+                {
+                    if (refreshingCurrentSession)
+                        activePage.DetachRemoteSessionForReplacement();
+                    else
+                        await activePage.CompleteMcpProjectReplacementAsync();
+                }
+                App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {page.ProjectName} (MCP)";
+                AppShell.instance?.HideNavView();
+                Shell.SetTabBarIsVisible(page, false);
+                Shell.SetNavBarIsVisible(page, true);
+
+                if (activePage is null)
+                {
+                    await Navigation.PushAsync(page);
+                }
+                else
+                {
+                    Navigation.InsertPageBefore(page, activePage);
+                    Navigation.RemovePage(activePage);
+                }
+
+                _mcpClientModePage = page;
+                _mcpClientModeSessionId = snapshot.SessionId;
+                _mcpClientModeRevision = snapshot.Revision;
+                _mcpClientModeSnapshotHash = snapshot.SnapshotHash;
+                _mcpClientModeDeclinedRevision = -1;
+                _mcpClientModeDeclinedSnapshotHash = string.Empty;
+                lastPage = page;
+            }
+            catch (Exception ex)
+            {
+                transitioned = false;
+                Log(ex, "Open MCP project page", this);
+                await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            }
+        });
+        return transitioned;
+    }
+
+    private void ShowMcpWaitingState(string? detail = null)
+    {
+        string text = detail ?? Localized.HomePage_WaitingForMCPProject;
+        AppShell.instance?.HideNavView();
+        Content = new VerticalStackLayout
+        {
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center,
+            Spacing = 12,
+            Children =
+            {
+                new ActivityIndicator { IsRunning = true, WidthRequest = 48, HeightRequest = 48 },
+                new Label { Text = text, HorizontalTextAlignment = TextAlignment.Center },
+            },
+        };
+    }
+
+    private static bool HasRenderErrorCode(Exception exception, RenderErrorCode code)
+        => exception is RemoteRenderException remote && remote.ErrorCode == code
+            || exception.Data[nameof(RemoteError.Code)] is RenderErrorCode dataCode && dataCode == code
+            || exception.Data["RenderErrorCode"] is RenderErrorCode renderCode && renderCode == code;
 
     private async void CollectionView_SelectionChanged(object? sender, Microsoft.Maui.Controls.SelectionChangedEventArgs e)
     {
@@ -485,6 +935,8 @@ public partial class HomePage : ContentPage
             LastChanged = DateTime.Now,
             LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion,
             LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
+            LastOpenAppName = MauiProgram.AssemblyName,
+            LastOpenAppIdentifier = MauiProgram.AppIdentifier,
             PluginUsed = []
         };
 
@@ -500,6 +952,7 @@ public partial class HomePage : ContentPage
         File.WriteAllText(
             Path.Combine(draftSourcePath, "project.pjfc"),
             JsonSerializer.Serialize(ProjectInfo));
+        DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(draftSourcePath);
         await Task.Delay(1500);
         await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
 
@@ -583,12 +1036,15 @@ public partial class HomePage : ContentPage
             LastChanged = DateTime.Now,
             LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion,
             LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
+            LastOpenAppName = MauiProgram.AssemblyName,
+            LastOpenAppIdentifier = MauiProgram.AppIdentifier,
             PluginUsed = []
         };
 
         File.WriteAllText(
             Path.Combine(draftSourcePath, "project.json"),
             JsonSerializer.Serialize(ProjectInfo));
+        DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(draftSourcePath);
 
         await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
 
@@ -722,8 +1178,15 @@ public partial class HomePage : ContentPage
             project.SnapshotIDMapping = ProjectJSONStructure.RebuildSnapshotMappingFromSlots(draftSourcePath, DraftPage.DraftJSONOption);
         }
 
+        if (!await LoadProjectPluginsForProjectAsync(draftSourcePath, project))
+        {
+            await Dispatcher.DispatchAsync(async () => Content = origContent);
+            return;
+        }
+
         if (!await CheckProjectVersionCompatibility(project))
         {
+            await ProjectPluginService.UnloadProjectPluginsAsync();
             await Dispatcher.DispatchAsync(async () => Content = origContent);
             return;
         }
@@ -836,8 +1299,22 @@ public partial class HomePage : ContentPage
                     return;
                 }
             ok:
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    if (timeline.Clips.Any(c => c.EffectBundles?.Any() ?? false))
+                    {
+                        if (!await DisplayAlertAsync(Localized._Info, Localized.HomePage_GoDraft_OneWayUpdateWarn("- EffectBundle"), Localized._Confirm, Localized._Cancel))
+                        {
+                            return;
+                        }
+                    }
+                    if (!(skipAskForRecover ?? false) && timeline.Clips.Any(c => c.Effects is { Length: > 0 } && (c.Effects?.Any(d => d.IsVariableArgumentEffect) ?? false)))
+                    {
+                        await DisplayAlertAsync(Localized._Info, Localized.HomePage_GoDraft_DeprecatedFeatureWarn(IPluginBase.CurrentPluginAPIVersion + 1, "- BindableEffect"), Localized._Confirm);
+                    }
+                });
                 (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline, project);
-                ConcurrentDictionary<string, AssetItem> assetDict = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((AssetItem a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (AssetItem a) => a));
+                ConcurrentDictionary<string, AssetItem> assetDict = new(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}"));
                 Dictionary<string, AssetItem> notfounds = new();
                 foreach (var item in dict)
                 {
@@ -865,71 +1342,67 @@ public partial class HomePage : ContentPage
                         notfounds.Add(item.Value?.AssetId ?? Guid.NewGuid().ToString(), item.Value);
                     }
                 }
-                if (notfounds.Any())
-                {
-                    var notFoundStr = notfounds.Select(kv => $"- {kv.Value.Name} ({kv.Value.Path})").Aggregate((a, b) => $"{a}{Environment.NewLine}{b}");
-                    await Dispatcher.DispatchAsync(async () =>
-                    {
-                        int result = 0;
-#if WINDOWS
-                        Microsoft.UI.Xaml.Controls.ContentDialog diag = new Microsoft.UI.Xaml.Controls.ContentDialog
-                        {
-                            Title = Localized.HomePage_SourceNotFound_Title,
-                            Content = $"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}",
-                            CloseButtonText = Localized._Cancel,
-                            PrimaryButtonText = Localized.HomePage_SourceNotFound_Continue,
-                            SecondaryButtonText = Localized.HomePage_SourceNotFound_RemoveThem
-                        };
+                //                if (notfounds.Any())
+                //                {
+                //                    var notFoundStr = notfounds.Select(kv => $"- {kv.Value.Name} ({kv.Value.Path})").Aggregate((a, b) => $"{a}{Environment.NewLine}{b}");
+                //                    await Dispatcher.DispatchAsync(async () =>
+                //                    {
+                //                        int result = 0;
+                //#if WINDOWS
+                //                        Microsoft.UI.Xaml.Controls.ContentDialog diag = new Microsoft.UI.Xaml.Controls.ContentDialog
+                //                        {
+                //                            Title = Localized.HomePage_SourceNotFound_Title,
+                //                            Content = $"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}",
+                //                            CloseButtonText = Localized._Cancel,
+                //                            PrimaryButtonText = Localized.HomePage_SourceNotFound_Continue,
+                //                            SecondaryButtonText = Localized.HomePage_SourceNotFound_RemoveThem
+                //                        };
 
-                        var services = Application.Current?.Handler?.MauiContext?.Services;
-                        var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
-                        if (dialogueHelper != null)
-                        {
-                            var r = await dialogueHelper.ShowContentDialogue(diag);
-                            result = (int)r;
-                        }
-#else
-                        string[] opts = [Localized.HomePage_SourceNotFound_RemoveThem, Localized.HomePage_SourceNotFound_Continue];
+                //                        var services = Application.Current?.Handler?.MauiContext?.Services;
+                //                        var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
+                //                        if (dialogueHelper != null)
+                //                        {
+                //                            var r = await dialogueHelper.ShowContentDialogue(diag);
+                //                            result = (int)r;
+                //                        }
+                //#else
+                //                        string[] opts = [Localized.HomePage_SourceNotFound_RemoveThem, Localized.HomePage_SourceNotFound_Continue];
 
-                        var select = await DisplayActionSheetAsync($"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}", null, Localized._Cancel, opts);
-                        if (select == Localized.HomePage_SourceNotFound_RemoveThem) result = 2;
-                        else if (select == Localized.HomePage_SourceNotFound_Continue) result = 1;
-                        else result = 0;
-#endif
+                //                        var select = await DisplayActionSheetAsync($"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}", null, Localized._Cancel, opts);
+                //                        if (select == Localized.HomePage_SourceNotFound_RemoveThem) result = 2;
+                //                        else if (select == Localized.HomePage_SourceNotFound_Continue) result = 1;
+                //                        else result = 0;
+                //#endif
 
 
-                        switch (result)
-                        {
-                            case 0:
-                                {
-                                    page = null;
-                                    return;
-                                }
-                            case 1:
-                                {
-                                    break;
-                                }
-                            case 2:
-                                {
-                                    var input = await DisplayPromptAsync(Localized._Warn, Localized.HomePage_SourceNotFound_RemoveThem_Conf, Localized._OK, Localized._Cancel, "no", -1, null, null);
-                                    if (input != "yes") return;
-                                    foreach (var item in notfounds)
-                                    {
-                                        dict = new(dict.RemoveRange(dict.Where(c => c.Value.SourcePath == item.Value.Path)));
-                                        assetDict = new(assetDict.RemoveRange(assetDict.Where(c => c.Key == item.Key)));
-                                    }
+                //                        switch (result)
+                //                        {
+                //                            case 0:
+                //                                {
+                //                                    page = null;
+                //                                    return;
+                //                                }
+                //                            case 1:
+                //                                {
+                //                                    break;
+                //                                }
+                //                            case 2:
+                //                                {
+                //                                    var input = await DisplayPromptAsync(Localized._Warn, Localized.HomePage_SourceNotFound_RemoveThem_Conf, Localized._OK, Localized._Cancel, "no", -1, null, null);
+                //                                    if (input != "yes") return;
+                //                                    foreach (var item in notfounds)
+                //                                    {
+                //                                        dict = new(dict.RemoveRange(dict.Where(c => c.Value.SourcePath == item.Value.Path)));
+                //                                        assetDict = new(assetDict.RemoveRange(assetDict.Where(c => c.Key == item.Key)));
+                //                                    }
 
-                                    break;
-                                }
-                        }
-                    });
-                }
-
-                if (!SettingsManager.IsSettingExists("Edit_PreferredPopupMode"))
-                {
-                    SettingsManager.WriteSetting("Edit_PreferredPopupMode", "bottom");
-                }
+                //                                    break;
+                //                                }
+                //                        }
+                //                    });
+                //                }
                 if (!(SettingsManager.IsSettingExists("Edit_UseDynamicPreview") || SettingsManager.IsSettingExists("Edit_LiveVideoPreviewDefaultResolution"))) SettingsManager.WriteSetting("Edit_UseDynamicPreview", true.ToString());
+                var startRenderRpcTask = Task.Run(() => RenderRpcBootstrap.Initialize(draftSourcePath, false, projectName: project?.ProjectName ?? "Project"));
                 DraftPage? createdPage = null;
                 bool pageCreationCancelled = false;
                 await Dispatcher.DispatchAsync(async () =>
@@ -945,7 +1418,6 @@ public partial class HomePage : ContentPage
                                 ProjectName = project?.ProjectName ?? "?",
                                 IsReadonly = isReadonly,
                                 Denoise = SettingsManager.IsBoolSettingTrue("Edit_Denoise"),
-                                PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "bottom"),
                                 MaximumSaveSlot = SettingsManager.GetSettingAs("Edit_MaximumSaveSlot", 50, 50),
                                 AlwaysShowToolbarBtns = SettingsManager.IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons"),
                                 ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole"),
@@ -976,16 +1448,11 @@ public partial class HomePage : ContentPage
                                     p.DefaultPreviewHeight = 720;
                                 }
                             }
-#if WINDOWS
-                            // AcceleratorsManager was initialized during plugin load.
-                            // No need to re-enumerate devices here — the configuration from
-                            // accels.json (or the default first non-CPU accelerator) is already loaded.
-                            if (projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DefaultAccelerator is null)
-                            {
-                                Log("WARNING: No ILGPU accelerator found on this device. GPU-accelerated effects will be unavailable.");
-                            }
-#endif
                             await p.PostInit();
+                            //var projectPluginsItem = new MenuFlyoutItem { Text = "Project plugins" };
+                            //projectPluginsItem.Clicked += async (_, _) => await p.Navigation.PushAsync(new ProjectPluginPage(p));
+                            //p.ExtensionsMenuBar.Add(projectPluginsItem);\
+                            bool hasAddItems = false;
                             foreach (var plugin in PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>())
                             {
                                 try
@@ -993,6 +1460,7 @@ public partial class HomePage : ContentPage
                                     plugin.InjectUI(p);
                                     var name = plugin.ReadLocalizationItem("_PluginBase_Name_", Localized._LocaleId_) ?? plugin.Name;
                                     var items = plugin.GetMenuItems(p);
+                                    if (items.Any()) hasAddItems = true;
                                     var sub = new MenuFlyoutSubItem { Text = name, IsEnabled = items.Any() };
                                     items.ForEach(c => sub.Add(c));
                                     p.ExtensionsMenuBar.Add(sub);
@@ -1007,7 +1475,14 @@ public partial class HomePage : ContentPage
                                         return;
                                     }
                                 }
+
                             }
+
+                            if (!hasAddItems)
+                            {
+                                p.MenuBarItems.Remove(p.ExtensionsMenuBar);
+                            }
+
                             createdPage = p;
                             break;
                         }
@@ -1024,6 +1499,7 @@ public partial class HomePage : ContentPage
                         }
                     }
                 });
+                await startRenderRpcTask;
                 if (pageCreationCancelled)
                 {
                     page = null;
@@ -1123,6 +1599,15 @@ public partial class HomePage : ContentPage
 
         if (!cancelled && page != null && project != null)
         {
+            //Remember the last opened project so it can be resumed with the --continue command line switch.
+            try
+            {
+                SettingsManager.WriteSetting("General_LastOpenedProject", draftSourcePath);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "record last opened project", this);
+            }
 #if WINDOWS
             TryEnableCrashAutoRestart(draftSourcePath);
 #endif
@@ -1134,28 +1619,31 @@ public partial class HomePage : ContentPage
                     try
                     {
                         App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {project.ProjectName}";
-                        AppShell.instance.HideNavView();
+                        AppShell.instance?.HideNavView();
                         Shell.SetTabBarIsVisible(page, false);
                         Shell.SetNavBarIsVisible(page, true);
                         lastPage = page;
                         await Navigation.PushAsync(page);
-                        if (!string.IsNullOrWhiteSpace(_pendingMcpServerAddress))
+#if WINDOWS
+                        if (!string.IsNullOrWhiteSpace(_pendingIntegratedMcpAddress))
                         {
+                            string address = _pendingIntegratedMcpAddress;
+                            _pendingIntegratedMcpAddress = null;
                             try
                             {
-                                await McpClientLinkService.Shared.ConnectAsync(page, draftSourcePath, _pendingMcpServerAddress);
-                                page.SetStatusText($"MCP linked: {_pendingMcpServerAddress}");
+                                await StartIntegratedMcpServerAsync(page, address);
+                                page.SetStatusText($"Integrated MCP server: {address.TrimEnd('/')}/mcp");
                             }
-                            catch (Exception linkEx)
+                            catch (Exception serverEx)
                             {
-                                Log(linkEx, "connect mcp client link", this);
-                                await DisplayAlertAsync(Localized._Warn, $"Failed to connect MCP server.\r\n{linkEx.Message}", Localized._OK);
-                            }
-                            finally
-                            {
-                                _pendingMcpServerAddress = null;
+                                Log(serverEx, "start integrated mcp server", this);
+                                await DisplayAlertAsync(
+                                    Localized._Warn,
+                                    $"Failed to start the integrated MCP server.\r\n{serverEx.Message}",
+                                    Localized._OK);
                             }
                         }
+#endif
                     }
                     catch (Exception ex)
                     {
@@ -1173,6 +1661,10 @@ public partial class HomePage : ContentPage
                     await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_FailByException(ex), "OK");
                 }
             });
+        }
+        else
+        {
+            await ProjectPluginService.UnloadProjectPluginsAsync();
         }
     }
 
@@ -1193,17 +1685,130 @@ public partial class HomePage : ContentPage
     }
 #endif
 
+    private async Task StartIntegratedMcpServerAsync(DraftPage page, string address)
+    {
+        if (!Uri.TryCreate(address, UriKind.Absolute, out var listenUri))
+        {
+            throw new ArgumentException("--mcp must contain an absolute HTTP or HTTPS URL.", nameof(address));
+        }
+
+        await StopIntegratedMcpServerAsync();
+
+        var backend = new IntegratedApiBackend(page);
+        var server = new IntegratedApiServer();
+        string? transportWarning = null;
+        try
+        {
+            await server.StartAsync(
+                new IntegratedApiServerOptions
+                {
+                    ListenUri = listenUri,
+                    WarningSink = warning =>
+                    {
+                        transportWarning = warning;
+                        Log(warning, "warn");
+                    },
+                },
+                backend);
+        }
+        catch
+        {
+            await server.DisposeAsync();
+            await backend.DisposeAsync();
+            throw;
+        }
+
+        _integratedApiBackend = backend;
+        _integratedApiServer = server;
+        if (!string.IsNullOrWhiteSpace(transportWarning))
+        {
+            await DisplayAlertAsync(Localized._Warn, transportWarning, Localized._OK);
+        }
+    }
+
+    private static string? GetCommandLineOption(IEnumerable<string> args, string optionName)
+    {
+        string prefix = optionName + "=";
+        string? value = args.FirstOrDefault(arg => arg.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+        return value is null ? null : value[prefix.Length..];
+    }
+
+    private static string? GetRemoteUriValue(Uri uri, string key)
+    {
+        foreach (string part in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string[] pair = part.Split('=', 2);
+            if (pair.Length == 2 && pair[0].Equals(key, StringComparison.OrdinalIgnoreCase))
+                return Uri.UnescapeDataString(pair[1].Replace('+', ' '));
+        }
+
+        return string.IsNullOrWhiteSpace(uri.UserInfo)
+            ? null
+            : Uri.UnescapeDataString(uri.UserInfo);
+    }
+
+    private static Uri RemoveRemoteCredentials(Uri uri)
+    {
+        var builder = new UriBuilder(uri)
+        {
+            UserName = string.Empty,
+            Password = string.Empty,
+        };
+        var query = uri.Query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Where(part => !part.StartsWith("token=", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        builder.Query = string.Join('&', query);
+        return builder.Uri;
+    }
+
+    private async Task StopIntegratedMcpServerAsync()
+    {
+        var server = _integratedApiServer;
+        var backend = _integratedApiBackend;
+        _integratedApiServer = null;
+        _integratedApiBackend = null;
+
+        if (server is not null)
+        {
+            try
+            {
+                await server.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "stop integrated mcp server", this);
+            }
+        }
+
+        if (backend is not null)
+        {
+            await backend.DisposeAsync();
+        }
+    }
 #if WINDOWS
     UserActivitySession? _previousSession;
 #endif
-
     DraftPage? lastPage = null;
+    private bool _renderRecoveryAttempted;
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        _ = McpClientLinkService.Shared.DisconnectAsync();
-        Environment.CurrentDirectory = MauiProgram.DataPath;
+#if WINDOWS
+        await StopIntegratedMcpServerAsync();
+#endif
+        App.Current?.Windows?[0]?.Title = Localized.AppBrand;
+
+        try
+        {
+            Environment.CurrentDirectory = MauiProgram.DataPath;
+        }
+        catch
+        {
+            // iOS blocks chdir() through the app container root.
+            // We use absolute paths throughout, so CurrentDirectory is unnecessary.
+        }
         try
         {
             if (lastPage is not null && Window is not null)
@@ -1212,19 +1817,38 @@ public partial class HomePage : ContentPage
             }
         }
         catch { }
-        if (Directory.GetDirectories(Path.Combine(MauiProgram.DataPath, "My Drafts"), "*").Length == 0)
+        try
         {
-            NoContentLayout.IsVisible = true;
-        }
-        else
-        {
-            NoContentLayout.IsVisible = false;
-            await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
-            if (_viewModel.LoadFailed)
+            if (Directory.GetDirectories(Path.Combine(MauiProgram.DataPath, "My Drafts"), "*").Length == 0)
             {
-                await DisplayAlertAsync(Localized._Info, Localized.HomePage_DraftLoadFailed(), Localized._OK);
-
+                NoContentLayout.IsVisible = true;
             }
+            else
+            {
+                NoContentLayout.IsVisible = false;
+                await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+                if (_viewModel.LoadFailed)
+                {
+                    await DisplayAlertAsync(Localized._Info, Localized.HomePage_DraftLoadFailed(), Localized._OK);
+
+                }
+                await TryRestoreActiveRenderAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            // iOS 17+ sandbox: stat on container root returns EPERM.
+            Log(ex, "load draft list", this);
+            NoContentLayout.IsVisible = true; // safe fallback
+        }
+
+        try
+        {
+            DynamicPreview.DiskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "set DiskCache root", this);
         }
 
 #if WINDOWS
@@ -1239,15 +1863,36 @@ public partial class HomePage : ContentPage
         }
         catch { }
 #elif iDevices
-        if (OperatingSystem.IsMacCatalyst())
-        {
-            AppShell_MacCatalyst.instance.ShowNavView();
-        }
+
 #endif
+    }
 
-        VideoClipDynamicPreviewProvider.DiskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "perClip");
-        DynamicPreview.DiskCacheRoot = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
+    private async Task TryRestoreActiveRenderAsync()
+    {
+        if (_renderRecoveryAttempted || !RenderRpcBootstrap.SupportsCliRenderProcess) return;
+        _renderRecoveryAttempted = true;
 
+        foreach (var project in _viewModel.Projects.ToArray())
+        {
+            try
+            {
+                if (!RenderRpcBootstrap.TryReconnectCliRender(project._projectPath, out var jobId)) continue;
+                var job = await RenderRpcBootstrap.Client.GetJobStatusAsync(jobId);
+                if (job.State is RenderJobState.Queued or RenderJobState.Running)
+                {
+                    await GoRender(project);
+                    return;
+                }
+
+                try { await RenderRpcBootstrap.Client.CloseProjectAsync(Guid.Empty); } catch { }
+                await RenderRpcBootstrap.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Restore background render after application restart", this);
+                try { await RenderRpcBootstrap.DisposeAsync(); } catch { }
+            }
+        }
     }
 
     protected override void OnNavigatedTo(NavigatedToEventArgs args)
@@ -1355,7 +2000,7 @@ public partial class HomePage : ContentPage
         {
             await DisplayAlertAsync(Localized._Warn, Localized.HomePage_FFmpegFailedLoadWarn(MauiProgram.ffmpegFailMessage), Localized._OK);
         }
-
+#if !iDevices
         try
         {
             if (File.Exists(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt")) && !Directory.Exists(File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"))))
@@ -1365,6 +2010,7 @@ public partial class HomePage : ContentPage
             }
         }
         catch { }
+#endif
         MainSettingsPage.SyncSettingToModules();
 #if WINDOWS
         if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
@@ -1403,6 +2049,7 @@ public partial class HomePage : ContentPage
 
             if (Directory.Exists(pvm._projectPath))
             {
+                ClearReadOnlyAttributes(pvm._projectPath);
                 Directory.Delete(pvm._projectPath, true);
             }
             await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
@@ -1440,7 +2087,7 @@ public partial class HomePage : ContentPage
             HeightRequest = 200
         };
         var fileName = $"{new string(vmItem.Name.Select(s => char.IsAsciiLetterOrDigit(s) ? s : '_').ToArray())}_{Guid.NewGuid()}.pjfc";
-        var tmpPath = Path.Combine(FileSystem.CacheDirectory, fileName);
+        var tmpPath = Path.Combine(MauiProgram.CachePath, fileName);
         await Task.Run(() =>
         {
             ZipFile.CreateFromDirectory(vmItem._projectPath, tmpPath, CompressionLevel.SmallestSize, includeBaseDirectory: false);
@@ -1486,22 +2133,30 @@ public partial class HomePage : ContentPage
 
 
     private async Task GoRender(ProjectsViewModel vmItem)
+        => await GoRender(vmItem._projectPath);
+
+    private async Task GoRender(string draftSourcePath)
     {
         try
         {
-            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(vmItem._projectPath, "project.pjfc")), DraftPage.DraftJSONOption);
-            var tml = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(vmItem._projectPath, "timeline.json")), DraftPage.DraftJSONOption);
+            string projectPath = File.Exists(Path.Combine(draftSourcePath, "project.pjfc"))
+                ? Path.Combine(draftSourcePath, "project.pjfc")
+                : Path.Combine(draftSourcePath, "project.json");
+            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(projectPath), DraftPage.DraftJSONOption);
+            var tml = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(draftSourcePath, "timeline.json")), DraftPage.DraftJSONOption);
             if (tml is null || project is null)
             {
                 await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
                 return;
             }
+            if (!await LoadProjectPluginsForProjectAsync(draftSourcePath, project)) return;
             (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(tml, project);
-            var draftPage = new DraftPage(project ?? new ProjectJSONStructure(), dict, new(), trackCount, vmItem._projectPath, project?.ProjectName ?? "?", false);
+            var draftPage = new DraftPage(project, dict, new(), trackCount, draftSourcePath, project.ProjectName ?? "?", false);
             var draft = DraftImportAndExportHelper.ExportFromDraftPage(draftPage, true, false);
-            var renderPage = new RenderPage(vmItem._projectPath, tml.Duration, project, draft);
+            var renderPage = new RenderPage(draftSourcePath, tml.Duration, project, draft);
             await Dispatcher.DispatchAsync(async () =>
             {
+                App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {project.ProjectName}";
                 Shell.SetTabBarIsVisible(renderPage, false);
                 Shell.SetNavBarIsVisible(renderPage, true);
 #if WINDOWS
@@ -1514,11 +2169,34 @@ public partial class HomePage : ContentPage
         }
         catch (Exception ex)
         {
-            Log(ex, "get project info", this);
+            await ProjectPluginService.UnloadProjectPluginsAsync();
+            Log(ex, "open render page", this);
             await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n({ex.Message})", Localized._OK);
             return;
         }
 
+    }
+
+    private async Task<bool> LoadProjectPluginsForProjectAsync(string projectRoot, ProjectJSONStructure project)
+    {
+        var result = await ProjectPluginService.LoadProjectPluginsAsync(
+            projectRoot,
+            project,
+            prompt => DisplayAlertAsync(
+                Localized._Warn,
+                $"Project: {prompt.ProjectName}\r\n" +
+                $"Plugin: {prompt.PluginName} ({prompt.PluginId})\r\n" +
+                $"Capabilities: {prompt.Capabilities}\r\n" +
+                $"Publisher: {prompt.PublisherFingerprint}\r\n" +
+                $"Package: {prompt.PackageSha256}\r\n\r\nTrust this plugin for this project on this device?",
+                Localized._Confirm,
+                Localized._Cancel));
+        if (result.Failed.Count == 0) return true;
+        var details = string.Join("\r\n", result.Failed.Select(x => $"{x.Key}: {x.Value}"));
+        if (await DisplayAlertAsync(Localized._Warn, $"Some project plugins could not be loaded:\r\n{details}", Localized.HomePage_SourceNotFound_Continue, Localized._Cancel))
+            return true;
+        await ProjectPluginService.UnloadProjectPluginsAsync();
+        return false;
     }
 
     private async Task RenameProject(ProjectsViewModel vmItem)
@@ -1527,33 +2205,31 @@ public partial class HomePage : ContentPage
         {
             var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, vmItem.Name, 1024, null, vmItem.Name);
             if (projName is null) return;
+            if (Path.GetInvalidPathChars().Any(projName.Contains) || Path.GetInvalidFileNameChars().Any(projName.Contains))
+            {
+                await DisplayAlertAsync(Localized._Error, GetInvalidFileNameWarn(), Localized._OK);
+                return;
+            }
             var newPath = Path.Combine(Path.GetDirectoryName(vmItem._projectPath) ?? "", projName + ".pjfc");
             if (Directory.Exists(newPath))
             {
                 await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
                 return;
             }
-            if (Path.GetInvalidPathChars().Any(projName.Contains) || Path.GetInvalidFileNameChars().Any(projName.Contains))
-            {
-                await DisplayAlertAsync(Localized._Error, GetInvalidFileNameWarn(), Localized._OK);
-                return;
-            }
-            var projInfoPath = Path.Combine(newPath, "project.pjfc");
-            if (!File.Exists(projInfoPath)) projInfoPath = Path.Combine(newPath, "project.json");
+
+            ClearReadOnlyAttributes(vmItem._projectPath);
+            var projInfoPath = Path.Combine(vmItem._projectPath, "project.pjfc");
+            if (!File.Exists(projInfoPath)) projInfoPath = Path.Combine(vmItem._projectPath, "project.json");
             var info = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(projInfoPath), DraftPage.DraftJSONOption);
             if (info is not null)
             {
                 info.ProjectName = projName;
                 File.WriteAllText(
-                    Path.Combine(newPath, "project.pjfc"),
+                    Path.Combine(vmItem._projectPath, "project.pjfc"),
                     JsonSerializer.Serialize(info));
             }
 
-            try
-            {
-                Directory.Move(Path.GetDirectoryName(vmItem._projectPath) ?? throw new InvalidOperationException("Cannot find project root."), newPath);
-            }
-            catch { } //ignore the exception, because we already changed the project name in the project.pjfc file, so it won't affect the draft itself.
+            Directory.Move(vmItem._projectPath, newPath);
 
             await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
         }
@@ -1562,6 +2238,29 @@ public partial class HomePage : ContentPage
             Log(ex, "rename project", this);
             await DisplayAlertAsync(Localized._Error, Localized.HomePage_ProjectContextMenu_Rename_Fail(vmItem.Name, ex), Localized._OK);
         }
+    }
+
+    private static void ClearReadOnlyAttributes(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.SetAttributes(path, File.GetAttributes(path) & ~FileAttributes.ReadOnly);
+            return;
+        }
+
+        if (!Directory.Exists(path)) return;
+
+        foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+        {
+            File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+        }
+
+        foreach (var directory in Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories))
+        {
+            File.SetAttributes(directory, File.GetAttributes(directory) & ~FileAttributes.ReadOnly);
+        }
+
+        File.SetAttributes(path, File.GetAttributes(path) & ~FileAttributes.ReadOnly);
     }
 
     public async Task ManageProject(ProjectsViewModel vmItem)
@@ -1589,18 +2288,32 @@ public partial class HomePage : ContentPage
                 border,
                 OnSelected: () =>
                 {
-                    _lastSelectedItemName = vmItem.Name;
-                    ProjectsCollection.SelectedItem = vmItem;
+                    // CollectionView recycles item containers.  The border can therefore
+                    // display a different project after the list is reloaded, while this
+                    // callback itself remains registered from the original Loaded event.
+                    // Always resolve the item that is currently displayed by the border.
+                    if (border.BindingContext is not ProjectsViewModel currentItem)
+                    {
+                        return;
+                    }
+
+                    _lastSelectedItemName = currentItem.Name;
+                    ProjectsCollection.SelectedItem = currentItem;
                 },
                 OnClicked: async () =>
                 {
-                    if (vmItem._name == CreateButtonName)
+                    if (border.BindingContext is not ProjectsViewModel currentItem)
+                    {
+                        return;
+                    }
+
+                    if (currentItem._name == CreateButtonName)
                     {
                         await CreateDraft();
                     }
                     else
                     {
-                        await GoDraft(vmItem);
+                        await GoDraft(currentItem);
                     }
 
                     ProjectsCollection.SelectedItem = null;
@@ -1608,11 +2321,16 @@ public partial class HomePage : ContentPage
                 },
                 OnContextMenuClick: async () =>
                 {
+                    if (border.BindingContext is not ProjectsViewModel currentItem)
+                    {
+                        return;
+                    }
+
                     if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
                     {
                         Vibration.Vibrate(120);
                     }
-                    await ShowContextMenu(vmItem);
+                    await ShowContextMenu(currentItem);
                 }
             );
 
@@ -1898,6 +2616,8 @@ public partial class HomePage : ContentPage
                 LastChanged = DateTime.Now,
                 LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion,
                 LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
+                LastOpenAppName = MauiProgram.AssemblyName,
+                LastOpenAppIdentifier = MauiProgram.AppIdentifier,
                 PluginUsed = []
             };
 
@@ -1939,6 +2659,7 @@ public partial class HomePage : ContentPage
             File.WriteAllText(
                 Path.Combine(draftSourcePath, "project.pjfc"),
                 JsonSerializer.Serialize(ProjectInfo));
+            DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(draftSourcePath);
 
         }
         catch (Exception ex)
@@ -2002,7 +2723,7 @@ public class ProjectsListViewModel
                 }
 
             fail:
-                failedProjects.Add(new ProjectsViewModel(proj?.ProjectName ?? "Unknown project", null, "")
+                failedProjects.Add(new ProjectsViewModel(proj?.ProjectName ?? new DirectoryInfo(item).Name, null, "")
                 {
                     _projectPath = item
                 });
@@ -2036,6 +2757,18 @@ public class ProjectsListViewModel
                 LoadFailed = true;
             }
         }
+
+#if WINDOWS || LINUX
+        var origMode = GCSettings.LargeObjectHeapCompactionMode;
+        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+        GC.WaitForPendingFinalizers();
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+        GCSettings.LargeObjectHeapCompactionMode = origMode;
+#else
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+#endif
     }
 
     public void LoadSample()

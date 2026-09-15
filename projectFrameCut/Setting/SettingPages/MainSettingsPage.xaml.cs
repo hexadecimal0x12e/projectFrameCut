@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls;
 using projectFrameCut.Setting.SettingPages;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,6 +14,7 @@ using projectFrameCut.Drawing.Text.Typology;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.InteractableEditor;
+using projectFrameCut.LivePreview;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
@@ -21,7 +22,6 @@ using projectFrameCut.Shared;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
-using projectFrameCut.ScriptEngine;
 using System.ComponentModel;
 
 namespace projectFrameCut
@@ -42,7 +42,7 @@ namespace projectFrameCut
 #endif
             VersionLabel.Text = $"{Localized.AppBrand} v{Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}{channelStr}";
             CopyrightText.Text += DateTime.Now.Year.ToString();
-            if (MauiProgram.IsStoreMode) PluginSettingButton.IsVisible = false; //plugin could broke store review
+            if (MauiProgram.IsStoreMode) ExtensibilitySettingButton.IsVisible = false; //plugin could broke store review
             if (IsBoolSettingTrue("DeveloperMode"))
             {
                 TestPageButton.IsVisible = true;
@@ -74,9 +74,9 @@ namespace projectFrameCut
         {
             await NavigateAsync(new MiscSettingPage());
         }
-        private async void OnPluginSettingClicked(object sender, EventArgs e)
+        private async void OnExtensibilitySettingClicked(object sender, EventArgs e)
         {
-            await NavigateAsync(new PluginSettingPage());
+            await NavigateAsync(new ExtensibilitySettingPage());
         }
         private async void OnAboutSettingClicked(object sender, EventArgs e)
         {
@@ -146,54 +146,56 @@ namespace projectFrameCut
         [Description("ApplySecuritySettings")]
         public static void SyncSettingToModules()
         {
-
-            if (!IsSettingExists("UserName") || string.IsNullOrWhiteSpace(GetSetting("UserName", "")))
+            try
             {
-                try
+                if (!IsSettingExists("UserName") || string.IsNullOrWhiteSpace(GetSetting("UserName", "")))
                 {
-                    var rnd = new RandomNameGenerator(Localized.RandomNameGenerator_Adjectives.Replace("，", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), Localized.RandomNameGenerator_Nouns.Replace("，", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), (a, b) => Localized.RandomNameGenerator_Contacter(a, b));
-                    WriteSetting("UserName", rnd.Generate());
+                    try
+                    {
+                        var rnd = new RandomNameGenerator(Localized.RandomNameGenerator_Adjectives.Replace("，", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), Localized.RandomNameGenerator_Nouns.Replace("，", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), (a, b) => Localized.RandomNameGenerator_Contacter(a, b));
+                        WriteSetting("UserName", rnd.Generate());
+                    }
+                    catch
+                    {
+                        WriteSetting("UserName", OperatingSystem.IsWindows() ? Environment.UserName : "default user");
+
+                    }
                 }
-                catch
+
+
+                if (IsBoolSettingTrue("render_SaveCheckpoint"))
                 {
-                    WriteSetting("UserName", OperatingSystem.IsWindows() ? Environment.UserName : "default user");
+                    try { Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint")); }
+                    catch { /* iOS sandbox fallback */ }
+                    MyLoggerExtensions.SaveDiagResult = true;
+                    MyLoggerExtensions.DiagResultPath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
 
                 }
-            }
-
-
-            if (IsBoolSettingTrue("render_SaveCheckpoint"))
-            {
-                Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
-                MyLoggerExtensions.SaveDiagResult = true;
-                MyLoggerExtensions.DiagResultPath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
-
-            }
-            else
-            {
-                MyLoggerExtensions.SaveDiagResult = false;
-            }
-            if (IsBoolSettingTrue("render_forceImpType_ForceHwAccel"))
-            {
-                EffectHelper.ForcePreferToType = EffectImplementType.HwAcceleration;
-            }
-            else if (IsBoolSettingTrue("render_forceImpType_ForceIPicture"))
-            {
-                EffectHelper.ForcePreferToType = EffectImplementType.IPicture;
-            }
-            else
-            {
-                EffectHelper.ForcePreferToType = null;
-            }
-
-            if (IsBoolSettingTrue("diag_TraceIPictureObject"))
-            {
-                PictureLifecycleTracker.Enabled = true;
-                PictureLifecycleTracker.TrackCollection = true;
-                PictureLifecycleTracker.FireEventOnDispose = true;
-                PictureLifecycleTracker.PictureDisposed += (s, e) =>
+                else
                 {
-                    Log($"""
+                    MyLoggerExtensions.SaveDiagResult = false;
+                }
+                if (IsBoolSettingTrue("render_forceImpType_ForceHwAccel"))
+                {
+                    EffectHelper.ForcePreferToType = EffectImplementType.HwAcceleration;
+                }
+                else if (IsBoolSettingTrue("render_forceImpType_ForceIPicture"))
+                {
+                    EffectHelper.ForcePreferToType = EffectImplementType.IPicture;
+                }
+                else
+                {
+                    EffectHelper.ForcePreferToType = null;
+                }
+
+                if (IsBoolSettingTrue("diag_TraceIPictureObject"))
+                {
+                    PictureLifecycleTracker.Enabled = true;
+                    PictureLifecycleTracker.TrackCollection = true;
+                    PictureLifecycleTracker.FireEventOnDispose = true;
+                    PictureLifecycleTracker.PictureDisposed += (s, e) =>
+                    {
+                        Log($"""
                         A {e.Picture.GetType().Name} Picture disposed.
                         Picture info: {e.Picture.Width}x{e.Picture.Height}, bpp: {e.Picture.BitPerPixel}, CanBeDisposed: {e.Picture.CanBeDisposed}
                         Create at {e.LifecycleState.CreatedAtUtc}, Disposed at {e.LifecycleState.DisposedAtUtc} (survived {e.LifecycleState.LifetimeToDispose})
@@ -204,48 +206,67 @@ namespace projectFrameCut
                         Process Stack:
                         {PictureProcessStack.FormatProcessStackForLog(e.Picture.ProcessStack)}
                         """);
-                };
+                    };
+                }
+                else
+                {
+                    PictureLifecycleTracker.Enabled = false;
+                    PictureLifecycleTracker.TrackCollection = false;
+                    PictureLifecycleTracker.FireEventOnDispose = false;
+                }
+                IPicture.AllowPixelModeDowngrade = !IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
+
+                try
+                {
+                    var vfdCahceDir = GetSetting("codec_VideoFrameDiskCachePath", Path.Combine(MauiProgram.CachePath, "VideoFrameCache"));
+                    Directory.CreateDirectory(vfdCahceDir);
+                    VideoFrameDiskCache.CacheBaseDir = vfdCahceDir;
+                    VideoFrameDiskCache.EnableCompression = IsBoolSettingTrueOrDefault("codec_VideoFrameDiskCacheEnableCompress", true);
+                    VideoFrameDiskCache.MaximumCacheSizeBytes = GetSettingAs<long>("codec_VideoFrameDiskCacheMaxSizeMB", 0, 0) * 1024 * 1024;
+                    IVideoSource.EnableDiskCache = IsBoolSettingTrueOrDefault("codec_EnableDiskCache", true);
+                }
+                catch // iOS/Non-MAUI SDK fallback
+                {
+                    IVideoSource.EnableDiskCache = false;
+                }
+               
+                ClassicOverlayMixture.EnableApproximatePath = IsBoolSettingTrue("render_preferApproximateMixture");
+                IVectorContentClip.GlobalDefaultAntiAliasMode = GetSetting("render_preferredAntiAliasMode", "ssaa4x") switch { "ssaa8x" => AntiAliasMode.SSAA8x, "ssaa4x" => AntiAliasMode.SSAA4x, "ssaa2x" => AntiAliasMode.SSAA2x, _ => AntiAliasMode.None };
+                IVectorContentClip.GlobalDefaultRasterizer = IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true) ? new VectorToPictureHwAccel() : new CPUVectorPictureRasterizer();
+                NormalTypesettingEngine.DebugDumpAdvance = Debugger.IsAttached && IsBoolSettingTrue("diag_TypesettingEngineDiagMode");
+                TextClip.DiagMode = IsBoolSettingTrue("diag_TypesettingEngineDiagMode");
+                DynamicPreview.DisableVectorPreviewPaths = IsBoolSettingTrueOrDefault("render_DisallowVectorClipToMAUIPathInPreview", true);
+                DynamicPreview.DisableEffectDynamicPreview = IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview");
+
+                DynamicPreview.DefaultOutputMode = ParsePreviewOutputMode(GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Automatic)));
+                LivePreviewer.DefaultOutputMode = DynamicPreview.DefaultOutputMode;
+
+                // ===== 安全设置同步 =====
+
+                // RichText 安全设置（通过 Markdown2XAML 静态属性，跨程序集通信）
+                Markdown2XAML.ApplySecuritySettings(
+                    enableRendering: IsBoolSettingTrueOrDefault("Security_RichText_EnableRendering", true),
+                    enableDisplayingImage: IsBoolSettingTrueOrDefault("Security_RichText_EnableDisplayingImage", true),
+                    enableDisplayingHtml: IsBoolSettingTrueOrDefault("Security_RichText_EnableDisplayingHtml", true),
+                    enableDisplayingXAML: IsBoolSettingTrueOrDefault("Security_RichText_EnableDisplayingXAML", true),
+                    enableXAMLExternalSource: IsBoolSettingTrueOrDefault("Security_RichText_EnableXAMLExternalSource", false)
+                );
+
+
+                // 远程内容：HTTP 解码器
+                HttpDecoderContext.Enabled = IsBoolSettingTrueOrDefault("Security_RemoteContent_EnableHttpDecoder", true);
             }
-            else
+            catch (Exception ex)
             {
-                PictureLifecycleTracker.Enabled = false;
-                PictureLifecycleTracker.TrackCollection = false;
-                PictureLifecycleTracker.FireEventOnDispose = false;
-            }
-            IPicture.AllowPixelModeDowngrade = !IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
-
-            var vfdCahceDir = GetSetting("codec_VideoFrameDiskCachePath", Path.Combine(FileSystem.CacheDirectory, "VideoFrameCache"));
-            Directory.CreateDirectory(vfdCahceDir);
-            VideoFrameDiskCache.CacheBaseDir = vfdCahceDir;
-            VideoFrameDiskCache.EnableCompression = IsBoolSettingTrueOrDefault("codec_VideoFrameDiskCacheEnableCompress", true);
-            VideoFrameDiskCache.MaximumCacheSizeBytes = GetSettingAs<long>("codec_VideoFrameDiskCacheMaxSizeMB", 0, 0) * 1024 * 1024;
-            IVideoSource.EnableMemoryCache = IsBoolSettingTrueOrDefault("codec_EnableMemoryCache", true);
-            IVideoSource.EnableDiskCache = IsBoolSettingTrueOrDefault("codec_EnableDiskCache", true);
-            ClassicOverlayMixture.EnableApproximatePath = IsBoolSettingTrue("render_preferApproximateMixture");
-            IVectorContentClip.GlobalDefaultAntiAliasMode = GetSetting("render_preferredAntiAliasMode", "ssaa4x") switch { "ssaa8x" => AntiAliasMode.SSAA8x, "ssaa4x" => AntiAliasMode.SSAA4x, "ssaa2x" => AntiAliasMode.SSAA2x, _ => AntiAliasMode.None };
-            IVectorContentClip.GlobalDefaultRasterizer = IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true) ? new VectorToPictureHwAccel() : new CPUVectorPictureRasterizer();
-            NormalTypesettingEngine.DebugDumpAdvance = Debugger.IsAttached && IsBoolSettingTrue("diag_TypesettingEngineDiagMode");
-            TextClip.DiagMode = IsBoolSettingTrue("diag_TypesettingEngineDiagMode");
-            DynamicPreview.DisableVectorPreviewPaths = IsBoolSettingTrueOrDefault("render_DisallowVectorClipToMAUIPathInPreview", true);
-            DynamicPreview.DisableEffectDynamicPreview = IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview");
-
-            // ===== 安全设置同步 =====
-
-            // RichText 安全设置（通过 Markdown2XAML 静态属性，跨程序集通信）
-            Markdown2XAML.ApplySecuritySettings(
-                enableRendering: IsBoolSettingTrueOrDefault("Security_RichText_EnableRendering", true),
-                enableDisplayingImage: IsBoolSettingTrueOrDefault("Security_RichText_EnableDisplayingImage", true),
-                enableDisplayingHtml: IsBoolSettingTrueOrDefault("Security_RichText_EnableDisplayingHtml", true),
-                enableDisplayingXAML: IsBoolSettingTrueOrDefault("Security_RichText_EnableDisplayingXAML", true),
-                enableXAMLExternalSource: IsBoolSettingTrueOrDefault("Security_RichText_EnableXAMLExternalSource", false)
-            );
-
-            // Script 引擎审计模式
-            PSCommandAuthorizationHelper.AuditMode = IsBoolSettingTrueOrDefault("Security_Script_AuditMode", false);
-
-            // 远程内容：HTTP 解码器
-            HttpDecoderContext.Enabled = IsBoolSettingTrueOrDefault("Security_RemoteContent_EnableHttpDecoder", true);
+                Log(ex, "Setup modules");
         }
+
+        static NativePreviewOutputMode ParsePreviewOutputMode(string value)
+            => Enum.TryParse<NativePreviewOutputMode>(value, ignoreCase: true, out var mode)
+                ? mode
+                : NativePreviewOutputMode.Automatic;
+
+    }
         int count = 0;
         private async void TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)
         {

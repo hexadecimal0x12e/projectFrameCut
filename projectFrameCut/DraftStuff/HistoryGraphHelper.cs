@@ -467,7 +467,7 @@ public sealed class DraftHistoryGraphProvider : IHistoryGraphProvider
         try
         {
             _page.SetStateBusy();
-            _page.ApplySlot(snapshotId);
+            await _page.ApplySlot(snapshotId);
             return true;
         }
         catch (Exception ex)

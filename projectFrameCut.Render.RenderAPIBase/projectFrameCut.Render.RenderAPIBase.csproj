@@ -8,8 +8,8 @@
 		<Platforms>AnyCPU;x64</Platforms>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
-		<AssemblyVersion>7.0.0.0</AssemblyVersion>
-		<FileVersion>7.0.0.0</FileVersion>
+		<AssemblyVersion>8.0.0.0</AssemblyVersion>
+		<FileVersion>8.0.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>codename 'projectFrameCut'</Product>
 		<Description>projectFrameCut render/3rd plugins shared library</Description>
@@ -17,8 +17,6 @@
 		<PackageProjectUrl>hexadecimal0x12e.com</PackageProjectUrl>
 		<Title>projectFrameCut render/3rd plugins shared library</Title>
 		<NeutralLanguage>zh-CN</NeutralLanguage>
-		
-		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,6 +28,7 @@
     <Using Include="projectFrameCut.Shared" />
 		<InternalsVisibleTo Include="projectFrameCut" />
 		<InternalsVisibleTo Include="projectFrameCut.Render" />
-  </ItemGroup>
+		<InternalsVisibleTo Include="projectFrameCut.Render.PluginIsolation"/>
+	</ItemGroup>
 
 </Project>

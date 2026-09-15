@@ -4,6 +4,32 @@ using System.Text;
 
 namespace projectFrameCut.Shared
 {
+    public sealed class PluginChannelRequest
+    {
+        public string Command { get; init; } = string.Empty;
+        public string JsonPayload { get; init; } = "{}";
+        public byte[] BinaryPayload { get; init; } = [];
+    }
+
+    public sealed class PluginChannelResponse
+    {
+        public string JsonPayload { get; init; } = "{}";
+        public byte[] BinaryPayload { get; init; } = [];
+    }
+
+    public interface IPluginChannel : IAsyncDisposable
+    {
+        string TargetPluginId { get; }
+        ValueTask<PluginChannelResponse> RequestAsync(PluginChannelRequest request, CancellationToken cancellationToken = default);
+    }
+
+    public interface IPluginCommunicationService
+    {
+        ValueTask<IPluginChannel> ConnectAsync(string targetPluginId, CancellationToken cancellationToken = default);
+        void RegisterHandler(string command, Func<PluginChannelRequest, CancellationToken, ValueTask<PluginChannelResponse>> handler);
+        void UnregisterHandler(string command);
+    }
+
     public interface IMessagingService
     {
         /// <summary>

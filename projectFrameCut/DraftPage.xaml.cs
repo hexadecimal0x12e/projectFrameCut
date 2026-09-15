@@ -1,7 +1,9 @@
-﻿using Microsoft.Maui.Controls.Shapes;
+using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
 using Microsoft.Maui.Storage;
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -43,32 +45,37 @@ using ITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System.Reflection;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.Contracts;
 using System.Runtime.InteropServices;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
+using projectFrameCut.ApplicationAPIBase.Workspace;
+using projectFrameCut.ApplicationAPIBase.Workspace.Modules;
 using projectFrameCut.InteractableEditor;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using CommunityToolkit.Maui.Extensions;
-using projectFrameCut.ScriptEngine;
-
+using projectFrameCut.ApplicationAPIBase.Plugins;
+using System.Security.Cryptography;
+using System.Globalization;
+using System.Text.Json.Nodes;
 
 #if WINDOWS
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
+using System.Reflection.Metadata.Ecma335;
 
 #endif
 
 #if iDevices
 using Foundation;
 using UIKit;
-using projectFrameCut.iDevicesAPI;
 using MobileCoreServices;
-using projectFrameCut.MetalAccelerater;
-
-
+#if IOS
+using projectFrameCut.Render.HwAccelEngine.Platforms.iOS;
+#endif
 #endif
 
 #if ANDROID
@@ -81,6 +88,14 @@ namespace projectFrameCut;
 
 public partial class DraftPage : ContentPage, IDraftPage
 {
+#if WINDOWS || LINUX
+    static DraftPage()
+    {
+        projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.UseExternalBackend =
+            RenderRpcBootstrap.SupportsCliRenderProcess;
+    }
+#endif
+
     #region const
     public const int ClipHeight = 62;
     const double MinClipWidth = 30.0;
@@ -90,8 +105,11 @@ public partial class DraftPage : ContentPage, IDraftPage
     const string MaterialIconPlay = "\ue037";
     const string MaterialIconPause = "\ue034";
     const string MaterialIconClose = "\ue5cd";
-    const string MainMultiWindowViewStatePropertyKey = "__DraftPage_MainMultiWindowView_State_v1";
     public const int SubTrackOffset = 10000;
+
+    private const string QuickCommandsSetting = "Edit_QuickCommands";
+    private const string EnableQuickCommandShortcutsSetting = "Edit_EnableQuickCommandShortcuts";
+    public const string DefaultQuickCommandOption = @"[""menu:1/0/4:Microsoft.Maui.Controls.Command:"",""menu:1/0/5:Microsoft.Maui.Controls.Command:"",""menu:2/0/0:Microsoft.Maui.Controls.Command:"",""menu:1/0/0:Microsoft.Maui.Controls.Command:"",""menu:1/0/2:Microsoft.Maui.Controls.Command:"",""menu:2/0/4:Microsoft.Maui.Controls.Command:"",""toggle:multiselect"",""toggle:keyframe""]";
 
     public readonly string[] DirectoriesNeeded =
     [
@@ -100,10 +118,12 @@ public partial class DraftPage : ContentPage, IDraftPage
         "assets",
         "proxy",
 #if WINDOWS
-        "thumbs\\perClip",
+        "thumbs\\perClip\\timeline",
+        "thumbs\\perClip\\dynamic",
         "thumbs\\clipLocalFallback",
 #else
-        "thumbs/perClip",
+        "thumbs/perClip/timeline",
+        "thumbs/perClip/dynamic",
         "thumbs/clipLocalFallback",
 #endif
     ];
@@ -119,6 +139,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     ClipElementUI? _selected = null;
     readonly HashSet<Guid> _selectedClipIds = [];
     readonly ConcurrentDictionary<Guid, Brush?> _selectedOrigColorByClipId = new();
+    private long _selectionUiVersion;
     private readonly List<TimelineClipboardItem> _timelineClipboard = [];
     private bool _timelineClipboardFromCut = false;
     private double _currentFrame = 0;
@@ -135,12 +156,24 @@ public partial class DraftPage : ContentPage, IDraftPage
     // Parameters for resizing popup when window size changes
     private double _popupHeightRatio = 0;
     private double _popupWidthRatio = 0;
-    private View? _popupAnchorView = null;
 
 
     private Size WindowSize = new(500, 500);
     private bool _hasTriedRestoreMainMultiWindowViewState = false;
     private bool _hasAppliedDefaultMainMultiWindowLayout = false;
+    private projectFrameCut.ApplicationAPIBase.Workspace.Workspace _workspace = null!;
+    private WorkspaceWindowHost _workspaceWindowHost = null!;
+    private MultiWindowItem PreviewSubwindow = null!;
+    private MultiWindowItem PropertiesSubwindow = null!;
+    private MultiWindowItem AssisstantSubWindow = null!;
+    private MultiWindowItem HistorySubWindow = null!;
+    private MultiWindowItem TimelineSubwindow = null!;
+    private MultiWindowItem AssetSubwindow = null!;
+    private MultiWindowItem AddClipSubwindow = null!;
+    private bool _fixedLayoutInitialized;
+    private TabbedView? _fixedClipInfoTabs;
+    private TabbedView? _fixedClipInfoPopupTabs;
+    private bool _syncingFixedClipInfoTabs;
 
 
 
@@ -191,6 +224,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     ConcurrentDictionary<string, DraftTasks> RunningTasks = new();
 
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _perClipThumbCts = new();
+    private readonly Dictionary<Guid, OnClipUIPreview> _activeClipPreviews = new();
     private const int ThumbIntervalFrames = 30;
     private const int ThumbMaxCount = 60;
     private const int ThumbTargetWidth = 320;
@@ -199,6 +233,21 @@ public partial class DraftPage : ContentPage, IDraftPage
     private bool _hasResolvedInitialPreviewFrame = false;
 
     private IHistoryGraphProvider? _activeHistoryProvider;
+    private RemoteProjectSession? _remoteProjectSession;
+    private bool _remoteSessionDetached;
+    private const int RemoteProjectSyncIntervalMs = 2000;
+    private CancellationTokenSource? _remoteProjectMonitorCts;
+    private long _remoteChangePromptedRevision = -1;
+    private string _remoteChangePromptedHash = string.Empty;
+    private const int RenderBackendHealthCheckIntervalMs = 5000;
+    private static readonly TimeSpan RenderBackendReconnectTimeout = TimeSpan.FromSeconds(30);
+    private readonly SemaphoreSlim _renderBackendRestartLock = new(1, 1);
+    private CancellationTokenSource? _renderBackendWatchdogCts;
+    private DateTime? _renderBackendDisconnectedSinceUtc;
+    // Set while navigating to the export page so OnNavigatingFrom can tell a
+    // same-project navigation apart from actually closing the project. The value
+    // is captured synchronously at the start of OnNavigatingFrom before any await.
+    private bool _navigatingToRenderPage;
 
 
     DateTime lastSyncTime = DateTime.MinValue;
@@ -214,19 +263,15 @@ public partial class DraftPage : ContentPage, IDraftPage
     public InteractableEditor.DynamicPreview DynamicPreviewProvider;
     private CancellationTokenSource? _dynamicPreviewCts;
     private readonly object _dynamicPreviewCtsLock = new();
-    public AIAssistance.AssistanceChatSessionsView ChatSessionsView = new();
+    public AIAssistance.AssistanceChatSessionsView ChatSessionsView = null!;
     public ProjectAddClipView AddClipView = null!;
 
     public ProjectJSONStructure ProjectInfo { get; set; }
+    public IWorkspace Workspace => _workspace;
     public ConcurrentDictionary<Guid, ClipElementUI> Clips = new();
     public ConcurrentDictionary<int, AbsoluteLayout> Tracks = new();
     public ConcurrentDictionary<string, AssetItem> Assets = new();
 
-    /// <summary>
-    /// 集成的 PowerShell 脚本引擎，可通过 <c>ScriptEngine.ExecuteAsync()</c> 执行脚本，
-    /// 内置 Get-ProjectClip / Add-ProjectClip 等命令与当前时间线交互。
-    /// </summary>
-    public ScriptCore ScriptEngine { get; } = new();
 
     public string WorkingPath { get; set; } = "";
     public event EventHandler<ClipUpdateEventArgs>? OnClipChanged;
@@ -255,10 +300,13 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand DuplicateCommand { get; private set; }
     public ICommand SaveCommand { get; private set; }
     public ICommand GotoCommand { get; private set; }
-    public ICommand ManageJobsCommand { get; private set; }
     public ICommand EscapeCommand { get; private set; }
     public ICommand PlayPauseCommand { get; private set; }
+    public ICommand PreviousFrameCommand { get; private set; }
+    public ICommand NextFrameCommand { get; private set; }
     public ICommand CleanRenderCacheCommand { get; private set; }
+    public ICommand RestartBackendCommand { get; private set; }
+    public ICommand CreateRpcTokenCommand { get; private set; }
     public ICommand ArrowRightCommand { get; private set; }
     public ICommand ArrowLeftCommand { get; private set; }
     public ICommand ArrowUpCommand { get; private set; }
@@ -275,9 +323,17 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ICommand ManageReferenceLinesCommand { get; private set; }
     public ICommand ZoomCommand { get; private set; }
     public ICommand SetTimelineScrollLockCommand { get; private set; }
+    public ICommand ToggleKeyframeRecordingCommand { get; private set; }
+    public ICommand ToggleLockScrollViewAfterSelectionCommand { get; private set; }
+    public ICommand ToggleMultiSelectCommand { get; private set; }
+    public ICommand ToggleReverseScrollLockKeyBehaviorCommand { get; private set; }
     public ICommand TimelineScrollCommand { get; private set; }
     public ICommand FollowPlayheadCommand { get; private set; }
-    public ICommand ShowScriptWindowCommand { get; private set; }
+    public ICommand ConfigureQuickCommandSlotCommand { get; private set; }
+    public ICommand ManageQuickCommandsCommand { get; private set; }
+    public ICommand ShowCommandPanelCommand { get; private set; }
+    public ObservableCollection<QuickCommandItem> QuickCommands { get; } = [];
+    public ObservableCollection<QuickCommandSlot> QuickCommandSlots { get; } = [];
 
     public bool _ShouldShowClipMoveControlInCenterInfoBar => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is null : true;
     public bool _ShouldShowCenterCompactControlGrid => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is not null : false;
@@ -300,7 +356,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     public event EventHandler? SelectedClipChanged;
     public bool UnNullUseCompactLayout => UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone;
     public bool IsPopupShowing => Popup.IsVisible;
-    public bool IsTimelineScrollEnabled { get; set { field = value; OnPropertyChanged(nameof(IsTimelineScrollEnabled)); } }
+    public bool IsTimelineScrollEnabled { get; set { if (field == value) return; field = value; OnPropertyChanged(nameof(IsTimelineScrollEnabled)); RefreshToggleCommandStates(); } }
+    public bool AllowExit { get; set; } = true;
     #endregion
 
     #region options
@@ -311,7 +368,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public int MaximumSaveSlot { get; set; } = 8;
     public Guid CurrentSnapshotID { get; set; } = Guid.Empty;
     public bool IsReadonly { get; set; } = false;
-    public string PreferredPopupMode { get; set; } = "bottom";
+    public bool IsRemoteProject => _remoteProjectSession is not null;
     public TimeSpan SyncCooldown { get; set; } = TimeSpan.FromMilliseconds(500);
     public bool AlwaysShowToolbarBtns { get; set; }
     public bool ShowBackendConsole { get; set; } = false;
@@ -323,15 +380,43 @@ public partial class DraftPage : ContentPage, IDraftPage
     public double PreviewAreaHeight { get; set; } = 250;
     public bool AutoSavePreviewAreaHeight { get; set; } = true;
     public bool? UseCompactLayout { get; set; } = null;
-    public bool LockScrollViewAfterSelection { get; set; }
+    public bool IsFixedLayout
+    {
+        get => field;
+        private set
+        {
+            if (field == value) return;
+            field = value;
+            OnPropertyChanged();
+        }
+    }
+    public int QuickCommandSlotCount { get; set; } = DeviceInfo.Idiom switch
+    {
+        var t when t == DeviceIdiom.Desktop => 8,
+        var t when t == DeviceIdiom.Tablet => 6,
+        var t when t == DeviceIdiom.Phone => 3,
+        _ => 8
+    };
+    public bool LockScrollViewAfterSelection { get { return field; } set { if (field == value) return; field = value; OnPropertyChanged(nameof(LockScrollViewAfterSelection)); RefreshToggleCommandStates(); } }
     public bool EnableClipInfoPopup { get; set; }
     public bool UseCommunityToolkitPopupInsteadOfOverlayLayer { get { return (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS()) || field; } set; }
-    public bool MultiSelectEnabled { get; set; }
+    public bool MultiSelectEnabled { get { return field; } set { if (field == value) return; field = value; OnPropertyChanged(nameof(MultiSelectEnabled)); RefreshToggleCommandStates(); } }
     public bool IsPopupClosableByTapBackground { get; set; } = true;
     public bool UseDynamicPreview { get; set; } = true;
     public int DynamicPreviewTimeout { get; set; } = 4096;
-    public int DynamicPreviewResolutionDivisor { get; set; } = 1;
-
+    public int DynamicPreviewResolutionDivisor { get => DynamicPreviewProvider?.PreviewResolutionDivisor ?? 1; set { DynamicPreviewProvider?.PreviewResolutionDivisor = value; } }
+    public bool ReverseScrollLockKeyBehavior { get { return field; } set { if (field == value) return; field = value; OnPropertyChanged(nameof(ReverseScrollLockKeyBehavior)); RefreshToggleCommandStates(); } } = false;
+    public bool IsKeyframeRecordingEnabled
+    {
+        get => ClipEditor?.EnableKeyframeRecording ?? false;
+        set
+        {
+            if (ClipEditor is null || ClipEditor.EnableKeyframeRecording == value) return;
+            ClipEditor.EnableKeyframeRecording = value;
+            OnPropertyChanged();
+            RefreshToggleCommandStates();
+        }
+    }
 
     #endregion
 
@@ -341,12 +426,16 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         RegisterCommands();
         InitializeComponent();
+        BindingContext = this;
+        InitializeQuickCommands();
         DisableTabFocusOnWindows(AddTrackButton);
         SetPlayPauseIconToPlay();
         SetStateBusy();
         SetStatusText(Localized.DraftPage_PleaseWait);
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = true, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill };
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview();
+        DynamicPreviewProvider.ClipInitializationFailed += OnClipInitializationFailed;
+        DynamicPreviewProvider.ClipInitializationRecovered += OnClipInitializationRecovered;
         DynamicPreviewProvider.PreviewResolutionDivisor = DynamicPreviewResolutionDivisor;
         ClipEditorHost.Content = ClipEditor;
         ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
@@ -354,6 +443,15 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.SetAssets(Assets);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
+        ClipEditor.ConfigureOverviewImageSource(RenderOverviewImageSourceAsync);
+        ClipEditor.ConfigureManageReferenceLinesRequested(() =>
+        {
+            ShowManageReferenceLinesPopup(ClipEditor, async (v) => await Dispatcher.DispatchAsync(async () => await ShowAPopup(new ScrollView { Content = v }, mode: "dialog")), async () => await Dispatcher.DispatchAsync(async () => await HidePopup()));
+        });
+        ClipEditor.ConfigureDefaultColorPickerRequested(currentColor =>
+        {
+            _ = ShowReferenceLineColorPicker(currentColor);
+        });
         ClipEditor.ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync);
         ClipEditor.ConfigureOverlayClipDoubleTap(OnClipEditorOverlayDoubleTappedAsync);
         ClipEditor.ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync);
@@ -370,10 +468,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         infoBuilder = new ClipInfoBuilder(this);
         var page = this;
         AddClipView = new ProjectAddClipView(ref page);
-        ChatSessionsView.GlobalToolCallFactories = AIAssistance.AITools.BuildToolCalls(ref page, OnClipPropertiesChanged);
         AddATrack(0);
-
-
+        ProjectInfo = new ProjectJSONStructure();
+        InitializeWorkspace();
     }
 
     public DraftPage(ProjectJSONStructure info, ConcurrentDictionary<Guid, ClipElementUI> clips, ConcurrentDictionary<string, AssetItem> assets, int initialTrackCount, string workingDir, string title = "Untitled draft", bool isReadonly = false)
@@ -383,6 +480,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         ArgumentNullException.ThrowIfNull(clips, nameof(clips));
         BindingContext = this;
         ProjectInfo = info;
+        ProjectInfo.NormallyExited = false;
         ProjectInfo.UserDefinedProperties ??= new();
         ProjectInfo.SnapshotIDMapping = ProjectJSONStructure.LoadSnapshotMapping(workingDir, savingOpts);
         if (ProjectInfo.SnapshotIDMapping.Count == 0)
@@ -398,17 +496,20 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (Directory.Exists(workingDir)) Environment.CurrentDirectory = workingDir;
         RegisterCommands();
         InitializeComponent();
+        InitializeQuickCommands();
         DisableTabFocusOnWindows(AddTrackButton);
         SetPlayPauseIconToPlay();
         SetStateBusy();
         SetStatusText(Localized.DraftPage_PleaseWait);
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = true, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill };
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview();
-        DynamicPreviewProvider.PreviewResolutionDivisor = DynamicPreviewResolutionDivisor;
+        DynamicPreviewProvider.ClipInitializationFailed += OnClipInitializationFailed;
+        DynamicPreviewProvider.ClipInitializationRecovered += OnClipInitializationRecovered;
         ClipEditorHost.Content = ClipEditor;
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync)
+                  .ConfigureOverviewImageSource(RenderOverviewImageSourceAsync)
                   .ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync)
                   .ConfigureOverlayClipDoubleTap(OnClipEditorOverlayDoubleTappedAsync)
                   .ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync)
@@ -433,7 +534,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         ApplyClipEditorPreviewOverlayMode();
         HookPreviewSurfaceSizeSync();
 
-
         OverlayLayer.IsVisible = false;
 #if ANDROID
         OverlayLayer.InputTransparent = false;
@@ -441,6 +541,10 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         Clips = clips;
         Assets = assets ?? new();
+        // The fluent editor setup above runs before the constructor assigns the loaded asset map.
+        // Rebind assets immediately. Clips are bound after their track views have been created,
+        // because binding can synchronously request render instances from the track UI.
+        ClipEditor.SetAssets(Assets);
         Tracks = new ConcurrentDictionary<int, AbsoluteLayout>();
         trackCount = initialTrackCount;
         ProjectInfo.ProjectName ??= title;
@@ -448,8 +552,6 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         var page = this;
         infoBuilder = new ClipInfoBuilder(this);
-        ChatSessionsView = new AIAssistance.AssistanceChatSessionsView(workingDir, ProjectName);
-        ChatSessionsView.GlobalToolCallFactories = AIAssistance.AITools.BuildToolCalls(ref page, OnClipPropertiesChanged);
         AddClipView = new ProjectAddClipView(ref page);
         WorkingPath = workingDir;
         TrackCalculator.HeightPerTrack = ClipHeight;
@@ -477,10 +579,36 @@ public partial class DraftPage : ContentPage, IDraftPage
             RegisterClip(item, true);
         }
         NormalizeLoadedClipFrameSemantics();
+        // Preview initialization can be slow (especially for vector content), so make the editor's
+        // clip map available before the page becomes interactive, but only after every clip has a
+        // corresponding element in Tracks.
+        _ = ClipEditor.UpdateClips(Clips);
+        InitializeWorkspace();
 
-        ScriptEngine.Initialize(this,
-            CreatePowerShellAuthorizationHandler(this),
-            CreateEnhancedPowerShellAuthorizationHandler(this));
+    }
+
+    private async Task CreateRpcTokenAsync()
+    {
+        try
+        {
+            if (AlreadyDisappeared) return;
+            if (IsRemoteProject) throw new NotSupportedException("External pipes must be created on the local render backend.");
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var client = RenderRpcBootstrap.Client;
+            var sessionId = await EnsureGuiRpcSessionAsync(client, timeout.Token);
+            var result = await client.CreateGuiProjectPipeAsync(new() { SessionId = sessionId }, timeout.Token);
+            if (AlreadyDisappeared) return;
+            if (await DisplayAlertAsync(Localized._Warn, Localized.DraftPage_CreateRpcToken_Warn, Localized._Confirm, Localized._Cancel) && !string.IsNullOrWhiteSpace(await DisplayPromptAsync(Localized._Info, Localized.DraftPage_CreateRpcToken_SuccessCopy, Localized.DraftPage_MenuBar_Edit_Copy, Localized._OK, result.Token, result.Token.Length, Keyboard.Text, result.Token)))
+            {
+                await Microsoft.Maui.ApplicationModel.DataTransfer.Clipboard.SetTextAsync(result.Token);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Create external RPC token", this);
+            if (!AlreadyDisappeared)
+                await DisplayAlertAsync(Localized._Error, Localized.DraftPage_CreateRpcTokenFailed, Localized._OK);
+        }
     }
 
     private void RegisterCommands()
@@ -489,8 +617,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         ExportCommand = new Command(() => OnExportedClick(this, EventArgs.Empty));
         GoRenderCommand = new Command(() => OnExportedClick(this, EventArgs.Empty));
         SettingsCommand = new Command(() => SettingsClick(this, EventArgs.Empty));
-        UndoCommand = new Command(() => UndoChanges());
-        RedoCommand = new Command(() => RedoChanges());
+        UndoCommand = new Command(async () => await UndoChanges());
+        RedoCommand = new Command(async () => await RedoChanges());
         SelectCommand = new Command(async () => await SelectAClip());
         ShowClipInfoPanelCommand = new Command(async () => { if (_selectedClipIds.Count == 1) await ShowAPopup(clip: _selected, border: _selected?.Clip); else SetStateFail(Localized.DraftPage_SelectExactlyOneToContinue); });
         SpiltCommand = new Command(() => Split_Clicked(this, EventArgs.Empty));
@@ -504,9 +632,12 @@ public partial class DraftPage : ContentPage, IDraftPage
         DuplicateCommand = new Command(async () => await DuplicateSelectionAsync());
         SaveCommand = new Command(() => OnRefreshButtonClicked(this, EventArgs.Empty));
         GotoCommand = new Command(async () => await GotoButtonClicked());
-        ManageJobsCommand = new Command(async () => await OnManageJobsClicked());
         PlayPauseCommand = new Command(async () => PlayPauseButton_Clicked(this, EventArgs.Empty));
+        PreviousFrameCommand = new Command(async () => await MovePlayhead(-1));
+        NextFrameCommand = new Command(async () => await MovePlayhead(1));
         CleanRenderCacheCommand = new Command(async () => await CleanRenderCache());
+        RestartBackendCommand = new Command(async () => await RestartRenderBackendAsync(showErrorDialog: true));
+        CreateRpcTokenCommand = new Command(async () => await CreateRpcTokenAsync());
         ArrowLeftCommand = new Command(async () => await HandleMoveArrowAsync(-SnapGridPixels, 0));
         ArrowRightCommand = new Command(async () => await HandleMoveArrowAsync(SnapGridPixels, 0));
         ArrowUpCommand = new Command(async () => await HandleMoveArrowAsync(0, -1));
@@ -528,14 +659,20 @@ public partial class DraftPage : ContentPage, IDraftPage
         });
         ClearReferenceLinesCommand = new Command(() => ClipEditor.ClearReferenceLines());
         ManageReferenceLinesCommand = new Command(() => { ShowManageReferenceLinesPopup(ClipEditor, async (v) => await Dispatcher.DispatchAsync(async () => await ShowAPopup(new ScrollView { Content = v }, mode: "dialog")), async () => await Dispatcher.DispatchAsync(async () => await HidePopup())); });
-        SetTimelineScrollLockCommand = new Command(() => SetTimelineScrollEnabled(!IsTimelineScrollEnabled));
+        SetTimelineScrollLockCommand = new Command(() => ToggleTimelineScroll());
+        ToggleKeyframeRecordingCommand = new Command(() => IsKeyframeRecordingEnabled = !IsKeyframeRecordingEnabled);
+        ToggleLockScrollViewAfterSelectionCommand = new Command(() => LockScrollViewAfterSelection = !LockScrollViewAfterSelection);
+        ToggleMultiSelectCommand = new Command(() => MultiSelectEnabled = !MultiSelectEnabled);
+        ToggleReverseScrollLockKeyBehaviorCommand = new Command(() => ReverseScrollLockKeyBehavior = !ReverseScrollLockKeyBehavior);
         TimelineScrollCommand = new Command<string>(async (i) =>
         {
             if (double.TryParse(i, out var offset))
-                await TimelineScrollView.ScrollToAsync(TimelineScrollView.ScrollX + offset, TimelineScrollView.ScrollY, true);
+                await HandleMoveArrowAsync(offset, 0, invertScrollLockBehavior: true);
         });
         FollowPlayheadCommand = new Command(async () => await ScrollTimelineToPlayhead());
-        ShowScriptWindowCommand = new Command(ShowScriptWindow);
+        ConfigureQuickCommandSlotCommand = new Command<int>(async index => await ConfigureQuickCommandSlotAsync(index));
+        ManageQuickCommandsCommand = new Command(async () => await ShowQuickCommandManagerAsync());
+        ShowCommandPanelCommand = new Command(async () => await ShowCommandPanelAsync());
 
         EscapeCommand =
             new Command(async () =>
@@ -609,17 +746,36 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         if (Inited) return;
         Inited = true;
+#if WINDOWS || LINUX
+        if (IsRemoteProject)
+            projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.UseExternalBackend = true;
+#endif
+        await _workspace.StartAsync();
+        OnClipChanged += ForwardClipChangeToWorkspace;
+        SelectedClipChanged += ForwardSelectionToWorkspace;
 
         ApplyClipEditorPreviewOverlayMode();
 
-        VideoClipDynamicPreviewProvider.DiskCacheRoot = Path.Combine(WorkingPath, "thumbs", "perClip");
-        DynamicPreview.DiskCacheRoot = Path.Combine(WorkingPath, "thumbs", "clipLocalFallback");
+        string dynamicPreviewCacheRoot = IsRemoteProject
+            ? Path.Combine(MauiProgram.CachePath, "remoteConnection", ProjectInfo.ProjectUniqueId.ToString("N"))
+            : Path.Combine(WorkingPath, "thumbs", "clipLocalFallback");
+        if (IsRemoteProject)
+        {
+            Directory.CreateDirectory(dynamicPreviewCacheRoot);
+            Directory.CreateDirectory(Path.Combine(dynamicPreviewCacheRoot, "thumbs"));
+        }
+        DynamicPreview.DiskCacheRoot = dynamicPreviewCacheRoot;
 
         previewWidth = ProjectInfo.RelativeWidth;
         previewHeight = ProjectInfo.RelativeHeight;
         previewer.ProjectRelativeWidth = ProjectInfo.RelativeWidth;
         previewer.ProjectRelativeHeight = ProjectInfo.RelativeHeight;
-        previewer.TempPath = Path.Combine(WorkingPath, "thumbs");
+        previewer.targetFrameRate = Math.Max(1, (int)ProjectInfo.TargetFrameRate);
+        previewer.ProjectJson = JsonSerializer.Serialize(ProjectInfo, savingOpts);
+        previewer.TempPath = IsRemoteProject
+            ? Path.Combine(MauiProgram.CachePath, "remoteConnection", ProjectInfo.ProjectUniqueId.ToString("N"), "thumbs")
+            : Path.Combine(WorkingPath, "thumbs");
+        previewer.ProjectName = ProjectName;
         DynamicPreviewProvider.SetLivePreviewer(ref previewer!);
         ClipEditor.UpdateVideoResolution(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
 
@@ -627,8 +783,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             ClipEditor.RestoreReferenceLinesFromJson(refLinesJson);
         }
-
-        ProjectInfo.NormallyExited = false;
 
         nopGesture.Tapped += (s, e) =>
         {
@@ -638,7 +792,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         };
 
 
-        if (!string.IsNullOrWhiteSpace(WorkingPath))
+        if (!IsRemoteProject && !string.IsNullOrWhiteSpace(WorkingPath))
         {
             foreach (var item in DirectoriesNeeded)
             {
@@ -656,11 +810,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         });
         ComputerHelper.Init();
-#elif iDevices
+#elif IOS
         MetalComputerHelper.RegisterComputerBridge();
-#elif WINDOWS
-        // AcceleratorsManager was initialized during plugin load.
-        if (projectFrameCut.Render.HwAccelEngine.Platforms.Windows.AcceleratorsManager.DefaultAccelerator is null)
+#elif WINDOWS || LINUX
+        if (!projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.UseExternalBackend &&
+            projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.DefaultAccelerator is null)
             throw new InvalidDataException("No valid ILGPU accelerator found.");
 #endif
 
@@ -669,9 +823,9 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (!UseDynamicPreview)
             {
                 var resString = $"{ProjectInfo.RelativeWidth}x{ProjectInfo.RelativeHeight}";
-                if (ResolutionPicker.ItemsSource is List<string> list && list.Contains(resString))
+                if (ClipEditor.PreviewResolutionOptions.Contains(resString))
                 {
-                    ResolutionPicker.SelectedItem = resString;
+                    ClipEditor.SelectPreviewResolution(resString);
                 }
             }
 
@@ -684,13 +838,14 @@ public partial class DraftPage : ContentPage, IDraftPage
                 this.Window.SizeChanged += Window_SizeChanged;
             }
         });
+        StartRemoteProjectMonitor();
     }
 
     private async void DraftPage_Loaded(object? sender, EventArgs e)
     {
         if (Debugger.IsAttached) MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog; //user don't want to see a lot of confused error message
 
-        if (UpperContent.Children[0] is Grid previewGrid && PreviewAreaHeight > 100)
+        if (UpperContent.Children[0] is Grid previewGrid && previewGrid is not MultiWindowView && PreviewAreaHeight > 100)
         {
             if (AutoSavePreviewAreaHeight)
             {
@@ -729,13 +884,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
         PlayheadLine.TranslationX = TrackHeadLayout.Width;
-        if (AlwaysShowToolbarBtns || !OperatingSystem.IsWindows()) AddToolbarBtns();
+        RegisterQuickCommandShortcuts();
         if (Width < Height) RightMenuBar.IsVisible = false;
 
         RulerLayout.GestureRecognizers.Add(rulerTapGesture);
-        PanGestureRecognizer rulerPanGesture = new();
-        rulerPanGesture.PanUpdated += RulerPanUpdated;
-        RulerLayout.GestureRecognizers.Add(rulerPanGesture);
 
         PlayheadLine.HeightRequest = Tracks.Count * ClipHeight;
         Window.SizeChanged += Window_SizeChanged;
@@ -743,8 +895,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         bgTap.Tapped += async (s, e) => await HidePopup();
         OverlayLayer.GestureRecognizers.Clear();
         OverlayLayer.GestureRecognizers.Add(bgTap);
+        OverlayLayer.SizeChanged -= OverlayLayer_SizeChanged;
+        OverlayLayer.SizeChanged += OverlayLayer_SizeChanged;
 
-        ResolutionPicker.ItemsSource = new List<string> {
+        var previewResolutionOptions = new List<string> {
                 Localized.DraftPage_DynamicPreview,
                 "1280x720",
                 "1920x1080",
@@ -753,8 +907,17 @@ public partial class DraftPage : ContentPage, IDraftPage
                 "7680x4320",
                 Localized.DraftPage_PrevResultion_Custom
                 };
-
-        ResolutionPicker.SelectedIndex = UseDynamicPreview ? 0 : 1;
+        var selectedPreviewResolution = UseDynamicPreview
+            ? previewResolutionOptions[0]
+            : $"{previewWidth}x{previewHeight}";
+        if (!previewResolutionOptions.Contains(selectedPreviewResolution))
+        {
+            selectedPreviewResolution = previewResolutionOptions[1];
+        }
+        ClipEditor.ConfigurePreviewResolution(
+            previewResolutionOptions,
+            selectedPreviewResolution,
+            OnPreviewResolutionChangedAsync);
 
         var w = this.Window?.Width ?? 0;
         var h = this.Window?.Height ?? 0;
@@ -770,12 +933,12 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             MainMultiWindowView.CloseWindow(PropertiesSubwindow);
             MainMultiWindowView.CloseWindow(AssisstantSubWindow);
+            MainMultiWindowView.CloseWindow(AddClipSubwindow);
             PreviewSubwindow.IsTitleBarVisible = false;
             PreviewSubwindow.IsResizable = false;
             PreviewSubwindow.Maximize();
             RightMenuBar.IsVisible = false;
             RightContentBorder.IsVisible = false;
-            //SpiltButton.IsVisible = false;
             PlayingControlLayout.HorizontalOptions = LayoutOptions.End;
             MainControlGrid.ColumnDefinitions = new ColumnDefinitionCollection
             {
@@ -785,25 +948,36 @@ public partial class DraftPage : ContentPage, IDraftPage
             Grid.SetColumn(LeftMenuBar, 0);
             Grid.SetColumn(PlayingControlLayout, 1);
             PlayingControlLayout.Margin = new(0, 0, 8, 0);
-            var c = MultiSelectControlLayout;
-            RightMenuBar.Remove(c);
-            LeftMenuBar.Add(c);
-            MultiSelectControlLayout.Margin = new(8, 0, 0, 0);
         }
         else
         {
             PreviewSubwindow.IsTitleBarVisible = true;
             RightMenuBar.IsVisible = true;
             RightContentBorder.IsVisible = true;
+            (Content as Grid)?.Remove(MainControlGrid);
+            ToolbarItems.Clear();
 
             foreach (var item in MainMultiWindowView.Windows)
             {
-                ViewMenuBarItem.Insert(0, new MenuFlyoutItem { Text = item.Title, Command = ManageWindowCommand, CommandParameter = item.WindowID.ToString() });
+                ViewMenuBarItem.Insert(0, new MenuFlyoutItem
+                {
+                    Text = item.Title,
+                    IconImageSource = new FontImageSource { FontFamily = MaterialIconFontFamily, Glyph = "\uf71b" },
+                    Command = ManageWindowCommand,
+                    CommandParameter = item.WindowID.ToString()
+                });
 
             }
             MainMultiWindowView.WindowAdded += (s, e) =>
             {
-                ViewMenuBarItem.Insert(0, new MenuFlyoutItem { Text = e.Title, Command = ManageWindowCommand, CommandParameter = e.WindowID.ToString() });
+                ViewMenuBarItem.Insert(0, new MenuFlyoutItem
+                {
+                    Text = e.Title,
+                    IconImageSource = new FontImageSource { FontFamily = MaterialIconFontFamily, Glyph = "\uf71b" },
+                    Command = ManageWindowCommand,
+                    CommandParameter = e.WindowID.ToString()
+                });
+                RefreshQuickCommands();
             };
             MainMultiWindowView.WindowClosed += (s, e) =>
             {
@@ -816,6 +990,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         {
                             ViewMenuBarItem.Remove(item);
                         }
+                        RefreshQuickCommands();
                     }
                 }
                 catch (Exception ex)
@@ -848,11 +1023,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (!Tracks.Any()) AddATrack(0);
         UpdatePlayheadHeight();
 
-        AssisstantSubWindow.Content = ChatSessionsView;
-        MainMultiWindowView.CloseWindow(AssisstantSubWindow);
         RefreshHistorySubWindowContent();
-        MainMultiWindowView.CloseWindow(HistorySubWindow);
-        //TryRestoreMainMultiWindowViewState();
         ApplyDefaultMainMultiWindowLayout();
         DropGestureRecognizer fileDropGesture = new();
         fileDropGesture.AllowDrop = true;
@@ -866,11 +1037,14 @@ public partial class DraftPage : ContentPage, IDraftPage
             _transformMenuActivatedHandle = "none";
             await HidePopup();
         };
+        CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss\\.ff}";
         OnPropertyChanged(nameof(UnNullUseCompactLayout));
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
+        await SwitchEditorLayoutAsync(UseCompactLayout == true ? "fixed" : "workspace");
         RestoreInteractableEditorState();
-        DraftChanged(sender, new ClipUpdateEventArgs { NoSave = true });
+        StartRenderBackendWatchdog();
+        await DraftChangedAsync(sender, new ClipUpdateEventArgs { NoSave = true });
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
 
@@ -908,10 +1082,16 @@ public partial class DraftPage : ContentPage, IDraftPage
             ClipEditor.ShowReferenceLines = showReferenceLines;
         }
 
+        if (ProjectInfo.Properties.TryGetValue("InteractableEditor_UseCheckerboardBackground", out var useCheckerboardBackgroundStr) &&
+            bool.TryParse(useCheckerboardBackgroundStr, out var useCheckerboardBackground))
+        {
+            ClipEditor.UseCheckerboardBackground = useCheckerboardBackground;
+        }
+
         if (ProjectInfo.Properties.TryGetValue("InteractableEditor_EnableKeyframeRecording", out var enableKeyframeRecordingStr) &&
             bool.TryParse(enableKeyframeRecordingStr, out var enableKeyframeRecording))
         {
-            ClipEditor.EnableKeyframeRecording = enableKeyframeRecording;
+            IsKeyframeRecordingEnabled = enableKeyframeRecording;
         }
     }
 
@@ -1054,13 +1234,21 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void SyncPreviewSurfaceSize()
     {
-        var width = ClipEditorHost.Width;
-        var height = ClipEditorHost.Height;
+        // Use the InteractableEditor's own rendered size (which is what
+        // OnSizeAllocated would deliver). The previous version used the
+        // ClipEditorHost's outer size, which includes the host's Padding and
+        // causes the canvas to be reported larger than the visible preview
+        // area, drifting the clip overlay away from the video. When the
+        // editor's Width/Height haven't been laid out yet we fall back to
+        // the host's inner content area (host size minus padding), which is
+        // exactly what OnSizeAllocated will hand the editor.
+        var width = ClipEditor.Width;
+        var height = ClipEditor.Height;
 
         if (width <= 0 || height <= 0)
         {
-            width = ClipEditor.Width;
-            height = ClipEditor.Height;
+            width = Math.Max(0, ClipEditorHost.Width - ClipEditorHost.Padding.HorizontalThickness);
+            height = Math.Max(0, ClipEditorHost.Height - ClipEditorHost.Padding.VerticalThickness);
         }
 
         if (width <= 0 || height <= 0)
@@ -1068,6 +1256,18 @@ public partial class DraftPage : ContentPage, IDraftPage
             return;
         }
 
+        // Explicitly push the editor's correct rendered size into both
+        // consumers. The DynamicPreviewProvider renders the live preview
+        // image at this size, and ClipEditor.UpdateCanvasSize is what
+        // drives _canvasWidth/_canvasHeight used by GetRenderRect(). We
+        // CANNOT rely solely on InteractableEditor.OnSizeAllocated: in
+        // deeply nested ControlTemplate hosts (MultiWindowItem wraps the
+        // ClipEditorHost in a template with a title bar row) the size
+        // allocation can be deferred or skipped, leaving _canvasWidth/
+        // _canvasHeight at their default (800x240) and causing the clip
+        // selection rectangle to drift away from the preview. The value
+        // we pass here matches what OnSizeAllocated would deliver, so
+        // calling it is race-free with the layout-driven path.
         ClipEditor.UpdateCanvasSize(width, height);
         DynamicPreviewProvider.UpdateCanvasSize(width, height);
     }
@@ -1078,182 +1278,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.ShowClipPreviewOverlays = UseDynamicPreview;
     }
 
-    private string? GetMainMultiWindowItemKey(MultiWindowItem window)
-    {
-        if (ReferenceEquals(window, PreviewSubwindow)) return nameof(PreviewSubwindow);
-        if (ReferenceEquals(window, PropertiesSubwindow)) return nameof(PropertiesSubwindow);
-        if (ReferenceEquals(window, AssisstantSubWindow)) return nameof(AssisstantSubWindow);
-        return null;
-    }
-
-    private bool TryGetMainMultiWindowItemByKey(string? key, out MultiWindowItem window)
-    {
-        switch (key)
-        {
-            case nameof(PreviewSubwindow):
-                window = PreviewSubwindow;
-                return true;
-            case nameof(PropertiesSubwindow):
-                window = PropertiesSubwindow;
-                return true;
-            case nameof(AssisstantSubWindow):
-                window = AssisstantSubWindow;
-                return true;
-            default:
-                window = PreviewSubwindow;
-                return false;
-        }
-    }
-
-    private static bool IsWindowLikelyMinimized(MultiWindowItem window)
-        => window.HeightRequest > 0 && window.HeightRequest <= 40;
-
-    private static bool IsWindowLikelyMaximized(MultiWindowItem window)
-        => window.HorizontalOptions.Alignment == LayoutAlignment.Fill
-           && window.VerticalOptions.Alignment == LayoutAlignment.Fill
-           && window.WidthRequest <= 0
-           && window.HeightRequest <= 0;
-
-    private MainMultiWindowStateEnvelope CaptureMainMultiWindowState()
-    {
-        var state = new MainMultiWindowStateEnvelope();
-        var windows = new[] { PreviewSubwindow, PropertiesSubwindow, AssisstantSubWindow };
-
-        foreach (var window in windows)
-        {
-            var key = GetMainMultiWindowItemKey(window);
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                continue;
-            }
-
-            var isOpen = MainMultiWindowView.Children.Contains(window);
-            state.Windows.Add(new MainMultiWindowWindowState
-            {
-                WindowKey = key,
-                IsOpen = isOpen,
-                IsVisible = window.IsVisible,
-                IsMaximized = IsWindowLikelyMaximized(window),
-                IsMinimized = IsWindowLikelyMinimized(window),
-                TranslationX = window.TranslationX,
-                TranslationY = window.TranslationY,
-                WidthRequest = window.WidthRequest,
-                HeightRequest = window.HeightRequest,
-                Column = Grid.GetColumn(window),
-                Row = Grid.GetRow(window),
-                ColumnSpan = Grid.GetColumnSpan(window),
-                RowSpan = Grid.GetRowSpan(window),
-                ZIndex = window.ZIndex
-            });
-        }
-
-        state.ActiveWindowKey = MainMultiWindowView.ActiveWindow is MultiWindowItem active
-            ? GetMainMultiWindowItemKey(active)
-            : null;
-
-        return state;
-    }
-
-    private void SaveMainMultiWindowViewStateToProjectInfo()
-    {
-        try
-        {
-            ProjectInfo.UserDefinedProperties ??= new();
-            var state = CaptureMainMultiWindowState();
-            ProjectInfo.UserDefinedProperties[MainMultiWindowViewStatePropertyKey] = JsonSerializer.Serialize(state, savingOpts);
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "Save MainMultiWindowView state", this);
-        }
-    }
-
-    private void TryRestoreMainMultiWindowViewState()
-    {
-        if (_hasTriedRestoreMainMultiWindowViewState)
-        {
-            return;
-        }
-
-        _hasTriedRestoreMainMultiWindowViewState = true;
-
-        if (UseCompactLayout ?? (DeviceInfo.Idiom == DeviceIdiom.Phone))
-        {
-            return;
-        }
-
-        if (!(ProjectInfo.UserDefinedProperties?.TryGetValue(MainMultiWindowViewStatePropertyKey, out var rawState) ?? false)
-            || string.IsNullOrWhiteSpace(rawState))
-        {
-            return;
-        }
-
-        try
-        {
-            var state = JsonSerializer.Deserialize<MainMultiWindowStateEnvelope>(rawState, savingOpts);
-            if (state is null)
-            {
-                return;
-            }
-
-            foreach (var item in state.Windows)
-            {
-                if (!TryGetMainMultiWindowItemByKey(item.WindowKey, out var window))
-                {
-                    continue;
-                }
-
-                if (!item.IsOpen)
-                {
-                    if (window.IsClosable && MainMultiWindowView.Children.Contains(window))
-                    {
-                        MainMultiWindowView.CloseWindow(window);
-                    }
-                    continue;
-                }
-
-                if (!MainMultiWindowView.Children.Contains(window))
-                {
-                    MainMultiWindowView.AddWindow(window);
-                }
-
-                window.HorizontalOptions = LayoutOptions.Start;
-                window.VerticalOptions = LayoutOptions.Start;
-
-                window.TranslationX = Math.Max(0, item.TranslationX);
-                window.TranslationY = Math.Max(0, item.TranslationY);
-                window.WidthRequest = item.WidthRequest;
-                window.HeightRequest = item.HeightRequest;
-                Grid.SetColumn(window, Math.Max(0, item.Column));
-                Grid.SetRow(window, Math.Max(0, item.Row));
-                Grid.SetColumnSpan(window, Math.Max(1, item.ColumnSpan));
-                Grid.SetRowSpan(window, Math.Max(1, item.RowSpan));
-                window.ZIndex = item.ZIndex;
-                window.IsVisible = item.IsVisible;
-
-                if (item.IsMaximized)
-                {
-                    window.Maximize();
-                }
-
-                if (item.IsMinimized && !IsWindowLikelyMinimized(window))
-                {
-                    window.Minimize();
-                }
-            }
-
-            if (TryGetMainMultiWindowItemByKey(state.ActiveWindowKey, out var active)
-                && MainMultiWindowView.Children.Contains(active))
-            {
-                MainMultiWindowView.BringToFront(active);
-            }
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "Restore MainMultiWindowView state", this);
-        }
-    }
-
     private void ApplyDefaultMainMultiWindowLayout()
     {
         if (_hasAppliedDefaultMainMultiWindowLayout)
@@ -1261,41 +1285,194 @@ public partial class DraftPage : ContentPage, IDraftPage
             return;
         }
 
-        if (UseCompactLayout ?? (DeviceInfo.Idiom == DeviceIdiom.Phone))
-        {
-            return;
-        }
-
-        if (MainMultiWindowView.Width <= 0 || MainMultiWindowView.Height <= 0)
-        {
-            return;
-        }
-
-        if (!MainMultiWindowView.Children.Contains(PreviewSubwindow) || !MainMultiWindowView.Children.Contains(PropertiesSubwindow))
-        {
-            return;
-        }
-
-        PreviewSubwindow.IsTitleBarVisible = true;
-        PreviewSubwindow.IsResizable = false;
-        PropertiesSubwindow.HorizontalOptions = LayoutOptions.Fill;
-        PropertiesSubwindow.VerticalOptions = LayoutOptions.Fill;
-
+        if (UseCompactLayout ?? (DeviceInfo.Idiom == DeviceIdiom.Phone)) return;
+        if (MainMultiWindowView.Width <= 0 || MainMultiWindowView.Height <= 0) return;
         try
         {
-            if (MainMultiWindowView.SnapWindow(PreviewSubwindow, WindowSnapZone.LeftHalf, bringToFront: false)
-                & MainMultiWindowView.SnapWindow(PropertiesSubwindow, WindowSnapZone.RightHalf))
-            {
-                MainMultiWindowView.BringToFront(PropertiesSubwindow);
-                _hasAppliedDefaultMainMultiWindowLayout = true;
-            }
+            _workspaceWindowHost.ApplyDefaultLayout();
+            ApplyTraditionalEditorLayout();
+            _hasAppliedDefaultMainMultiWindowLayout = true;
         }
-        catch (COMException ex)
+        catch (COMException ex) { Log(ex, "Apply workspace default window layout", this); }
+    }
+
+    private void ApplyTraditionalEditorLayout()
+    {
+        if (!MainMultiWindowView.Children.Contains(AddClipSubwindow))
         {
-            Log(ex, "ApplyDefaultMainMultiWindowLayout SnapWindow", this);
+            return;
+        }
+
+        var width = MainMultiWindowView.Width;
+        var height = MainMultiWindowView.Height;
+        if (width <= 0 || height <= 0) return;
+
+        MainMultiWindowView.SnapWindowToRelativeBounds(AddClipSubwindow, new Rect(0, 0, 0.28, 0.55), bringToFront: false);
+        MainMultiWindowView.SnapWindowToRelativeBounds(PreviewSubwindow, new Rect(0.28, 0, 0.47, 0.55), bringToFront: false);
+        MainMultiWindowView.SnapWindowToRelativeBounds(PropertiesSubwindow, new Rect(0.75, 0, 0.25, 0.55), bringToFront: false);
+        MainMultiWindowView.SnapWindowToRelativeBounds(TimelineSubwindow, new Rect(0, 0.55, 1, 0.45), bringToFront: false);
+    }
+
+    #endregion
+
+    #region workspace
+    private void InitializeWorkspace()
+    {
+        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, wrapSoundtrackAsClip: true, includeUiOnlyClips: true, fixOverlap: false, rebuildEffects: false);
+        IWorkspaceStorage storage = string.IsNullOrWhiteSpace(WorkingPath) ? NullWorkspaceStorage.Instance : new FileWorkspaceStorage(WorkingPath);
+        _workspace = new projectFrameCut.ApplicationAPIBase.Workspace.Workspace(
+            ProjectInfo.ProjectUniqueId == Guid.Empty ? Guid.CreateVersion7().ToString("N") : ProjectInfo.ProjectUniqueId.ToString("N"),
+            "timeline",
+            storage: storage);
+        _workspace
+            .RegisterModule(new ProjectModule(ProjectInfo, WorkingPath, IsReadonly))
+            .RegisterModule(new TimelineModule(draft))
+            .RegisterModule(new HistoryModule(MaximumSaveSlot))
+            .RegisterModule(new AssetModule(Assets.Values))
+            .RegisterModule(new PreviewModule())
+            .RegisterModule(new PropertyModule())
+            .RegisterModule(new AssistanceModule());
+        foreach (var pluginModule in PluginManager.LoadedPlugins.Values.OfType<IWorkspaceModule>())
+            _workspace.RegisterModule(pluginModule);
+
+        var page = this;
+        ChatSessionsView = new AIAssistance.AssistanceChatSessionsView(WorkingPath, ProjectName, _workspace)
+        {
+            GlobalToolCallFactories = AIAssistance.AITools.BuildToolCalls(ref page, OnClipPropertiesChanged)
+        };
+        AssistanceHost.Content = ChatSessionsView;
+        AddClipHost.Content = AddClipView;
+
+        WorkspaceViewPool.Remove(ClipEditorHost);
+        WorkspaceViewPool.Remove(RightContentBorder);
+        WorkspaceViewPool.Remove(AssistanceHost);
+        WorkspaceViewPool.Remove(AddClipHost);
+        if (LowerContent.Parent is Grid timelineParent) timelineParent.Remove(LowerContent);
+
+        _workspaceWindowHost = new WorkspaceWindowHost(
+            _workspace,
+            MainMultiWindowView,
+            new WorkspaceViewContext(this),
+            new DictionaryWorkspaceLayoutStore(ProjectInfo.Properties));
+        _workspaceWindowHost.WindowCreationFailed += (_, ex) => Log(ex, "Create workspace module window", this);
+        var workspaceExperienceProviders = new List<IWorkspaceExperienceProvider>
+        {
+            new DraftWorkspaceExperienceProvider(PreviewModule.ModuleId,
+            [
+                new WorkspaceExperienceDefinition
+                {
+                    WindowKey = "preview.main", ModuleId = PreviewModule.ModuleId, Title = Localized.AssetPage_ShowPreview,
+                    IsClosable = false, IsNavigationVisible = false, CreateContent = () => ClipEditorHost,
+                    DefaultPlacement = new WorkspaceWindowPlacement { SnapZone = WindowSnapZone.TopLeftQuarter }
+                }
+            ]),
+            new DraftWorkspaceExperienceProvider(TimelineModule.ModuleId,
+            [
+                new WorkspaceExperienceDefinition
+                {
+                    WindowKey = "timeline.main", ModuleId = TimelineModule.ModuleId, Title = Localized.DraftPage_MenuBar_Timeline,
+                    IsClosable = false, IsNavigationVisible = false, CreateContent = () => LowerContent,
+                    DefaultPlacement = new WorkspaceWindowPlacement { SnapZone = WindowSnapZone.BottomHalf, Height = 500 }
+                }
+            ]),
+            new DraftWorkspaceExperienceProvider(PropertyModule.ModuleId,
+            [
+                new WorkspaceExperienceDefinition
+                {
+                    WindowKey = "properties.main", ModuleId = PropertyModule.ModuleId, Title = Localized.PropertyPanel,
+                    IsClosable = false, IsNavigationVisible = false,  CreateContent = () => RightContentBorder,
+                    DefaultPlacement = new WorkspaceWindowPlacement { SnapZone = WindowSnapZone.TopRightQuarter }
+                }
+            ]),
+            new DraftWorkspaceExperienceProvider(AssetModule.ModuleId,
+            [
+                new WorkspaceExperienceDefinition
+                {
+                    WindowKey = "clips.add", ModuleId = AssetModule.ModuleId, Title = Localized.DraftPage_CenterMenuBar_AddClip,
+                    IsInitiallyVisible = false, IsNavigationVisible = false,  CreateContent = () => AddClipHost,
+                    DefaultPlacement = new WorkspaceWindowPlacement { Width = 720, Height = 600, X = 24, Y = 24 }
+                },
+                new WorkspaceExperienceDefinition
+                {
+                    WindowKey = "assets.browser", ModuleId = AssetModule.ModuleId, Title = Localized.DraftPage_AssetPanel_LocalAssets,
+                    IsInitiallyVisible = false, IsNavigationVisible = false, CreateContent = CreateWorkspaceAssetView,
+                    DefaultPlacement = new WorkspaceWindowPlacement { Width = 520, Height = 600, X = 24, Y = 24 }
+                }
+            ]),
+            new DraftWorkspaceExperienceProvider(HistoryModule.ModuleId,
+            [
+                new WorkspaceExperienceDefinition
+                {
+                    WindowKey = "history.main", ModuleId = HistoryModule.ModuleId, Title = Localized.DraftPage_MenuBar_Edit_History,
+                    IsInitiallyVisible = false, IsNavigationVisible = false,  CreateContent = () => new DraftSettingPage(this).HistoryTabContent,
+                    DefaultPlacement = new WorkspaceWindowPlacement { Width = 880, Height = 620, X = 40, Y = 40 }
+                }
+            ]),
+            new DraftWorkspaceExperienceProvider(AssistanceModule.ModuleId,
+            [
+                new WorkspaceExperienceDefinition
+                {
+                    WindowKey = "assistance.chat", ModuleId = AssistanceModule.ModuleId, Title = Localized.AIAssistant_ChatViewTitle,
+                    IsInitiallyVisible = false, IsNavigationVisible = false,  CreateContent = () => AssistanceHost,
+                    DefaultPlacement = new WorkspaceWindowPlacement { Width = 400, Height = 500, X = 56, Y = 56 }
+                }
+            ])
+        };
+        workspaceExperienceProviders.AddRange(PluginManager.LoadedPlugins.Values.OfType<IWorkspaceExperienceProvider>());
+        _workspaceWindowHost.Compose(workspaceExperienceProviders);
+        _hasAppliedDefaultMainMultiWindowLayout = _workspaceWindowHost.WasLayoutRestored;
+
+        PreviewSubwindow = _workspaceWindowHost.GetWindow("preview.main");
+        TimelineSubwindow = _workspaceWindowHost.GetWindow("timeline.main");
+        PropertiesSubwindow = _workspaceWindowHost.GetWindow("properties.main");
+        AddClipSubwindow = _workspaceWindowHost.GetWindow("clips.add");
+        AssetSubwindow = _workspaceWindowHost.GetWindow("assets.browser");
+        HistorySubWindow = _workspaceWindowHost.GetWindow("history.main");
+        HistorySubWindow.MinimumWindowWidth = 560;
+        HistorySubWindow.MinimumWindowHeight = 400;
+        AssisstantSubWindow = _workspaceWindowHost.GetWindow("assistance.chat");
+
+        // A fresh workspace starts with the media/add panel docked into the editor.
+        // Restored projects keep their saved layout and can open it from the toolbar.
+        if (!_workspaceWindowHost.WasLayoutRestored
+            && !(UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone))
+        {
+            _workspaceWindowHost.OpenWindow("clips.add");
         }
     }
 
+    private View CreateWorkspaceAssetView()
+    {
+        var page = this;
+        var view = new ProjectAssetView(ref page);
+        var drop = new DropGestureRecognizer { AllowDrop = true };
+        drop.DragOver += File_DragOver;
+        drop.Drop += File_Drop;
+        view.GestureRecognizers.Add(drop);
+        return view;
+    }
+
+    private void ForwardClipChangeToWorkspace(object? sender, ClipUpdateEventArgs args)
+    {
+        if (_workspace.State is WorkspaceState.Disposed or WorkspaceState.Faulted) return;
+        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, wrapSoundtrackAsClip: true, includeUiOnlyClips: true, fixOverlap: false, rebuildEffects: false);
+        _workspace.GetModule<TimelineModule>().Reset(draft.Clips);
+        _workspace.GetModule<ProjectModule>().MarkDirty(args.ToString());
+        if (!args.NoSave) _workspace.GetModule<HistoryModule>().Capture(args.ToString());
+    }
+
+    private void ForwardSelectionToWorkspace(object? sender, EventArgs args)
+    {
+        var selected = _selectedClipIds.ToHashSet();
+        if (_selected is not null) selected.Add(_selected.Id);
+        _workspace.GetModule<PropertyModule>().SetSelection(selected);
+    }
+
+    private sealed class DraftWorkspaceExperienceProvider(string moduleId, IReadOnlyCollection<WorkspaceExperienceDefinition> windows) : IWorkspaceExperienceProvider
+    {
+        public string ModuleId { get; } = moduleId;
+        public IReadOnlyCollection<WorkspaceExperienceDefinition> GetWindows(IWorkspace workspace, WorkspaceViewContext context) => windows;
+    }
     #endregion
 
     #region add stuff
@@ -1407,6 +1584,14 @@ public partial class DraftPage : ContentPage, IDraftPage
     private static View GetClipInteractionTarget(ClipElementUI clip)
     {
         return clip.Clip.Content as View ?? clip.Clip;
+    }
+
+    private static void RegisterClipCursor(View view, Func<PointerCursorKind> cursorKindGetter)
+    {
+        var pointerGesture = new PointerGestureRecognizer();
+        pointerGesture.PointerEntered += (_, _) => PointerCursorHelper.SetCursor(view, cursorKindGetter());
+        pointerGesture.PointerExited += (_, _) => PointerCursorHelper.SetCursor(view, null);
+        view.GestureRecognizers.Add(pointerGesture);
     }
 
 #if WINDOWS
@@ -1547,6 +1732,15 @@ public partial class DraftPage : ContentPage, IDraftPage
         RegisterClipPanAuthorization(clipInteractionTarget, element);
 #endif
 
+        RegisterClipCursor(clipInteractionTarget, () => element.MovingStatus switch
+        {
+            ClipMovingStatus.Move => PointerCursorKind.Move,
+            ClipMovingStatus.Resize => PointerCursorKind.HorizontalResize,
+            _ => PointerCursorKind.Hand
+        });
+        RegisterClipCursor(element.LeftHandle, () => PointerCursorKind.HorizontalResize);
+        RegisterClipCursor(element.RightHandle, () => PointerCursorKind.HorizontalResize);
+
 
 
 
@@ -1584,9 +1778,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         Log($"Start generating the per-clip preview for clip {clip.Id} - {clip.DisplayName}");
 
         var clipId = clip.Id;
-        var outDir = Path.Combine(WorkingPath, "thumbs", "perClip", clipId.ToString());
+        var outDir = Path.Combine(WorkingPath, "thumbs", "perClip", clipId.ToString(), "timeline");
 
-        if (Directory.Exists(outDir) && Directory.GetFiles(outDir, "*.png").Length > 0)
+        if (Directory.Exists(outDir)
+            && Directory.EnumerateFiles(outDir, "*.png", SearchOption.TopDirectoryOnly)
+                .Any(path => int.TryParse(Path.GetFileNameWithoutExtension(path), out _)))
             return;
 
         if (_perClipThumbCts.TryRemove(clipId, out var existingCts))
@@ -1599,6 +1795,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         var sourcePath = clip.SourcePath;
         var totalFrames = clip.maxFrameCount > 0 ? (int)clip.maxFrameCount : (int)clip.lengthInFrame;
+        var completed = false;
 
         _ = Task.Run(async () =>
         {
@@ -1621,7 +1818,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
                     try
                     {
-                        var frame = vidSrc.GetFrame((uint)f, false);
+                        var frame = vidSrc.GetFrame((uint)f);
                         var aspect = (double)frame.Height / frame.Width;
                         var targetHeight = (int)(ThumbTargetWidth * aspect);
                         var resized = frame.Resize(ThumbTargetWidth, targetHeight, false);
@@ -1635,6 +1832,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         Log(ex, $"thumb gen clip={clipId} frame={f}", this);
                     }
                 }
+                completed = true;
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -1643,8 +1841,20 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
             finally
             {
-                _perClipThumbCts.TryRemove(clipId, out _);
+                if (_perClipThumbCts.TryGetValue(clipId, out var registeredCts)
+                    && ReferenceEquals(registeredCts, cts))
+                {
+                    _perClipThumbCts.TryRemove(clipId, out _);
+                }
                 cts.Dispose();
+                if (completed)
+                {
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        if (Clips.TryGetValue(clipId, out var currentClip))
+                            ApplyClipPreview(currentClip);
+                    });
+                }
             }
         }, cts.Token);
     }
@@ -1653,9 +1863,18 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         try
         {
+            // Dispose any previous preview for this clip before creating a new one
+            if (_activeClipPreviews.TryGetValue(element.Id, out var oldGen))
+            {
+                oldGen.Dispose();
+                _activeClipPreviews.Remove(element.Id);
+            }
+
             var previewGen = new OnClipUIPreview(this, element);
+            _activeClipPreviews[element.Id] = previewGen;
             var previewView = previewGen.Update();
             element.UpdateContent(previewView);
+            element.ApplyInitializationFailureIndicator();
 
         }
         catch (Exception ex)
@@ -2253,7 +2472,11 @@ public partial class DraftPage : ContentPage, IDraftPage
     private async void AddClip_Clicked(object sender, EventArgs e)
     {
         await (AddClipView.MainTabView.BindingContext as ProjectAddClipViewModel)?.Refresh();
-        await ShowAPopup(AddClipView);
+        _workspaceWindowHost.OpenWindow("clips.add");
+        if (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
+        {
+            AddClipSubwindow.Maximize();
+        }
     }
 
     public void BeginClipPlacement(Func<int, double, ClipElementUI> clipFactory, Predicate<int>? trackFilter = null, string? name = null, Action? afterPlacement = null)
@@ -2275,8 +2498,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                 SetPlayPauseIconToClose();
                 CurrentPlayheadLabel.IsVisible = false;
             }
-            MultiSelectInfoLabel.IsVisible = false;
-            MultiSelectCheckBox.IsVisible = false;
         });
 
         LeftInfoLabel.Text = (UseCompactLayout ?? false) ? Localized.DraftPage_AddClipView_ClickToPlace_Compact(name ?? "Clip") : Localized.DraftPage_AddClipView_ClickToPlace(name ?? "Clip");
@@ -2301,14 +2522,11 @@ public partial class DraftPage : ContentPage, IDraftPage
             LeftInfoLabel.Text = "";
             AddClip.IsVisible = true;
             AssetPanelButton.IsVisible = true;
-            //SpiltButton.IsVisible = !(UseCompactLayout ?? false);
             if (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
             {
                 SetPlayPauseIconToPlay();
                 CurrentPlayheadLabel.IsVisible = true;
             }
-            MultiSelectInfoLabel.IsVisible = true;
-            MultiSelectCheckBox.IsVisible = true;
         });
     }
 
@@ -2395,11 +2613,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                     SetPlayPauseIconToPlay();
                     CurrentPlayheadLabel.IsVisible = true;
                 }
-                MultiSelectInfoLabel.IsVisible = true;
-                MultiSelectCheckBox.IsVisible = true;
                 AddClip.IsVisible = true;
                 AssetPanelButton.IsVisible = true;
-                //SpiltButton.IsVisible = !(UseCompactLayout ?? false);
                 LeftInfoLabel.Text = "";
             });
 
@@ -2470,12 +2685,15 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task RefreshSelectionUiAsync()
     {
+        var version = Interlocked.Increment(ref _selectionUiVersion);
+
         if (_selectedClipIds.Count == 0)
         {
             SetStatusText(Localized.DraftPage_EverythingFine);
             ClipEditor.SetClip(null, null);
             if (LockScrollViewAfterSelection) SetTimelineScrollEnabled(true);
             RightContentBorder.Content = CreatePropertiesPlaceholder(Localized.DraftPage_PropertyPanel_SelectToContinue);
+            await RefreshFixedClipInfoAsync(null);
             SelectedClipChanged?.Invoke(this, EventArgs.Empty);
             return;
         }
@@ -2490,14 +2708,42 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (_selectedClipIds.Count == 1 && _selected is not null)
         {
             var clip = _selected;
+            var sw = Stopwatch.StartNew();
             SetStatusText(Localized.DraftPage_Selected(clip.DisplayName));
             if (LockScrollViewAfterSelection) SetTimelineScrollEnabled(false);
-            RightContentBorder.Content = await BuildPropertyPanel(clip);
             SelectedClipChanged?.Invoke(this, EventArgs.Empty);
-            if (clip.ClipType != ClipMode.AudioClip || clip.ClipType != ClipMode.MarkingClip || clip.ClipType != ClipMode.Special)
+            if (clip.ClipType != ClipMode.AudioClip
+                && clip.ClipType != ClipMode.MarkingClip
+                && clip.ClipType != ClipMode.Special)
             {
                 ClipEditor.SetClip(clip, Assets.TryGetValue(clip.Id.ToString(), out var asset) ? asset : null);
-                await RefreshPreviewFromCurrentProviderAsync();
+            }
+            else
+            {
+                ClipEditor.SetClip(null, null);
+            }
+
+            await Task.Yield();
+            if (version != Volatile.Read(ref _selectionUiVersion) || _selected?.Id != clip.Id) return;
+
+            var previewTask = clip.ClipType != ClipMode.AudioClip
+                && clip.ClipType != ClipMode.MarkingClip
+                && clip.ClipType != ClipMode.Special
+                ? RefreshPreviewFromCurrentProviderAsync()
+                : Task.CompletedTask;
+            if (IsFixedLayout)
+            {
+                await RefreshFixedClipInfoAsync(clip);
+            }
+            else
+            {
+                RightContentBorder.Content = await BuildPropertyPanel(clip);
+            }
+            if (version != Volatile.Read(ref _selectionUiVersion) || _selected?.Id != clip.Id) return;
+            await previewTask;
+            if (version == Volatile.Read(ref _selectionUiVersion) && _selected?.Id == clip.Id)
+            {
+                LogDiagnostic($"Refreshed selection UI for clip {clip.Id} in {sw.ElapsedMilliseconds}ms");
             }
             return;
         }
@@ -2511,6 +2757,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center
         };
+        await RefreshFixedClipInfoAsync(null);
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
         OnPropertyChanged(nameof(SelectedAnyClip));
@@ -2528,13 +2775,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     }
 
-    private void MultiSelectLabel_TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)
-    {
-        MultiSelectCheckBox.IsChecked = !MultiSelectCheckBox.IsChecked;
-        OnPropertyChanged(nameof(MultiSelectEnabled));
-    }
-
-    private async void MultiSelectCheckBox_CheckedChanged(object? sender, CheckedChangedEventArgs e)
+    private async void MultiSelectToggleButton_Toggled(object? sender, ToggledEventArgs e)
     {
         MultiSelectEnabled = e.Value;
         OnPropertyChanged(nameof(MultiSelectEnabled));
@@ -2550,6 +2791,15 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         await RefreshSelectionUiAsync();
     }
+
+    private void KeyframeRecordingToggleButton_Toggled(object sender, ToggledEventArgs e)
+    {
+        IsKeyframeRecordingEnabled = e.Value;
+    }
+
+    private void ToggleTimelineScroll()
+        => SetTimelineScrollEnabled(!IsTimelineScrollEnabled);
+
 
     private static bool IsTapWithinBorderInteractiveBounds(Border border, TappedEventArgs? e)
     {
@@ -3219,6 +3469,11 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
 
             Clips.TryRemove(target.Id, out _);
+
+            // Dispose the scroll-aware preview to unsubscribe from scroll events
+            if (_activeClipPreviews.Remove(target.Id, out var previewGen))
+                previewGen.Dispose();
+
             deletedNames.Add(GetClipNameForChangeReason(target, target.Id.ToString()));
             LogDiagnostic($"clip {target.Id} deleted.");
 
@@ -3432,33 +3687,14 @@ public partial class DraftPage : ContentPage, IDraftPage
             pasted.TargetHeight = dto.TargetHeight;
             pasted.TargetX = dto.TargetX;
             pasted.TargetY = dto.TargetY;
+            pasted.StartingX = dto.StartingX;
+            pasted.StartingY = dto.StartingY;
             pasted.ExtraData = dto.MetaData?.ToDictionary(kv => kv.Key, kv => kv.Value) ?? new Dictionary<string, object>();
             pasted.Effects = dto.Effects?.ToDictionary(
                 e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,
                 e => PluginManager.CreateEffect(e, ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight));
 
-            if (dto.EffectBundles != null)
-            {
-                var bundles = new Dictionary<Guid, IEffectBundle>();
-                foreach (var bundle in dto.EffectBundles)
-                {
-                    if (!EffectServices.GetAvailableEffectBundles().TryGetValue(bundle.BundleTypeName, out var factory))
-                    {
-                        continue;
-                    }
-
-                    var instance = factory();
-                    instance.Id = bundle.Id;
-                    instance.Name = bundle.Name;
-                    instance.Parameters = bundle.Parameters ?? new Dictionary<string, object>();
-                    instance.BindedInputId = bundle.BindedInputId;
-                    instance.BindedOutputId = bundle.BindedOutputId;
-                    instance.BindedInputIds = bundle.BindedInputIds?.ToList();
-                    bundles[instance.Id] = instance;
-                }
-
-                pasted.EffectBundles = bundles;
-            }
+            pasted.EffectProviders = EffectBindingHelper.MigrateToEffectProviders(dto.EffectProviders, dto.EffectBundles);
 
             pasted.ApplySpeedRatio();
             pasted.ApplyClipColor();
@@ -3746,8 +3982,25 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private async Task HandleMoveArrowAsync(double pixelDelta, int trackDelta)
+    private async Task HandleMoveArrowAsync(
+        double pixelDelta,
+        int trackDelta,
+        bool invertScrollLockBehavior = false)
     {
+        if (trackDelta == 0)
+        {
+            bool scrollLockEnabled = IsKeyboardScrollLockEnabled();
+            bool shouldScrollTimeline = invertScrollLockBehavior
+                ? scrollLockEnabled
+                : !scrollLockEnabled;
+
+            if (shouldScrollTimeline)
+            {
+                await ScrollTimelineByAsync(pixelDelta);
+                return;
+            }
+        }
+
         if (!IsClipMoving)
         {
             if (_pendingClipPlacementFactory is not null)
@@ -3792,6 +4045,25 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         ApplyKeyboardMovePreview();
         await FollowKeyboardMoveViewportAsync();
+    }
+
+    private bool IsKeyboardScrollLockEnabled()
+    {
+#if WINDOWS
+        var state = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Scroll);
+        var locked = (state & Windows.UI.Core.CoreVirtualKeyStates.Locked) == Windows.UI.Core.CoreVirtualKeyStates.Locked;
+        return ReverseScrollLockKeyBehavior ? !locked : locked;
+#else
+        return false;
+#endif
+    }
+
+    private async Task ScrollTimelineByAsync(double pixelDelta)
+    {
+        await TimelineScrollView.ScrollToAsync(
+            Math.Max(0, TimelineScrollView.ScrollX + pixelDelta),
+            TimelineScrollView.ScrollY,
+            true);
     }
 
     private async Task FollowKeyboardMoveViewportAsync()
@@ -4256,6 +4528,9 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     if (removed?.Clip != null)
                     {
+                        if (_activeClipPreviews.Remove(key, out var oldPreview))
+                            oldPreview.Dispose();
+
                         // remove visual from overlay if present
                         try { OverlayLayer?.Children.Remove(removed.Clip); } catch { }
                         // also remove from its track container
@@ -4512,11 +4787,52 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (_selected is null) return;
         var clip = _selected;
 
+        if (e.Id == "__EFFECT_BINDING_CHANGED__")
+        {
+            // The binding editor already rebuilt clip.Effects off the UI thread. Updating the timeline
+            // and property panel here used to turn every completed connection into a full-page refresh.
+            // Keep the model/history current and refresh only the preview that actually depends on it.
+            var changedClip = e.Value as ClipElementUI ?? clip;
+            Clips[changedClip.Id] = changedClip;
+            MarkHistoryPanelDirty();
+            try
+            {
+                // The changed clip was rebuilt by DraftEffectBindingView. Rebuilding every clip again
+                // during export is both redundant and the largest source of the 10-15 second UI stall.
+                var d = DraftImportAndExportHelper.ExportFromDraftPage(
+                    this,
+                    includeUiOnlyClips: false,
+                    rebuildEffects: false);
+                await previewer.UpdateDraft(d);
+                DynamicPreviewProvider.SetClips(previewer.Clips);
+                await RefreshPreviewFromCurrentProviderAsync();
+            }
+            catch (Exception refreshEx)
+            {
+                Log(refreshEx, "refresh preview after effect binding changed", this);
+            }
+            return;
+        }
+
         if (e.Id == "__REFRESH_PANEL__")
         {
             Clips[clip.Id] = clip;
             await ReRenderUI();
             RefreshPropertyPanel(clip);
+            // 节点编辑器（DraftEffectBindingView）的 EffectBundlesChanged 经 __REFRESH_PANEL__ 路由到这里。
+            // 绑定/连线在渲染层只有通过 provider 重建才生效（见 EffectHelper.GetClipEffectsInstances），
+            // 因此这里必须同步刷新预览，否则关闭节点编辑器后画面不会反映新的绑定。
+            try
+            {
+                var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+                await previewer.UpdateDraft(d);
+                DynamicPreviewProvider.SetClips(previewer.Clips);
+                await RefreshPreviewFromCurrentProviderAsync();
+            }
+            catch (Exception refreshEx)
+            {
+                Log(refreshEx, "refresh preview after effect binding changed", this);
+            }
             return;
         }
 
@@ -4616,7 +4932,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region asset
-    private async Task AddAsset(string path)
+    internal async Task AddAsset(string path, bool showAssetPanel = true)
     {
         SetStateBusy(Localized.DraftPage_PrepareAsset);
         try
@@ -4659,11 +4975,15 @@ public partial class DraftPage : ContentPage, IDraftPage
             var cid = item.AssetId;
             Log($"Added asset '{item.Path}'s info: {item.Duration} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.Duration * item.SecondPerFrame} s");
             Assets.AddOrUpdate(cid, item, (_, _) => item);
-            Dispatcher.Dispatch(async () =>
+            _workspace.GetModule<AssetModule>().Add(item);
+            if (showAssetPanel)
             {
-                await HidePopup();
-                AssetPanelButton_Clicked(this, new());
-            });
+                Dispatcher.Dispatch(async () =>
+                {
+                    await HidePopup();
+                    AssetPanelButton_Clicked(this, new());
+                });
+            }
             SetStateOK(Localized.DraftPage_AssetAdded(Path.GetFileNameWithoutExtension(path)));
             var createProxy = (ProxyOption != "never") && ((ProxyOption == "always") || await DisplayAlertAsync(Localized.DraftPage_CreateProxy(item.Name), Localized.DraftPage_CreateProxy_Info, Localized._Confirm, Localized._Cancel));
             var task = new DraftTasks(cid, (c) => Task.Run(cancellationToken: c, action: async () =>
@@ -4688,14 +5008,11 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         try
         {
-            var draftPage = this;
-            var assetView = new ProjectAssetView(ref draftPage);
-            DropGestureRecognizer fileDropGesture = new();
-            fileDropGesture.AllowDrop = true;
-            fileDropGesture.DragOver += File_DragOver;
-            fileDropGesture.Drop += File_Drop;
-            assetView.GestureRecognizers.Add(fileDropGesture);
-            await ShowAPopup(assetView);
+            // Recreate the browser so its view model reflects the latest asset collection.
+            // The provider is stable; only this window's content is refreshed.
+            AssetSubwindow.Content = CreateWorkspaceAssetView();
+            _workspaceWindowHost.OpenWindow("assets.browser");
+            await Task.CompletedTask;
         }
         catch (Exception ex)
         {
@@ -4705,80 +5022,476 @@ public partial class DraftPage : ContentPage, IDraftPage
     }
     #endregion
 
-    #region task
-    public async Task<ScrollView> CreateJobsPanel()
+    #region commands
+    public async Task ShowCommandPanelAsync()
     {
-        var ppb = new PropertyPanelBuilder().AddText(new SingleLineLabel(Localized.DraftPage_Tasks_Title, 20));
-        if (RunningTasks.IsEmpty)
+        RefreshQuickCommands();
+
+        var commandRows = new VerticalStackLayout { Spacing = 8 };
+        var emptyLabel = new Label
         {
-            ppb.AddText(Localized.DraftPage_Tasks_NoneTasks);
+            Text = Localized.DraftPage_CommandPanel_NoResults,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center,
+            Margin = new Thickness(12, 32),
+            IsVisible = false
+        };
+        var rows = new List<(QuickCommandItem Item, Border View, string SearchText)>();
+        var commands = QuickCommands.ToList();
+        if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+        {
+            commands.AddRange(GetDebugCommands().Select(x =>
+                new QuickCommandItem($"debug:{x.Key}", x.Key, x.Value, "\ue868")));
         }
-        else
+
+        async Task InvokeAsync(QuickCommandItem item)
         {
-            foreach (var item in RunningTasks)
+            if (!item.Command.CanExecute(item.Parameter)) return;
+            await HidePopup(true);
+            try
             {
-                ppb.AddSeparator();
-                var task = item.Value;
-                ppb.AddText(new TitleAndDescriptionLineLabel(item.Value.Name, item.Value.Description))
-                    .AddText(item.Value.IsRunningDisplay);
-                if (task.InnerTask.IsCompleted)
-                {
-                    ppb.AddButton($"Remove,{item.Key}", Localized._Remove);
-                }
-                else
-                {
-                    ppb.AddButton($"Cancel,{item.Key}", Localized._Cancel);
-
-                }
-
+                item.Command.Execute(item.Parameter);
+                item.RefreshToggleState();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Invoke command panel command", item.Key);
             }
         }
-#if DEBUG
-        ppb.AddButton("Add some task", async (s, e) =>
-        {
-            var t = new DraftTasks("123", (c) => Thread.Sleep(9999), "A sleeping thread", "nothing here");
-            RunningTasks.TryAdd(t.Id, t);
-            var t1 = new DraftTasks("456", (c) => Task.Delay(99999, c), "A sleeping task with cts", "nothing here");
-            RunningTasks.TryAdd(t1.Id, t1);
-            Popup.Content = await CreateJobsPanel();
 
-        });
-#endif
-        ppb.ListenToChanges(async (a) =>
+        foreach (var item in commands.OrderBy(x => x.Title, StringComparer.CurrentCultureIgnoreCase))
         {
-            var action = a.Id.Split(',')[0];
-            var id = a.Id.Split(',', 2)[1];
-            if (!RunningTasks.TryGetValue(id, out var task))
+            var type = item.IsToggle ? Localized.DraftPage_CommandPanel_ToggleCommand : Localized.DraftPage_CommandPanel_NormalCommand;
+            var icon = new Label
             {
-                await DisplayAlertAsync(Localized._Error, $"Task {id} not found in Tasks.", Localized._OK);
-                return;
-            }
-            switch (action)
+                Text = item.IconGlyph,
+                FontFamily = item.FontFamily,
+                FontSize = 24,
+                HorizontalTextAlignment = TextAlignment.Center,
+                VerticalTextAlignment = TextAlignment.Center,
+                WidthRequest = 40
+            };
+            var title = new Label { Text = item.Title, FontSize = 16, FontAttributes = FontAttributes.Bold };
+            var key = new Label { Text = item.Key, FontSize = 11, Opacity = 0.7, LineBreakMode = LineBreakMode.TailTruncation };
+            var metadata = new Label
             {
-                case "Cancel":
-                    {
-                        var sure = await DisplayAlertAsync(Localized._Warn, Localized.DraftPage_Tasks_CancelWarn(task.Name), Localized._Confirm, Localized._Cancel);
-                        if (sure) task.Cancel();
-                        break;
-                    }
-                case "Remove":
-                    {
-                        RunningTasks.Remove(id, out _);
-                        break;
-                    }
-                default:
-                    break;
-            }
+                Text = $"{Localized.DraftPage_CommandPanel_Type}: {type}",
+                FontSize = 12,
+                Opacity = 0.8,
+                LineBreakMode = LineBreakMode.WordWrap
+            };
+            var details = new VerticalStackLayout { Spacing = 2, Children = { title, key, metadata } };
+            var invokeButton = new Button
+            {
+                Text = Localized.DraftPage_CommandPanel_Invoke,
+                Padding = new Thickness(12, 6),
+                VerticalOptions = LayoutOptions.Center,
+                IsEnabled = item.IsEnabled
+            };
+            invokeButton.Clicked += async (_, _) => await InvokeAsync(item);
 
-            Popup.Content = await CreateJobsPanel();
-        });
-        return ppb.BuildWithScrollView();
+            var row = new Grid
+            {
+                ColumnSpacing = 10,
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto)
+                }
+            };
+            row.Add(icon, 0, 0);
+            row.Add(details, 1, 0);
+            row.Add(invokeButton, 2, 0);
+
+            var border = new Border
+            {
+                Padding = 10,
+                StrokeThickness = 1,
+                Stroke = Application.Current?.RequestedTheme == AppTheme.Dark ? Colors.DimGray : Colors.LightGray,
+                StrokeShape = new RoundRectangle { CornerRadius = 8 },
+                Content = row
+            };
+            commandRows.Children.Add(border);
+            rows.Add((item, border, $"{item.Title}\n{item.Key}\n{type}"));
+        }
+
+        void Filter(string? query)
+        {
+            var hasQuery = !string.IsNullOrWhiteSpace(query);
+            var visibleCount = 0;
+            foreach (var row in rows)
+            {
+                row.View.IsVisible = !hasQuery || row.SearchText.Contains(query!, StringComparison.CurrentCultureIgnoreCase);
+                if (row.View.IsVisible) visibleCount++;
+            }
+            emptyLabel.IsVisible = visibleCount == 0;
+        }
+
+        var search = new SearchBar { Placeholder = Localized.DraftPage_CommandPanel_Search };
+        search.TextChanged += (_, e) => Filter(e.NewTextValue);
+        search.SearchButtonPressed += async (_, _) =>
+        {
+            var first = rows.FirstOrDefault(x => x.View.IsVisible && x.Item.IsEnabled);
+            if (first.Item is not null) await InvokeAsync(first.Item);
+        };
+
+        var panel = new Grid
+        {
+            RowSpacing = 10,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+            RowDefinitions =
+            {
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Star)
+            }
+        };
+        panel.Add(new VerticalStackLayout
+        {
+            Spacing = 6,
+            MinimumHeightRequest = 86,
+            Children =
+            {
+                new Label
+                {
+                    Text = Localized.DraftPage_CommandPanel,
+                    Margin = new(0, 8, 0, 0),
+                    FontSize = 22,
+                    FontAttributes = FontAttributes.Bold
+                },
+                search
+            }
+        }, 0, 0);
+        panel.Add(new ScrollView
+        {
+            Content = new VerticalStackLayout
+            {
+                Spacing = 0,
+                Children = { commandRows, emptyLabel }
+            }
+        }, 0, 1);
+
+        await ShowAPopup(panel, mode: "dialog", disableScrollWrapping: true);
+        search.Focus();
     }
 
-    public async Task OnManageJobsClicked()
+    private void RefreshToggleCommandStates()
     {
-        await HidePopup();
-        await ShowAPopup(await CreateJobsPanel());
+        foreach (var command in QuickCommands.Where(x => x.IsToggle)) command.RefreshToggleState();
+    }
+
+    private void RegisterQuickCommandShortcuts()
+    {
+#if WINDOWS
+        if (Handler?.PlatformView is Microsoft.UI.Xaml.FrameworkElement element)
+        {
+            element.KeyDown -= QuickCommandShortcuts_KeyDown;
+            element.KeyDown += QuickCommandShortcuts_KeyDown;
+        }
+#endif
+    }
+
+#if WINDOWS
+    private void QuickCommandShortcuts_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (!SettingsManager.IsBoolSettingTrue(EnableQuickCommandShortcutsSetting)) return;
+
+        var state = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Control);
+        if (!state.HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down)) return;
+
+        var index = e.Key switch
+        {
+            Windows.System.VirtualKey.Number1 => 0,
+            Windows.System.VirtualKey.Number2 => 1,
+            Windows.System.VirtualKey.Number3 => 2,
+            Windows.System.VirtualKey.Number4 => 3,
+            Windows.System.VirtualKey.Number5 => 4,
+            Windows.System.VirtualKey.Number6 => 5,
+            Windows.System.VirtualKey.Number7 => 6,
+            Windows.System.VirtualKey.Number8 => 7,
+            _ => -1
+        };
+        if (index < 0) return;
+
+        var slot = QuickCommandSlots[index];
+        if (slot.Item is null || !slot.Command.CanExecute(slot.CommandParameter)) return;
+        slot.Command.Execute(slot.CommandParameter);
+        e.Handled = true;
+    }
+#endif
+
+    public void RegisterQuickCommand(string key, string title, ICommand command, object? parameter = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentNullException.ThrowIfNull(command);
+
+        var item = new QuickCommandItem($"manual:{key}", title, command, "\ue8b8", parameter);
+        var existing = QuickCommands.FirstOrDefault(x => x.Key == item.Key);
+        if (existing is not null) QuickCommands.Remove(existing);
+        QuickCommands.Add(item);
+        RebuildQuickCommandSlots();
+    }
+
+    private IEnumerable<(string Key, string Text, ICommand Command, string IconGlyph, object? Argument)> EnumerateMenuCommands()
+    {
+        for (var menuIndex = 0; menuIndex < MenuBarItems.Count; menuIndex++)
+        {
+            var menu = MenuBarItems[menuIndex];
+            foreach (var item in EnumerateMenuItems((System.Collections.IEnumerable)menu, "0"))
+            {
+                if (item.Item.Command is null) continue;
+                yield return ($"menu:{menuIndex}/{item.Path}:{item.Item.Command.GetType().FullName}:{item.Item.CommandParameter}",
+                    item.Item.Text ?? menu.Text ?? "Command", item.Item.Command,
+                    (item.Item.IconImageSource as FontImageSource)?.Glyph ?? "\ue8b8", item.Item.CommandParameter);
+            }
+        }
+    }
+
+    private static IEnumerable<(string Path, MenuFlyoutItem Item)> EnumerateMenuItems(System.Collections.IEnumerable items, string path)
+    {
+        var index = 0;
+        foreach (var child in items)
+        {
+            var childPath = $"{path}/{index++}";
+            if (child is MenuFlyoutItem flyoutItem) yield return (childPath, flyoutItem);
+            if (child is MenuFlyoutSubItem subItem)
+            {
+                foreach (var nested in EnumerateMenuItems((System.Collections.IEnumerable)subItem, childPath)) yield return nested;
+            }
+        }
+    }
+
+    private IEnumerable<(string Key, string Text, ICommand Command, string IconGlyph, object? Argument)> EnumerateToggleCommands()
+    {
+        yield return ("toggle:multiselect", Localized.DraftPage_CenterMenuBar_MultiSelect, ToggleMultiSelectCommand, "\ue162", null);
+        yield return ("toggle:keyframe", Localized.InteractableEditor_KeyFrame, ToggleKeyframeRecordingCommand, "\ue697", null);
+        yield return ("toggle:timeline-scroll", Localized.DraftPage_MenuBar_View_Timeline_LockScroll, SetTimelineScrollLockCommand, "\ue897", null);
+        yield return ("toggle:lock-after-selection", Localized.DraftPage_MenuBar_View_Timeline_LockScrollWhenSelected, ToggleLockScrollViewAfterSelectionCommand, "\ue897", null);
+        yield return ("toggle:reverse-scroll-key", Localized.DraftPage_MenuBar_View_Timeline_ReverseScrollBehavior, ToggleReverseScrollLockKeyBehaviorCommand, "\ue8d4", null);
+    }
+
+    private Func<bool>? GetToggleState(string key) => key switch
+    {
+        "toggle:multiselect" => () => MultiSelectEnabled,
+        "toggle:keyframe" => () => IsKeyframeRecordingEnabled,
+        "toggle:lock-after-selection" => () => LockScrollViewAfterSelection,
+        "toggle:timeline-scroll" => () => IsTimelineScrollEnabled,
+        "toggle:reverse-scroll-key" => () => ReverseScrollLockKeyBehavior,
+        _ => null
+    };
+
+    private void InitializeQuickCommands()
+    {
+        QuickCommands.Clear();
+        foreach (var command in EnumerateMenuCommands().Concat(EnumerateToggleCommands()).GroupBy(x => x.Key).Select(x => x.First()))
+        {
+            QuickCommands.Add(new QuickCommandItem(command.Key, command.Text, command.Command, command.IconGlyph, command.Argument, GetToggleState(command.Key)));
+        }
+        for (var index = QuickCommandSlots.Count; index < QuickCommandSlotCount; index++) QuickCommandSlots.Add(new QuickCommandSlot(this, index));
+        RebuildQuickCommandSlots();
+    }
+
+    private void RefreshQuickCommands()
+    {
+        var manualCommands = QuickCommands.Where(x => x.Key.StartsWith("manual:")).ToList();
+        QuickCommands.Clear();
+        foreach (var command in EnumerateMenuCommands().Concat(EnumerateToggleCommands()).GroupBy(x => x.Key).Select(x => x.First()))
+        {
+            QuickCommands.Add(new QuickCommandItem(command.Key, command.Text, command.Command, command.IconGlyph, command.Argument, GetToggleState(command.Key)));
+        }
+        foreach (var command in manualCommands) QuickCommands.Add(command);
+        RebuildQuickCommandSlots();
+    }
+
+    private string?[] GetQuickCommandSelection()
+    {
+        var raw = SettingsManager.GetSetting(QuickCommandsSetting, DefaultQuickCommandOption);
+        if (string.IsNullOrWhiteSpace(raw)) raw = DefaultQuickCommandOption;
+        try
+        {
+            var values = JsonSerializer.Deserialize<string?[]>(raw) ?? [];
+            return values.Take(QuickCommandSlotCount).Concat(Enumerable.Repeat<string?>(null, QuickCommandSlotCount)).Take(QuickCommandSlotCount).ToArray();
+        }
+        catch { return new string?[QuickCommandSlotCount]; }
+    }
+
+    private void RebuildQuickCommandSlots()
+    {
+        if (QuickCommandSlots.Count == 0) return;
+        var selection = GetQuickCommandSelection();
+        for (var index = 0; index < QuickCommandSlots.Count; index++) QuickCommandSlots[index].Item = QuickCommands.FirstOrDefault(x => x.Key == selection[index]);
+    }
+
+    private async Task ConfigureQuickCommandSlotAsync(int index, Func<Task>? afterSelected = null)
+    {
+        if (index < 0 || index >= QuickCommandSlots.Count) return;
+        RefreshQuickCommands();
+
+        var commands = QuickCommands.ToList();
+        var rows = new List<(QuickCommandItem? Item, Border View, string SearchText)>();
+        var commandRows = new VerticalStackLayout { Spacing = 8 };
+        var emptyRow = new Border
+        {
+            Padding = 12,
+            StrokeThickness = 1,
+            Stroke = Application.Current?.RequestedTheme == AppTheme.Dark ? Colors.DimGray : Colors.LightGray,
+            StrokeShape = new RoundRectangle { CornerRadius = 8 },
+            Content = new Label { Text = Localized.TemplateExtractPage_Clear, FontSize = 16 }
+        };
+        emptyRow.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(async () => await SelectQuickCommandAsync(index, null, afterSelected)) });
+        commandRows.Children.Add(emptyRow);
+        rows.Add((null, emptyRow, Localized.TemplateExtractPage_Clear));
+
+        foreach (var item in commands)
+        {
+            var grid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star)
+                },
+                ColumnSpacing = 10
+            };
+            grid.Add(new Label { Text = item.IconGlyph, FontFamily = item.FontFamily, FontSize = 24, WidthRequest = 40, HorizontalTextAlignment = TextAlignment.Center }, 0, 0);
+            grid.Add(new VerticalStackLayout
+            {
+                Spacing = 2,
+                Children =
+                {
+                    new Label { Text = item.Title, FontSize = 16, FontAttributes = FontAttributes.Bold },
+                    new Label { Text = item.Key, FontSize = 11, Opacity = 0.7 }
+                }
+            }, 1, 0);
+            var row = new Border
+            {
+                Padding = 10,
+                StrokeThickness = 1,
+                Stroke = Application.Current?.RequestedTheme == AppTheme.Dark ? Colors.DimGray : Colors.LightGray,
+                StrokeShape = new RoundRectangle { CornerRadius = 8 },
+                Content = grid
+            };
+            row.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(async () => await SelectQuickCommandAsync(index, item, afterSelected)) });
+            commandRows.Children.Add(row);
+            rows.Add((item, row, $"{item.Title}\n{item.Key}"));
+        }
+
+        var emptyLabel = new Label { Text = Localized.DraftPage_CommandPanel_NoResults, HorizontalOptions = LayoutOptions.Center, Margin = new Thickness(12, 32), IsVisible = false };
+        var search = new SearchBar { Placeholder = Localized.DraftPage_CommandPanel_Search };
+        search.TextChanged += (_, e) =>
+        {
+            var visible = 0;
+            foreach (var row in rows)
+            {
+                row.View.IsVisible = string.IsNullOrWhiteSpace(e.NewTextValue) || row.SearchText.Contains(e.NewTextValue, StringComparison.CurrentCultureIgnoreCase);
+                if (row.View.IsVisible) visible++;
+            }
+            emptyLabel.IsVisible = visible == 0;
+        };
+        var panel = new Grid
+        {
+            RowSpacing = 10,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+            RowDefinitions = { new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star) }
+        };
+        panel.Add(new VerticalStackLayout
+        {
+            Spacing = 6,
+            MinimumHeightRequest = 78,
+            Children =
+            {
+                new Label { Text = $"{Localized.DraftPage_QuickCommand} #{index + 1}", FontSize = 22, FontAttributes = FontAttributes.Bold },
+                search
+            }
+        }, 0, 0);
+        panel.Add(new ScrollView { Content = new VerticalStackLayout { Spacing = 0, Children = { commandRows, emptyLabel } } }, 0, 1);
+        await ShowAPopup(panel, mode: "dialog", disableScrollWrapping: true);
+        search.Focus();
+    }
+
+    private async Task SelectQuickCommandAsync(int index, QuickCommandItem? item, Func<Task>? afterSelected = null)
+    {
+        var selection = GetQuickCommandSelection();
+        selection[index] = item?.Key;
+        SettingsManager.WriteSetting(QuickCommandsSetting, JsonSerializer.Serialize(selection));
+        RebuildQuickCommandSlots();
+        await HidePopup(true);
+        if (afterSelected is not null) await afterSelected();
+    }
+
+    private void QuickCommandButton_Loaded(object? sender, EventArgs e)
+    {
+        if (sender is not Border border) return;
+        foreach (var gesture in border.GestureRecognizers.ToList()) border.GestureRecognizers.Remove(gesture);
+        UIServices.RegisterSelectOrContextMenu(border, OnContextMenuClick: async () =>
+        {
+            if (border.BindingContext is not QuickCommandSlot slot) return;
+            RefreshQuickCommands();
+            await ConfigureQuickCommandSlotAsync(slot.Index);
+        });
+    }
+
+    private async Task ShowQuickCommandManagerAsync()
+    {
+        RefreshQuickCommands();
+        var configuredCount = QuickCommandSlots.Count(x => x.Item is not null);
+        var rows = new VerticalStackLayout { Spacing = 8 };
+        foreach (var slot in QuickCommandSlots)
+        {
+            var item = slot.Item;
+            var details = new VerticalStackLayout
+            {
+                Spacing = 2,
+                Children =
+                {
+                    new Label { Text = $"#{slot.Index + 1}  {item?.Title ?? Localized.TemplateExtractPage_Clear}", FontSize = 16, FontAttributes = FontAttributes.Bold },
+                    new Label { Text = item?.Key ?? "", FontSize = 11, Opacity = 0.7 }
+                }
+            };
+            var configure = new Button
+            {
+                Text = Localized.DraftPage_QuickCommand,
+                Padding = new Thickness(10, 5),
+                Command = new Command(async () =>
+            {
+                await HidePopup(true);
+                await ConfigureQuickCommandSlotAsync(slot.Index, ShowQuickCommandManagerAsync);
+            })
+            };
+            var grid = new Grid { ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) }, ColumnSpacing = 10 };
+            grid.Add(details, 0, 0);
+            grid.Add(configure, 1, 0);
+            rows.Children.Add(new Border
+            {
+                Padding = 10,
+                StrokeThickness = 1,
+                Stroke = Application.Current?.RequestedTheme == AppTheme.Dark ? Colors.DimGray : Colors.LightGray,
+                StrokeShape = new RoundRectangle { CornerRadius = 8 },
+                Content = grid
+            });
+        }
+        var panel = new Grid
+        {
+            RowSpacing = 10,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+            RowDefinitions = { new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star) }
+        };
+        panel.Add(new VerticalStackLayout
+        {
+            Spacing = 4,
+            MinimumHeightRequest = 58,
+            Children =
+            {
+                new Label { Text = Localized.DraftPage_QuickCommand, FontSize = 22, FontAttributes = FontAttributes.Bold },
+                new Label { Text = $"{configuredCount}/{QuickCommandSlots.Count}  |  {QuickCommands.Count}", Opacity = 0.8 }
+            }
+        }, 0, 0);
+        panel.Add(new ScrollView { Content = rows }, 0, 1);
+        await ShowAPopup(panel, mode: "dialog", disableScrollWrapping: true);
     }
     #endregion
 
@@ -5474,6 +6187,9 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     if (removed?.Clip != null)
                     {
+                        if (_activeClipPreviews.Remove(ghostId, out var oldPreview))
+                            oldPreview.Dispose();
+
                         try { OverlayLayer?.Children.Remove(removed.Clip); } catch { }
                         foreach (var t in Tracks.Values.ToList())
                             try { t.Children.Remove(removed.Clip); } catch { }
@@ -5492,6 +6208,9 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     if (removed?.Clip != null)
                     {
+                        if (_activeClipPreviews.Remove(shadowId, out var oldPreview))
+                            oldPreview.Dispose();
+
                         try { OverlayLayer?.Children.Remove(removed.Clip); } catch { }
                         foreach (var t in Tracks.Values.ToList())
                             try { t.Children.Remove(removed.Clip); } catch { }
@@ -5591,600 +6310,43 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    public async Task ShowAPopup(View? content = null, View? border = null, ClipElementUI? clip = null, string mode = "")
+    public async Task ShowAPopup(View? content = null, View? border = null, ClipElementUI? clip = null, string mode = "bottom", bool disableScrollWrapping = false)
     {
         content ??= (border != null && clip != null) ? await BuildPropertyPanel(clip) : new Label { Text = $"No content to show. This SHOULD is a bug, please feedback.\r\n{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}" };
-        bool disablePopupScrollWrapping = clip?.ClipType == ClipMode.VideoClip || clip?.ClipType == ClipMode.PhotoClip;
+        disableScrollWrapping |= clip?.ClipType == ClipMode.VideoClip || clip?.ClipType == ClipMode.PhotoClip;
 
         OverlayLayer.IsVisible = true;
         OverlayLayer.InputTransparent = false;
+        var popupHostSize = GetPopupHostSize();
 
-        if (DeviceInfo.Idiom == DeviceIdiom.Phone)
-        {
-            await ShowAFullscreenPopupInBottom(WindowSize.Height * 0.75, content);
-            return;
-        }
-
-        if (!SettingsManager.IsSettingExists("PreferredPopupMode"))
-        {
-            SettingsManager.WriteSetting("PreferredPopupMode", "bottom");
-        }
         try
         {
-            switch (!string.IsNullOrWhiteSpace(mode) ? mode : SettingsManager.GetSetting("PreferredPopupMode"))
+            switch (mode)
             {
-                case "right":
-                    {
-                        await ShowAFullscreenPopupInRight(WindowSize.Height * 0.75, content, disablePopupScrollWrapping);
-                        break;
-                    }
-                case "bottom":
-                    {
-                        await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, content, disablePopupScrollWrapping);
-                        break;
-                    }
                 case "dialog":
-                    {
-                        await ShowACenteredPopup(WindowSize.Height / 1.5, WindowSize.Width / 2, content, disablePopupScrollWrapping);
-                        break;
-                    }
-                case "window":
-                    {
-                        var w = new MultiWindowItem
-                        {
-                            Content = content,
-                            Title = "",
-                            IsNavigationVisible = false
-                        };
-                        MainMultiWindowView.AddWindow(w);
-                        await w.OpenInNewWindow();
-                        break;
-                    }
-                case "clip":
-                    {
-                        if (border is not null)
-                            await ShowClipPopup(border, content, clip);
-                        else
-                            await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, content, disablePopupScrollWrapping);
-                        break;
-                    }
+                    await ShowACenteredPopup(popupHostSize.Height / 1.5, popupHostSize.Width / 2, content, disableScrollWrapping);
+                    break;
+                default:
+                    await ShowAFullscreenPopupInBottom(popupHostSize.Height / 1.2, content, disableScrollWrapping);
+                    break;
             }
         }
         catch (Exception ex)
         {
-            Log(ex, "ShowClipPopup", clip);
+            Log(ex, "ShowAPopup", clip);
             throw;
         }
 
 
     }
 
-    private void ShowScriptWindow()
-    {
-        const string scriptWindowTitle = "Script Console";
-        // 检查是否已存在脚本窗口
-        if (MainMultiWindowView.Windows.FirstOrDefault(w => w.Title == scriptWindowTitle) is MultiWindowItem existing)
-        {
-            MainMultiWindowView.BringToFront(existing);
-            return;
-        }
-
-        var inputEditor = new Editor
-        {
-            Placeholder = "Enter PowerShell command…\ne.g. Get-ProjectClip\n     Add-ProjectClip -Name Test -Track 0 -StartX 100",
-            HeightRequest = 100,
-            FontSize = 13,
-            FontFamily = "MarkdownCodeBlock",
-            IsSpellCheckEnabled = false,
-            AutoSize = EditorAutoSizeOption.TextChanges,
-        };
-
-        var outputEditor = new Editor
-        {
-            IsReadOnly = true,
-            FontSize = 13,
-            FontFamily = "MarkdownCodeBlock",
-            BackgroundColor = Color.FromArgb("#1E1E1E"),
-            TextColor = Colors.White,
-        };
-
-        var runButton = new Button
-        {
-            Text = "▶ Run",
-            BackgroundColor = Color.FromArgb("#0E639C"),
-            TextColor = Colors.White,
-            CornerRadius = 4,
-            HeightRequest = 32,
-            Margin = new Thickness(0, 0, 4, 0),
-        };
-
-        var clearButton = new Button
-        {
-            Text = "Clear",
-            BackgroundColor = Color.FromArgb("#333333"),
-            TextColor = Colors.White,
-            CornerRadius = 4,
-            HeightRequest = 32,
-            Margin = new Thickness(4, 0, 0, 0),
-        };
-
-        var statusLabel = new Label
-        {
-            Text = "Ready",
-            FontSize = 11,
-            VerticalOptions = LayoutOptions.Center,
-            HorizontalOptions = LayoutOptions.Fill,
-            TextColor = Color.FromArgb("#888888"),
-        };
-
-
-        clearButton.Clicked += (_, _) =>
-        {
-            inputEditor.Text = "";
-            outputEditor.Text = "";
-            statusLabel.Text = "Cleared";
-            statusLabel.TextColor = Color.FromArgb("#888888");
-        };
-
-        // 快速命令按钮
-        var quickCmds = new[] { "Get-ProjectClip", "Get-ProjectClip | Format-Table -AutoSize", "Add-ProjectClip -Name 'Test' -Track 0 -StartX 100" };
-        var quickCmdBar = new HorizontalStackLayout { Spacing = 4, Margin = new Thickness(0, 4) };
-        foreach (var cmd in quickCmds)
-        {
-            var chip = new Button
-            {
-                Text = cmd,
-                FontSize = 11,
-                BackgroundColor = Color.FromArgb("#2D2D2D"),
-                TextColor = Color.FromArgb("#CCCCCC"),
-                CornerRadius = 4,
-                Padding = new Thickness(8, 2),
-                HeightRequest = 26,
-            };
-            chip.Clicked += (_, _) =>
-            {
-                inputEditor.Text = cmd;
-            };
-            quickCmdBar.Children.Add(chip);
-        }
-
-        var buttonBar = new HorizontalStackLayout
-        {
-            Children = { runButton, clearButton },
-            Spacing = 0,
-            Margin = new Thickness(0, 4),
-        };
-
-        var cmdBar = new ScrollView { Content = quickCmdBar, Orientation = ScrollOrientation.Horizontal };
-
-        // ════════════════════════════════════════════════════════════════
-        //  授权面板（内联在 Script Console 窗口内，基于事件驱动）
-        //  通过 TaskCompletionSource 实现完全非阻塞授权。
-        // ════════════════════════════════════════════════════════════════
-        var authMessageLabel = new Label
-        {
-            FontSize = 12,
-            TextColor = Colors.White,
-            LineBreakMode = LineBreakMode.WordWrap,
-        };
-
-        // 当前待处理的授权请求
-        TaskCompletionSource<Dictionary<string, AuthorizationResult>>? pendingAuthTcs = null;
-        IReadOnlyList<string>? pendingCmdNames = null;
-
-        var btnAllow = new Button { Text = Localized.ScriptEngine_Auth_Allow, BackgroundColor = Color.FromArgb("#4EC9B0"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
-        var btnAllowRemember = new Button { Text = Localized.ScriptEngine_Auth_AllowRemember, BackgroundColor = Color.FromArgb("#1E6F5C"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
-        var btnDeny = new Button { Text = Localized.ScriptEngine_Auth_Deny, BackgroundColor = Color.FromArgb("#C04040"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
-        var btnDenyRemember = new Button { Text = Localized.ScriptEngine_Auth_DenyRemember, BackgroundColor = Color.FromArgb("#8B0000"), TextColor = Colors.White, CornerRadius = 4, HeightRequest = 32, FontSize = 12 };
-
-        var authPanel = new Border
-        {
-            IsVisible = false,
-            BackgroundColor = Color.FromArgb("#252526"),
-            Stroke = Color.FromArgb("#555555"),
-            StrokeThickness = 1,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
-            Padding = new Thickness(12, 10),
-            Content = new VerticalStackLayout
-            {
-                Spacing = 8,
-                Children =
-                {
-                    new Label { Text = Localized.ScriptEngine_Auth_DialogTitle, FontSize = 14, TextColor = Colors.Yellow, FontAttributes = FontAttributes.Bold },
-                    new ScrollView { Content = authMessageLabel, MaximumHeightRequest = 150 },
-                    new HorizontalStackLayout
-                    {
-                        Spacing = 8,
-                        HorizontalOptions = LayoutOptions.Center,
-                        Children = { btnAllow, btnAllowRemember, btnDeny, btnDenyRemember },
-                    },
-                }
-            },
-        };
-
-        // ── 订阅授权请求事件（完全非阻塞） ──
-        EventHandler<AuthorizationRequestedEventArgs>? authHandler = null;
-        authHandler = (sender, args) =>
-        {
-            // 构建显示消息
-            var sb = new System.Text.StringBuilder();
-
-            if (!string.IsNullOrEmpty(args.ObfuscationWarning))
-            {
-                sb.AppendLine($"{Localized.ScriptEngine_Auth_SecurityWarningLabel}{args.ObfuscationWarning}");
-                sb.AppendLine($"{Localized.ScriptEngine_Auth_ThreatLevelLabel}{args.ThreatLevel?.ToString() ?? Localized._Unknown}");
-                sb.AppendLine();
-            }
-
-            if (args.CommandNames.Count > 0)
-            {
-                sb.AppendLine(Localized.ScriptEngine_Auth_RequestHeader);
-                for (int i = 0; i < args.CommandNames.Count; i++)
-                {
-                    var name = args.CommandNames[i];
-                    var ctx = args.Commands.Count > i ? args.Commands[i] : null;
-                    sb.Append($"\n  • {Localized.ScriptEngine_Auth_CommandLabel}{name}");
-                    if (ctx?.TargetPath != null) sb.Append($"\n    {Localized.ScriptEngine_Auth_TargetPathLabel}{ctx.TargetPath}");
-                    if (ctx?.TargetUrl != null) sb.Append($"\n    {Localized.ScriptEngine_Auth_TargetUrlLabel}{ctx.TargetUrl}");
-                }
-            }
-            else
-            {
-                sb.Append(Localized.ScriptEngine_Auth_RequestHeader);
-            }
-
-            // 更新 UI 并存储 TCS
-            authMessageLabel.Text = sb.ToString();
-            pendingAuthTcs = args.Completion;
-            pendingCmdNames = args.CommandNames;
-            authPanel.IsVisible = true;
-        };
-        ScriptEngine.AuthorizationRequested += authHandler;
-
-        // ── 简化后的 Run 按钮 ──
-        runButton.Clicked += async (_, _) =>
-        {
-            var script = inputEditor.Text?.Trim();
-            if (string.IsNullOrWhiteSpace(script))
-            {
-                statusLabel.Text = "Please enter a command.";
-                return;
-            }
-
-            runButton.IsEnabled = false;
-            statusLabel.Text = "Running…";
-            statusLabel.TextColor = Color.FromArgb("#888888");
-            outputEditor.Text = "";
-
-            try
-            {
-                var result = await ScriptEngine.ExecuteAsync(script);
-                outputEditor.Text = result;
-                statusLabel.Text = $"Completed ({result.Length} chars)";
-                statusLabel.TextColor = Color.FromArgb("#4EC9B0");
-            }
-            catch (Exception ex)
-            {
-                outputEditor.Text = $"ERROR: {ex.Message}";
-                statusLabel.Text = "Failed";
-                statusLabel.TextColor = Colors.OrangeRed;
-            }
-            finally
-            {
-                runButton.IsEnabled = true;
-            }
-        };
-
-        void CompleteAuth(AuthorizationResult decision)
-        {
-            var tcs = pendingAuthTcs;
-            var names = pendingCmdNames;
-            pendingAuthTcs = null;
-            pendingCmdNames = null;
-            if (tcs != null)
-            {
-                var decisions = names?.ToDictionary(c => c, _ => decision)
-                    ?? new Dictionary<string, AuthorizationResult>();
-                tcs.TrySetResult(decisions);
-            }
-            authPanel.IsVisible = false;
-        }
-
-        btnAllow.Clicked += (_, _) => CompleteAuth(AuthorizationResult.Allow);
-        btnAllowRemember.Clicked += (_, _) => CompleteAuth(AuthorizationResult.AllowAndRemember);
-        btnDeny.Clicked += (_, _) => CompleteAuth(AuthorizationResult.Deny);
-        btnDenyRemember.Clicked += (_, _) => CompleteAuth(AuthorizationResult.DenyAndRemember);
-
-        var windowContent = new Grid
-        {
-            RowDefinitions =
-            {
-                new RowDefinition { Height = GridLength.Auto },                          // 0: 测试警告
-                new RowDefinition { Height = GridLength.Auto },                          // 1: 快速命令
-                new RowDefinition { Height = GridLength.Auto },                          // 2: 输入
-                new RowDefinition { Height = GridLength.Auto },                          // 3: 按钮
-                new RowDefinition { Height = GridLength.Auto },                          // 4: 授权面板（默认隐藏）
-                new RowDefinition { Height = new GridLength(1, GridUnitType.Star) },     // 5: 输出
-                new RowDefinition { Height = GridLength.Auto },                          // 6: 状态
-            },
-            Padding = new Thickness(8),
-            ColumnDefinitions = { new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) } },
-            RowSpacing = 4,
-            Children =
-            {
-                new Label { Text = Localized.DraftPage_Scripting_TestOnly, TextColor = Colors.Yellow },
-                cmdBar,
-                inputEditor,
-                buttonBar,
-                authPanel,
-                outputEditor,
-                statusLabel,
-            },
-        };
-
-        Grid.SetRow(cmdBar, 1);
-        Grid.SetRow(inputEditor, 2);
-        Grid.SetRow(buttonBar, 3);
-        Grid.SetRow(authPanel, 4);
-        Grid.SetRow(outputEditor, 5);
-        Grid.SetRow(statusLabel, 6);
-
-        var window = new MultiWindowItem
-        {
-            Title = scriptWindowTitle,
-            Content = windowContent,
-            WidthRequest = 500,
-            HeightRequest = 450,
-            IsResizable = true,
-            IsMaximizable = true,
-            IsMinimizable = true,
-            IsClosable = true,
-            IsDraggable = true,
-            IsPopOutVisible = true
-        };
-
-        // ── 窗口关闭时取消订阅事件 ──
-        window.CloseClicked += (_, _) =>
-        {
-            if (authHandler != null)
-                ScriptEngine.AuthorizationRequested -= authHandler;
-        };
-
-        MainMultiWindowView.AddWindow(window);
-    }
-
-    private async Task ShowClipPopup(View anchorView, View popupContent, ClipElementUI? clip = null)
-    {
-        popupShowingDirection = "clip";
-        _popupHeightRatio = 0;
-        _popupWidthRatio = 0;
-        _popupAnchorView = anchorView;
-
-        var existing = OverlayLayer.Children.FirstOrDefault(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle");
-        if (existing != null)
-        {
-            var toRemove = OverlayLayer.Children.Where(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle").ToList();
-            foreach (var r in toRemove)
-                OverlayLayer.Children.Remove(r);
-        }
-
-
-        double desiredPopupWidth = 500;
-        double desiredPopupHeight = 400;
-        double arrowSize = 20;
-        double spacing = 8;
-        double minPopupWidth = 200;
-        double minPopupHeight = 120;
-        double margin = 8;
-
-        Point clipAbs = GetAbsolutePosition(anchorView, null);
-        Point overlayAbs = GetAbsolutePosition(OverlayLayer, null);
-
-        int retries = 0;
-        while ((OverlayLayer.Width <= 0 || OverlayLayer.Height <= 0 || double.IsNaN(clipAbs.Y) || clipAbs.Y <= 0) && retries < 6)
-        {
-            await Task.Delay(30);
-            clipAbs = GetAbsolutePosition(anchorView, null);
-            overlayAbs = GetAbsolutePosition(OverlayLayer, null);
-            retries++;
-        }
-
-        double cumulativeScrollY = 0;
-        VisualElement? parent = anchorView.Parent as VisualElement;
-        while (parent != null && parent != OverlayLayer)
-        {
-            if (parent is ScrollView sv)
-            {
-                cumulativeScrollY += sv.ScrollY;
-            }
-            parent = parent.Parent as VisualElement;
-        }
-        double clipWidth = (anchorView.Width > 0) ? anchorView.Width : anchorView.WidthRequest;
-        double clipHeight = (anchorView.Height > 0) ? anchorView.Height : anchorView.HeightRequest;
-
-        Point abs = new Point(clipAbs.X - overlayAbs.X, clipAbs.Y - overlayAbs.Y - cumulativeScrollY);
-
-        // for fallback 
-        double overlayW = OverlayLayer.Width > 0 ? OverlayLayer.Width : this.Width;
-        double overlayH = OverlayLayer.Height > 0 ? OverlayLayer.Height : this.Height;
-        if (double.IsNaN(overlayW) || overlayW <= 0) overlayW = 1000;
-        if (double.IsNaN(overlayH) || overlayH <= 0) overlayH = 1000;
-
-        double availableBelow = overlayH - (abs.Y + clipHeight) - spacing - arrowSize - margin;
-        double availableAbove = abs.Y - spacing - arrowSize - margin;
-        if (availableBelow < 0) availableBelow = 0;
-        if (availableAbove < 0) availableAbove = 0;
-
-        double popupWidth = Math.Min(desiredPopupWidth, Math.Max(minPopupWidth, overlayW - margin * 2));
-        double popupHeight;
-        bool popupBelow;
-
-        if (availableBelow >= desiredPopupHeight)
-        {
-            popupBelow = true;
-            popupHeight = desiredPopupHeight;
-        }
-        else if (availableAbove >= desiredPopupHeight)
-        {
-            popupBelow = false;
-            popupHeight = desiredPopupHeight;
-        }
-        else
-        {
-            if (availableBelow >= availableAbove)
-            {
-                popupBelow = true;
-                popupHeight = Math.Max(minPopupHeight, Math.Min(desiredPopupHeight, availableBelow));
-            }
-            else
-            {
-                popupBelow = false;
-                popupHeight = Math.Max(minPopupHeight, Math.Min(desiredPopupHeight, availableAbove));
-            }
-
-            popupHeight = Math.Min(popupHeight, Math.Max(minPopupHeight, overlayH - margin * 2));
-        }
-
-        double clipCenterX = abs.X + (clipWidth / 2.0);
-        double popupX = clipCenterX - (popupWidth / 2.0);
-        if (popupX < margin) popupX = margin;
-        if (popupX + popupWidth + margin > overlayW) popupX = Math.Max(margin, overlayW - popupWidth - margin);
-
-        double popupY;
-        if (popupBelow)
-        {
-            popupY = abs.Y + clipHeight + spacing + arrowSize;
-            if (popupY + popupHeight + margin > overlayH)
-            {
-                popupY = Math.Max(margin, overlayH - popupHeight - margin);
-            }
-        }
-        else
-        {
-            popupY = abs.Y - popupHeight - arrowSize - spacing;
-            if (popupY < margin)
-            {
-                popupY = margin;
-            }
-        }
-
-        double triangleLeft = clipCenterX - (arrowSize / 2.0);
-        double triangleMin = popupX + 6;
-        double triangleMax = popupX + popupWidth - arrowSize - 6;
-        triangleLeft = Math.Clamp(triangleLeft, triangleMin, triangleMax);
-        double triangleTop;
-
-        Polygon triangle;
-        if (popupBelow)
-        {
-            triangle = new Polygon
-            {
-                StyleId = "ClipPopupTriangle",
-                Fill = Colors.Grey,
-                Points = new PointCollection
-                {
-                    new Point(0, arrowSize),
-                    new Point(arrowSize / 2.0, 0),
-                    new Point(arrowSize, arrowSize)
-                }
-            };
-            triangleTop = popupY - arrowSize;
-        }
-        else
-        {
-            triangle = new Polygon
-            {
-                StyleId = "ClipPopupTriangle",
-                Fill = Colors.Grey,
-                Points = new PointCollection
-                {
-                    new Point(0, 0),
-                    new Point(arrowSize / 2.0, arrowSize),
-                    new Point(arrowSize, 0)
-                },
-                Opacity = 0.75
-            };
-            triangleTop = popupY + popupHeight;
-        }
-
-        AbsoluteLayout.SetLayoutBounds(triangle, new Rect(triangleLeft, triangleTop, arrowSize, arrowSize));
-
-        var frame = new Border
-        {
-            StyleId = "ClipPopupFrame",
-            Background = new SolidColorBrush(Colors.Grey),
-            Stroke = Colors.Black,
-            StrokeThickness = 1,
-            StrokeShape = new RoundRectangle { CornerRadius = 4 },
-            Padding = new Thickness(2),
-            Opacity = 0.95,
-            Content = popupContent
-        };
-
-        frame.GestureRecognizers.Add(nopGesture);
-
-        AbsoluteLayout.SetLayoutBounds(frame, new Rect(popupX, popupY, popupWidth, popupHeight));
-
-        frame.Opacity = 0;
-        frame.Scale = 0.95;
-        frame.TranslationY = 5;
-
-        triangle.Opacity = 0;
-        triangle.Scale = 0.95;
-        triangle.TranslationY = 5;
-
-        if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
-        {
-            // 使用 CommunityToolkit Popup
-            var toolkitPopupContent = new AbsoluteLayout
-            {
-                WidthRequest = popupWidth,
-                HeightRequest = popupHeight + arrowSize,
-                Children = { triangle, frame }
-            };
-
-            // 调整布局为相对于 popup 内容的坐标
-            AbsoluteLayout.SetLayoutBounds(triangle, new Rect(triangleLeft - popupX, popupBelow ? 0 : popupHeight, arrowSize, arrowSize));
-            AbsoluteLayout.SetLayoutBounds(frame, new Rect(0, popupBelow ? arrowSize : 0, popupWidth, popupHeight));
-
-            _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
-            {
-                Content = toolkitPopupContent,
-                CanBeDismissedByTappingOutsideOfPopup = true
-            };
-
-            ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
-        }
-        else
-        {
-            OverlayLayer.IsVisible = true;
-            OverlayLayer.InputTransparent = false;
-            OverlayLayer.Children.Add(frame);
-            OverlayLayer.Children.Add(triangle);
-        }
-
-
-        const uint entranceMs = 220u;
-        try
-        {
-            await Task.WhenAll(
-                frame.FadeToAsync(0.9, entranceMs, Easing.CubicOut),
-                frame.ScaleToAsync(1, entranceMs, Easing.CubicOut),
-                frame.TranslateToAsync(0, 0, entranceMs, Easing.CubicOut),
-                triangle.FadeToAsync(0.9, entranceMs, Easing.CubicOut),
-                triangle.ScaleToAsync(1, entranceMs, Easing.CubicOut),
-                triangle.TranslateToAsync(0, 0, entranceMs, Easing.CubicOut)
-            );
-        }
-        catch { }
-    }
 
     private void ReAdjustPopupForWindowSize()
     {
         if (popupShowingDirection == "none") return;
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer) return;
 
-        var size = WindowSize;
+        var size = GetPopupHostSize();
         if (size.Width <= 0 || size.Height <= 0) return;
 
         try
@@ -6202,20 +6364,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         Popup.TranslationY = size.Height - newHeight;
                     }
                     break;
-                case "right":
-                    if (_popupWidthRatio > 0)
-                    {
-                        double newLeftMargin = size.Height * _popupWidthRatio;
-                        double newWidth = size.Width - newLeftMargin;
-                        if (newWidth < 200) newWidth = 200;
-                        Popup.WidthRequest = newWidth;
-                        Popup.HeightRequest = size.Height * 0.85;
-                        Popup.TranslationX = newLeftMargin;
-                        Popup.TranslationY = 20;
-                    }
-                    break;
                 case "dialog":
-                case "center":
                     if (_popupHeightRatio > 0 && _popupWidthRatio > 0)
                     {
                         double desiredHeight = size.Height * _popupHeightRatio;
@@ -6233,18 +6382,16 @@ public partial class DraftPage : ContentPage, IDraftPage
                         Popup.TranslationY = targetY;
                     }
                     break;
-                case "clip":
-                    if (_popupAnchorView is not null)
-                    {
-                        _ = Dispatcher.Dispatch(async () =>
-                        {
-                            await HidePopup(true);
-                        });
-                    }
-                    break;
             }
         }
         catch { }
+    }
+
+    private Size GetPopupHostSize()
+    {
+        return new(
+            OverlayLayer.Width > 0 ? OverlayLayer.Width : Width > 0 ? Width : WindowSize.Width,
+            OverlayLayer.Height > 0 ? OverlayLayer.Height : Height > 0 ? Height : WindowSize.Height);
     }
 
     public async Task HidePopup(bool force = false)
@@ -6265,7 +6412,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         else
         {
             OverlayLayer.InputTransparent = true;
-            await Task.WhenAll(HideClipPopup(), HideFullscreenPopup());
+            await HideFullscreenPopup();
 
             OverlayLayer.IsVisible = false;
             OverlayLayer.InputTransparent = true;
@@ -6274,35 +6421,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         popupShowingDirection = "none";
         _popupHeightRatio = 0;
         _popupWidthRatio = 0;
-        _popupAnchorView = null;
-    }
-
-    private async Task HideClipPopup()
-    {
-        var toRemove = OverlayLayer.Children.Where(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle").ToList();
-
-        // Animate out (run all animations in parallel)
-        const uint exitMs = 220u;
-        var visuals = toRemove.OfType<VisualElement>().ToList();
-        var tasks = new List<Task>();
-        foreach (var v in visuals)
-        {
-            try
-            {
-                var t = Task.WhenAll(
-                    v.FadeToAsync(0, exitMs, Easing.CubicIn),
-                    v.ScaleToAsync(0.95, exitMs, Easing.CubicIn),
-                    v.TranslateToAsync(0, 10, exitMs, Easing.CubicIn)
-                );
-                tasks.Add(t);
-            }
-            catch { }
-        }
-        try { await Task.WhenAll(tasks); } catch { }
-
-        foreach (var r in toRemove)
-            OverlayLayer.Children.Remove(r);
-
+        OverlayLayer.BackgroundColor = Colors.Transparent;
     }
 
     private async Task ShowAFullscreenPopupInBottom(double height, View content, bool disableScrollWrapping = false)
@@ -6311,8 +6430,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         OverlayLayer.IsVisible = true;
         OverlayLayer.InputTransparent = false;
+        OverlayLayer.BackgroundColor = Colors.Transparent;
 
-        var size = WindowSize;
+        var size = GetPopupHostSize();
         _popupHeightRatio = size.Height > 0 ? height / size.Height : 0;
         _popupWidthRatio = 0;
 
@@ -6322,16 +6442,17 @@ public partial class DraftPage : ContentPage, IDraftPage
             HeightRequest = height,
             TranslationX = 15,
             TranslationY = size.Height + 10,
-            Background = new SolidColorBrush(Colors.Grey),
+            BackgroundColor = Color.FromArgb("#FF2D2D30"),
+            Stroke = Color.FromArgb("#FF3E3E42"),
 
             StrokeShape = new RoundRectangle
             {
                 CornerRadius = 8,
-                StrokeThickness = 8
+                StrokeThickness = 1
             },
             Padding = 12,
             Content = content,
-            Opacity = 0.95
+            Opacity = 1.0
         };
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
@@ -6353,7 +6474,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 VerticalOptions = LayoutOptions.End
             };
 
-            ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
+            await ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
         }
         else
         {
@@ -6372,79 +6493,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             var targetY = height;
             try
             {
-                await Popup.TranslateToAsync(Popup.TranslationX, size.Height - targetY, 300, Easing.SinOut);
-            }
-            catch { }
-        }
-    }
-
-    private async Task ShowAFullscreenPopupInRight(double width, View content, bool disableScrollWrapping = false)
-    {
-        popupShowingDirection = "right";
-
-        OverlayLayer.IsVisible = true;
-        OverlayLayer.InputTransparent = false;
-
-        var size = WindowSize;
-        _popupHeightRatio = 0;
-        _popupWidthRatio = size.Height > 0 ? width / size.Height : 0;
-
-        Popup = new Border
-        {
-            WidthRequest = size.Width - width,
-            HeightRequest = size.Height * 0.85,
-            TranslationX = size.Width + 20,
-            TranslationY = 20,
-            Background = new SolidColorBrush(Colors.Grey),
-
-            StrokeShape = new RoundRectangle
-            {
-                CornerRadius = 8,
-                StrokeThickness = 8
-            },
-            Padding = 12,
-            Content = content,
-            Opacity = 0.95
-        };
-        if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
-        {
-            // 使用 CommunityToolkit Popup
-            View popupContentView = disableScrollWrapping
-                ? content
-                : new ScrollView
-                {
-                    Content = content
-                };
-
-            popupContentView.WidthRequest = size.Width - width;
-            popupContentView.HeightRequest = size.Height * 0.85;
-
-            _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
-            {
-                Content = popupContentView,
-                CanBeDismissedByTappingOutsideOfPopup = true,
-                HorizontalOptions = LayoutOptions.End
-            };
-
-            ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
-        }
-        else
-        {
-            try
-            {
-                OverlayLayer.InputTransparent = false;
-                Popup.GestureRecognizers.Add(nopGesture);
-                OverlayLayer.Add(Popup);
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Show popup", this);
-                await DisplayAlertAsync(Localized._Error, "Cannot show a popup.", Localized._OK);
-            }
-            var targetX = width;
-            try
-            {
-                await Popup.TranslateToAsync(width, Popup.TranslationY, 300, Easing.SinOut);
+                await Task.WhenAll(Popup.TranslateToAsync(Popup.TranslationX, size.Height - targetY, 300, Easing.SinOut), AnimatePopupScrimAsync(300));
             }
             catch { }
         }
@@ -6456,6 +6505,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         OverlayLayer.IsVisible = true;
         OverlayLayer.InputTransparent = false;
+        OverlayLayer.BackgroundColor = Colors.Transparent;
 
 
         var size = new Size(OverlayLayer.Width, OverlayLayer.Height);
@@ -6495,18 +6545,23 @@ public partial class DraftPage : ContentPage, IDraftPage
             HeightRequest = popupHeight,
             TranslationX = targetX,
             TranslationY = size.Height + 10,
-            Background = new SolidColorBrush(Colors.Grey),
+            BackgroundColor = Color.FromArgb("#FF2D2D30"),
+            Stroke = Color.FromArgb("#FF3E3E42"),
             StrokeShape = new RoundRectangle
             {
                 CornerRadius = 8,
-                StrokeThickness = 8
+                StrokeThickness = 1
             },
             Padding = 12,
+            Shadow = new Shadow
+            {
+                Radius = 0,
+                Brush = Colors.Transparent
+            },
             Content = content,
             Opacity = 0.0,
             Scale = 0.97
         };
-
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
             // 使用 CommunityToolkit Popup
@@ -6528,7 +6583,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 VerticalOptions = LayoutOptions.Center
             };
 
-            ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
+            await ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
         }
         else
         {
@@ -6548,48 +6603,61 @@ public partial class DraftPage : ContentPage, IDraftPage
             try
             {
                 await Task.WhenAll(
-                    Popup.FadeToAsync(0.95, entranceMs, Easing.CubicOut),
+                    Popup.FadeToAsync(1.0, entranceMs, Easing.CubicOut),
                     Popup.ScaleToAsync(1, entranceMs, Easing.CubicOut),
-                    Popup.TranslateToAsync(targetX, targetY, entranceMs, Easing.CubicOut)
+                    Popup.TranslateToAsync(targetX, targetY, entranceMs, Easing.CubicOut),
+                    AnimatePopupScrimAsync(entranceMs)
                 );
             }
             catch
             {
                 try
                 {
-                    Popup.Opacity = 0.95;
+                    Popup.Opacity = 1.0;
                     Popup.Scale = 1;
                     Popup.TranslationX = targetX;
                     Popup.TranslationY = targetY;
+                    OverlayLayer.BackgroundColor = Color.FromArgb("#55000000");
                 }
                 catch { }
             }
+
         }
+    }
+
+
+    private Task AnimatePopupScrimAsync(uint length)
+    {
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        new Animation(progress =>
+        {
+            OverlayLayer.BackgroundColor = Color.FromRgba(0, 0, 0, 0.33 * progress);
+        }).Commit(
+            OverlayLayer,
+            "PopupScrim",
+            16,
+            length,
+            Easing.CubicOut,
+            (_, _) => completion.TrySetResult(true));
+        return completion.Task;
     }
 
     private async Task HideFullscreenPopup()
     {
-        var size = WindowSize;
+        var size = GetPopupHostSize();
         try
         {
             switch (popupShowingDirection)
             {
-                case "right":
-                    await Popup.TranslateToAsync(size.Width + 20, Popup.TranslationY, 300, Easing.SinIn);
-                    break;
                 case "bottom":
                     await Popup.TranslateToAsync(Popup.TranslationX, size.Height + 10, 300, Easing.SinIn);
                     break;
                 case "dialog":
-                case "center":
                     await Task.WhenAll(
                         Popup.FadeToAsync(0, 180u, Easing.CubicIn),
                         Popup.ScaleToAsync(0.97, 180u, Easing.CubicIn),
                         Popup.TranslateToAsync(Popup.TranslationX, size.Height + 10, 220u, Easing.CubicIn)
                     );
-                    break;
-                default:
-                    await Popup.TranslateToAsync(Popup.TranslationX, size.Height + 10, 300, Easing.SinIn);
                     break;
             }
         }
@@ -6598,7 +6666,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         Popup.Content = null;
         OverlayLayer.Remove(Popup);
         OverlayLayer.InputTransparent = true;
-
+        OverlayLayer.BackgroundColor = Colors.Transparent;
         popupShowingDirection = "none";
 
     }
@@ -6726,121 +6794,20 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             MainMultiWindowView.CloseWindow(window);
         }
-        if (UpperContent.Children[0] is Grid previewGrid)
+        _workspaceWindowHost.OpenWindow("preview.main");
+        _workspaceWindowHost.OpenWindow("timeline.main");
+        _workspaceWindowHost.OpenWindow("properties.main");
+        if (!(UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone))
         {
-            previewGrid.HeightRequest = 250;
-            if (previewGrid is MultiWindowView)
-            {
-                _hasAppliedDefaultMainMultiWindowLayout = false;
-                ApplyDefaultMainMultiWindowLayout();
-            }
-            else
-            {
-                previewGrid.ColumnDefinitions.Clear();
-                previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-                int colIndex = 0;
-                foreach (var child in previewGrid.Children)
-                {
-                    if (child.GetType().Name == "MultiWindowItem" && colIndex < 2)
-                    {
-                        Grid.SetColumn((BindableObject)child, colIndex);
-                        colIndex++;
-                    }
-                }
-            }
+            _workspaceWindowHost.OpenWindow("clips.add");
         }
+        _hasAppliedDefaultMainMultiWindowLayout = false;
+        ApplyDefaultMainMultiWindowLayout();
     }
 
     public static void ShowManageReferenceLinesPopup(InteractableEditor.InteractableEditor ClipEditor, Action<View> ShowPopupCallback, Action ClosePopupCallback)
     {
         var panel = new VerticalStackLayout { Spacing = 6, Padding = new Thickness(10) };
-
-        var titleSection = new HorizontalStackLayout { Spacing = 8 };
-
-        var defaultsLabel = new Label
-        {
-            Text = Localized.DraftPage_ManageReferenceLines_Defaults,
-            FontAttributes = FontAttributes.Bold,
-            FontSize = 16,
-            TextColor = Colors.White,
-            VerticalOptions = LayoutOptions.Center
-        };
-        titleSection.Children.Add(defaultsLabel);
-
-        var defaultColorSwatch = new Border
-        {
-            WidthRequest = 28,
-            HeightRequest = 28,
-            BackgroundColor = ClipEditor.DefaultReferenceLineColor,
-            StrokeThickness = 2,
-            Stroke = Colors.Gray,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
-            VerticalOptions = LayoutOptions.Center
-        };
-        var defaultColorTap = new TapGestureRecognizer();
-        defaultColorTap.Tapped += async (_, _) =>
-        {
-            var picker = new ApplicationAPIBase.Views.Pickers.ColorPicker { SelectedColor = ClipEditor.DefaultReferenceLineColor };
-            picker.SelectedColorChanged += (_, color) =>
-            {
-                ClipEditor.DefaultReferenceLineColor = color;
-            };
-
-            var popupView = new VerticalStackLayout
-            {
-                Spacing = 10,
-                Padding = new Thickness(10, 0),
-                Children =
-            {
-                new Button
-                {
-                    Text = Localized._Hide,
-                    Command = new Command(ClosePopupCallback)
-                },
-                picker,
-            }
-            };
-        };
-        defaultColorSwatch.GestureRecognizers.Add(defaultColorTap);
-
-        var defaultThicknessEntry = new Entry
-        {
-            Text = ClipEditor.DefaultReferenceLineThickness.ToString("F1"),
-            WidthRequest = 54,
-            Keyboard = Keyboard.Numeric,
-            VerticalOptions = LayoutOptions.Center,
-            HorizontalTextAlignment = TextAlignment.Center
-        };
-        defaultThicknessEntry.Completed += (_, _) =>
-        {
-            if (double.TryParse(defaultThicknessEntry.Text, out var t))
-                ClipEditor.DefaultReferenceLineThickness = t;
-            else
-                defaultThicknessEntry.Text = ClipEditor.DefaultReferenceLineThickness.ToString("F1");
-        };
-        defaultThicknessEntry.Unfocused += (_, _) =>
-        {
-            if (double.TryParse(defaultThicknessEntry.Text, out var t))
-                ClipEditor.DefaultReferenceLineThickness = t;
-            else
-                defaultThicknessEntry.Text = ClipEditor.DefaultReferenceLineThickness.ToString("F1");
-        };
-
-        var defaultThicknessLabel = new Label
-        {
-            Text = Localized.DraftPage_ManageReferenceLines_ThicknessLabel,
-            VerticalOptions = LayoutOptions.Center,
-            TextColor = Colors.White
-        };
-
-        titleSection.Children.Add(defaultColorSwatch);
-        titleSection.Children.Add(defaultThicknessLabel);
-        titleSection.Children.Add(defaultThicknessEntry);
-        panel.Children.Add(titleSection);
-
-        panel.Children.Add(new BoxView { HeightRequest = 1, Color = Colors.Gray, Margin = new Thickness(0, 8) });
 
         var lines = ClipEditor.ReferenceLines;
         if (lines.Count == 0)
@@ -7006,7 +6973,249 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     #region compute stuff
     [DebuggerNonUserCode()]
-    public uint PixelToFrame(double px) => (uint)(px * FramePerPixel * tracksZoomOffest);
+    public uint PixelToFrame(double px)
+    {
+        double frame = px * FramePerPixel * tracksZoomOffest;
+        if (!double.IsFinite(frame) || frame <= 0d)
+        {
+            return 0;
+        }
+
+        if (frame >= uint.MaxValue)
+        {
+            return uint.MaxValue;
+        }
+
+        return (uint)frame;
+    }
+
+    /// <summary>
+    /// Opens a project stored on a headless projectFrameCut device. The returned
+    /// page uses the same editor controls as a local project; Save commits the
+    /// current page snapshot through the remote protobuf RPC session.
+    /// </summary>
+    public static async Task<DraftPage> OpenRemoteAsync(
+        Uri serverUri,
+        string token,
+        string? clientId = null,
+        CancellationToken cancellationToken = default)
+    {
+        RemoteProjectSession session = await RemoteProjectSession.OpenAsync(
+            serverUri, token, clientId, cancellationToken);
+        try
+        {
+            return CreateFromRemoteSession(session);
+        }
+        catch
+        {
+            await session.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Builds an editor page over an already-open remote session. The returned
+    /// page takes ownership of the session and closes it when the page exits.
+    /// </summary>
+    internal static DraftPage CreateFromRemoteSession(RemoteProjectSession session)
+    {
+        ProjectJSONStructure project = session.Project;
+        DraftStructureJSON draft = session.Draft;
+        (ConcurrentDictionary<Guid, ClipElementUI> clips, int trackCount) =
+            DraftImportAndExportHelper.ImportFromJSON(draft, project);
+        var assets = new ConcurrentDictionary<string, AssetItem>(
+            session.Assets.Where(static asset => !string.IsNullOrWhiteSpace(asset.AssetId))
+                .ToDictionary(asset => asset.AssetId!, asset => asset));
+
+        var page = new DraftPage(
+            project,
+            clips,
+            assets,
+            trackCount,
+            session.ProjectRoot,
+            project.ProjectName ?? "Remote project",
+            isReadonly: false);
+        page._remoteProjectSession = session;
+        page.previewer.RpcClient = session.Client;
+        page.previewer.RenderSessionId = session.Snapshot.RenderSession.SessionId == Guid.Empty
+            ? session.Snapshot.SessionId
+            : session.Snapshot.RenderSession.SessionId;
+        page.previewer.RenderProjectRoot = session.ProjectRoot;
+        page.previewer.RenderProxyRoot = Path.Combine(session.ProjectRoot, "proxy");
+        page.previewer.RemoteAssets = session.Assets
+            .Where(static asset => !string.IsNullOrWhiteSpace(asset.AssetId) && !string.IsNullOrWhiteSpace(asset.Path))
+            .Select(static asset => new AssetPathEntry { AssetId = asset.AssetId!, Path = asset.Path! })
+            .ToList();
+        page.previewer.ArtifactResolver = (artifact, ct) =>
+            session.MaterializeArtifactAsync(artifact, page.previewer.ProjectRoot, ct);
+        page.ProjectName = project.ProjectName ?? "Remote project";
+        return page;
+    }
+
+    internal async Task<bool> PrepareForMcpProjectReplacementAsync()
+    {
+        RemoteProjectSession? session = _remoteProjectSession;
+        if (session is null) return true;
+        if (!_workspace.GetModule<ProjectModule>().IsDirty) return true;
+
+        long previousSavedRevision = session.LastSavedRevision;
+        await Save(true, new ClipUpdateEventArgs
+        {
+            Reason = ClipUpdateReason.Unknown,
+            DetailInfo = "Auto-save before MCP project switch",
+        });
+        return session.LastSavedRevision > previousSavedRevision;
+    }
+
+    internal bool HasUnsavedRemoteChanges =>
+        _remoteProjectSession is not null && _workspace.GetModule<ProjectModule>().IsDirty;
+
+    internal void DetachRemoteSessionForReplacement()
+    {
+        StopRemoteProjectMonitor();
+        _remoteProjectSession = null;
+        _remoteSessionDetached = true;
+        ExitNoSave = true;
+    }
+
+    internal async Task CompleteMcpProjectReplacementAsync()
+    {
+        RemoteProjectSession? session = _remoteProjectSession;
+        if (session is null) return;
+
+        try
+        {
+            await session.CloseSharedServerSessionAsync();
+        }
+        catch (Exception ex) when (
+            ex is RemoteRenderException remote && remote.ErrorCode == RenderErrorCode.SessionNotFound ||
+            ex.Data[nameof(RemoteError.Code)] is RenderErrorCode code && code == RenderErrorCode.SessionNotFound ||
+            ex.Data["RenderErrorCode"] is RenderErrorCode renderCode && renderCode == RenderErrorCode.SessionNotFound)
+        {
+        }
+
+        DetachRemoteSessionForReplacement();
+    }
+
+    private void StartRemoteProjectMonitor()
+    {
+        RemoteProjectSession? session = _remoteProjectSession;
+        if (session is null || !session.MonitorChanges || _remoteProjectMonitorCts is not null) return;
+
+        var cancellation = new CancellationTokenSource();
+        _remoteProjectMonitorCts = cancellation;
+        _ = MonitorRemoteProjectChangesAsync(session, cancellation.Token);
+    }
+
+    private void StopRemoteProjectMonitor()
+    {
+        CancellationTokenSource? cancellation = _remoteProjectMonitorCts;
+        _remoteProjectMonitorCts = null;
+        if (cancellation is null) return;
+        try { cancellation.Cancel(); }
+        catch (ObjectDisposedException) { }
+    }
+
+    private async Task MonitorRemoteProjectChangesAsync(
+        RemoteProjectSession session,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(RemoteProjectSyncIntervalMs, cancellationToken).ConfigureAwait(false);
+                if (AlreadyDisappeared || !ReferenceEquals(_remoteProjectSession, session)) return;
+
+                HeadlessProjectSnapshot latest;
+                try
+                {
+                    latest = await session.ReadLatestSnapshotAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Monitor remote project changes", this);
+                    continue;
+                }
+
+                if (session.MatchesSnapshot(latest)) continue;
+                await Dispatcher.DispatchAsync(() => HandleRemoteProjectChangeAsync(session, latest));
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Monitor remote project changes", this);
+        }
+    }
+
+    private async Task HandleRemoteProjectChangeAsync(
+        RemoteProjectSession session,
+        HeadlessProjectSnapshot latest)
+    {
+        if (AlreadyDisappeared || !ReferenceEquals(_remoteProjectSession, session) || session.MatchesSnapshot(latest)) return;
+        if (saveLocker.CurrentCount == 0) return;
+
+        if (_workspace.GetModule<ProjectModule>().IsDirty)
+        {
+            if (_remoteChangePromptedRevision == latest.Revision &&
+                string.Equals(_remoteChangePromptedHash, latest.SnapshotHash, StringComparison.Ordinal)) return;
+
+            _remoteChangePromptedRevision = latest.Revision;
+            _remoteChangePromptedHash = latest.SnapshotHash;
+            bool sync = await DisplayAlertAsync(
+                Localized._Info,
+                Localized.DraftPage_RemoteProject_ModifiedOnServer,
+                Localized.DraftPage_RemoteProject_SyncFromServer,
+                Localized._Cancel);
+            if (!sync) return;
+        }
+
+        await SyncRemoteProjectFromServerAsync(latest);
+    }
+
+    /// <summary>
+    /// Discards the local unsaved edits and reloads the editor from the latest
+    /// server-side snapshot, keeping the same remote session alive. The current
+    /// page is replaced in the navigation stack by a freshly built one.
+    /// </summary>
+    private async Task SyncRemoteProjectFromServerAsync(HeadlessProjectSnapshot? latest = null)
+    {
+        var session = _remoteProjectSession;
+        if (session is null) return;
+        SetStateBusy();
+        try
+        {
+            if (latest is null)
+                await session.SyncFromServerAsync();
+            else
+                session.AdoptSnapshot(latest);
+            var replacement = CreateFromRemoteSession(session);
+            string? title = App.Current?.Windows?[0]?.Title;
+
+            // Hand the session over to the replacement page: while leaving the
+            // navigation stack, this page must neither save nor close anything.
+            DetachRemoteSessionForReplacement();
+
+            Navigation.InsertPageBefore(replacement, this);
+            Shell.SetTabBarIsVisible(replacement, false);
+            Shell.SetNavBarIsVisible(replacement, true);
+            await replacement.PostInit();
+            Navigation.RemovePage(this);
+            if (!string.IsNullOrEmpty(title) && App.Current?.Windows?[0] is { } window) window.Title = title;
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Sync remote project from server", this);
+            SetStateFail(Localized.DraftPage_RemoteProject_SyncFailed);
+        }
+    }
     [DebuggerNonUserCode()]
     public double FrameToPixel(uint f) => f / (FramePerPixel * tracksZoomOffest);
 
@@ -7028,12 +7237,13 @@ public partial class DraftPage : ContentPage, IDraftPage
             return;
         }
 
-        clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+        clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
 
         IKeyFramedEffectProvider? provider = null;
-        foreach (var eb in clip.EffectBundles.Values)
+        foreach (var eb in clip.EffectProviders.Values)
         {
-            if (string.Equals(eb.TypeName, "ProgressPlacer", StringComparison.Ordinal) && eb is IKeyFramedEffectProvider kfp)
+            if (string.Equals(eb.TypeName, "ProgressPlacer", StringComparison.Ordinal)
+                && EffectServices.GetUIProvider(eb) is IKeyFramedEffectProvider kfp)
             {
                 provider = kfp;
                 break;
@@ -7042,11 +7252,12 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         if (provider is null)
         {
-            var newBundle = new ProgressPlacerEffectBundle();
-            newBundle.BindedInputId = IEffectBundle.InputAnchorGUID;
-            newBundle.BindedOutputId = IEffectBundle.OutputAnchorGUID;
-            clip.EffectBundles[newBundle.Id] = newBundle;
-            provider = newBundle;
+            var newProvider = new ProgressPlacerProvider();
+            newProvider.SetMainInputSource(IEffectProvider.InputAnchorGUID);
+            EffectBindingHelper.SetFinalOutput(clip.EffectProviders, null);
+            newProvider.SetFinalOutputSource(true);
+            clip.EffectProviders[newProvider.Id] = newProvider;
+            provider = EffectServices.GetUIProvider(newProvider) as IKeyFramedEffectProvider;
             ClipInfoBuilder.RebuildAllEffects(clip);
         }
 
@@ -7300,6 +7511,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     SemaphoreSlim renderingLock = new(1, 1);
     private CancellationTokenSource? _renderOneFrameCts;
     private readonly object _renderCtsLock = new();
+    private const int InitialStaticPreviewLongEdge = 240;
+    private const int MaxConcurrentStaticPreviewRenders = 3;
 
     private CancellationToken ResetDynamicPreviewToken()
     {
@@ -7313,6 +7526,53 @@ public partial class DraftPage : ContentPage, IDraftPage
             _dynamicPreviewCts = new CancellationTokenSource();
             return _dynamicPreviewCts.Token;
         }
+    }
+
+    private void OnClipInitializationFailed(Guid clipId, string description)
+    {
+        Dispatcher.Dispatch(() =>
+        {
+            if (!Clips.TryGetValue(clipId, out var clip)) return;
+            if (ClipInitializationFailure.IsMarked(clip.ExtraData)) return;
+            ClipInitializationFailure.Mark(clip.ExtraData, "Source or ResolveEffect", new InvalidOperationException(description));
+            clip.ApplyInitializationFailureIndicator();
+            DraftChanged(this, new ClipUpdateEventArgs
+            {
+                DetailInfo = $"Clip initialization failed: {clip.DisplayName}",
+                ChangedClipID = clip.Id,
+                SourceId = clip.Id,
+                SourceName = clip.DisplayName,
+                Reason = ClipUpdateReason.PropertyChanged
+            });
+        });
+    }
+
+    internal bool DeleteClipForService(Guid clipId)
+    {
+        if (!Clips.TryGetValue(clipId, out var clip))
+        {
+            return false;
+        }
+
+        DeleteAClip(clip);
+        return true;
+    }
+
+    private void OnClipInitializationRecovered(Guid clipId)
+    {
+        Dispatcher.Dispatch(() =>
+        {
+            if (!Clips.TryGetValue(clipId, out var clip) || !ClipInitializationFailure.IsMarked(clip.ExtraData)) return;
+            clip.ClearInitializationFailureIndicator();
+            DraftChanged(this, new ClipUpdateEventArgs
+            {
+                DetailInfo = $"Clip initialization recovered: {clip.DisplayName}",
+                ChangedClipID = clip.Id,
+                SourceId = clip.Id,
+                SourceName = clip.DisplayName,
+                Reason = ClipUpdateReason.PropertyChanged
+            });
+        });
     }
 
     private void CancelDynamicPreview()
@@ -7344,7 +7604,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             var targetWidth = Math.Max(1, previewWidth);
             var targetHeight = Math.Max(1, previewHeight);
-            var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, targetWidth, targetHeight, ClipEditor.Width, ClipEditor.Height, token);
+            var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, targetWidth, targetHeight, token);
             token.ThrowIfCancellationRequested();
             return await ClipEditor.ApplyPreparedPreviewsAsync(preparedPreviews);
         }
@@ -7363,6 +7623,142 @@ public partial class DraftPage : ContentPage, IDraftPage
 #endif
             return false;
         }
+    }
+
+    private async Task SwitchEditorLayoutAsync(string? mode)
+    {
+        bool fixedLayout = string.Equals(mode, "fixed", StringComparison.OrdinalIgnoreCase);
+        if (fixedLayout == IsFixedLayout && _fixedLayoutInitialized) return;
+
+        if (fixedLayout)
+        {
+            DetachViewFromParent(ClipEditorHost);
+            DetachViewFromParent(LowerContent);
+            DetachViewFromParent(AddClipView);
+
+            FixedPreviewHost.Content = ClipEditorHost;
+            FixedTimelineHost.Content = LowerContent;
+            PlayingControlLayout.HorizontalOptions = LayoutOptions.Fill;
+            PlayingControlLayout.Margin = new(4, 2, 0, 3);
+            MainMultiWindowView.IsVisible = false;
+            UpperContent.IsVisible = false;
+            MainControlGrid.IsVisible = false;
+            FixedLayoutRoot.IsVisible = true;
+            IsFixedLayout = true;
+            RebuildQuickCommandSlots();
+            await RefreshFixedClipInfoAsync(_selectedClipIds.Count == 1 ? _selected : null);
+        }
+        else
+        {
+            DetachViewFromParent(AddClipView);
+            FixedPreviewHost.Content = null;
+            FixedTimelineHost.Content = null;
+            FixedClipInfoHost.Content = null;
+            if (AddClipSubwindow is not null)
+            {
+                _workspaceWindowHost?.OpenWindow("clips.add");
+            }
+            PreviewSubwindow.Content = ClipEditorHost;
+            TimelineSubwindow.Content = LowerContent;
+            AddClipHost.Content = AddClipView;
+            PlayingControlLayout.HorizontalOptions = UseCompactLayout == true ? LayoutOptions.End : LayoutOptions.Fill;
+            PlayingControlLayout.Margin = UseCompactLayout == true ? new(0, 0, 8, 0) : new(4, 2, 0, 3);
+            FixedLayoutRoot.IsVisible = false;
+            UpperContent.IsVisible = true;
+            MainControlGrid.IsVisible = true;
+            MainMultiWindowView.IsVisible = true;
+            IsFixedLayout = false;
+            _fixedClipInfoTabs = null;
+            _fixedClipInfoPopupTabs = null;
+        }
+
+        _fixedLayoutInitialized = true;
+        await Dispatcher.DispatchAsync(() => UpdatePlayheadPosition());
+    }
+
+    private static void DetachViewFromParent(View? view)
+    {
+        if (view?.Parent is ContentView contentView && contentView.Content == view)
+        {
+            contentView.Content = null;
+        }
+        else if (view?.Parent is Border border && border.Content == view)
+        {
+            border.Content = null;
+        }
+        else if (view?.Parent is Layout layout)
+        {
+            layout.Remove(view);
+        }
+    }
+
+    private async Task RefreshFixedClipInfoAsync(ClipElementUI? clip)
+    {
+        if (!IsFixedLayout) return;
+        if (popupShowingDirection != "none") await HidePopup(true);
+        DetachViewFromParent(AddClipView);
+        _fixedClipInfoPopupTabs = await infoBuilder.BuildFixed(clip, OnClipPropertiesChanged, AddClipView);
+        _fixedClipInfoPopupTabs.HeaderRightContent = new Button
+        {
+            Text = MaterialIconClose,
+            FontFamily = MaterialIconFontFamily,
+            WidthRequest = 42,
+            Command = new Command(async () => await HidePopup(true))
+        };
+        _fixedClipInfoTabs = new TabbedView { Background = Background };
+        foreach (var item in _fixedClipInfoPopupTabs.TabItems)
+        {
+            _fixedClipInfoTabs.TabItems.Add(new TabbedViewItem
+            {
+                Header = item.Header,
+                Tag = item.Tag,
+                Content = new Grid { HeightRequest = 1 }
+            });
+        }
+        _fixedClipInfoPopupTabs.OnTabSwitched += (_, selectedItem) =>
+        {
+            if (_syncingFixedClipInfoTabs) return;
+            _syncingFixedClipInfoTabs = true;
+            _fixedClipInfoTabs?.SelectByTag(selectedItem.Tag);
+            _syncingFixedClipInfoTabs = false;
+        };
+        _fixedClipInfoTabs.OnTabSwitched += FixedClipInfoTabSwitched;
+        FixedClipInfoHost.Content = _fixedClipInfoTabs;
+        FixedClipInfoHost.IsVisible = true;
+        FixedClipInfoHost.HeightRequest = 48;
+    }
+
+    private async void FixedClipInfoTabSwitched(object? sender, TabbedViewItem item)
+    {
+        if (_fixedClipInfoPopupTabs is null) return;
+        _syncingFixedClipInfoTabs = true;
+        _fixedClipInfoPopupTabs.SelectByTag(item.Tag);
+        _syncingFixedClipInfoTabs = false;
+        if (item.Tag == "add")
+        {
+            DetachViewFromParent(AddClipView);
+            await ShowAPopup(content: AddClipView);
+            return;
+        }
+        await ShowAPopup(content: _fixedClipInfoPopupTabs);
+    }
+
+    private async Task<ImageSource?> RenderOverviewImageSourceAsync()
+    {
+        if (AlreadyDisappeared || previewer.Clips is null) return null;
+
+        var frame = (uint)Math.Clamp(_currentFrame, 0d, uint.MaxValue);
+        var projectWidth = Math.Max(1, ProjectInfo.RelativeWidth);
+        var projectHeight = Math.Max(1, ProjectInfo.RelativeHeight);
+        var scale = (double)InitialStaticPreviewLongEdge / Math.Max(projectWidth, projectHeight);
+        var width = Math.Max(1, (int)Math.Round(projectWidth * scale));
+        var height = Math.Max(1, (int)Math.Round(projectHeight * scale));
+        var path = await Task.Run(() => previewer.RenderFrame(frame, width, height));
+        if (!File.Exists(path)) return null;
+
+        var content = await File.ReadAllBytesAsync(path);
+        LogDiagnostic($"Rendered overview frame {frame} at {width}x{height}");
+        return ImageSource.FromStream(() => new MemoryStream(content, writable: false));
     }
 
     private async Task RenderOneFrame(uint duration, int? width = null, int? height = null)
@@ -7414,19 +7810,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
                 if (!await RefreshDynamicPreviewOverlay())
                 {
-                    string fallbackPath = string.Empty;
-                    await Task.Run(() =>
-                    {
-                        cts.Token.ThrowIfCancellationRequested();
-                        fallbackPath = previewer.RenderFrame(duration, targetWidth, targetHeight);
-                        cts.Token.ThrowIfCancellationRequested();
-                    }, cts.Token);
-
-                    await ClipEditor.StaticPreviewOverlayImage.ForceLoadPNGToAImage(fallbackPath);
-                    await Dispatcher.DispatchAsync(() =>
-                    {
-                        ClipEditor.SetStaticPreviewVisible(true);
-                    });
+                    await RenderStaticPreviewProgressivelyAsync(duration, targetWidth, targetHeight, cts.Token);
                 }
             }
             else
@@ -7438,19 +7822,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     LivePreviewPlayer.IsVisible = false;
                 });
 
-                string path = string.Empty;
-                await Task.Run(() =>
-                {
-                    cts.Token.ThrowIfCancellationRequested();
-                    path = previewer.RenderFrame(duration, targetWidth, targetHeight);
-                    cts.Token.ThrowIfCancellationRequested();
-                }, cts.Token);
-
-                await ClipEditor.StaticPreviewOverlayImage.ForceLoadPNGToAImage(path);
-                await Dispatcher.DispatchAsync(() =>
-                {
-                    ClipEditor.SetStaticPreviewVisible(true);
-                });
+                await RenderStaticPreviewProgressivelyAsync(duration, targetWidth, targetHeight, cts.Token);
             }
 
 
@@ -7493,6 +7865,124 @@ public partial class DraftPage : ContentPage, IDraftPage
             cts.Dispose();
             renderingLock.Release();
         }
+    }
+
+    private async Task RenderStaticPreviewProgressivelyAsync(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token)
+    {
+        var sizes = BuildProgressiveStaticPreviewSizes(targetWidth, targetHeight);
+        using var displayLock = new SemaphoreSlim(1, 1);
+        using var renderThrottle = new SemaphoreSlim(MaxConcurrentStaticPreviewRenders, MaxConcurrentStaticPreviewRenders);
+        var displayedTier = -1;
+
+        async Task RenderTierAsync(int tier, bool isFinalTier)
+        {
+            var (width, height) = sizes[tier];
+            try
+            {
+                await renderThrottle.WaitAsync(token);
+                string path;
+                try
+                {
+                    path = await Task.Run(() =>
+                    {
+                        token.ThrowIfCancellationRequested();
+                        var renderedPath = previewer.RenderFrame(frameIndex, width, height);
+                        token.ThrowIfCancellationRequested();
+                        return renderedPath;
+                    }, token);
+                }
+                finally
+                {
+                    renderThrottle.Release();
+                }
+
+                await displayLock.WaitAsync(token);
+                try
+                {
+                    // Tiers complete out of order. Never let a late low-resolution render replace a
+                    // sharper image that has already reached the preview surface.
+                    if (tier <= displayedTier)
+                    {
+                        return;
+                    }
+
+                    token.ThrowIfCancellationRequested();
+                    if (IsRemoteProject)
+                    {
+                        // WinUI may accept a file:// LocalCache URI without throwing and then fail the
+                        // asynchronous decode, leaving the Image empty. Read the downloaded artifact
+                        // through an authorized stream instead.
+                        byte[] content = await File.ReadAllBytesAsync(path, token);
+                        await Dispatcher.DispatchAsync(() =>
+                            ClipEditor.StaticPreviewOverlayImage.Source = ImageSource.FromStream(
+                                () => new MemoryStream(content, writable: false)));
+                    }
+                    else
+                    {
+                        await ClipEditor.StaticPreviewOverlayImage.ForceLoadPNGToAImage(path);
+                    }
+                    token.ThrowIfCancellationRequested();
+                    displayedTier = tier;
+                    await Dispatcher.DispatchAsync(() => ClipEditor.SetStaticPreviewVisible(true));
+                }
+                finally
+                {
+                    displayLock.Release();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (!isFinalTier)
+            {
+                // A failed intermediate tier must not prevent the target-resolution render from
+                // completing. The final tier still propagates its error to the normal UI handler.
+                Log(ex, $"Render progressive static preview tier {width}x{height}", this);
+            }
+        }
+
+        // Give the smallest render an uncontested head start. Once something is visible, render the
+        // remaining quality levels in parallel; the display gate above keeps upgrades monotonic.
+        await RenderTierAsync(0, sizes.Count == 1);
+        if (sizes.Count == 1)
+        {
+            return;
+        }
+
+        var finalTier = sizes.Count - 1;
+        var finalRender = RenderTierAsync(finalTier, true);
+        var intermediateRenders = Enumerable.Range(1, Math.Max(0, finalTier - 1))
+            .Select(tier => RenderTierAsync(tier, false));
+        await Task.WhenAll(intermediateRenders.Append(finalRender));
+    }
+
+    private static List<(int Width, int Height)> BuildProgressiveStaticPreviewSizes(int width, int height)
+    {
+        width = Math.Max(1, width);
+        height = Math.Max(1, height);
+        var targetLongEdge = Math.Max(width, height);
+        var sizes = new List<(int Width, int Height)>();
+
+        for (var longEdge = Math.Min(InitialStaticPreviewLongEdge, targetLongEdge);
+             longEdge < targetLongEdge;
+             longEdge = Math.Min(targetLongEdge, longEdge * 2))
+        {
+            var scale = (double)longEdge / targetLongEdge;
+            var tier = (Math.Max(1, (int)Math.Round(width * scale)), Math.Max(1, (int)Math.Round(height * scale)));
+            if (sizes.Count == 0 || sizes[^1] != tier)
+            {
+                sizes.Add(tier);
+            }
+        }
+
+        var target = (width, height);
+        if (sizes.Count == 0 || sizes[^1] != target)
+        {
+            sizes.Add(target);
+        }
+
+        return sizes;
     }
 
     CancellationTokenSource? _playbackCts;
@@ -7620,6 +8110,19 @@ public partial class DraftPage : ContentPage, IDraftPage
             return _livePreviewRealtimeHost;
         }
 
+        // The MediaElement is a child of the LivePreviewerHost (ContentView with Fill/Fill),
+        // which itself fills the InteractableEditor. Without explicit Fill/Fill + AspectFit
+        // here, the MediaElement falls back to its natural (video-source) size, which is
+        // 1920x1080 or larger. The editor is only ~248px tall, so the unscaled MediaElement
+        // overflows downward and visually dominates the editor — making every overlay
+        // coordinate (renderRect, selection handles, debug overlay) appear to be misaligned
+        // with the visible video, because the visible video is not at the editor's
+        // coordinate scale. Constrain it to the host and use AspectFit so the live frame
+        // letterboxes identically to the static PreviewOverlayImage.
+        LivePreviewPlayer.Aspect = Aspect.AspectFit;
+        LivePreviewPlayer.HorizontalOptions = LayoutOptions.Fill;
+        LivePreviewPlayer.VerticalOptions = LayoutOptions.Fill;
+
         var host = new Grid();
         host.Children.Add(LivePreviewPlayer);
         _livePreviewRealtimeHost = host;
@@ -7644,6 +8147,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             _playbackStartFrame = _currentFrame;
             _nextPlaybackPath = null;
             await previewer.ResetAudioPlaybackSources();
+            var continuousAudioReady = false;
 
             // Render all remaining audio as one continuous WAV to eliminate block-switching gaps
             int totalFrames = (int)Math.Max(previewer.TotalDuration, ProjectDuration);
@@ -7658,23 +8162,65 @@ public partial class DraftPage : ContentPage, IDraftPage
                 if (_fullContinuousAudioPath != null && File.Exists(_fullContinuousAudioPath))
                 {
                     _continuousAudioStartFrame = _currentFrame;
+                    var audioOpened = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Dispatcher.DispatchAsync(() =>
                     {
+                        try
+                        {
+                            DynamicPreviewAudioProvider.Stop();
+                            DynamicPreviewAudioProvider.Source = null;
+                            ComputeView.Children.Remove(DynamicPreviewAudioProvider);
+                        }
+                        catch { }
+
                         DynamicPreviewAudioProvider = new MediaElement
                         {
-                            Source = MediaSource.FromFile(_fullContinuousAudioPath),
                             ShouldAutoPlay = false,
                             ShouldKeepScreenOn = false,
                             ShouldLoopPlayback = false,
                             ShouldShowPlaybackControls = false,
+                            InputTransparent = true,
+                            WidthRequest = 1,
+                            HeightRequest = 1,
+                            Opacity = 0.01,
+                        };
+                        DynamicPreviewAudioProvider.MediaOpened += (_, _) => audioOpened.TrySetResult(true);
+                        DynamicPreviewAudioProvider.MediaFailed += (_, args) =>
+                        {
+                            Log($"Failed to open the live-preview audio source: {args.ErrorMessage}", "warn");
+                            audioOpened.TrySetResult(false);
                         };
                         DynamicPreviewAudioProvider.MediaEnded += (s, e) =>
                         {
-                            try { ComputeView.Children.Remove(DynamicPreviewAudioProvider); }
+                            try
+                            {
+                                if (s is MediaElement endedPlayer)
+                                {
+                                    ComputeView.Children.Remove(endedPlayer);
+                                }
+                            }
                             catch { }
                         };
                         ComputeView.Add(DynamicPreviewAudioProvider);
+                        // Set Source only after the handlers are attached and the native control is
+                        // part of the visual tree, otherwise an immediate Play() can be lost before
+                        // WinUI finishes opening the WAV.
+                        DynamicPreviewAudioProvider.Source = MediaSource.FromFile(_fullContinuousAudioPath);
                     });
+
+                    try
+                    {
+                        continuousAudioReady = await audioOpened.Task.WaitAsync(TimeSpan.FromSeconds(15), token);
+                    }
+                    catch (TimeoutException)
+                    {
+                        Log("Timed out waiting for the live-preview audio source to open.", "warn");
+                    }
+
+                    if (!continuousAudioReady)
+                    {
+                        Log("The live-preview audio source could not be opened; video preview will continue without audio.", "warn");
+                    }
                 }
             }
 
@@ -7689,14 +8235,14 @@ public partial class DraftPage : ContentPage, IDraftPage
                     LivePreviewPlayer.IsVisible = false;
                 });
 
-                _continuousAudioStopwatch = Stopwatch.StartNew();
-                if (_fullContinuousAudioPath is not null)
+                await Dispatcher.DispatchAsync(() =>
                 {
-                    Dispatcher.Dispatch(() =>
+                    if (continuousAudioReady)
                     {
                         DynamicPreviewAudioProvider.Play();
-                    });
-                }
+                    }
+                    _continuousAudioStopwatch = Stopwatch.StartNew();
+                });
 
                 await RenderSomeFramesDynamicSynced((int)_currentFrame, token);
                 return;
@@ -7724,7 +8270,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     LivePreviewPlayer.Source = MediaSource.FromFile(path);
                     LivePreviewPlayer.Play();
                     _continuousAudioStopwatch = Stopwatch.StartNew();
-                    if (_fullContinuousAudioPath is not null)
+                    if (continuousAudioReady)
                         DynamicPreviewAudioProvider.Play();
                 });
                 StartContinuousPlayheadSyncLoop(currentStartFrame);
@@ -7786,7 +8332,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), "Throw", Localized._OK))) throw;
 #else
             await MainThread.InvokeOnMainThreadAsync(async () => await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail((uint)_currentFrame, ex), Localized._OK));
-#endif        
+#endif
         }
     }
 
@@ -7904,8 +8450,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     private async Task RenderSomeFramesDynamicSynced(int startPoint, CancellationToken ct)
     {
         uint lastRenderedFrame = 0, targetFrame = (uint)startPoint;
-        var targetWidth = Math.Max(1, previewWidth);
-        var targetHeight = Math.Max(1, previewHeight);
         var totalDisplay = TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame).ToString("mm\\:ss");
         var developerMode = SettingsManager.IsBoolSettingTrue("DeveloperMode");
         int maxFrame = (int)Math.Max(previewer.TotalDuration, ProjectDuration);
@@ -7916,8 +8460,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         int fpsCount = 0;
         Stopwatch prepareWatch = new(), applyWatch = new();
         Task? pendingUiUpdate = null;
-        IReadOnlyList<DynamicPreview.PreparedPreview>? preparedPreviews = null!;
-        var (canvasWidth, canvasHeight) = DynamicPreviewProvider.ResolveDimensions(targetWidth, targetHeight, ClipEditor.Width, ClipEditor.Height);
+        IReadOnlyList<projectFrameCut.ApplicationAPIBase.Interaction.PreparedPreview>? preparedPreviews = null!;
+        var projectWidth = Math.Max(1, ProjectInfo.RelativeWidth);
+        var projectHeight = Math.Max(1, ProjectInfo.RelativeHeight);
+        var (canvasWidth, canvasHeight) = DynamicPreviewProvider.ResolveDimensions(projectWidth, projectHeight, ClipEditor.Width, ClipEditor.Height);
 
         MainThread.BeginInvokeOnMainThread(() =>
         {
@@ -7979,9 +8525,9 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 prepareWatch.Restart();
                 preparedPreviews = await DynamicPreviewProvider.PrepareRequestsAsync(
-                    DynamicPreviewProvider.ResolveRequests(DynamicPreviewProvider.Clips, targetFrame, canvasWidth, canvasHeight),
+                    DynamicPreviewProvider.ResolveRequests(DynamicPreviewProvider.Clips, targetFrame, projectWidth, projectHeight),
                     canvasWidth, canvasHeight,
-                    targetWidth, targetHeight,
+                    projectWidth, projectHeight,
                     targetFrame,
                     true, false,
                     0,
@@ -8155,7 +8701,138 @@ public partial class DraftPage : ContentPage, IDraftPage
         CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss\\.ff}";
     }
 
+    private void StartRenderBackendWatchdog()
+    {
+        if (IsRemoteProject || _renderBackendWatchdogCts is not null) return;
+
+        var cts = new CancellationTokenSource();
+        _renderBackendWatchdogCts = cts;
+        _renderBackendDisconnectedSinceUtc = DateTime.UtcNow;
+        _ = Task.Run(() => MonitorRenderBackendAsync(cts.Token));
+        _ = Task.Run(() => MonitorExternalRpcRequestsAsync(cts.Token));
+        _ = Task.Run(() => MonitorGuiRpcAsync(cts.Token));
+    }
+
+    private void StopRenderBackendWatchdog()
+    {
+        var cts = Interlocked.Exchange(ref _renderBackendWatchdogCts, null);
+        if (cts is null) return;
+        try { cts.Cancel(); } catch { }
+        cts.Dispose();
+    }
+
+    private async Task MonitorRenderBackendAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(RenderBackendHealthCheckIntervalMs, cancellationToken).ConfigureAwait(false);
+                if (AlreadyDisappeared || _renderBackendRestartLock.CurrentCount == 0) continue;
+
+                bool connected = false;
+                if (RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
+                {
+                    using var probeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    probeCts.CancelAfter(TimeSpan.FromSeconds(5));
+                    try
+                    {
+                        _ = await client.GetCapabilitiesAsync(probeCts.Token).ConfigureAwait(false);
+                        connected = true;
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+                    {
+                        Log(ex, "Probe render RPC backend connection", this);
+                    }
+                }
+
+                if (connected)
+                {
+                    _renderBackendDisconnectedSinceUtc = null;
+                    continue;
+                }
+
+                var now = DateTime.UtcNow;
+                _renderBackendDisconnectedSinceUtc ??= now;
+                if (now - _renderBackendDisconnectedSinceUtc < RenderBackendReconnectTimeout) continue;
+
+                _renderBackendDisconnectedSinceUtc = now;
+                await RestartRenderBackendAsync(showErrorDialog: false).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Monitor render RPC backend", this);
+            }
+        }
+    }
+
+    private async Task RestartRenderBackendAsync(bool showErrorDialog)
+    {
+        if (IsRemoteProject)
+        {
+            if (showErrorDialog)
+                await DisplayAlertAsync(Localized._Info, Localized.DraftPage_RestartBackend_RemoteUnavailable, Localized._OK);
+            return;
+        }
+
+        await _renderBackendRestartLock.WaitAsync();
+        try
+        {
+            if (AlreadyDisappeared) return;
+
+            await Dispatcher.DispatchAsync(() =>
+            {
+                SetStateBusy();
+                SetStatusText(Localized.DraftPage_RestartBackend_Restarting);
+            });
+
+            var draft = await MainThread.InvokeOnMainThreadAsync(() =>
+                DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false));
+
+            await Task.Run(() => RenderRpcBootstrap.Restart(WorkingPath, ProjectName));
+            previewer.RenderSessionId = Guid.NewGuid();
+            await previewer.UpdateDraft(draft).ConfigureAwait(false);
+            _renderBackendDisconnectedSinceUtc = null;
+
+            if (!AlreadyDisappeared)
+            {
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    DynamicPreviewProvider.SetClips(previewer.Clips);
+                    await RefreshPreviewFromCurrentProviderAsync();
+                    SetStateOK();
+                    SetStatusText(Localized.DraftPage_RestartBackend_Succeeded);
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _renderBackendDisconnectedSinceUtc = DateTime.UtcNow;
+            Log(ex, "Restart render RPC backend", this);
+            if (!AlreadyDisappeared)
+            {
+                await Dispatcher.DispatchAsync(() =>
+                {
+                    SetStateFail($"{Localized.DraftPage_RestartBackend_Failed} {Localized._ExceptionTemplate(ex)}");
+                });
+                if (showErrorDialog)
+                    await DisplayAlertAsync(Localized._Error, $"{Localized.DraftPage_RestartBackend_Failed} {Localized._ExceptionTemplate(ex)}", Localized._OK);
+            }
+        }
+        finally
+        {
+            _renderBackendRestartLock.Release();
+        }
+    }
+
     private async void DraftChanged(object? sender, ClipUpdateEventArgs e)
+        => await DraftChangedAsync(sender, e);
+
+    private async Task DraftChangedAsync(object? sender, ClipUpdateEventArgs e)
     {
         if (AlreadyDisappeared) return;
 
@@ -8181,17 +8858,21 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
         UpdatePlayheadHeight();
-        var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+        DraftStructureJSON d = null!;
         SetStateBusy();
         SetStatusText(Localized.DraftPage_ApplyingChanges);
 
         try
         {
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+                await previewer.UpdateDraft(d);
+            });
             ProjectDuration = Math.Max(d.Duration, d.AudioDuration);
             TryMoveToInitialPreviewFrame(d);
             await ClipEditor.UpdateClips(Clips);
             ClipEditor.SetCurrentFrame((uint)Math.Max(0, _currentFrame));
-            await previewer.UpdateDraft(d);
             DynamicPreviewProvider.SetClips(previewer.Clips);
             await RefreshPreviewFromCurrentProviderAsync();
             SetStatusText(Localized.DraftPage_ChangesApplied);
@@ -8331,27 +9012,21 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         try
         {
-            // Get tap position relative to the ruler
+            // RulerLayout and PlayheadLine are both children of LowerContent, so the ruler's
+            // local X is also the playhead's viewport X. Keep this conversion entirely in the
+            // timeline window's coordinate space: a floating MultiWindowItem may be translated
+            // relative to the page, and including that page offset would turn window movement
+            // into an apparent timeline offset.
             var p = e.GetPosition(RulerLayout);
             if (p is null) return;
 
-            // Convert to OverlayLayer coordinate space
-            Point rulerAbs = GetAbsolutePosition(RulerLayout, null);
-            Point overlayAbs = GetAbsolutePosition(OverlayLayer, null);
-            double xInOverlay = rulerAbs.X - overlayAbs.X + p.Value.X;
-
-            // Optional: snap to grid/clip edges using existing logic
-            double snappedX = SnapPixels(xInOverlay);
-
-            // Clamp to overlay bounds
-            double overlayWidth = OverlayLayer.Width > 0 ? OverlayLayer.Width : this.Width;
-            double playheadWidth = (PlayheadLine.Width > 0) ? PlayheadLine.Width : PlayheadLine.WidthRequest;
-            if (double.IsNaN(overlayWidth) || overlayWidth <= 0) overlayWidth = 0;
-            double clampedX = Math.Clamp(snappedX, 0, Math.Max(0, overlayWidth - playheadWidth));
-
-            if (clampedX - TrackHeadLayout.Width >= 0 || TimelineScrollView.ScrollX > 0)
+            double timelineX = p.Value.X - TrackHeadLayout.Width + TimelineScrollView.ScrollX;
+            if (timelineX >= 0)
             {
-                var duration = PixelToFrame(clampedX - TrackHeadLayout.Width + TimelineScrollView.ScrollX);
+                // Clip edges and the snap grid are expressed in timeline-content coordinates,
+                // not viewport/page coordinates.
+                double snappedTimelineX = SnapPixels(timelineX);
+                var duration = PixelToFrame(snappedTimelineX);
                 _currentFrame = duration;
                 SyncClipEditorCurrentFrame();
                 UpdatePlayheadPosition();
@@ -8393,7 +9068,43 @@ public partial class DraftPage : ContentPage, IDraftPage
                 TimelineScrollView.ScrollToAsync(e.ScrollX, 0, false);
         }
         UpdatePlayheadPosition(e.ScrollX);
+
+        // Notify all active clip previews so they update their visible frame range
+        NotifyClipPreviewsScrollChanged(e.ScrollX);
     }
+
+    private void NotifyClipPreviewsScrollChanged(double scrollX)
+    {
+        double viewportWidth = TimelineScrollView.Width;
+        List<Guid>? toRemove = null;
+        foreach (var kvp in _activeClipPreviews)
+        {
+            if (!kvp.Value.NotifyScrollChanged(scrollX, viewportWidth))
+            {
+                toRemove ??= new();
+                toRemove.Add(kvp.Key);
+            }
+        }
+        if (toRemove is not null)
+        {
+            foreach (var id in toRemove)
+            {
+                if (_activeClipPreviews.TryGetValue(id, out var detached))
+                {
+                    detached.Dispose();
+                    _activeClipPreviews.Remove(id);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns the current horizontal scroll position and viewport width of the
+    /// main timeline ScrollView. Used by <see cref="OnClipUIPreview"/> to perform
+    /// viewport-culled frame rendering without direct access to the private field.
+    /// </summary>
+    internal (double scrollX, double viewportWidth) GetTimelineScrollState()
+        => (TimelineScrollView.ScrollX, TimelineScrollView.Width);
 
     private async Task MovePlayhead(int deltaFrames)
     {
@@ -8403,6 +9114,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         SyncClipEditorCurrentFrame();
 
         UpdatePlayheadPosition();
+        CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss\\.ff}";
 
         var timeX = FrameToPixel((uint)_currentFrame);
 
@@ -8487,12 +9199,14 @@ public partial class DraftPage : ContentPage, IDraftPage
     }
 
     [DebuggerNonUserCode()] //too annoying in step-through debugging
-    private IClip? OnGetClipInstanceCallback(ClipElementUI element)
+    internal IClip? GetLoadedClipInstance(Guid clipId)
     {
-        if (previewer?.Clips is not null && previewer.Clips.Length > 0)
-        {
-            if (previewer.Clips.FirstOrDefault(c => c.Id == element.Id, null) is IClip c) return c;
-        }
+        return previewer?.Clips?.FirstOrDefault(c => c.Id == clipId);
+    }
+
+    internal IClip? GetOrCreateClipInstance(ClipElementUI element)
+    {
+        if (GetLoadedClipInstance(element.Id) is IClip c) return c;
         try
         {
             return PluginManager.CreateClip(JsonSerializer.SerializeToElement(DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, element)));
@@ -8504,26 +9218,31 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
+    [DebuggerNonUserCode()]
+    private IClip? OnGetClipInstanceCallback(ClipElementUI element) => GetOrCreateClipInstance(element);
+
     #endregion
 
     #region save, undo and redo
-
-    public async Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null)
+    public async Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null, bool throwOnFailure = false)
     {
         if (string.IsNullOrEmpty(WorkingPath))
         {
+            if (throwOnFailure) throw new InvalidOperationException("Project working path is empty.");
             Log("saving failed: working path is empty", "warn");
             SetStateFail(Localized.DraftPage_CannotSave_NoPath);
             return;
         }
         if (IsReadonly)
         {
+            if (throwOnFailure) throw new InvalidOperationException("Project is read-only.");
             Log("saving failed: project is read-only", "warn");
             SetStateFail(Localized.DraftPage_CannotSave_Readonly);
             return;
         }
         if (!await saveLocker.WaitAsync(1500))
         {
+            if (throwOnFailure) throw new TimeoutException("Project save is busy.");
             Log("Cannot save because of failed to acquire save lock, skipping this save.", "warn");
             return;
         }
@@ -8531,34 +9250,56 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: true);
             var assets = Assets.Values.ToList();
+            var timelineModule = _workspace.GetModule<TimelineModule>();
+            var assetModule = _workspace.GetModule<AssetModule>();
+            timelineModule.Reset(draft.Clips);
+            assetModule.Reset(assets);
+
+            if (_remoteProjectSession is not null)
+            {
+                ProjectInfo.LastChanged = DateTime.Now;
+                ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
+                ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
+                ProjectInfo.LastOpenAppName = MauiProgram.AssemblyName;
+                ProjectInfo.LastOpenAppIdentifier = MauiProgram.AppIdentifier;
+                ProjectInfo.ProjectName ??= ProjectName;
+                ProjectDuration = draft.Duration;
+                try
+                {
+                    await _remoteProjectSession.ApplyAndSaveAsync(
+                        ProjectInfo,
+                        draft,
+                        assets,
+                        args?.ToString() ?? (noSlot ? "Auto-save" : "Save"));
+                }
+                catch (RemoteRenderException ex) when (ex.ErrorCode == RenderErrorCode.VersionConflict)
+                {
+                    Log("Remote project was modified by another client; local changes conflict with the server.", "warn");
+                    SetStateFail(Localized.DraftPage_RemoteProject_ModifiedOnServer);
+                    if (!noSlot)
+                    {
+                        bool sync = await DisplayAlertAsync(
+                            Localized._Info,
+                            Localized.DraftPage_RemoteProject_ModifiedOnServer,
+                            Localized.DraftPage_RemoteProject_SyncFromServer,
+                            Localized._Cancel);
+                        if (sync) await SyncRemoteProjectFromServerAsync();
+                    }
+                    return;
+                }
+                _workspace.GetModule<ProjectModule>().MarkClean();
+                SetStateOK(Localized.DraftPage_EverythingFine);
+                return;
+            }
+
             var snapshotId = Guid.NewGuid();
             string slot = ".";
             if (noSlot)
             {
                 ProjectInfo.NormallyExited = true;
-                await File.WriteAllTextAsync(Path.Combine(WorkingPath, "timeline.json"), JsonSerializer.Serialize(draft, savingOpts), default);
-                await File.WriteAllTextAsync(Path.Combine(WorkingPath, "assets.json"), JsonSerializer.Serialize(assets, savingOpts), default);
-                try
-                {
-                    using var cts = new CancellationTokenSource();
-                    cts.CancelAfter(10000);
-                    await Task.Run(() =>
-                    {
-                        try
-                        {
-                            var thumbPath = ProjectInfo.ThumbPath ?? previewer.RenderFrame(0U, 1280, 720);
-                            if (!string.IsNullOrEmpty(thumbPath) && File.Exists(thumbPath))
-                            {
-                                var destPath = Path.Combine(WorkingPath, "thumbs", "_project.png");
-                                File.Copy(thumbPath, destPath, true);
-                            }
-                        }
-                        catch { }
-
-                    }, cts.Token);
-
-                }
-                catch { }
+                await Task.Run(SaveProjectThumbnailBeforeExit);
+                await timelineModule.SaveAsync(draft);
+                await assetModule.SaveAsync();
             }
             else //avoid worst condition (crashes while saving)
             {
@@ -8584,14 +9325,17 @@ public partial class DraftPage : ContentPage, IDraftPage
                 if (args is not null)
                 {
                     draft.ChangeReason = args.ToString();
+                    draft.DetailedChangeReason = args.DetailInfo ?? string.Empty;
                 }
+                draft.Operator = args?.Operator ?? ClipChangeOperatorKind.User;
+                draft.OperatorDetailName = args?.OperatorDetailName ?? string.Empty;
                 draft.ChangedByUserDisplayName = SettingsManager.GetSetting("UserName", "User");
                 draft.ChangedByUser = SettingsManager.GetSettingAs("UserID", Guid.Empty, Guid.Empty);
                 draft.PreviousSnapshot = PreviousSnapshotID;
                 draft.SnapshotID = snapshotId;
                 Directory.CreateDirectory(Path.Combine(WorkingPath, "saveSlots", slot));
-                await File.WriteAllTextAsync(Path.Combine(WorkingPath, "saveSlots", slot, "timeline.json"), JsonSerializer.Serialize(draft, savingOpts), default);
-                await File.WriteAllTextAsync(Path.Combine(WorkingPath, "saveSlots", slot, "assets.json"), JsonSerializer.Serialize(assets, savingOpts), default);
+                await _workspace.GetModule<HistoryModule>().SaveSnapshotAsync(draft, slot);
+                await _workspace.Context.Storage.WriteTextAsync(Path.Combine("saveSlots", slot, "assets.json"), JsonSerializer.Serialize(assets, savingOpts));
                 PreviousSnapshotID = draft.SnapshotID;
                 _historyNavigatedByUndoRedo = false;
             }
@@ -8600,13 +9344,20 @@ public partial class DraftPage : ContentPage, IDraftPage
             ProjectInfo.LastChanged = DateTime.Now;
             ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
             ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
+            ProjectInfo.LastOpenAppName = MauiProgram.AssemblyName;
+            ProjectInfo.LastOpenAppIdentifier = MauiProgram.AppIdentifier;
             ProjectInfo.PluginUsed =
                 draft.Clips
                            .Select(c => c.FromPlugin)
                            .Concat(draft.Clips.SelectMany(c => c.Effects?.Select(eff => eff.FromPlugin) ?? []))
-                           .Concat(draft.Clips.SelectMany(c => c.EffectBundles?.Select(eff => eff.FromPlugin) ?? []))
+                           .Concat(draft.Clips.SelectMany(c => c.EffectProviders?.Select(eff => eff.FromPlugin) ?? []))
                            .Where(c => !c.StartsWith("projectFrameCut.Render."))
                            .Distinct().ToList();
+
+            if (ProjectInfo.ProjectUniqueId == Guid.Empty)
+            {
+                ProjectInfo.ProjectUniqueId = Guid.NewGuid();
+            }
 
             if (ClipEditor != null)
             {
@@ -8617,12 +9368,14 @@ public partial class DraftPage : ContentPage, IDraftPage
                 ProjectInfo.Properties["InteractableEditor_EnableKeyframeRecording"] = ClipEditor.EnableKeyframeRecording.ToString();
             }
 
-            await File.WriteAllTextAsync(Path.Combine(WorkingPath, "project.pjfc"), JsonSerializer.Serialize(ProjectInfo, savingOpts), default);
-            ProjectInfo.SaveSnapshotMapping(WorkingPath, savingOpts);
+            if (!AlreadyDisappeared) _workspaceWindowHost.SaveLayout();
+            await _workspace.GetModule<ProjectModule>().SaveProjectAsync();
+            DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(WorkingPath);
         }
         catch (Exception ex)
         {
             Log(ex, "saving draft failed", this);
+            if (throwOnFailure) throw;
             SetStateFail(Localized.DraftPage_CannotSave_Exception(ex));
         }
         finally
@@ -8817,7 +9570,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private void RedoChanges()
+    private async Task RedoChanges()
     {
         var nextSlots = GetNextSlots();
         if (nextSlots is null || nextSlots.Count == 0)
@@ -8832,14 +9585,14 @@ public partial class DraftPage : ContentPage, IDraftPage
         var nextSlot = nextSlots.Count == 1
             ? nextSlots[0]
             : nextSlots.OrderByDescending(s => s.SavedAtUtc).First();
-        ApplySlot(nextSlot.SnapshotID);
+        await ApplySlot(nextSlot.SnapshotID);
         if (CurrentSnapshotID != oldSlot)
         {
             _historyNavigatedByUndoRedo = true;
         }
     }
 
-    private void UndoChanges()
+    private async Task UndoChanges()
     {
         var nextSlot = GetPreviousSlot();
         if (nextSlot is null)
@@ -8850,11 +9603,58 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (IsSyncCooldown()) return;
         SetSyncCooldown();
         var oldSlot = CurrentSnapshotID;
-        ApplySlot(nextSlot.SnapshotID);
+        await ApplySlot(nextSlot.SnapshotID);
         if (CurrentSnapshotID != oldSlot)
         {
             _historyNavigatedByUndoRedo = true;
         }
+    }
+
+    private ProjectHistoryState GetProjectHistoryState()
+    {
+        var previous = GetPreviousSlot();
+        return new()
+        {
+            CurrentSnapshotId = CurrentSnapshotID,
+            CanUndo = previous is not null && FindSlotDirectory(previous.SnapshotID) is not null,
+            CanRedo = GetNextSlots().Any(x => FindSlotDirectory(x.SnapshotID) is not null),
+        };
+    }
+
+    private ProjectHistory GetProjectHistory()
+    {
+        var (nodes, _) = HistoryGraphDataBuilder.BuildFromDraftPage(this);
+        return new()
+        {
+            State = GetProjectHistoryState(),
+            Nodes = nodes.Select(x => new ProjectHistoryNode
+            {
+                SnapshotId = x.SnapshotID,
+                PreviousSnapshotId = x.PreviousSnapshotID,
+                NextSnapshotIds = x.NextSnapshotIDs.ToList(),
+                SavedAtUtc = x.SavedAt == default ? DateTime.MinValue : x.SavedAt.Kind switch
+                {
+                    DateTimeKind.Utc => x.SavedAt,
+                    DateTimeKind.Local => x.SavedAt.ToUniversalTime(),
+                    _ => DateTime.SpecifyKind(x.SavedAt, DateTimeKind.Local).ToUniversalTime(),
+                },
+                ChangeReason = x.ChangeReason,
+                ChangedBy = x.ChangedByUserDisplayName,
+                ChangedByUserId = x.ChangedByUser,
+                IsCurrentSnapshot = x.IsCurrentSnapshot,
+            }).ToList(),
+        };
+    }
+
+    private async Task<ProjectHistoryState> ApplyProjectHistorySnapshotAsync(Guid snapshotId, bool navigatedByUndoRedo)
+    {
+        if (snapshotId == Guid.Empty) throw new ArgumentException("SnapshotId is required.");
+        if (snapshotId == CurrentSnapshotID) return GetProjectHistoryState();
+        if (FindSlotDirectory(snapshotId) is null) throw new KeyNotFoundException("Project history snapshot not found.");
+        await ApplySlot(snapshotId);
+        if (CurrentSnapshotID != snapshotId) throw new InvalidOperationException("Project history snapshot could not be restored.");
+        if (navigatedByUndoRedo) _historyNavigatedByUndoRedo = true;
+        return GetProjectHistoryState();
     }
 
     /// <summary>
@@ -8867,7 +9667,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         _activeHistoryProvider = provider;
     }
 
-    public void ApplySlot(Guid snapshotId)
+    public async Task ApplySlot(Guid snapshotId)
     {
         try
         {
@@ -8890,6 +9690,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             (var clips, var tracks) = DraftImportAndExportHelper.ImportFromJSON(draftJson, ProjectInfo);
             Clips = new ConcurrentDictionary<Guid, ClipElementUI>(clips);
             Assets = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a));
+            ClipEditor.SetAssets(Assets);
 
             foreach (var item in Tracks)
             {
@@ -8910,11 +9711,12 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
 
             EnsureContinuousTrackIndices();
+            await ClipEditor.UpdateClips(Clips);
             CurrentSnapshotID = snapshotId;
             _activeHistoryProvider?.NotifyExternalSnapshotChanged();
             PreviousSnapshotID = draftJson.PreviousSnapshot;
             RefreshHistorySubWindowContent();
-            DraftChanged(this, new() { DetailInfo = "Sync changes", NoSave = true });
+            await DraftChangedAsync(this, new() { DetailInfo = "Sync changes", NoSave = true });
             SetStateOK(Localized.DraftPage_RedoAndUndo_Success(draftJson.SavedAt));
 
         }
@@ -8976,6 +9778,433 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     #endregion
 
+    #region rpc/remote
+    private readonly SemaphoreSlim _guiRegistrationGate = new(1, 1);
+    private Guid _guiSessionId;
+    private IRenderClient? _guiClient;
+
+    #region external RPC
+    private async Task<Guid> EnsureGuiRpcSessionAsync(IRenderClient client, CancellationToken ct)
+    {
+        await _guiRegistrationGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            if (AlreadyDisappeared) throw new InvalidOperationException("Project is closed.");
+            if (ReferenceEquals(_guiClient, client) && _guiSessionId != Guid.Empty) return _guiSessionId;
+            var id = Guid.NewGuid();
+            await client.RegisterGuiProjectAsync(new() { SessionId = id }, ct).ConfigureAwait(false);
+            _guiClient = client;
+            _guiSessionId = id;
+            Log($"Registered GUI RPC session {id}.");
+            return id;
+        }
+        finally { _guiRegistrationGate.Release(); }
+    }
+
+    private async Task MonitorGuiRpcAsync(CancellationToken ct)
+    {
+        if (!RenderRpcBootstrap.SupportsCliRenderProcess) return;
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                try
+                {
+                    if (!RenderRpcBootstrap.TryGetClient(out var client) || client is null)
+                    { await Task.Delay(1000, ct); continue; }
+                    var id = await EnsureGuiRpcSessionAsync(client, ct).ConfigureAwait(false);
+                    var work = await client.GetGuiProjectWorkAsync(new() { SessionId = id }, ct).ConfigureAwait(false);
+                    if (work.Request is null) continue;
+                    var result = new GuiProjectResult { SessionId = id, RequestId = work.Request.RequestId };
+                    try
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        result.Json = await MainThread.InvokeOnMainThreadAsync(async () =>
+                        {
+                            if (AlreadyDisappeared || id != _guiSessionId || ct.IsCancellationRequested)
+                                throw new InvalidOperationException("Project session is closed.");
+                            Log($"GUI RPC {work.Request.Operation}, request {work.Request.RequestId}.");
+                            return JsonSerializer.Serialize(await ExecuteGuiProjectAsync(work.Request));
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"GUI RPC {work.Request.Operation}", this);
+                        result.Error = new RemoteError(ex);
+                    }
+                    await client.CompleteGuiProjectWorkAsync(result, ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
+                catch (Exception ex)
+                {
+                    Log(ex, "GUI RPC request loop", this);
+                    await Task.Delay(1000, ct).ConfigureAwait(false);
+                }
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+        finally
+        {
+            if (_guiClient is not null && _guiSessionId != Guid.Empty)
+            {
+                try
+                {
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                    await _guiClient.UnregisterGuiProjectAsync(new() { SessionId = _guiSessionId }, timeout.Token).ConfigureAwait(false);
+                }
+                catch (Exception ex) { Log(ex, "Unregister GUI RPC session", this); }
+                _guiSessionId = Guid.Empty;
+                _guiClient = null;
+            }
+        }
+    }
+
+    private object GuiClipSnapshot(ClipElementUI clip)
+    {
+        var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, clip, false);
+        return new
+        {
+            ClipId = dto.Id,
+            dto.Name,
+            Type = dto.ClipType.ToString(),
+            TrackId = dto.LayerIndex,
+            dto.StartFrame,
+            DurationFrames = dto.Duration,
+            SourceStartFrame = dto.RelativeStartFrame,
+            dto.FilePath,
+            WidthPixels = dto.TargetWidth,
+            HeightPixels = dto.TargetHeight,
+            XPixels = dto.TargetX,
+            YPixels = dto.TargetY
+        };
+    }
+
+    private static object GuiField(IEffectArgumentField field) => new
+    {
+        FieldId = field.Id,
+        FieldType = field.FieldType.ToString(),
+        field.DefaultValue,
+        field.MinValue,
+        field.MaxValue,
+        field.PresetOptions,
+        field.Remarks,
+        Value = field switch { StaticEffectArgumentField f => f.Value, DynamicEffectParamField f => f.StaticFallbackValue, _ => null },
+    };
+
+    private static object GuiProvider(IEffectProvider provider, Guid clipId, string? registrationKey = null) => new
+    {
+        ClipId = clipId,
+        ProviderId = provider.Id,
+        provider.Name,
+        TypeName = registrationKey ?? provider.TypeName,
+        provider.Enabled,
+        Target = provider.Target.ToString(),
+        EffectType = provider.TypeOfEffect.ToString(),
+        InputProviderId = provider.HasMainPictureInput() ? provider.GetMainInputSource() : null,
+        IsFinalOutput = provider.IsFinalOutputSource(),
+        Fields = provider.Fields.Values.Select(GuiField).ToArray(),
+    };
+
+    private async Task<object?> ExecuteGuiProjectAsync(GuiProjectRequest request)
+    {
+        using var document = JsonDocument.Parse(request.ParametersJson);
+        var p = document.RootElement;
+        if (p.ValueKind != JsonValueKind.Object) throw new ArgumentException("Parameters must be an object.");
+        bool Has(string key) => p.TryGetProperty(key, out _);
+        string? S(string key) => Has(key) ? p.GetProperty(key).GetString() : null;
+        int I(string key, int fallback = 0) => Has(key) ? p.GetProperty(key).GetInt32() : fallback;
+        uint U(string key, uint fallback = 0) => Has(key) ? p.GetProperty(key).GetUInt32() : fallback;
+        Guid G(string key) => Has(key) ? p.GetProperty(key).GetGuid() : Guid.Empty;
+        bool B(string key, bool fallback = false) => Has(key) ? p.GetProperty(key).GetBoolean() : fallback;
+        Dictionary<string, object> Fields() => Has("Fields")
+            ? p.GetProperty("Fields").EnumerateObject().ToDictionary(x => x.Name, x => EffectParamConvert.Normalize(x.Value.Clone())!) : new();
+        ClipElementUI Clip() => Clips.TryGetValue(G("ClipId"), out var c) ? c : throw new KeyNotFoundException("Clip not found.");
+        IEffectProvider Factory() => EffectServices.GetAvailableEffectProviders().TryGetValue(S("TypeName") ?? "", out var f)
+            ? f() : throw new KeyNotFoundException("Effect provider type not found.");
+        object Info() => new
+        {
+            SessionId = _guiSessionId,
+            Name = ProjectInfo.ProjectName,
+            WidthPixels = ProjectInfo.RelativeWidth,
+            HeightPixels = ProjectInfo.RelativeHeight,
+            FrameRate = ProjectInfo.TargetFrameRate,
+            DurationFrames = ProjectDuration,
+            ClipCount = Clips.Count,
+            TrackCount = Tracks.Count,
+            AssetCount = Assets.Count,
+            WorkingPath,
+            CurrentFrame,
+            CurrentSnapshotId = CurrentSnapshotID,
+        };
+        foreach (var key in new[] { "StartFrame", "SourceStartFrame", "DurationFrames", "TrackId" })
+            if (Has(key) && (U(key) > int.MaxValue || (key == "DurationFrames" && U(key) == 0)))
+                throw new ArgumentException($"Invalid {key}.");
+        foreach (var key in new[] { "WidthPixels", "HeightPixels" })
+            if (Has(key) && I(key) <= 0) throw new ArgumentException($"Invalid {key}.");
+        var operation = request.Operation;
+        bool write = !operation.ToString().StartsWith("Get", StringComparison.Ordinal);
+        if (write && IsReadonly) throw new InvalidOperationException("Project is read-only.");
+        object? result;
+        switch (operation)
+        {
+            case GuiProjectOperation.GetProjectHistory:
+                return GetProjectHistory();
+            case GuiProjectOperation.UndoProjectHistory:
+                return await ApplyProjectHistorySnapshotAsync(GetPreviousSlot()?.SnapshotID
+                    ?? throw new InvalidOperationException("No earlier project history snapshot is available."), true);
+            case GuiProjectOperation.RedoProjectHistory:
+                {
+                    var next = GetNextSlots().Where(x => FindSlotDirectory(x.SnapshotID) is not null)
+                        .OrderByDescending(x => x.SavedAtUtc).FirstOrDefault()
+                        ?? throw new InvalidOperationException("No later project history snapshot is available.");
+                    return await ApplyProjectHistorySnapshotAsync(next.SnapshotID, true);
+                }
+            case GuiProjectOperation.RestoreProjectHistory:
+                return await ApplyProjectHistorySnapshotAsync(G("SnapshotId"), false);
+            case GuiProjectOperation.GetInfo: return Info();
+            case GuiProjectOperation.Save:
+                await Save(args: CreateGuiProjectChange(request), throwOnFailure: true);
+                return Info();
+            case GuiProjectOperation.GetClip:
+                return Clips.Values.Where(c => (!Has("ClipId") || c.Id == G("ClipId"))
+                    && (!Has("TrackId") || c.origTrack == I("TrackId"))
+                    && (!Has("Name") || c.DisplayName.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)))
+                    .Select(GuiClipSnapshot).ToArray();
+            case GuiProjectOperation.AddClip:
+                {
+                    if (!Tracks.ContainsKey(I("TrackId"))) throw new ArgumentException("Track not found.");
+                    if (Has("FilePath") && Has("AssetId")) throw new ArgumentException("Choose FilePath or AssetId.");
+                    ClipElementUI c;
+                    if (Has("AssetId"))
+                    {
+                        if (!Assets.TryGetValue(S("AssetId")!, out var asset)) throw new KeyNotFoundException("Asset not found.");
+                        c = CreateFromAsset(asset, I("TrackId"), FrameToPixel(U("StartFrame")));
+                    }
+                    else
+                    {
+                        var path = S("FilePath");
+                        if (path is not null && !File.Exists(path)) throw new FileNotFoundException("Source file not found.", path);
+                        c = CreateAndAddClip(FrameToPixel(U("StartFrame")), FrameToPixel(U("DurationFrames", 300)), I("TrackId"),
+                            labelText: S("Name") ?? "New Clip", relativeStart: U("SourceStartFrame"));
+                        if (path is not null)
+                        {
+                            c.SourcePath = path;
+                            c.ClipType = ClipElementUI.DetermineClipMode(path);
+                            if (c.ClipType is ClipMode.VideoClip or ClipMode.AudioClip) c.UpdateSourceDuration();
+                        }
+                    }
+                    result = GuiClipSnapshot(ApplyGuiClipParameters(c, p));
+                    break;
+                }
+            case GuiProjectOperation.SetClip: result = GuiClipSnapshot(ApplyGuiClipParameters(Clip(), p)); break;
+            case GuiProjectOperation.CopyClip:
+                {
+                    var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, Clip(), false);
+                    dto.Id = Guid.NewGuid();
+                    dto.Name = S("Name") ?? $"Copy of {dto.Name}";
+                    dto.StartFrame = U("StartFrame", checked(dto.StartFrame + dto.Duration));
+                    dto.LayerIndex = U("TrackId", dto.LayerIndex);
+                    result = GuiClipSnapshot(TimelineMcpLiveService.ReplaceClip(this, dto));
+                    break;
+                }
+            case GuiProjectOperation.RemoveClip:
+                if (!TimelineMcpLiveService.DeleteClip(this, Clip().Id)) throw new InvalidOperationException("Clip could not be removed.");
+                result = null; break;
+            case GuiProjectOperation.GetTrack:
+                return Tracks.Keys.OrderBy(x => x).Where(x => !Has("TrackId") || x == I("TrackId"))
+                    .Select(x => new { TrackId = x, ClipCount = Clips.Values.Count(c => c.origTrack == x) }).ToArray();
+            case GuiProjectOperation.AddTrack:
+                {
+                    int id = I("TrackId", Tracks.Keys.DefaultIfEmpty(-1).Max() + 1);
+                    if (id < 0 || Tracks.ContainsKey(id)) throw new ArgumentException("Invalid or duplicate track.");
+                    AddATrack(id); result = new { TrackId = id }; break;
+                }
+            case GuiProjectOperation.GetAsset:
+                return Assets.Where(a => (!Has("AssetId") || a.Key == S("AssetId")) && (!Has("Name") || (a.Value.Name ?? "").Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)))
+                    .Select(a => new { AssetId = a.Key, a.Value.Name, a.Value.Path, Type = a.Value.AssetType.ToString(), a.Value.Width, a.Value.Height, a.Value.Duration }).ToArray();
+            case GuiProjectOperation.AddAsset:
+                {
+                    var source = S("FilePath") ?? throw new ArgumentException("FilePath is required.");
+                    if (!File.Exists(source)) throw new FileNotFoundException("Asset file not found.", source);
+                    var directory = Path.Combine(WorkingPath, "assets");
+                    Directory.CreateDirectory(directory);
+                    var destination = Path.Combine(directory, Guid.NewGuid() + Path.GetExtension(source));
+                    File.Copy(source, destination);
+                    try
+                    {
+                        var asset = AssetDatabase.Create(destination, S("Name") ?? Path.GetFileNameWithoutExtension(source), AssetItem.GetAssetType(destination))
+                            ?? throw new InvalidOperationException("Cannot import asset.");
+                        if (!Assets.TryAdd(asset.AssetId, asset)) throw new InvalidOperationException("Duplicate asset ID.");
+                        result = new { asset.AssetId, asset.Name, asset.Path }; break;
+                    }
+                    catch { File.Delete(destination); throw; }
+                }
+            case GuiProjectOperation.RemoveAsset:
+                if (!Assets.TryRemove(S("AssetId") ?? "", out _)) throw new KeyNotFoundException("Asset not found.");
+                result = null; break;
+            case GuiProjectOperation.GetTextStyle:
+                return PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(x => x.TextClipStyleProvider)
+                    .Select(x => new { StyleId = x.Key, FromPlugin = x.Value().FromPlugin }).ToArray();
+            case GuiProjectOperation.GetTextStyleField:
+                return (TimelineMcpLiveService.ResolveTextStyleProvider(S("StyleId") ?? "") ?? throw new KeyNotFoundException("Text style not found."))
+                    .SettableFields.Values.Select(f => new { FieldId = f.Id, FieldType = f.FieldType.ToString(), f.DefaultValue, f.MinValue, f.MaxValue, f.PresetOptions, f.Remarks }).ToArray();
+            case GuiProjectOperation.AddTextClip:
+                {
+                    if (!Tracks.ContainsKey(I("TrackId"))) throw new ArgumentException("Track not found.");
+                    var c = TimelineMcpLiveService.AddTextClipToPage(this, S("StyleId") ?? "", S("Text") ?? "",
+                        0, I("TrackId"), Fields(), strictFields: true);
+                    result = GuiClipSnapshot(ApplyGuiClipParameters(c, p)); break;
+                }
+            case GuiProjectOperation.SetTextClipStyle:
+                TimelineMcpLiveService.SetTextClipStyleFields(this, Clip().Id, Fields(), strictFields: true);
+                result = GuiClipSnapshot(Clip()); break;
+            case GuiProjectOperation.GetEffectProviderType:
+                return EffectServices.GetAvailableEffectProviders().Select(x => (Key: x.Key, Provider: x.Value()))
+                    .Where(x => !Has("Name") || x.Key.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)
+                        || x.Provider.Name.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase))
+                    .Select(x => GuiProvider(x.Provider, Guid.Empty, x.Key)).ToArray();
+            case GuiProjectOperation.GetEffectProviderField: return Factory().Fields.Values.Select(GuiField).ToArray();
+            case GuiProjectOperation.GetClipEffectProvider:
+                return (Clip().EffectProviders?.Values.AsEnumerable() ?? Enumerable.Empty<IEffectProvider>())
+                    .Where(x => (!Has("ProviderId") || x.Id == G("ProviderId")) && (!Has("TypeName") || x.TypeName == S("TypeName")))
+                    .Select(x => GuiProvider(x, G("ClipId"))).ToArray();
+            case GuiProjectOperation.AddClipEffectProvider:
+            case GuiProjectOperation.SetClipEffectProvider:
+                {
+                    var c = Clip();
+                    var provider = operation == GuiProjectOperation.AddClipEffectProvider ? Factory()
+                        : c.EffectProviders?.GetValueOrDefault(G("ProviderId")) ?? throw new KeyNotFoundException("Effect provider not found.");
+                    if (!EffectBindingHelper.AreTargetsCompatible(provider.Target, c.GetEffectTarget())) throw new ArgumentException("Effect target is incompatible.");
+                    if (Has("InputProviderId") && !provider.HasMainPictureInput()) throw new ArgumentException("Provider has no main picture input.");
+                    ApplyGuiProviderFields(provider, Fields(), B("ResetToDefaults"));
+                    if (Has("Name")) provider.Name = S("Name")!;
+                    if (Has("Enabled")) provider.Enabled = B("Enabled");
+                    if (operation == GuiProjectOperation.AddClipEffectProvider) TimelineMcpLiveService.AddEffectProvider(this, c.Id.ToString(), provider);
+                    if (Has("InputProviderId")) provider.SetMainInputSource(G("InputProviderId"));
+                    if (Has("IsFinalOutput"))
+                    {
+                        if (B("IsFinalOutput")) EffectBindingHelper.SetFinalOutput(c.EffectProviders!, provider.Id);
+                        else provider.SetFinalOutputSource(false);
+                    }
+                    ClipInfoBuilder.RebuildAllEffects(c);
+                    RefreshPropertyPanel(c);
+                    result = GuiProvider(provider, c.Id); break;
+                }
+            case GuiProjectOperation.RemoveClipEffectProvider:
+                if (!TimelineMcpLiveService.RemoveEffectProvider(this, Clip().Id.ToString(), G("ProviderId"))) throw new KeyNotFoundException("Effect provider not found.");
+                result = null; break;
+            default: throw new NotSupportedException("Unknown GUI project operation.");
+        }
+        var change = CreateGuiProjectChange(request);
+        ForwardClipChangeToWorkspace(this, change);
+        await DraftChangedAsync(this, change);
+        return result;
+    }
+
+    private static ClipUpdateEventArgs CreateGuiProjectChange(GuiProjectRequest request) => new()
+    {
+        ChangeReason = string.IsNullOrWhiteSpace(request.ChangeReason) ? $"RPC {request.Operation}" : request.ChangeReason.Trim(),
+        DetailInfo = $"RPC {request.Operation}",
+        Operator = ClipChangeOperatorKind.ExternalRPC,
+        OperatorDetailName = string.IsNullOrWhiteSpace(request.ClientName) ? "RPC client" : request.ClientName.Trim(),
+    };
+
+    private ClipElementUI ApplyGuiClipParameters(ClipElementUI clip, JsonElement parameters)
+    {
+        var node = JsonSerializer.SerializeToNode(DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, clip, false))!;
+        foreach (var (source, target) in new[] { ("Name", "Name"), ("StartFrame", "StartFrame"), ("DurationFrames", "Duration"),
+            ("SourceStartFrame", "RelativeStartFrame"), ("TrackId", "LayerIndex"), ("FilePath", "FilePath"),
+            ("WidthPixels", "TargetWidth"), ("HeightPixels", "TargetHeight"), ("XPixels", "TargetX"), ("YPixels", "TargetY") })
+            if (parameters.TryGetProperty(source, out var value)) node[target] = JsonNode.Parse(value.GetRawText());
+        var dto = node.Deserialize<ClipDraftDTO>()!;
+        if (dto.Duration == 0 || dto.LayerIndex > int.MaxValue || !Tracks.ContainsKey((int)dto.LayerIndex)) throw new ArgumentException("Invalid duration or track.");
+        return TimelineMcpLiveService.ReplaceClip(this, dto);
+    }
+
+    private static void ApplyGuiProviderFields(IEffectProvider provider, Dictionary<string, object> values, bool reset)
+    {
+        var fields = new Dictionary<string, IEffectArgumentField>(reset
+            ? EffectServices.GetAvailableEffectProviders()[provider.TypeName]().Fields : provider.Fields);
+        foreach (var (id, raw) in values)
+        {
+            if (!fields.TryGetValue(id, out var f)) throw new ArgumentException($"Unknown effect field '{id}'.");
+            var value = EffectParamConvert.Normalize(raw);
+            object? converted = (f.FieldType & (EffectArgumentFieldType)0xFFFF) switch
+            {
+                EffectArgumentFieldType.Integer => Convert.ToInt32(value, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.UnsignedInteger => Convert.ToUInt16(value, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.Numeric => Convert.ToSingle(value, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.Boolean => Convert.ToBoolean(value, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.Long => Convert.ToInt64(value, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.UnsignedLong => Convert.ToUInt64(value, CultureInfo.InvariantCulture),
+                EffectArgumentFieldType.String => value?.ToString(),
+                _ => value,
+            };
+            if (f.PresetOptions is { Length: > 0 } && converted is string text && !f.PresetOptions.Contains(text)) throw new ArgumentException($"Invalid option for '{id}'.");
+            fields[id] = new StaticEffectArgumentField
+            {
+                Id = id,
+                FieldType = f.FieldType,
+                Value = converted,
+                DefaultValue = f.DefaultValue,
+                MinValue = f.MinValue,
+                MaxValue = f.MaxValue,
+                PresetOptions = f.PresetOptions,
+                Remarks = f.Remarks
+            };
+        }
+        provider.Fields = fields;
+        foreach (var id in (reset ? provider.EnumerateFieldBindings().Select(x => x.Key).ToArray() : values.Keys.ToArray())) provider.ClearFieldBinding(id);
+    }
+
+    private async Task MonitorExternalRpcRequestsAsync(CancellationToken ct)
+    {
+        IRenderClient? checkedClient = null;
+        var supported = false;
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(1000, ct).ConfigureAwait(false);
+                if (AlreadyDisappeared || !RenderRpcBootstrap.SupportsCliRenderProcess ||
+                    !RenderRpcBootstrap.TryGetClient(out var client) || client is null) continue;
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                timeout.CancelAfter(TimeSpan.FromSeconds(5));
+                if (!ReferenceEquals(checkedClient, client))
+                {
+                    supported = (await client.GetCapabilitiesAsync(timeout.Token).ConfigureAwait(false))
+                        .Operations.Contains(nameof(RenderOperation.GetExternalRpcRequest));
+                    checkedClient = client;
+                }
+                if (!supported) continue;
+                var sessionId = await EnsureGuiRpcSessionAsync(client, timeout.Token).ConfigureAwait(false);
+                var pending = await client.GetExternalRpcRequestAsync(timeout.Token).ConfigureAwait(false);
+                if (pending.ClaimId == Guid.Empty) continue;
+                var request = JsonSerializer.Deserialize<ExternalRpcRequest>(pending.Json)!;
+                var approved = request.IsPersistent || await MainThread.InvokeOnMainThreadAsync(async () =>
+                    {
+                        if (AlreadyDisappeared || ct.IsCancellationRequested) return false;
+                        return await DisplayAlertAsync(Localized.DraftPage_ExternalRpcAuthorization_Title(request.AppName),
+                            Localized.DraftPage_ExternalRpcAuthorization(request.AppName, request.Author, request.Purpose),
+                            Localized._OK, Localized._Cancel);
+                    }).WaitAsync(ct).ConfigureAwait(false);
+                if (AlreadyDisappeared || ct.IsCancellationRequested) return;
+                using var responseTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                responseTimeout.CancelAfter(TimeSpan.FromSeconds(10));
+                await client.ResolveExternalRpcRequestAsync(new() { ClaimId = pending.ClaimId, Approved = approved, GuiSessionId = sessionId }, responseTimeout.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+            catch (Exception ex)
+            {
+                Log(ex, "Authorize external RPC request", this);
+                try { await Task.Delay(5000, ct).ConfigureAwait(false); }
+                catch (OperationCanceledException) { return; }
+            }
+        }
+    }
+    #endregion
+    #endregion
+
     #region misc
     private void SetPlayPauseIconToPlay()
     {
@@ -8999,9 +10228,44 @@ public partial class DraftPage : ContentPage, IDraftPage
         SetStateBusy();
         try
         {
-            foreach (var item in Directory.GetFiles(Path.Combine(WorkingPath, "thumbs")))
+            isPlaying = false;
+            CancelDynamicPreview();
+            try { _playbackCts?.Cancel(); } catch { }
+            foreach (var cts in _perClipThumbCts.Values)
             {
-                File.Delete(item);
+                try { cts.Cancel(); } catch { }
+            }
+
+            await Dispatcher.DispatchAsync(() =>
+            {
+                try
+                {
+                    LivePreviewPlayer.Stop();
+                    DynamicPreviewAudioProvider.Stop();
+                    LivePreviewPlayer.Source = null;
+                    DynamicPreviewAudioProvider.Source = null;
+                    ClipEditor.ApplyPreparedPreviews([]);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "detach previews before cache cleanup", this);
+                }
+            });
+
+            var thumbsRoot = Path.Combine(WorkingPath, "thumbs");
+            if (Directory.Exists(thumbsRoot))
+            {
+                foreach (var item in Directory.EnumerateFiles(thumbsRoot, "*", SearchOption.AllDirectories).ToArray())
+                {
+                    try { File.Delete(item); } catch (FileNotFoundException) { }
+                }
+            }
+
+            // Re-seed timeline thumbnail generation after the cleanup. Previously only
+            // top-level thumbs were deleted, and no producer was restarted for new Clips.
+            foreach (var clip in Clips.Values)
+            {
+                StartPerClipThumbGeneration(clip);
             }
         }
         catch (Exception ex)
@@ -9023,7 +10287,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (LockScrollViewAfterSelection) SetTimelineScrollEnabled(true);
         await ReRenderUI();
         await RefreshDynamicPreviewOverlay();
-        DraftChanged(sender, new() { NoSave = true });
+        await DraftChangedAsync(sender, new() { NoSave = true });
 #if WINDOWS
         var origMode = GCSettings.LargeObjectHeapCompactionMode;
         GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
@@ -9161,108 +10425,81 @@ public partial class DraftPage : ContentPage, IDraftPage
     }
 
     ToolbarItem RunningTaskToolbarItem = new();
-
-    void AddToolbarBtns()
+    private Dictionary<string, ICommand> GetDebugCommands() => new()
     {
-        LogDiagnostic("Adding toolbars buttons...");
-        try
         {
-            ToolbarItems.Clear();
-            ToolbarItems.Add(new ToolbarItem
+            "Debug_ToggleDebugViewForInteractableEditor", new Command(async () =>
             {
-                Text = Localized.DraftPage_MenuBar_Edit_Undo,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 0,
-                Command = UndoCommand
-            });
-            ToolbarItems.Add(new ToolbarItem
+                ClipEditor.ShowPreviewDebugOverlay = !ClipEditor.ShowPreviewDebugOverlay;
+            })
+        },
+        {
+            "Debug_ReRenderLivePreview", new Command(async () =>
             {
-                Text = Localized.DraftPage_MenuBar_Edit_Redo,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 0,
-                Command = RedoCommand
-            });
-            ToolbarItems.Add(new ToolbarItem
+                var token = ResetDynamicPreviewToken();
+                var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, previewWidth, previewHeight, token);
+                token.ThrowIfCancellationRequested();
+                ClipEditor.ApplyPreparedPreviews(preparedPreviews);
+            })
+        },
+        {
+            "Debug_CreatePopup", new Command(async () =>
             {
-                Text = Localized.DraftPage_MenuBar_Edit_History,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 0,
-                Command = ManageWindowCommand,
-                CommandParameter = "history"
-            });
-            ToolbarItems.Add(new ToolbarItem
+                string[] type = ["bottom", "dialog"];
+                var select = await DisplayActionSheetAsync("info", "select", null, type);
+                await ShowAPopup(content: await BuildPropertyPanel(_selected), border: _selected?.Clip, clip: _selected, mode: select);
+            })
+        },
+        {
+            "Debug_DumpProcessStack", new Command(async () =>
             {
-                Text = Localized.DraftPage_MenuBar_Edit_ConfigurePreview,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 0,
-                Command = new Command(async () =>
+                var f = previewer.GetFrame((uint)_currentFrame, previewWidth, previewHeight);
+                var text = PictureProcessStack.FormatProcessStackForLog(f.ProcessStack);
+                await Microsoft.Maui.ApplicationModel.DataTransfer.Clipboard.Default.SetTextAsync(text);
+            })
+        },
+        {
+            "Debug_OpenAWindow", new Command(async () =>
+            {
+                var page = new TestPage();
+                var wd = new MultiWindowItem
                 {
-                    var option = await DisplayActionSheetAsync(Localized.DraftPage_MenuBar_Edit_ConfigurePreview, Localized._Cancel, null, (ResolutionPicker.ItemsSource as List<string>)?.ToArray() ?? []);
-                    if (!string.IsNullOrWhiteSpace(option)) ResolutionPicker.SelectedItem = option;
-                })
-            });
-
-            //RunningTaskToolbarItem = new ToolbarItem
-            //{
-            //    Text = Localized.DraftPage_MenuBar_Jobs_ManageJobs,
-            //    Order = ToolbarItemOrder.Primary,
-            //    Priority = 0,
-            //    Command = ManageJobsCommand
-            //};
-            //ToolbarItems.Add(RunningTaskToolbarItem);
-
-            ToolbarItems.Add(new ToolbarItem
-            {
-                Text = Localized.DraftPage_GoRender,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 0,
-                Command = GoRenderCommand
-            });
-
-            ToolbarItems.Add(new ToolbarItem
-            {
-                Text = Localized.DraftPage_MenuBar_Project_Save,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 0,
-                Command = SaveCommand
-            });
-
-            ToolbarItems.Add(new ToolbarItem
-            {
-                Text = Localized._Settings,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 1,
-                Command = SettingsCommand
-            });
-            if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
-            {
-                ToolbarItems.Add(new ToolbarItem
+                    Content = page.Content,
+                    Title = "Test Window"
+                };
+                await Dispatcher.DispatchAsync(async () =>
                 {
-                    Text = Localized.DraftPage_MenuBar_Project_Scripting,
-                    Order = ToolbarItemOrder.Secondary,
-                    Priority = 1,
-                    Command = ShowScriptWindowCommand,
+                    MainMultiWindowView.AddWindow(wd);
                 });
-            }
-
-            var MoreOptionButton = new ToolbarItem
-            {
-                Text = Localized.HomePage_MenuBar_MoreOptions,
-                Order = ToolbarItemOrder.Secondary,
-                Priority = 1
-            };
-
-            MoreOptionButton.Clicked += ShowMoreOptionsMenu;
-            ToolbarItems.Add(MoreOptionButton);
-
-        }
-        catch
+            })
+        },
         {
+            "Debug_Crash", new Command(async () =>
+            {
+                var type = await DisplayActionSheetAsync("Choose a favor you'd like", "Cancel", null, "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)");
+                switch (type)
+                {
+                    case "Native(null pointer)":
+#if ANDROID
+                        throw new Java.Lang.NullPointerException("test crash from native code");
+#elif WINDOWS
+                        IntPtr ptr = IntPtr.Zero;
+                        Marshal.WriteInt32(ptr, 42);
+#endif
+                        break;
+                    case "Managed(NullReferenceException)":
+                        throw new NullReferenceException("test crash");
+                    case "Environment.FailFast":
+                        Environment.FailFast("test crash");
+                        break;
+                }
+            })
         }
-    }
+    };
 
     private async void ShowMoreOptionsMenu(object? sender, EventArgs e)
     {
+        RefreshQuickCommands();
         Dictionary<string, (ICommand? command, object? argument)> actionsPair = MenuBarItems
             .SelectMany(menuBarItem =>
                 menuBarItem.OfType<MenuFlyoutItem>()
@@ -9273,79 +10510,11 @@ public partial class DraftPage : ContentPage, IDraftPage
                     ))
             )
             .ToDictionary(x => x.Key, x => x.Value);
-        Dictionary<string, ICommand?> debugActionsPair = new Dictionary<string, ICommand?>
-        {
-            {
-                "Debug_ToggleDebugViewForInteractableEditor" ,new Command(async () =>
-                {
-                    ClipEditor.ShowPreviewDebugOverlay = !ClipEditor.ShowPreviewDebugOverlay;
-                })
-            },
-            {
-                "Debug_ReRenderLivePreview", new Command(async () =>
-                {
-                    var token = ResetDynamicPreviewToken();
-                    var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, previewWidth, previewHeight, ClipEditor.Width, ClipEditor.Height, token);
-                    token.ThrowIfCancellationRequested();
-                    ClipEditor.ApplyPreparedPreviews(preparedPreviews);
-                })
-            },
-            {
-                "Debug_CreatePopup" ,new Command(async () =>
-                {
-                    string[] type = ["right", "bottom","center","dialog"];
-                    var select = await DisplayActionSheetAsync("info", "select", null, type);
-                    await ShowAPopup(content: await BuildPropertyPanel(_selected), border: _selected?.Clip, clip:_selected, mode: select);
-                })
-            },
-            {
-                "Debug_DumpProcessStack", new Command(async () =>
-                {
-                    var f = previewer.GetFrame((uint)_currentFrame, previewWidth, previewHeight);
-                    var text = PictureProcessStack.FormatProcessStackForLog(f.ProcessStack);
-                    await Microsoft.Maui.ApplicationModel.DataTransfer.Clipboard.Default.SetTextAsync(text);
-                })
-            },
-            {
-                "Debug_OpenAWindow", new Command(async () =>
-                {
-                    var page = new TestPage();
-                    var wd = new MultiWindowItem()
-                    {
-                        Content = page.Content,
-                        Title = "Test Window",
-                    };
-                    await Dispatcher.DispatchAsync(async () =>
-                    {
-                        MainMultiWindowView.AddWindow(wd);
-                    });
-                })
-            },
-            {
-                "Debug_Crash", new Command(async () =>
-                {
-                    var type = await DisplayActionSheetAsync("Choose a favor you'd like", "Cancel", null, "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)");
-                    switch (type)
-                    {
-                        case "Native(null pointer)":
-#if ANDROID
-                            throw new Java.Lang.NullPointerException("test crash from native code");
-#elif WINDOWS
-                            IntPtr ptr = IntPtr.Zero;
-                            Marshal.WriteInt32(ptr, 42);
-#endif
-                            break;
-                        case "Managed(NullReferenceException)":
-                            throw new NullReferenceException("test crash");
-                        case "Environment.FailFast":
-                            Environment.FailFast("test crash");
-                            break;
-                    }
-                })
-            }
-        };
+        var debugActionsPair = GetDebugCommands();
 
-        var option = await DisplayActionSheetAsync(Localized._Info, Localized._Cancel, null, actionsPair.Keys.Concat(SettingsManager.IsBoolSettingTrue("DeveloperMode") ? debugActionsPair.Keys : new List<string>()).ToArray());
+        var option = await DisplayActionSheetAsync(Localized._Info, Localized._Cancel, null, actionsPair.Keys
+            .Concat(SettingsManager.IsBoolSettingTrue("DeveloperMode") ? debugActionsPair.Keys : new List<string>())
+            .ToArray());
 
         if (string.IsNullOrWhiteSpace(option)) return;
 
@@ -9365,12 +10534,24 @@ public partial class DraftPage : ContentPage, IDraftPage
         await Save(true);
         var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, true, false);
         var page = new RenderPage(WorkingPath, ProjectDuration, ProjectInfo, draft);
-        await Dispatcher.DispatchAsync(async () =>
+        // The export page belongs to the same project: mark the navigation so
+        // OnNavigatingFrom does not tear down this project's render backend.
+        _navigatingToRenderPage = true;
+        try
         {
-            Shell.SetTabBarIsVisible(page, false);
-            Shell.SetNavBarIsVisible(page, true);
-            await Navigation.PushAsync(page);
-        });
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                Shell.SetTabBarIsVisible(page, false);
+                Shell.SetNavBarIsVisible(page, true);
+                await Navigation.PushAsync(page);
+            });
+        }
+        finally
+        {
+            // OnNavigatingFrom captured the flag synchronously before any await,
+            // so clearing it here cannot race the project-close decision.
+            _navigatingToRenderPage = false;
+        }
 
     }
 
@@ -9383,37 +10564,30 @@ public partial class DraftPage : ContentPage, IDraftPage
         await ShowAPopup(new DraftSettingPage(this).Content, mode: "dialog");
     }
 
-    private async void ResolutionPicker_SelectedIndexChanged(object sender, EventArgs e)
+    private async Task OnPreviewResolutionChangedAsync(string picked)
     {
-        var picker = sender as Picker;
         var requireCustomResolution = false;
-        if (picker != null)
+        if (picked == Localized.DraftPage_DynamicPreview)
         {
-            if (picker.SelectedItem is string picked)
+            UseDynamicPreview = true;
+            PreviewSubwindow.Title = $"{Localized.AssetPage_ShowPreview} - {Localized.DraftPage_DynamicPreview}";
+        }
+        else
+        {
+            UseDynamicPreview = false;
+            PreviewSubwindow.Title = Localized.AssetPage_ShowPreview;
+            var parts = picked.Split('x');
+            if (parts.Length == 2 &&
+               int.TryParse(parts[0].Trim(), out int w1) &&
+               int.TryParse(parts[1].Trim(), out int h1))
             {
-                if (picked == Localized.DraftPage_DynamicPreview)
-                {
-                    UseDynamicPreview = true;
-                    PreviewSubwindow.Title = $"{Localized.AssetPage_ShowPreview} - {Localized.DraftPage_DynamicPreview}";
-                }
-                else
-                {
-                    UseDynamicPreview = false;
-                    PreviewSubwindow.Title = Localized.AssetPage_ShowPreview;
-                    var parts = picked.Split('x');
-                    if (parts.Length == 2 &&
-                       int.TryParse(parts[0].Trim(), out int w1) &&
-                       int.TryParse(parts[1].Trim(), out int h1))
-                    {
-                        SetStatusText(Localized.DraftPage_PrevResultion_Seted(w1, h1));
-                        previewWidth = w1;
-                        previewHeight = h1;
-                    }
-                    else
-                    {
-                        requireCustomResolution = true;
-                    }
-                }
+                SetStatusText(Localized.DraftPage_PrevResultion_Seted(w1, h1));
+                previewWidth = w1;
+                previewHeight = h1;
+            }
+            else
+            {
+                requireCustomResolution = true;
             }
         }
 
@@ -9514,74 +10688,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         return new Size(widthDp, heightDp);
     }
 
-    /// <summary>
-    /// 创建 PowerShell 命令授权处理器。
-    /// 当脚本尝试执行可能危害或未分类的命令时，弹出对话框询问用户。
-    /// 用户可以选择允许/拒绝，并可选择记住此次决策。
-    /// </summary>
-    public static CommandAuthorizationCallback CreatePowerShellAuthorizationHandler(Page page)
-    {
-        return (commandInfo, commandOrigin) =>
-        {
-            var signal = new ManualResetEventSlim(false);
-            var result = AuthorizationResult.Deny;
-
-            MainThread.BeginInvokeOnMainThread(async () =>
-            {
-                try
-                {
-                    // 第一层：询问是否允许执行此命令
-                    var allowed = await page.DisplayAlertAsync(
-                        Localized.ScriptEngine_Auth_DialogTitle,
-                        BuildDetailedAuthMessage(new AuthorizationContext
-                        {
-                            CommandInfo = commandInfo,
-                            CommandOrigin = commandOrigin,
-                        }),
-                        Localized.ScriptEngine_Auth_Allow,
-                        Localized.ScriptEngine_Auth_Deny);
-
-                    if (allowed)
-                    {
-                        // 第二层：询问是否记住此决策
-                        var remember = await page.DisplayAlertAsync(
-                            Localized._Info,
-                            Localized.ScriptEngine_Auth_SureRemember,
-                            Localized.ScriptEngine_Auth_RememberAllow_Yes,
-                            Localized.ScriptEngine_Auth_RememberAllow_No);
-                        result = remember ? AuthorizationResult.AllowAndRemember : AuthorizationResult.Allow;
-                    }
-                    else
-                    {
-                        var remember = await page.DisplayAlertAsync(
-                            Localized._Info,
-                            Localized.ScriptEngine_Auth_SureRemember,
-                            Localized.ScriptEngine_Auth_RememberDeny_Yes,
-                            Localized.ScriptEngine_Auth_RememberDeny_No);
-                        result = remember ? AuthorizationResult.DenyAndRemember : AuthorizationResult.Deny;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(ex, "PowerShell authorization prompt");
-                    result = AuthorizationResult.Deny;
-                }
-                finally
-                {
-                    signal.Set();
-                }
-            });
-
-            // 阻塞等待用户决策（30 秒超时保护）
-            if (!signal.Wait(TimeSpan.FromSeconds(30)))
-            {
-                Logger.Log("PowerShell authorization prompt timed out after 30s");
-                result = AuthorizationResult.Deny;
-            }
-
-            return result;
-        };
-    }
 
     /// <summary>
     /// 检查当前 AI 聊天窗口是否活跃（在 MultiWindowView 中可见且有打开的会话）。
@@ -9593,151 +10699,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             && ChatSessionsView.Current is not null;
     }
 
-    /// <summary>
-    /// 创建增强的 PowerShell 命令授权处理器，显示丰富的命令参数信息。
-    /// 如果有活跃的 AI 聊天窗口，将授权请求路由到聊天界面中，减少弹框打断。
-    /// 包括文件操作的目标路径、Web 请求的 URL、路径安全状态等。
-    /// </summary>
-    public static EnhancedAuthorizationCallback CreateEnhancedPowerShellAuthorizationHandler(Page page)
-    {
-        return (context, allowRemember) =>
-        {
-            var signal = new ManualResetEventSlim(false);
-            var result = AuthorizationResult.Deny;
 
-            // ════════════════════════════════════════════════════════════════
-            //  路由到聊天界面：如果有活跃的 AI 聊天窗口
-            // ════════════════════════════════════════════════════════════════
-            if (page is DraftPage draftPage && draftPage.IsChatActive())
-            {
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    try
-                    {
-                        var chatTask = draftPage.ChatSessionsView.Current!
-                            .ShowAuthorizationRequestAsync(context, allowRemember);
-
-                        // 用户点击按钮后，在后台线程完成对 ManualResetEvent 的信号通知
-                        chatTask.ContinueWith(t =>
-                        {
-                            if (t.IsCompletedSuccessfully)
-                                result = t.Result;
-                            signal.Set();
-                        }, TaskScheduler.Default);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Log(ex, "PowerShell chat authorization");
-                        signal.Set(); // 防止超时，使用默认 Deny
-                    }
-                });
-
-                // 聊天界面不阻塞 UI，给予用户充分的决策时间（5 分钟）
-                if (!signal.Wait(TimeSpan.FromSeconds(300)))
-                {
-                    Logger.Log("PowerShell chat authorization timed out after 300s");
-                    result = AuthorizationResult.Deny;
-                }
-            }
-            else
-            {
-                // ════════════════════════════════════════════════════════════════
-                //  传统对话框方式（聊天窗口不可用时）
-                // ════════════════════════════════════════════════════════════════
-                MainThread.InvokeOnMainThreadAsync(async () =>
-                {
-                    try
-                    {
-                        // 构建详细消息
-                        var message = BuildDetailedAuthMessage(context);
-
-                        // 第一层：询问是否允许执行此命令
-                        var allowed = await page.DisplayAlertAsync(
-                            Localized.ScriptEngine_Auth_DialogTitle,
-                            message,
-                            Localized._Confirm, Localized._Cancel);
-
-                        if (allowed)
-                        {
-                            var remember = allowRemember && await page.DisplayAlertAsync(
-                                Localized._Info,
-                                Localized.ScriptEngine_Auth_SureRemember,
-                                Localized.ScriptEngine_Auth_RememberAllow_Yes, Localized.ScriptEngine_Auth_RememberAllow_No);
-                            result = remember ? AuthorizationResult.AllowAndRemember : AuthorizationResult.Allow;
-                        }
-                        else
-                        {
-                            var remember = allowRemember && await page.DisplayAlertAsync(
-                                Localized._Info,
-                                Localized.ScriptEngine_Auth_SureRemember,
-                                Localized.ScriptEngine_Auth_RememberDeny_Yes, Localized.ScriptEngine_Auth_RememberDeny_No);
-                            result = remember ? AuthorizationResult.DenyAndRemember : AuthorizationResult.Deny;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Log(ex, "PowerShell enhanced authorization");
-                        result = AuthorizationResult.Deny;
-                    }
-                    finally
-                    {
-                        signal.Set();
-                    }
-                });
-
-                if (!signal.Wait(TimeSpan.FromSeconds(30)))
-                {
-                    Logger.Log("PowerShell enhanced authorization prompt timed out after 30s");
-                    result = AuthorizationResult.Deny;
-                }
-            }
-
-            return result;
-        };
-    }
-
-    /// <summary>
-    /// 构建增强授权对话框的详细消息文本。
-    /// </summary>
-    private static string BuildDetailedAuthMessage(AuthorizationContext ctx)
-    {
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine(Localized.ScriptEngine_Auth_RequestHeader);
-        sb.AppendLine();
-        sb.AppendLine($"{Localized.ScriptEngine_Auth_CommandLabel}{ctx.CommandInfo?.Name ?? Localized._Unknown}");
-
-        // 文件路径信息
-        if (!string.IsNullOrEmpty(ctx.TargetPath))
-        {
-            sb.AppendLine();
-            sb.AppendLine($"{Localized.ScriptEngine_Auth_TargetPathLabel}{ctx.TargetPath}");
-            sb.AppendLine($"{Localized.ScriptEngine_Auth_PathStatusLabel}{ctx.PathSafetyStatus switch
-            {
-                PathSafety.Safe => Localized.ScriptEngine_Auth_PathSafe,
-                PathSafety.OutsideProject => Localized.ScriptEngine_Auth_PathOutsideProject,
-                PathSafety.PathTraversal => Localized.ScriptEngine_Auth_PathTraversal,
-                PathSafety.Unresolved => Localized.ScriptEngine_Auth_PathUnresolved,
-                _ => Localized._Unknown,
-            }}");
-        }
-
-        // URL 信息
-        if (!string.IsNullOrEmpty(ctx.TargetUrl))
-        {
-            sb.AppendLine();
-            sb.AppendLine($"{Localized.ScriptEngine_Auth_TargetUrlLabel}{ctx.TargetUrl}");
-        }
-
-        // 混淆警告
-        if (!string.IsNullOrEmpty(ctx.ObfuscationWarning))
-        {
-            sb.AppendLine();
-            sb.AppendLine($"{Localized.ScriptEngine_Auth_SecurityWarningLabel}{ctx.ObfuscationWarning}");
-            sb.AppendLine($"{Localized.ScriptEngine_Auth_ThreatLevelLabel}{ctx.ThreatLevel?.ToString() ?? Localized._Unknown}");
-        }
-
-        return sb.ToString();
-    }
 
     #endregion
 
@@ -9784,7 +10746,23 @@ public partial class DraftPage : ContentPage, IDraftPage
             base.OnNavigatingFrom(e);
             return;
         }
+        // Capture before any await: the flag is only meaningful at the moment the
+        // navigation begins. True when leaving for the export page (same project);
+        // false when the project is actually being closed (back to HomePage/exit).
+        bool leavingProject = !_navigatingToRenderPage;
+        if (leavingProject && !ExitNoSave)
+            SaveProjectThumbnailBeforeExit();
         AlreadyDisappeared = true;
+        try
+        {
+            _workspaceWindowHost.SaveLayout();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Save window layout", this);
+        }
+        StopRenderBackendWatchdog();
+        StopRemoteProjectMonitor();
         CancelPendingClipPlacement();
         foreach (var (_, cts) in _perClipThumbCts)
         {
@@ -9795,23 +10773,15 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         try
         {
-            foreach (var item in MainMultiWindowView.Children.OfType<MultiWindowItem>().ToList())
-            {
-                try
-                {
-                    item.Close(true);
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, $"close subwindow {item?.Title}", this);
-                }
-            }
+            // MultiWindowItems can be detached from MainMultiWindowView and hosted
+            // by native OS windows. Close them before replacing this page's visual
+            // tree so their content cannot call back into a disposed DraftPage.
+            MainMultiWindowView.CloseStandaloneWindows();
         }
         catch (Exception ex)
         {
-            Log(ex, "close subwindows", this);
+            Log(ex, "Close standalone draft windows", this);
         }
-
 
         try
         {
@@ -9844,10 +10814,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             this.Window.SizeChanged -= Window_SizeChanged;
         }
+        OverlayLayer.SizeChanged -= OverlayLayer_SizeChanged;
         MyLoggerExtensions.OnExceptionLog -= MyLoggerExtensions_OnExceptionLog;
-
-        //SaveMainMultiWindowViewStateToProjectInfo();
-
 
         foreach (var item in PluginManager.LoadedPlugins)
         {
@@ -9863,7 +10831,33 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         try
         {
-            if (!ExitNoSave) await Save(true);
+            if (leavingProject && !ExitNoSave) await Save(true);
+            if (leavingProject && _remoteProjectSession is not null)
+            {
+                await _remoteProjectSession.CloseAsync();
+            }
+            else if (leavingProject && !_remoteSessionDetached)
+            {
+                try
+                {
+                    await RenderRpcBootstrap.Client.CloseProjectAsync(previewer.RenderSessionId);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Close render RPC project session", this);
+                }
+            }
+            if (leavingProject)
+            {
+                try { await RenderRpcBootstrap.DisposeAsync(); }
+                catch (Exception ex) { Log(ex, "Dispose render RPC backend", this); }
+                try
+                {
+                    await _workspaceWindowHost.DisposeAsync();
+                    await _workspace.DisposeAsync();
+                }
+                catch (Exception ex) { Log(ex, "Dispose workspace", this); }
+            }
             App.Current?.Windows?[0]?.Title = Localized.AppBrand;
             TouchProjectFolder();
             base.OnNavigatingFrom(e);
@@ -9878,7 +10872,48 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
             catch { }
         }
+        finally
+        {
+            if (leavingProject)
+                await ProjectPluginService.UnloadProjectPluginsAsync();
+        }
 
+    }
+
+    internal void SaveProjectThumbnailBeforeExit()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(WorkingPath)) return;
+
+            var projectThumbPath = ProjectInfo.ThumbPath;
+            var thumbPath = !string.IsNullOrWhiteSpace(projectThumbPath) && File.Exists(projectThumbPath)
+                ? projectThumbPath
+                : previewer.TryRenderFrame(0U, 1280, 720);
+            if (string.IsNullOrWhiteSpace(thumbPath) || !File.Exists(thumbPath))
+            {
+                Log("Project thumbnail render failed; keeping the previous thumbnail.", "warn");
+                return;
+            }
+
+            var destPath = Path.Combine(WorkingPath, "thumbs", "_project.png");
+            var tempPath = $"{destPath}.{Guid.NewGuid():N}.tmp";
+            Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+            try
+            {
+                File.Copy(thumbPath, tempPath, true);
+                File.Move(tempPath, destPath, true);
+                LogDiagnostic($"Project thumbnail saved before exit: {destPath}");
+            }
+            finally
+            {
+                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Save project thumbnail before exit", this);
+        }
     }
 
     private void TouchProjectFolder()
@@ -9905,26 +10940,45 @@ public partial class DraftPage : ContentPage, IDraftPage
         ApplyDefaultMainMultiWindowLayout();
     }
 
+    private void OverlayLayer_SizeChanged(object? sender, EventArgs e)
+    {
+        ReAdjustPopupForWindowSize();
+    }
+
     private bool ignoreRunningTasks = false;
 
     protected override bool OnBackButtonPressed()
     {
-        if (RunningTasks.Any(c => !c.Value.InnerTask.IsCompleted))
+        if (!AllowExit) return true;
+        if (!ignoreRunningTasks && RunningTasks.Any(c => !c.Value.InnerTask.IsCompleted))
         {
             Dispatcher.Dispatch(async () =>
             {
                 await Task.Delay(250);
                 ignoreRunningTasks = await DisplayAlertAsync(Localized._Warn, Localized.DraftPage_EverythingFine, Localized._Confirm, Localized._Cancel);
-                if (ignoreRunningTasks)
-                {
-                    await Navigation.PopAsync();
-                }
             });
             return false;
         }
-        if (!ignoreRunningTasks && Window is not null) Window?.SizeChanged -= Window_SizeChanged;
-        if (ignoreRunningTasks) return true;
-        _ = Save(true);
+        try
+        {
+            foreach (var item in MainMultiWindowView.Windows)
+            {
+                try
+                {
+                    item.Close(true);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"close subwindow {item?.Title}", this);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "close subwindows", this);
+        }
+
+        if (Window is not null) Window?.SizeChanged -= Window_SizeChanged;
         Navigation.PopToRootAsync();
         return true;
     }
@@ -10221,36 +11275,95 @@ public partial class DraftPage : ContentPage, IDraftPage
         public required int TrackIndex { get; init; }
     }
 
-    private sealed class MainMultiWindowWindowState
-    {
-        public required string WindowKey { get; init; }
-        public bool IsOpen { get; init; }
-        public bool IsVisible { get; init; }
-        public bool IsMaximized { get; init; }
-        public bool IsMinimized { get; init; }
-        public double TranslationX { get; init; }
-        public double TranslationY { get; init; }
-        public double WidthRequest { get; init; }
-        public double HeightRequest { get; init; }
-        public int Column { get; init; }
-        public int Row { get; init; }
-        public int ColumnSpan { get; init; }
-        public int RowSpan { get; init; }
-        public int ZIndex { get; init; }
-    }
-
-    private sealed class MainMultiWindowStateEnvelope
-    {
-        public List<MainMultiWindowWindowState> Windows { get; init; } = [];
-        public string? ActiveWindowKey { get; set; }
-    }
-
     public class DraftPageLogItem
     {
         public string Message { get; set; }
         public string Level { get; set; } = "Info";
         public bool AlreadyRead { get; set; } = false;
     }
+
+    public sealed class QuickCommandItem : BindableObject
+    {
+        public QuickCommandItem(string key, string title, ICommand command, string iconGlyph, object? parameter = null, Func<bool>? toggleState = null)
+        {
+            Key = key;
+            Title = title;
+            Command = command;
+            IconGlyph = iconGlyph;
+            Parameter = parameter;
+            ToggleState = toggleState;
+            Command.CanExecuteChanged += OnCanExecuteChanged;
+        }
+
+        public string Key { get; }
+        public string Title { get; }
+        public ICommand Command { get; }
+        public string IconGlyph { get; }
+        public string FontFamily => "Icons";
+        public object? Parameter { get; }
+        public bool IsToggle => ToggleState is not null;
+        public bool IsToggled => ToggleState?.Invoke() ?? false;
+        private Func<bool>? ToggleState { get; }
+        public bool IsEnabled => Command.CanExecute(Parameter);
+
+        public void RefreshToggleState() => OnPropertyChanged(nameof(IsToggled));
+        private void OnCanExecuteChanged(object? sender, EventArgs e) => OnPropertyChanged(nameof(IsEnabled));
+    }
+
+    public sealed class QuickCommandSlot : BindableObject
+    {
+        private readonly DraftPage _page;
+        private QuickCommandItem? _item;
+
+        public QuickCommandSlot(DraftPage page, int index)
+        {
+            _page = page;
+            Index = index;
+        }
+
+        public int Index { get; }
+        public QuickCommandItem? Item
+        {
+            get => _item;
+            set
+            {
+                if (ReferenceEquals(_item, value)) return;
+                if (_item is not null) _item.PropertyChanged -= ItemPropertyChanged;
+                _item = value;
+                if (_item is not null) _item.PropertyChanged += ItemPropertyChanged;
+                OnPropertyChanged(nameof(Item));
+                OnPropertyChanged(nameof(Text));
+                OnPropertyChanged(nameof(FontFamily));
+                OnPropertyChanged(nameof(Command));
+                OnPropertyChanged(nameof(CommandParameter));
+                OnPropertyChanged(nameof(IsToggled));
+                OnPropertyChanged(nameof(IsEnabled));
+                OnPropertyChanged(nameof(Description));
+            }
+        }
+
+        public string Text => Item?.IconGlyph ?? "+";
+        public string? FontFamily => Item?.FontFamily;
+        public ICommand Command => Item?.Command ?? _page.ConfigureQuickCommandSlotCommand;
+        public object CommandParameter => Item?.Parameter ?? Index;
+        public bool IsToggled => Item?.IsToggled ?? false;
+        public bool IsEnabled => Item?.IsEnabled ?? true;
+        public string Description => Item?.Title ?? "Unknown command";
+
+        private void ItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(QuickCommandItem.IsToggled) or null)
+            {
+                OnPropertyChanged(nameof(IsToggled));
+            }
+
+            if (e.PropertyName is nameof(QuickCommandItem.IsEnabled) or null)
+            {
+                OnPropertyChanged(nameof(IsEnabled));
+            }
+        }
+    }
+
     #endregion
 
 }

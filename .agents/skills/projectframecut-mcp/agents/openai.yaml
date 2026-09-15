@@ -1,0 +1,4 @@
+interface:
+  display_name: "projectFrameCut MCP"
+  short_description: "Create and edit projectFrameCut timelines through MCP"
+  default_prompt: "Use $projectframecut-mcp to inspect a projectFrameCut timeline and make the requested edits safely."

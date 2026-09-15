@@ -1,4 +1,4 @@
-﻿using LocalizedResources;
+using LocalizedResources;
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
@@ -6,10 +6,12 @@ using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
 using projectFrameCut.Render;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System.Reflection;
 
@@ -65,6 +67,12 @@ public class DraftSettingPage
             });
             tabView.TabItems.Add(new TabbedViewItem
             {
+                Header = Localized.DraftSettingPage_Tab_Statistics,
+                Tag = "statistics",
+                Content = BuildStatisticsTab()
+            });
+            tabView.TabItems.Add(new TabbedViewItem
+            {
                 Header = Localized.MainSettingsPage_Tab_Misc,
                 Content = BuildAdvancedTab()
             });
@@ -86,15 +94,21 @@ public class DraftSettingPage
         });
         tabView.TabItems.Add(new TabbedViewItem
         {
+            Header = Localized.DraftSettingPage_Tab_Statistics,
+            Tag = "statistics",
+            Content = BuildStatisticsTab()
+        });
+        tabView.TabItems.Add(new TabbedViewItem
+        {
             Header = Localized.DraftSettingPage_Tab_Messages,
             Tag = "messages",
             Content = BuildHistoryLogsTab()
         });
-        tabView.TabItems.Add(new TabbedViewItem
-        {
-            Header = Localized.DraftSettingPage_Tab_Compatibility,
-            Content = BuildCompatibilityTab()
-        });
+        //tabView.TabItems.Add(new TabbedViewItem
+        //{
+        //    Header = Localized.DraftSettingPage_Tab_Compatibility,
+        //    Content = BuildCompatibilityTab()
+        //});
         tabView.TabItems.Add(new TabbedViewItem
         {
             Header = Localized.MainSettingsPage_Tab_Misc,
@@ -121,7 +135,11 @@ public class DraftSettingPage
                             Title = Localized.DraftSettingPage_Tab_History,
                             Content = BuildHistoryGraphTab(),
                             IsNavigationVisible = false,
-                            IsPopOutVisible = true
+                            IsPopOutVisible = true,
+                            WidthRequest = 880,
+                            HeightRequest = 620,
+                            MinimumWindowWidth = 560,
+                            MinimumWindowHeight = 400
                         };
                         parent.MainMultiWindowView.AddWindow(w);
                         await Task.Delay(50);
@@ -256,6 +274,8 @@ public class DraftSettingPage
             {
                 info.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
                 info.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
+                info.LastOpenAppName = MauiProgram.AssemblyName;
+                info.LastOpenAppIdentifier = MauiProgram.AppIdentifier;
                 await SaveStandaloneProjectInfo(info);
             }
         })
@@ -345,6 +365,21 @@ public class DraftSettingPage
     #endregion
 
     #region history
+
+    private View BuildStatisticsTab()
+    {
+        string projectPath = IsStandaloneJsonMode ? standaloneProjectPath! : parent.WorkingPath;
+        Guid currentSnapshotId = IsStandaloneJsonMode ? Guid.Empty : parent.CurrentSnapshotID;
+        double frameRate = IsStandaloneJsonMode ? 30 : parent.ProjectInfo.TargetFrameRate;
+
+        if (IsStandaloneJsonMode && TryLoadStandaloneProjectInfo(out var info, out _))
+        {
+            currentSnapshotId = info.LastSnapshotID;
+            frameRate = info.TargetFrameRate;
+        }
+
+        return new DraftStatisticsView(projectPath, currentSnapshotId, frameRate);
+    }
 
     public View BuildClassicHistoryTab()
     {
@@ -438,7 +473,7 @@ public class DraftSettingPage
             };
 
             Guid targetSlot = item.SnapshotID;
-            applyButton.Clicked += (_, _) => ApplyHistorySlot(targetSlot);
+            applyButton.Clicked += async (_, _) => await ApplyHistorySlot(targetSlot);
 
             var titleRow = new Grid
             {
@@ -461,12 +496,12 @@ public class DraftSettingPage
         return new ScrollView { Content = root };
     }
 
-    private void ApplyHistorySlot(Guid snapshotId)
+    private async Task ApplyHistorySlot(Guid snapshotId)
     {
         try
         {
             parent.SetStateBusy(Localized.DraftPage_ApplyingChanges);
-            parent.ApplySlot(snapshotId);
+            await parent.ApplySlot(snapshotId);
             tabView.SelectedItem.Content = BuildHistoryGraphTab();
         }
         catch (Exception ex)
@@ -751,6 +786,7 @@ public class DraftSettingPage
 
                 await System.IO.File.WriteAllTextAsync(projectFilePath, System.Text.Json.JsonSerializer.Serialize(parent.ProjectInfo, DraftPage.DraftJSONOption));
                 parent.ProjectInfo.SaveSnapshotMapping(System.IO.Path.GetDirectoryName(projectFilePath)!, DraftPage.DraftJSONOption);
+                DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(System.IO.Path.GetDirectoryName(projectFilePath)!);
                 parent.SetStateOK(Localized._Done);
             }
 
@@ -851,6 +887,7 @@ public class DraftSettingPage
 
                 await System.IO.File.WriteAllTextAsync(projectFilePath, System.Text.Json.JsonSerializer.Serialize(parent.ProjectInfo, DraftPage.DraftJSONOption));
                 parent.ProjectInfo.SaveSnapshotMapping(System.IO.Path.GetDirectoryName(projectFilePath)!, DraftPage.DraftJSONOption);
+                DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(System.IO.Path.GetDirectoryName(projectFilePath)!);
                 parent.SetStateOK(Localized._Done);
             }
 
@@ -961,6 +998,7 @@ public class DraftSettingPage
                 System.IO.File.Copy(srcAssets, dstAssets, overwrite: true);
             }
 
+            DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(standaloneProjectPath);
             await ShowInfoAsync(Localized._Done);
             tabView.SelectedItem.Content = BuildHistoryGraphTab();
         }
@@ -1195,10 +1233,42 @@ public class DraftSettingPage
         layout.Children.Add(new HorizontalStackLayout { Children = { new Label { Text = "TargetWidth", VerticalOptions = LayoutOptions.Center }, targetWEntry }, Spacing = 8 });
         layout.Children.Add(new HorizontalStackLayout { Children = { new Label { Text = "TargetHeight" }, targetHEntry }, Spacing = 8 });
 
-        var effectBundles = (clip.EffectBundles ?? [])
-            .OrderBy(b => b.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(b => b.BundleTypeName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(b => b.Id)
+        // Effect management now runs on the IEffectProvider system.
+        // EffectProviders is the preferred shape; legacy EffectBundles is still auto-migrated
+        // when no provider data exists (keep-for-compatibility read). If plugins are not loaded
+        // or migration fails, the effect section shows a fallback message instead of crashing.
+        var effectProviders = new List<(IEffectProvider Provider, bool MigratedFromBundle)>();
+        string? providerLoadError = null;
+        try
+        {
+            if (clip.EffectProviders is { Length: > 0 } || clip.EffectBundles is { Length: > 0 })
+            {
+                var factories = EffectServices.GetAvailableEffectProviders();
+                if (factories.Count == 0)
+                {
+                    providerLoadError = "Effect providers are unavailable: the plugin system has not been initialized.";
+                }
+                else if (clip.EffectProviders is { Length: > 0 })
+                {
+                    var restored = EffectBindingHelper.MigrateToEffectProviders(clip.EffectProviders, null);
+                    effectProviders.AddRange(restored.Values.Select(p => (p, false)));
+                }
+                else
+                {
+                    var restored = EffectBindingHelper.MigrateToEffectProviders(null, clip.EffectBundles);
+                    effectProviders.AddRange(restored.Values.Select(p => (p, true)));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            providerLoadError = $"Failed to load effect providers: {ex.Message}";
+        }
+
+        var sortedProviders = effectProviders
+            .OrderBy(x => x.Provider.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Provider.TypeName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Provider.Id)
             .ToList();
 
         layout.Children.Add(new Label
@@ -1209,7 +1279,17 @@ public class DraftSettingPage
             Margin = new Thickness(0, 8, 0, 0)
         });
 
-        if (effectBundles.Count == 0)
+        if (providerLoadError is not null)
+        {
+            layout.Children.Add(new Label
+            {
+                Text = providerLoadError,
+                FontSize = 11,
+                TextColor = Colors.IndianRed,
+                LineBreakMode = LineBreakMode.CharacterWrap
+            });
+        }
+        else if (sortedProviders.Count == 0)
         {
             layout.Children.Add(new Label
             {
@@ -1220,17 +1300,18 @@ public class DraftSettingPage
         }
         else
         {
-            foreach (var bundle in effectBundles)
+            foreach (var item in sortedProviders)
             {
-                var bundleInfo = new Label
+                var provider = item.Provider;
+                var providerInfo = new Label
                 {
-                    Text = BuildEffectBundleSummary(bundle),
+                    Text = BuildStandaloneEffectProviderSummary(provider, item.MigratedFromBundle),
                     FontSize = 11,
                     LineBreakMode = LineBreakMode.CharacterWrap,
                     Opacity = 0.9
                 };
 
-                var deleteBundleButton = new Button
+                var deleteProviderButton = new Button
                 {
                     Text = Localized.DraftPage_ContextMenu_Delete,
                     BackgroundColor = Colors.OrangeRed,
@@ -1239,19 +1320,19 @@ public class DraftSettingPage
                     HorizontalOptions = LayoutOptions.Start
                 };
 
-                deleteBundleButton.Clicked += async (_, _) =>
+                deleteProviderButton.Clicked += async (_, _) =>
                 {
-                    bool confirmBundleDelete = await ConfirmAsync(
+                    bool confirmProviderDelete = await ConfirmAsync(
                         Localized._Warn,
-                        Localized.HomePage_ProjectContextMenu_Delete_Confirm0($"'{bundle.Name}' ({bundle.BundleTypeName}@'{clip.Name}')"));
-                    if (!confirmBundleDelete)
+                        Localized.HomePage_ProjectContextMenu_Delete_Confirm0($"'{provider.Name}' ({provider.TypeName}@'{clip.Name}')"));
+                    if (!confirmProviderDelete)
                     {
                         return;
                     }
 
-                    if (!RemoveStandaloneEffectBundle(clip, bundle.Id))
+                    if (!RemoveStandaloneEffectProvider(clip, provider.Id))
                     {
-                        await ShowInfoAsync("Effect bundle not found.");
+                        await ShowInfoAsync("Effect provider not found.");
                         return;
                     }
 
@@ -1260,21 +1341,21 @@ public class DraftSettingPage
                     tabView.SelectedItem.Content = BuildClipAndAssetManageTab();
                 };
 
-                var bundleCard = new VerticalStackLayout
+                var providerCard = new VerticalStackLayout
                 {
                     Spacing = 4,
                     Padding = new Thickness(8, 6),
                     BackgroundColor = new Color(1f, 1f, 1f, 0.03f),
-                    Children = { bundleInfo, deleteBundleButton }
+                    Children = { providerInfo, deleteProviderButton }
                 };
-                layout.Children.Add(bundleCard);
+                layout.Children.Add(providerCard);
             }
         }
 
-        var bundleIdSet = new HashSet<Guid>(effectBundles.Select(b => b.Id));
+        var providerIdSet = new HashSet<Guid>(effectProviders.Select(x => x.Provider.Id));
         var standaloneEffects = (clip.Effects ?? [])
             .Select((effect, idx) => new { Effect = effect, Index = idx })
-            .Where(x => !IsEffectBoundToExistingBundle(x.Effect, bundleIdSet))
+            .Where(x => !IsEffectBoundToExistingProvider(x.Effect, providerIdSet))
             .OrderBy(x => x.Effect.Index)
             .ThenBy(x => x.Effect.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x.Index)
@@ -1436,54 +1517,51 @@ public class DraftSettingPage
         return true;
     }
 
-    private static bool RemoveStandaloneEffectBundle(ClipDraftDTO clip, Guid bundleId)
+    /// <summary>
+    /// Removes an <see cref="IEffectProvider"/> from the clip's provider-native JSON array.
+    /// The provider's output binding is cleared as well (a provider being the final output would
+    /// otherwise leave a dangling final-output marker in the stored configuration).
+    /// </summary>
+    private static bool RemoveStandaloneEffectProvider(ClipDraftDTO clip, Guid providerId)
     {
-        if (clip.EffectBundles is null)
+        if (clip.EffectProviders is not { Length: > 0 } || providerId == Guid.Empty)
         {
             return false;
         }
 
-        var bundles = clip.EffectBundles.ToList();
-        int removeIndex = bundles.FindIndex(b => b.Id == bundleId);
+        var providers = clip.EffectProviders.ToList();
+        int removeIndex = providers.FindIndex(p => p.Id == providerId);
         if (removeIndex < 0)
         {
             return false;
         }
 
-        bundles.RemoveAt(removeIndex);
-        clip.EffectBundles = bundles.Count == 0 ? null : bundles.ToArray();
-
-        if (clip.Effects is not null)
+        providers.RemoveAt(removeIndex);
+        if (providers.Count > 0)
         {
-            string groupId = bundleId.ToString();
-            foreach (var effect in clip.Effects)
+            string removedId = providerId.ToString();
+            foreach (var provider in providers)
             {
-                if (string.Equals(effect.BindedEffectGroupID, groupId, StringComparison.OrdinalIgnoreCase))
+                if (provider.AnchorsBindingState is { } state
+                    && state.TryGetValue(EffectProviderAnchorExtensions.OutputKey, out var output)
+                    && output == removedId)
                 {
-                    effect.BindedEffectGroupID = string.Empty;
+                    state[EffectProviderAnchorExtensions.OutputKey] = IEffectProvider.NoConnectionGUID.ToString();
                 }
             }
         }
-
+        clip.EffectProviders = providers.Count == 0 ? null : providers.ToArray();
         return true;
     }
 
-    private static bool IsEffectBoundToExistingBundle(EffectAndMixtureJSONStructure effect, HashSet<Guid> bundleIds)
+    private static bool IsEffectBoundToExistingProvider(EffectAndMixtureJSONStructure effect, HashSet<Guid> providerIds)
     {
         if (effect is null || string.IsNullOrWhiteSpace(effect.BindedEffectGroupID))
         {
             return false;
         }
 
-        return Guid.TryParse(effect.BindedEffectGroupID.Trim(), out var gid) && bundleIds.Contains(gid);
-    }
-
-    private static string BuildEffectBundleSummary(EffectBundleJSONStructure bundle)
-    {
-        int parameterCount = bundle.Parameters?.Count ?? 0;
-        int multiInputCount = bundle.BindedInputIds?.Length ?? 0;
-        return $"Name: {bundle.Name} | ClipType: {bundle.BundleTypeName} | Id: {bundle.Id}\n"
-             + $"Input: {bundle.BindedInputId} | Output: {bundle.BindedOutputId} | MultiInput: {multiInputCount} | Params: {parameterCount}";
+        return Guid.TryParse(effect.BindedEffectGroupID.Trim(), out var gid) && providerIds.Contains(gid);
     }
 
     private static string BuildStandaloneEffectSummary(EffectAndMixtureJSONStructure effect)
@@ -1491,7 +1569,31 @@ public class DraftSettingPage
         int parameterCount = effect.Parameters?.Count ?? 0;
         string bindingId = string.IsNullOrWhiteSpace(effect.BindedEffectGroupID) ? "(none)" : effect.BindedEffectGroupID;
         return $"Name: {effect.Name} | ClipType: {effect.TypeName} | Index: {effect.Index} | Enabled: {effect.Enabled}\n"
-             + $"Implement: {effect.ImplementType} | Params: {parameterCount} | BindedEffectGroupID: {bindingId}";
+             + $"Implement: {effect.ImplementType} | Params: {parameterCount} | BindedEffectProvidingSystemID: {bindingId}";
+    }
+
+    /// <summary>
+    /// Builds a read-only summary of an <see cref="IEffectProvider"/> instance for the standalone
+    /// clip-management card. <paramref name="migratedFromBundle"/> marks providers restored from a
+    /// legacy effect data so the UI can hint that they are still on the old format.
+    /// </summary>
+    private static string BuildStandaloneEffectProviderSummary(IEffectProvider provider, bool migratedFromBundle)
+    {
+        if (provider is null) return "(null provider)";
+
+        int parameterCount = provider.Fields?.Count ?? 0;
+        int bindingCount = provider.AnchorsBindingState?.Count ?? 0;
+        string target = provider.Target.ToString();
+        string input = provider.GetMainInputSource();
+        string inputDisplay = input == IEffectProvider.InputAnchorGUID.ToString()
+            ? "Source"
+            : input == IEffectProvider.NoConnectionGUID.ToString()
+                ? "(none)"
+                : input;
+        string output = provider.IsFinalOutputSource() ? "Final" : "(none)";
+        string legacyHint = migratedFromBundle ? " [from legacy bundle]" : string.Empty;
+        return $"Name: {provider.Name} | Type: {provider.TypeName} | Id: {provider.Id} | Enabled: {provider.Enabled}\n"
+             + $"Target: {target} | Input: {inputDisplay} | Output: {output} | Fields: {parameterCount} | Bindings: {bindingCount}{legacyHint}";
     }
 
     private View BuildStandaloneAssetEditorCard(AssetItem asset, DraftStructureJSON draft, List<ClipDraftDTO> clips, List<AssetItem> assets, string projectRoot)
@@ -1836,6 +1938,7 @@ public class DraftSettingPage
 
         await System.IO.File.WriteAllTextAsync(timelinePath, System.Text.Json.JsonSerializer.Serialize(draft, DraftPage.DraftJSONOption));
         await System.IO.File.WriteAllTextAsync(assetsPath, System.Text.Json.JsonSerializer.Serialize(assets, DraftPage.DraftJSONOption));
+        DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(projectRoot);
 
         if (!IsStandaloneJsonMode)
         {
@@ -1912,6 +2015,7 @@ public class DraftSettingPage
         string projectFilePath = ResolveStandaloneProjectFilePath();
         await System.IO.File.WriteAllTextAsync(projectFilePath, System.Text.Json.JsonSerializer.Serialize(info, DraftPage.DraftJSONOption));
         info.SaveSnapshotMapping(standaloneProjectPath, DraftPage.DraftJSONOption);
+        DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(standaloneProjectPath);
     }
 
     private string ResolveStandaloneProjectFilePath()

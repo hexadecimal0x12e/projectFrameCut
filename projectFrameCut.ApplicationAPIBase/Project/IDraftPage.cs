@@ -105,7 +105,8 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// Applies the state from the specified snapshot slot to the current draft.
         /// </summary>
         /// <param name="snapshotId">The snapshot identifier to restore from.</param>
-        void ApplySlot(Guid snapshotId);
+        /// <returns>A task representing the asynchronous operation.</returns>
+        Task ApplySlot(Guid snapshotId);
 
         /// <summary>
         /// Starts interactive clip placement mode, allowing the user to click on a track to place a new clip.
@@ -213,8 +214,9 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// </summary>
         /// <param name="noSlot">Whether to skip saving to a history slot.</param>
         /// <param name="args">Optional clip update event arguments describing what changed.</param>
+        /// <param name="throwOnFailure">Whether to throw an exception if the save operation fails.</param>
         /// <returns>A task representing the asynchronous save operation.</returns>
-        Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null);
+        public Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null, bool throwOnFailure = false);
 
         /// <summary>
         /// Sets the editor state to busy with a default status message.
@@ -257,6 +259,6 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         /// <param name="clip">Optional clip associated with the popup.</param>
         /// <param name="mode">The popup display mode identifier.</param>
         /// <returns>A task representing the asynchronous popup operation.</returns>
-        Task ShowAPopup(View? content = null, View? border = null, IClipElementUI? clip = null, string mode = "");
+        Task ShowAPopup(View? content = null, View? border = null, IClipElementUI? clip = null, string mode = "bottom");
     }
 }

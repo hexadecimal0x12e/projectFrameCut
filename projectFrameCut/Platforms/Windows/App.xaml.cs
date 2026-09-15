@@ -8,6 +8,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using projectFrameCut.Platforms.Windows;
+using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -179,7 +180,7 @@ namespace projectFrameCut.WinUI
         }
 
         public static async Task BringToForeground()
-            {
+        {
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 var window = Microsoft.Maui.Controls.Application.Current?.Windows[0];

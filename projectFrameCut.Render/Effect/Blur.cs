@@ -18,16 +18,13 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
 
         public float Sigma { get; init; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            {"Sigma", Sigma}
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string? NeedComputer => null;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public bool IsReorderable => true;
+        bool IEffect.CanProcessFromCanvas => true;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -39,7 +36,7 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string TypeName => "Blur";
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.IPicture)
@@ -52,16 +49,19 @@ namespace projectFrameCut.Render.Effect
             float sigma = 0f;
             if (parameters.TryGetValue("Sigma", out var val))
             {
-                sigma = Convert.ToSingle(val);
+                sigma = DynamicParam.ToFloat(val);
             }
-            return new BlurEffect_IPicture { Sigma = sigma, ImplementType = implementType };
+            var effect = new BlurEffect_IPicture { Sigma = sigma, ImplementType = implementType };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            return BlurEffect.Process(source, Sigma);
+            float sigma = DynamicParam.Resolve(Parameters.GetValueOrDefault("Sigma"), Sigma);
+            return BlurEffect.Process(source, sigma);
         }
     }
 
@@ -74,16 +74,13 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
 
         public float Sigma { get; init; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "Sigma", Sigma }
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string? NeedComputer => "BlurComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
+        bool IEffect.CanProcessFromCanvas => true;
 
         public static List<string> ParametersNeeded { get; } = new List<string> { "Sigma" };
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
@@ -92,7 +89,7 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string TypeName => "Blur";
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
@@ -105,20 +102,23 @@ namespace projectFrameCut.Render.Effect
             float sigma = 0f;
             if (parameters.TryGetValue("Sigma", out var val))
             {
-                sigma = Convert.ToSingle(val);
+                sigma = DynamicParam.ToFloat(val);
             }
-            return new BlurEffect_HwAccel { Sigma = sigma };
+            var effect = new BlurEffect_HwAccel { Sigma = sigma };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            if (Sigma <= float.Epsilon)
+            float sigma = DynamicParam.Resolve(Parameters.GetValueOrDefault("Sigma"), Sigma);
+            if (sigma <= float.Epsilon)
                 return source;
 
             if (computer is null)
-                return BlurEffect.Process(source, Sigma);
+                return BlurEffect.Process(source, sigma);
 
             var sw = Stopwatch.StartNew();
             var (r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
@@ -126,11 +126,11 @@ namespace projectFrameCut.Render.Effect
             FourChannelResult computeResult;
             if (computer is IBlurComputer bc)
             {
-                computeResult = bc.ComputeBlur(r, g, b, a, source.Width, Sigma);
+                computeResult = bc.ComputeBlur(r, g, b, a, source.Width, sigma);
             }
             else
             {
-                var resultArr = computer.Compute([r, g, b, a, source.Width, Sigma]);
+                var resultArr = computer.Compute([r, g, b, a, source.Width, sigma]);
 
                 if (resultArr.Length != 4 ||
                     resultArr[0] is not float[] rOut ||
@@ -153,41 +153,55 @@ namespace projectFrameCut.Render.Effect
                 OperationDisplayName = "Blur (GPU)",
                 Operator = typeof(BlurEffect_HwAccel),
                 ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object> { { "Sigma", Sigma } }
+                Properties = new Dictionary<string, object> { { "Sigma", sigma } }
             }).ToList();
             return result;
         }
     }
 
-    public class BlurEffectFactory : IEffectFactory
+    /// <summary>
+    /// The Render-side provider of the Blur effect. It owns the factory capability and the property metadata
+    /// (previously split between the provider and factory implementations).
+    /// </summary>
+    public class BlurEffectProvider : EffectProviderBase
     {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string TypeName => "Blur";
-        public EffectTarget Target => EffectTarget.Video;
-        public List<string> ParametersNeeded { get; } = new List<string> { "Sigma" };
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string> { { "Sigma", "float" } };
+        public BlurEffectProvider()
+        {
+            Name = "Blur";
+            SetField("Sigma", 4f);
+        }
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture, EffectImplementType.HwAcceleration };
+        public override string TypeName => "Blur";
 
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("Sigma", EffectArgumentFieldType.Numeric, "4", min: "0", max: "128")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
             if (implementType == EffectImplementType.NotSpecified)
             {
-                return BuildWithDefaultType(parameters);
+                if (!parameters.ContainsKey("Sigma")) parameters["Sigma"] = 0f;
+                return [BlurEffect_IPicture.FromParametersDictionary(parameters)];
             }
             return implementType switch
             {
-                EffectImplementType.IPicture => BlurEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
-                EffectImplementType.HwAcceleration => BlurEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>()),
+                EffectImplementType.IPicture => [BlurEffect_IPicture.FromParametersDictionary(parameters)],
+                EffectImplementType.HwAcceleration => [BlurEffect_HwAccel.FromParametersDictionary(parameters)],
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };
-        }
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
-        {
-            parameters ??= new Dictionary<string, object> { { "Sigma", 0f } };
-            if (!parameters.ContainsKey("Sigma")) parameters["Sigma"] = 0f;
-            return BlurEffect_IPicture.FromParametersDictionary(parameters);
         }
     }
 }

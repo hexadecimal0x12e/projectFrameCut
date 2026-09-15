@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Description>projectFrameCut shared plugin isolation transport runtime</Description>
+    <Title>projectFrameCut shared plugin isolation transport runtime</Title>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\projectFrameCut.Render.Contracts\projectFrameCut.Render.Contracts.csproj" />
+    <ProjectReference Include="..\projectFrameCut.Render.RenderAPIBase\projectFrameCut.Render.RenderAPIBase.csproj" />
+    <ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<Using Include="projectFrameCut.Render.RenderAPIBase" />
+		<Using Include="projectFrameCut.Shared.Logger">
+			<Static>True</Static>
+		</Using>
+		<Using Include="projectFrameCut.Shared" />
+	</ItemGroup>
+
+</Project>

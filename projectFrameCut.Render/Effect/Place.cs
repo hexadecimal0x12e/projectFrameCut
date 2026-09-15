@@ -22,12 +22,7 @@ namespace projectFrameCut.Render.Effect
 
         public int StartX { get; set; }
         public int StartY { get; set; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "StartX", StartX },
-            { "StartY", StartY },
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string? NeedComputer => "PlaceComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -47,7 +42,7 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string TypeName => "Place";
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
 
         void IEffect.Initialize()
         {
@@ -66,11 +61,13 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException("Too many parameters provided.");
             }
 
-            return new PlaceEffect_HwAccel
+            var effect = new PlaceEffect_HwAccel
             {
-                StartX = Convert.ToInt32(parameters["StartX"]),
-                StartY = Convert.ToInt32(parameters["StartY"]),
+                StartX = DynamicParam.ToInt32(parameters.GetValueOrDefault("StartX")),
+                StartY = DynamicParam.ToInt32(parameters.GetValueOrDefault("StartY")),
             };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
@@ -82,8 +79,10 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException("targetWidth and targetHeight must be positive");
             }
 
-            int startX = StartX;
-            int startY = StartY;
+            int placeX = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartX"), StartX);
+            int placeY = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartY"), StartY);
+            int startX = placeX;
+            int startY = placeY;
             if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
             {
                 startX = (int)Math.Round((double)startX * targetWidth / RelativeWidth);
@@ -216,47 +215,49 @@ namespace projectFrameCut.Render.Effect
 
     }
 
-    public class PlaceEffectFactory : IEffectFactory
+    /// <summary>
+    /// The Render-side provider of the Place effect.
+    /// </summary>
+    public class PlaceEffectProvider : EffectProviderBase
     {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-
-        public string TypeName => "Place";
-
-        public EffectTarget Target => EffectTarget.Video;
-
-        public List<string> ParametersNeeded { get; } = new List<string>
+        public PlaceEffectProvider()
         {
-            "StartX",
-            "StartY",
-        };
+            Name = "Place";
+            SetField("StartX", 0);
+            SetField("StartY", 0);
+        }
 
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        public override string TypeName => "Place";
+
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {
-            {"StartX", "int"},
-            {"StartY", "int"},
-        };
+            return
+            [
+                Field("StartX", EffectArgumentFieldType.Integer, "0"),
+                Field("StartY", EffectArgumentFieldType.Integer, "0")
+            ];
+        }
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.HwAcceleration };
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration];
 
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
             Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
             if (implementType == EffectImplementType.NotSpecified)
             {
-                return BuildWithDefaultType(parameters);
+                return [PlaceEffect_HwAccel.FromParametersDictionary(parameters)];
             }
-
             return implementType switch
             {
-                EffectImplementType.HwAcceleration => PlaceEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>()),
+                EffectImplementType.HwAcceleration => [PlaceEffect_HwAccel.FromParametersDictionary(parameters)],
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };
-        }
-
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters)
-        {
-            Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
-            return PlaceEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
         }
     }
 }

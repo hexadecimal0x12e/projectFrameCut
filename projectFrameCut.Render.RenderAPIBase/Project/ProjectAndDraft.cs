@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render;
+using projectFrameCut.Render;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
@@ -24,6 +24,28 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string? ProjectName { get; set; }
 
         /// <summary>
+        /// A unique id of this project.
+        /// DO NOT change after project creates.
+        /// </summary>
+        /// <remarks>
+        /// Use UUID V7 for all new projects; UUID v4 will indicates the project is auto-updated from earlier version.
+        /// </remarks>
+        public Guid ProjectUniqueId
+        {
+            get;
+            set
+            {
+                if (field != Guid.Empty) throw new InvalidOperationException("Cannot set ProjectUniqueId after initialization.");
+                if (value == Guid.Empty)
+                {
+                    Logger.Log($"Setting Guid.Empty for ProjectUniqueId of project {ProjectName ?? "(unknown)"}, ignoring.");
+                    return;
+                }
+                field = value;
+            }
+        }
+
+        /// <summary>
         /// Determine the version of APIBase while the draft is saved.
         /// </summary>
         public int LastOpenAPIBaseVersion { get; set; } = 0;
@@ -32,9 +54,22 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// </summary>
         public string LastOpenAppVersion { get; set; } = "0.0.0.0";
         /// <summary>
+        /// Determine the name of Application while the draft is saved.
+        /// </summary>
+        public string LastOpenAppName { get; set; } = "Unknown";
+        /// <summary>
+        /// Determine the Identifier of Application while the draft is saved.
+        /// </summary>
+        public string LastOpenAppIdentifier { get; set; } = "Unknown";
+        /// <summary>
         /// Determine what plugins used in this project.
         /// </summary>
         public List<string> PluginUsed { get; set; } = new List<string>();
+
+        /// <summary>
+        /// Plugins carried by this project and loaded only while this project is open.
+        /// </summary>
+        public List<ProjectPluginReference> ProjectPlugins { get; set; } = new();
 
         /// <summary>
         /// The relative width of the draft.
@@ -205,6 +240,32 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         }
     }
 
+    [Flags]
+    public enum ProjectPluginCapability
+    {
+        None = 0,
+        Effects = 1,
+        VideoSources = 2,
+        Tools = 4,
+        Menus = 8,
+        Settings = 16,
+        PropertyPanels = 32,
+        TextStyles = 64,
+        VectorHandlers = 128,
+    }
+
+    public sealed class ProjectPluginReference
+    {
+        public string PluginId { get; set; } = string.Empty;
+        public string PackagePath { get; set; } = string.Empty;
+        public string PackageSha256 { get; set; } = string.Empty;
+        public string PublisherCertificateDer { get; set; } = string.Empty;
+        public string PublisherCertificateFingerprint { get; set; } = string.Empty;
+        public ProjectPluginCapability Capabilities { get; set; }
+        public bool Enabled { get; set; } = true;
+        public Dictionary<string, string> Configuration { get; set; } = new();
+    }
+
 
     /// <summary>
     /// Represents the structure of a draft in JSON format.
@@ -225,7 +286,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// </summary>
         public SoundtrackDTO[] SoundTracks { get; set; } = Array.Empty<SoundtrackDTO>();
 
-
         /// <summary>
         /// Get the total duration of the draft in frames.
         /// </summary>
@@ -240,18 +300,33 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public DateTime SavedAt { get; set; } = DateTime.MinValue;
 
         /// <summary>
+        /// The user's ID which make this change.  Used in history management and undo/redo system.
+        /// </summary>
+        public Guid ChangedByUser { get; set; } = Guid.Empty;
+        /// <summary>
+        /// The user's nickname who made the change. Used in history management and undo/redo system.
+        /// </summary>
+        public string ChangedByUserDisplayName { get; set; } = string.Empty;
+
+        /// <summary>
         /// Indicates why the draft was changed. 
         /// Used in history management and undo/redo system.
         /// </summary>
         public string ChangeReason { get; set; } = string.Empty;
         /// <summary>
-        /// The user's nickname who made the change. Used in history management and undo/redo system.
+        /// Indicates the detailed reason for the draft change.
         /// </summary>
-        public string ChangedByUserDisplayName { get; set; } = string.Empty;
+        public string DetailedChangeReason { get; set; } = string.Empty;
+
         /// <summary>
-        /// The user's ID which make this change.  Used in history management and undo/redo system.
+        /// Indicates the type of operation that caused the draft change. Used in history management and undo/redo system.
         /// </summary>
-        public Guid ChangedByUser { get; set; } = Guid.Empty;
+        public ClipChangeOperatorKind Operator { get; set; } = ClipChangeOperatorKind.User;
+
+        /// <summary>
+        /// Indicates the detail name of the operator that caused the draft change. Used in history management and undo/redo system.
+        /// </summary>
+        public string OperatorDetailName { get; set; } = string.Empty;
 
         /// <summary>
         /// The unique identifier of the previous draft snapshot. Used in branch/edition management.
@@ -288,8 +363,12 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
+        [Obsolete("Use EffectProviders instead. Keep for auto migration use only.")]
         public EffectBundleJSONStructure[]? EffectBundles { get; set; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; set; }
 
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }

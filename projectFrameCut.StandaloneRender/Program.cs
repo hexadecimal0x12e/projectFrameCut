@@ -12,6 +12,7 @@ using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.WindowsRender;
+using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Shared;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -24,7 +25,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using static projectFrameCut.Shared.Logger;
 using projectFrameCut.Render.Effect;
-using projectFrameCut.Render.HwAccelEngine.Platforms.Windows;
+
+using projectFrameCut.Drawing.Base.Picture;
 
 
 
@@ -34,13 +36,13 @@ using Microsoft.DiagnosticsHub;
 
 namespace projectFrameCut.StandaloneRender
 {
-    internal class Program
+    public class Program
     {
         const int PluginAPIVersion = 1;
 
         static readonly JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
-        static async Task<int> Main(string[] args)
+        public static async Task<int> Main(string[] args)
         {
             if (!args.Contains("--nolog"))
             {
@@ -110,6 +112,7 @@ namespace projectFrameCut.StandaloneRender
                     Available modes:
                         - render: Render video/audio/all from the given project file.
                         - bench: Benchmark hardware accelerators for rendering.
+                        - reencode: Decode an existing video and re-encode it. Useful for codec testing.
 
                     Arguments:
                     Mode 'render':
@@ -120,6 +123,7 @@ namespace projectFrameCut.StandaloneRender
                         [-assetDbFile=<path to database.json file>]
                         [-pluginRoot=<path to plugin root>]
                         [-maxParallelThreads=<number>]
+                        [-maxPendingWriteFrames=<number>]
                         [-oneByOneRender=<true|false> -renderByLayer=<true|false> -prepareInWorker=<true|false> -enableThreadAffinity=<true|false>]
                         [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-multiAccelerator=<true|false>]
@@ -129,24 +133,64 @@ namespace projectFrameCut.StandaloneRender
                         [-FFmpegLibraryPath=<path to FFmpeg libraries>]
                         [-diagReportPath=<path diag report output directory>]
                         [-preferHwAccelDecoder=<true|false>]
+                        [-ApproximateMixture=<true|false>]
                         [-PictureResizer=<cpu|hwaccel>]
                         [-VideoFrameDiskCacheRoot=<path to video frame disk cache root>]
-                        [-VideoFrameMemoryCache=<true|false>]
-                        [-ApproximateMixture=<true|false>]
+                        [-enableDiskCacheRouting=<true|false> or -forceUseDiskCache=<true|false>]
+                        [-diskCacheThreshold=<0.1-0.95>] [-diskCacheMaxFrameCount=<number>] [-videoBuilderDiskCacheRoot=<path>]
+                        [-chunkRender=<true|false>]
+                        [-chunkFrames=<number> | -chunkSeconds=<number>] [-chunkParallelism=<number>]
+                        [-chunkResume=<true|false>] [-chunkKeepFiles=<true|false>]
+                        [-multiStream=<true|false>]
 
 
 
-                    Mode 'bench':
+                    Mode 'bench' [sub-modes]:
+                        bench render    - Render pipeline benchmark (default)
+                        bench encode    - VideoBuilder cache & encode throughput test
+                        bench decode    - IVideoSource decode performance test
+
+                    Common arguments (all sub-modes):
+                        [-writeToNull=<true|false>]
+
+                    Sub-mode 'render' arguments:
                         [-multiAccelerator=<true|false>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
-                        [-writeToNull=<true|false>]
                         [-maxParallelThreads=<number>]
+                        [-maxPendingWriteFrames=<number>]
                         [-oneByOneRender=<true|false> -renderByLayer=<true|false> -prepareInWorker=<true|false> -enableThreadAffinity=<true|false>]
                         [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-GCOptions=0,1,2]
                         [-preferHwAccelDecoder=<true|false>]
                         [-PictureResizer=<cpu|hwaccel>]
                         [-ApproximateMixture=<true|false>]
+
+                    Sub-mode 'encode' arguments:
+                        [-output=<output file>]                         (if omitted → BlackHoleWriter, no real file)
+                        [-encoder=<codec name>]                         (default: libx264)
+                        [-pixelFormat=<AVPixelFormat name>]             (default: yuv420p)
+                        [-totalFrames=<number>]                         (default: 600)
+                        [-fps=<frame rate>]                             (default: 60)
+                        [-enableDiskCacheRouting=<true|false>]          (test disk cache spillover)
+                        [-diskCacheThreshold=<0.1-0.95>]                (default: 0.85)
+                        [-maxPendingWriteFrames=<number>]
+
+                    Sub-mode 'decode' arguments:
+                        -source=<video file path>                   (required)
+                        [-maxFrames=<number>]                       (limit decoded frames)
+                        [-VideoFrameDiskCache=<true|false>]
+                        [-preferHwAccelDecoder=<true|false>]
+
+                    Mode 'reencode':
+                        -source=<input video>                       (required)
+                        -output=<output file>                       (required)
+                        [-encoder=<codec name>]                     (default: libx264)
+                        [-pixelFormat=<AVPixelFormat name>]         (default: AV_PIX_FMT_YUV420P)
+                        [-maxFrames=<number>]                       (limit frames to reencode)
+                        [-preferHwAccelDecoder=<true|false>]
+                        [-preferHwAccelEncoder=<true|false>]
+                        [-bitRate=<bitrate in bps>]                 (optional, encoder bitrate)
+                        [-multiStream=<true|false>]
 
                     ---
 
@@ -283,21 +327,82 @@ namespace projectFrameCut.StandaloneRender
                     }
                     catch { throw; }
                 case "bench":
-                    var accelResult1 = InitAccel(switches);
-                    if (accelResult1 != 0)
+                    // ── 解析子模式（render / encode / decode）──────────
+                    var benchSubMode = "render";
+                    if (args.Length > 1 && !args[1].StartsWith('-') && !args[1].Contains('='))
                     {
-                        return accelResult1;
+                        benchSubMode = args[1].ToLowerInvariant();
                     }
+                    else if (switches.TryGetValue("benchMode", out var switchBenchMode))
+                    {
+                        benchSubMode = switchBenchMode.ToLowerInvariant();
+                    }
+
+                    if (benchSubMode != "render" && benchSubMode != "encode" && benchSubMode != "decode")
+                    {
+                        Log($"ERROR: Unknown bench sub-mode '{benchSubMode}'. Available: render, encode, decode.", "error");
+                        return 1;
+                    }
+
+                    Log($"Bench sub-mode: {benchSubMode}");
+
+                    // 只有 render（渲染管线测试）需要 GPU 加速器
+                    if (benchSubMode == "render" || switches.ContainsKey("preferHwAccelDecoder"))
+                    {
+                        var accelResult1 = InitAccel(switches);
+                        if (accelResult1 != 0)
+                        {
+                            return accelResult1;
+                        }
+                    }
+
                     try
                     {
-                        return await GoBench(switches);
+                        return benchSubMode switch
+                        {
+                            "encode" => await GoBenchEncode(switches),
+                            "decode" => await GoBenchDecode(switches),
+                            _ => await GoBenchRender(switches),
+                        };
                     }
                     catch (TaskCanceledException)
                     {
                         Log("Benchmark task was canceled.");
                         return 255;
                     }
-                    break;
+                case "reencode":
+                    // 初始化 FFmpeg（与 render 和 bench 使用相同的模式）
+                    Log("Initializing FFmpeg for reencode...");
+                    DynamicallyLoadedBindings.EnableAutoInitialization = false;
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+                    ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", AppContext.BaseDirectory);
+                    if (FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
+                    {
+                        FFmpegHelper.SetupFFmpegLogging(ffmpeg.AV_LOG_INFO);
+                        Log($"FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}");
+                    }
+                    else
+                    {
+                        Log($"FFmpeg library failed to load.", "error");
+                        return 1;
+                    }
+                    FFmpegHelper.SetupFFmpegLogging();
+
+                    if (switches.ContainsKey("preferHwAccelDecoder"))
+                    {
+                        var accelResult1 = InitAccel(switches);
+                        if (accelResult1 != 0) return accelResult1;
+                    }
+
+                    try
+                    {
+                        return await GoReencode(switches);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        Log("Reencode task was canceled.");
+                        return 255;
+                    }
                 case "list_accels":
                     Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
                     var devices = context.Devices.ToList();
@@ -514,7 +619,14 @@ namespace projectFrameCut.StandaloneRender
                 use16Bit = trace;
             }
 
+            bool multiStream = bool.TryParse(switches.GetOrAdd("multiStream", "false"), out var multiStreamValue) && multiStreamValue;
+
             var bpp = use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
+            var chunkOptions = ParseChunkRenderOptions(switches, fps);
+            long? requestedBitRate = switches.TryGetValue("bitRate", out var bitRateText)
+                && long.TryParse(bitRateText, out var parsedBitRate) && parsedBitRate > 0
+                    ? parsedBitRate
+                    : null;
 
             if (!switches.ContainsKey("output"))
             {
@@ -523,7 +635,18 @@ namespace projectFrameCut.StandaloneRender
             }
             var outputPath = switches["output"].Replace("{CurrentTime}", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
 
-            Log($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, 16 bit render:{use16Bit}({fmpBPP} bpp output)");
+            if (multiStream && !outputPath.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase))
+            {
+                Log("ERROR: --multiStream=true requires an .mkv output path.", "error");
+                return 1;
+            }
+            if (multiStream && chunkOptions.Enabled)
+            {
+                Log("ERROR: --multiStream=true cannot be combined with --chunkRender=true.", "error");
+                return 1;
+            }
+
+            Log($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, 16 bit render:{use16Bit}({fmpBPP} bpp output), multiStream:{multiStream}");
 
             #endregion
 
@@ -563,6 +686,21 @@ namespace projectFrameCut.StandaloneRender
             }
 
             Log($"GC Option:{GCOption}");
+
+            int maxPendingWriteFrames = 0; // 0 = use Renderer default
+            if (switches.TryGetValue("maxPendingWriteFrames", out var mpwf))
+            {
+                if (!int.TryParse(mpwf, out maxPendingWriteFrames) || maxPendingWriteFrames < 0)
+                {
+                    Log($"Invalid maxPendingWriteFrames value '{mpwf}', must be a non-negative integer. Default will be used.", "warn");
+                    maxPendingWriteFrames = 0;
+                }
+                else
+                {
+                    Log($"Max pending write frames: {maxPendingWriteFrames}");
+                }
+            }
+            double maxPendingWriteFramesDouble = maxPendingWriteFrames;
 
             ConcurrentDictionary<string, AssetItem> assets = new();
 
@@ -648,7 +786,9 @@ namespace projectFrameCut.StandaloneRender
 
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
-            InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
+            bool hwAccelEncode = bool.TryParse(switches.GetOrAdd("preferHwAccelEncoder", "false"), out var hwAccelEncodeValue) && hwAccelEncodeValue;
+            InternalPluginBase.HWAccelDecodeOptionGetter = new(() => hwAccelDecode);
+            InternalPluginBase.HWAccelEncodeOptionGetter = new(() => hwAccelEncode);
 
             PictureLifecycleTracker.Enabled = trace && !Renderer.IsProfilerAttached;
             PictureLifecycleTracker.TrackCollection = trace && !Renderer.IsProfilerAttached;
@@ -663,9 +803,19 @@ namespace projectFrameCut.StandaloneRender
                 IVideoSource.EnableDiskCache = false;
             }
 
-            IVideoSource.EnableMemoryCache = bool.TryParse(switches.GetOrAdd("VideoFrameMemoryCache", "false"), out var memoryCache) && memoryCache;
+            var diskCacheRoutingEnabled = bool.TryParse(switches.GetOrAdd("enableDiskCacheRouting", "false"), out var useDiskCache) && useDiskCache;
+            if (diskCacheRoutingEnabled)
+            {
+                var threshold = switches.TryGetValue("diskCacheThreshold", out var dctStr)
+                    && double.TryParse(dctStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dct)
+                    ? Math.Clamp(dct, 0.1, 0.95) : 0.7;
+                var cacheRoot = switches.TryGetValue("videoBuilderDiskCacheRoot", out var vcr) && !string.IsNullOrWhiteSpace(vcr) ? vcr : "(default temp)";
+                var maxPending = maxPendingWriteFrames > 0 ? maxPendingWriteFrames.ToString() : "(auto)";
+                var maxFrames = switches.TryGetValue("diskCacheMaxFrameCount", out var mfcStr) && int.TryParse(mfcStr, out var mfc) ? mfc : 0;
+                Log($"VideoBuilder disk cache routing: Enabled, threshold: {threshold:P0} of max pending ({maxPending}), max frames on disk: {(maxFrames > 0 ? maxFrames.ToString() : "unlimited")}, cache root: {cacheRoot}");
+            }
 
-            Log($"Video decoding: Prefer HWAccel: {YesNo(hwAccelDecode)}, Memory cache: {YesNo(IVideoSource.EnableMemoryCache)}, Disk cache: {YesNo(IVideoSource.EnableDiskCache)} {(IVideoSource.EnableDiskCache ? $"(cache dir: {VideoFrameDiskCache.CacheBaseDir})" : "")}");
+            Log($"Video decoding: Prefer HWAccel Decode: {YesNo(hwAccelDecode)} Encode: {YesNo(hwAccelEncode)}, Disk cache: {YesNo(IVideoSource.EnableDiskCache)} {(IVideoSource.EnableDiskCache ? $"(cache dir: {VideoFrameDiskCache.CacheBaseDir})" : "")}, Disk buffer: {YesNo(diskCacheRoutingEnabled)}");
 
             ClassicOverlayMixture.EnableApproximatePath = bool.TryParse(switches.GetOrAdd("ApproximateMixture", "false"), out var approximateMixture) && approximateMixture;
 
@@ -724,9 +874,49 @@ namespace projectFrameCut.StandaloneRender
             CancellationTokenSource cts = new();
             VideoBuilder builder = null!;
             Renderer renderer = null!;
+            ConcurrentDictionary<int, VideoBuilder> activeChunkBuilders = new();
+            ConcurrentDictionary<int, Renderer> activeChunkRenderers = new();
+            IVideoWriter CreateConfiguredWriter(string path, bool intermediateChunk)
+            {
+                IVideoWriter writer = multiStream
+                    ? new AlphaBrightnessVideoWriter
+                    {
+                        CodecName = outputEncoder,
+                        Channels = AuxiliaryVideoChannels.Alpha | AuxiliaryVideoChannels.Brightness,
+                    }
+                    : PluginManager.CreateVideoWriter(outputEncoder);
+                writer.Width = width;
+                writer.Height = height;
+                writer.FramePerSecond = fps;
+                writer.PixelFormat = outputFormat.ToString();
+                writer.OutputPath = path;
+                if (string.IsNullOrWhiteSpace(writer.CodecName)) writer.CodecName = outputEncoder;
+                if (requestedBitRate.HasValue) writer.BitRate = requestedBitRate.Value;
+                if (intermediateChunk)
+                {
+                    writer.BitRate = Math.Max(writer.BitRate, CalculateIntermediateBitRate(width, height, fps, bpp));
+                    writer.PreferToSpeed = true;
+                }
+                return writer;
+            }
+
+            IVideoSource CreateChunkVideoSource(string path)
+            {
+                if (HDRDecoderContext.IsHdrVideo(path)) return new HDRDecoderContext(path);
+                return use16Bit ? new DecoderContext16Bit(path) : new DecoderContext8Bit(path);
+            }
+
             var noSigInt = !Environment.GetCommandLineArgs().Contains("--noSigInt");
             var keyboardInterrupt = !Environment.GetCommandLineArgs().Contains("--keyboardInterrupt");
-            async Task composeVideo(string resultPath)
+            async Task composeVideoRange(
+                string resultPath,
+                uint startFrame,
+                uint frameCount,
+                int renderThreads,
+                int chunkIndex,
+                int chunkCount = 1,
+                Action<double, TimeSpan, double>? rangeProgress = null,
+                bool intermediateChunk = false)
             {
                 var clips = JSONToIClips(timeline, assets, bpp);
 
@@ -736,20 +926,37 @@ namespace projectFrameCut.StandaloneRender
                     PictureLifecycleTracker.Clear();
                 }
 
-                builder = new VideoBuilder(resultPath, width, height, fps, outputEncoder, outputFormat.ToString())
+                var localBuilder = new VideoBuilder(CreateConfiguredWriter(resultPath, intermediateChunk))
                 {
-                    EnablePreview = true,
+                    EnablePreview = !chunkOptions.Enabled || chunkOptions.Parallelism == 1,
                     DoGCAfterEachWrite = GCOption > 0,
                     DisposeFrameAfterEachWrite = true,
-                    Duration = timeline.Duration,
+                    StartFrame = startFrame,
+                    Duration = frameCount,
                     BlockWrite = oneByOneRender,
+                    EnableDiskCacheRouting = bool.TryParse(switches.GetOrAdd("enableDiskCacheRouting", "false"), out var useDiskCache) && useDiskCache,
+                    ForceUseDiskCache = bool.TryParse(switches.GetOrAdd("forceUseDiskCache", "false"), out var forceUseDiskCache) && forceUseDiskCache,
+                    DiskCacheMaxPendingFrames = maxPendingWriteFrames > 0 ? maxPendingWriteFrames : 0,
+                    DiskCacheMaxFrameCount = switches.TryGetValue("diskCacheMaxFrameCount", out var mfcStr) && int.TryParse(mfcStr, out var mfc) ? Math.Max(mfc, 0) : 0,
+                    DiskCacheDirectory = switches.TryGetValue("videoBuilderDiskCacheRoot", out var cacheRoot) && !string.IsNullOrWhiteSpace(cacheRoot) ? cacheRoot : null,
                 };
 
-                renderer = new Renderer
+                if (localBuilder.EnableDiskCacheRouting && switches.TryGetValue("diskCacheThreshold", out var dctStr)
+                    && double.TryParse(dctStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dct))
                 {
-                    builder = builder,
+                    localBuilder.DiskCacheThreshold = Math.Clamp(dct, 0.1, 0.95);
+                }
+
+                var localRenderer = new Renderer
+                {
+                    builder = localBuilder,
                     Clips = clips,
-                    Duration = timeline.Duration,
+                    StartFrame = startFrame,
+                    Duration = frameCount,
+                    ChunkIndex = chunkIndex,
+                    ChunkCount = Math.Max(1, chunkCount),
+                    CompletedFramesBeforeChunk = startFrame,
+                    TotalProjectFrames = timeline.Duration,
                     LogProcessStack = !string.IsNullOrWhiteSpace(diagReportPath),
                     LogRenderState = (bool.TryParse(switches.TryGetValue("LogState", out var ls2) ? ls2 : "false", out var lsbool) && lsbool),
                     LogStaticsData = false,
@@ -758,7 +965,8 @@ namespace projectFrameCut.StandaloneRender
                     EnableRenderWatchdogForceStart = false,
                     MaxRenderScheduleTimeout = 0,
                     MinSchedulePreparedFrames = 1,
-                    MaxThreads = maxParallelThreads,
+                    MaxThreads = Math.Max(1, renderThreads),
+                    MaxPendingWriteFrames = maxPendingWriteFrames > 0 ? maxPendingWriteFrames : 0,
                     RenderByLayers = renderByLayer,
                     PrepareInWorkerThreads = prepareInWorker,
                     OneByOneRender = oneByOneRender,
@@ -772,31 +980,37 @@ namespace projectFrameCut.StandaloneRender
 
                 if (!Environment.GetCommandLineArgs().Contains("--nolog"))
                 {
-                    renderer.OnProgressChanged += (s, e) =>
+                    localRenderer.OnProgressChanged += (s, e) =>
                     {
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
                         FrameDoneMark.Emit($"Progress: {s:p0} ({renderer.CurrentFinished}/{renderer.Duration}), ETA: {e:hh\\:mm\\:ss}, FPS: {renderer.CurrentFps:n2}");
 #endif
-                        if (renderer.CurrentSecondPerFrame <= 1.5)
+                        rangeProgress?.Invoke(s, e, localRenderer.CurrentFps);
+                        double writeBufFree = maxPendingWriteFrames > 0 ? localBuilder.PendingWriteCount / maxPendingWriteFramesDouble : 0;
+                        if (localRenderer.CurrentSecondPerFrame <= 1.5)
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2}          \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{localRenderer.CurrentFps:n2}, buffer: {writeBufFree:p2} on ram used and {localBuilder.FramesOnDisk} on disk          \r");
                         }
                         else
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / renderer.CurrentFps):n2} second per frame          \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / localRenderer.CurrentFps):n2} second per frame, buffer: {writeBufFree:p2} on ram used and {localBuilder.FramesOnDisk} on disk        \r");
                         }
                     };
                 }
 
-                builder?.Build(preparerAffinityCpuIndexes)?.Start();
-                renderer.PrepareRender(cts.Token);
+                builder = localBuilder;
+                renderer = localRenderer;
+                activeChunkBuilders[chunkIndex] = localBuilder;
+                activeChunkRenderers[chunkIndex] = localRenderer;
+                localBuilder.Build(preparerAffinityCpuIndexes)?.Start();
+                localRenderer.PrepareRender(cts.Token);
                 Stopwatch sw1 = new();
                 Log("Start render...");
                 sw1.Restart();
                 try
                 {
-                    await renderer.GoRender(cts.Token);
-                    Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
+                    await localRenderer.GoRender(cts.Token);
+                    Log($"Render done,total elapsed {sw1}, avg elapsed {localRenderer.EachElapsedForPreparing.DefaultIfEmpty().Average(t => t.TotalSeconds)} spf to prepare and {localRenderer.EachElapsed.DefaultIfEmpty().Average(t => t.TotalSeconds)} spf to render");
                 }
                 catch (TaskCanceledException)
                 {
@@ -805,6 +1019,8 @@ namespace projectFrameCut.StandaloneRender
                 catch (Exception ex)
                 {
                     Log(ex, "Render error");
+                    localBuilder.Interrupt();
+                    ReleaseLocalResources();
                     throw;
                 }
 
@@ -813,7 +1029,7 @@ namespace projectFrameCut.StandaloneRender
                     try
                     {
                         Log("Export diag data...");
-                        DiagReportExporter.ExportCsv(diagReportPath!, renderer);
+                        DiagReportExporter.ExportCsv(diagReportPath!, localRenderer);
                         await PictureLifecycleTracker.ExportPictureLifecycleTrackerSnapshots(Path.Combine(diagReportPath!, $"PictureLifeCycle-{Guid.NewGuid()}.csv"));
                     }
                     catch (Exception ex)
@@ -822,18 +1038,66 @@ namespace projectFrameCut.StandaloneRender
                     }
                 }
 
-                if (cts.IsCancellationRequested) return;
+                if (cts.IsCancellationRequested)
+                {
+                    localBuilder.Interrupt();
+                    ReleaseLocalResources();
+                    cts.Token.ThrowIfCancellationRequested();
+                }
 
                 Log("Finish writing video...");
-                builder?.Finish((i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), timeline.Duration, (c, p) => Console.Write($"Frame #{c} added, completed {p:p2}.    \r"));
-
-                Log($"Releasing resources...");
-
-                foreach (var item in clips)
+                try
                 {
-                    item?.Dispose();
+                    localBuilder.Finish(
+                        i => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height),
+                        checked(startFrame + frameCount),
+                        (c, p) => Console.Write($"Frame #{c} added, completed {p:p2}.    \r"));
                 }
-                renderer.builder = null;
+                finally
+                {
+                    ReleaseLocalResources();
+                }
+
+                void ReleaseLocalResources()
+                {
+                    Log($"Releasing resources...");
+                    foreach (var item in clips) item?.Dispose();
+                    localRenderer.builder = null;
+                    activeChunkBuilders.TryRemove(chunkIndex, out _);
+                    activeChunkRenderers.TryRemove(chunkIndex, out _);
+                }
+            }
+
+            async Task<ChunkRenderCoordinator?> composeVideo(string resultPath, bool publishChunkedResult = true)
+            {
+                if (!chunkOptions.Enabled)
+                {
+                    await composeVideoRange(resultPath, 0, timeline.Duration, maxParallelThreads, 0, 1).ConfigureAwait(false);
+                    return null;
+                }
+
+                var coordinator = new ChunkRenderCoordinator(
+                    workingPath,
+                    timeline.Duration,
+                    fps,
+                    Path.GetExtension(resultPath),
+                    $"{width}x{height}|{fps}|{outputFormat}|{outputEncoder}|16bit={use16Bit}|bitrate={requestedBitRate}|serial={oneByOneRender}|layers={renderByLayer}|prepare={prepareInWorker}|approx={ClassicOverlayMixture.EnableApproximatePath}|effect={EffectHelper.ForcePreferToType}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}",
+                    maxParallelThreads,
+                    chunkOptions);
+                await coordinator.InitializeAsync(cts.Token).ConfigureAwait(false);
+                await coordinator.RenderPendingChunksAsync(
+                    (segment, chunkPath, chunkThreads, report, token) =>
+                        composeVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads, segment.Index, coordinator.ChunkCount, report, intermediateChunk: true),
+                    state => Console.Write($"Chunk {state.ChunkIndex + 1}/{state.ChunkCount}, {state.GlobalProgress:P1} complete{(state.Reused ? " (reused)" : string.Empty)}       \r"),
+                    cts.Token).ConfigureAwait(false);
+                string merged = await coordinator.MergeAsync(
+                    path => CreateConfiguredWriter(path, intermediateChunk: false),
+                    CreateChunkVideoSource,
+                    (mergeProgress, mergeEta) => Console.Write($"Merging chunks by frame: {mergeProgress:P1} complete, ETA {mergeEta:hh\\:mm\\:ss}       \r"),
+                    cts.Token).ConfigureAwait(false);
+                if (publishChunkedResult)
+                    await ChunkRenderCoordinator.PublishAsync(merged, resultPath, cts.Token).ConfigureAwait(false);
+                return coordinator;
             }
 
             void composeAudio(string resultPath)
@@ -895,7 +1159,7 @@ namespace projectFrameCut.StandaloneRender
                 {
                     Log($"Time's up! stopAfter's {stopAfter}s timeout reached, exiting...");
                     await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
-                    builder?.Interrupt();
+                    foreach (var activeBuilder in activeChunkBuilders.Values) activeBuilder.Interrupt();
                     Environment.Exit(255);
                 });
 
@@ -923,7 +1187,7 @@ namespace projectFrameCut.StandaloneRender
                                         {
                                             Console.WriteLine("Cancel signal receive! try cancelling render...");
                                             await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
-                                            builder?.Interrupt();
+                                            foreach (var activeBuilder in activeChunkBuilders.Values) activeBuilder.Interrupt();
                                             Environment.Exit(255);
                                         }
                                         else
@@ -933,13 +1197,14 @@ namespace projectFrameCut.StandaloneRender
                                         break;
 
                                     case ConsoleKey.S:
-                                        if (renderer is null)
+                                        if (activeChunkRenderers.IsEmpty && renderer is null)
                                         {
                                             Log("Render is not initialized yet.");
                                         }
                                         else
                                         {
-                                            Log(renderer.GetRendererStatusInfo(includeQueueAndWriterStats: true), "STAT");
+                                            foreach (var activeRenderer in activeChunkRenderers.OrderBy(pair => pair.Key))
+                                                Log($"Chunk {activeRenderer.Key + 1}: {activeRenderer.Value.GetRendererStatusInfo(includeQueueAndWriterStats: true)}", "STAT");
                                         }
                                         break;
                                     case ConsoleKey.P:
@@ -969,7 +1234,7 @@ namespace projectFrameCut.StandaloneRender
                     Console.WriteLine("Hit Ctrl-C again to stop immediately.");
 
                     await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
-                    builder?.Interrupt();
+                    foreach (var activeBuilder in activeChunkBuilders.Values) activeBuilder.Interrupt();
                     Environment.Exit(255);
                 };
                 Log("Render job starts. Press Ctrl-C to interrupt render process.");
@@ -982,7 +1247,8 @@ namespace projectFrameCut.StandaloneRender
             switch (target)
             {
                 case "video":
-                    await composeVideo(outputPath);
+                    var videoChunkJob = await composeVideo(outputPath);
+                    if (videoChunkJob is not null && !chunkOptions.KeepChunkFiles) videoChunkJob.Cleanup();
                     break;
                 case "audio":
                     composeAudio(outputPath);
@@ -991,18 +1257,42 @@ namespace projectFrameCut.StandaloneRender
                     var outputDir = switches.TryGetValue("outputIntermediatePath", out var iPath) ? iPath : Path.GetDirectoryName(outputPath);
                     outputDir ??= Environment.CurrentDirectory;
                     var ext = Path.GetExtension(outputPath);
-                    string vidOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-                    string audOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
-                    await composeVideo(vidOutputPath);
+                    string vidOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+                    string audOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+                    var allChunkJob = await composeVideo(vidOutputPath, publishChunkedResult: !chunkOptions.Enabled);
+                    if (allChunkJob is not null) vidOutputPath = allChunkJob.MergedPath;
                     composeAudio(audOutputPath);
                     Console.WriteLine("Composing audio and video... this may take a few seconds.");
-                    VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, outputPath, true);
+                    if (!File.Exists(audOutputPath))
+                    {
+                        if (allChunkJob is null) File.Move(vidOutputPath, outputPath, overwrite: true);
+                        else await ChunkRenderCoordinator.PublishAsync(vidOutputPath, outputPath, cts.Token).ConfigureAwait(false);
+                    }
+                    else if (allChunkJob is null)
+                    {
+                        VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, outputPath, true);
+                    }
+                    else
+                    {
+                        string outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath)) ?? Environment.CurrentDirectory;
+                        string atomicOutput = Path.Combine(outputDirectory, $".{Path.GetFileNameWithoutExtension(outputPath)}.{Guid.NewGuid():N}{Path.GetExtension(outputPath)}");
+                        try
+                        {
+                            VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, atomicOutput, true);
+                            File.Move(atomicOutput, outputPath, overwrite: true);
+                        }
+                        finally
+                        {
+                            if (File.Exists(atomicOutput)) File.Delete(atomicOutput);
+                        }
+                    }
                     try
                     {
-                        File.Delete(vidOutputPath);
+                        if (allChunkJob is null) File.Delete(vidOutputPath);
                         File.Delete(audOutputPath);
                     }
                     catch { }
+                    if (allChunkJob is not null && !chunkOptions.KeepChunkFiles) allChunkJob.Cleanup();
                     break;
                 default:
                     Log($"ERROR: Unknown target '{target}'.");
@@ -1015,11 +1305,67 @@ namespace projectFrameCut.StandaloneRender
             return 0;
         }
 
+        private static ChunkRenderOptions ParseChunkRenderOptions(ConcurrentDictionary<string, string> switches, int frameRate)
+        {
+            bool enabled = bool.TryParse(switches.GetValueOrDefault("chunkRender", "false"), out var chunkRender) && chunkRender;
+            bool resume = !bool.TryParse(switches.GetValueOrDefault("chunkResume", "true"), out var chunkResume) || chunkResume;
+            bool keepFiles = bool.TryParse(switches.GetValueOrDefault("chunkKeepFiles", "false"), out var chunkKeepFiles) && chunkKeepFiles;
+            int parallelism = int.TryParse(switches.GetValueOrDefault("chunkParallelism", "1"), out var parsedParallelism)
+                ? Math.Max(1, parsedParallelism)
+                : 1;
+            uint? frames = null;
+            double? seconds = null;
+            if (switches.TryGetValue("chunkFrames", out var chunkFramesText))
+            {
+                if (!uint.TryParse(chunkFramesText, out var parsedFrames) || parsedFrames == 0)
+                    throw new ArgumentException("-chunkFrames must be a positive integer.");
+                frames = parsedFrames;
+            }
+            if (switches.TryGetValue("chunkSeconds", out var chunkSecondsText))
+            {
+                if (!double.TryParse(chunkSecondsText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsedSeconds)
+                    || parsedSeconds <= 0 || double.IsNaN(parsedSeconds) || double.IsInfinity(parsedSeconds))
+                    throw new ArgumentException("-chunkSeconds must be a positive finite number.");
+                seconds = parsedSeconds;
+            }
+            if (frames.HasValue && seconds.HasValue)
+                throw new ArgumentException("Specify only one of -chunkFrames and -chunkSeconds.");
+            if (enabled && !frames.HasValue && !seconds.HasValue)
+                frames = checked((uint)Math.Max(1, frameRate) * 60u);
+            return new ChunkRenderOptions
+            {
+                Enabled = enabled,
+                ChunkFrames = frames,
+                ChunkSeconds = seconds,
+                Parallelism = parallelism,
+                Resume = resume,
+                KeepChunkFiles = keepFiles
+            };
+        }
+
+        private static long CalculateIntermediateBitRate(
+            int width,
+            int height,
+            int frameRate,
+            IPicture.PicturePixelMode pixelMode)
+        {
+            double bitsPerPixel = pixelMode == IPicture.PicturePixelMode.UShortPicture ? 0.5 : 0.3;
+            double estimate = (double)width * height * frameRate * bitsPerPixel;
+            return (long)Math.Clamp(estimate, 12_000_000d, 300_000_000d);
+        }
+
+        private static string GetFileFingerprintPart(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return string.Empty;
+            var info = new FileInfo(path);
+            return $"{Path.GetFullPath(path)}|{info.Length}|{info.LastWriteTimeUtc.Ticks}";
+        }
+
         /// <summary>
         /// 运行内置基准测试：使用 <see cref="BenchmarkSourceGenerator.GetDraftStructure"/>
         /// 生成的测试项目进行渲染管线性能测试，输出详细的帧时间统计。
         /// </summary>
-        private static async Task<int> GoBench(ConcurrentDictionary<string, string> switches)
+        private static async Task<int> GoBenchRender(ConcurrentDictionary<string, string> switches)
         {
             // ── 解析基准测试参数 ──────────────────────────────
             const int width = 1920;
@@ -1081,6 +1427,20 @@ namespace projectFrameCut.StandaloneRender
             if (GCOption == 2)
             {
                 GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            }
+
+            int maxPendingWriteFrames = 0; // 0 = use Renderer default
+            if (switches.TryGetValue("maxPendingWriteFrames", out var mpwf))
+            {
+                if (!int.TryParse(mpwf, out maxPendingWriteFrames) || maxPendingWriteFrames < 0)
+                {
+                    Log($"Invalid maxPendingWriteFrames value '{mpwf}', must be a non-negative integer. Default will be used.", "warn");
+                    maxPendingWriteFrames = 0;
+                }
+                else
+                {
+                    Log($"Max pending write frames: {maxPendingWriteFrames}");
+                }
             }
 
             string YesNo(bool b) => b ? "Yes" : "No";
@@ -1157,7 +1517,9 @@ namespace projectFrameCut.StandaloneRender
 
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
-            InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
+            bool hwAccelEncode = bool.TryParse(switches.GetOrAdd("preferHwAccelEncoding", "false"), out var hwAccelEncodeValue) && hwAccelEncodeValue;
+            InternalPluginBase.HWAccelEncodeOptionGetter = new(() => hwAccelEncode);
+            InternalPluginBase.HWAccelDecodeOptionGetter = new(() => hwAccelDecode);
             ClassicOverlayMixture.EnableApproximatePath = bool.TryParse(switches.GetOrAdd("ApproximateMixture", "false"), out var approximateMixture) && approximateMixture;
             if (Enum.TryParse<EffectImplementType>(switches.GetOrAdd("ForcePreferToType", "NotSpecified"), out var forcePreferToType) && forcePreferToType != EffectImplementType.NotSpecified)
             {
@@ -1189,6 +1551,7 @@ namespace projectFrameCut.StandaloneRender
                 MinSchedulePreparedFrames = 0,
                 ThrottleThreshold = (int)(duration * 8),
                 MaxThreads = boostMode ? (int)duration : maxParallelThreads,
+                MaxPendingWriteFrames = maxPendingWriteFrames > 0 ? maxPendingWriteFrames : 0,
                 BlockPreparingBeforeRendering = boostMode,
                 DisableAllThrottleOptions = boostMode,
                 RenderByLayers = renderByLayer,
@@ -1338,6 +1701,558 @@ namespace projectFrameCut.StandaloneRender
             }
             renderer.builder = null;
 
+            return 0;
+        }
+
+        /// <summary>
+        /// 编码性能基准测试：使用 <see cref="VideoBuilder"/>，
+        /// 生成随机帧并以乱序追加，以模拟真实渲染场景中的 Cache 访问模式。
+        /// 指定 -output 时可写入实际视频文件（否则使用 BlackHoleWriter）。
+        /// </summary>
+        private static async Task<int> GoBenchEncode(ConcurrentDictionary<string, string> switches)
+        {
+            // ── 参数 ────────────────────────────────────────────
+            const int width = 1920;
+            const int height = 1080;
+            const int defaultFps = 60;
+
+            var totalFrames = uint.TryParse(switches.GetOrAdd("totalFrames", "600"), out var tf) ? tf : 600u;
+            var fpsSetting = int.TryParse(switches.GetOrAdd("fps", defaultFps.ToString()), out var fps) ? fps : defaultFps;
+
+            // 磁盘缓存路由
+            var diskCacheThreshold = switches.TryGetValue("diskCacheThreshold", out var dctStr)
+                && double.TryParse(dctStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dct)
+                ? Math.Clamp(dct, 0.1, 0.95) : 0.85;
+            var enableDiskCache = bool.TryParse(switches.GetOrAdd("enableDiskCacheRouting", "false"), out var edc) && edc;
+            var maxPendingFrames = int.TryParse(switches.GetOrAdd("maxPendingWriteFrames", "0"), out var mpf) ? mpf : 0;
+
+            // ── 输出路径 ────────────────────────────────────────
+            var outputPath = switches.TryGetValue("output", out var outPath) && !string.IsNullOrWhiteSpace(outPath)
+                ? outPath.Replace("{CurrentTime}", DateTime.Now.ToString("yyyyMMdd_HHmmss"))
+                : null;
+
+            var useRealEncoder = outputPath is not null;
+            string encoder, pixelFormat;
+            string builderLabel;
+
+            if (useRealEncoder)
+            {
+                encoder = switches.GetOrAdd("encoder", "libx264");
+                pixelFormat = switches.GetOrAdd("pixelFormat", "AV_PIX_FMT_YUV420P");
+                builderLabel = $"{encoder} → {outputPath}";
+                Log($"Output: {outputPath}, encoder: {encoder}, pixel format: {pixelFormat}");
+            }
+            else
+            {
+                encoder = "BlackHoleWriter";
+                pixelFormat = "";
+                builderLabel = "BlackHoleWriter (null output)";
+                Log("No -output specified; using BlackHoleWriter (no real file written).");
+            }
+
+            string YesNo(bool b) => b ? "Yes" : "No";
+
+            Log($"Encode bench: {totalFrames} frames, {width}x{height} @ {fps}fps");
+            Log($"Disk cache: {YesNo(enableDiskCache)} (threshold: {diskCacheThreshold:P0})");
+            // ── 初始化 FFmpeg ────────────────────────────────
+            Log("Initializing FFmpeg for encode bench...");
+            DynamicallyLoadedBindings.EnableAutoInitialization = false;
+            FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+            ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", AppContext.BaseDirectory);
+            if (FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
+            {
+                FFmpegHelper.SetupFFmpegLogging(ffmpeg.AV_LOG_INFO);
+                Log($"FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}");
+            }
+            else
+            {
+                Log($"FFmpeg library failed to load. ({ffmpeg.BindingVerificationResult?.Failures?.Aggregate("", (a, b) => $"{a}{Environment.NewLine}{b.FunctionName} failed to load in {b.LibraryName}: {b.Message}")})", "error");
+                return 1;
+            }
+            FFmpegHelper.SetupFFmpegLogging();
+            Log($"FFmpeg library path: {ffmpeg.RootPath}");
+
+            // ── 创建 VideoBuilder ──────────────────────────────
+            var builder = new VideoBuilder(outputPath ?? "/dev/null", width, height, fps, encoder, pixelFormat)
+            {
+                Duration = totalFrames,
+                // 允许乱序追加
+                StrictMode = false,
+                AllowDuplicatedFrameWrite = false,
+                DisposeFrameAfterEachWrite = true,
+                EnableDiskCacheRouting = enableDiskCache,
+                DiskCacheThreshold = diskCacheThreshold,
+                DiskCacheMaxPendingFrames = maxPendingFrames,
+                // 关闭自动预览日志避免干扰
+                EnablePreview = false,
+            };
+
+            Log($"VideoBuilder initialized with {builderLabel}.");
+
+            // ── 生成随机帧索引（Fisher-Yates 洗牌）─────────────
+            var frameIndices = new uint[totalFrames];
+            for (uint i = 0; i < totalFrames; i++) frameIndices[i] = i;
+            var rng = Random.Shared;
+            for (int i = frameIndices.Length - 1; i > 0; i--)
+            {
+                int j = rng.Next(i + 1);
+                (frameIndices[i], frameIndices[j]) = (frameIndices[j], frameIndices[i]);
+            }
+
+            // ── 预生成帧数据 ──────────────────────────────────
+            Log("Pre-generating frame data...");
+            var frames = new IPicture[totalFrames];
+            for (uint i = 0; i < totalFrames; i++)
+            {
+                var r = (byte)rng.Next(256);
+                var g = (byte)rng.Next(256);
+                var b = (byte)rng.Next(256);
+                frames[i] = Picture8bpp.GenerateSolidColor(width, height, r, g, b, a: null);
+                frames[i].Tag = $"generated frame #{i}";
+            }
+            Log($"Generated {totalFrames} frames.");
+
+            // ── 启动写入线程 ──────────────────────────────────
+            builder.Build()?.Start();
+            Log("Writer thread started.");
+
+            // ── 乱序追加 ──────────────────────────────────────
+            Log("Appending frames in random order...");
+            var swAppend = Stopwatch.StartNew();
+            long peakPending = 0;
+
+            for (int i = 0; i < frameIndices.Length; i++)
+            {
+                var idx = frameIndices[i];
+                builder.Append(idx, frames[idx]);
+
+                var pending = builder.PendingWriteCount;
+                if (pending > peakPending) peakPending = pending;
+
+                if ((i + 1) % Math.Max(totalFrames / 10, 1) == 0)
+                {
+                    var pct = (double)(i + 1) / totalFrames;
+                    Console.Write($"\rAppending: {pct:P0} ({i + 1}/{totalFrames}), pending: {builder.PendingWriteCount}, disk: {builder.FramesOnDisk}         ");
+                }
+            }
+            swAppend.Stop();
+            Console.WriteLine();
+            Log($"Append done in {swAppend.Elapsed.TotalSeconds:F3}s, peak pending: {peakPending}, final pending: {builder.PendingWriteCount}, disk: {builder.FramesOnDisk}");
+
+            var appendFps = totalFrames / swAppend.Elapsed.TotalSeconds;
+
+            // ── 等待写入/编码完成 ─────────────────────────────
+            Log("Waiting for writer to drain (encode remaining frames)...");
+            var swFlush = Stopwatch.StartNew();
+            builder.Finish(
+                regenerator: idx => Picture8bpp.GenerateSolidColor(width, height, 0, 0, 0, null),
+                totalFrames: totalFrames,
+                onWritingProgressUpdate: (c, p) => Console.Write($"\rFlushing: frame #{c} / {totalFrames} ({p:P2})    ")
+            );
+            swFlush.Stop();
+            Console.WriteLine();
+
+            var totalTime = swFlush.Elapsed;
+            var encodeFps = totalFrames / Math.Max(totalTime.TotalSeconds, 0.001);
+
+            // ── 结果统计 ──────────────────────────────────────
+            Log("");
+            Log("========================================", "stat");
+            if (useRealEncoder)
+                Log("  Encode Benchmark Results (real video)", "stat");
+            else
+                Log("  Encode Benchmark Results (null device)", "stat");
+            Log("========================================", "stat");
+            Log($"  Total frames       : {totalFrames}", "stat");
+            Log($"  Resolution         : {width}x{height}", "stat");
+            Log($"  FPS setting        : {fps}", "stat");
+            if (useRealEncoder)
+            {
+                Log($"  Encoder            : {encoder}", "stat");
+                Log($"  Pixel format       : {pixelFormat}", "stat");
+                Log($"  Output file        : {outputPath}", "stat");
+            }
+            Log($"  Disk cache         : {YesNo(enableDiskCache)} (@ {diskCacheThreshold:P0} threshold)", "stat");
+            Log($"  Append FPS         : {appendFps:F2}", "stat");
+            Log($"  Encode FPS         : {encodeFps:F2}", "stat");
+            if (useRealEncoder)
+            {
+                var bitsPerFrame = (long)width * height * 3 * 8; // approx YUV 4:2:0 → 12 bpp → 12 bits
+                var bitrate = (long)(bitsPerFrame * fps);
+                Log($"  Est. bitrate       : {bitrate / 1000.0 / 1000.0:F1} Mbps (raw, uncompressed)", "stat");
+            }
+            Log($"  Total time         : {totalTime.TotalSeconds:F3}s", "stat");
+            Log($"  Peak pending count : {peakPending}", "stat");
+            Log($"  Final cache cleared: {builder.WrittenFramesCount}/{builder.TotalFramesCount}", "stat");
+            Log("========================================", "stat");
+
+            builder.Dispose();
+            return 0;
+        }
+
+        /// <summary>
+        /// 解码性能基准测试：创建 <see cref="IVideoSource"/> 并顺序解码所有帧，
+        /// 测量解码吞吐量（FPS）和速度倍率。
+        /// </summary>
+        private static async Task<int> GoBenchDecode(ConcurrentDictionary<string, string> switches)
+        {
+            // ── 参数 ────────────────────────────────────────────
+            if (!switches.TryGetValue("source", out var sourcePath) || string.IsNullOrWhiteSpace(sourcePath))
+            {
+                Log("ERROR: Decode benchmark requires -source=<video file path>.", "error");
+                return 1;
+            }
+
+            if (!File.Exists(sourcePath))
+            {
+                Log($"ERROR: Source file '{sourcePath}' not found.", "error");
+                return 1;
+            }
+
+            var maxFrames = int.TryParse(switches.TryGetValue("maxFrames", out var mf) ? mf : "0", out var parsedMf) && parsedMf > 0 ? parsedMf : 0;
+            var enableDiskCache = bool.TryParse(switches.GetOrAdd("VideoFrameDiskCache", "false"), out var edc) && edc;
+
+            IVideoSource.EnableDiskCache = enableDiskCache;
+
+            string YesNo(bool b) => b ? "Yes" : "No";
+
+            Log($"Decode bench source: {sourcePath}");
+            Log($"Disk cache: {YesNo(enableDiskCache)}");
+
+            // ── 创建解码器 ──────────────────────────────────────
+            Log("Creating video source...");
+            IVideoSource? source = null;
+            try
+            {
+                source = PluginManager.CreateVideoSource(sourcePath);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Failed to create video source");
+                return 1;
+            }
+
+            if (source is null)
+            {
+                Log("ERROR: Failed to create video source - no plugin supports this file.", "error");
+                return 1;
+            }
+
+            source.Initialize();
+            source.StrictMode = false;
+
+            var totalFrames = source.TotalFrames > 0 ? source.TotalFrames : 0;
+            if (totalFrames <= 0)
+            {
+                Log("WARN: Cannot determine total frame count, estimating via probing...", "warn");
+                // 尝试探测帧数
+                totalFrames = 0;
+                for (uint probe = 0; probe < 100000; probe += 100)
+                {
+                    try
+                    {
+                        using var probeFrame = source.GetFrame(probe);
+                        if (probeFrame is null) break;
+                        totalFrames = probe + 1;
+                    }
+                    catch { break; }
+                }
+                if (totalFrames <= 0)
+                {
+                    Log("ERROR: Cannot determine total frame count, aborting.", "error");
+                    source.Dispose();
+                    return 1;
+                }
+            }
+
+            var decodeTotal = maxFrames > 0 ? Math.Min(maxFrames, totalFrames) : totalFrames;
+
+            Log($"Source: {source.Width}x{source.Height}, {source.Fps:F2}fps, {decodeTotal}/{totalFrames} frames, decoder: {source.TypeName}");
+
+            // ── 热启动（丢弃前几帧加载开销）────────────────────
+            var warmupCount = (int)Math.Min(30, decodeTotal / 10);
+            Log($"Warming up ({warmupCount} frames)...");
+            for (uint i = 0; i < warmupCount; i++)
+            {
+                using var warmupFrame = source.GetFrame(i);
+            }
+            Log("Warm-up done.");
+
+            // ── 解码测试 ──────────────────────────────────────
+            Log("Starting decode benchmark...");
+            Console.CursorVisible = false;
+            var sw = Stopwatch.StartNew();
+            long decodedBytes = 0;
+            int decodedCount = 0;
+
+            for (uint i = 0; i < decodeTotal; i++)
+            {
+                using var frame = source.GetFrame(i);
+                if (frame is not null)
+                {
+                    decodedCount++;
+                    decodedBytes += frame.Width * frame.Height * (frame.BitPerPixel / 8);
+                }
+
+                if ((i + 1) % (Math.Max(decodeTotal / 50, 1)) == 0 || i == decodeTotal - 1)
+                {
+                    var pct = (double)(i + 1) / decodeTotal;
+                    var elapsed = sw.Elapsed.TotalSeconds;
+                    var currentFps = (i + 1) / Math.Max(elapsed, 0.001);
+                    Console.Write($"\rDecoding: {pct:P1} ({i + 1}/{decodeTotal}), {currentFps:F1} FPS, elapsed: {elapsed:F1}s      ");
+                }
+            }
+            sw.Stop();
+            Console.WriteLine();
+            Console.CursorVisible = true;
+
+            // ── 结果统计 ──────────────────────────────────────
+            var totalTime = sw.Elapsed;
+            var decodeFps = decodedCount / Math.Max(totalTime.TotalSeconds, 0.001);
+            var speedVsRealtime = decodeFps / Math.Max(source.Fps, 1.0);
+            var bandwidthMbps = (decodedBytes / Math.Max(totalTime.TotalSeconds, 0.001)) / (1024.0 * 1024.0);
+
+            Log("");
+            Log("========================================", "stat");
+            Log("  Decode Benchmark Results", "stat");
+            Log("========================================", "stat");
+            Log($"  Source file        : {Path.GetFileName(sourcePath)}", "stat");
+            Log($"  Resolution         : {source.Width}x{source.Height}", "stat");
+            Log($"  Source FPS         : {source.Fps:F2}", "stat");
+            Log($"  Decoder            : {source.TypeName}", "stat");
+            Log($"  Disk cache         : {YesNo(enableDiskCache)}", "stat");
+            Log($"  Frames decoded     : {decodedCount}/{decodeTotal}", "stat");
+            Log($"  Total time         : {totalTime.TotalSeconds:F3}s", "stat");
+            Log($"  Decode FPS         : {decodeFps:F2}", "stat");
+            Log($"  Speed vs realtime  : {speedVsRealtime:F2}x", "stat");
+            Log($"  Bandwidth          : {bandwidthMbps:F1} MB/s (raw pixel)", "stat");
+            Log($"  Avg per frame      : {(totalTime.TotalMilliseconds / Math.Max(decodedCount, 1)):F3}ms", "stat");
+            Log("========================================", "stat");
+
+            source.Dispose();
+            return 0;
+        }
+
+        /// <summary>
+        /// 重新编码模式：解码输入视频，然后使用指定编码器重新编码输出。
+        /// 用于测试编解码器的正确性和性能。
+        /// </summary>
+        private static async Task<int> GoReencode(ConcurrentDictionary<string, string> switches)
+        {
+            // ── 参数 ────────────────────────────────────────────
+            if (!switches.TryGetValue("source", out var sourcePath) || string.IsNullOrWhiteSpace(sourcePath))
+            {
+                Log("ERROR: Reencode requires -source=<input video>.", "error");
+                return 1;
+            }
+            if (!switches.TryGetValue("output", out var outputPath) || string.IsNullOrWhiteSpace(outputPath))
+            {
+                Log("ERROR: Reencode requires -output=<output file>.", "error");
+                return 1;
+            }
+            if (!File.Exists(sourcePath))
+            {
+                Log($"ERROR: Source file '{sourcePath}' not found.", "error");
+                return 1;
+            }
+
+            bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
+            bool hwAccelEncode = bool.TryParse(switches.GetOrAdd("preferHwAccelEncoder", "false"), out var hwAccelEncodeValue) && hwAccelEncodeValue;
+            bool multiStream = bool.TryParse(switches.GetOrAdd("multiStream", "false"), out var multiStreamValue) && multiStreamValue;
+            InternalPluginBase.HWAccelDecodeOptionGetter = new(() => hwAccelDecode);
+            InternalPluginBase.HWAccelEncodeOptionGetter = new(() => hwAccelEncode);
+            Log($"Use hardware acceleration for decoding: {hwAccelDecode}, encoding: {hwAccelEncode}");
+
+            outputPath = outputPath.Replace("{CurrentTime}", DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+            if (multiStream && !outputPath.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase))
+            {
+                Log("ERROR: -multiStream=true requires an .mkv output path.", "error");
+                return 1;
+            }
+
+            var encoder = switches.GetOrAdd("encoder", "libx264");
+            var pixelFormatStr = switches.GetOrAdd("pixelFormat", "AV_PIX_FMT_YUV420P");
+            var maxFrames = int.TryParse(switches.TryGetValue("maxFrames", out var mf) ? mf : "0", out var parsedMf) && parsedMf > 0 ? parsedMf : 0;
+            var bitRate = long.TryParse(switches.TryGetValue("bitRate", out var br) ? br : "0", out var parsedBr) && parsedBr > 0 ? parsedBr : 4_000_000L;
+
+            // ── 创建解码器 ──────────────────────────────────────
+            Log($"Creating decoder for: {sourcePath}");
+            IVideoSource? source = null;
+            try
+            {
+                source = multiStream && HDRDecoderContext.IsHdrVideo(sourcePath)
+                    ? new HDRDecoderContext(sourcePath)
+                    : PluginManager.CreateVideoSource(sourcePath);
+                Log($"Created decoder: {source?.TypeName ?? "(null)"}");
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Failed to create video source");
+                return 1;
+            }
+
+            if (source is null)
+            {
+                Log("ERROR: Failed to create video source - no plugin supports this file.", "error");
+                return 1;
+            }
+
+            source.Initialize();
+            source.StrictMode = false;
+
+            var totalFrames = source.TotalFrames > 0 ? source.TotalFrames : 0;
+            if (totalFrames <= 0)
+            {
+                Log("ERROR: Cannot determine total frame count.", "error");
+                source.Dispose();
+                return 1;
+            }
+
+            var decodeCount = maxFrames > 0 ? Math.Min(maxFrames, (int)totalFrames) : (int)totalFrames;
+            var srcWidth = source.Width;
+            var srcHeight = source.Height;
+            var srcFps = source.Fps;
+
+            if (srcWidth <= 0 || srcHeight <= 0 || srcFps <= 0)
+            {
+                Log($"ERROR: Invalid source dimensions ({srcWidth}x{srcHeight}) or FPS ({srcFps}).", "error");
+                source.Dispose();
+                return 1;
+            }
+
+            Log($"Source: {srcWidth}x{srcHeight}, {srcFps:F2}fps, {decodeCount}/{totalFrames} frames, decoder: {source.TypeName}");
+
+            Log($"Creating encoder: {encoder}, pixel format: {pixelFormatStr}, {srcWidth}x{srcHeight} @ {srcFps:F0}fps");
+
+            IVideoWriter writer = multiStream
+                ? new AlphaBrightnessVideoWriter
+                {
+                    Width = srcWidth,
+                    Height = srcHeight,
+                    FramePerSecond = (int)Math.Round(srcFps),
+                    CodecName = encoder,
+                    PixelFormat = pixelFormatStr,
+                    OutputPath = outputPath,
+                    BitRate = bitRate,
+                    Channels = AuxiliaryVideoChannels.Alpha | AuxiliaryVideoChannels.Brightness,
+                }
+                : hwAccelEncode
+                    ? new VideoWriterHWAccel
+                    {
+                        Width = srcWidth,
+                        Height = srcHeight,
+                        FramePerSecond = (int)Math.Round(srcFps),
+                        CodecName = encoder,
+                        PixelFormat = pixelFormatStr,
+                        OutputPath = outputPath,
+                        BitRate = bitRate,
+                    }
+                    : new VideoWriter
+                    {
+                        Width = srcWidth,
+                        Height = srcHeight,
+                        FramePerSecond = (int)Math.Round(srcFps),
+                        CodecName = encoder,
+                        PixelFormat = pixelFormatStr,
+                        OutputPath = outputPath,
+                        BitRate = bitRate,
+                    };
+
+            if (multiStream && hwAccelEncode)
+            {
+                Log("WARNING: -preferHwAccelEncoder is not supported by multistream output; using the software writer.", "warn");
+            }
+
+            try
+            {
+                writer.Initialize();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Failed to initialize encoder");
+                source.Dispose();
+                return 1;
+            }
+
+            Log($"Encoder initialized: {outputPath}");
+
+            // ── 逐帧转码 ──────────────────────────────────────
+            Log("Starting reencode...");
+            var sw = Stopwatch.StartNew();
+            int encodedCount = 0;
+
+            for (uint i = 0; i < decodeCount; i++)
+            {
+                try
+                {
+                    using (var frame = multiStream && source is IHDRVideoSource hdrSource
+                        ? hdrSource.GetHDRFrame(i, hasAlpha: true)
+                        : source.GetFrame(i))
+                    {
+                        if (multiStream && frame.BitPerPixel != IPicture.PicturePixelMode.UShortPicture)
+                        {
+                            using var converted = frame.ToBitPerPixel(IPicture.PicturePixelMode.UShortPicture);
+                            writer.Append(converted);
+                        }
+                        else
+                        {
+                            writer.Append(frame);
+                        }
+                        encodedCount++;
+                    }
+
+                    var elapsed = sw.Elapsed.TotalSeconds;
+                    var fps = (i + 1) / Math.Max(elapsed, 0.001);
+                    Console.Write($"\rReencoding: {((double)(i + 1) / decodeCount):P1}, {fps:F1} FPS， ETA: {TimeSpan.FromSeconds((decodeCount - (i + 1)) / Math.Max(fps, 0.001)):mm\\:ss} ");
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Failed to encode frame #{i}");
+                }
+
+
+            }
+            sw.Stop();
+            Console.WriteLine();
+
+            // ── 完成编码 ──────────────────────────────────────
+            Log("Finishing encoding...");
+            try
+            {
+                writer.Finish();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Error during encoder finish");
+            }
+
+            // ── 结果统计 ──────────────────────────────────────
+            var totalTime = sw.Elapsed;
+            var overallFps = encodedCount / Math.Max(totalTime.TotalSeconds, 0.001);
+
+            Log("");
+            Log("========================================", "stat");
+            Log("  Reencode Results", "stat");
+            Log("========================================", "stat");
+            Log($"  Source file       : {Path.GetFileName(sourcePath)}", "stat");
+            Log($"  Output file       : {outputPath}", "stat");
+            Log($"  Resolution        : {srcWidth}x{srcHeight}", "stat");
+            Log($"  FPS               : {srcFps:F2}", "stat");
+            Log($"  Decoder           : {source.TypeName}", "stat");
+            Log($"  Encoder           : {encoder}", "stat");
+            Log($"  Pixel format      : {pixelFormatStr}", "stat");
+            Log($"  Multi-stream      : {multiStream}", "stat");
+            Log($"  Bitrate           : {bitRate / 1000.0 / 1000.0:F1} Mbps", "stat");
+            Log($"  Frames encoded    : {encodedCount}", "stat");
+            Log($"  Total time        : {totalTime.TotalSeconds:F3}s", "stat");
+            Log($"  Overall FPS       : {overallFps:F2}", "stat");
+            if (srcFps > 0)
+                Log($"  Speed vs realtime : {(overallFps / srcFps):F2}x", "stat");
+            Log($"  Avg per frame     : {(totalTime.TotalMilliseconds / Math.Max(encodedCount, 1)):F3}ms", "stat");
+            Log("========================================", "stat");
+
+            source.Dispose();
+            writer.Dispose();
             return 0;
         }
 

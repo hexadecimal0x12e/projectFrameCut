@@ -1,10 +1,8 @@
 ﻿using Microsoft.Extensions.AI;
 using Microsoft.Maui.Graphics;
 using projectFrameCut.AIAssistance;
-using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
@@ -17,6 +15,7 @@ using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Drawing.Text.Typology;
 using projectFrameCut.Render.ClipsAndTracks.Text;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
 namespace projectFrameCut.ApplicationPluginBase.Text
 {
@@ -115,12 +114,12 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
         }
 
-        public Dictionary<string, EffectBundleSettableFields> SettableFields
+        public Dictionary<string, EffectArgumentFieldDescriptor> SettableFields
         {
             get
             {
                 var fontNames = TextStyleProviderSettableFieldHelper.GetAvailableFontNames();
-                return new Dictionary<string, EffectBundleSettableFields>
+                return new Dictionary<string, EffectArgumentFieldDescriptor>
                 {
                     [TextKey] = TextStyleProviderSettableFieldHelper.StringField(TextKey, "Source Text", "Source text to display and translate", DefaultText),
                     [FontKey] = TextStyleProviderSettableFieldHelper.EnumField(FontKey, "Font Family", "Font used for source and translated text", "HarmonyOS Sans SC Medium", fontNames),
@@ -142,7 +141,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             }
         }
 
-        public bool HandleSettableFieldsChange(EffectBundleSettableFields field, object value, out string feedback)
+        public bool HandleSettableFieldsChange(EffectArgumentFieldDescriptor field, object value, out string feedback)
         {
             if (field is null || !SettableFields.TryGetValue(field.Id, out var canonicalField))
             {
@@ -324,7 +323,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
             panel.AddEntry(ColorKey, "Source Color", GetOrDefault(ColorKey, "#FFFFFF"), "#FFFFFF");
             panel.AddEntry(TranslationColorKey, "Translation Color", GetOrDefault(TranslationColorKey, "#CFCFCF"), "#CFCFCF");
-            panel.AddSwitch(TranslationAutoGenerateKey, "Auto Generate", ParseBool(GetOrDefault(TranslationAutoGenerateKey, bool.TrueString), true));
+            panel.AddCheckbox(TranslationAutoGenerateKey, "Auto Generate", ParseBool(GetOrDefault(TranslationAutoGenerateKey, bool.TrueString), true));
             return panel;
         }
 
@@ -444,7 +443,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
 
             try
             {
-                var rect = TextMeasureHelper.MeasureBounds(entries, canvasWidth, canvasHeight);
+                var rect = TextServices.MeasureBounds(entries, canvasWidth, canvasHeight);
                 return new ClipPositionTuple(
                     (int)Math.Round(rect.X),
                     (int)Math.Round(rect.Y),
@@ -577,7 +576,7 @@ namespace projectFrameCut.ApplicationPluginBase.Text
             if (entries.Length == 0) return (1f, 1f);
             try
             {
-                var rect = TextMeasureHelper.MeasureBounds(entries, 1920f, 1080f);
+                var rect = TextServices.MeasureBounds(entries, 1920f, 1080f);
                 return (Math.Max(1f, (float)Math.Ceiling(rect.Width)) + 15f, Math.Max(1f, (float)Math.Ceiling(rect.Height)) + 15f);
             }
             catch

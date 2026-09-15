@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Core;
 using Microsoft.Maui.Storage;
 using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Helpers;
@@ -8,6 +8,7 @@ using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -22,7 +23,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
-using System.Management.Automation;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -557,6 +557,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ObservableCollection<AssetItemViewModel> LocalAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> SharedAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> ReuseableAssets { get; } = new();
+    public ObservableCollection<RpcVideoSourceItemViewModel> RpcVideoSources { get; } = new();
     public ObservableCollection<TemplateItemViewModel> AvailableTemplates { get; } = new();
     public ObservableCollection<TransformItemViewModel> AvailableTransforms { get; } = new();
     public ObservableCollection<TextStyleItemViewModel> AvailableTextStyles { get; } = new();
@@ -565,6 +566,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ObservableCollection<AssetItemViewModel> FilteredLocalAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> FilteredSharedAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> FilteredReuseableAssets { get; } = new();
+    public ObservableCollection<RpcVideoSourceItemViewModel> FilteredRpcVideoSources { get; } = new();
     public ObservableCollection<TemplateItemViewModel> FilteredAvailableTemplates { get; } = new();
     public ObservableCollection<TransformItemViewModel> FilteredAvailableTransforms { get; } = new();
     public ObservableCollection<TextStyleItemViewModel> FilteredAvailableTextStyles { get; } = new();
@@ -582,6 +584,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ICommand AddAssetClipCommand { get; set; } = null!;
     public ICommand AddTemplateCommand { get; set; } = null!;
     public ICommand AddReuseableAssetClipCommand { get; set; } = null!;
+    public ICommand RefreshRpcVideoSourcesCommand { get; set; } = null!;
     public ICommand AddTransformClipCommand { get; set; } = null!;
     public ICommand AddTransformClipInLeftCommand { get; set; } = null!;
     public ICommand AddTransformClipInRightCommand { get; set; } = null!;
@@ -611,6 +614,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         GenerateTextPreviewCommand = new Command(async () => InitializeTextStyles(string.IsNullOrWhiteSpace(TextToAdd) ? null : TextToAdd));
         AddAlternativeSourceClipCommand = new Command(async () => await AddAlternativeSourceClip());
         AddAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddAssetClip(asset));
+        RefreshRpcVideoSourcesCommand = new Command(async () => await LoadRpcVideoSources());
         AddTemplateCommand = new Command<TemplateItemViewModel>(async (template) => await AddTemplate(template));
         AddTransformClipCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, false));
         AddTransformClipInLeftCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, true, false));
@@ -645,6 +649,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         RegisterCommands();
         await LoadAssets();
+        await LoadRpcVideoSources();
         LoadTemplates();
         LoadTransforms();
         InitializeTextStyles();
@@ -672,7 +677,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 TemplateId = kv.Key,
                 Name = string.IsNullOrWhiteSpace(template.TemplateName) ? kv.Key.ToString() : template.TemplateName,
-                TemplateType = template.TemplateType.ToString(),
+                TemplateType = template is ScriptBasedTemplateStructure ? "Script (unsupported)" : template.TemplateType.ToString(),
                 Scope = template.Scope.ToString(),
                 Template = template
             };
@@ -784,6 +789,24 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         */
     }
 
+    public async Task LoadRpcVideoSources()
+    {
+        RpcVideoSources.Clear();
+        if (RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
+        {
+            try
+            {
+                foreach (var source in (await client.ListExternalVideoSourcesAsync()).Sources.OrderBy(x => x.ClientName).ThenBy(x => x.Name))
+                    RpcVideoSources.Add(new(this, source));
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Load external RPC video sources", this);
+            }
+        }
+        await FilterAssets();
+    }
+
     #endregion
 
     #region asset
@@ -809,6 +832,44 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
 
+    public async Task AddRpcVideoSource(RpcVideoSourceItemViewModel? item)
+    {
+        if (item is null) return;
+        try
+        {
+            var source = item.Source;
+            var path = RemoteRpcVideoSource.CreatePath(source);
+            var asset = new AssetItem
+            {
+                AssetId = $"rpc:{source.ClientId:N}:{source.SourceId}",
+                Name = source.Name,
+                Path = path,
+                AssetType = AssetType.Video,
+                ClipType = ClipMode.VideoClip,
+                Duration = source.TotalFrames,
+                SecondPerFrame = source.Fps > 0 ? (float)(1d / source.Fps) : -1,
+                Width = source.Width,
+                Height = source.Height,
+                BitPerPixel = source.HasKnownResultBitsPerPixel ? source.ResultBitsPerPixel : 0,
+                CreatedAt = DateTime.UtcNow,
+            };
+            BeginTimelineClipPlacement((trackIndex, startX) =>
+            {
+                var clip = _draftPage.CreateFromAsset(asset, trackIndex, startX, InternalPluginBase.InternalPluginBaseID, path);
+                _draftPage.RegisterClip(clip, true);
+                _draftPage.AddAClip(clip);
+                return clip;
+            }, name: source.Name);
+            ClipAdded?.Invoke(this, EventArgs.Empty);
+            Log($"Added external RPC video source {source.ClientId}/{source.SourceId} to the timeline.");
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Add external RPC video source", this);
+            await _draftPage.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
+    }
+
     public async Task AddTemplate(TemplateItemViewModel? templateViewModel)
     {
         if (templateViewModel?.Template is null)
@@ -816,31 +877,16 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             return;
         }
 
-        // ---- 原有 JSON 模板逻辑 ----
+        if (templateViewModel.Template is ScriptBasedTemplateStructure)
+        {
+            await _draftPage.DisplayAlertAsync(Localized._Error, "Script templates are no longer supported.", Localized._OK);
+            return;
+        }
+
         if (templateViewModel.Template is not JSONBasedTemplateStructure jsonTemplate)
         {
-            if (templateViewModel.Template is ScriptBasedTemplateStructure scriptTemplate)
-            {
-                jsonTemplate = new JSONBasedTemplateStructure
-                {
-                    TemplateName = scriptTemplate.TemplateName,
-                    TemplateID = scriptTemplate.TemplateID,
-                    Scope = scriptTemplate.Scope,
-                    Draft = scriptTemplate.Draft ?? new DraftStructureJSON(),
-                    Project = scriptTemplate.Project ?? new ProjectJSONStructure(),
-                    AssetHashTable = scriptTemplate.AssetHashTable,
-                    CreatedInAPIVersion = scriptTemplate.CreatedInAPIVersion,
-                    HaveAsset = scriptTemplate.HaveAsset,
-                    TemplateVersion = scriptTemplate.TemplateVersion,
-                    VariableDefinitions = scriptTemplate.VariableDefinitions,
-                    Variables = scriptTemplate.Variables
-                };
-            }
-            else
-            {
-                await _draftPage.DisplayAlertAsync(Localized._Info, "the templates are not supported for timeline insertion.", Localized._OK);
-                return;
-            }
+            await _draftPage.DisplayAlertAsync(Localized._Info, "This template does not support timeline insertion.", Localized._OK);
+            return;
         }
 
         try
@@ -926,14 +972,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             if (templateClips.Count == 0)
             {
-                if (templateViewModel.Template is ScriptBasedTemplateStructure scriptTemplate)
-                {
-                    await ApplyScriptTemplateAsync(scriptTemplate, templateViewModel.Name);
-                }
-                else
-                {
-                    await _draftPage.DisplayAlertAsync(Localized._Info, "This template has no valid timeline clips.", Localized._OK);
-                }
+                await _draftPage.DisplayAlertAsync(Localized._Info, "This template has no valid timeline clips.", Localized._OK);
                 return;
             }
 
@@ -1075,14 +1114,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
                 _ = _draftPage.UpdateAdjacencyForTrack();
                 return firstClip ?? throw new InvalidOperationException("No clip could be placed from template.");
-            }, trackFilter, templateViewModel.Name,
-            async () =>
-            {
-                if (templateViewModel.Template is ScriptBasedTemplateStructure scriptTemplate)
-                {
-                    await ApplyScriptTemplateAsync(scriptTemplate, templateViewModel.Name, inputValues);
-                }
-            });
+            }, trackFilter, templateViewModel.Name);
 
             ClipAdded?.Invoke(this, EventArgs.Empty);
         }
@@ -1113,72 +1145,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             _draftPage.IsPopupClosableByTapBackground = originPopupClosable;
             inputView.CloseRequested -= closeRequestedHandler;
-        }
-    }
-
-    /// <summary>
-    /// 应用脚本模板：用户填入变量 → 注入 PowerShell 运行空间 → 执行脚本。
-    /// </summary>
-    private async Task ApplyScriptTemplateAsync(ScriptBasedTemplateStructure template, string? name, Dictionary<string, string?>? inputValues = null)
-    {
-        string? tempExtractDir = null;
-        try
-        {
-            // 0. 从 .pjfcTemplate 包中提取并读取脚本内容
-            string scriptContent;
-            try
-            {
-                var (_, dir) = await TemplatePackageIO.ExtractStoredTemplateAsync(
-                    template.TemplateID, DraftPage.DraftJSONOption);
-                tempExtractDir = dir;
-
-                var scriptFilePath = Path.Combine(dir, "script.ps1");
-                if (!File.Exists(scriptFilePath))
-                {
-                    await _draftPage.DisplayAlertAsync(Localized._Error,
-                        $"模板「{template.TemplateName}」没有关联脚本。", Localized._OK);
-                    return;
-                }
-
-                scriptContent = await File.ReadAllTextAsync(scriptFilePath);
-            }
-            catch (FileNotFoundException)
-            {
-                await _draftPage.DisplayAlertAsync(Localized._Error,
-                    $"找不到模板「{template.TemplateName}」的包文件。", Localized._OK);
-                return;
-            }
-
-            // 1. 获取变量输入
-            inputValues ??= await PromptTemplateValuesWithViewAsync(template, name);
-            if (inputValues is null)
-                return;
-
-            // 2. 准备脚本运行环境：将填充后的变量注入 ScriptEngine
-            var scriptVars = new Dictionary<string, object?>();
-            foreach (var (key, value) in inputValues)
-                scriptVars[key] = value;
-            scriptVars["TemplateName"] = template.TemplateName;
-
-            _draftPage.ScriptEngine.SetVariables(scriptVars);
-
-            // 3. 执行脚本
-            var result = await _draftPage.ScriptEngine.ExecuteAsync(scriptContent);
-
-            await _draftPage.DisplayAlertAsync(Localized._Info, $"成功导入模板「{template.TemplateName}」。\n\n{result}", Localized._OK);
-
-            // 5. 刷新时间线
-            ClipAdded?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "apply script template", this);
-            await _draftPage.DisplayAlertAsync(Localized._Error,
-                $"执行脚本模板「{template.TemplateName}」时出错：{ex.Message}", Localized._OK);
-        }
-        finally
-        {
-            TemplatePackageIO.TryCleanupExtractDir(tempExtractDir);
         }
     }
 
@@ -1935,7 +1901,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             var factories = TransformServices.GetAvailableTransforms();
             if (!factories.TryGetValue(transform.TypeKey, out var factory)) return;
 
-            var previewDir = Path.Combine(FileSystem.CacheDirectory, "TransformPreviews");
+            var previewDir = Path.Combine(MauiProgram.CachePath, "TransformPreviews");
             Directory.CreateDirectory(previewDir);
             var videoPath = Path.Combine(previewDir, $"{transform.TypeKey}.mp4");
 
@@ -2040,11 +2006,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         FilteredLocalAssets.Clear();
         FilteredSharedAssets.Clear();
         FilteredReuseableAssets.Clear();
+        FilteredRpcVideoSources.Clear();
         FilteredAvailableTemplates.Clear();
 
         List<AssetItemViewModel> localFiltered = new();
         List<AssetItemViewModel> sharedFiltered = new();
         List<AssetItemViewModel> reuseableFiltered = new();
+        List<RpcVideoSourceItemViewModel> rpcFiltered = new();
         List<TemplateItemViewModel> templateFiltered = new();
 
         if (string.IsNullOrWhiteSpace(SearchText))
@@ -2053,6 +2021,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             localFiltered.AddRange(LocalAssets);
             sharedFiltered.AddRange(SharedAssets);
             reuseableFiltered.AddRange(ReuseableAssets);
+            rpcFiltered.AddRange(RpcVideoSources);
             templateFiltered.AddRange(AvailableTemplates.Where(ShouldShowTemplateByScope));
         }
         else
@@ -2088,6 +2057,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     reuseableFiltered.Add(asset);
                 }
             }
+            rpcFiltered.AddRange(RpcVideoSources.Where(x => x.Name.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
+                || x.ClientName.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
+                || x.DecoderName.Contains(searchLower, StringComparison.OrdinalIgnoreCase)));
 
             foreach (var template in AvailableTemplates)
             {
@@ -2119,6 +2091,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             localFiltered = (await localFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
             sharedFiltered = (await sharedFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
             reuseableFiltered = (await reuseableFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
+            rpcFiltered = rpcFiltered.OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
             templateFiltered = (await templateFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
         }
 
@@ -2134,6 +2107,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             FilteredReuseableAssets.Add(asset);
         }
+        foreach (var source in rpcFiltered) FilteredRpcVideoSources.Add(source);
 
         foreach (var template in templateFiltered)
         {
@@ -2283,7 +2257,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
 
             // ???????
-            var sketchDir = Path.Combine(FileSystem.CacheDirectory, "Sketches");
+            var sketchDir = Path.Combine(MauiProgram.CachePath, "Sketches");
             Directory.CreateDirectory(sketchDir);
             var tempPath = Path.Combine(sketchDir, $"sketch_{Guid.NewGuid():N}.png");
 
@@ -3050,7 +3024,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                             var vid = PluginManager.CreateVideoSource(localPath);
                             item.Duration = vid.TotalFrames;
                             item.SecondPerFrame = (float)(1f / vid.Fps);
-                            vid.GetFrame(0U, false).SaveToPng(thumbnailPath);
+                            vid.GetFrame(0U).SaveToPng(thumbnailPath);
                             item.ThumbnailPath = thumbnailPath;
                             break;
                         }
@@ -3332,6 +3306,27 @@ public class AssetItemViewModel
     }
 }
 
+public sealed class RpcVideoSourceItemViewModel
+{
+    public RpcVideoSourceItemViewModel(ProjectAddClipViewModel parent, ExternalVideoSourceDescriptor source)
+    {
+        Source = source;
+        AddCommand = new Command(async () => await parent.AddRpcVideoSource(this));
+    }
+
+    public ExternalVideoSourceDescriptor Source { get; }
+    public string Name => Source.Name;
+    public string ClientName => string.IsNullOrWhiteSpace(Source.ClientName) ? Source.ClientId.ToString("D") : Source.ClientName;
+    public string DecoderName => Source.DecoderName;
+    public string Resolution => Source.Width > 0 && Source.Height > 0 ? $"{Source.Width}×{Source.Height}" : "?";
+    public string FrameRate => Source.Fps > 0 ? $"{Source.Fps:0.###} FPS" : "? FPS";
+    public string Duration => Source.TotalFrames > 0 && Source.Fps > 0 ? TimeSpan.FromSeconds(Source.TotalFrames / Source.Fps).ToString("hh\\:mm\\:ss") : "--:--:--";
+
+    public string Capabilities => $"{(Source.HasKnownResultBitsPerPixel ? $"{Source.ResultBitsPerPixel}-bit" : "Variable bit depth")} RGB{(Source.SupportsAlpha ? "A" : "")}{(Source.SupportsHdr ? " (HDR)" : "")}";
+    public string SourceInfoDisplay => $"{Resolution} {FrameRate} ({Duration})";
+    public Command AddCommand { get; }
+}
+
 public class TemplateItemViewModel
 {
     public Guid TemplateId { get; set; }
@@ -3419,7 +3414,7 @@ public class TextStyleItemViewModel
     public required TextClipEntry ActualTemplate { get; set; } = default!;
     private ImageSource? _previewSource;
 
-    private static string PreviewCacheDir => Path.Combine(FileSystem.CacheDirectory, "TextStylePreviews");
+    private static string PreviewCacheDir => Path.Combine(MauiProgram.CachePath, "TextStylePreviews");
 
     private string ComputeCacheKey()
     {
@@ -3511,7 +3506,7 @@ public class TextStyleItemViewModel
                 var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
                 var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
 
-                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
+                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, 8);
 
                 // Encode to PNG once, share between disk cache and ImageSource
                 var bpp8 = img.ToBitPerPixel(8);
@@ -3549,7 +3544,7 @@ public class TextStyleProviderItemViewModel
 
     private ImageSource? _previewSource;
 
-    private static string PreviewCacheDir => Path.Combine(FileSystem.CacheDirectory, "TextStylePreviews");
+    private static string PreviewCacheDir => Path.Combine(MauiProgram.CachePath, "TextStylePreviews");
 
     private string ComputeCacheKey()
     {
@@ -3602,7 +3597,7 @@ public class TextStyleProviderItemViewModel
                 var imgHeight = Math.Clamp((int)(maxFontSize * 1.2f) + 4, 24, 200);
                 var imgWidth = Math.Clamp((int)(sample.Length * maxFontSize * 0.6f) + 20, 100, 1200);
 
-                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true, 8);
+                var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, 8);
 
                 // Encode to PNG once, share between disk cache and ImageSource
                 var bpp8 = img.ToBitPerPixel(8);

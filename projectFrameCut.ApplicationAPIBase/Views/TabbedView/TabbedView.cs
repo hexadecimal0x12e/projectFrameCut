@@ -354,7 +354,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
 
                     if (Debugger.IsAttached)
                     {
-                        if (await Dispatcher.DispatchAsync(async () => await Shell.Current.CurrentPage.DisplayAlertAsync("Error", $"Failed to load content for tab '{SelectedItem?.Header ?? "Unknown"}'.{Environment.NewLine}Error: {ex.Message}{Environment.NewLine}{Environment.NewLine}Throw it?", "Yes", "No")))
+                        var alertPage = Window?.Page ?? Microsoft.Maui.Controls.Application.Current?.Windows.FirstOrDefault()?.Page;
+                        if (alertPage is not null && await Dispatcher.DispatchAsync(async () => await alertPage.DisplayAlertAsync("Error", $"Failed to load content for tab '{SelectedItem?.Header ?? "Unknown"}'.{Environment.NewLine}Error: {ex.Message}{Environment.NewLine}{Environment.NewLine}Throw it?", "Yes", "No")))
                         {
                             throw;
                         }
@@ -416,7 +417,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             catch (Exception ex)
             {
                 Log(ex, $"Place tab {selectedItem.Tag}/{selectedItem.Header} content in the tabview of {Parent}({Parent.GetType().Name})", this);
-                await (Shell.Current?.DisplayAlertAsync(Localize.APIBaseLocalizedResources.Localized._Error, Localize.APIBaseLocalizedResources.Localized.TabView_Error(selectedItem?.Header?.ToString() ?? selectedItem?.Tag ?? "?"), Localize.APIBaseLocalizedResources.Localized._OK) ?? Task.CompletedTask);
+                var alertPage = Window?.Page ?? Microsoft.Maui.Controls.Application.Current?.Windows.FirstOrDefault()?.Page;
+                await (alertPage?.DisplayAlertAsync(Localize.APIBaseLocalizedResources.Localized._Error, Localize.APIBaseLocalizedResources.Localized.TabView_Error(selectedItem?.Header?.ToString() ?? selectedItem?.Tag ?? "?"), Localize.APIBaseLocalizedResources.Localized._OK) ?? Task.CompletedTask);
             }
 
 

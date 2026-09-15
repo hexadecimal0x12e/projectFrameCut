@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
@@ -84,7 +85,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
         public string? FilePath { get; set; }
         public bool NeedFilePath => true;
         public Dictionary<string, object> ExtraData { get; set; }
@@ -93,6 +97,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
 
 
@@ -109,16 +115,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint? GetClipLength() => null;
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
-        {
-            throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
-        }
-
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
-        {
-            throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
-        }
-
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
         {
             throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
         }
@@ -146,6 +142,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 },
                 _ => throw new NotSupportedException($"Unsupported track type {TrackType}."),
             };
+
+           EffectHelper.ResolveClipEffects(this);
         }
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)

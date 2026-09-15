@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>projectFrameCut.ExternalPluginBackendExample</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\projectFrameCut.ExamplePlugin1\projectFrameCut.ExamplePlugin1.csproj" />
+    <ProjectReference Include="..\..\projectFrameCut.Render.Contracts\projectFrameCut.Render.Contracts.csproj" />
+    <ProjectReference Include="..\..\projectFrameCut.Render.PluginIsolation\projectFrameCut.Render.PluginIsolation.csproj" />
+  </ItemGroup>
+
+</Project>

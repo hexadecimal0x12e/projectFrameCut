@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+
+		<Authors>hexadecimal0x12e</Authors>
+		<Product>codename 'projectFrameCut'</Product>
+		<Description>projectFrameCut RPC Protocol contracts</Description>
+		<Copyright>Copyright (c) hexadecimal0x12e 2025-2026</Copyright>
+		<PackageProjectUrl>hexadecimal0x12e.com</PackageProjectUrl>
+		<Title>projectFrameCut RPC Protocol contracts</Title>
+		<NeutralLanguage>zh-CN</NeutralLanguage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="protobuf-net" Version="3.2.56" />
+  </ItemGroup>
+
+</Project>

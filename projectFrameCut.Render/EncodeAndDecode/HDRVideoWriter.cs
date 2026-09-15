@@ -92,6 +92,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
+        private long _bitRate = 8_000_000;
+        public long BitRate
+        {
+            get => _bitRate;
+            set
+            {
+                if (_inited) throw new InvalidOperationException("Cannot modify property after initialization");
+                _bitRate = value;
+            }
+        }
+
         private AVPixelFormat _pixelFormat;
         private AVFormatContext* _fmtCtx;
         private AVStream* _videoStream;
@@ -121,6 +132,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public uint DurationWritten => Index;
 
         public IPicture.PicturePixelMode? TargetPPB => _sourceColorDepth;
+
+        public bool PreferToSpeed { get; set; }
 
         public static bool DetectCodec(string codec)
         {
@@ -225,7 +238,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _codecCtx->framerate = new AVRational { num = FramePerSecond, den = 1 };
             _codecCtx->gop_size = 12;
             _codecCtx->max_b_frames = _enableHdrSignaling ? 0 : 2;
-            _codecCtx->bit_rate = 8_000_000;
+            _codecCtx->bit_rate = _bitRate;
 
             if (_enableHdrSignaling)
             {
@@ -243,6 +256,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 ffmpeg.av_dict_set(&opts, "preset", "veryfast", 0);
                 ffmpeg.av_dict_set(&opts, "tune", "zerolatency", 0);
+            }
+            else if (PreferToSpeed && _codecCtx->codec_id == AVCodecID.AV_CODEC_ID_HEVC)
+            {
+                ffmpeg.av_dict_set(&opts, "preset", "veryfast", 0);
             }
 
             if (_enableHdrSignaling)
@@ -801,6 +818,20 @@ namespace projectFrameCut.Render.EncodeAndDecode
         {
             if (_isHeaderWritten) return;
 
+            if (_fmtCtx == null)
+            {
+                if (string.IsNullOrWhiteSpace(OutputPath))
+                    throw new InvalidOperationException(
+                        "Cannot write video header: OutputPath was not set. " +
+                        "The video writer was created without an output path (for codec probing) " +
+                        "but Append was called as if it were ready to write. " +
+                        "Set OutputPath and call Initialize() before writing frames.");
+                throw new InvalidOperationException(
+                    $"Cannot write video header: the video writer was not properly initialized " +
+                    $"(OutputPath='{OutputPath}', but the format context is null). " +
+                    "Ensure Initialize() completed successfully before calling Append.");
+            }
+
             if (_metadata != null && _metadata.Count > 0)
             {
                 foreach (var kv in _metadata)
@@ -995,7 +1026,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 || ext.Equals(".m4v", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static uint     MakeFourCC(char c0, char c1, char c2, char c3)
+        private static uint MakeFourCC(char c0, char c1, char c2, char c3)
         {
             return (uint)c0
                 | ((uint)c1 << 8)

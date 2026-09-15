@@ -35,8 +35,10 @@ namespace projectFrameCut.Render.Rendering
             throw new KeyNotFoundException($"Cached value with key '{key}' not found in either frame-local or global cache.");
         }
 
+        [Obsolete("IBindableArgumentEffect is deprecated. Consider migrate to IEffectProvider system with a dynamic field.")]
         public static bool ProcessBindableArgsEffect(uint targetFrame, ref IPicture frame, ref ConcurrentDictionary<string, object> globalResultCache, Dictionary<string, object> frameLocalCache, IClip clip, IBindableArgumentEffect item, IComputer? computer, int width, int height)
         {
+            Log($"IBindableArgumentEffect is deprecated. Consider migrate to IEffectProvider system with a dynamic field. Processing effect: {item.Name} ({item.TypeName})");
             switch (item.EffectRole)
             {
                 case BindableArgumentEffectType.ValueProvider:
@@ -228,7 +230,7 @@ namespace projectFrameCut.Render.Rendering
                     }
                 },
             };
-            return clip.GetFrameRelativeToStartPointOfSource(0, width, height, true, 8);
+            return clip.GetFrameRelativeToStartPointOfSource(0, width, height, 8);
         }
     }
 }

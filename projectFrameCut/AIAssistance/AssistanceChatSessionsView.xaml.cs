@@ -1,6 +1,8 @@
 ﻿namespace projectFrameCut.AIAssistance;
 
 using Microsoft.Extensions.AI;
+using projectFrameCut.ApplicationAPIBase.Workspace;
+using projectFrameCut.ApplicationAPIBase.Workspace.Modules;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.Services;
 using System.Collections.ObjectModel;
@@ -14,33 +16,55 @@ public partial class AssistanceChatSessionsView : ContentView
     private readonly ObservableCollection<SessionListItem> _sessions = [];
     private readonly string? _projectPath;
     private readonly string? _projectName;
-    public AssistanceChatView? Current = null;
+    private readonly IWorkspace? _workspace;
+    private MultiWindowItem? _hostWindow;
+    public AssistanceChatView? Current { get; private set; }
 
     public Func<IEnumerable<AIFunction>>? GlobalToolCallFactories;
 
 
-    public AssistanceChatSessionsView() : this(null, null)
+    public AssistanceChatSessionsView() : this(null, null, null)
     {
     }
 
-    public AssistanceChatSessionsView(string? projectPath, string? projectName)
+    public AssistanceChatSessionsView(string? projectPath, string? projectName, IWorkspace? workspace = null)
     {
         _projectPath = projectPath;
         _projectName = projectName;
+        _workspace = workspace;
         InitializeComponent();
         SessionListView.ItemsSource = _sessions;
         AssistanceChatSessionStore.SessionsChanged += AssistanceChatSessionStore_SessionsChanged;
         RefreshSessions();
-        if (Parent is MultiWindowItem host)
+        if (_workspace is not null
+            && _workspace.TryGetModule<AssistanceModule>(out var assistanceModule)
+            && assistanceModule is not null)
         {
-            host.OnNavigate += (s, view) =>
-            {
-                if (view.Next is AssistanceChatView v)
-                {
-                    Current = v;
-                    v.ToolCallFactories = GlobalToolCallFactories;
-                }
-            };
+            assistanceModule.BindMessageHandler(HandleWorkspaceMessageAsync);
+        }
+    }
+
+    protected override void OnParentSet()
+    {
+        base.OnParentSet();
+        var host = GetHostWindow();
+        if (host is null || ReferenceEquals(host, _hostWindow)) return;
+
+        if (_hostWindow is not null) _hostWindow.OnNavigate -= HostWindow_OnNavigate;
+        _hostWindow = host;
+        _hostWindow.OnNavigate += HostWindow_OnNavigate;
+    }
+
+    private void HostWindow_OnNavigate(object? sender, (View Next, View Current) navigation)
+    {
+        if (navigation.Next is AssistanceChatView view)
+        {
+            view.ToolCallFactories = GlobalToolCallFactories;
+            SetCurrent(view);
+        }
+        else if (navigation.Next is AssistanceChatSessionsView)
+        {
+            SetCurrent(null);
         }
     }
 
@@ -109,8 +133,8 @@ public partial class AssistanceChatSessionsView : ContentView
 
     private void NavigateToSession(Guid sessionId)
     {
-        var s = new AssistanceChatView(sessionId, GlobalToolCallFactories, _projectPath, _projectName);
-        Current = s;
+        var s = new AssistanceChatView(sessionId, GlobalToolCallFactories, _projectPath, _projectName, workspace: _workspace);
+        SetCurrent(s);
         if (GetHostWindow() is MultiWindowItem host)
         {
             host.NavigateTo(s);
@@ -127,6 +151,44 @@ public partial class AssistanceChatSessionsView : ContentView
             Log($"Failed to navigate to session {sessionId} because host window is not found. Parent is a {Parent?.GetType().Name}\r\n{Environment.StackTrace}", "error");
             _ = Application.Current?.Windows?[0]?.Page?.DisplayAlertAsync(Localized._Error, $"Parent is not a valid window. Please feedback this bug.", Localized._OK);
         }
+    }
+
+    private void SetCurrent(AssistanceChatView? view)
+    {
+        Current = view;
+        if (_workspace is not null
+            && _workspace.TryGetModule<AssistanceModule>(out var module)
+            && module is not null)
+            module.SetActiveSession(view?.SessionId);
+    }
+
+    private async Task<WorkspaceAssistanceMessageResponse> HandleWorkspaceMessageAsync(
+        WorkspaceAssistanceMessageRequest request,
+        CancellationToken cancellationToken)
+    {
+        AssistanceChatView target = await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            if (Current is { } current) return current;
+
+            var session = AssistanceChatSessionStore.CreateSession(_projectPath);
+            var view = new AssistanceChatView(
+                session.SessionId,
+                GlobalToolCallFactories,
+                _projectPath,
+                _projectName,
+                workspace: _workspace);
+            SetCurrent(view);
+            GetHostWindow()?.NavigateTo(view);
+            return view;
+        });
+
+        var text = await target.ReceiveWorkspaceMessageAsync(request, cancellationToken);
+        return new WorkspaceAssistanceMessageResponse
+        {
+            SessionId = target.SessionId,
+            SourceModuleId = request.SourceModuleId,
+            Text = text,
+        };
     }
 
     private MultiWindowItem? GetHostWindow()

@@ -1,29 +1,28 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Services;
 using System.Globalization;
 using System.Text.Json;
-using static projectFrameCut.ApplicationAPIBase.Effect.EffectBundleSettableFields;
 
 namespace projectFrameCut.ApplicationPluginBase.Text;
 
 internal static class TextStyleProviderSettableFieldHelper
 {
-    internal static EffectBundleSettableFields StringField(
+    internal static EffectArgumentFieldDescriptor StringField(
         string id,
         string displayName,
         string description,
         string defaultValue) => new()
         {
             Id = id,
-            DisplayName = displayName,
-            Description = description,
-            ValueType = FieldType.String,
+            TypeName = "TextClipStyleField",
+            FieldType = EffectArgumentFieldType.String,
             DefaultValue = defaultValue,
             MinValue = "",
-            MaxValue = ""
+            MaxValue = "",
+            Remarks = description
         };
 
-    internal static EffectBundleSettableFields NumericField(
+    internal static EffectArgumentFieldDescriptor NumericField(
         string id,
         string displayName,
         string description,
@@ -32,24 +31,24 @@ internal static class TextStyleProviderSettableFieldHelper
         float? max = null,
         bool mandatory = true)
     {
-        var valueType = FieldType.Numeric;
-        if (min.HasValue) valueType |= FieldType.HasMinValue;
-        if (max.HasValue) valueType |= FieldType.HasMaxValue;
-        if (mandatory) valueType |= FieldType.Mandatory;
+        var fieldType = EffectArgumentFieldType.Numeric;
+        if (min.HasValue) fieldType |= EffectArgumentFieldType.HasMinValue;
+        if (max.HasValue) fieldType |= EffectArgumentFieldType.HasMaxValue;
+        if (mandatory) fieldType |= EffectArgumentFieldType.Mandatory;
 
-        return new EffectBundleSettableFields
+        return new EffectArgumentFieldDescriptor
         {
             Id = id,
-            DisplayName = displayName,
-            Description = description,
-            ValueType = valueType,
+            TypeName = "TextClipStyleField",
+            FieldType = fieldType,
             DefaultValue = defaultValue?.ToString(CultureInfo.InvariantCulture) ?? "",
             MinValue = min?.ToString(CultureInfo.InvariantCulture) ?? "",
-            MaxValue = max?.ToString(CultureInfo.InvariantCulture) ?? ""
+            MaxValue = max?.ToString(CultureInfo.InvariantCulture) ?? "",
+            Remarks = description
         };
     }
 
-    internal static EffectBundleSettableFields IntegerField(
+    internal static EffectArgumentFieldDescriptor IntegerField(
         string id,
         string displayName,
         string description,
@@ -58,39 +57,39 @@ internal static class TextStyleProviderSettableFieldHelper
         int? max = null,
         bool mandatory = true)
     {
-        var valueType = FieldType.Integer;
-        if (min.HasValue) valueType |= FieldType.HasMinValue;
-        if (max.HasValue) valueType |= FieldType.HasMaxValue;
-        if (mandatory) valueType |= FieldType.Mandatory;
+        var fieldType = EffectArgumentFieldType.Integer;
+        if (min.HasValue) fieldType |= EffectArgumentFieldType.HasMinValue;
+        if (max.HasValue) fieldType |= EffectArgumentFieldType.HasMaxValue;
+        if (mandatory) fieldType |= EffectArgumentFieldType.Mandatory;
 
-        return new EffectBundleSettableFields
+        return new EffectArgumentFieldDescriptor
         {
             Id = id,
-            DisplayName = displayName,
-            Description = description,
-            ValueType = valueType,
+            TypeName = "TextClipStyleField",
+            FieldType = fieldType,
             DefaultValue = defaultValue.ToString(CultureInfo.InvariantCulture),
             MinValue = min?.ToString(CultureInfo.InvariantCulture) ?? "",
-            MaxValue = max?.ToString(CultureInfo.InvariantCulture) ?? ""
+            MaxValue = max?.ToString(CultureInfo.InvariantCulture) ?? "",
+            Remarks = description
         };
     }
 
-    internal static EffectBundleSettableFields BooleanField(
+    internal static EffectArgumentFieldDescriptor BooleanField(
         string id,
         string displayName,
         string description,
         bool defaultValue) => new()
         {
             Id = id,
-            DisplayName = displayName,
-            Description = description,
-            ValueType = FieldType.Boolean,
+            TypeName = "TextClipStyleField",
+            FieldType = EffectArgumentFieldType.Boolean,
             DefaultValue = defaultValue.ToString().ToLowerInvariant(),
             MinValue = "",
-            MaxValue = ""
+            MaxValue = "",
+            Remarks = description
         };
 
-    internal static EffectBundleSettableFields EnumField(
+    internal static EffectArgumentFieldDescriptor EnumField(
         string id,
         string displayName,
         string description,
@@ -98,25 +97,24 @@ internal static class TextStyleProviderSettableFieldHelper
         string[] presetOptions) => new()
         {
             Id = id,
-            DisplayName = displayName,
-            Description = description,
-            ValueType = FieldType.Enum,
+            TypeName = "TextClipStyleField",
+            FieldType = EffectArgumentFieldType.String,
             DefaultValue = defaultValue,
             MinValue = "",
             MaxValue = "",
-            PresetOptions = presetOptions
+            PresetOptions = presetOptions,
+            Remarks = description
         };
 
-    internal static EffectBundleSettableFields ColorField(
+    internal static EffectArgumentFieldDescriptor ColorField(
         string id,
         string displayName,
         string description,
         string defaultValue) => new()
         {
             Id = id,
-            DisplayName = displayName,
-            Description = description,
-            ValueType = FieldType.Color,
+            TypeName = "TextClipStyleField",
+            FieldType = EffectArgumentFieldType.Color,
             DefaultValue = defaultValue,
             MinValue = "",
             MaxValue = "",
@@ -132,46 +130,50 @@ internal static class TextStyleProviderSettableFieldHelper
             .ToArray();
 
     internal static bool TryNormalizeValue(
-        EffectBundleSettableFields field,
+        EffectArgumentFieldDescriptor field,
         object? value,
         out object normalizedValue,
         out string feedback)
     {
-        var baseType = field.ValueType & (FieldType)0x7FF;
+        var baseType = field.FieldType & (EffectArgumentFieldType)0x7FF;
         var normalizedInput = NormalizeJsonValue(value);
+
+        // Enum fields are String-type with PresetOptions set
+        if (baseType == EffectArgumentFieldType.String && field.PresetOptions is { Length: > 0 })
+            baseType = EffectArgumentFieldType.String; // handled by TryNormalizeEnum below
 
         switch (baseType)
         {
-            case FieldType.String:
+            case EffectArgumentFieldType.String when field.PresetOptions is { Length: > 0 }:
+                return TryNormalizeEnum(field, normalizedInput, out normalizedValue, out feedback);
+            case EffectArgumentFieldType.String:
                 normalizedValue = normalizedInput?.ToString() ?? "";
                 feedback = "";
                 return true;
-            case FieldType.Numeric:
+            case EffectArgumentFieldType.Numeric:
                 return TryNormalizeNumeric(field, normalizedInput, out normalizedValue, out feedback);
-            case FieldType.Integer:
+            case EffectArgumentFieldType.Integer:
                 return TryNormalizeInteger(field, normalizedInput, out normalizedValue, out feedback);
-            case FieldType.Boolean:
+            case EffectArgumentFieldType.Boolean:
                 return TryNormalizeBoolean(field, normalizedInput, out normalizedValue, out feedback);
-            case FieldType.Enum:
-                return TryNormalizeEnum(field, normalizedInput, out normalizedValue, out feedback);
-            case FieldType.Color:
+            case EffectArgumentFieldType.Color:
                 return TryNormalizeColor(field, value, out normalizedValue, out feedback);
             default:
                 normalizedValue = "";
-                feedback = $"Unsupported field type '{baseType}' for field '{field.DisplayName}'.";
+                feedback = $"Unsupported field type '{baseType}' for field '{field.Id}'.";
                 return false;
         }
     }
 
     private static bool TryNormalizeNumeric(
-        EffectBundleSettableFields field,
+        EffectArgumentFieldDescriptor field,
         object? value,
         out object normalizedValue,
         out string feedback)
     {
         if (value is null || value is string text && string.IsNullOrWhiteSpace(text))
         {
-            if (!field.ValueType.HasFlag(FieldType.Mandatory))
+            if (!field.FieldType.HasFlag(EffectArgumentFieldType.Mandatory))
             {
                 normalizedValue = "";
                 feedback = "";
@@ -179,14 +181,14 @@ internal static class TextStyleProviderSettableFieldHelper
             }
 
             normalizedValue = "";
-            feedback = $"A value is required for field '{field.DisplayName}'.";
+            feedback = $"A value is required for field '{field.Id}'.";
             return false;
         }
 
         if (!TryConvertToFloat(value, out var parsed))
         {
             normalizedValue = "";
-            feedback = $"Cannot convert value '{value}' to number for field '{field.DisplayName}'.";
+            feedback = $"Cannot convert value '{value}' to number for field '{field.Id}'.";
             return false;
         }
 
@@ -201,7 +203,7 @@ internal static class TextStyleProviderSettableFieldHelper
     }
 
     private static bool TryNormalizeInteger(
-        EffectBundleSettableFields field,
+        EffectArgumentFieldDescriptor field,
         object? value,
         out object normalizedValue,
         out string feedback)
@@ -209,7 +211,7 @@ internal static class TextStyleProviderSettableFieldHelper
         if (!TryConvertToInt(value, out var parsed))
         {
             normalizedValue = "";
-            feedback = $"Cannot convert value '{value}' to integer for field '{field.DisplayName}'.";
+            feedback = $"Cannot convert value '{value}' to integer for field '{field.Id}'.";
             return false;
         }
 
@@ -224,7 +226,7 @@ internal static class TextStyleProviderSettableFieldHelper
     }
 
     private static bool TryNormalizeBoolean(
-        EffectBundleSettableFields field,
+        EffectArgumentFieldDescriptor field,
         object? value,
         out object normalizedValue,
         out string feedback)
@@ -244,12 +246,12 @@ internal static class TextStyleProviderSettableFieldHelper
         }
 
         normalizedValue = false;
-        feedback = $"Cannot convert value '{value}' to boolean for field '{field.DisplayName}'.";
+        feedback = $"Cannot convert value '{value}' to boolean for field '{field.Id}'.";
         return false;
     }
 
     private static bool TryNormalizeEnum(
-        EffectBundleSettableFields field,
+        EffectArgumentFieldDescriptor field,
         object? value,
         out object normalizedValue,
         out string feedback)
@@ -258,7 +260,7 @@ internal static class TextStyleProviderSettableFieldHelper
         if (string.IsNullOrWhiteSpace(text))
         {
             normalizedValue = "";
-            feedback = $"A value is required for enum field '{field.DisplayName}'.";
+            feedback = $"A value is required for enum field '{field.Id}'.";
             return false;
         }
 
@@ -267,7 +269,7 @@ internal static class TextStyleProviderSettableFieldHelper
         if (canonicalValue is null)
         {
             normalizedValue = "";
-            feedback = $"Value '{text}' is not a valid option for field '{field.DisplayName}'. Valid options: {string.Join(", ", field.PresetOptions ?? [])}.";
+            feedback = $"Value '{text}' is not a valid option for field '{field.Id}'. Valid options: {string.Join(", ", field.PresetOptions ?? [])}.";
             return false;
         }
 
@@ -277,7 +279,7 @@ internal static class TextStyleProviderSettableFieldHelper
     }
 
     private static bool TryNormalizeColor(
-        EffectBundleSettableFields field,
+        EffectArgumentFieldDescriptor field,
         object? value,
         out object normalizedValue,
         out string feedback)
@@ -295,7 +297,7 @@ internal static class TextStyleProviderSettableFieldHelper
             || !TryGetUShort(element, "b", out var blue))
         {
             normalizedValue = "";
-            feedback = $"Value for field '{field.DisplayName}' must be a 16-bit RGBA JSON object.";
+            feedback = $"Value for field '{field.Id}' must be a 16-bit RGBA JSON object.";
             return false;
         }
 
@@ -306,7 +308,7 @@ internal static class TextStyleProviderSettableFieldHelper
             || float.IsNaN(alpha) || float.IsInfinity(alpha) || alpha is < 0f or > 1f))
         {
             normalizedValue = "";
-            feedback = $"Alpha for field '{field.DisplayName}' must be between 0 and 1, or null.";
+            feedback = $"Alpha for field '{field.Id}' must be between 0 and 1, or null.";
             return false;
         }
 
@@ -321,23 +323,23 @@ internal static class TextStyleProviderSettableFieldHelper
     }
 
     private static bool ValidateRange(
-        EffectBundleSettableFields field,
+        EffectArgumentFieldDescriptor field,
         double value,
         out string feedback)
     {
-        if (field.ValueType.HasFlag(FieldType.HasMinValue)
+        if (field.FieldType.HasFlag(EffectArgumentFieldType.HasMinValue)
             && double.TryParse(field.MinValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var min)
             && value < min)
         {
-            feedback = $"Value {value} is less than minimum {min} for field '{field.DisplayName}'.";
+            feedback = $"Value {value} is less than minimum {min} for field '{field.Id}'.";
             return false;
         }
 
-        if (field.ValueType.HasFlag(FieldType.HasMaxValue)
+        if (field.FieldType.HasFlag(EffectArgumentFieldType.HasMaxValue)
             && double.TryParse(field.MaxValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var max)
             && value > max)
         {
-            feedback = $"Value {value} exceeds maximum {max} for field '{field.DisplayName}'.";
+            feedback = $"Value {value} exceeds maximum {max} for field '{field.Id}'.";
             return false;
         }
 

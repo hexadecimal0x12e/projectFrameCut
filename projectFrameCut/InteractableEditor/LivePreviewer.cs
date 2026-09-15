@@ -2,179 +2,416 @@
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using projectFrameCut.Drawing.Base.Picture;
 using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
 namespace projectFrameCut.LivePreview
 {
+    public enum NativePreviewOutputMode
+    {
+        Disabled,
+        Automatic,
+        Required,
+    }
+
+    public sealed record PreviewFrameSource(
+        string? ScRgbPath,
+        string? FallbackImagePath,
+        int Width,
+        int Height,
+        int Stride,
+        PreviewPixelFormat PixelFormat,
+        string ColorSpace,
+        bool RequireSwapChain);
+
     public class LivePreviewer
     {
+        private const string StaticFrameCacheVersion = "v3-preview-pixel-format";
+        private const string ClipPreviewCacheVersion = "v3-preview-pixel-format";
         public IClip[]? Clips;
         public ISoundTrack[]? SoundTracks;
         public int targetFrameRate = 60;
         public uint TotalDuration;
         public string TempPath = string.Empty;
         public string? ProxyRoot;
+        public string ProjectJson { get; set; } = string.Empty;
+        public IRenderClient? RpcClient { get; set; }
+        public Func<RenderArtifact, CancellationToken, Task<string>>? ArtifactResolver { get; set; }
+        public string? RenderProjectRoot { get; set; }
+        public string? RenderProxyRoot { get; set; }
+        public IReadOnlyList<AssetPathEntry>? RemoteAssets { get; set; }
         public int ProjectRelativeWidth { get; set; }
         public int ProjectRelativeHeight { get; set; }
         public event Action<double, TimeSpan>? OnProgressChanged;
+        public Guid RenderSessionId { get; set; } = Guid.NewGuid();
+        public FrameHashIndex HashIndex { get; private set; } = new();
+        private IReadOnlyDictionary<uint, string> FrameHashLookup { get; set; } = new Dictionary<uint, string>();
+        private IReadOnlyDictionary<Guid, IReadOnlyDictionary<uint, string>> ClipHashLookup { get; set; }
+            = new Dictionary<Guid, IReadOnlyDictionary<uint, string>>();
+        public string ProjectRoot => string.IsNullOrWhiteSpace(TempPath) ? string.Empty : Directory.GetParent(Path.GetFullPath(TempPath))?.FullName ?? string.Empty;
+        public string ProjectName { get; set; } = "Untitled Project";
+        public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Automatic;
 
         public bool IsFrameRendered(uint frameIndex)
         {
             if (Clips == null) return false;
-            var frameHash = Timeline.GetFrameHash(Clips, frameIndex);
-            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{frameHash}.png");
-            return Path.Exists(destPath);
+            if (frameIndex >= TotalDuration) return false;
+            var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash) ? indexedHash : "nullframe";
+            return Directory.Exists(TempPath)
+                && Directory.EnumerateFiles(TempPath, $"projectFrameCut_Render_{StaticFrameCacheVersion}_{frameHash}_*.png", SearchOption.TopDirectoryOnly).Any();
         }
 
-        public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight)
+        public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token = default)
         {
-            ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
             (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
-            LogDiagnostic($"[LiveRender] RenderOne request: frame #{frameIndex}");
-            var frameHash = Timeline.GetFrameHash(Clips, frameIndex);
-            var cacheKey = BuildFrameCacheKey(frameHash, targetWidth, targetHeight);
-            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{cacheKey}.png");
-            LogDiagnostic($"[LiveRender] FrameHash:{frameHash}");
-            if (Path.Exists(destPath))
+            try
             {
-                LogDiagnostic($"[LiveRender] Frame already exist; skip");
+                return RenderFrameCore(frameIndex, targetWidth, targetHeight, token);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Render frame #{frameIndex}", this);
+                var errFrame = ClipInitializationFailure.CreateFallbackFrame(targetWidth, targetHeight, 8, "Rendering", ex.Message);
+                var destPath = Path.Combine(TempPath, $"projectFrameCut_RenderError_{frameIndex}.png");
+                errFrame.SaveToPng(destPath);
                 return destPath;
             }
-            else
+        }
+
+        public string? TryRenderFrame(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token = default)
+        {
+            (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
+            try
             {
-                LogDiagnostic($"[LiveRender] Generating frame #{frameIndex} ({frameHash})...");
+                return RenderFrameCore(frameIndex, targetWidth, targetHeight, token);
             }
-            foreach (var item in Clips)
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
-                item.ReInit(8);
+                throw;
             }
-            var layers = Timeline.GetFramesInOneFrame(
-                Clips,
-                frameIndex,
-                targetWidth,
-                targetHeight,
-                forceResize: true,
-                projectRelativeWidth: ProjectRelativeWidth,
-                projectRelativeHeight: ProjectRelativeHeight);
-            var pic = Timeline.MixtureLayers(
-                layers,
-                frameIndex,
-                targetWidth,
-                targetHeight,
-                autoCenterImplicitClip: true,
-                projectRelativeWidth: ProjectRelativeWidth,
-                projectRelativeHeight: ProjectRelativeHeight);
-            pic.ToBitPerPixel(8).SaveToPng(destPath);
-            return destPath;
+            catch (Exception ex)
+            {
+                Log(ex, $"Render frame #{frameIndex}", this);
+                return null;
+            }
+        }
+
+        private string RenderFrameCore(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token)
+        {
+            ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
+            var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash) ? indexedHash : "nullframe";
+            var cachedPath = Path.Combine(ProjectRoot, "thumbs", $"projectFrameCut_Render_{StaticFrameCacheVersion}_{frameHash}_{targetWidth}x{targetHeight}.png");
+            if (File.Exists(cachedPath)) return cachedPath;
+            var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineFrameAsync(new TimelineFrameRequest
+            {
+                SessionId = RenderSessionId,
+                FrameIndex = frameIndex,
+                Width = targetWidth,
+                Height = targetHeight,
+                PreferredPixelFormat = PreviewPixelFormat.EncodedImage,
+            }, token).AsTask().GetAwaiter().GetResult();
+            var path = ResolveArtifactPath(artifact, token);
+            if (!File.Exists(path))
+                throw new FileNotFoundException("The render backend returned an artifact that does not exist.", path);
+            return path;
         }
 
         public IPicture GetFrame(uint frameIndex, int targetWidth, int targetHeight)
         {
-            ArgumentNullException.ThrowIfNull(Clips, "Clips");
+            return new Picture8bpp(RenderFrame(frameIndex, targetWidth, targetHeight));
+        }
+
+        public PreviewFrameSource RenderFrameForDisplay(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token)
+        {
             (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
-            var layers = Timeline.GetFramesInOneFrame(
-                Clips,
-                frameIndex,
-                targetWidth,
-                targetHeight,
-                forceResize: true,
-                projectRelativeWidth: ProjectRelativeWidth,
-                projectRelativeHeight: ProjectRelativeHeight);
-            var pic = Timeline.MixtureLayers(
-                layers,
-                frameIndex,
-                targetWidth,
-                targetHeight,
-                autoCenterImplicitClip: true,
-                projectRelativeWidth: ProjectRelativeWidth,
-                projectRelativeHeight: ProjectRelativeHeight);
-            return pic;
+            if (!OperatingSystem.IsWindows() && DefaultOutputMode == NativePreviewOutputMode.Required)
+                throw new PlatformNotSupportedException("Required SwapChain preview is only available on Windows.");
+            if (DefaultOutputMode == NativePreviewOutputMode.Disabled || !OperatingSystem.IsWindows())
+            {
+                var fallback = RenderFrame(frameIndex, targetWidth, targetHeight, token);
+                return new PreviewFrameSource(null, fallback, targetWidth, targetHeight, 0, PreviewPixelFormat.EncodedImage, string.Empty, false);
+            }
+
+            try
+            {
+                var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineFrameAsync(new TimelineFrameRequest
+                {
+                    SessionId = RenderSessionId,
+                    FrameIndex = frameIndex,
+                    Width = targetWidth,
+                    Height = targetHeight,
+                    PreferredPixelFormat = PreviewPixelFormat.Rgba16FloatScRgb,
+                }, token).AsTask().GetAwaiter().GetResult();
+                if (artifact.PixelFormat != PreviewPixelFormat.Rgba16FloatScRgb)
+                    throw new NotSupportedException("The render backend did not return an FP16 scRGB preview artifact.");
+
+                var scRgbPath = ResolveArtifactPath(artifact, token);
+                var fallback = DefaultOutputMode == NativePreviewOutputMode.Automatic
+                    ? RenderFrame(frameIndex, targetWidth, targetHeight, token)
+                    : null;
+                return new PreviewFrameSource(scRgbPath, fallback, artifact.Width, artifact.Height, artifact.Stride, artifact.PixelFormat, artifact.ColorSpace, DefaultOutputMode == NativePreviewOutputMode.Required);
+            }
+            catch when (DefaultOutputMode == NativePreviewOutputMode.Automatic && !token.IsCancellationRequested)
+            {
+                var fallback = RenderFrame(frameIndex, targetWidth, targetHeight, token);
+                return new PreviewFrameSource(null, fallback, targetWidth, targetHeight, 0, PreviewPixelFormat.EncodedImage, string.Empty, false);
+            }
         }
 
         public async Task UpdateDraft(DraftStructureJSON json)
         {
             var clips = json.Clips;
-            if (clips is null || clips.Length == 0) return;
+            clips ??= [];
 
             var clipsList = new List<IClip>();
             var reinitTasks = new List<Task>();
 
             foreach (var clip in clips)
             {
+                if (clip is null)
+                {
+                    Log("Live preview skipped a null clip entry.", "warn");
+                    continue;
+                }
                 if (clip.ClipType == ClipMode.MarkingClip)
                 {
                     continue;
                 }
 
-                var clipJson = JsonSerializer.SerializeToElement(clip);
-                var clipInstance = PluginManager.CreateClip(clipJson);
-                if (clipInstance.FilePath is not null)
+                reinitTasks.Add(Task.Run(() =>
                 {
-                    if (clipInstance.FilePath.StartsWith('$'))
+                    IClip clipInstance = null!;
+                    try
                     {
-                        var asset = AssetDatabase.Assets[clipInstance.FilePath.Substring(1)];
-                        clipInstance.FilePath = asset.Path;
-                        var proxyPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".proxy", $"{asset.AssetId}.mp4");
-                        if (Path.Exists(proxyPath))
-                        {
-                            clipInstance.FilePath = proxyPath;
-                            Log($"The proxy for {clipInstance.Name} is used.");
-                        }
-                        else
-                        {
-                            Log($"The proxy for {clipInstance.Name} does not exist.");
-                        }
+                        var clipJson = JsonSerializer.SerializeToElement(clip);
+                        clipInstance = PluginManager.CreateClip(clipJson);
                     }
-                    else if (ProxyRoot is not null && clipInstance.FilePath is not null)
+                    catch (Exception ex)
                     {
-                        var proxiedPath = Path.Combine(ProxyRoot, $"{Path.GetFileNameWithoutExtension(clipInstance.FilePath)}.proxy.mp4");
+                        if (clipInstance is not null)
+                            ClipInitializationFailure.Mark(clipInstance, "Initialization", ex);
+                        Log(ex, $"Create clip instance for {clip.Name}", this);
+                        return;
+                    }
+                    if (clipInstance is null)
+                    {
+                        Log($"Live preview skipped clip {clip.Id}/{clip.Name}: the clip provider returned no instance.", "warn");
+                        return;
+                    }
+                    if (clipInstance.FilePath is not null)
+                    {
+                        if (clipInstance.FilePath.StartsWith('$'))
+                        {
+                            var assetId = clipInstance.FilePath.Substring(1);
+                            var remoteAsset = RemoteAssets?.LastOrDefault(item =>
+                                string.Equals(item.AssetId, assetId, StringComparison.Ordinal));
+                            if (remoteAsset is not null && !string.IsNullOrWhiteSpace(remoteAsset.Path))
+                            {
+                                // A remote path is only useful to the render server. Keep it on the
+                                // metadata clip so geometry/timing can still drive dynamic overlays;
+                                // RenderClipFrame performs the actual source rendering remotely.
+                                clipInstance.FilePath = remoteAsset.Path;
+                            }
+                            else if (AssetDatabase.Assets.TryGetValue(assetId, out var asset) && asset is not null && !string.IsNullOrWhiteSpace(asset.Path))
+                            {
+                                clipInstance.FilePath = asset.Path;
+                                var proxyPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".proxy", $"{asset.AssetId}.mp4");
+                                if (Path.Exists(proxyPath))
+                                {
+                                    clipInstance.FilePath = proxyPath;
+                                    Log($"The proxy for {clipInstance.Name} is used.");
+                                }
+                                else
+                                {
+                                    Log($"The proxy for {clipInstance.Name} does not exist.");
+                                }
+                            }
+                            else
+                            {
+                                Log($"Live preview asset '{assetId}' was not found; the clip will use its fallback frame.", "warn");
+                            }
+                        }
+                        else if (ProxyRoot is not null && clipInstance.FilePath is not null)
+                        {
+                            var proxiedPath = Path.Combine(ProxyRoot, $"{Path.GetFileNameWithoutExtension(clipInstance.FilePath)}.proxy.mp4");
 
-                        if (Path.Exists(proxiedPath))
-                        {
-                            clipInstance.FilePath = proxiedPath;
-                            Log($"The proxy for {clipInstance.Name} is used.");
-                        }
-                        else
-                        {
-                            Log($"The proxy for {clipInstance.Name} does not exist.");
+                            if (Path.Exists(proxiedPath))
+                            {
+                                clipInstance.FilePath = proxiedPath;
+                                Log($"The proxy for {clipInstance.Name} is used.");
+                            }
+                            else
+                            {
+                                Log($"The proxy for {clipInstance.Name} does not exist.");
+                            }
                         }
                     }
-                }
-                clipsList.Add(clipInstance);
-                reinitTasks.Add(Task.Run(() => clipInstance.ReInit(8)));
+                    try
+                    {
+                        if (RpcClient is null)
+                        {
+                            clipInstance.ReInit(8);
+                            if (!ClipInitializationFailure.HasDeferredFailures(clipInstance.ExtraData))
+                                ClipInitializationFailure.Clear(clipInstance);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ClipInitializationFailure.Mark(clipInstance, "Source or ResolveEffect", ex);
+                        Log(ex, $"Initialize live-preview clip {clipInstance.Name} ({clipInstance.Id}); using checkerboard fallback", this);
+                    }
+                    finally
+                    {
+                        // Remote media normally cannot be opened on the UI device. The clip is still
+                        // required for ContainsFrame/layout calculations; its bitmap comes from RPC.
+                        lock (clipsList)
+                        {
+                            clipsList.Add(clipInstance);
+                        }
+                    }
+                }));
             }
 
             await Task.WhenAll(reinitTasks);
 
             Clips = clipsList.ToArray();
             SoundTracks = DraftImportAndExportHelper.JSONToISoundTracks(json).ToArray();
-            long max = 0;
+            ulong max = 0;
             foreach (var clip in Clips)
             {
-                max = Math.Max(clip.StartFrame + clip.Duration, max);
+                var end = (ulong)clip.StartFrame + clip.Duration;
+                if (end > uint.MaxValue)
+                {
+                    Log($"[LiveRender] Ignoring overflowing timeline end for clip {clip.Id}/{clip.Name}: start={clip.StartFrame}, duration={clip.Duration}.", "warn");
+                    max = Math.Max(max, (ulong)clip.StartFrame + 1);
+                    continue;
+                }
+                max = Math.Max(end, max);
 
-            }
-
-            if (max > uint.MaxValue)
-            {
-                throw new OverflowException($"Project duration overflow, total frames exceed {uint.MaxValue}.");
             }
 
             TotalDuration = (uint)max;
 
+            var request = new OpenProjectRequest
+            {
+                SessionId = RenderSessionId,
+                ProjectRoot = RenderProjectRoot ?? ProjectRoot,
+                ProjectJson = ProjectJson,
+                TimelineJson = JsonSerializer.Serialize(json),
+                ProxyRoot = RenderProxyRoot ?? ProxyRoot ?? string.Empty,
+                ProjectWidth = Math.Max(1, ProjectRelativeWidth),
+                ProjectHeight = Math.Max(1, ProjectRelativeHeight),
+                FrameRate = Math.Max(1, targetFrameRate),
+                Assets = RemoteAssets?.ToList() ?? AssetDatabase.Assets.Select(static item => new AssetPathEntry
+                {
+                    AssetId = item.Key,
+                    Path = item.Value.Path ?? string.Empty,
+                }).Where(static item => !string.IsNullOrWhiteSpace(item.Path)).ToList(),
+            };
+            // Start the Render backend only after a concrete project has been loaded.
+            // This keeps application startup and the home page independent from the
+            // Windows CLI RPC process. The project root is passed so each open
+            // project gets a dedicated backend bound to it.
+            if (RpcClient is null) RenderRpcBootstrap.Initialize(request.ProjectRoot, projectName: ProjectName);
+            var session = await (RpcClient ?? RenderRpcBootstrap.Client).OpenProjectAsync(request).ConfigureAwait(false);
+            HashIndex = session.HashIndex ?? new();
+            FrameHashLookup = HashIndex.FrameHashes
+                .GroupBy(entry => entry.FrameIndex)
+                .ToDictionary(group => group.Key, group => group.Last().Hash);
+            ClipHashLookup = HashIndex.ClipHashes.ToDictionary(
+                entry => entry.ClipId,
+                entry => (IReadOnlyDictionary<uint, string>)entry.FrameHashes
+                    .GroupBy(frame => frame.FrameIndex)
+                    .ToDictionary(group => group.Key, group => group.Last().Hash));
+            TotalDuration = session.Duration;
+
             Log($"[LiveRender] Updated clips, total {Clips.Length} clips.");
+        }
+
+        public string RenderClipFrame(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token)
+        {
+            if (ClipHashLookup.TryGetValue(clipId, out var clipHashes)
+                && clipHashes.TryGetValue(frameIndex, out var clipHash))
+            {
+                var cachedPath = Path.Combine(
+                    ProjectRoot,
+                    "thumbs",
+                    "perClip",
+                    clipId.ToString(),
+                    "dynamic",
+                    $"dynamic_{ClipPreviewCacheVersion}_{clipHash}_{Math.Max(1, projectWidth)}x{Math.Max(1, projectHeight)}_{Math.Max(1, canvasWidth)}x{Math.Max(1, canvasHeight)}.png");
+                if (File.Exists(cachedPath)) return cachedPath;
+            }
+            var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
+            {
+                SessionId = RenderSessionId,
+                ClipId = clipId,
+                FrameIndex = frameIndex,
+                CanvasWidth = canvasWidth,
+                CanvasHeight = canvasHeight,
+                ProjectWidth = projectWidth,
+                ProjectHeight = projectHeight,
+                PreferredPixelFormat = PreviewPixelFormat.EncodedImage,
+            }, token).AsTask().GetAwaiter().GetResult();
+            return ResolveArtifactPath(artifact, token);
+        }
+
+        public PreviewFrameSource RenderClipFrameForDisplay(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token)
+        {
+            if (!OperatingSystem.IsWindows() && DefaultOutputMode == NativePreviewOutputMode.Required)
+                throw new PlatformNotSupportedException("Required SwapChain preview is only available on Windows.");
+            if (DefaultOutputMode == NativePreviewOutputMode.Disabled || !OperatingSystem.IsWindows())
+            {
+                var fallback = RenderClipFrame(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token);
+                return new PreviewFrameSource(null, fallback, canvasWidth, canvasHeight, 0, PreviewPixelFormat.EncodedImage, string.Empty, false);
+            }
+
+            try
+            {
+                var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
+                {
+                    SessionId = RenderSessionId,
+                    ClipId = clipId,
+                    FrameIndex = frameIndex,
+                    CanvasWidth = canvasWidth,
+                    CanvasHeight = canvasHeight,
+                    ProjectWidth = projectWidth,
+                    ProjectHeight = projectHeight,
+                    PreferredPixelFormat = PreviewPixelFormat.Rgba16FloatScRgb,
+                }, token).AsTask().GetAwaiter().GetResult();
+                if (artifact.PixelFormat != PreviewPixelFormat.Rgba16FloatScRgb)
+                    throw new NotSupportedException("The render backend did not return an FP16 scRGB clip-preview artifact.");
+
+                var scRgbPath = ResolveArtifactPath(artifact, token);
+                var fallback = DefaultOutputMode == NativePreviewOutputMode.Automatic
+                    ? RenderClipFrame(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token)
+                    : null;
+                return new PreviewFrameSource(scRgbPath, fallback, artifact.Width, artifact.Height, artifact.Stride, artifact.PixelFormat, artifact.ColorSpace, DefaultOutputMode == NativePreviewOutputMode.Required);
+            }
+            catch when (DefaultOutputMode == NativePreviewOutputMode.Automatic && !token.IsCancellationRequested)
+            {
+                var fallback = RenderClipFrame(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token);
+                return new PreviewFrameSource(null, fallback, canvasWidth, canvasHeight, 0, PreviewPixelFormat.EncodedImage, string.Empty, false);
+            }
         }
 
         public bool HasAudioSources()
@@ -186,6 +423,14 @@ namespace projectFrameCut.LivePreview
 
         public async Task ResetAudioPlaybackSources(int ppb = 8)
         {
+            // Remote source paths belong to the render server and cannot be reopened by the UI
+            // process. The remote OpenProject call already initialized these sources; playback
+            // below consumes the WAV/MP4 artifacts downloaded from that server.
+            if (RpcClient is not null)
+            {
+                return;
+            }
+
             if (Clips is not null)
             {
                 foreach (var clip in Clips.Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip))
@@ -209,81 +454,42 @@ namespace projectFrameCut.LivePreview
             {
                 return null;
             }
-
-            var id = Guid.NewGuid();
-            var audDestPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}.wav");
-
-            using var writer = new AudioWriter(audDestPath, sampleRate, channels, "pcm_s16le");
-            var composer = new AudioComposer<float>
+            var artifact = await (RpcClient ?? RenderRpcBootstrap.Client).RenderAudioSegmentAsync(new AudioSegmentRequest
             {
-                Clips = Clips ?? Array.Empty<IClip>(),
-                SoundTracks = SoundTracks,
-                Writer = writer,
-                StartFrame = (uint)startIndex,
-                Duration = (uint)length,
-            };
-
-            await Task.Run(() => composer.Compose(targetFramerate, sampleRate, channels, 40960, token), token);
-            writer.Finish();
-            return audDestPath;
+                SessionId = RenderSessionId,
+                StartFrame = checked((uint)startIndex),
+                Length = checked((uint)length),
+                FrameRate = targetFramerate,
+                SampleRate = sampleRate,
+                Channels = channels,
+            }, token).ConfigureAwait(false);
+            return await ResolveArtifactPathAsync(artifact, token).ConfigureAwait(false);
         }
 
         public async Task<string> RenderSomeFrames(int startIndex, int length, int targetWidth, int targetFramerate, int targetHeight, CancellationToken token, bool includeAudio = true)
         {
-
             (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
-
-            var (encodeWidth, encodeHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: true);
-
-            var id = Guid.NewGuid();
-            var resultPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}_result.mp4");
-            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}.mp4");
-            var audDestPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}.wav");
-            LogDiagnostic($"[LiveRender] RenderSomeFrames request: frame #{startIndex}, length {length}, output {targetWidth}x{targetHeight}, encode {encodeWidth}x{encodeHeight}");
-            using var builder = new VideoBuilder(destPath, encodeWidth, encodeHeight, targetFramerate, "libx264", "AV_PIX_FMT_YUV420P")
+            var artifact = await (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineSegmentAsync(new TimelineSegmentRequest
             {
-                Duration = uint.MaxValue,
-                BlockWrite = true //builder doesn't write from non-0 start index when blockwrite is not true
-            };
-            Renderer renderer = new Renderer
-            {
-                StartFrame = (uint)startIndex,
-                Duration = (uint)length,
-                builder = builder,
-                Clips = Clips,
-                Use16Bit = false,
-                AutoCenterImplicitClip = true,
-                MaxThreads = 1,
-                ProjectRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : targetWidth,
-                ProjectRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : targetHeight,
-
-            };
-            renderer.PrepareRender(token);
-            renderer.OnProgressChanged += OnProgressChanged;
-            await renderer.GoRender(token);
-            renderer.OnProgressChanged -= OnProgressChanged;
-
-            if (includeAudio)
-            {
-                audDestPath = await RenderSomeAudio(startIndex, length, targetFramerate, token) ?? string.Empty;
-            }
-            builder.Writer.Finish(); //Finish doesn't support non-0 start frame, just end the writer
-            builder.Dispose();
-
-            if (includeAudio && !string.IsNullOrWhiteSpace(audDestPath) && File.Exists(audDestPath))
-            {
-                await Task.Run(() => VideoAudioMuxer.MuxFromFiles(destPath, audDestPath, resultPath, true), token);
-                File.Delete(audDestPath);
-            }
-            else
-            {
-                File.Copy(destPath, resultPath, true);
-            }
-
-            File.Delete(destPath);
-            LogDiagnostic($"[LiveRender] RenderSomeFrames finished: {resultPath}");
-            return resultPath;
+                SessionId = RenderSessionId,
+                StartFrame = checked((uint)startIndex),
+                Length = checked((uint)length),
+                Width = targetWidth,
+                Height = targetHeight,
+                FrameRate = targetFramerate,
+                IncludeAudio = includeAudio,
+            }, token).ConfigureAwait(false);
+            OnProgressChanged?.Invoke(1, TimeSpan.Zero);
+            return await ResolveArtifactPathAsync(artifact, token).ConfigureAwait(false);
         }
+
+        private string ResolveArtifactPath(RenderArtifact artifact, CancellationToken cancellationToken)
+            => ResolveArtifactPathAsync(artifact, cancellationToken).GetAwaiter().GetResult();
+
+        private Task<string> ResolveArtifactPathAsync(RenderArtifact artifact, CancellationToken cancellationToken)
+            => ArtifactResolver is not null
+                ? ArtifactResolver(artifact, cancellationToken)
+                : Task.FromResult(RenderRpcBootstrap.ResolveArtifactPath(ProjectRoot, artifact));
 
         private static (int width, int height) NormalizeTargetSize(int width, int height, bool requireEven)
         {
@@ -311,6 +517,6 @@ namespace projectFrameCut.LivePreview
         }
 
         private static string BuildFrameCacheKey(string frameHash, int width, int height)
-            => $"{frameHash}_{width}x{height}";
+            => $"{StaticFrameCacheVersion}_{frameHash}_{width}x{height}";
     }
 }

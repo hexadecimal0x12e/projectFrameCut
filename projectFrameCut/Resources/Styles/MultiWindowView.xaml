@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<?xaml-comp compile="true" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!--
+        Global MultiWindowView defaults.
+        A user MultiWindowView.xaml file can override any entry by declaring the
+        same key because that dictionary is merged after this one.
+    -->
+
+    <!-- Window and workspace sizing -->
+    <x:String x:Key="MultiWindowItemDefaultTitle">Window</x:String>
+    <x:Double x:Key="MultiWindowItemDefaultWidth">400</x:Double>
+    <x:Double x:Key="MultiWindowItemDefaultHeight">300</x:Double>
+    <x:Double x:Key="MultiWindowItemMinimumWidth">240</x:Double>
+    <x:Double x:Key="MultiWindowItemMinimumHeight">120</x:Double>
+    <x:Double x:Key="MultiWindowItemMinimizedHeight">35</x:Double>
+    <x:Double x:Key="MultiWindowItemTitleBarHeight">32</x:Double>
+    <x:Double x:Key="MultiWindowItemStandaloneTitleBarHeight">50</x:Double>
+    <x:Double x:Key="MultiWindowItemCornerRadius">10</x:Double>
+    <x:Double x:Key="MultiWindowItemBorderThickness">1</x:Double>
+    <!-- Consumed by MultiWindowItem.ResizeHandleSize and converted to GridLength in code. -->
+    <x:Double x:Key="MultiWindowItemResizeHandleSize">10</x:Double>
+    <Thickness x:Key="MultiWindowItemOuterPadding">5</Thickness>
+
+    <x:Double x:Key="MultiWindowViewTaskbarHeight">40</x:Double>
+    <x:Double x:Key="MultiWindowViewTaskbarItemHeight">32</x:Double>
+    <x:Double x:Key="MultiWindowViewTaskbarItemMinimumWidth">120</x:Double>
+    <x:Double x:Key="MultiWindowViewTaskbarItemMaximumWidth">200</x:Double>
+    <x:Double x:Key="MultiWindowViewContentChooserItemHeight">32</x:Double>
+    <x:Double x:Key="MultiWindowViewLayoutOptionWidth">130</x:Double>
+    <x:Double x:Key="MultiWindowViewLayoutOptionHeight">90</x:Double>
+
+    <!-- Workspace/window colors -->
+    <Color x:Key="MultiWindowViewBackgroundColor">#2D2D30</Color>
+    <Color x:Key="MultiWindowItemBackgroundColorLight">#EFF4F7</Color>
+    <Color x:Key="MultiWindowItemBackgroundColorDark">#262D3D</Color>
+    <Color x:Key="MultiWindowItemBorderColorLight">#CCCCCC</Color>
+    <Color x:Key="MultiWindowItemBorderColorDark">#000000</Color>
+    <Color x:Key="MultiWindowItemTitleBarBackgroundColor">Transparent</Color>
+    <Color x:Key="MultiWindowItemTitleTextColorLight">#1A1A1A</Color>
+    <Color x:Key="MultiWindowItemTitleTextColorDark">#FFFFFF</Color>
+    <Color x:Key="MultiWindowItemTitleBarSeparatorColorLight">#20000000</Color>
+    <Color x:Key="MultiWindowItemTitleBarSeparatorColorDark">#15FFFFFF</Color>
+
+    <!-- Title and title-bar buttons -->
+    <x:Double x:Key="MultiWindowItemTitleFontSize">14</x:Double>
+    <Thickness x:Key="MultiWindowItemTitleMargin">10,0,0,0</Thickness>
+    <x:Double x:Key="MultiWindowItemWindowButtonSize">24</x:Double>
+    <Style x:Key="MultiWindowItemTitleStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="{DynamicResource MultiWindowItemTitleFontSize}" />
+        <Setter Property="VerticalOptions" Value="Center" />
+        <Setter Property="LineBreakMode" Value="TailTruncation" />
+    </Style>
+    <Style x:Key="MultiWindowItemWindowButtonStyle" TargetType="Border">
+        <Setter Property="WidthRequest" Value="{DynamicResource MultiWindowItemWindowButtonSize}" />
+        <Setter Property="HeightRequest" Value="{DynamicResource MultiWindowItemWindowButtonSize}" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 4" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="Stroke" Value="Transparent" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <!-- Taskbar and overlay colors -->
+    <Color x:Key="MultiWindowViewTaskbarBackgroundColor">#252528</Color>
+    <Color x:Key="MultiWindowViewTaskbarItemBackgroundColor">#3C3C40</Color>
+    <Color x:Key="MultiWindowViewTaskbarItemHoverColor">#505055</Color>
+    <Color x:Key="MultiWindowViewTaskbarTextColor">#FFFFFF</Color>
+    <x:Double x:Key="MultiWindowViewTaskbarTextFontSize">12</x:Double>
+
+    <Color x:Key="MultiWindowViewOverlayScrimColor">#80000000</Color>
+    <Color x:Key="MultiWindowViewOverlayBackgroundColor">#2D2D30</Color>
+    <Color x:Key="MultiWindowViewContentChooserBackgroundColor">#CC2D2D30</Color>
+    <Color x:Key="MultiWindowViewOverlayBorderColor">#3E3E42</Color>
+    <Color x:Key="MultiWindowViewOverlayTextColor">#FFFFFF</Color>
+    <Color x:Key="MultiWindowViewOverlaySecondaryTextColor">#808080</Color>
+    <Color x:Key="MultiWindowViewOverlayButtonColor">#454545</Color>
+    <Color x:Key="MultiWindowViewLayoutPreviewBackgroundColor">#1E1E1E</Color>
+    <Color x:Key="MultiWindowViewSnapPreviewColor">#3F7FB5FF</Color>
+    <Color x:Key="MultiWindowViewSnapPreviewBorderColor">#80B6E0FF</Color>
+</ResourceDictionary>

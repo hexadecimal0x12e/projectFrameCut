@@ -24,15 +24,7 @@ namespace projectFrameCut.Render.Effect
         public int Height { get; init; }
         public int Width { get; init; }
         public float Angle { get; init; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            {"StartX", StartX },
-            {"StartY", StartY },
-            {"Height", Height },
-            {"Width", Width },
-            {"Angle", Angle },
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string? NeedComputer => null;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
@@ -51,6 +43,7 @@ namespace projectFrameCut.Render.Effect
         public static List<string> OptionalParameters { get; } = new List<string>
         {
             "Angle",
+            "CropList"
         };
 
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
@@ -78,37 +71,44 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Unsupported parameters: {string.Join(", ", unsupportedParameters)}");
             }
 
-            float angle = parameters.TryGetValue("Angle", out var angleVal) ? Convert.ToSingle(angleVal) : 0f;
+            float angle = parameters.TryGetValue("Angle", out var angleVal) ? DynamicParam.ToFloat(angleVal) : 0f;
 
-            return new CropEffect_IPicture
+            var effect = new CropEffect_IPicture
             {
-                StartX = Convert.ToInt32(parameters["StartX"]),
-                StartY = Convert.ToInt32(parameters["StartY"]),
-                Height = Convert.ToInt32(parameters["Height"]),
-                Width = Convert.ToInt32(parameters["Width"]),
+                StartX = DynamicParam.ToInt32(parameters.GetValueOrDefault("StartX")),
+                StartY = DynamicParam.ToInt32(parameters.GetValueOrDefault("StartY")),
+                Height = DynamicParam.ToInt32(parameters.GetValueOrDefault("Height")),
+                Width = DynamicParam.ToInt32(parameters.GetValueOrDefault("Width")),
                 Angle = angle,
                 ImplementType = implementType,
             };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            int startX = StartX;
-            int startY = StartY;
-            int width = Width;
-            int height = Height;
+            int cropX = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartX"), StartX);
+            int cropY = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartY"), StartY);
+            int cropW = DynamicParam.Resolve(Parameters.GetValueOrDefault("Width"), Width);
+            int cropH = DynamicParam.Resolve(Parameters.GetValueOrDefault("Height"), Height);
+            float cropAngle = DynamicParam.Resolve(Parameters.GetValueOrDefault("Angle"), Angle);
+            int startX = cropX;
+            int startY = cropY;
+            int width = cropW;
+            int height = cropH;
 
             if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
             {
-                startX = (int)Math.Round((double)StartX * targetWidth / RelativeWidth);
-                startY = (int)Math.Round((double)StartY * targetHeight / RelativeHeight);
-                width = (int)Math.Round((double)Width * targetWidth / RelativeWidth);
-                height = (int)Math.Round((double)Height * targetHeight / RelativeHeight);
+                startX = (int)Math.Round((double)cropX * targetWidth / RelativeWidth);
+                startY = (int)Math.Round((double)cropY * targetHeight / RelativeHeight);
+                width = (int)Math.Round((double)cropW * targetWidth / RelativeWidth);
+                height = (int)Math.Round((double)cropH * targetHeight / RelativeHeight);
             }
 
-            return CropEffectShared.CropAndProcess(source, startX, startY, width, height, Angle);
+            return CropEffectShared.CropAndProcess(source, startX, startY, width, height, cropAngle);
         }
 
         [Obsolete("Use Render directly instead.")]
@@ -117,7 +117,7 @@ namespace projectFrameCut.Render.Effect
             return CropEffectShared.CropAndProcess(source, startX, startY, width, height, Angle);
         }
 
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; }
     }
 
@@ -293,15 +293,17 @@ namespace projectFrameCut.Render.Effect
             float angleRad = angle * MathF.PI / 180f;
             float cosA = MathF.Cos(angleRad);
             float sinA = MathF.Sin(angleRad);
+            var alpha = new float[pixels];
 
             var result = new Picture8bpp(outW, outH)
             {
                 r = GC.AllocateUninitializedArray<byte>(pixels),
                 g = GC.AllocateUninitializedArray<byte>(pixels),
                 b = GC.AllocateUninitializedArray<byte>(pixels),
-                a = src.HasAlphaChannel && src.a != null
-                    ? GC.AllocateUninitializedArray<float>(pixels) : null,
-                HasAlphaChannel = src.HasAlphaChannel,
+                // Keep RGB allocations uninitialized for performance. Pixels outside the
+                // rotated source are hidden by the zero-initialized alpha channel.
+                a = alpha,
+                HasAlphaChannel = true,
                 Tag = src.Tag,
             };
 
@@ -325,25 +327,11 @@ namespace projectFrameCut.Render.Effect
                         result.r[idx] = rr;
                         result.g[idx] = gg;
                         result.b[idx] = bb;
+                        alpha[idx] = src.HasAlphaChannel && src.a != null
+                            ? SampleBilinearAlpha(src, sx, sy)
+                            : 1f;
                     }
-                    // out-of-bounds pixels stay 0 (black/transparent)
-                }
-            }
-
-            if (result.a != null && src.a != null)
-            {
-                for (int oy = 0; oy < outH; oy++)
-                {
-                    int dstRowStart = oy * outW;
-                    for (int ox = 0; ox < outW; ox++)
-                    {
-                        float rx = safe.X + ox - cx;
-                        float ry = safe.Y + oy - cy;
-                        float sx = cosA * rx - sinA * ry + cx;
-                        float sy = sinA * rx + cosA * ry + cy;
-                        if (sx >= 0 && sx < srcW && sy >= 0 && sy < srcH)
-                            result.a[dstRowStart + ox] = SampleBilinearAlpha(src, sx, sy);
-                    }
+                    // Out-of-bounds RGB values remain uninitialized, but alpha stays 0.
                 }
             }
 
@@ -361,15 +349,17 @@ namespace projectFrameCut.Render.Effect
             float angleRad = angle * MathF.PI / 180f;
             float cosA = MathF.Cos(angleRad);
             float sinA = MathF.Sin(angleRad);
+            var alpha = new float[pixels];
 
             var result = new Picture16bpp(outW, outH)
             {
                 r = GC.AllocateUninitializedArray<ushort>(pixels),
                 g = GC.AllocateUninitializedArray<ushort>(pixels),
                 b = GC.AllocateUninitializedArray<ushort>(pixels),
-                a = src.HasAlphaChannel && src.a != null
-                    ? GC.AllocateUninitializedArray<float>(pixels) : null,
-                HasAlphaChannel = src.HasAlphaChannel,
+                // Keep RGB allocations uninitialized for performance. Pixels outside the
+                // rotated source are hidden by the zero-initialized alpha channel.
+                a = alpha,
+                HasAlphaChannel = true,
                 Tag = src.Tag,
             };
 
@@ -392,24 +382,11 @@ namespace projectFrameCut.Render.Effect
                         result.r[idx] = rr;
                         result.g[idx] = gg;
                         result.b[idx] = bb;
+                        alpha[idx] = src.HasAlphaChannel && src.a != null
+                            ? SampleBilinearAlpha(src, sx, sy)
+                            : 1f;
                     }
-                }
-            }
-
-            if (result.a != null && src.a != null)
-            {
-                for (int oy = 0; oy < outH; oy++)
-                {
-                    int dstRowStart = oy * outW;
-                    for (int ox = 0; ox < outW; ox++)
-                    {
-                        float rx = safe.X + ox - cx;
-                        float ry = safe.Y + oy - cy;
-                        float sx = cosA * rx - sinA * ry + cx;
-                        float sy = sinA * rx + cosA * ry + cy;
-                        if (sx >= 0 && sx < srcW && sy >= 0 && sy < srcH)
-                            result.a[dstRowStart + ox] = SampleBilinearAlpha(src, sx, sy);
-                    }
+                    // Out-of-bounds RGB values remain uninitialized, but alpha stays 0.
                 }
             }
 
@@ -584,15 +561,7 @@ namespace projectFrameCut.Render.Effect
         public int Height { get; init; }
         public int Width { get; init; }
         public float Angle { get; init; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "StartX", StartX },
-            { "StartY", StartY },
-            { "Height", Height },
-            { "Width", Width },
-            { "Angle", Angle },
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string? NeedComputer => "CropComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -611,6 +580,7 @@ namespace projectFrameCut.Render.Effect
         public static List<string> OptionalParameters { get; } = new List<string>
         {
             "Angle",
+            "CropList"
         };
 
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
@@ -623,7 +593,7 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string TypeName => "Crop";
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
@@ -640,26 +610,33 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Unsupported parameters: {string.Join(", ", unsupportedParameters)}");
             }
 
-            float angle = parameters.TryGetValue("Angle", out var angleVal) ? Convert.ToSingle(angleVal) : 0f;
+            float angle = parameters.TryGetValue("Angle", out var angleVal) ? DynamicParam.ToFloat(angleVal) : 0f;
 
-            return new CropEffect_HwAccel
+            var effect = new CropEffect_HwAccel
             {
-                StartX = Convert.ToInt32(parameters["StartX"]),
-                StartY = Convert.ToInt32(parameters["StartY"]),
-                Height = Convert.ToInt32(parameters["Height"]),
-                Width = Convert.ToInt32(parameters["Width"]),
+                StartX = DynamicParam.ToInt32(parameters.GetValueOrDefault("StartX")),
+                StartY = DynamicParam.ToInt32(parameters.GetValueOrDefault("StartY")),
+                Height = DynamicParam.ToInt32(parameters.GetValueOrDefault("Height")),
+                Width = DynamicParam.ToInt32(parameters.GetValueOrDefault("Width")),
                 Angle = angle,
             };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            int startX = StartX;
-            int startY = StartY;
-            int width = Width;
-            int height = Height;
+            int cropX = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartX"), StartX);
+            int cropY = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartY"), StartY);
+            int cropW = DynamicParam.Resolve(Parameters.GetValueOrDefault("Width"), Width);
+            int cropH = DynamicParam.Resolve(Parameters.GetValueOrDefault("Height"), Height);
+            float cropAngle = DynamicParam.Resolve(Parameters.GetValueOrDefault("Angle"), Angle);
+            int startX = cropX;
+            int startY = cropY;
+            int width = cropW;
+            int height = cropH;
 
             if (width <= 0 || height <= 0)
             {
@@ -668,15 +645,15 @@ namespace projectFrameCut.Render.Effect
 
             if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
             {
-                startX = (int)Math.Round((double)StartX * targetWidth / RelativeWidth);
-                startY = (int)Math.Round((double)StartY * targetHeight / RelativeHeight);
-                width = (int)Math.Round((double)Width * targetWidth / RelativeWidth);
-                height = (int)Math.Round((double)Height * targetHeight / RelativeHeight);
+                startX = (int)Math.Round((double)cropX * targetWidth / RelativeWidth);
+                startY = (int)Math.Round((double)cropY * targetHeight / RelativeHeight);
+                width = (int)Math.Round((double)cropW * targetWidth / RelativeWidth);
+                height = (int)Math.Round((double)cropH * targetHeight / RelativeHeight);
             }
 
-            if (Math.Abs(Angle) > float.Epsilon)
+            if (Math.Abs(cropAngle) > float.Epsilon)
             {
-                return CropEffectShared.CropAndProcess(source, startX, startY, width, height, Angle);
+                return CropEffectShared.CropAndProcess(source, startX, startY, width, height, cropAngle);
             }
 
             if (startX >= source.Width || startY >= source.Height ||
@@ -803,4 +780,102 @@ namespace projectFrameCut.Render.Effect
     }
 
 
+
+
+
+    /// <summary>
+    /// The Render-side provider of the Crop effect. Builds either the normal crop or the continuous
+    /// progress cropper depending on the <see cref="EffectProviderBase.IsContinuousEffectParameterKey"/> parameter.
+    /// </summary>
+    public class CropEffectProvider : EffectProviderBase
+    {
+        public CropEffectProvider()
+        {
+            Name = "Crop";
+            SetField("StartX", 0);
+            SetField("StartY", 0);
+            SetField("Width", 1280);
+            SetField("Height", 720);
+            SetField("Angle", 0f);
+        }
+
+        public override string TypeName => "Crop";
+
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("StartX", EffectArgumentFieldType.Integer, "0"),
+                Field("StartY", EffectArgumentFieldType.Integer, "0"),
+                Field("Width", EffectArgumentFieldType.Integer, "1280", min: "1"),
+                Field("Height", EffectArgumentFieldType.Integer, "720", min: "1"),
+                Field("Angle", EffectArgumentFieldType.Numeric, "0", min: "-180", max: "180"),
+                // Declared so the continuous-Crop serialized parameters (which include CropList) can be
+                // typed by ConvertParams / NormalizedParameters. The normal crop never emits this key.
+                Field("CropList", EffectArgumentFieldType.String, "[]", remarks: "Serialized CropData array as JSON string (continuous crop only)")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration, EffectImplementType.IPicture];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            if (MetaData.Remove(IsContinuousEffectParameterKey, out _) || parameters.Remove(IsContinuousEffectParameterKey, out _))
+            {
+                if (!parameters.ContainsKey("StartX")) parameters["StartX"] = 0;
+                if (!parameters.ContainsKey("StartY")) parameters["StartY"] = 0;
+                if (!parameters.ContainsKey("Height")) parameters["Height"] = 1;
+                if (!parameters.ContainsKey("Width")) parameters["Width"] = 1;
+                if (!parameters.ContainsKey("Angle")) parameters["Angle"] = 0f;
+                if (!parameters.ContainsKey("CropList")) parameters["CropList"] = "[]";
+
+                return implementType switch
+                {
+                    EffectImplementType.HwAcceleration =>
+                    [
+                        new ProgressCropper_HwAccel
+                        {
+                            StartX = Convert.ToInt32(parameters["StartX"]),
+                            StartY = Convert.ToInt32(parameters["StartY"]),
+                            Height = Convert.ToInt32(parameters["Height"]),
+                            Width = Convert.ToInt32(parameters["Width"]),
+                            Angle = Convert.ToSingle(parameters["Angle"]),
+                            CropList = CropEffectShared.ParseCropList(parameters["CropList"]),
+                        }
+                    ],
+                    EffectImplementType.IPicture or EffectImplementType.NotSpecified =>
+                    [
+                        new ProgressCropper_IPicture
+                        {
+                            StartX = Convert.ToInt32(parameters["StartX"]),
+                            StartY = Convert.ToInt32(parameters["StartY"]),
+                            Height = Convert.ToInt32(parameters["Height"]),
+                            Width = Convert.ToInt32(parameters["Width"]),
+                            Angle = Convert.ToSingle(parameters["Angle"]),
+                            CropList = CropEffectShared.ParseCropList(parameters["CropList"]),
+                            ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType,
+                        }
+                    ],
+                    _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
+                };
+            }
+
+            if (implementType == EffectImplementType.NotSpecified)
+            {
+                return [CropEffect_IPicture.FromParametersDictionary(parameters, EffectImplementType.IPicture)];
+            }
+            return implementType switch
+            {
+                EffectImplementType.HwAcceleration => [CropEffect_HwAccel.FromParametersDictionary(parameters)],
+                EffectImplementType.IPicture => [CropEffect_IPicture.FromParametersDictionary(parameters, implementType)],
+                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
+            };
+        }
+    }
 }

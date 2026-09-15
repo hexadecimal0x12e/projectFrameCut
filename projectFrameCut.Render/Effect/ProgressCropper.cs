@@ -17,7 +17,7 @@ namespace projectFrameCut.Render.Effect
         public string TypeName => "Crop";
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public bool IsReorderable => true;
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
@@ -30,20 +30,16 @@ namespace projectFrameCut.Render.Effect
         public int Width { get; init; }
         public float Angle { get; init; }
         public List<CropData> CropList { get; set; } = new();
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "StartX", StartX },
-            { "StartY", StartY },
-            { "Height", Height },
-            { "Width", Width },
-            { "Angle", Angle },
-            { "CropList", JsonSerializer.Serialize(CropList) },
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public IPicture Render(IPicture source, float progress, IComputer? computer, int targetWidth, int targetHeight)
         {
-            var crop = ResolveCrop(progress, targetWidth, targetHeight);
+            int cropX = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartX"), StartX);
+            int cropY = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartY"), StartY);
+            int cropW = DynamicParam.Resolve(Parameters.GetValueOrDefault("Width"), Width);
+            int cropH = DynamicParam.Resolve(Parameters.GetValueOrDefault("Height"), Height);
+            float cropAngle = DynamicParam.Resolve(Parameters.GetValueOrDefault("Angle"), Angle);
+            var crop = ResolveCrop(progress, targetWidth, targetHeight, cropX, cropY, cropW, cropH, cropAngle);
             return CropEffectShared.CropAndProcess(source, crop.StartX, crop.StartY, crop.Width, crop.Height, crop.Angle);
         }
 
@@ -52,11 +48,11 @@ namespace projectFrameCut.Render.Effect
             ArgumentNullException.ThrowIfNull(parameters);
             return new ProgressCropper_IPicture
             {
-                StartX = Convert.ToInt32(parameters["StartX"]),
-                StartY = Convert.ToInt32(parameters["StartY"]),
-                Height = Convert.ToInt32(parameters["Height"]),
-                Width = Convert.ToInt32(parameters["Width"]),
-                Angle = parameters.TryGetValue("Angle", out var angleVal) ? Convert.ToSingle(angleVal) : 0f,
+                StartX = DynamicParam.ToInt32(parameters.GetValueOrDefault("StartX")),
+                StartY = DynamicParam.ToInt32(parameters.GetValueOrDefault("StartY")),
+                Height = DynamicParam.ToInt32(parameters.GetValueOrDefault("Height")),
+                Width = DynamicParam.ToInt32(parameters.GetValueOrDefault("Width")),
+                Angle = parameters.TryGetValue("Angle", out var angleVal) ? DynamicParam.ToFloat(angleVal) : 0f,
                 CropList = CropEffectShared.ParseCropList(parameters.TryGetValue("CropList", out var list) ? list : null),
                 RelativeWidth = RelativeWidth,
                 RelativeHeight = RelativeHeight,
@@ -77,11 +73,11 @@ namespace projectFrameCut.Render.Effect
             }
         }
 
-        private CropData ResolveCrop(float progress, int targetWidth, int targetHeight)
+        private CropData ResolveCrop(float progress, int targetWidth, int targetHeight, int startX, int startY, int width, int height, float angle)
         {
             CropData crop = CropList.Count > 0
                 ? CropEffectShared.GetCropForProgress(CropList, Math.Clamp(progress, 0.0, 1.0))
-                : new CropData(0, StartX, StartY, Width, Height, Angle);
+                : new CropData(0, startX, startY, width, height, angle);
 
             return CropEffectShared.Scale(crop, targetWidth, targetHeight, RelativeWidth, RelativeHeight);
         }
@@ -105,23 +101,14 @@ namespace projectFrameCut.Render.Effect
         public int Width { get; init; }
         public float Angle { get; init; }
         public List<CropData> CropList { get; set; } = new();
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "StartX", StartX },
-            { "StartY", StartY },
-            { "Height", Height },
-            { "Width", Width },
-            { "Angle", Angle },
-            { "CropList", JsonSerializer.Serialize(CropList) },
-        };
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string? NeedComputer => "CropComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
         public string TypeName => "Crop";
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
@@ -144,11 +131,16 @@ namespace projectFrameCut.Render.Effect
 
         public IPicture Render(IPicture source, float progress, IComputer? computer, int targetWidth, int targetHeight)
         {
-            int startX = StartX;
-            int startY = StartY;
-            int width = Width;
-            int height = Height;
-            float angle = Angle;
+            int cropX = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartX"), StartX);
+            int cropY = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartY"), StartY);
+            int cropW = DynamicParam.Resolve(Parameters.GetValueOrDefault("Width"), Width);
+            int cropH = DynamicParam.Resolve(Parameters.GetValueOrDefault("Height"), Height);
+            float cropAngle = DynamicParam.Resolve(Parameters.GetValueOrDefault("Angle"), Angle);
+            int startX = cropX;
+            int startY = cropY;
+            int width = cropW;
+            int height = cropH;
+            float angle = cropAngle;
 
             if (CropList.Count > 0)
             {
@@ -162,10 +154,10 @@ namespace projectFrameCut.Render.Effect
             }
             else if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
             {
-                startX = (int)Math.Round((double)StartX * targetWidth / RelativeWidth);
-                startY = (int)Math.Round((double)StartY * targetHeight / RelativeHeight);
-                width = (int)Math.Round((double)Width * targetWidth / RelativeWidth);
-                height = (int)Math.Round((double)Height * targetHeight / RelativeHeight);
+                startX = (int)Math.Round((double)cropX * targetWidth / RelativeWidth);
+                startY = (int)Math.Round((double)cropY * targetHeight / RelativeHeight);
+                width = (int)Math.Round((double)cropW * targetWidth / RelativeWidth);
+                height = (int)Math.Round((double)cropH * targetHeight / RelativeHeight);
             }
 
             if (width <= 0 || height <= 0)
@@ -245,11 +237,11 @@ namespace projectFrameCut.Render.Effect
             ArgumentNullException.ThrowIfNull(parameters);
             return new ProgressCropper_HwAccel
             {
-                StartX = Convert.ToInt32(parameters["StartX"]),
-                StartY = Convert.ToInt32(parameters["StartY"]),
-                Height = Convert.ToInt32(parameters["Height"]),
-                Width = Convert.ToInt32(parameters["Width"]),
-                Angle = parameters.TryGetValue("Angle", out var angleVal) ? Convert.ToSingle(angleVal) : 0f,
+                StartX = DynamicParam.ToInt32(parameters.GetValueOrDefault("StartX")),
+                StartY = DynamicParam.ToInt32(parameters.GetValueOrDefault("StartY")),
+                Height = DynamicParam.ToInt32(parameters.GetValueOrDefault("Height")),
+                Width = DynamicParam.ToInt32(parameters.GetValueOrDefault("Width")),
+                Angle = parameters.TryGetValue("Angle", out var angleVal) ? DynamicParam.ToFloat(angleVal) : 0f,
                 CropList = CropEffectShared.ParseCropList(parameters.TryGetValue("CropList", out var list) ? list : null),
                 RelativeWidth = RelativeWidth,
                 RelativeHeight = RelativeHeight,
@@ -271,105 +263,47 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class CropEffectFactory : IEffectFactory
+    /// <summary>
+    /// The Render-side provider of the ProgressCrop keyframed crop provider.
+    /// </summary>
+    public class ProgressCropProvider : EffectProviderBase
     {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-
-        public string TypeName => "Crop";
-
-        public EffectTarget Target => EffectTarget.Video;
-
-        public List<string> ParametersNeeded { get; } = new List<string>
+        public ProgressCropProvider()
         {
-            "StartX",
-            "StartY",
-            "Height",
-            "Width",
-        };
-
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
-        {
-            {"StartX", "int" },
-            {"StartY", "int" },
-            {"Height", "int" },
-            {"Width", "int" },
-            {"Angle", "float" },
-        };
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.HwAcceleration, EffectImplementType.IPicture };
-
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            if (implementType == EffectImplementType.NotSpecified)
-            {
-                return BuildWithDefaultType(parameters);
-            }
-
-            return implementType switch
-            {
-                EffectImplementType.HwAcceleration => CropEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>()),
-                EffectImplementType.IPicture => CropEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
-                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
-            };
+            Name = "ProgressCrop";
+            SetField("StartX", 0);
+            SetField("StartY", 0);
+            SetField("Width", 1280);
+            SetField("Height", 720);
+            SetField("Angle", 0f);
+            SetField("CropList", "[]");
         }
 
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters)
+        public override string TypeName => "ProgressCrop";
+
+        public override EffectType TypeOfEffect => EffectType.ContinuousEffect;
+
+        public override EffectTarget Target => EffectTarget.Video | EffectTarget.IsKeyFramed | EffectTarget.IsNotVisibleInNewEffectSelector;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {
-            return CropEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), EffectImplementType.IPicture);
-        }
-    }
-
-    public class ProgressCropperEffectFactory : IEffectFactory
-    {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-
-        public string TypeName => "Crop";
-
-        public EffectTarget Target => EffectTarget.Video;
-
-        public List<string> ParametersNeeded { get; } = new List<string>
-        {
-            "StartX",
-            "StartY",
-            "Height",
-            "Width",
-        };
-
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
-        {
-            { "StartX", "int" },
-            { "StartY", "int" },
-            { "Height", "int" },
-            { "Width", "int" },
-            { "Angle", "float" },
-            { "CropList", "string" },
-        };
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.HwAcceleration, EffectImplementType.IPicture };
-
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            if (implementType == EffectImplementType.NotSpecified)
-            {
-                return BuildWithDefaultType(parameters);
-            }
-
-            return implementType switch
-            {
-                EffectImplementType.HwAcceleration => BuildContinuousHw(parameters),
-                EffectImplementType.IPicture => BuildContinuous(parameters, EffectImplementType.IPicture),
-                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
-            };
+            return
+            [
+                Field("StartX", EffectArgumentFieldType.Integer, "0"),
+                Field("StartY", EffectArgumentFieldType.Integer, "0"),
+                Field("Width", EffectArgumentFieldType.Integer, "1280", min: "1"),
+                Field("Height", EffectArgumentFieldType.Integer, "720", min: "1"),
+                Field("Angle", EffectArgumentFieldType.Numeric, "0", min: "-180", max: "180"),
+                Field("CropList", EffectArgumentFieldType.String, "[]", remarks: "Serialized CropData array as JSON string")
+            ];
         }
 
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters)
-        {
-            return BuildContinuous(parameters, EffectImplementType.IPicture);
-        }
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration, EffectImplementType.IPicture];
 
-        private static IEffect BuildContinuous(Dictionary<string, object>? parameters, EffectImplementType implementType)
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
-            parameters ??= new Dictionary<string, object>();
             if (!parameters.ContainsKey("StartX")) parameters["StartX"] = 0;
             if (!parameters.ContainsKey("StartY")) parameters["StartY"] = 0;
             if (!parameters.ContainsKey("Height")) parameters["Height"] = 1;
@@ -377,36 +311,34 @@ namespace projectFrameCut.Render.Effect
             if (!parameters.ContainsKey("Angle")) parameters["Angle"] = 0f;
             if (!parameters.ContainsKey("CropList")) parameters["CropList"] = "[]";
 
-            return new ProgressCropper_IPicture
+            return implementType switch
             {
-                StartX = Convert.ToInt32(parameters["StartX"]),
-                StartY = Convert.ToInt32(parameters["StartY"]),
-                Height = Convert.ToInt32(parameters["Height"]),
-                Width = Convert.ToInt32(parameters["Width"]),
-                Angle = Convert.ToSingle(parameters["Angle"]),
-                CropList = CropEffectShared.ParseCropList(parameters["CropList"]),
-                ImplementType = implementType,
-            };
-        }
-
-        private static IEffect BuildContinuousHw(Dictionary<string, object>? parameters)
-        {
-            parameters ??= new Dictionary<string, object>();
-            if (!parameters.ContainsKey("StartX")) parameters["StartX"] = 0;
-            if (!parameters.ContainsKey("StartY")) parameters["StartY"] = 0;
-            if (!parameters.ContainsKey("Height")) parameters["Height"] = 1;
-            if (!parameters.ContainsKey("Width")) parameters["Width"] = 1;
-            if (!parameters.ContainsKey("Angle")) parameters["Angle"] = 0f;
-            if (!parameters.ContainsKey("CropList")) parameters["CropList"] = "[]";
-
-            return new ProgressCropper_HwAccel
-            {
-                StartX = Convert.ToInt32(parameters["StartX"]),
-                StartY = Convert.ToInt32(parameters["StartY"]),
-                Height = Convert.ToInt32(parameters["Height"]),
-                Width = Convert.ToInt32(parameters["Width"]),
-                Angle = Convert.ToSingle(parameters["Angle"]),
-                CropList = CropEffectShared.ParseCropList(parameters["CropList"]),
+                EffectImplementType.HwAcceleration =>
+                [
+                    new ProgressCropper_HwAccel
+                    {
+                        StartX = Convert.ToInt32(parameters["StartX"]),
+                        StartY = Convert.ToInt32(parameters["StartY"]),
+                        Height = Convert.ToInt32(parameters["Height"]),
+                        Width = Convert.ToInt32(parameters["Width"]),
+                        Angle = Convert.ToSingle(parameters["Angle"]),
+                        CropList = CropEffectShared.ParseCropList(parameters["CropList"]),
+                    }
+                ],
+                EffectImplementType.IPicture or EffectImplementType.NotSpecified =>
+                [
+                    new ProgressCropper_IPicture
+                    {
+                        StartX = Convert.ToInt32(parameters["StartX"]),
+                        StartY = Convert.ToInt32(parameters["StartY"]),
+                        Height = Convert.ToInt32(parameters["Height"]),
+                        Width = Convert.ToInt32(parameters["Width"]),
+                        Angle = Convert.ToSingle(parameters["Angle"]),
+                        CropList = CropEffectShared.ParseCropList(parameters["CropList"]),
+                        ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType,
+                    }
+                ],
+                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };
         }
     }

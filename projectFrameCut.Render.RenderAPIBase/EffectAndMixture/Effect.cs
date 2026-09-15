@@ -24,7 +24,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Define the type name of the effect. 
         /// </summary>
         /// <remarks>
-        /// it SHOULD equals to <see cref="IEffectBundle.TypeName"/>, <see cref="IEffectFactory.TypeName"/> and so on.
+        /// it SHOULD equals to <see cref="IEffectProvider.TypeName"/> and so on.
         /// </remarks>
         public string TypeName { get; }
         /// <summary>
@@ -47,11 +47,11 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         /// <summary>
         /// Get the ID of this specific effect instance.
-        /// This is a <b>REQUIRED</b> property for any kind of <see cref="IBindableArgumentEffect"/>, but optional for others. 
+        /// This is a <b>REQUIRED</b> property, and it <b>should be a Guid</b>.
         /// </summary>
         /// <remarks>
-        /// DO NOT set this property manually. It will be set when the effect is created.
-        /// If set, it <b>should be a Guid</b>.
+        /// DO NOT set this property manually. It will be set when the effect is created. 
+        /// Manually setting this property may cause unexpected behavior, such as effect instance reference issues.
         /// </remarks>
         public string Id { get; set; }
 
@@ -75,6 +75,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         [JsonIgnore]
         public bool IsReorderable { get; }
+
+        /// <summary>
+        /// Gets whether this effect can process a frame after it has been resized to the target canvas size.
+        /// </summary>
+        [JsonIgnore]
+        public bool CanProcessFromCanvas => false;
 
         /// <summary>
         /// Indicates whether this effect needs a specific computer with the computer which it's ID is <see cref="NeedComputer"/> to run.
@@ -119,7 +125,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Get the info of this effect. Used in MCP calling in agent.
         /// </summary>
         /// <remarks>
-        /// For UI Displaying purpose please use EffectBundle's GetDisplayInfo method instead.
+        /// For UI displaying purposes, use the EffectProvider's display information instead.
         /// </remarks>
         /// <returns></returns>
         public virtual EffectInfo GetInfo()
@@ -136,12 +142,13 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         }
 
         /// <summary>
-        /// Get the binded EffectGroup's ID
+        /// Get the binded effect providing system's ID. 
+        /// Blank means this effect is not binded to any effect providing system (i.e. <see cref="IEffectProvider"/>).
         /// </summary>
         /// <remarks>
         /// <b>DO NOT</b> set this property manually. EffectGroup will do this.
         /// </remarks>
-        public string? BindedEffectGroupID { get; set; }
+        public string? BindedEffectProvidingSystemID { get; set; }
     }
 
     public interface INormalEffect : IEffect
@@ -178,4 +185,15 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
     }
 
+    /// <summary>
+    /// A value provider effect is a special kind of effect that does not produce picture output, but instead provides a dynamic value to other effects. 
+    /// <para />
+    /// It implements both <see cref="IEffect"/> and <see cref="IEffectArgumentField"/>, allowing it to be used as a source of dynamic parameters for other effects in the rendering pipeline.
+    /// </summary>
+    public interface IValueProviderEffect : IEffect, IEffectArgumentField
+    {
+        EffectType IEffect.TypeOfEffect => EffectType.NonIPictureOutputValueProvider;
+
+        bool IEffectArgumentField.IsDynamic => true;
+    }
 }

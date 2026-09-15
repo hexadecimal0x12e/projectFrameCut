@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -27,7 +27,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public float SecondPerFrameRatio { get; init; }
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectProvider[]? EffectProvidersInstances { get; set; }
         public string? FilePath { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
@@ -35,6 +38,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public int StartingX { get; set; }
+        public int StartingY { get; set; }
 
         public bool NeedFilePath => false;
 
@@ -67,11 +72,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex) => throw new NotSupportedException("Use TransformProcesser.");
-
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
-        {
-            throw new NotSupportedException("Use TransformProcesser.");
-        }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
         {

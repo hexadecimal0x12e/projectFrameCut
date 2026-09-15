@@ -1,5 +1,6 @@
 ﻿using FFmpeg.AutoGen;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
@@ -125,46 +126,48 @@ public partial class AdvancedSettingPage : ContentPage
             c => c.AddText(SettingLocalizedResources.Advanced_ManualEditSetting)
                   .AddCustomChild(layout)
                   .AddSeparator()
-                  .AddSwitch("DeveloperMode", SettingLocalizedResources.Advanced_DeveloperMode, SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+                  .AddCheckbox("DeveloperMode", SettingLocalizedResources.Advanced_DeveloperMode, SettingsManager.IsBoolSettingTrue("DeveloperMode"))
                   .AddSeparator())
         .AddText(SettingLocalizedResources.Advanced_Logging, fontSize: 20)
-        .AddSwitch("LogUIMessageToLogger", SettingLocalizedResources.Advanced_LogUIMessageToLogger, SettingsManager.IsBoolSettingTrue("LogUIMessageToLogger"))
-        .AddSwitch("DedicatedLogWindow", SettingLocalizedResources.Advanced_DedicatedLogWindow, SettingsManager.IsBoolSettingTrue("DedicatedLogWindow"))
+        .AddCheckbox("LogUIMessageToLogger", SettingLocalizedResources.Advanced_LogUIMessageToLogger, SettingsManager.IsBoolSettingTrue("LogUIMessageToLogger"))
+        .AddCheckbox("DedicatedLogWindow", SettingLocalizedResources.Advanced_DedicatedLogWindow, SettingsManager.IsBoolSettingTrue("DedicatedLogWindow"))
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.Advanced_Recover, fontSize: 20)
-        .AddSwitch("DontPanicOnUnhandledException", SettingLocalizedResources.Advanced_DontPanicOnUnhandledException, SettingsManager.IsBoolSettingTrue("DontPanicOnUnhandledException"))
-        .AddSwitch("AutoRecoverDraft", SettingLocalizedResources.Advanced_AutoRecoverDraft, SettingsManager.IsBoolSettingTrue("AutoRecoverDraft"))
+        .AddCheckbox("DontPanicOnUnhandledException", SettingLocalizedResources.Advanced_DontPanicOnUnhandledException, SettingsManager.IsBoolSettingTrue("DontPanicOnUnhandledException"))
+        .AddCheckbox("AutoRecoverDraft", SettingLocalizedResources.Advanced_AutoRecoverDraft, SettingsManager.IsBoolSettingTrue("AutoRecoverDraft"))
         .AddSeparator()
 
         .AddText(Localized.AppShell_ProjectsTab, fontSize: 20)
-        .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
-        .AddSwitch("edit_IgnoreEffectsTargetInEffectTab", SettingLocalizedResources.Edit_IgnoreEffectsTargetInEffectTab, SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab"), null)
-        .AddSwitch("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer", SettingLocalizedResources.Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer, SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer"), null)
+        .AddCheckbox("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
+        .AddCheckbox("edit_IgnoreEffectsTargetInEffectTab", SettingLocalizedResources.Edit_IgnoreEffectsTargetInEffectTab, SettingsManager.IsBoolSettingTrue("edit_IgnoreEffectsTargetInEffectTab"), null)
+        .AddCheckbox("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer", SettingLocalizedResources.Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer, SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer"), null)
+        .AddCheckbox("render_ForceDirectRenderTransport", SettingLocalizedResources.Render_ForceDirectRenderTransport, SettingsManager.IsBoolSettingTrue("render_ForceDirectRenderTransport"), null)
+        .AddCheckbox("render_RpcServerEnableHttp", SettingLocalizedResources.Render_RpcServerEnableHttp, SettingsManager.IsBoolSettingTrue("render_RpcServerEnableHttp"), null)
+        .AddEntry("render_RpcServerHttpPort", SettingLocalizedResources.Render_RpcServerHttpPort, GetSetting("render_RpcServerHttpPort", ""), "39485")
         .AddSeparator()
 
         .AddText("IPicture", fontSize: 20)
-        //.AddSwitch("diag_EnableProcessStack", SettingLocalizedResources.Advanced_EnableProcessStack, SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack"))
-        .AddSwitch("diag_TraceIPictureObject", SettingLocalizedResources.Advanced_TraceIPictureObject, SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject"))
-        .AddSwitch("render_DisallowPictureModeDowngrade", SettingLocalizedResources.Render_DisallowPictureModeDowngrade, IsBoolSettingTrue("render_DisallowPictureModeDowngrade"), null)
+        .AddCheckbox("diag_TraceIPictureObject", SettingLocalizedResources.Advanced_TraceIPictureObject, SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject"))
+        .AddCheckbox("render_DisallowPictureModeDowngrade", SettingLocalizedResources.Render_DisallowPictureModeDowngrade, IsBoolSettingTrue("render_DisallowPictureModeDowngrade"), null)
         .AddSeparator()
         
         .AddText(Localized.MainSettingsPage_Tab_Render, fontSize: 20)
-        .AddSwitch("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
-        .AddSwitch("render_DumpDiagData", SettingLocalizedResources.Render_DumpDiagData, IsBoolSettingTrue("render_DumpDiagData"), null)
-        .AddSwitch("render_DisallowVectorClipToMAUIPathInPreview", SettingLocalizedResources.Advanced_DisallowVectorClipToMAUIPathInPreview, IsBoolSettingTrueOrDefault("render_DisallowVectorClipToMAUIPathInPreview", true), null) //the vector dynamic preview is very problematic so disable it by default
-        .AddSwitch("render_DisallowViewBasedEffectInPreview", SettingLocalizedResources.Advanced_DisallowViewBasedEffectInPreview, IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview"), null)
+        .AddCheckbox("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
+        .AddCheckbox("render_DumpDiagData", SettingLocalizedResources.Render_DumpDiagData, IsBoolSettingTrue("render_DumpDiagData"), null)
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.Advanced_TextAndGlobalization, fontSize: 20)
         .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts.TryGetValue(GetSetting("OverrideCulture", "default"), out var k) ? k : "", null)
-        .AddSwitch("UseSystemFont", SettingLocalizedResources.Advanced_UseSystemFont, SettingsManager.IsBoolSettingTrue("UseSystemFont"))
-        .AddSwitch("diag_TypesettingEngineDiagMode", SettingLocalizedResources.Advanced_TypesettingEngineDiagMode, IsBoolSettingTrue("diag_TypesettingEngineDiagMode"), null)
+        .AddCheckbox("UseSystemFont", SettingLocalizedResources.Advanced_UseSystemFont, SettingsManager.IsBoolSettingTrue("UseSystemFont"))
+        .AddCheckbox("diag_TypesettingEngineDiagMode", SettingLocalizedResources.Advanced_TypesettingEngineDiagMode, IsBoolSettingTrue("diag_TypesettingEngineDiagMode"), null)
         .AddSeparator()
 
         .AddText("UI", fontSize: 20)
-        .AddSwitch("ui_ForceUseShell", SettingLocalizedResources.Advanced_UseMAUIShell, SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
-        .AddSwitch("ui_ShowWelcomePage", SettingLocalizedResources.Advanced_ShowWelcomePage, SettingsManager.IsBoolSettingTrue("ui_ShowWelcomePage"))
+        .AddCheckbox("ui_ForceUseShell", SettingLocalizedResources.Advanced_UseMAUIShell, SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
+        .AddCheckbox("ui_ShowWelcomePage", SettingLocalizedResources.Advanced_ShowWelcomePage, SettingsManager.IsBoolSettingTrue("ui_ShowWelcomePage"))
+        .AddCheckbox("render_RpcServerShowConsole", SettingLocalizedResources.Render_RpcServerShowConsole, SettingsManager.IsBoolSettingTrue("render_RpcServerShowConsole"), null)
+        .AddCheckbox("plugin_IsolationShowConsole", SettingLocalizedResources.Plugin_IsolationShowConsole, SettingsManager.IsBoolSettingTrue("plugin_IsolationShowConsole"), null)
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.GeneralCodec_Title, fontSize: 20)
@@ -255,6 +258,8 @@ public partial class AdvancedSettingPage : ContentPage
                                 File.WriteAllText(timelineFile, jsonText);
                             }
                         }
+
+                        DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(projectDir);
                     }
                     catch (Exception ex)
                     {
@@ -317,77 +322,19 @@ public partial class AdvancedSettingPage : ContentPage
                             var failReason = "";
                             try
                             {
-                                var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
-                                if (Directory.Exists(pluginRoot))
+                                var assemblyBytes = await PluginService.ExportVerifiedAssemblyAsync(pluginID);
+                                var savePath = Path.Combine(MauiProgram.CachePath, $"{pluginID}.dll");
+                                await File.WriteAllBytesAsync(savePath, assemblyBytes, default);
+                                await Share.RequestAsync(new ShareFileRequest
                                 {
-                                    var pluginPem = await SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}");
-                                    if (string.IsNullOrEmpty(pluginPem))
-                                    {
-                                        string? localizedPluginBrokenReason = null;
-                                        try
-                                        {
-                                            localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_SignMissing;
-                                        }
-                                        catch { }
-                                        failReason = localizedPluginBrokenReason ?? "Plugin's signature is missing or corrupted. Try reinstall it.";
-                                        throw new FileNotFoundException(failReason, pluginID);
-                                    }
-
-                                    if (!File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.enc")) || !File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.sig")) || !File.Exists(Path.Combine(pluginRoot, "hashtable.json.enc")))
-                                    {
-                                        string? localizedPluginBrokenReason = null;
-                                        try
-                                        {
-                                            localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing;
-                                        }
-                                        catch { }
-                                        failReason = localizedPluginBrokenReason ?? "Some of the plugin files are missing. Try reinstall it.";
-                                    }
-
-                                    var pemHash = HashServices.ComputeStringHash(pluginPem ?? string.Empty, SHA512.Create());
-                                    var pluginEnc = File.ReadAllBytes(Path.Combine(pluginRoot, pluginID + ".dll.enc"));
-                                    var htbEnc = File.ReadAllBytes(Path.Combine(pluginRoot, "hashtable.json.enc"));
-                                    var decBytes = FileCryptoService.DecryptToFileWithPassword(pemHash, pluginEnc);
-                                    var savePath = Path.Combine(FileSystem.CacheDirectory, $"{pluginID}.dll");
-                                    await File.WriteAllBytesAsync(savePath, decBytes, default);
-                                    await Share.RequestAsync(new ShareFileRequest()
-                                    {
-                                        File = new ShareFile(savePath),
-                                        Title = $"assembly for {pluginID}",
-                                    });
-                                    return;
-                                }
-                                else
-                                {
-                                    string? localizedPluginBrokenReason = null;
-                                    try
-                                    {
-                                        localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing_DirectoryNotFound;
-                                    }
-                                    catch { }
-                                    failReason = localizedPluginBrokenReason ?? "Plugin file not found.";
-                                }
+                                    File = new ShareFile(savePath),
+                                    Title = $"assembly for {pluginID}",
+                                });
+                                return;
                             }
-                            catch (ReflectionTypeLoadException)
-                            {
-                                string? localizedFailReason = null;
-                                try
-                                {
-                                    localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
-                                }
-                                catch { }
-                                failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
-                            }
-
                             catch (Exception ex)
                             {
-                                string? localizedPluginBrokenReason = null;
-                                try
-                                {
-                                    localizedPluginBrokenReason = Localized._ExceptionTemplate(ex);
-                                }
-                                catch { }
-                                failReason = localizedPluginBrokenReason ?? $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
+                                failReason = ex.Message;
                             }
                             await DisplayAlertAsync(Localized._Error, $"failed\r\n({failReason ?? "unknown"})", Localized._OK);
                         }

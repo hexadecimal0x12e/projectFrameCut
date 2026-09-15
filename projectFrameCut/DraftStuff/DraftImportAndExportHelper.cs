@@ -1,5 +1,4 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
-using projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.Asset;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.DraftStuff;
@@ -24,11 +23,77 @@ namespace projectFrameCut.DraftStuff
 {
     internal static class DraftImportAndExportHelper
     {
+        private const string ProjectDirectoryDesktopIni =
+"""
+[.ShellClassInfo]
+DirectoryClass=projectFrameCut.ProjectDirectory
+IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwpk6y\LocalState\appicon.ico,0
+""";
         private const string InternalPlaceEffectName = "__Internal_Place__";
         private const string InternalResizeEffectName = "__Internal_Resize__";
         private const string SolidColorOutputWidthKey = "SolidColorOutputWidth";
         private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
         private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
+
+        public static void EnsureProjectDirectoryShellIntegration(string projectPath)
+        {
+            if (string.IsNullOrWhiteSpace(projectPath) || !Directory.Exists(projectPath)) return;
+
+            try
+            {
+                string desktopIniPath = Path.Combine(projectPath, "desktop.ini");
+                if (OperatingSystem.IsWindows() && File.Exists(desktopIniPath))
+                {
+                    File.SetAttributes(
+                        desktopIniPath,
+                        File.GetAttributes(desktopIniPath) & ~(FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReadOnly));
+                }
+                File.WriteAllText(desktopIniPath, ProjectDirectoryDesktopIni);
+                if (OperatingSystem.IsWindows())
+                {
+                    File.SetAttributes(desktopIniPath, FileAttributes.Hidden | FileAttributes.System);
+                    File.SetAttributes(projectPath, File.GetAttributes(projectPath) | FileAttributes.ReadOnly);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Update project directory shell integration for {projectPath}");
+            }
+        }
+
+        private static void InitializeEffects(ClipElementUI element, ClipDraftDTO dto, int relativeWidth, int relativeHeight)
+        {
+            try
+            {
+                element.Effects = dto.Effects?.ToDictionary(
+                    effect => string.IsNullOrWhiteSpace(effect.Name) ? $"Effect-{Guid.NewGuid()}" : effect.Name,
+                    effect => PluginManager.CreateEffect(effect, relativeWidth, relativeHeight))
+                    ?? new Dictionary<string, IEffect>();
+                element.EffectProviders = EffectBindingHelper.MigrateToEffectProviders(dto.EffectProviders, dto.EffectBundles);
+                ClipInfoBuilder.RebuildAllEffects(element);
+            }
+            catch (Exception ex)
+            {
+                ClipInitializationFailure.Mark(element.ExtraData, "Effect initialization", ex);
+                Log(ex, $"Initialize effects for clip {element.DisplayName}; using fallback", nameof(DraftImportAndExportHelper));
+            }
+        }
+
+        private static void RebuildEffectsForExport(ClipElementUI element)
+        {
+            if (ClipInitializationFailure.IsMarked(element.ExtraData)) return;
+
+            try
+            {
+                ClipInfoBuilder.RebuildAllEffects(element);
+            }
+            catch (Exception ex)
+            {
+                ClipInitializationFailure.Mark(element.ExtraData, "Effect graph initialization", ex);
+                element.ApplyInitializationFailureIndicator();
+                Log(ex, $"Rebuild effects for clip {element.DisplayName} during export; preserving fallback state", nameof(DraftImportAndExportHelper));
+            }
+        }
 
         [return: NotNullIfNotNull(nameof(page))]
         [return: NotNullIfNotNull(nameof(element))]
@@ -41,7 +106,7 @@ namespace projectFrameCut.DraftStuff
                 throw new KeyNotFoundException($"Cannot find clip element '{element.Id}' in current draft page tracks.");
             }
 
-            ClipInfoBuilder.RebuildAllEffects(element);
+            RebuildEffectsForExport(element);
 
             // Ghost/Shadow check: Guid-based IDs cannot use string prefix matching.
             // These clips are filtered upstream in the calling code.
@@ -49,7 +114,12 @@ namespace projectFrameCut.DraftStuff
             return CreateClipDraftDTO(page, border, element, (uint)trackIndex, wrapSoundtrackAsClip);
         }
 
-        public static DraftStructureJSON ExportFromDraftPage(projectFrameCut.DraftPage page, bool wrapSoundtrackAsClip = false, bool includeUiOnlyClips = true, bool fixOverlap = false)
+        public static DraftStructureJSON ExportFromDraftPage(
+            projectFrameCut.DraftPage page,
+            bool wrapSoundtrackAsClip = false,
+            bool includeUiOnlyClips = true,
+            bool fixOverlap = false,
+            bool rebuildEffects = true)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
 
@@ -66,17 +136,13 @@ namespace projectFrameCut.DraftStuff
                     if (child is Microsoft.Maui.Controls.Border border)
                     {
                         if (border.BindingContext is not ClipElementUI elem) continue;
-                        ClipInfoBuilder.RebuildAllEffects(elem);
+                        if (rebuildEffects)
+                            RebuildEffectsForExport(elem);
 
                         // Ghost/Shadow check: Guid-based IDs cannot use string prefix matching.
                         if (!includeUiOnlyClips && elem.ClipType == ClipMode.MarkingClip) continue;
 
-                        double startPx = border.TranslationX;
-                        double widthPx = (border.WidthRequest > 0) ? border.WidthRequest : ((border.Width > 0) ? border.Width : border.WidthRequest);
-
-                        uint startFrame = (uint)Math.Round(page.PixelToFrame(startPx) / elem.SecondPerFrameRatio);
-                        uint durationFrames = (uint)Math.Round(page.PixelToFrame(widthPx) / elem.SecondPerFrameRatio);
-                        if (durationFrames == 0) durationFrames = 1;
+                        ResolveExportTiming(page, border, elem, out uint startFrame, out uint durationFrames);
 
                         string name = string.IsNullOrWhiteSpace(elem.DisplayName) ? ExtractLabelText(border) ?? elem.Id.ToString() : elem.DisplayName;
 
@@ -126,12 +192,24 @@ namespace projectFrameCut.DraftStuff
                     {
                         if (wrapSoundtrackAsClip)
                         {
-                            audMax = Math.Max(dto.StartFrame + dto.Duration, audMax);
+                            var end = (ulong)dto.StartFrame + dto.Duration;
+                            if (end > uint.MaxValue)
+                            {
+                                Log($"Ignoring overflowing audio clip end during draft export: {dto.Id}/{dto.Name}, start={dto.StartFrame}, duration={dto.Duration}.", "warn");
+                                end = (ulong)dto.StartFrame + 1;
+                            }
+                            audMax = Math.Max((long)end, audMax);
                         }
                     }
                     else
                     {
-                        max = Math.Max(dto.StartFrame + dto.Duration, max);
+                        var end = (ulong)dto.StartFrame + dto.Duration;
+                        if (end > uint.MaxValue)
+                        {
+                            Log($"Ignoring overflowing clip end during draft export: {dto.Id}/{dto.Name}, start={dto.StartFrame}, duration={dto.Duration}.", "warn");
+                            end = (ulong)dto.StartFrame + 1;
+                        }
+                        max = Math.Max((long)end, max);
                     }
                 }
 
@@ -189,12 +267,7 @@ namespace projectFrameCut.DraftStuff
 
         private static ClipDraftDTO CreateClipDraftDTO(projectFrameCut.DraftPage page, Microsoft.Maui.Controls.Border border, ClipElementUI elem, uint layerIndex, bool wrapSoundtrackAsClip)
         {
-            double startPx = border.TranslationX;
-            double widthPx = (border.WidthRequest > 0) ? border.WidthRequest : ((border.Width > 0) ? border.Width : border.WidthRequest);
-
-            uint startFrame = (uint)Math.Round(page.PixelToFrame(startPx) / elem.SecondPerFrameRatio);
-            uint durationFrames = (uint)Math.Round(page.PixelToFrame(widthPx) / elem.SecondPerFrameRatio);
-            if (durationFrames == 0) durationFrames = 1;
+            ResolveExportTiming(page, border, elem, out uint startFrame, out uint durationFrames);
 
             string name = string.IsNullOrWhiteSpace(elem.DisplayName) ? ExtractLabelText(border) ?? elem.Id.ToString() : elem.DisplayName;
 
@@ -224,6 +297,8 @@ namespace projectFrameCut.DraftStuff
                     TargetHeight = elem.TargetHeight,
                     TargetX = elem.TargetX,
                     TargetY = elem.TargetY,
+                    StartingX = elem.StartingX,
+                    StartingY = elem.StartingY,
                     MetaData = normalizedMeta,
                     Effects = null
                 };
@@ -259,7 +334,7 @@ namespace projectFrameCut.DraftStuff
                     }
                     if (entries is { Count: > 0 })
                     {
-                        var bounds = TextMeasureHelper.MeasureBounds(entries, 1920, 1080);
+                        var bounds = TextServices.MeasureBounds(entries, 1920, 1080);
                         if (bounds.Width > 0 && bounds.Height > 0)
                         {
                             exportTargetWidth = Math.Max(1, (int)Math.Ceiling(bounds.Width));
@@ -295,24 +370,34 @@ namespace projectFrameCut.DraftStuff
                 TargetHeight = exportTargetHeight,
                 TargetX = elem.TargetX,
                 TargetY = elem.TargetY,
+                StartingX = elem.StartingX,
+                StartingY = elem.StartingY,
                 MetaData = normalizedMeta2,
                 Effects = elem.Effects?.Select((kv) =>
                 {
                     var effect = kv.Value;
+                    // Filter out Func<object> dynamic values from effect.Parameters (they cannot be serialized).
+                    // The binding state is preserved in the provider-level Fields serialization.
+                    var parameters = effect.Parameters is { Count: > 0 }
+                        ? effect.Parameters
+                            .Where(kvp => !DynamicParam.IsDynamicValue(kvp.Value))
+                            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+                        : effect.Parameters;
+
                     var structure = new EffectAndMixtureJSONStructure
                     {
                         Name = kv.Key,
                         FromPlugin = effect.FromPlugin,
                         TypeName = effect.TypeName,
-                        Parameters = effect.Parameters,
+                        Parameters = parameters,
                         Index = effect.Index,
                         Enabled = effect.Enabled,
                         RelativeHeight = effect.RelativeHeight,
                         RelativeWidth = effect.RelativeWidth,
                         IsContinuousEffect = effect.TypeOfEffect == EffectType.ContinuousEffect,
-                        IsVariableArgumentEffect = effect is IBindableArgumentEffect,
+                        IsVariableArgumentEffect = false,
                         ImplementType = effect.ImplementType,
-                        BindedEffectGroupID = effect.BindedEffectGroupID ?? "",
+                        BindedEffectGroupID = effect.BindedEffectProvidingSystemID ?? "",
                     };
 
                     if (effect is IBindableArgumentEffect bindableEffect)
@@ -332,19 +417,84 @@ namespace projectFrameCut.DraftStuff
 
                     return structure;
                 }).ToArray(),
-                EffectBundles = elem.EffectBundles?.Values
-                    .Select(b => new EffectBundleJSONStructure
+                EffectBundles = null,
+                EffectProviders = elem.EffectProviders?.Values
+                    .Select(p => new EffectProviderJSONStructure
                     {
-                        Id = b.Id,
-                        BundleTypeName = b.TypeName,
-                        Parameters = b.Parameters,
-                        Name = b.Name,
-                        Enabled = b.Enabled,
-                        BindedInputId = b.BindedInputId,
-                        BindedOutputId = b.BindedOutputId,
-                        BindedInputIds = b.BindedInputIds?.ToArray(),
+                        Id = p.Id,
+                        FromPlugin = p.FromPlugin,
+                        TypeName = p.TypeName,
+                        Name = p.Name,
+                        Enabled = p.Enabled,
+                        AnchorsBindingState = p.AnchorsBindingState,
+                        StaticFields = p.Fields?
+                            .Where(kv => kv.Value is StaticEffectArgumentField)
+                            .ToDictionary(
+                                kv => kv.Key,
+                                kv => EffectParamConvert.Normalize(((StaticEffectArgumentField)kv.Value).Value) ?? new object()),
+                        MetaData = p.MetaData is { Count: > 0 } ? p.MetaData : null,
                     }).ToArray()
             };
+        }
+
+        private static void ResolveExportTiming(
+            projectFrameCut.DraftPage page,
+            Microsoft.Maui.Controls.Border border,
+            ClipElementUI elem,
+            out uint startFrame,
+            out uint durationFrames)
+        {
+            double ratio = elem.SecondPerFrameRatio;
+            if (!double.IsFinite(ratio) || ratio <= 0d)
+            {
+                ratio = 1d;
+            }
+
+            double startPx = border.TranslationX;
+            if (!double.IsFinite(startPx) || startPx < 0d)
+            {
+                startPx = double.IsFinite(elem.layoutX) && elem.layoutX > 0d ? elem.layoutX : 0d;
+            }
+
+            startFrame = ConvertExportFrame(page.PixelToFrame(startPx) / ratio, 0u);
+
+            double widthPx = border.WidthRequest;
+            if (!double.IsFinite(widthPx) || widthPx <= 0d)
+            {
+                widthPx = border.Width;
+            }
+            if (!double.IsFinite(widthPx) || widthPx <= 0d)
+            {
+                widthPx = elem.origLength;
+            }
+
+            uint fallbackDuration = elem.lengthInFrame is > 0 and < uint.MaxValue
+                ? elem.lengthInFrame
+                : 1u;
+            durationFrames = !double.IsFinite(widthPx) || widthPx <= 0d
+                ? fallbackDuration
+                : ConvertExportFrame(page.PixelToFrame(widthPx) / ratio, fallbackDuration);
+
+            if (durationFrames == 0 || (ulong)startFrame + durationFrames > uint.MaxValue)
+            {
+                Log($"Invalid clip timing was repaired during draft export: {elem.Id}/{elem.DisplayName}, start={startFrame}, duration={durationFrames}, width={widthPx}.", "warn");
+                durationFrames = startFrame < uint.MaxValue ? 1u : 0u;
+                if (durationFrames == 0)
+                {
+                    startFrame = uint.MaxValue - 1;
+                    durationFrames = 1u;
+                }
+            }
+        }
+
+        private static uint ConvertExportFrame(double value, uint fallback)
+        {
+            if (!double.IsFinite(value) || value < 0d || value >= uint.MaxValue)
+            {
+                return fallback;
+            }
+
+            return (uint)Math.Round(value);
         }
 
         private static Dictionary<string, object> NormalizeClipMetaData(Dictionary<string, object>? source, uint targetFrameRate)
@@ -421,8 +571,27 @@ namespace projectFrameCut.DraftStuff
                         throw;
                     }
                 }
-                if (InitAtLoad) clipInstance.ReInit(targetPPB ?? throw new NullReferenceException("You must provide a targetPPB."));
-                clipInstance.EffectsInstances = clipInstance?.Effects?.Select(e => PluginManager.CreateEffect(e, e.ImplementType == EffectImplementType.NotSpecified ? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{e.FromPlugin}.{e.TypeName}", EffectImplementType.NotSpecified) : e.ImplementType))?.ToArray() ?? [];
+                try
+                {
+                    if (InitAtLoad) clipInstance.ReInit(targetPPB ?? throw new NullReferenceException("You must provide a targetPPB."));
+                }
+                catch (Exception ex)
+                {
+                    ClipInitializationFailure.Mark(clipInstance, "SourceReading", ex);
+                    Log(ex, $"Initialize clip {clipInstance.Name} ({clipInstance.Id}); using fallback", nameof(DraftImportAndExportHelper));
+                }
+                try
+                {
+                    // 从 EffectProviders 重建（保留动态绑定），无 provider 时回退静态 Effects。
+                    clipInstance.EffectsInstances = EffectHelper.GetClipEffectsInstances(clipInstance);
+                    if (!ClipInitializationFailure.HasDeferredFailures(clipInstance.ExtraData))
+                        ClipInitializationFailure.Clear(clipInstance);
+                }
+                catch (Exception ex)
+                {
+                    ClipInitializationFailure.Mark(clipInstance, "ResolveEffect", ex);
+                    Log(ex, $"Initialize clip {clipInstance.Name} ({clipInstance.Id}); using fallback", nameof(DraftImportAndExportHelper));
+                }
                 if (clipInstance is IVectorContentClip vc && clipInstance.ExtraData.TryGetValue("VectorAntiAliasMode", out var aaObj) && aaObj is string aaStr && !string.IsNullOrEmpty(aaStr))
                 {
                     var aaProp = typeof(IVectorContentClip).GetProperty("ClipAntiAliasMode");
@@ -760,40 +929,13 @@ namespace projectFrameCut.DraftStuff
                 element.TargetHeight = dto.TargetHeight;
                 element.TargetX = dto.TargetX;
                 element.TargetY = dto.TargetY;
+                element.StartingX = dto.StartingX;
+                element.StartingY = dto.StartingY;
                 element.TypeName = dto.TypeName;
                 element.FromPlugin = dto.FromPlugin;
-                element.Effects = dto.Effects?.ToDictionary(
-                    e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,
-                    e => PluginManager.CreateEffect(e, proj.RelativeWidth, proj.RelativeHeight)
-                );
-
-                if (dto.EffectBundles != null)
-                {
-                    var dict = new Dictionary<Guid, IEffectBundle>();
-                    for (int i = 0; i < dto.EffectBundles.Length; i++)
-                    {
-                        var b = dto.EffectBundles[i];
-                        var f = EffectServices.GetAvailableEffectBundles()[b.BundleTypeName]();
-                        f.Id = b.Id;
-                        f.Enabled = b.Enabled;
-                        f.Name = b.Name;
-                        f.Parameters = b.Parameters ?? new Dictionary<string, object>();
-                        f.BindedInputId = b.BindedInputId;
-                        f.BindedOutputId = b.BindedOutputId;
-                        f.BindedInputIds = b.BindedInputIds?.ToList();
-                        dict.Add(b.Id, f);
-                    }
-                    element.EffectBundles = dict;
-                }
-
-                if (element.Effects is null)
-                {
-                    element.Effects = new Dictionary<string, IEffect>();
-                }
-
-                // Rebuild generated effects from bundles before applying UI width from speed ratio.
-                ClipInfoBuilder.RebuildAllEffects(element);
+                InitializeEffects(element, dto, proj.RelativeWidth, proj.RelativeHeight);
                 element.ApplySpeedRatio();
+                element.ApplyInitializationFailureIndicator();
 
                 if (element.ClipType == ClipMode.TransformClip || element.ClipType == ClipMode.MarkingClip)
                 {
@@ -905,6 +1047,11 @@ namespace projectFrameCut.DraftStuff
                     var cur = list[i];
                     var next = list[i + 1];
                     ulong curEnd = (ulong)cur.StartFrame + cur.Duration;
+                    if (curEnd > uint.MaxValue)
+                    {
+                        Log($"Skipping overlap repair for overflowing clip {cur.Id}/{cur.Name}: start={cur.StartFrame}, duration={cur.Duration}.", "warn");
+                        continue;
+                    }
                     if (curEnd > next.StartFrame)
                     {
                         ulong overlap = curEnd - next.StartFrame;
@@ -920,13 +1067,19 @@ namespace projectFrameCut.DraftStuff
             ulong max = 0, audMax = 0;
             foreach (var dto in dtos)
             {
+                var end = (ulong)dto.StartFrame + dto.Duration;
+                if (end > uint.MaxValue)
+                {
+                    Log($"Ignoring overflowing clip end while fixing overlaps: {dto.Id}/{dto.Name}, start={dto.StartFrame}, duration={dto.Duration}.", "warn");
+                    end = (ulong)dto.StartFrame + 1;
+                }
                 if (dto.ClipType == ClipMode.AudioClip)
                 {
-                    audMax = Math.Max(audMax, (ulong)dto.StartFrame + dto.Duration);
+                    audMax = Math.Max(audMax, end);
                 }
                 else
                 {
-                    max = Math.Max(max, (ulong)dto.StartFrame + dto.Duration);
+                    max = Math.Max(max, end);
                 }
             }
 
@@ -1007,47 +1160,18 @@ namespace projectFrameCut.DraftStuff
             element.TargetHeight = clip.TargetHeight;
             element.TargetX = clip.TargetX;
             element.TargetY = clip.TargetY;
+            element.StartingX = clip.StartingX;
+            element.StartingY = clip.StartingY;
 
             element.TypeName = clip.TypeName;
             element.FromPlugin = clip.FromPlugin;
 
-            // Reconstruct Effects
-            element.Effects = clip.Effects?.ToDictionary(
-                e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,
-                e => PluginManager.CreateEffect(e, 1, 1)
-            ) ?? new Dictionary<string, IEffect>();
+            InitializeEffects(element, clip, 1, 1);
 
-            // Reconstruct Effect Bundles
-            if (clip.EffectBundles != null)
-            {
-                var dict = new Dictionary<Guid, IEffectBundle>();
-                foreach (var b in clip.EffectBundles)
-                {
-                    if (EffectServices.GetAvailableEffectBundles().TryGetValue(b.BundleTypeName, out var factory))
-                    {
-                        var f = factory();
-                        f.Id = b.Id;
-                        f.Name = b.Name;
-                        f.Parameters = b.Parameters ?? new Dictionary<string, object>();
-                        f.BindedInputId = b.BindedInputId;
-                        f.BindedOutputId = b.BindedOutputId;
-                        f.BindedInputIds = b.BindedInputIds?.ToList();
-                        dict[b.Id] = f;
-                    }
-                }
-                element.EffectBundles = dict;
-            }
-            else
-            {
-                element.EffectBundles = new Dictionary<Guid, IEffectBundle>();
-            }
-
-            // Rebuild generated effects from bundles before applying UI width from speed ratio.
-            ClipInfoBuilder.RebuildAllEffects(element);
-
-            // Apply visual properties after speed/effects are fully restored.
+            // Apply visual properties after effect initialization has been attempted.
             element.ApplySpeedRatio();
             element.ApplyClipColor();
+            element.ApplyInitializationFailureIndicator();
 
             if (element.ClipType == ClipMode.TransformClip || element.ClipType == ClipMode.MarkingClip)
             {

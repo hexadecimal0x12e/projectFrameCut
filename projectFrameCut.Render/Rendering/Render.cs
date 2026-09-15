@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
@@ -24,6 +24,15 @@ using System.Threading.Tasks;
 
 namespace projectFrameCut.Render.Rendering
 {
+    public readonly record struct ChunkRenderProgress(
+        int ChunkIndex,
+        int ChunkCount,
+        int FinishedFrames,
+        uint ChunkFrames,
+        double ChunkProgress,
+        double GlobalProgress,
+        TimeSpan EstimatedRemaining);
+
     public class Renderer : IRenderContext
     {
         #region opts
@@ -32,6 +41,22 @@ namespace projectFrameCut.Render.Rendering
         public required IClip[] Clips { get; set; }
         public uint Duration;
         public uint StartFrame = 0;
+        /// <summary>
+        /// Zero-based chunk ordinal when this renderer is used by a chunked render job.
+        /// </summary>
+        public int ChunkIndex { get; set; }
+        /// <summary>
+        /// Number of chunks in the owning render job. A value of one represents a normal render.
+        /// </summary>
+        public int ChunkCount { get; set; } = 1;
+        /// <summary>
+        /// Frames completed by earlier chunks. Used only for reporting global chunk progress.
+        /// </summary>
+        public uint CompletedFramesBeforeChunk { get; set; }
+        /// <summary>
+        /// Total frame count of the owning project. Defaults to this renderer's duration.
+        /// </summary>
+        public uint TotalProjectFrames { get; set; }
         public VideoBuilder? builder;
 
         public bool LogRenderState = false;
@@ -49,6 +74,8 @@ namespace projectFrameCut.Render.Rendering
 
         public bool EnableGPUBatchProcess { get; set; } = true;
         public bool AllowReorderEffect { get; set; } = true;
+        public bool EnableEffectAutoRetry { get; set; } = true;
+        public bool ProcessEffectFromCanvas { get; set; } = true;
 
         public int MaxRenderScheduleTimeout { get; set; } = 500;
         public int MinSchedulePreparedFrames { get => field > 0 ? field : MaxThreads; set; }
@@ -59,6 +86,7 @@ namespace projectFrameCut.Render.Rendering
         public int RenderSchedulerIdleDelayMs { get => field > 0 ? field : 10; set; } = 10;
         public int MinRemainingFramesForPreparedWait { get => field >= 0 ? field : Math.Max(0, MaxThreads / 2 - 2); set; } = -1;
         public int ThrottleThreshold { get => field > 0 ? field : Math.Max(MaxThreads * 4, MaxThreads + 8); set; }
+        public int MaxPendingWriteFrames { get => field > 0 ? field : Math.Max(ThrottleThreshold * 2, 32); set; }
         public bool BlockPreparingBeforeRendering { get; set; } = false;
         public bool DisableAllThrottleOptions { get; set; } = false;
 
@@ -76,10 +104,22 @@ namespace projectFrameCut.Render.Rendering
         Dictionary<Guid, bool> IsClipGeneratedByAI = new();
 
         public event Action<double, TimeSpan>? OnProgressChanged;
+        public event Action<ChunkRenderProgress>? OnChunkProgressChanged;
         private Stopwatch _renderTotalStopwatch = new();
         private double _currentFps = 0;
 
         public double CurrentFps => Interlocked.CompareExchange(ref _currentFps, 0, 0);
+        public TimeSpan OnePercentLowFrameTime => ComputeLowPercentileFrameTime(0.01);
+        public double OnePercentLowFps
+        {
+            get
+            {
+                var ts = ComputeLowPercentileFrameTime(0.01);
+                if (ts.TotalSeconds <= 0) return -1;
+                return 1 / ts.TotalSeconds;
+            }
+        }
+
         public double CurrentSecondPerFrame => 1 / CurrentFps;
         public double CurrentFinishedPercentage => Duration > 0 ? (double)Volatile.Read(ref Finished) / Duration : 0;
         public int CurrentFinished => Finished;
@@ -88,6 +128,7 @@ namespace projectFrameCut.Render.Rendering
         public double Progress => CurrentFinishedPercentage;
         public string? AudioFilePath = null;
         public IAudioSource ComposedAudio { get { if (field is not null) return field; field = PluginManager.CreateAudioSource(AudioFilePath ?? throw new FileNotFoundException("Audio is not set.")); return field; } private set { field = value; } }
+        double IRenderContext.TargetSecondPerFrame => 1d / (double)(builder?.Writer?.FramePerSecond ?? 30.0);
 
         public ConcurrentBag<TimeSpan> EachElapsed = new(), EachElapsedForPreparing = new();
 
@@ -116,12 +157,13 @@ namespace projectFrameCut.Render.Rendering
         int ThreadWorking = 0, Finished = 0;
         private SemaphoreSlim _threadLimiter = null!;
 
-        public static bool IsProfilerAttached =>
-            string.Equals(Environment.GetEnvironmentVariable("COR_ENABLE_PROFILING"), "1", StringComparison.Ordinal);
-
-
         ConcurrentQueue<uint> PreparedFrames = new(), BlankFrames = new();
-        ConcurrentDictionary<uint, byte> PreparedFlag = new();
+        /// <summary>
+        /// Per-frame prepared flag array indexed by (frame - StartFrame).
+        /// 0 = not prepared, 1 = prepared-and-queued, 2 = pre-cached by RenderSpecificFrame.
+        /// Uses <see cref="Interlocked.CompareExchange"/> for atomic access.
+        /// </summary>
+        int[] _preparedFlagArray = [];
 
         int TotalEnqueued = 0;
         volatile bool PreparerFinished = false;
@@ -142,8 +184,13 @@ namespace projectFrameCut.Render.Rendering
         private static readonly ConcurrentDictionary<string, bool> ComputerBatchSupportCache = new();
 
         // Running totals for O(1) average elapsed statistics (avoids scanning the bags on every stat log)
-        private long _renderElapsedTicksTotal; private int _renderElapsedCount;
-        private long _prepareElapsedTicksTotal; private int _prepareElapsedCount;
+        private long _renderElapsedTicksTotal; 
+        private int _renderElapsedCount;
+        private long _prepareElapsedTicksTotal; 
+        private int _prepareElapsedCount;
+
+        public static bool IsProfilerAttached =>
+            string.Equals(Environment.GetEnvironmentVariable("COR_ENABLE_PROFILING"), "1", StringComparison.Ordinal);
 
         #endregion
 
@@ -151,7 +198,8 @@ namespace projectFrameCut.Render.Rendering
         public void PrepareRender(CancellationToken token)
         {
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
-            if (builder is null) Log("Builder is null, nothing will be written to output file.", "warn");
+            if (AutoSetupRenderContext) IRenderContext.Current = this;
+            Log($"[Preparer] Calculating clip visibility for {Duration} frames...");
             var clipsForFrame = new List<IClip>(Clips.Length);
             for (uint idx = StartFrame; idx < StartFrame + Duration; idx++)
             {
@@ -160,7 +208,6 @@ namespace projectFrameCut.Render.Rendering
                 foreach (var item in Clips)
                 {
                     if (token.IsCancellationRequested) return;
-
 
                     if (item.ContainsFrame(idx) || (item.ExtendToWholeDraft && item.LayerIndex > SubTrackOffset))
                     {
@@ -183,14 +230,10 @@ namespace projectFrameCut.Render.Rendering
                     Interlocked.Increment(ref TotalEnqueued);
                 }
 
-                if (idx % 50 == 0)
-                {
-                    Log($"[Preparer] source preparing finished {(float)(idx - StartFrame) / (float)Duration:p3} ({idx - StartFrame}/{Duration})");
-                }
-
             }
             InitializeRenderCaches();
             Log($"[Preparer] source preparing done.");
+            if (builder is null) Log("Builder is null, nothing will be written to output file.", "warn");
 
         }
 
@@ -232,7 +275,8 @@ namespace projectFrameCut.Render.Rendering
                         FrameCache.GetOrAdd(item.Id, (_) => new()).TryAdd(idx, frame);
                     }
                 }
-                if (PreparedFlag.TryAdd(idx, 0))
+                int prepFlagArrayIdx = (int)(idx - StartFrame);
+                if (prepFlagArrayIdx >= 0 && prepFlagArrayIdx < _preparedFlagArray.Length && Interlocked.CompareExchange(ref _preparedFlagArray[prepFlagArrayIdx], 1, 0) == 0)
                 {
                     PreparedFrames.Enqueue(idx);
                     Interlocked.Increment(ref TotalEnqueued);
@@ -248,6 +292,7 @@ namespace projectFrameCut.Render.Rendering
 
         private void InitializeRenderCaches()
         {
+            _preparedFlagArray = new int[Duration];
             _ppb = Use16Bit ? 16 : 8;
             if (builder is not null)
             {
@@ -259,7 +304,7 @@ namespace projectFrameCut.Render.Rendering
 
             if (UseHDR)
             {
-                BlankFrame = HDRPicture16bpp.GenerateSolidColor(TargetWidth, TargetHeight, 0, 0, 0, 0, SDRClipsBrightnessInHDRMode);
+                BlankFrame = HDRPicture16bpp.GenerateSolidColor(TargetWidth, TargetHeight, 0, 0, 0, 0, 0);
             }
             else if (Use16Bit)
             {
@@ -305,6 +350,7 @@ namespace projectFrameCut.Render.Rendering
                             FrameTime = textClip.FrameTime,
                             SecondPerFrameRatio = textClip.SecondPerFrameRatio,
                             Effects = textClip.Effects,
+                            EffectProviders = textClip.EffectProviders,   // 必须带上，否则转换后 provider 绑定数据丢失
                             ExtraData = textClip.ExtraData,
                             ExtendToWholeDraft = textClip.ExtendToWholeDraft,
                             BindedSoundTrack = textClip.BindedSoundTrack,
@@ -332,9 +378,11 @@ namespace projectFrameCut.Render.Rendering
                     if (aiMark is bool) isAI = (bool)aiMark;
                     else if (aiMark is string s && bool.TryParse(s, out var parsed)) isAI = parsed;
                     else if (aiMark is JsonElement je && je.ValueKind == JsonValueKind.True) isAI = true;
+                    Log($"[Preparer] Clip {item.Id} ({item.Name}) is marked as AI-generated.");
                 }
                 if (isAI) IsClipGeneratedByAI.TryAdd(item.Id, isAI);
-                var effectInstances = EffectHelper.GetEffectsInstances(item.Effects);
+                // 优先从 EffectProviders 重建（保留动态绑定，值提供器被内联进消费者字段），无 provider 时回退静态 Effects。
+                var effectInstances = EffectHelper.GetClipEffectsInstances(item);
 
                 if (HasExplicitTargetRect(item))
                 {
@@ -405,7 +453,7 @@ namespace projectFrameCut.Render.Rendering
         {
 
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
-            if (ClipNeedForFrame.IsEmpty || Duration <= 0)
+            if ((ClipNeedForFrame.IsEmpty && BlankFrames.IsEmpty) || Duration <= 0)
             {
                 throw new InvalidOperationException("Either the project is empty, Duration is not set, or PrepareRender is not called yet. Please ensure that the project has clips and call PrepareRender before rendering.");
             }
@@ -429,6 +477,109 @@ namespace projectFrameCut.Render.Rendering
             }
         }
 
+        /// <summary>
+        /// Writer backpressure throttle: if <see cref="VideoBuilder"/> has accumulated too many
+        /// unwritten frames (<see cref="MaxPendingWriteFrames"/>), pause the render scheduler
+        /// until at least 50% of the threshold have been flushed to disk by the write thread.
+        /// Returns <c>false</c> if the caller should abort due to cancellation.
+        /// No-op when <see cref="DisableAllThrottleOptions"/> is true, <see cref="builder"/> is null,
+        /// or the pending count is already within the limit.
+        /// </summary>
+        private async Task<bool> CheckWriterBackpressureAsync(int pollDelayMs, CancellationToken token)
+        {
+            if (DisableAllThrottleOptions || builder is null)
+                return true;
+
+            int pending = builder.PendingWriteCount;
+            int maxPending = MaxPendingWriteFrames;
+            if (pending <= maxPending)
+                return true;
+
+            Log($"[Render] Writer backpressure: {pending} frames pending write (limit {maxPending}). Pausing render until write thread catches up...", "warn");
+
+            while (!token.IsCancellationRequested)
+            {
+                await Task.Delay(pollDelayMs, token);
+                if (builder.PendingWriteCount <= 10)
+                {
+                    Log($"[Render] Writer backpressure resolved: {builder.PendingWriteCount} frames pending, resuming render.", "info");
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        #region scheduler helpers
+
+        private readonly record struct SchedulerConfig(
+            int WatchdogTimeoutMs,
+            double LaunchUtilizationThreshold,
+            int PreparePollDelayMs,
+            int IdleDelayMs,
+            int MinRemainingFramesForPreparedWait,
+            int MaxRenderScheduleTimeoutValue);
+
+        private SchedulerConfig ResolveSchedulerConfig()
+        {
+            int watchdog = RenderWatchdogNoProgressTimeoutMs > 0 ? RenderWatchdogNoProgressTimeoutMs : 60_000;
+            double util = RenderWorkerLaunchUtilizationThreshold;
+            if (double.IsNaN(util) || double.IsInfinity(util) || util <= 0) util = 1.0;
+            if (util > 1.0) util = 1.0;
+            int preparePollMs = RenderSchedulerPreparePollDelayMs > 0 ? RenderSchedulerPreparePollDelayMs : 5;
+            int idleMs = RenderSchedulerIdleDelayMs > 0 ? RenderSchedulerIdleDelayMs : 10;
+            int minPrepared = MinRemainingFramesForPreparedWait >= 0
+                ? MinRemainingFramesForPreparedWait
+                : Math.Max(0, MaxThreads / 2 - 2);
+            int maxTimeout = MaxRenderScheduleTimeout > 0 ? MaxRenderScheduleTimeout : 500;
+            return new(watchdog, util, preparePollMs, idleMs, minPrepared, maxTimeout);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void HandleGarbageCollection()
+        {
+            if (GCOption == 2)
+            {
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.WaitForFullGCComplete();
+            }
+            else if (GCOption == 1)
+            {
+                GC.Collect();
+            }
+        }
+
+        private static void HandleSchedulerExceptions(ConcurrentQueue<Exception> exceptions, string contextMessage)
+        {
+            if (exceptions.IsEmpty) return;
+            var list = new List<Exception>();
+            while (exceptions.TryDequeue(out var ex)) list.Add(ex);
+            if (list.Count == 1) throw list.First();
+            throw new AggregateException(contextMessage, list);
+        }
+
+        private void StartStatLoggerThread(CancellationToken token, bool includeQueueAndWriterStats)
+        {
+            new Thread(() =>
+            {
+                while (running)
+                {
+                    try
+                    {
+                        if (token.IsCancellationRequested) return;
+                        Log(GetRendererStatusInfo(includeQueueAndWriterStats), "STAT");
+                        Thread.Sleep(10000);
+                    }
+                    catch { }
+                }
+            })
+            {
+                Name = "Stat logger thread",
+                IsBackground = false
+            }.Start();
+        }
+
+        #endregion
+
         private async Task GoBackgroundPreparerRender(CancellationToken token)
         {
             // Initialize thread limiter
@@ -447,29 +598,11 @@ namespace projectFrameCut.Render.Rendering
 
 
             running = true;
-            if (LogStaticsData)
-            {
-                new Thread(() =>
-                {
-                    while (running)
-                    {
-                        try
-                        {
-                            if (token.IsCancellationRequested) return;
-                            Log(GetRendererStatusInfo(includeQueueAndWriterStats: true), "STAT");
-                            Thread.Sleep(10000);
-                        }
-                        catch { }
-                    }
-                })
-                {
-                    Name = "Stat logger thread",
-                    IsBackground = false
-                }.Start();
-            }
+            if (LogStaticsData) StartStatLoggerThread(token, includeQueueAndWriterStats: true);
 
             Thread preparer = new(() =>
             {
+                if (AutoSetupRenderContext) IRenderContext.Current = this;
                 IRenderContext.SetWorkerState(0, RenderWorkerStage.PreparingSource, "Preparer");
                 if (EnableThreadAffinity)
                 {
@@ -497,6 +630,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     PreparerFinished = true;
                     IRenderContext.ClearWorkerState();
+                    if (AutoSetupRenderContext) IRenderContext.Current = null;
                 }
             })
             {
@@ -517,7 +651,7 @@ namespace projectFrameCut.Render.Rendering
             }
 
             var workerThreadAffinity = ResolveWorkerThreadAffinity();
-            if (workerThreadAffinity.Mask.HasValue)
+            if (workerThreadAffinity.Mask is not null)
             {
                 Log($"Using thread affinity for worker threads ({workerThreadAffinity.Description}).");
             }
@@ -525,6 +659,7 @@ namespace projectFrameCut.Render.Rendering
             [MethodImpl(MethodImplOptions.AggressiveOptimization)]
             void worker(uint targetFrame)
             {
+                if (AutoSetupRenderContext) IRenderContext.Current = this;
                 IRenderContext.SetWorkerState(targetFrame, RenderWorkerStage.Compositing, $"Render worker #{targetFrame}");
                 try
                 {
@@ -545,6 +680,7 @@ namespace projectFrameCut.Render.Rendering
                 finally
                 {
                     IRenderContext.ClearWorkerState();
+                    if (AutoSetupRenderContext) IRenderContext.Current = null;
                     Interlocked.Decrement(ref ThreadWorking);
                     try
                     {
@@ -559,7 +695,7 @@ namespace projectFrameCut.Render.Rendering
                 Log("Throttling disabled for both preparer and render workers. This may lead to high memory usage and potential deadlocks if the preparer is slower than the render workers.");
 
 
-                Parallel.For(StartFrame, Duration, new ParallelOptions { MaxDegreeOfParallelism = MaxThreads, CancellationToken = token }, i =>
+                Parallel.For(StartFrame, checked(StartFrame + Duration), new ParallelOptions { MaxDegreeOfParallelism = MaxThreads, CancellationToken = token }, i =>
                 {
                     Interlocked.Increment(ref ThreadWorking);
                     StartWorkerThread($"Render worker #{i}", () => worker((uint)i), workerThreadAffinity.Mask);
@@ -571,18 +707,7 @@ namespace projectFrameCut.Render.Rendering
             // Give the preparer a brief moment to queue the first frames, then start scheduling immediately
             await Task.Delay(50, token);
 
-            int watchdogTimeoutMs = RenderWatchdogNoProgressTimeoutMs > 0 ? RenderWatchdogNoProgressTimeoutMs : 60_000;
-            double launchUtilizationThreshold = RenderWorkerLaunchUtilizationThreshold;
-            if (double.IsNaN(launchUtilizationThreshold) || double.IsInfinity(launchUtilizationThreshold) || launchUtilizationThreshold <= 0)
-                launchUtilizationThreshold = 1.0;
-            if (launchUtilizationThreshold > 1.0)
-                launchUtilizationThreshold = 1.0;
-            int preparePollDelayMs = RenderSchedulerPreparePollDelayMs > 0 ? RenderSchedulerPreparePollDelayMs : 5;
-            int idleDelayMs = RenderSchedulerIdleDelayMs > 0 ? RenderSchedulerIdleDelayMs : 10;
-            int minRemainingFramesForPreparedWait = MinRemainingFramesForPreparedWait >= 0
-                ? MinRemainingFramesForPreparedWait
-                : Math.Max(0, MaxThreads / 2 - 2);
-
+            var cfg = ResolveSchedulerConfig();
             Stopwatch lastActivity = Stopwatch.StartNew();
             int lastManuallyStarted = 0;
             int lastFinished = Volatile.Read(ref Finished);
@@ -609,17 +734,17 @@ namespace projectFrameCut.Render.Rendering
                 }
 
                 bool forceStart = EnableRenderWatchdogForceStart
-                    && watchdogTimeoutMs > 0
-                    && lastActivity.ElapsedMilliseconds >= watchdogTimeoutMs;
+                    && cfg.WatchdogTimeoutMs > 0
+                    && lastActivity.ElapsedMilliseconds >= cfg.WatchdogTimeoutMs;
                 bool underLaunchUtilizationThreshold = availableSlots > 0
-                    && (double)working / Math.Max(1, MaxThreads) < launchUtilizationThreshold;
+                    && (double)working / Math.Max(1, MaxThreads) < cfg.LaunchUtilizationThreshold;
                 if (preparedCount > 0 && (forceStart || underLaunchUtilizationThreshold))
                 {
                     int toStart = forceStart ? preparedCount : Math.Min(preparedCount, availableSlots);
 
                     if (forceStart)
                     {
-                        Log($"[Watchdog] No rendered frame progress for {watchdogTimeoutMs} ms. prepared={preparedCount}, working={working}/{MaxThreads}, finished={Volatile.Read(ref Finished)}/{Duration}.", "warn");
+                        Log($"[Watchdog] No rendered frame progress for {cfg.WatchdogTimeoutMs} ms. prepared={preparedCount}, working={working}/{MaxThreads}, finished={Volatile.Read(ref Finished)}/{Duration}.", "warn");
                         if (availableSlots == 0)
                         {
                             Log($"[Watchdog] No available slots (all render threads busy). This often means a render thread is blocked (e.g. in effects/mixer) or the writer is stuck waiting for a missing frame index.", "warn");
@@ -629,9 +754,9 @@ namespace projectFrameCut.Render.Rendering
                     {
                         // Add timeout to avoid infinite wait when preparer is slow (e.g., on Android with OpenGL main-thread bottleneck)
                         Stopwatch waitElapsed = Stopwatch.StartNew();
-                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > minRemainingFramesForPreparedWait && PreparedFrames.Count < MinSchedulePreparedFrames)
+                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > cfg.MinRemainingFramesForPreparedWait && PreparedFrames.Count < MinSchedulePreparedFrames)
                         {
-                            await Task.Delay(preparePollDelayMs, token);
+                            await Task.Delay(cfg.PreparePollDelayMs, token);
                             if (MaxRenderScheduleTimeout > 0 && waitElapsed.ElapsedMilliseconds >= MaxRenderScheduleTimeout)
                             {
                                 lastManuallyStarted += PreparedFrames.Count;
@@ -646,15 +771,14 @@ namespace projectFrameCut.Render.Rendering
 
                     lastActivity.Restart();
 
-                    if (GCOption == 2)
-                    {
-                        GC.Collect(2, GCCollectionMode.Forced, true, true);
-                        GC.WaitForFullGCComplete();
-                    }
-                    else if (GCOption == 1)
-                    {
-                        GC.Collect();
-                    }
+                    HandleGarbageCollection();
+
+                    // Writer backpressure throttle
+                    if (!await CheckWriterBackpressureAsync(cfg.PreparePollDelayMs, token))
+                        break;
+                    lastActivity.Restart();
+                    toStart = forceStart ? PreparedFrames.Count : Math.Min(PreparedFrames.Count, Math.Max(0, MaxThreads - Volatile.Read(ref ThreadWorking)));
+                    if (toStart <= 0) continue;
 
                     for (int i = 0; i < toStart; i++)
                     {
@@ -678,18 +802,11 @@ namespace projectFrameCut.Render.Rendering
                     {
                         FlushBlankFramesBefore(StartFrame + Duration, token);
                     }
-                    await Task.Delay(idleDelayMs, token);
+                    await Task.Delay(cfg.IdleDelayMs, token);
                 }
 
 
-                if (!exceptions.IsEmpty)
-                {
-                    Log("Exceptions occurred during rendering. Aborting.", "error");
-                    var list = new List<Exception>();
-                    while (exceptions.TryDequeue(out var ex)) list.Add(ex);
-                    if (list.Count == 1) throw list.First();
-                    throw new AggregateException("Multiple exceptions occurred during rendering.", list);
-                }
+                HandleSchedulerExceptions(exceptions, "Multiple exceptions occurred during rendering.");
 
             }
             if (token.IsCancellationRequested)
@@ -739,8 +856,9 @@ namespace projectFrameCut.Render.Rendering
             running = true;
 
             var (Mask, Description) = ResolveWorkerThreadAffinityTargetCores();
+            var workerAffinityMask = ResolveWorkerThreadAffinity().Mask; // ulong? for StartWorkerThread compatibility
             int[] reversedMask = [];
-            if (Mask.Length > 0)
+            if (Mask?.Any() ?? false)
             {
                 Log($"Using thread affinity for worker threads ({Description}).");
                 reversedMask = Enumerable.Range(0, Environment.ProcessorCount).Except(Mask).ToArray();
@@ -762,6 +880,7 @@ namespace projectFrameCut.Render.Rendering
             [MethodImpl(MethodImplOptions.AggressiveOptimization)]
             void worker(uint targetFrame)
             {
+                if (AutoSetupRenderContext) IRenderContext.Current = this;
                 IRenderContext.SetWorkerState(targetFrame, RenderWorkerStage.PreparingSource, $"Worker-Decode render #{targetFrame}");
                 try
                 {
@@ -770,9 +889,11 @@ namespace projectFrameCut.Render.Rendering
                         ThreadAffinityHelper.SetCurrentThreadAffinity(reversedMask); //let preparing work can eat all small cores
                     }
 
+                    FlushBlankFramesBefore(targetFrame, token);
+
                     if (!ClipNeedForFrame.TryGetValue(targetFrame, out var clips) || clips == null || clips.Length == 0)
                     {
-                        builder?.Append(targetFrame, BlankFrame);
+                        builder?.Append(targetFrame, BlankFrame.Clone());
                         TrackRenderElapsed(TimeSpan.Zero);
                         FramePrepareElapsed.TryAdd(targetFrame, TimeSpan.Zero);
                         FrameRenderElapsed.TryAdd(targetFrame, TimeSpan.Zero);
@@ -809,7 +930,7 @@ namespace projectFrameCut.Render.Rendering
                     TrackPrepareElapsed(sw.Elapsed);
                     FramePrepareElapsed[targetFrame] = sw.Elapsed;
 
-                    if (Mask.Length > 0)
+                    if (Mask?.Any() ?? false)
                     {
                         ThreadAffinityHelper.SetCurrentThreadAffinity(Mask); //let preparing work can eat all big cores
                         Thread.Sleep(0); // reschedule the thread to make sure new mask applies
@@ -832,6 +953,7 @@ namespace projectFrameCut.Render.Rendering
                 finally
                 {
                     IRenderContext.ClearWorkerState();
+                    if (AutoSetupRenderContext) IRenderContext.Current = null;
                     Interlocked.Decrement(ref ThreadWorking);
                     try
                     {
@@ -844,29 +966,15 @@ namespace projectFrameCut.Render.Rendering
             if (DisableAllThrottleOptions)
             {
                 Log("Throttling disabled for worker-decoded render. This may lead to high memory usage and potential deadlocks if the preparer is slower than the render workers.");
-                Parallel.For(StartFrame, Duration, new ParallelOptions { MaxDegreeOfParallelism = MaxThreads, CancellationToken = token }, i =>
+                Parallel.For(StartFrame, checked(StartFrame + Duration), new ParallelOptions { MaxDegreeOfParallelism = MaxThreads, CancellationToken = token }, i =>
                 {
                     Interlocked.Increment(ref ThreadWorking);
-                    new Thread(() =>
-                    {
-                        worker((uint)i);
-                    })
-                    {
-                        Name = $"Worker-Decode render #{i}",
-                        IsBackground = false,
-                        Priority = ThreadPriority.Highest
-                    }.Start();
+                    StartWorkerThread($"Worker-Decode render #{i}", () => worker((uint)i), workerAffinityMask);
                 });
                 goto done;
             }
 
-            int watchdogTimeoutMs = RenderWatchdogNoProgressTimeoutMs > 0 ? RenderWatchdogNoProgressTimeoutMs : 60_000;
-            double launchUtilizationThreshold = RenderWorkerLaunchUtilizationThreshold;
-            if (double.IsNaN(launchUtilizationThreshold) || double.IsInfinity(launchUtilizationThreshold) || launchUtilizationThreshold <= 0)
-                launchUtilizationThreshold = 1.0;
-            if (launchUtilizationThreshold > 1.0)
-                launchUtilizationThreshold = 1.0;
-            int idleDelayMs = RenderSchedulerIdleDelayMs > 0 ? RenderSchedulerIdleDelayMs : 10;
+            var cfg = ResolveSchedulerConfig();
 
             Stopwatch lastActivity = Stopwatch.StartNew();
             int lastFinished = Volatile.Read(ref Finished);
@@ -896,28 +1004,27 @@ namespace projectFrameCut.Render.Rendering
                     break;
 
                 bool forceStart = EnableRenderWatchdogForceStart
-                    && watchdogTimeoutMs > 0
-                    && lastActivity.ElapsedMilliseconds >= watchdogTimeoutMs;
+                    && cfg.WatchdogTimeoutMs > 0
+                    && lastActivity.ElapsedMilliseconds >= cfg.WatchdogTimeoutMs;
                 bool underLaunchUtilizationThreshold = availableSlots > 0
-                    && (double)working / Math.Max(1, MaxThreads) < launchUtilizationThreshold;
+                    && (double)working / Math.Max(1, MaxThreads) < cfg.LaunchUtilizationThreshold;
 
                 if (queuedFrames > 0 && (forceStart || underLaunchUtilizationThreshold))
                 {
                     int toStart = forceStart ? queuedFrames : Math.Min(queuedFrames, availableSlots);
                     if (forceStart)
                     {
-                        Log($"[Watchdog] No rendered frame progress for {watchdogTimeoutMs} ms. queued={queuedFrames}, working={working}/{MaxThreads}, finished={finished}/{Duration}.", "warn");
+                        Log($"[Watchdog] No rendered frame progress for {cfg.WatchdogTimeoutMs} ms. queued={queuedFrames}, working={working}/{MaxThreads}, finished={finished}/{Duration}.", "warn");
                     }
 
-                    if (GCOption == 2)
-                    {
-                        GC.Collect(2, GCCollectionMode.Forced, true, true);
-                        GC.WaitForFullGCComplete();
-                    }
-                    else if (GCOption == 1)
-                    {
-                        GC.Collect();
-                    }
+                    HandleGarbageCollection();
+
+                    // Writer backpressure throttle
+                    if (!await CheckWriterBackpressureAsync(cfg.IdleDelayMs, token))
+                        break;
+                    lastActivity.Restart();
+                    toStart = forceStart ? frameQueue.Count : Math.Min(frameQueue.Count, Math.Max(0, MaxThreads - Volatile.Read(ref ThreadWorking)));
+                    if (toStart <= 0) { enqueueFramesToThrottle(); continue; }
 
                     for (int i = 0; i < toStart; i++)
                     {
@@ -932,15 +1039,21 @@ namespace projectFrameCut.Render.Rendering
 
                         Interlocked.Increment(ref ThreadWorking);
 
-                        new Thread(() =>
+                        if (Mask is not null)
                         {
-                            worker(targetFrame);
-                        })
+                            // With affinity: must create dedicated threads (two-phase affinity would pollute ThreadPool)
+                            new Thread(() => { worker(targetFrame); })
+                            {
+                                Name = $"Worker-Decode render #{targetFrame}",
+                                IsBackground = false,
+                                Priority = ThreadPriority.Highest
+                            }.Start();
+                        }
+                        else
                         {
-                            Name = $"Worker-Decode render #{targetFrame}",
-                            IsBackground = false,
-                            Priority = ThreadPriority.Highest
-                        }.Start();
+                            // No affinity: reuse ThreadPool to avoid per-frame thread creation cost
+                            ThreadPool.QueueUserWorkItem(_ => worker(targetFrame));
+                        }
 
                     }
 
@@ -950,14 +1063,12 @@ namespace projectFrameCut.Render.Rendering
                 }
 
                 enqueueFramesToThrottle();
-                await Task.Delay(idleDelayMs, token);
-                if (!exceptions.IsEmpty)
+                if (nextFrameToEnqueue >= renderEndFrame && frameQueue.IsEmpty && Volatile.Read(ref ThreadWorking) == 0 && !BlankFrames.IsEmpty)
                 {
-                    var list = new List<Exception>();
-                    while (exceptions.TryDequeue(out var ex)) list.Add(ex);
-                    if (list.Count == 1) throw list.First();
-                    throw new AggregateException("Multiple exceptions occurred during worker-decoded rendering.", list);
+                    FlushBlankFramesBefore(StartFrame + Duration, token);
                 }
+                await Task.Delay(cfg.IdleDelayMs, token);
+                HandleSchedulerExceptions(exceptions, "Multiple exceptions occurred during worker-decoded rendering.");
             }
 
         done:
@@ -976,7 +1087,9 @@ namespace projectFrameCut.Render.Rendering
         {
 
 
-            PreparedFlag.TryRemove(targetFrame, out _);
+            int pfIdx = (int)(targetFrame - StartFrame);
+            if ((uint)pfIdx < _preparedFlagArray.Length)
+                Interlocked.CompareExchange(ref _preparedFlagArray[pfIdx], 0, 1);
 
             if (!ClipNeedForFrame.TryGetValue(targetFrame, out var clipsNeed) || clipsNeed.Length == 0)
             {
@@ -1010,26 +1123,7 @@ namespace projectFrameCut.Render.Rendering
         {
             Log("[Renderer] OneByOne enabled/MaxThread is 1: switching to single-threaded, synchronous render.", "info");
 
-            if (LogStaticsData)
-            {
-                new Thread(() =>
-                {
-                    while (running)
-                    {
-                        try
-                        {
-                            if (token.IsCancellationRequested) return;
-                            Log(GetRendererStatusInfo(includeQueueAndWriterStats: false), "STAT");
-                            Thread.Sleep(10000);
-                        }
-                        catch { }
-                    }
-                })
-                {
-                    Name = "Stat logger thread",
-                    IsBackground = false
-                }.Start();
-            }
+            if (LogStaticsData) StartStatLoggerThread(token, includeQueueAndWriterStats: false);
 
             running = true;
 
@@ -1087,29 +1181,11 @@ namespace projectFrameCut.Render.Rendering
                 Log($"Using thread affinity for worker threads ({workerThreadAffinity.Description}).");
             }
 
-            if (LogStaticsData)
-            {
-                new Thread(() =>
-                {
-                    while (running)
-                    {
-                        try
-                        {
-                            if (token.IsCancellationRequested) return;
-                            Log(GetRendererStatusInfo(includeQueueAndWriterStats: true), "STAT");
-                            Thread.Sleep(10000);
-                        }
-                        catch { }
-                    }
-                })
-                {
-                    Name = "Stat logger thread",
-                    IsBackground = false
-                }.Start();
-            }
+            if (LogStaticsData) StartStatLoggerThread(token, includeQueueAndWriterStats: true);
 
             Thread preparer = new(() =>
             {
+                if (AutoSetupRenderContext) IRenderContext.Current = this;
                 IRenderContext.SetWorkerState(0, RenderWorkerStage.PreparingSource, "Layer-Preparer");
                 try
                 {
@@ -1124,6 +1200,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     PreparerFinished = true;
                     IRenderContext.ClearWorkerState();
+                    if (AutoSetupRenderContext) IRenderContext.Current = null;
                 }
             })
             {
@@ -1142,18 +1219,7 @@ namespace projectFrameCut.Render.Rendering
             // Give the preparer a brief moment to queue the first frames, then start scheduling immediately
             await Task.Delay(50, token);
 
-            int watchdogTimeoutMs = RenderWatchdogNoProgressTimeoutMs > 0 ? RenderWatchdogNoProgressTimeoutMs : 60_000;
-            double launchUtilizationThreshold = RenderWorkerLaunchUtilizationThreshold;
-            if (double.IsNaN(launchUtilizationThreshold) || double.IsInfinity(launchUtilizationThreshold) || launchUtilizationThreshold <= 0)
-                launchUtilizationThreshold = 1.0;
-            if (launchUtilizationThreshold > 1.0)
-                launchUtilizationThreshold = 1.0;
-            int preparePollDelayMs = RenderSchedulerPreparePollDelayMs > 0 ? RenderSchedulerPreparePollDelayMs : 5;
-            int idleDelayMs = RenderSchedulerIdleDelayMs > 0 ? RenderSchedulerIdleDelayMs : 10;
-            int minRemainingFramesForPreparedWait = MinRemainingFramesForPreparedWait >= 0
-                ? MinRemainingFramesForPreparedWait
-                : Math.Max(0, MaxThreads / 2 - 2);
-
+            var cfg = ResolveSchedulerConfig();
             Stopwatch lastActivity = Stopwatch.StartNew();
             int lastManuallyStarted = 0;
             int lastFinished = Volatile.Read(ref Finished);
@@ -1180,10 +1246,10 @@ namespace projectFrameCut.Render.Rendering
                 }
 
                 bool forceStart = EnableRenderWatchdogForceStart
-                    && watchdogTimeoutMs > 0
-                    && lastActivity.ElapsedMilliseconds >= watchdogTimeoutMs;
+                    && cfg.WatchdogTimeoutMs > 0
+                    && lastActivity.ElapsedMilliseconds >= cfg.WatchdogTimeoutMs;
                 bool underLaunchUtilizationThreshold = availableSlots > 0
-                    && (double)working / Math.Max(1, MaxThreads) < launchUtilizationThreshold;
+                    && (double)working / Math.Max(1, MaxThreads) < cfg.LaunchUtilizationThreshold;
 
                 if (preparedCount > 0 && (forceStart || underLaunchUtilizationThreshold))
                 {
@@ -1191,7 +1257,7 @@ namespace projectFrameCut.Render.Rendering
 
                     if (forceStart)
                     {
-                        Log($"[Watchdog] No rendered frame progress for {watchdogTimeoutMs} ms. prepared={preparedCount}, working={working}/{MaxThreads}, finished={Volatile.Read(ref Finished)}/{Duration}.", "warn");
+                        Log($"[Watchdog] No rendered frame progress for {cfg.WatchdogTimeoutMs} ms. prepared={preparedCount}, working={working}/{MaxThreads}, finished={Volatile.Read(ref Finished)}/{Duration}.", "warn");
                         if (availableSlots == 0)
                         {
                             Log($"[Watchdog] No available slots (all render threads busy). This often means a render thread is blocked or the writer is stuck waiting for a missing frame index.", "warn");
@@ -1200,9 +1266,9 @@ namespace projectFrameCut.Render.Rendering
                     else
                     {
                         Stopwatch waitElapsed = Stopwatch.StartNew();
-                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > minRemainingFramesForPreparedWait && PreparedFrames.Count < MinSchedulePreparedFrames)
+                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > cfg.MinRemainingFramesForPreparedWait && PreparedFrames.Count < MinSchedulePreparedFrames)
                         {
-                            await Task.Delay(preparePollDelayMs, token);
+                            await Task.Delay(cfg.PreparePollDelayMs, token);
                             if (MaxRenderScheduleTimeout > 0 && waitElapsed.ElapsedMilliseconds >= MaxRenderScheduleTimeout)
                             {
                                 lastManuallyStarted += PreparedFrames.Count;
@@ -1217,15 +1283,14 @@ namespace projectFrameCut.Render.Rendering
 
                     lastActivity.Restart();
 
-                    if (GCOption == 2)
-                    {
-                        GC.Collect(2, GCCollectionMode.Forced, true, true);
-                        GC.WaitForFullGCComplete();
-                    }
-                    else if (GCOption == 1)
-                    {
-                        GC.Collect();
-                    }
+                    HandleGarbageCollection();
+
+                    // Writer backpressure throttle
+                    if (!await CheckWriterBackpressureAsync(cfg.PreparePollDelayMs, token))
+                        break;
+                    lastActivity.Restart();
+                    toStart = forceStart ? PreparedFrames.Count : Math.Min(PreparedFrames.Count, Math.Max(0, MaxThreads - Volatile.Read(ref ThreadWorking)));
+                    if (toStart <= 0) continue;
 
                     for (int i = 0; i < toStart; i++)
                     {
@@ -1237,7 +1302,7 @@ namespace projectFrameCut.Render.Rendering
                         if (!FrameLayerGroups!.TryGetValue(targetFrame, out var layerGroups) || layerGroups.Length == 0)
                         {
                             // No clips at this frame: treat as blank
-                            builder?.Append(targetFrame, BlankFrame);
+                            builder?.Append(targetFrame, BlankFrame.Clone());
                             TrackRenderElapsed(TimeSpan.Zero);
                             FramePrepareElapsed.TryAdd(targetFrame, TimeSpan.Zero);
                             FrameRenderElapsed.TryAdd(targetFrame, TimeSpan.Zero);
@@ -1284,6 +1349,7 @@ namespace projectFrameCut.Render.Rendering
                             [MethodImpl(MethodImplOptions.AggressiveOptimization)]
                             void worker()
                             {
+                                if (AutoSetupRenderContext) IRenderContext.Current = this;
                                 IRenderContext.SetWorkerState(capturedFrame, RenderWorkerStage.Compositing, $"Layer worker #{capturedFrame}.{capturedLayerIdx}");
                                 try
                                 {
@@ -1298,6 +1364,7 @@ namespace projectFrameCut.Render.Rendering
                                 finally
                                 {
                                     IRenderContext.ClearWorkerState();
+                                    if (AutoSetupRenderContext) IRenderContext.Current = null;
                                     Interlocked.Decrement(ref ThreadWorking);
                                     try
                                     {
@@ -1318,17 +1385,10 @@ namespace projectFrameCut.Render.Rendering
                     {
                         FlushBlankFramesBefore(StartFrame + Duration, token);
                     }
-                    await Task.Delay(idleDelayMs, token);
+                    await Task.Delay(cfg.IdleDelayMs, token);
                 }
 
-                if (!exceptions.IsEmpty)
-                {
-                    Log("Exceptions occurred during rendering. Aborting.", "error");
-                    var list = new List<Exception>();
-                    while (exceptions.TryDequeue(out var ex)) list.Add(ex);
-                    if (list.Count == 1) throw list.First();
-                    throw new AggregateException("Multiple exceptions occurred during rendering.", list);
-                }
+                HandleSchedulerExceptions(exceptions, "Multiple exceptions occurred during rendering.");
             }
 
             if (token.IsCancellationRequested)
@@ -1363,7 +1423,9 @@ namespace projectFrameCut.Render.Rendering
                 Log($"[Render] WARN: Target frame {targetFrame} exceeds project duration. Ignore.");
                 return;
             }
-            PreparedFlag.TryRemove(targetFrame, out _);
+            int pfIdx = (int)(targetFrame - StartFrame);
+            if ((uint)pfIdx < _preparedFlagArray.Length)
+                Interlocked.CompareExchange(ref _preparedFlagArray[pfIdx], 0, 1);
 
             if (!ClipNeedForFrame.Remove(targetFrame, out var ClipsNeed) || ClipsNeed.Length == 0)
             {
@@ -1542,7 +1604,7 @@ namespace projectFrameCut.Render.Rendering
             //    - 如果 Worker 已出队此帧（TryRemove 消费了 flag），TryAdd 也会成功，
             //      TryPreAppend 写入 Cache，Worker 结束后 RenderAFrame 会检测到并跳过
             if (builder?.FramePendedToWrite.ContainsKey(frameIndex) == false
-                && PreparedFlag.TryAdd(frameIndex, 0))
+                && TryClaimPreparedFlag(frameIndex))
             {
                 var clone = result.Clone();
                 if (builder?.TryPreAppend(frameIndex, clone) == true)
@@ -1556,7 +1618,9 @@ namespace projectFrameCut.Render.Rendering
                 else
                 {
                     // 认领竞争失败（另一线程先写入了），清理 flag
-                    PreparedFlag.TryRemove(frameIndex, out _);
+                    int pfIdx2 = (int)(frameIndex - StartFrame);
+                    if ((uint)pfIdx2 < _preparedFlagArray.Length)
+                        Interlocked.CompareExchange(ref _preparedFlagArray[pfIdx2], 0, 1);
                     try { clone.Dispose(); } catch { }
                 }
             }
@@ -1602,7 +1666,7 @@ namespace projectFrameCut.Render.Rendering
             {
                 // 空白帧
                 Log($"[ReRenderFrame] Frame {frameIndex} has no clips, returning blank frame.");
-                return BlankFrame.CanBeDisposed ? BlankFrame.Clone() : BlankFrame;
+                return BlankFrame.Clone();
             }
 
             var ppb = Use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
@@ -1642,7 +1706,7 @@ namespace projectFrameCut.Render.Rendering
             if (framesToRender.Count == 0)
             {
                 Log($"[ReRenderFrame] Frame {frameIndex}: no source frames available, returning blank.");
-                return BlankFrame.CanBeDisposed ? BlankFrame.Clone() : BlankFrame;
+                return BlankFrame.Clone();
             }
 
             // 合成帧（直接复用 RenderAFrameInternal 的合成逻辑）
@@ -1703,11 +1767,18 @@ namespace projectFrameCut.Render.Rendering
                     IPicture f;
                     if (item.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(item, clipTargetWidth, clipTargetHeight))
                     {
-                        f = sre.Compute(item, PluginManager.CreateComputer(sre.NeedComputer), clipTargetWidth, clipTargetHeight, frameIndex, ppb);
+                        f = sre.Compute(
+                                item,
+                                PluginManager.CreateComputer(sre.NeedComputer),
+                               item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb),
+                                clipTargetWidth,
+                                clipTargetHeight,
+                                item.GetRelativeFrameIndex(frameIndex)
+                                    ?? throw new IndexOutOfRangeException($"Frame #{frameIndex} is not in clip [{StartFrame}, {StartFrame + item.GetEffectiveDuration()})."), ppb);
                     }
                     else
                     {
-                        f = immutableContent.GetContent(clipTargetWidth, clipTargetHeight, true, ppb);
+                        f = immutableContent.GetContent(clipTargetWidth, clipTargetHeight, ppb);
                     }
                     f.CanBeDisposed = false;
                     f.Tag = $"Immutable content for clip {item.Id} at {clipTargetWidth}x{clipTargetHeight} ppb={ppb}";
@@ -1719,11 +1790,18 @@ namespace projectFrameCut.Render.Rendering
             }
             else if (item.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(item, clipTargetWidth, clipTargetHeight))
             {
-                frame = sre.Compute(item, PluginManager.CreateComputer(sre.NeedComputer), clipTargetWidth, clipTargetHeight, frameIndex, ppb);
+                frame = sre.Compute(
+                        item, 
+                        PluginManager.CreateComputer(sre.NeedComputer), 
+                        item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb), 
+                        clipTargetWidth, 
+                        clipTargetHeight, 
+                        item.GetRelativeFrameIndex(frameIndex) 
+                            ?? throw new IndexOutOfRangeException($"Frame #{frameIndex} is not in clip [{StartFrame}, {StartFrame + item.GetEffectiveDuration()})."), ppb);
             }
             else
             {
-                frame = item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, true, ppb);
+                frame = item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb);
             }
 
             if (frame is not null && IsClipGeneratedByAI.TryGetValue(item.Id, out var aiMark) && aiMark)
@@ -1780,14 +1858,28 @@ namespace projectFrameCut.Render.Rendering
                 {
                     // Copy is only materialized when a bindable effect actually gets removed
                     List<IEffect>? effectCopy = null;
+                    // Cache Computer by NeedComputer string to avoid per-effect CreateComputer overhead
+                    // (many effects in a chain often share the same computer type)
+                    string? lastComputerType = null;
+                    IComputer? cachedComputer = null;
+                    // Begin the per-frame value-provider context: pre-fills the built-in frame/progress
+                    // sources and clears provider values. Value-provider effects write into it during
+                    // the effect loop and consumer dynamic parameters read from it.
+                    var clipDuration = clip.GetEffectiveDuration();
+                    var clipProgress = clipDuration > 0
+                        ? Math.Clamp((float)((long)targetFrame - (long)clip.StartFrame) / clipDuration, 0f, 1f)
+                        : 0f;
+                    ValueProviderFrameContext.BeginFrame(targetFrame, clipProgress);
                     for (int _effectIdx = 0; _effectIdx < effects.Length; _effectIdx++)
                     {
+                        var item = effects[_effectIdx];
                         // Try GPU batch processing (2+ consecutive GPU effects)
                         if (EnableGPUBatchProcess)
                         {
-                            var batch = CollectGpuBatch(effects, _effectIdx, out var nextBatchIdx);
+                            var batch = CollectGpuBatch(effects, _effectIdx, ProcessEffectFromCanvas, out var nextBatchIdx);
                             if (batch.Count >= 2)
                             {
+                                frame = ResizeForEffectIfNeeded(frame, batch[0], targetPos.TargetWidth, targetPos.TargetHeight);
                                 frame = ProcessGpuBatch(frame, batch, frame.Width, frame.Height);
                                 _effectIdx = nextBatchIdx - 1; // -1 because for loop will increment
                                 continue;
@@ -1795,8 +1887,13 @@ namespace projectFrameCut.Render.Rendering
                         }
 
 
-                        var item = effects[_effectIdx];
-                        var computer = PluginManager.CreateComputer(item.NeedComputer);
+                        // Reuse Computer instance when NeedComputer hasn't changed within the same clip chain
+                        if (item.NeedComputer != lastComputerType)
+                        {
+                            cachedComputer = item.NeedComputer is not null ? PluginManager.CreateComputer(item.NeedComputer) : null;
+                            lastComputerType = item.NeedComputer;
+                        }
+                        var computer = cachedComputer;
                         IRenderContext.CurrentFrameBuffer = frame;
 
                         try
@@ -1805,6 +1902,7 @@ namespace projectFrameCut.Render.Rendering
                             {
                                 case EffectType.NormalEffect:
                                     if (item is not INormalEffect e) goto notdefined;
+                                    frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
                                     frame = e.Render(frame, computer, TargetWidth, TargetHeight);
                                     continue;
                                 case EffectType.ContinuousEffect:
@@ -1813,15 +1911,9 @@ namespace projectFrameCut.Render.Rendering
                                     int scopedEnd = c.IsScoped ? c.EndPoint : (int)(clip.StartFrame + clip.GetEffectiveDuration());
                                     if (scopedEnd <= scopedStart || targetFrame < scopedStart || targetFrame >= scopedEnd) continue;
                                     float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
+                                    frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
                                     frame = c.Render(frame, continuousProgress, computer, TargetWidth, TargetHeight);
-                                    continue;
-                                case EffectType.BindableEffect:
-                                    if (item is not IBindableArgumentEffect b) goto notdefined;
-                                    if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, b, computer, TargetWidth, TargetHeight))
-                                    {
-                                        (effectCopy ??= new List<IEffect>(effects)).Remove(item);
-                                    }
-                                    continue;
+                                    continue; 
                                 case EffectType.ContinuousClipPositionProvider:
                                     if (item is not IContinuousClipPositionProvider cp) goto notdefined;
                                     var pos = cp.GetPosition(clip, targetFrame, TargetWidth, TargetHeight);
@@ -1857,6 +1949,8 @@ namespace projectFrameCut.Render.Rendering
                                         targetPos = pos1;
                                     }
                                     continue;
+                                case EffectType.NonIPictureOutputValueProvider:
+                                    throw new InvalidOperationException($"Effect {item.Name} ({item.Id}) of clip {clip.Id} is a NonIPictureOutputValueProvider and should have been handled in the EffectBindingHelper.RebuildAllEffects. This indicates a logic error.");
 
                                 case EffectType.MixtureProvider:
                                 case EffectType.SpeedVarianceProvider:
@@ -1864,44 +1958,35 @@ namespace projectFrameCut.Render.Rendering
                                 case EffectType.ContinuousTextEffect:
                                 case EffectType.SourceReplacement:
                                     continue; //they've processed somewhere else
+
+                                case EffectType.NotSpecified:
+                                    throw new InvalidOperationException($"EffectType cannot be NotSpecified. Processing: {item.Name} of clip {clip.Id}");
+
                                 default:
+                                    Log($"[Render] Effect {item.Name} of clip {clip.Id} has an not defined type {item.TypeOfEffect}.", "warn");
                                     goto notdefined;
                             }
                         }
-#if !DEBUG
-                        catch (NotSupportedException)
-                        {
-                            goto notdefined;
-                        }
-                        catch (NotImplementedException)
-                        {
-                            goto notdefined;
-                        }
-                        catch (InvalidOperationException)
-                        {
-                            goto notdefined;
-                        }
-#endif
                         catch (Exception ex)
                         {
                             Log(ex, $"Processing effect {item?.Name} ({item?.Id}) of clip {clip.Id}", this);
-#if DEBUG
-                            goto notdefined;
-#else
-                            throw;
-#endif
+                            if (EnableEffectAutoRetry)
+                            {
+                                goto notdefined;
+                            }
+                            else
+                            {
+                                throw;
+                            }
                         }
 
 
 
                     notdefined:
-                        Log($"[Render] Effect {item.Name} of clip {clip.Id} has an not static defined type.", "warn");
                         if (item is IBindableArgumentEffect be)
                         {
-                            if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, be, computer, TargetWidth, TargetHeight))
-                            {
-                                (effectCopy ??= new List<IEffect>(effects)).Remove(item);
-                            }
+                            frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
+                            EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, be, computer, TargetWidth, TargetHeight);
                         }
                         else if (item is IContinuousEffect c)
                         {
@@ -1909,10 +1994,12 @@ namespace projectFrameCut.Render.Rendering
                             int scopedEnd = c.IsScoped ? c.EndPoint : (int)(clip.StartFrame + clip.GetEffectiveDuration());
                             if (scopedEnd <= scopedStart || targetFrame < scopedStart || targetFrame >= scopedEnd) continue;
                             float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
+                            frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
                             frame = c.Render(frame, continuousProgress, computer, TargetWidth, TargetHeight);
                         }
                         else if (item is INormalEffect n)
                         {
+                            frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
                             frame = n.Render(frame, computer, TargetWidth, TargetHeight);
                         }
                         else if (item is IClipPositionProvider p)
@@ -1939,6 +2026,10 @@ namespace projectFrameCut.Render.Rendering
                                 targetPos = new(x, y, w, h, false);
                             }
                         }
+                        else if(item is IValueProviderEffect)
+                        {
+                            throw new InvalidOperationException($"Effect {item.Name} ({item.Id}) of clip {clip.Id} is a IValueProviderEffect and should have been handled in the EffectBindingHelper.RebuildAllEffects. This indicates a logic error.");
+                        }
                         else if (item is IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect or ISourceReplacementEffect)
                         {
                             //skip here, they've processed somewhere else
@@ -1950,14 +2041,8 @@ namespace projectFrameCut.Render.Rendering
                         }
 
                     }
-
-                    if (effectCopy is not null)
-                    {
-                        var updated = effectCopy.OrderBy(c => c.Index).ToArray();
-                        if (AllowReorderEffect)
-                            updated = ReorderEffectsForGpuBatching(updated);
-                        EffectCache[clip.Id] = updated;
-                    }
+                    // The per-frame value-provider values are only needed during effect processing.
+                    ValueProviderFrameContext.EndFrame();
                 }
 
                 // Resize frame to match targetPos dimensions when they differ (replaces legacy __Internal_Resize__ effect)
@@ -2061,7 +2146,7 @@ namespace projectFrameCut.Render.Rendering
 
                 if (result is null)
                 {
-                    return BlankFrame.CanBeDisposed ? BlankFrame.Clone() : BlankFrame;
+                    return BlankFrame.Clone();
                 }
 
                 if (result.Width < TargetWidth || result.Height < TargetHeight)
@@ -2129,6 +2214,24 @@ namespace projectFrameCut.Render.Rendering
             FrameRenderElapsed[frameIndex] = sw.Elapsed;
         }
 
+        private IPicture ResizeForEffectIfNeeded(IPicture frame, IEffect effect, int targetWidth, int targetHeight)
+        {
+            if (!ProcessEffectFromCanvas || !effect.CanProcessFromCanvas
+                || targetWidth <= 0 || targetHeight <= 0
+                || frame.Width == targetWidth && frame.Height == targetHeight)
+            {
+                return frame;
+            }
+
+            var resized = frame.Resize(targetWidth, targetHeight, true);
+            if (!ReferenceEquals(frame, resized))
+            {
+                try { frame.Dispose(); } catch { }
+            }
+            IRenderContext.CurrentFrameBuffer = resized;
+            return resized;
+        }
+
         #region GPU batch
 
         /// <summary>
@@ -2136,10 +2239,11 @@ namespace projectFrameCut.Render.Rendering
         /// that can be batched into a single GPU session.
         /// Returns the batch only if it contains at least 2 effects.
         /// </summary>
-        static List<IEffect> CollectGpuBatch(IReadOnlyList<IEffect> effects, int startIndex, out int nextIndex)
+        static List<IEffect> CollectGpuBatch(IReadOnlyList<IEffect> effects, int startIndex, bool splitByCanvasSupport, out int nextIndex)
         {
             var batch = new List<IEffect>();
             string? fromPlugin = null;
+            bool canProcessFromCanvas = false;
 
             for (int i = startIndex; i < effects.Count; i++)
             {
@@ -2162,9 +2266,11 @@ namespace projectFrameCut.Render.Rendering
                     if (batch.Count == 0)
                     {
                         fromPlugin = item.FromPlugin;
+                        canProcessFromCanvas = item.CanProcessFromCanvas;
                         batch.Add(item);
                     }
-                    else if (item.FromPlugin == fromPlugin)
+                    else if (item.FromPlugin == fromPlugin
+                        && (!splitByCanvasSupport || item.CanProcessFromCanvas == canProcessFromCanvas))
                     {
                         batch.Add(item);
                     }
@@ -2194,7 +2300,7 @@ namespace projectFrameCut.Render.Rendering
         /// to group GPU-batchable effects from the same plugin together, maximizing batch size.
         /// Non-reorderable effects stay in their original positions as anchors.
         /// </summary>
-        private static IEffect[] ReorderEffectsForGpuBatching(IEffect[] effects)
+        private IEffect[] ReorderEffectsForGpuBatching(IEffect[] effects)
         {
             if (effects.Length <= 1) return effects;
 
@@ -2207,7 +2313,9 @@ namespace projectFrameCut.Render.Rendering
                 if (!list[i].IsReorderable) { i++; continue; }
 
                 int blockStart = i;
-                while (i < list.Count && list[i].IsReorderable)
+                bool canProcessFromCanvas = list[i].CanProcessFromCanvas;
+                while (i < list.Count && list[i].IsReorderable
+                    && (!ProcessEffectFromCanvas || list[i].CanProcessFromCanvas == canProcessFromCanvas))
                     i++;
                 int blockEnd = i;
 
@@ -2414,7 +2522,7 @@ namespace projectFrameCut.Render.Rendering
 
                 if (merged == null)
                 {
-                    merged = BlankFrame;
+                    merged = BlankFrame.Clone();
                 }
 
                 if (merged.Width < TargetWidth || merged.Height < TargetHeight)
@@ -2559,6 +2667,17 @@ namespace projectFrameCut.Render.Rendering
             return false;
         }
 
+        /// <summary>
+        /// Atomically claims a frame in <see cref="_preparedFlagArray"/>.
+        /// Equivalent to <c>ConcurrentDictionary.TryAdd(key, 0)</c> on the old <c>PreparedFlag</c> dictionary.
+        /// Returns true if the frame was not yet claimed (CAS 0→1 succeeded).
+        /// </summary>
+        private bool TryClaimPreparedFlag(uint frameIndex)
+        {
+            int idx = (int)(frameIndex - StartFrame);
+            return (uint)idx < _preparedFlagArray.Length && Interlocked.CompareExchange(ref _preparedFlagArray[idx], 1, 0) == 0;
+        }
+
         private void InvokeProgress()
         {
             double prog = (double)Volatile.Read(ref Finished) / Duration;
@@ -2566,6 +2685,18 @@ namespace projectFrameCut.Render.Rendering
             double fps = elapsed.TotalSeconds > 0 ? Volatile.Read(ref Finished) / elapsed.TotalSeconds : 0;
             Interlocked.Exchange(ref _currentFps, fps);
             OnProgressChanged?.Invoke(prog, GetEstimated(prog));
+            uint projectFrames = TotalProjectFrames > 0 ? TotalProjectFrames : Duration;
+            double globalProgress = projectFrames > 0
+                ? Math.Clamp((CompletedFramesBeforeChunk + Volatile.Read(ref Finished)) / (double)projectFrames, 0, 1)
+                : prog;
+            OnChunkProgressChanged?.Invoke(new ChunkRenderProgress(
+                ChunkIndex,
+                Math.Max(1, ChunkCount),
+                Volatile.Read(ref Finished),
+                Duration,
+                prog,
+                globalProgress,
+                GetEstimated(prog)));
         }
 
         private TimeSpan GetEstimated(double prog)
@@ -2593,6 +2724,7 @@ namespace projectFrameCut.Render.Rendering
             double preparedProgress = totalFrames > 0 ? (double)prepared / totalFrames : 0;
             TimeSpan eachRender = GetAverageElapsed(Interlocked.Read(ref _renderElapsedTicksTotal), Volatile.Read(ref _renderElapsedCount));
             TimeSpan eachPrepare = GetAverageElapsed(Interlocked.Read(ref _prepareElapsedTicksTotal), Volatile.Read(ref _prepareElapsedCount));
+            double onePctLow = OnePercentLowFps;
 
             if (includeQueueAndWriterStats)
             {
@@ -2602,13 +2734,13 @@ namespace projectFrameCut.Render.Rendering
                     $"pending to render: {prepared - finished}, " +
                     $"total write frames: {wrote} wrote and {Math.Max(0, totalWriteFrames - wrote)} pended, " +
                     $"slots {Math.Max(0, MaxThreads - working)}/{MaxThreads}, active workers: {working}, " +
-                    $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {eachRender}.)";
+                    $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {eachRender}, 1% low FPS: {onePctLow:n1} ({OnePercentLowFrameTime.TotalMilliseconds:n1} ms).)";
             }
 
             return $"Finished {finishedProgress:p2}. ETA: {GetEstimated(finishedProgress)}, " +
                 $"Memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB. \r\n" +
                 $"       ({finished} of {totalFrames} finished, already elapsed {_renderTotalStopwatch.Elapsed}, " +
-                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {eachRender}.)";
+                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {eachRender}, 1% low FPS: {onePctLow:n1} ({OnePercentLowFrameTime.TotalMilliseconds:n1} ms).)";
         }
 
         private static TimeSpan GetAverageElapsed(ConcurrentBag<TimeSpan> elapsedCollection)
@@ -2640,6 +2772,25 @@ namespace projectFrameCut.Render.Rendering
 
         private static TimeSpan GetAverageElapsed(long totalTicks, int count)
             => count > 0 ? new TimeSpan(totalTicks / count) : TimeSpan.Zero;
+
+        /// <summary>
+        /// 计算低百分位帧耗时：对 <see cref="EachElapsed"/> 中所有帧渲染耗时排序，
+        /// 取最慢的 <paramref name="fraction"/> 比例帧的平均值。
+        /// 例如 fraction=0.01 得到 1% low 帧耗时，fraction=0.001 得到 0.1% low。
+        /// 返回 <see cref="TimeSpan.Zero"/> 表示尚无数据。
+        /// </summary>
+        /// <param name="fraction">要平均的最慢帧比例，如 0.01 表示最慢 1%。</param>
+        public TimeSpan ComputeLowPercentileFrameTime(double fraction)
+        {
+            if (EachElapsed.IsEmpty) return TimeSpan.Zero;
+
+            var sorted = EachElapsed.OrderBy(ts => ts.Ticks).ToArray();
+            int count = Math.Max(1, (int)(sorted.Length * fraction));
+            long totalTicks = 0;
+            for (int i = sorted.Length - count; i < sorted.Length; i++)
+                totalTicks += sorted[i].Ticks;
+            return new TimeSpan(totalTicks / count);
+        }
 
         private Dictionary<string, object> RentFrameLocalCache()
         {
@@ -2719,7 +2870,7 @@ namespace projectFrameCut.Render.Rendering
                 // Clean up thread limiter
                 try { _threadLimiter?.Dispose(); } catch { }
 
-                PreparedFlag.Clear();
+                Array.Clear(_preparedFlagArray);
                 while (PreparedFrames.TryDequeue(out _)) { }
                 while (BlankFrames.TryDequeue(out _)) { }
 
@@ -2754,7 +2905,7 @@ namespace projectFrameCut.Render.Rendering
                         break;
                     }
 
-                    builder?.Append(blankIdx, BlankFrame);
+                    builder?.Append(blankIdx, BlankFrame.Clone());
                     TrackRenderElapsed(TimeSpan.Zero);
                     FramePrepareElapsed.TryAdd(blankIdx, TimeSpan.Zero);
                     FrameRenderElapsed.TryAdd(blankIdx, TimeSpan.Zero);
@@ -2797,7 +2948,7 @@ namespace projectFrameCut.Render.Rendering
             GC.Collect();
         }
 
-        private (int[] Mask, string? Description) ResolveWorkerThreadAffinityTargetCores()
+        private (int[]? Mask, string? Description) ResolveWorkerThreadAffinityTargetCores()
         {
             if (WorkerCPUCoreIndexs is { Length: > 0 })
             {

@@ -22,14 +22,8 @@ namespace projectFrameCut.Render.Effect
         public int Height { get; init; }
         public int Width { get; init; }
         public bool PreserveAspectRatio { get; init; } = true;
-        public string? BindedEffectGroupID { get; set; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            {"Height", Height },
-            {"Width", Width },
-            {"PreserveAspectRatio" , PreserveAspectRatio  },
-        };
+        public string? BindedEffectProvidingSystemID { get; set; }
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
@@ -70,15 +64,17 @@ namespace projectFrameCut.Render.Effect
             bool preserve = false;
             if (parameters.TryGetValue("PreserveAspectRatio", out var val))
             {
-                preserve = Convert.ToBoolean(val);
+                preserve = DynamicParam.ToBool(val);
             }
 
-            return new ResizeEffect_HwAccel
+            var effect = new ResizeEffect_HwAccel
             {
-                Height = Convert.ToInt32(parameters["Height"]),
-                Width = Convert.ToInt32(parameters["Width"]),
+                Height = DynamicParam.ToInt32(parameters.GetValueOrDefault("Height")),
+                Width = DynamicParam.ToInt32(parameters.GetValueOrDefault("Width")),
                 PreserveAspectRatio = preserve,
             };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
@@ -86,13 +82,16 @@ namespace projectFrameCut.Render.Effect
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
             var sw = Stopwatch.StartNew();
-            int width = Width;
-            int height = Height;
+            int resizeWidth = DynamicParam.Resolve(Parameters.GetValueOrDefault("Width"), Width);
+            int resizeHeight = DynamicParam.Resolve(Parameters.GetValueOrDefault("Height"), Height);
+            bool preserveAspectRatio = DynamicParam.Resolve(Parameters.GetValueOrDefault("PreserveAspectRatio"), PreserveAspectRatio);
+            int width = resizeWidth;
+            int height = resizeHeight;
 
             if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
             {
-                width = Math.Max(1, (int)Math.Round((double)Width * targetWidth / RelativeWidth, MidpointRounding.AwayFromZero));
-                height = Math.Max(1, (int)Math.Round((double)Height * targetHeight / RelativeHeight, MidpointRounding.AwayFromZero));
+                width = Math.Max(1, (int)Math.Round((double)resizeWidth * targetWidth / RelativeWidth, MidpointRounding.AwayFromZero));
+                height = Math.Max(1, (int)Math.Round((double)resizeHeight * targetHeight / RelativeHeight, MidpointRounding.AwayFromZero));
             }
             else
             {
@@ -103,7 +102,7 @@ namespace projectFrameCut.Render.Effect
             int destWidth = width;
             int destHeight = height;
 
-            if (PreserveAspectRatio)
+            if (preserveAspectRatio)
             {
                 double sourceRatio = (double)source.Width / source.Height;
                 double targetRatio = (double)width / height;
@@ -213,7 +212,7 @@ namespace projectFrameCut.Render.Effect
                 {
                     { "Width", destWidth },
                     { "Height", destHeight },
-                    { "PreserveAspectRatio", PreserveAspectRatio }
+                    { "PreserveAspectRatio", preserveAspectRatio }
                 }
             }).ToList();
             return result;
@@ -234,14 +233,8 @@ namespace projectFrameCut.Render.Effect
         public int Height { get; init; }
         public int Width { get; init; }
         public bool PreserveAspectRatio { get; init; } = true;
-        public string? BindedEffectGroupID { get; set; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            {"Height", Height },
-            {"Width", Width },
-            {"PreserveAspectRatio" , PreserveAspectRatio  },
-        };
+        public string? BindedEffectProvidingSystemID { get; set; }
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
@@ -283,28 +276,33 @@ namespace projectFrameCut.Render.Effect
             bool preserve = false;
             if (parameters.TryGetValue("PreserveAspectRatio", out var val))
             {
-                preserve = Convert.ToBoolean(val);
+                preserve = DynamicParam.ToBool(val);
             }
 
-            return new ResizeEffect_IPicture
+            var effect = new ResizeEffect_IPicture
             {
-                Height = Convert.ToInt32(parameters["Height"]),
-                Width = Convert.ToInt32(parameters["Width"]),
+                Height = DynamicParam.ToInt32(parameters.GetValueOrDefault("Height")),
+                Width = DynamicParam.ToInt32(parameters.GetValueOrDefault("Width")),
                 PreserveAspectRatio = preserve,
             };
+            effect.Parameters = parameters;
+            return effect;
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            int width = Width;
-            int height = Height;
+            int resizeWidth = DynamicParam.Resolve(Parameters.GetValueOrDefault("Width"), Width);
+            int resizeHeight = DynamicParam.Resolve(Parameters.GetValueOrDefault("Height"), Height);
+            bool preserveAspectRatio = DynamicParam.Resolve(Parameters.GetValueOrDefault("PreserveAspectRatio"), PreserveAspectRatio);
+            int width = resizeWidth;
+            int height = resizeHeight;
 
             if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
             {
-                width = Math.Max(1, (int)Math.Round((double)Width * targetWidth / RelativeWidth, MidpointRounding.AwayFromZero));
-                height = Math.Max(1, (int)Math.Round((double)Height * targetHeight / RelativeHeight, MidpointRounding.AwayFromZero));
+                width = Math.Max(1, (int)Math.Round((double)resizeWidth * targetWidth / RelativeWidth, MidpointRounding.AwayFromZero));
+                height = Math.Max(1, (int)Math.Round((double)resizeHeight * targetHeight / RelativeHeight, MidpointRounding.AwayFromZero));
             }
             else
             {
@@ -312,56 +310,57 @@ namespace projectFrameCut.Render.Effect
                 height = Math.Max(1, height);
             }
 
-            return source.Resize(width, height, PreserveAspectRatio);
+            return source.Resize(width, height, preserveAspectRatio);
         }
 
     }
 
-    public class ResizeEffectFactory : IEffectFactory
+    /// <summary>
+    /// The Render-side provider of the Resize effect.
+    /// </summary>
+    public class ResizeEffectProvider : EffectProviderBase
     {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-
-        public string TypeName => "Resize";
-
-        public EffectTarget Target => EffectTarget.Video;
-
-        public List<string> ParametersNeeded { get; } = new List<string>
+        public ResizeEffectProvider()
         {
-            "Height",
-            "Width",
-        };
-
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
-        {
-            {"Height", "int" },
-            {"Width", "int" },
-            {"PreserveAspectRatio", "bool" },
-        };
-
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture, EffectImplementType.HwAcceleration, EffectImplementType.IPicture };
-
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
-        {
-            Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
-
-            if (implementType == EffectImplementType.NotSpecified)
-            {
-                return BuildWithDefaultType(parameters);
-            }
-
-            return implementType switch
-            {
-                EffectImplementType.IPicture => ResizeEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>()),
-                EffectImplementType.HwAcceleration => ResizeEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>()),
-                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
-            };
+            Name = "Resize";
+            SetField("Width", 1920);
+            SetField("Height", 1080);
+            SetField("PreserveAspectRatio", true);
         }
 
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
+        public override string TypeName => "Resize";
+
+        public override EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public override EffectTarget Target => EffectTarget.Video | EffectTarget.IsNotVisibleInEffectEditor | EffectTarget.IsNotVisibleInNewEffectSelector;
+
+        public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
+        {
+            return
+            [
+                Field("Width", EffectArgumentFieldType.Integer, "1920", min: "1"),
+                Field("Height", EffectArgumentFieldType.Integer, "1080", min: "1"),
+                Field("PreserveAspectRatio", EffectArgumentFieldType.Boolean, "true")
+            ];
+        }
+
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
+
+        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
             Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
-
-            return ResizeEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
+            if (implementType == EffectImplementType.NotSpecified)
+            {
+                return [ResizeEffect_IPicture.FromParametersDictionary(parameters)];
+            }
+            return implementType switch
+            {
+                EffectImplementType.IPicture => [ResizeEffect_IPicture.FromParametersDictionary(parameters)],
+                EffectImplementType.HwAcceleration => [ResizeEffect_HwAccel.FromParametersDictionary(parameters)],
+                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
+            };
         }
     }
 }

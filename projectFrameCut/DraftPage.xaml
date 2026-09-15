@@ -4,6 +4,7 @@
              x:Class="projectFrameCut.DraftPage"
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:local="clr-namespace:projectFrameCut"
+             xmlns:controls="clr-namespace:projectFrameCut.Controls"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
              xmlns:mw="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;assembly=projectFrameCut.ApplicationAPIBase"
              x:DataType="local:DraftPage"
@@ -11,87 +12,85 @@
              Title="">
     <ContentPage.MenuBarItems>
         <MenuBarItem x:Name="ProjectNameMenuBarItem" Text="{l:Localized Key=DraftPage_MenuBar_Project}">
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_GoRender}"  Command="{Binding GoRenderCommand}" />
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_GoRender}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe04b;}" Command="{Binding GoRenderCommand}" />
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Save}" Command="{Binding SaveCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Save}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe161;}" Command="{Binding SaveCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                                 Key="S" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_History}" Command="{Binding ManageWindowCommand}" CommandParameter="history">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_History}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe889;}" Command="{Binding ManageWindowCommand}" CommandParameter="history">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                                 Key="H" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_CleanRenderCache}" Command="{Binding CleanRenderCacheCommand}"/>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Option}" Command="{Binding SettingsCommand}"/>
-            <!-- TODO
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_CleanRenderCache}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe872;}" Command="{Binding CleanRenderCacheCommand}"/>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Option}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8b8;}" Command="{Binding SettingsCommand}"/>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Share}"/>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Cooperate}"/>
-            -->
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_RestartBackend}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe042;}" Command="{Binding RestartBackendCommand}"/>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_CreateRpcToken}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe73e;}" Command="{Binding CreateRpcTokenCommand}"/>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_ExitWithoutSave}" Command="{Binding ExitNoSaveCommand}"/>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Exit}" Command="{Binding ExitCommand}"/>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_ExitWithoutSave}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14a;}" Command="{Binding ExitNoSaveCommand}"/>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Exit}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe879;}" Command="{Binding ExitCommand}"/>
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Edit}" >
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Copy}" Command="{Binding CopyCommand}" IsEnabled="{Binding SelectedAnyClip}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Copy}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14d;}" Command="{Binding CopyCommand}" IsEnabled="{Binding SelectedAnyClip}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                     Key="C" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Cut}" Command="{Binding CutCommand}" IsEnabled="{Binding SelectedAnyClip}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Cut}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14e;}" Command="{Binding CutCommand}" IsEnabled="{Binding SelectedAnyClip}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                     Key="X" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Paste}" Command="{Binding PasteCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Paste}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14f;}" Command="{Binding PasteCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                     Key="V" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Duplicate}" Command="{Binding DuplicateCommand}" IsEnabled="{Binding SelectedAnyClip}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Duplicate}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14d;}" Command="{Binding DuplicateCommand}" IsEnabled="{Binding SelectedAnyClip}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                                 Key="D" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Undo}" Command="{Binding UndoCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Undo}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe166;}" Command="{Binding UndoCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                                 Key="Z" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Redo}" Command="{Binding RedoCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Redo}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe15a;}" Command="{Binding RedoCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                                 Key="Y" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator/>
-            <MenuFlyoutItem Text="{Binding IsClipMoving, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_MenuBar_Edit_MoveLeft}, FalseObject={l:Localized Key=DraftPage_MenuBar_Edit_PlayheadMoveLeft}}}" Command="{Binding ArrowLeftCommand}">
+            <MenuFlyoutItem Text="{Binding IsClipMoving, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_MenuBar_Edit_MoveLeft}, FalseObject={l:Localized Key=DraftPage_MenuBar_Edit_PlayheadMoveLeft}}}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe5c4;}" Command="{Binding ArrowLeftCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator  Key="Left" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{Binding IsClipMoving, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_MenuBar_Edit_MoveRight}, FalseObject={l:Localized Key=DraftPage_MenuBar_Edit_PlayheadMoveRight}}}" Command="{Binding ArrowRightCommand}">
+            <MenuFlyoutItem Text="{Binding IsClipMoving, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_MenuBar_Edit_MoveRight}, FalseObject={l:Localized Key=DraftPage_MenuBar_Edit_PlayheadMoveRight}}}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe5c8;}" Command="{Binding ArrowRightCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator  Key="Right" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_MoveUp}" Command="{Binding ArrowUpCommand}" IsEnabled="{Binding IsClipMoving}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_MoveUp}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe5d8;}" Command="{Binding ArrowUpCommand}" IsEnabled="{Binding IsClipMoving}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator  Key="Up" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_MoveDown}" Command="{Binding ArrowDownCommand}" IsEnabled="{Binding IsClipMoving}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_MoveDown}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe5db;}" Command="{Binding ArrowDownCommand}" IsEnabled="{Binding IsClipMoving}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator  Key="Down" />
                 </MenuFlyoutItem.KeyboardAccelerators>
@@ -99,88 +98,117 @@
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Clip}">
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Add}" Command="{Binding AddCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Add}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe145;}" Command="{Binding AddCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                     Key="A" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Select}" Command="{Binding SelectCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Select}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe162;}" Command="{Binding SelectCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
                     Key="C" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=PropertyPanel}" Command="{Binding ShowClipInfoPanelCommand}" IsEnabled="{Binding SelectedAnyClip}">
+            <MenuFlyoutItem Text="{l:Localized Key=PropertyPanel}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8b8;}" Command="{Binding ShowClipInfoPanelCommand}" IsEnabled="{Binding SelectedAnyClip}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem  Text="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_MenuBar_Edit_Combine}, FalseObject={l:Localized Key=DraftPage_MenuBar_Edit_Spilt}}}"  Command="{Binding SpiltOrCombineCommand}"  IsEnabled="{Binding SelectedAnyClip}">
+            <MenuFlyoutItem Text="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_MenuBar_Edit_Combine}, FalseObject={l:Localized Key=DraftPage_MenuBar_Edit_Spilt}}}" Command="{Binding SpiltOrCombineCommand}" IsEnabled="{Binding SelectedAnyClip}">
+                <MenuFlyoutItem.IconImageSource>
+                    <FontImageSource FontFamily="Icons" Glyph="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject='&#xf420;', FalseObject='&#xe14e;'}}" />
+                </MenuFlyoutItem.IconImageSource>
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
                     Key="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject=G, FalseObject=S}}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" Command="{Binding MoveCommand}" IsEnabled="{Binding SelectedAnyClip}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xf71e;}" Command="{Binding MoveCommand}" IsEnabled="{Binding SelectedAnyClip}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
                     Key="M" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
 
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" Command="{Binding DeleteCommand}" IsEnabled="{Binding SelectedAnyClip}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14a;}" Command="{Binding DeleteCommand}" IsEnabled="{Binding SelectedAnyClip}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator
                     Key="Delete" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_PlayPause}" Command="{Binding PlayPauseCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_PlayPause}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe037;}" Command="{Binding PlayPauseCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator  Key="Space" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Goto}" Command="{Binding GotoCommand}">
-                <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
-                                Key="G" />
-                </MenuFlyoutItem.KeyboardAccelerators>
-            </MenuFlyoutItem>
         </MenuBarItem>
 
-        <MenuBarItem x:Name="ViewMenuBarItem" Text="{l:Localized Key=DraftPage_MenuBar_View}">
-            <!--        <MenuFlyoutItem Text="{l:Localized Key=AssetPage_ShowPreview}" Command="{Binding ManageWindowCommand}" CommandParameter="preview" />
-            <MenuFlyoutItem Text="{l:Localized Key=PropertyPanel}" Command="{Binding ManageWindowCommand}" CommandParameter="properties" />
-            <MenuFlyoutItem Text="{l:Localized Key=AIAssistant_ChatViewTitle}" Command="{Binding ManageWindowCommand}" CommandParameter="assistant" />
--->
-            <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Timeline_ScrollLeft}" Command="{Binding TimelineScrollCommand}" CommandParameter="-10" >
+        <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Timeline}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Timeline_ScrollLeft}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe5c4;}" Command="{Binding TimelineScrollCommand}" CommandParameter="-10" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl', MacCatalyst='Command'}" 
                                 Key="Left" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Timeline_ScrollRight}" Command="{Binding TimelineScrollCommand}" CommandParameter="10" >
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Timeline_ScrollRight}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe5c8;}" Command="{Binding TimelineScrollCommand}" CommandParameter="10" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl', MacCatalyst='Command'}" 
                                 Key="Right" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Timeline_FollowPlayhead}" Command="{Binding FollowPlayheadCommand}" >
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Timeline_FollowPlayhead}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe061;}" Command="{Binding FollowPlayheadCommand}" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl', MacCatalyst='Command'}" 
                                 Key="F" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{Binding IsTimelineScrollEnabled, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_MenuBar_View_Timeline_LockScroll}, FalseObject={l:Localized Key=DraftPage_MenuBar_View_Timeline_UnLockScroll}}}" Command="{Binding SetTimelineScrollLockCommand}" >
+            <MenuFlyoutItem Text="{Binding IsTimelineScrollEnabled, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_MenuBar_View_Timeline_LockScroll}, FalseObject={l:Localized Key=DraftPage_MenuBar_View_Timeline_UnLockScroll}}}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe897;}" Command="{Binding SetTimelineScrollLockCommand}" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl', MacCatalyst='Command'}" 
                                 Key="L" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomIn}" Command="{Binding ZoomCommand}" CommandParameter="-" >
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Goto}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8b6;}" Command="{Binding GotoCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
+                                Key="G" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_GotoPreviousFrame}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe045;}" Command="{Binding PreviousFrameCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Alt', MacCatalyst='Command,Option'}" 
+                                Key="Left" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_GotoNextFrame}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe044;}" Command="{Binding NextFrameCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Alt', MacCatalyst='Command,Option'}" 
+                                Key="Right" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Horizontal}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe22c;}" Command="{Binding AddHorizontalReferenceLineCommand}" >
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Option,Alt'}" 
+                    Key="H" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Vertical}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe233;}" Command="{Binding AddVerticalReferenceLineCommand}" >
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Option,Alt'}" 
+                    Key="V" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Manage}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8b8;}" Command="{Binding ManageReferenceLinesCommand}" />
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Clear}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14c;}" Command="{Binding ClearReferenceLinesCommand}" />
+        </MenuBarItem>
+        <MenuBarItem x:Name="ViewMenuBarItem" Text="{l:Localized Key=DraftPage_MenuBar_View}">
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
+
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomIn}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8ff;}" Command="{Binding ZoomCommand}" CommandParameter="-" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
                                 Key="Equal" />
@@ -190,13 +218,13 @@
                                 Key="Add" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomReset}" Command="{Binding ZoomCommand}" CommandParameter="0" >
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomReset}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xea10;}" Command="{Binding ZoomCommand}" CommandParameter="0" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
                                 Key="0" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomOut}" Command="{Binding ZoomCommand}" CommandParameter="+" >
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ZoomOut}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe900;}" Command="{Binding ZoomCommand}" CommandParameter="+" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
                                 Key="OemMinus" />
@@ -206,42 +234,28 @@
             </MenuFlyoutItem>
 
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Horizontal}" Command="{Binding AddHorizontalReferenceLineCommand}" >
-                <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Option,Alt'}" 
-                                Key="H" />
-                </MenuFlyoutItem.KeyboardAccelerators>
-            </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Vertical}" Command="{Binding AddVerticalReferenceLineCommand}" >
-                <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Option,Alt'}" 
-                                Key="V" />
-                </MenuFlyoutItem.KeyboardAccelerators>
-            </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Manage}" Command="{Binding ManageReferenceLinesCommand}" />
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Clear}" Command="{Binding ClearReferenceLinesCommand}" />
-            <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Switch}" Command="{Binding ManageWindowCommand}" CommandParameter="switch" >
+
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Switch}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xf742;}" Command="{Binding ManageWindowCommand}" CommandParameter="switch" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl', MacCatalyst='Option'}" 
                                 Key="Tab" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ToggleTaskbar}" Command="{Binding ManageWindowCommand}" CommandParameter="taskbar" />
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_CloseAdditional}" Command="{Binding ManageWindowCommand}" CommandParameter="close-extra" >
+            <!--   <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ToggleTaskbar}" Command="{Binding ManageWindowCommand}" CommandParameter="taskbar" /> -->
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_CloseAdditional}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xf230;}" Command="{Binding ManageWindowCommand}" CommandParameter="close-extra" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Command,Alt'}" 
                                 Key="W" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
 
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_CloseActive}" Command="{Binding ManageWindowCommand}" CommandParameter="active" >
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_CloseActive}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xf745;}" Command="{Binding ManageWindowCommand}" CommandParameter="active" >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
                                 Key="W" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Reset}" Command="{Binding ResetMultiWindowViewCommand}"  >
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Reset}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe042;}" Command="{Binding ResetMultiWindowViewCommand}"  >
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Command,Alt'}" 
                                 Key="R" />
@@ -254,20 +268,20 @@
 
         </MenuBarItem>
 
-        <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs}">
-            <MenuFlyoutItem x:Name="JobRunningIndicator" Text="{l:Localized Key=DraftPage_NoJobRunning}" IsEnabled="False" />
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs_ManageJobs}" Command="{Binding ManageJobsCommand}">
+        <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Command}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_CommandPanel}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe9a9;}" Command="{Binding ShowCommandPanelCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}" Key="T" />
+                    <KeyboardAccelerator Key="{OnPlatform WinUI=F12, MacCatalyst=UIKeyInputF12}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutSeparator/>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Conform}" Command="{Binding ReturnCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_QuickCommand}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8b8;}" Command="{Binding ManageQuickCommandsCommand}" />
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Conform}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe5ca;}" Command="{Binding ReturnCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator  Key="{OnPlatform MacCatalyst=Return, Default=Enter}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Escape}" Command="{Binding EscapeCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Escape}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14c;}" Command="{Binding EscapeCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Key="{OnPlatform WinUI=Escape, MacCatalyst=UIKeyInputEscape}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
@@ -275,103 +289,187 @@
         </MenuBarItem>
 
     </ContentPage.MenuBarItems>
-
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="{l:Localized Key=DraftPage_CommandPanel}"  Command="{Binding ShowCommandPanelCommand}" />
+    </ContentPage.ToolbarItems>
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="25"/>
         </Grid.RowDefinitions>
 
+        <Grid Grid.Row="0" x:Name="UpperContent">
+            <mw:MultiWindowView x:FieldModifier="public"
+                                x:Name="MainMultiWindowView"
+                                ZIndex="0"
+                                HorizontalOptions="Fill"
+                                VerticalOptions="Fill" />
+            <!-- These reusable views are detached and assigned to module windows by WorkspaceWindowHost.
+                 No module-specific MultiWindowItem is declared in DraftPage XAML. -->
+            <Grid x:Name="WorkspaceViewPool" IsVisible="False">
+                <ContentView x:Name="ClipEditorHost"
+                        Padding="16"
+                        BackgroundColor="Transparent"
+                        InputTransparent="False"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Fill" />
+                <Border x:Name="RightContentBorder" StrokeThickness="0" HorizontalOptions="Fill" VerticalOptions="Fill" />
+                <ContentView x:Name="AssistanceHost"
+                             BackgroundColor="Transparent"
+                             HorizontalOptions="Fill"
+                             VerticalOptions="Fill" />
+                <ContentView x:Name="AddClipHost"
+                             BackgroundColor="Transparent"
+                             HorizontalOptions="Fill"
+                             VerticalOptions="Fill" />
+            </Grid>
+        </Grid>
 
-        <VerticalStackLayout Grid.Row="0" x:Name="UpperContent">
-            <mw:MultiWindowView x:FieldModifier="public" x:Name="MainMultiWindowView" ZIndex="0">
-                <mw:MultiWindowItem x:Name="PreviewSubwindow" Title="{l:Localized Key=AssetPage_ShowPreview}" IsNavigationVisible="False" IsClosable="False" IsPopOutVisible="True">
-                    <ContentView x:Name="ClipEditorHost"
-                            Padding="16"                            
-                            BackgroundColor="Transparent"
-                            InputTransparent="False"
-                            HorizontalOptions="Fill"
-                            VerticalOptions="Fill" />
-                </mw:MultiWindowItem>
-                <mw:MultiWindowItem x:Name="PropertiesSubwindow" Title="{l:Localized Key=PropertyPanel}" IsClosable="False" IsPopOutVisible="True" HorizontalOptions="Fill" VerticalOptions="Fill">
-                    <Border x:Name="RightContentBorder" StrokeThickness="0" HorizontalOptions="Fill" VerticalOptions="Fill" />
-                </mw:MultiWindowItem>
-                <mw:MultiWindowItem x:Name="AssisstantSubWindow" Title="Assistant P" HeightRequest="500" WidthRequest="400" IsPopOutVisible="True">
+        <Grid x:Name="FixedLayoutRoot"
+              Grid.Row="0"
+              Grid.RowSpan="2"
+              IsVisible="False"
+              ZIndex="20"
+              BackgroundColor="{DynamicResource MultiWindowViewBackgroundColor}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="0.42*" />
+                <RowDefinition Height="0.58*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-                </mw:MultiWindowItem>
-                <mw:MultiWindowItem x:Name="HistorySubWindow" Title="{l:Localized Key=DraftPage_MenuBar_Edit_History}" HeightRequest="500" WidthRequest="400" IsPopOutVisible="True">
+            <Border Grid.Row="0" Margin="8,8,8,4" Stroke="{DynamicResource MultiWindowViewSnapPreviewBorderColor}" StrokeThickness="2" BackgroundColor="{DynamicResource MultiWindowViewBackgroundColor}">
+                <ContentView x:Name="FixedPreviewHost" Padding="4" BackgroundColor="{DynamicResource MultiWindowViewBackgroundColor}" />
+            </Border>
 
-                </mw:MultiWindowItem>
-            </mw:MultiWindowView>
+            <ContentView Grid.Row="1" x:Name="FixedTimelineHost" />
+
+            <Border Grid.Row="2"
+                    x:Name="FixedClipInfoHost"
+                    IsVisible="False"
+                    StrokeThickness="0"
+                    BackgroundColor="{DynamicResource MultiWindowViewBackgroundColor}"
+                    HeightRequest="48"
+                    VerticalOptions="End" />
+        </Grid>
+
+        <Grid Grid.Row="1"
+              Margin="0,8,0,8"
+              x:Name="MainControlGrid"
+              ZIndex="1"
+              HeightRequest="44"
+              MaximumHeightRequest="44"
+              VerticalOptions="Start">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <HorizontalStackLayout Grid.Column="0" x:Name="LeftMenuBar">
+                <Button x:Name="AddClip" IsVisible="{Binding _ShouldShowClipMoveControlInCenterInfoBar}"  FontFamily="Icons" Text="&#xe145;" FontSize="24" ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" SemanticProperties.Description="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" Clicked="AddClip_Clicked" Margin="2,0,0,0" />
+                <Button x:Name="AssetPanelButton" IsVisible="{Binding _ShouldShowClipMoveControlInCenterInfoBar}"  Text="&#xe413;" FontSize="24"  FontFamily="Icons" ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" SemanticProperties.Description="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
+                <Button x:Name="AssistantToggleButton" Text="&#xe0b7;" FontSize="24" FontFamily="Icons"  ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatViewTitle}" SemanticProperties.Description="{l:Localized Key=AIAssistant_ChatViewTitle}"  Margin="8,0,0,0" Clicked="AssistantToggleButton_Clicked" />
+                <HorizontalStackLayout IsEnabled="{Binding SelectedAnyClip}" IsVisible="{Binding UnNullUseCompactLayout, Converter={toolkit:InvertedBoolConverter}}"  HorizontalOptions="{Binding UnNullUseCompactLayout, Converter={toolkit:BoolToObjectConverter TrueObject=End, FalseObject=Start}}" Margin="{Binding UnNullUseCompactLayout, Converter={toolkit:BoolToObjectConverter TrueObject='0,0,0,0', FalseObject='8,0,0,0'}}">
+                    <BoxView WidthRequest="1" Margin="8,0,4,0" BackgroundColor="#80aaaaaa" />
+                    <Button Text="&#xf71e;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding MoveCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" />
+                    <Button Text="&#xe14a;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding DeleteCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" />
+                </HorizontalStackLayout>
+                <Label x:Name="LeftInfoLabel"  Text="" FontSize="12" Margin="8,0,0,0" VerticalOptions="Center" HorizontalOptions="Fill" LineBreakMode="CharacterWrap" />
+
+            </HorizontalStackLayout>
+
+            <ScrollView  Grid.Column="1"  Orientation="Horizontal" IsVisible="{Binding _ShouldShowCenterCompactControlGrid}"  IsEnabled="{Binding SelectedAnyClip}" x:Name="CenterCompactControlGrid" HorizontalOptions="End" Margin="0,0,-4,0" >
+                <HorizontalStackLayout>
+                    <Button Text="&#xe8b8;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding ShowClipInfoPanelCommand}" IsVisible="{Binding MultiSelectEnabled, Converter={toolkit:InvertedBoolConverter}}"  SemanticProperties.Description="{l:Localized Key=PropertyPanel}" ToolTipProperties.Text="{l:Localized Key=PropertyPanel}" />
+                    <Button Text="&#xf71e;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding MoveCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" />
+                    <Button Text="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject='&#xf420;', FalseObject='&#xe14e;'}}"  FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding SpiltOrCombineCommand}" IsVisible="True" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" />
+                    <Button Text="&#xe14a;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding DeleteCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" />
+                    <BoxView WidthRequest="1" Margin="4,0,0,0" BackgroundColor="#80aaaaaa"  />
+                    <Button Text="&#xe9d5;" FontSize="24" Margin="8,0,8,0" FontFamily="Icons" Command="{Binding UnselectCommand}"  SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" />
+                </HorizontalStackLayout>
+            </ScrollView>
 
 
+            <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar" >
 
-            <Grid Margin="0,8,0,8" x:Name="MainControlGrid" ZIndex="1">
+                <Border BackgroundColor="Transparent" StrokeThickness="0" WidthRequest="8"/>
+            </HorizontalStackLayout>
+        </Grid>
+
+        <Grid x:Name="LowerContent" Grid.Row="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="12"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0"
+                 x:Name="PlayingControlLayout"
+                 Margin="4,2,0,3"
+                 HorizontalOptions="Fill"
+                 VerticalOptions="Center">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
+
                 </Grid.ColumnDefinitions>
-                <HorizontalStackLayout Grid.Column="0" x:Name="LeftMenuBar">
-                    <Button x:Name="AddClip" IsVisible="{Binding _ShouldShowClipMoveControlInCenterInfoBar}"  FontFamily="Icons" Text="&#xe145;" FontSize="24" ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" SemanticProperties.Description="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" Clicked="AddClip_Clicked" Margin="2,0,0,0" />
-                    <Button x:Name="AssetPanelButton" IsVisible="{Binding _ShouldShowClipMoveControlInCenterInfoBar}"  Text="&#xe413;" FontSize="24"  FontFamily="Icons" ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" SemanticProperties.Description="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
-                    <Button x:Name="AssistantToggleButton" Text="&#xe0b7;" FontSize="24" FontFamily="Icons"  ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatViewTitle}" SemanticProperties.Description="{l:Localized Key=AIAssistant_ChatViewTitle}"  Margin="8,0,0,0" Clicked="AssistantToggleButton_Clicked" />
-                    <HorizontalStackLayout IsEnabled="{Binding SelectedAnyClip}" IsVisible="{Binding UnNullUseCompactLayout, Converter={toolkit:InvertedBoolConverter}}"  HorizontalOptions="{Binding UnNullUseCompactLayout, Converter={toolkit:BoolToObjectConverter TrueObject=End, FalseObject=Start}}" Margin="{Binding UnNullUseCompactLayout, Converter={toolkit:BoolToObjectConverter TrueObject='0,0,0,0', FalseObject='8,0,0,0'}}">
-                        <BoxView WidthRequest="1" Margin="8,0,4,0" BackgroundColor="#80aaaaaa" />
-                        <Button Text="&#xf71e;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding MoveCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" />
-                        <Button Text="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject='&#xf420;', FalseObject='&#xf1f8;'}}"  FontSize="24" Margin="4,0,4,0" FontFamily="Icons"  Command="{Binding SpiltOrCombineCommand}"  IsVisible="True" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" />
-                        <Button Text="&#xe14a;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding DeleteCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" />
-                    </HorizontalStackLayout>
-                    <Label x:Name="LeftInfoLabel"  Text="" FontSize="12" Margin="8,0,0,0" VerticalOptions="Center" HorizontalOptions="Fill" LineBreakMode="CharacterWrap" />
 
+                <HorizontalStackLayout Grid.Column="0" HorizontalOptions="Start">
+                    <HorizontalStackLayout x:Name="QuickCommandButtons"
+                                           Margin="2,0"
+                                           Spacing="8"
+                                           VerticalOptions="Center"
+                                           BindableLayout.ItemsSource="{Binding QuickCommandSlots}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <Border Loaded="QuickCommandButton_Loaded"
+                                        StrokeThickness="0"
+                                        Padding="0">
+                                    <controls:ToggleButton Text="{Binding Text}"
+                                                           FontFamily="{Binding FontFamily}"
+                                                           Padding="0"
+                                                           WidthRequest="32"
+                                                           HeightRequest="32"
+                                                           FontSize="20"
+                                                           IsTogglebale="False"
+                                                           IsToggled="{Binding IsToggled, Mode=OneWay}"
+                                                           Command="{Binding Command}"
+                                                           CommandParameter="{Binding CommandParameter}"
+                                                           IsEnabled="{Binding IsEnabled}"
+                                                           SemanticProperties.Description="{Binding Description}"
+                                                           ToolTipProperties.Text="{Binding Description}" />
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </HorizontalStackLayout>
                 </HorizontalStackLayout>
 
-                <HorizontalStackLayout x:Name="PlayingControlLayout" Grid.Column="1" HorizontalOptions="Center">
-                    <Button x:Name="PlayPauseButton" Text="&#xe037;" FontFamily="Icons" FontSize="20" Clicked="PlayPauseButton_Clicked"  />
-                    <Label x:Name="CurrentPlayheadLabel" Text="00:00/??:??" Margin="8,0,0,0" VerticalOptions="Center"></Label>
+                <HorizontalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="6">
+                    <Label x:Name="CurrentPlayheadLabel"
+                       Text="00:00/??:??"
+                       Margin="8,0,0,0"
+                       VerticalOptions="Center" />
+                    <Button x:Name="PlayPauseButton"
+                        Text="&#xe037;"
+                        FontFamily="Icons"
+                        FontSize="20"
+                        Padding="10,0"
+                        Clicked="PlayPauseButton_Clicked"
+                        ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_PlayPause}"
+                        SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_PlayPause}" />
                 </HorizontalStackLayout>
-                <ScrollView  Grid.Column="1"  Orientation="Horizontal" IsVisible="{Binding _ShouldShowCenterCompactControlGrid}"  IsEnabled="{Binding SelectedAnyClip}" x:Name="CenterCompactControlGrid" HorizontalOptions="End" Margin="0,0,-4,0" >
-                    <HorizontalStackLayout>
-                        <Button Text="&#xe8b8;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding ShowClipInfoPanelCommand}" IsVisible="{Binding MultiSelectEnabled, Converter={toolkit:InvertedBoolConverter}}"  SemanticProperties.Description="{l:Localized Key=PropertyPanel}" ToolTipProperties.Text="{l:Localized Key=PropertyPanel}" />
-                        <Button Text="&#xf71e;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding MoveCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" />
-                        <Button Text="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject='&#xf420;', FalseObject='&#xf1f8;'}}"  FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding SpiltOrCombineCommand}" IsVisible="True" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" />
-                        <Button Text="&#xe14a;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding DeleteCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" />
-                        <BoxView WidthRequest="1" Margin="4,0,0,0" BackgroundColor="#80aaaaaa"  />
-                        <Button Text="&#xe9d5;" FontSize="24" Margin="8,0,8,0" FontFamily="Icons" Command="{Binding UnselectCommand}"  SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" />
-                    </HorizontalStackLayout>
-                </ScrollView>
 
-
-                <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar" >
-                    <HorizontalStackLayout Grid.Column="4" x:Name="MultiSelectControlLayout" HorizontalOptions="Start" VerticalOptions="Center" Margin="0,0,8,0" Spacing="4">
-                        <CheckBox x:Name="MultiSelectCheckBox" Margin="0,0,0,0" CheckedChanged="MultiSelectCheckBox_CheckedChanged" VerticalOptions="Center" />
-                        <Label Text="{l:Localized Key=DraftPage_CenterMenuBar_MultiSelect}" x:Name="MultiSelectInfoLabel" VerticalOptions="Center" >
-                            <Label.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="MultiSelectLabel_TapGestureRecognizer_Tapped"/>
-                            </Label.GestureRecognizers>
-                        </Label>
-                    </HorizontalStackLayout>
-                    <Picker x:Name="ResolutionPicker" Margin="0,-2,0,0" WidthRequest="120" MinimumWidthRequest="100" SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
-                    <Button x:Name="ZoomOutButton" Text="-" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
-                    <Button x:Name="ZoomResetButton" Text="1x" Margin="8,0,0,0" Clicked="ZoomResetButton_Clicked"/>
-                    <Button x:Name="ZoomInButton" Text="+" Margin="8,0,0,0" Clicked="ZoomInButton_Clicked"/>
-                    <Border BackgroundColor="Transparent" StrokeThickness="0" WidthRequest="8"/>
+                <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" Spacing="8">
+                    <Button x:Name="ZoomOutButton" Text="-" Margin="0" Clicked="ZoomOutButton_Clicked" />
+                    <Button x:Name="ZoomResetButton" Text="1x" Margin="0" Clicked="ZoomResetButton_Clicked"/>
+                    <Button x:Name="ZoomInButton" Text="+" Margin="0" Clicked="ZoomInButton_Clicked"/>
                 </HorizontalStackLayout>
             </Grid>
 
-            <HorizontalStackLayout x:Name="RulerLayout" HeightRequest="12" WidthRequest="-1" BackgroundColor="LightGray">
+            <HorizontalStackLayout Grid.Row="1"
+                                   x:Name="RulerLayout"
+                                   HeightRequest="12"
+                                   BackgroundColor="LightGray" />
 
-            </HorizontalStackLayout>
-        </VerticalStackLayout>
-
-        <Grid x:Name="LowerContent" Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="25"/>
-            </Grid.RowDefinitions>
-
-            <ScrollView Grid.Row="0" x:Name="TracksAndClipsLayout" Orientation="Vertical">
+            <ScrollView Grid.Row="2" x:Name="TracksAndClipsLayout" Orientation="Vertical">
                 <VerticalStackLayout>
                     <Grid x:Name="MainTrackContentGrid">
                         <Grid.ColumnDefinitions>
@@ -413,7 +511,7 @@
                 </VerticalStackLayout>
 
             </ScrollView>
-            <BoxView x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
+            <BoxView Grid.Row="2" x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
         </Grid>
 
         <Grid Grid.Row="2" BackgroundColor="#80001122" Margin="0,0,0,0">
@@ -439,7 +537,7 @@
 
 
                 <HorizontalStackLayout HorizontalOptions="End" Grid.Column="3">
-                    <Label x:Name="AlternativeStatusLabel" Text="" />
+                    <Label x:Name="AlternativeStatusLabel" Text="" Margin="-4,4,0,0" />
                     <VerticalStackLayout x:Name="ComputeView" WidthRequest="15" />
 
                 </HorizontalStackLayout>

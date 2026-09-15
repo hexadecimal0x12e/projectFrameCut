@@ -19,7 +19,7 @@
                     <Button x:Name="AISettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_AI}" FontSize="24" Clicked="OnAISettingClicked" />
                     <Button x:Name="SecuritySettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Security}" FontSize="24" Clicked="OnSecuritySettingClicked" />
                     <Button x:Name="RenderSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Render}" FontSize="24" Clicked="OnRenderSettingClicked" />
-                    <Button x:Name="PluginSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Plugin}" FontSize="24" Clicked="OnPluginSettingClicked" />
+                    <Button x:Name="ExtensibilitySettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Extensibility}" FontSize="24" Clicked="OnExtensibilitySettingClicked" />
                     <Button x:Name="MiscSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Misc}" FontSize="24" Clicked="OnMiscSettingClicked" />
                     <Button x:Name="AboutSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_About}" FontSize="24" Clicked="OnAboutSettingClicked" />
                     <Button x:Name="AdvancedSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Advanced}" IsVisible="False" FontSize="24" Clicked="AdvancedSettingButton_Clicked" />

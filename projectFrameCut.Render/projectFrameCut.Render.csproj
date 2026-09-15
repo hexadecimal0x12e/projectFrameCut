@@ -9,8 +9,8 @@
 		<Platforms>AnyCPU;x64</Platforms>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
-		<AssemblyVersion>3.0.0.0</AssemblyVersion>
-		<FileVersion>3.0.0.0</FileVersion>
+		<AssemblyVersion>3.1.0.0</AssemblyVersion>
+		<FileVersion>3.1.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>projectFrameCut CRL</Product>
 		<Description>projectFrameCut's core render library</Description>
@@ -26,7 +26,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\projectFrameCut.Render.Contracts\projectFrameCut.Render.Contracts.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render.RenderAPIBase\projectFrameCut.Render.RenderAPIBase.csproj" />
+		<ProjectReference Include="..\projectFrameCut.Render.PluginIsolation\projectFrameCut.Render.PluginIsolation.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render.HwAccelContracts\projectFrameCut.Render.HwAccelContracts.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
 	</ItemGroup>
@@ -41,5 +43,11 @@
 		<Using Include="projectFrameCut.Shared" />
 	</ItemGroup>
 
-
+	<ItemGroup>
+	  <None Remove="Resource\*.png" />
+	  <EmbeddedResource Include="Resource\Error.png" LogicalName="projectFrameCut.Render.Resource.Error.png" />
+	  <EmbeddedResource Include="Resource\Error_SourceFail.png" LogicalName="projectFrameCut.Render.Resource.Error_SourceFail.png" />
+	  <EmbeddedResource Include="Resource\Error_BindingFail.png" LogicalName="projectFrameCut.Render.Resource.Error_BindingFail.png" />
+	  <EmbeddedResource Include="Resource\Error_SourceNotFound.png" LogicalName="projectFrameCut.Render.Resource.Error_SourceNotFound.png" />
+	</ItemGroup>
 </Project>

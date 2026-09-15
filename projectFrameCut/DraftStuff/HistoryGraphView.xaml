@@ -26,7 +26,8 @@
         <Grid Grid.Row="1" BackgroundColor="#1e1e1e">
 
             <!-- Graph view layer -->
-            <Grid x:Name="GraphViewContainer">
+            <Grid x:Name="GraphViewContainer"
+                  SizeChanged="OnGraphViewSizeChanged">
                 <Grid.GestureRecognizers>
                     <PanGestureRecognizer PanUpdated="OnCanvasPanUpdated"/>
                     <PinchGestureRecognizer PinchUpdated="OnCanvasPinchUpdated"/>
@@ -40,6 +41,7 @@
 
                 <!-- Nodes Layer (on top of connections) -->
                 <AbsoluteLayout x:Name="NodesContainer"
+                                AnchorX="0" AnchorY="0"
                                 InputTransparent="False"/>
             </Grid>
 
