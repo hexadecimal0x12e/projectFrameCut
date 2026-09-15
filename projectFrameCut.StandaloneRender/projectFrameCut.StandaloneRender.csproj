@@ -9,6 +9,7 @@
 		<AssemblyTitle>projectFrameCut standalone renderer</AssemblyTitle>
 		<Version>1.7.0.0</Version>
 		<DefineConstants>$(DefineConstants);WINNETCORE</DefineConstants>
+
 	</PropertyGroup>
 
   <ItemGroup>
