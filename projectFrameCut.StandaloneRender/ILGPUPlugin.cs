@@ -6,6 +6,7 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.WindowsRender;
 using projectFrameCut.Shared;
 using System;
@@ -76,7 +77,7 @@ namespace projectFrameCut.StandaloneRender
         public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider => new Dictionary<string, Func<IEffectProvider>> { };
 
         //Dictionary<string, Func<string, string, IClip>> IPluginBase.ClipProvider => new Dictionary<string, Func<string, string, IClip>> { };
-        Dictionary<string, Func<string, IVideoSource>> IPluginBase.VideoSourceProvider => new Dictionary<string, Func<string, IVideoSource>> { };
+        Dictionary<string, IVideoSource> IPluginBase.VideoSourceProvider => new Dictionary<string, IVideoSource> { };
         public Dictionary<string, string> Configuration { get => new Dictionary<string, string>(); set { } }
         public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString => new Dictionary<string, Dictionary<string, string>> { };
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new Dictionary<string, Func<string, string, ISoundTrack>> { };

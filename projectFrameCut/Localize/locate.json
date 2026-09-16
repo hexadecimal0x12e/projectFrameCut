@@ -2114,7 +2114,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u8981\u653E\u7F6E\u300C{name}\u300D:\r- \u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u3002\r- \u4F7F\u7528\u952E\u76D8\u4E0A\u7684\u4E0A\u4E0B\u5DE6\u53F3\u952E\u6765\u79FB\u52A8\uFF0C\u6309Enter\u6765\u786E\u5B9A\u4F4D\u7F6E\u3002\r- \u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002",
+        "Value": "\u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u4F4D\u7F6E\u6765\u6DFB\u52A0\u300C{name}\u300D\uFF1B\u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\uFF0C\u6216\u8005\u4F7F\u7528\u65B9\u5411\u952E\u6765\u7CBE\u786E\u7684\u79FB\u52A8\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -11369,7 +11369,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "To place \u0022{name}\u0022:\r- Click an empty spot on the track to add at the clicked position.\r- Use the arrow keys to move, and press Enter to confirm the position.\r- Press Esc to cancel this operation.",
+        "Value": "Click an empty spot on the track to add \u201C{name}\u201D; press Esc to cancel, or use the arrow keys to move precisely.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -21779,7 +21779,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u8981\u653E\u7F6E\u300C{name}\u300D\uFF1A\r- \u9EDE\u64CA\u8ECC\u9053\u4E0A\u7A7A\u9592\u7684\u5730\u65B9\u4F86\u5728\u9EDE\u64CA\u7684\u4F4D\u7F6E\u6DFB\u52A0\u3002\r- \u4F7F\u7528\u9375\u76E4\u4E0A\u7684\u4E0A\u4E0B\u5DE6\u53F3\u9375\u4F86\u79FB\u52D5\uFF0C\u6309 Enter \u4F86\u78BA\u5B9A\u4F4D\u7F6E\u3002\r- \u6309 Esc \u4F86\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002",
+        "Value": "\u9EDE\u64CA\u8ECC\u9053\u4E0A\u7A7A\u9592\u7684\u4F4D\u7F6E\u4F86\u65B0\u589E\u300C{name}\u300D\uFF1B\u6309 Esc \u4F86\u53D6\u6D88\u6B64\u64CD\u4F5C\uFF0C\u6216\u4F7F\u7528\u65B9\u5411\u9375\u4F86\u7CBE\u78BA\u5730\u79FB\u52D5\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -32305,7 +32305,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u300C{name}\u300D\u3092\u914D\u7F6E\u3059\u308B\u306B\u306F\uFF1A\r- \u30C8\u30E9\u30C3\u30AF\u4E0A\u306E\u7A7A\u3044\u3066\u3044\u308B\u5834\u6240\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u3001\u30AF\u30EA\u30C3\u30AF\u3057\u305F\u4F4D\u7F6E\u306B\u8FFD\u52A0\u3057\u307E\u3059\u3002\r- \u30AD\u30FC\u30DC\u30FC\u30C9\u306E\u4E0A\u4E0B\u5DE6\u53F3\u30AD\u30FC\u3067\u79FB\u52D5\u3057\u3001Enter\u30AD\u30FC\u3067\u4F4D\u7F6E\u3092\u78BA\u5B9A\u3057\u307E\u3059\u3002\r- Esc\u30AD\u30FC\u3067\u64CD\u4F5C\u3092\u30AD\u30E3\u30F3\u30BB\u30EB\u3057\u307E\u3059\u3002",
+        "Value": "\u30C8\u30E9\u30C3\u30AF\u4E0A\u306E\u7A7A\u304D\u4F4D\u7F6E\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u300C{name}\u300D\u3092\u8FFD\u52A0\u3002Esc\u3067\u4E2D\u6B62\u3001\u65B9\u5411\u30AD\u30FC\u3067\u6B63\u78BA\u306B\u79FB\u52D5\u3067\u304D\u307E\u3059\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -42840,7 +42840,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u300C{name}\u300D\uC744(\uB97C) \uBC30\uCE58\uD558\uB824\uBA74:\n- \uD2B8\uB799\uC758 \uBE48 \uACF3\uC744 \uD074\uB9AD\uD558\uC5EC \uD574\uB2F9 \uC704\uCE58\uC5D0 \uCD94\uAC00\uD558\uC138\uC694.\n- \uD0A4\uBCF4\uB4DC\uC758 \uD654\uC0B4\uD45C \uD0A4(\u2191\u2193\u2190\u2192)\uB97C \uC0AC\uC6A9\uD558\uC5EC \uC774\uB3D9\uD558\uACE0 Enter \uD0A4\uB85C \uC704\uCE58\uB97C \uD655\uC778\uD558\uC138\uC694.\n- Esc \uD0A4\uB97C \uB204\uB974\uBA74 \uC791\uC5C5\uC774 \uCDE8\uC18C\uB429\uB2C8\uB2E4.",
+        "Value": "\uD2B8\uB799\uC758 \uBE48 \uC704\uCE58\uB97C \uD074\uB9AD\uD558\uC5EC \u201C{name}\u201D\uC744(\uB97C) \uCD94\uAC00\uD558\uC138\uC694. Esc \uD0A4\uB97C \uB20C\uB7EC \uCDE8\uC18C\uD558\uAC70\uB098 \uBC29\uD5A5\uD0A4\uB85C \uC815\uD655\uD558\uAC8C \uC774\uB3D9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -53360,7 +53360,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Pour placer \u00AB {name} \u00BB :\r- Cliquez sur un endroit libre de la piste pour ajouter \u00E0 l\u0027endroit cliqu\u00E9.\r- Utilisez les touches fl\u00E9ch\u00E9es du clavier pour vous d\u00E9placer, puis appuyez sur Entr\u00E9e pour confirmer la position.\r- Appuyez sur \u00C9chap pour annuler cette op\u00E9ration.",
+        "Value": "Cliquez sur un emplacement libre de la piste pour ajouter \u00AB {name} \u00BB ; appuyez sur \u00C9chap pour annuler cette action, ou utilisez les touches fl\u00E9ch\u00E9es pour un d\u00E9placement pr\u00E9cis.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -63875,7 +63875,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u0644\u0648\u0636\u0639 \u00AB{name}\u00BB:\r- \u0627\u0646\u0642\u0631 \u0639\u0644\u0649 \u0645\u0643\u0627\u0646 \u0641\u0627\u0631\u063A \u0639\u0644\u0649 \u0627\u0644\u0645\u0633\u0627\u0631 \u0644\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0639\u0646\u0635\u0631 \u0641\u064A \u0645\u0643\u0627\u0646 \u0627\u0644\u0646\u0642\u0631.\r- \u0627\u0633\u062A\u062E\u062F\u0645 \u0645\u0641\u0627\u062A\u064A\u062D \u0627\u0644\u0623\u0633\u0647\u0645 \u0639\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0645\u0641\u0627\u062A\u064A\u062D \u0644\u0644\u062A\u062D\u0631\u0643\u060C \u062B\u0645 \u0627\u0636\u063A\u0637 Enter \u0644\u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0645\u0648\u0636\u0639.\r- \u0627\u0636\u063A\u0637 Esc \u0644\u0625\u0644\u063A\u0627\u0621 \u0647\u0630\u0647 \u0627\u0644\u0639\u0645\u0644\u064A\u0629.",
+        "Value": "\u0627\u0646\u0642\u0631 \u0639\u0644\u0649 \u0645\u0648\u0636\u0639 \u0641\u0627\u0631\u063A \u0641\u064A \u0627\u0644\u0645\u0633\u0627\u0631 \u0644\u0625\u0636\u0627\u0641\u0629 \u00AB{name}\u00BB\u061B \u0627\u0636\u063A\u0637 \u0639\u0644\u0649 Esc \u0644\u0625\u0644\u063A\u0627\u0621 \u0630\u0644\u0643\u060C \u0623\u0648 \u0627\u0633\u062A\u062E\u062F\u0645 \u0645\u0641\u0627\u062A\u064A\u062D \u0627\u0644\u0623\u0633\u0647\u0645 \u0644\u062A\u062D\u0631\u064A\u0643\u0647 \u0628\u062F\u0642\u0629.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -74403,7 +74403,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Um \u201E{name}\u201C zu platzieren:\r- Klicken Sie auf eine freie Stelle auf der Spur, um den Clip an der angeklickten Position hinzuzuf\u00FCgen.\r- Verwenden Sie die Pfeiltasten auf der Tastatur, um zu navigieren, und dr\u00FCcken Sie Enter, um die Position zu best\u00E4tigen.\r- Dr\u00FCcken Sie Esc, um diesen Vorgang abzubrechen.",
+        "Value": "Klicken Sie auf eine freie Stelle auf der Spur, um \u201E{name}\u201C hinzuzuf\u00FCgen; dr\u00FCcken Sie Esc, um den Vorgang abzubrechen, oder verwenden Sie die Pfeiltasten f\u00FCr pr\u00E4zises Verschieben.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -84928,7 +84928,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Para colocar \u00AB{name}\u00BB:\r- Haga clic en un lugar vac\u00EDo de la pista para agregarlo en la posici\u00F3n del clic.\r- Use las teclas de flecha (arriba, abajo, izquierda, derecha) para moverse y presione Enter para confirmar la posici\u00F3n.\r- Presione Esc para cancelar esta operaci\u00F3n.",
+        "Value": "Haga clic en un espacio libre de la pista para a\u00F1adir \u00AB{name}\u00BB; pulse Esc para cancelar esta operaci\u00F3n, o use las teclas de direcci\u00F3n para moverlo con precisi\u00F3n.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -95448,7 +95448,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Per posizionare \u00AB{name}\u00BB:\r- Clicca su uno spazio vuoto sulla timeline per aggiungere nella posizione cliccata.\r- Usa i tasti freccia su/gi\u00F9/sinistra/destra per spostarti, premi Invio per confermare la posizione.\r- Premi Esc per annullare l\u0027operazione.",
+        "Value": "Clicca su una posizione libera della traccia per aggiungere \u00AB{name}\u00BB; premi Esc per annullare questa operazione oppure usa i tasti freccia per regolare la posizione con precisione.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -105976,7 +105976,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Umie\u015B\u0107 \u201E{name}\u201D: \r- Kliknij wolne miejsce na \u015Bcie\u017Cce, aby doda\u0107 w miejscu klikni\u0119cia.\r- U\u017Cyj klawiszy strza\u0142ek do przesuwania, a nast\u0119pnie naci\u015Bnij Enter, aby potwierdzi\u0107 pozycj\u0119.\r- Naci\u015Bnij Esc, aby anulowa\u0107 t\u0119 operacj\u0119.",
+        "Value": "Kliknij wolne miejsce na \u015Bcie\u017Cce, aby doda\u0107 \u201E{name}\u201D; naci\u015Bnij Esc, aby anulowa\u0107 t\u0119 operacj\u0119, lub u\u017Cyj klawiszy strza\u0142ek, aby precyzyjnie dostosowa\u0107 po\u0142o\u017Cenie.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -116495,7 +116495,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Para colocar \u00AB{name}\u00BB:\r- Clique em um espa\u00E7o vazio na linha do tempo para adicionar na posi\u00E7\u00E3o clicada.\r- Use as teclas de seta (cima, baixo, esquerda, direita) para mover e pressione Enter para confirmar a posi\u00E7\u00E3o.\r- Pressione Esc para cancelar esta opera\u00E7\u00E3o.",
+        "Value": "Clique em um espa\u00E7o vazio na faixa para adicionar \u201C{name}\u201D; pressione Esc para cancelar esta opera\u00E7\u00E3o ou use as teclas de seta para mover com precis\u00E3o.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -127015,7 +127015,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u0427\u0442\u043E\u0431\u044B \u0440\u0430\u0437\u043C\u0435\u0441\u0442\u0438\u0442\u044C \u00AB{name}\u00BB:\r- \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043D\u0430 \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u043E\u0435 \u043C\u0435\u0441\u0442\u043E \u043D\u0430 \u0434\u043E\u0440\u043E\u0436\u043A\u0435, \u0447\u0442\u043E\u0431\u044B \u0434\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0432 \u043C\u0435\u0441\u0442\u0435 \u043A\u043B\u0438\u043A\u0430.\r- \u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 \u043A\u043B\u0430\u0432\u0438\u0448\u0438 \u0441\u043E \u0441\u0442\u0440\u0435\u043B\u043A\u0430\u043C\u0438 \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0435\u043D\u0438\u044F, \u043D\u0430\u0436\u043C\u0438\u0442\u0435 Enter, \u0447\u0442\u043E\u0431\u044B \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C \u043F\u043E\u0437\u0438\u0446\u0438\u044E.\r- \u041D\u0430\u0436\u043C\u0438\u0442\u0435 Esc, \u0447\u0442\u043E\u0431\u044B \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C \u044D\u0442\u0443 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u044E.",
+        "Value": "\u0429\u0451\u043B\u043A\u043D\u0438\u0442\u0435 \u043F\u043E \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u043E\u043C\u0443 \u043C\u0435\u0441\u0442\u0443 \u043D\u0430 \u0434\u043E\u0440\u043E\u0436\u043A\u0435, \u0447\u0442\u043E\u0431\u044B \u0434\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u00AB{name}\u00BB; \u043D\u0430\u0436\u043C\u0438\u0442\u0435 Esc, \u0447\u0442\u043E\u0431\u044B \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C \u044D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435, \u0438\u043B\u0438 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 \u043A\u043B\u0430\u0432\u0438\u0448\u0438 \u0441\u043E \u0441\u0442\u0440\u0435\u043B\u043A\u0430\u043C\u0438 \u0434\u043B\u044F \u0442\u043E\u0447\u043D\u043E\u0433\u043E \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0435\u043D\u0438\u044F.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -137539,7 +137539,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u300C{name}\u300D yerle\u015Ftirmek i\u00E7in:\r- T\u0131klamak istedi\u011Finiz yere eklemek i\u00E7in zaman \u00E7izelgesinde bo\u015F bir yere t\u0131klay\u0131n.\r- Ta\u015F\u0131mak i\u00E7in klavyedeki y\u00F6n tu\u015Flar\u0131n\u0131 kullan\u0131n, Enter tu\u015Funa basarak konumu onaylay\u0131n.\r- Bu i\u015Flemi iptal etmek i\u00E7in Esc tu\u015Funa bas\u0131n.",
+        "Value": "\u0022{name}\u0022 eklemek i\u00E7in par\u00E7adaki bo\u015F bir konuma t\u0131klay\u0131n; iptal i\u00E7in Esc\u0027ye, hassas hareket i\u00E7in ok tu\u015Flar\u0131na bas\u0131n.",
         "Mode": "InterpolationString",
         "Args": [
           {

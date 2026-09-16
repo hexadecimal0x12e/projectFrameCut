@@ -75,7 +75,7 @@
 			<Extensions>
 				<uap3:Extension Category="windows.appExecutionAlias" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
 					<uap3:AppExecutionAlias>
-						<desktop:ExecutionAlias Alias="projectFrameCutCompatible_hexadecimal0x12e.projectFrameCut_1.6.0.0.exe" />
+						<desktop:ExecutionAlias Alias="projectFrameCutCompatible_hexadecimal0x12e.projectFrameCut_1.7.0.0.exe" />
 					</uap3:AppExecutionAlias>
 				</uap3:Extension>
 			</Extensions>
