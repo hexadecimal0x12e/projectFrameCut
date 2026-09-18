@@ -5,7 +5,7 @@
 
 ## 系统要求
 独立渲染器支持Windows和Linux操作系统。最低系统要求如下：
-- .NET 10 运行时
+- .NET 11 运行时
 - **8.1.x**的FFmpeg 库
 - CUDA 或 OpenCL 支持的 GPU，用于硬件加速
 

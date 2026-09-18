@@ -218,6 +218,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     private CancellationTokenSource? _snapshotSaveCts;
     private ClipUpdateEventArgs? _pendingSnapshotSaveArgs;
     private bool _historyPanelDirty = true;
+    private int _renderProjectPrepared;
 
     bool AlreadyDisappeared = false;
 
@@ -271,7 +272,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     public ConcurrentDictionary<Guid, ClipElementUI> Clips = new();
     public ConcurrentDictionary<int, AbsoluteLayout> Tracks = new();
     public ConcurrentDictionary<string, AssetItem> Assets = new();
-
 
     public string WorkingPath { get; set; } = "";
     public event EventHandler<ClipUpdateEventArgs>? OnClipChanged;
@@ -358,6 +358,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public bool IsPopupShowing => Popup.IsVisible;
     public bool IsTimelineScrollEnabled { get; set { if (field == value) return; field = value; OnPropertyChanged(nameof(IsTimelineScrollEnabled)); RefreshToggleCommandStates(); } }
     public bool AllowExit { get; set; } = true;
+    public bool BetterAccessibilityMode { get; set; } = false;
     #endregion
 
     #region options
@@ -428,7 +429,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         InitializeComponent();
         BindingContext = this;
         InitializeQuickCommands();
-        DisableTabFocusOnWindows(AddTrackButton);
+        if (!BetterAccessibilityMode) DisableTabFocusOnWindows(AddTrackButton);
         SetPlayPauseIconToPlay();
         SetStateBusy();
         SetStatusText(Localized.DraftPage_PleaseWait);
@@ -474,6 +475,11 @@ public partial class DraftPage : ContentPage, IDraftPage
     }
 
     public DraftPage(ProjectJSONStructure info, ConcurrentDictionary<Guid, ClipElementUI> clips, ConcurrentDictionary<string, AssetItem> assets, int initialTrackCount, string workingDir, string title = "Untitled draft", bool isReadonly = false)
+        : this(info, clips, assets, initialTrackCount, workingDir, title, isReadonly, false)
+    {
+    }
+
+    internal DraftPage(ProjectJSONStructure info, ConcurrentDictionary<Guid, ClipElementUI> clips, ConcurrentDictionary<string, AssetItem> assets, int initialTrackCount, string workingDir, string title, bool isReadonly, bool deferLoadedUiInitialization)
 #pragma warning restore CS8618
     {
         ArgumentNullException.ThrowIfNull(info, nameof(info));
@@ -497,7 +503,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         RegisterCommands();
         InitializeComponent();
         InitializeQuickCommands();
-        DisableTabFocusOnWindows(AddTrackButton);
+        if (!BetterAccessibilityMode) DisableTabFocusOnWindows(AddTrackButton);
         SetPlayPauseIconToPlay();
         SetStateBusy();
         SetStatusText(Localized.DraftPage_PleaseWait);
@@ -557,34 +563,54 @@ public partial class DraftPage : ContentPage, IDraftPage
         TrackCalculator.HeightPerTrack = ClipHeight;
 
 
+        if (!deferLoadedUiInitialization)
+        {
+            InitializeLoadedUiAsync(false).GetAwaiter().GetResult();
+        }
+    }
+
+    internal async Task InitializeLoadedUiAsync(bool yieldToDispatcher, CancellationToken cancellationToken = default)
+    {
+        int completed = 0;
         var maxMainTrack = Clips.Values.Where(c => c.origTrack < SubTrackOffset).Select(c => c.origTrack ?? 0).DefaultIfEmpty(0).Max();
         for (int i = 0; i <= maxMainTrack; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             AddATrack(i);
+            if (yieldToDispatcher && ++completed % 4 == 0) await Task.Delay(1, cancellationToken);
         }
         if (Clips.Values.Any(c => c.origTrack >= SubTrackOffset))
         {
             var maxSubTrack = Clips.Values.Where(c => c.origTrack >= SubTrackOffset).Select(c => c.origTrack ?? 0).DefaultIfEmpty(SubTrackOffset).Max();
             for (int i = SubTrackOffset; i <= maxSubTrack; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 AddASubTrack(i);
+                if (yieldToDispatcher && ++completed % 4 == 0) await Task.Delay(1, cancellationToken);
             }
         }
         foreach (var kv in Clips.OrderBy(kv => kv.Value.origTrack ?? 0).ThenBy(kv => kv.Value.origX))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var item = kv.Value;
             int t = item.origTrack ?? 0;
             if (!Tracks.ContainsKey(t)) AddATrack(t);
-            AddAClip(item);
+            AddAClip(item, false);
             RegisterClip(item, true);
+            if (yieldToDispatcher && ++completed % 4 == 0) await Task.Delay(1, cancellationToken);
         }
         NormalizeLoadedClipFrameSemantics();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (yieldToDispatcher) await Task.Delay(1, cancellationToken);
+        await UpdateAdjacencyForTrack(cancellationToken);
+        UpdateTimelineWidth();
         // Preview initialization can be slow (especially for vector content), so make the editor's
         // clip map available before the page becomes interactive, but only after every clip has a
         // corresponding element in Tracks.
         _ = ClipEditor.UpdateClips(Clips);
-        InitializeWorkspace();
-
+        cancellationToken.ThrowIfCancellationRequested();
+        if (yieldToDispatcher) await Task.Delay(1, cancellationToken);
+        await InitializeWorkspaceAsync(yieldToDispatcher, cancellationToken);
     }
 
     private async Task CreateRpcTokenAsync()
@@ -839,6 +865,20 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
         });
         StartRemoteProjectMonitor();
+    }
+
+    internal async Task PrepareRenderBackendAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await Dispatcher.DispatchAsync(async () =>
+        {
+            var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
+            await previewer.UpdateDraft(draft).WaitAsync(cancellationToken);
+            DynamicPreviewProvider.SetClips(previewer.Clips);
+        });
+        cancellationToken.ThrowIfCancellationRequested();
+        Interlocked.Exchange(ref _renderProjectPrepared, 1);
+        LogDiagnostic($"Prepared render RPC project {ProjectName} before navigation.");
     }
 
     private async void DraftPage_Loaded(object? sender, EventArgs e)
@@ -1317,7 +1357,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     #region workspace
     private void InitializeWorkspace()
+        => InitializeWorkspaceAsync(false).GetAwaiter().GetResult();
+
+    private async Task InitializeWorkspaceAsync(bool yieldToDispatcher, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, wrapSoundtrackAsClip: true, includeUiOnlyClips: true, fixOverlap: false, rebuildEffects: false);
         IWorkspaceStorage storage = string.IsNullOrWhiteSpace(WorkingPath) ? NullWorkspaceStorage.Instance : new FileWorkspaceStorage(WorkingPath);
         _workspace = new projectFrameCut.ApplicationAPIBase.Workspace.Workspace(
@@ -1334,6 +1378,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             .RegisterModule(new AssistanceModule());
         foreach (var pluginModule in PluginManager.LoadedPlugins.Values.OfType<IWorkspaceModule>())
             _workspace.RegisterModule(pluginModule);
+        if (yieldToDispatcher) await Task.Delay(1, cancellationToken);
 
         var page = this;
         ChatSessionsView = new AIAssistance.AssistanceChatSessionsView(WorkingPath, ProjectName, _workspace)
@@ -1348,12 +1393,15 @@ public partial class DraftPage : ContentPage, IDraftPage
         WorkspaceViewPool.Remove(AssistanceHost);
         WorkspaceViewPool.Remove(AddClipHost);
         if (LowerContent.Parent is Grid timelineParent) timelineParent.Remove(LowerContent);
+        if (yieldToDispatcher) await Task.Delay(1, cancellationToken);
 
         _workspaceWindowHost = new WorkspaceWindowHost(
             _workspace,
             MainMultiWindowView,
             new WorkspaceViewContext(this),
-            new DictionaryWorkspaceLayoutStore(ProjectInfo.Properties));
+            SettingsManager.IsBoolSettingTrueOrDefault("Edit_RememberWindowLayout", true)
+                ? new DictionaryWorkspaceLayoutStore(ProjectInfo.Properties)
+                : null);
         _workspaceWindowHost.WindowCreationFailed += (_, ex) => Log(ex, "Create workspace module window", this);
         var workspaceExperienceProviders = new List<IWorkspaceExperienceProvider>
         {
@@ -1419,6 +1467,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             ])
         };
         workspaceExperienceProviders.AddRange(PluginManager.LoadedPlugins.Values.OfType<IWorkspaceExperienceProvider>());
+        cancellationToken.ThrowIfCancellationRequested();
         _workspaceWindowHost.Compose(workspaceExperienceProviders);
         _hasAppliedDefaultMainMultiWindowLayout = _workspaceWindowHost.WasLayoutRestored;
 
@@ -1439,6 +1488,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             _workspaceWindowHost.OpenWindow("clips.add");
         }
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     private View CreateWorkspaceAssetView()
@@ -1754,7 +1804,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         Clips.AddOrUpdate(element.Id, element, (_, _) => element);
     }
 
-    public void AddAClip(ClipElementUI c)
+    public void AddAClip(ClipElementUI c) => AddAClip(c, true);
+
+    private void AddAClip(ClipElementUI c, bool updateLayout)
     {
         if (c.origTrack is null)
             throw new ArgumentNullException(nameof(c.origTrack));
@@ -1763,8 +1815,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         c.Clip.IsVisible = c.ShouldDisplayInUI;
         Tracks[c.origTrack ?? 0].Children.Add(c.Clip);
-        _ = UpdateAdjacencyForTrack();
-        UpdateTimelineWidth();
+        if (updateLayout)
+        {
+            _ = UpdateAdjacencyForTrack();
+            UpdateTimelineWidth();
+        }
         ApplyClipPreview(c);
     }
 
@@ -2204,7 +2259,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             HeightRequest = 16
 
         };
-        DisableTabFocusOnWindows(removeBtn);
+        if (!BetterAccessibilityMode) DisableTabFocusOnWindows(removeBtn);
 
         ImageButton optsBtn = new ImageButton
         {
@@ -2321,7 +2376,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             HeightRequest = 16
 
         };
-        DisableTabFocusOnWindows(removeBtn);
+        if (!BetterAccessibilityMode) DisableTabFocusOnWindows(removeBtn);
 
         ImageButton optsBtn = new ImageButton
         {
@@ -6091,15 +6146,18 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    public async Task UpdateAdjacencyForTrack()
+    public Task UpdateAdjacencyForTrack() => UpdateAdjacencyForTrack(default);
+
+    private async Task UpdateAdjacencyForTrack(CancellationToken cancellationToken)
     {
         foreach (var item in Tracks.Keys)
         {
-            await UpdateAdjacencyForTrack(item);
+            cancellationToken.ThrowIfCancellationRequested();
+            await UpdateAdjacencyForTrack(item, cancellationToken);
         }
     }
 
-    private async Task UpdateAdjacencyForTrack(int trackIndex)
+    private async Task UpdateAdjacencyForTrack(int trackIndex, CancellationToken cancellationToken = default)
     {
         SetStateBusy(Localized._Processing);
         if (!Tracks.TryGetValue(trackIndex, out var track)) return;
@@ -6116,7 +6174,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         for (int i = 0; i < byorder.Count; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             localRadius[i] = new RoundRectangleRadiusType { tl = defaultRadius, tr = defaultRadius, br = defaultRadius, bl = defaultRadius };
+            if (cancellationToken.CanBeCanceled && i % 16 == 15) await Task.Delay(1, cancellationToken);
         }
 
         foreach (var item in byorder)
@@ -6126,6 +6186,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         for (int i = 0; i < byorder.Count; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var self = byorder[i];
 
             var (leftNeighbor, rightNeighbor) = FindNeighbors(self);
@@ -6153,6 +6214,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     localRadius[ri].br = 0;
                 }
             }
+            if (cancellationToken.CanBeCanceled && i % 16 == 15) await Task.Delay(1, cancellationToken);
         }
 
         await Dispatcher.DispatchAsync(() =>
@@ -6298,11 +6360,40 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region popup
+    private static (Color Background, Color Border) GetPopupColors()
+    {
+        var resources = Application.Current?.Resources;
+        bool dark = Application.Current?.RequestedTheme == AppTheme.Dark;
+
+        Color Get(string key, string fallbackKey)
+        {
+            if (resources?.TryGetValue(key, out var value) == true && value is Color color) return color;
+            if (resources?.TryGetValue(fallbackKey, out value) == true && value is Color fallback) return fallback;
+            return Colors.Transparent;
+        }
+
+        return dark
+            ? (Get("PopupBackgroundColorDark", "Gray900"), Get("PopupBorderColorDark", "Gray600"))
+            : (Get("PopupBackgroundColorLight", "White"), Get("PopupBorderColorLight", "Gray200"));
+    }
+
     private async Task ShowCommunityToolkitPopup(CommunityToolkit.Maui.Views.Popup popup)
     {
         try
         {
-            await CommunityToolkit.Maui.Extensions.PopupExtensions.ShowPopupAsync(Navigation, popup, null);
+            var colors = GetPopupColors();
+            popup.BackgroundColor = colors.Background;
+            await CommunityToolkit.Maui.Extensions.PopupExtensions.ShowPopupAsync(Navigation, popup, new CommunityToolkit.Maui.PopupOptions
+            {
+                CanBeDismissedByTappingOutsideOfPopup = popup.CanBeDismissedByTappingOutsideOfPopup,
+                Shape = new RoundRectangle
+                {
+                    CornerRadius = 8,
+                    BackgroundColor = colors.Background,
+                    Stroke = colors.Border,
+                    StrokeThickness = 1
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -6427,6 +6518,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     private async Task ShowAFullscreenPopupInBottom(double height, View content, bool disableScrollWrapping = false)
     {
         popupShowingDirection = "bottom";
+        var colors = GetPopupColors();
 
         OverlayLayer.IsVisible = true;
         OverlayLayer.InputTransparent = false;
@@ -6442,8 +6534,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             HeightRequest = height,
             TranslationX = 15,
             TranslationY = size.Height + 10,
-            BackgroundColor = Color.FromArgb("#FF2D2D30"),
-            Stroke = Color.FromArgb("#FF3E3E42"),
+            BackgroundColor = colors.Background,
+            Stroke = colors.Border,
 
             StrokeShape = new RoundRectangle
             {
@@ -6502,6 +6594,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     public async Task ShowACenteredPopup(double desiredHeight, double desiredWidth, View content, bool disableScrollWrapping = false)
     {
         popupShowingDirection = "dialog";
+        var colors = GetPopupColors();
 
         OverlayLayer.IsVisible = true;
         OverlayLayer.InputTransparent = false;
@@ -6545,8 +6638,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             HeightRequest = popupHeight,
             TranslationX = targetX,
             TranslationY = size.Height + 10,
-            BackgroundColor = Color.FromArgb("#FF2D2D30"),
-            Stroke = Color.FromArgb("#FF3E3E42"),
+            BackgroundColor = colors.Background,
+            Stroke = colors.Border,
             StrokeShape = new RoundRectangle
             {
                 CornerRadius = 8,
@@ -8864,10 +8957,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         try
         {
+            bool usePreparedRenderProject = Interlocked.Exchange(ref _renderProjectPrepared, 0) == 1;
             await Dispatcher.DispatchAsync(async () =>
             {
                 d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
-                await previewer.UpdateDraft(d);
+                if (!usePreparedRenderProject) await previewer.UpdateDraft(d);
             });
             ProjectDuration = Math.Max(d.Duration, d.AudioDuration);
             TryMoveToInitialPreviewFrame(d);
@@ -9814,6 +9908,11 @@ public partial class DraftPage : ContentPage, IDraftPage
                     { await Task.Delay(1000, ct); continue; }
                     var id = await EnsureGuiRpcSessionAsync(client, ct).ConfigureAwait(false);
                     var work = await client.GetGuiProjectWorkAsync(new() { SessionId = id }, ct).ConfigureAwait(false);
+                    if (!string.IsNullOrWhiteSpace(work.ConnectedClientName))
+                    {
+                        SetStatusText($"External RPC client connected: {work.ConnectedClientName}");
+                        continue;
+                    }
                     if (work.Request is null) continue;
                     var result = new GuiProjectResult { SessionId = id, RequestId = work.Request.RequestId };
                     try
@@ -11064,51 +11163,74 @@ public partial class DraftPage : ContentPage, IDraftPage
     public void SetStateFail()
     {
         if (StateIndicator is null) return;
-        Dispatcher.Dispatch(() =>
+        try
         {
-            StateIndicator.Children.Clear();
-            StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
+            Dispatcher.Dispatch(() =>
             {
-                Stroke = Colors.Red,
-                StrokeThickness = 3,
-                Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,4 L 20,20 M 20,4 L 4,20"),
-                WidthRequest = 20,
-                HeightRequest = 20,
-                Margin = new Thickness(0, -3, 0, 0)
+                try
+                {
+                    StateIndicator.Children.Clear();
+                    StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
+                    {
+                        Stroke = Colors.Red,
+                        StrokeThickness = 3,
+                        Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,4 L 20,20 M 20,4 L 4,20"),
+                        WidthRequest = 20,
+                        HeightRequest = 20,
+                        Margin = new Thickness(0, -3, 0, 0)
+                    });
+                }
+                catch { }
             });
-        });
-
+        }
+        catch { }
     }
 
     public void SetStateWarn()
     {
         if (StateIndicator is null) return;
-        Dispatcher.Dispatch(() =>
+        try
         {
-            StateIndicator.Children.Clear();
-            StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
+            Dispatcher.Dispatch(() =>
             {
-                Stroke = Colors.Yellow,
-                StrokeThickness = 3,
-                Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,4 L 20,20 M 20,4 L 4,20"),
-                WidthRequest = 20,
-                HeightRequest = 20,
-                Margin = new Thickness(0, -3, 0, 0)
+                try
+                {
+                    StateIndicator.Children.Clear();
+                    StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
+                    {
+                        Stroke = Colors.Yellow,
+                        StrokeThickness = 3,
+                        Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,4 L 20,20 M 20,4 L 4,20"),
+                        WidthRequest = 20,
+                        HeightRequest = 20,
+                        Margin = new Thickness(0, -3, 0, 0)
+                    });
+                }
+                catch { }
             });
-        });
+        }
+        catch { }
 
     }
 
     public void SetStateWarn(string text)
     {
         SetStateFail();
-        Dispatcher.Dispatch(() =>
+        try
         {
-            StatusLabel.TextColor = Colors.Yellow;
-            StatusLabel.Text = text;
-        });
+            Dispatcher.Dispatch(() =>
+            {
+                try
+                {
+                    StatusLabel.TextColor = Colors.Yellow;
+                    StatusLabel.Text = text;
+                }
+                catch { }
+            });
+        }
+        catch { }
         if (LogUIMessageToLogger) Log(text, "UI warn");
-        HistoryLogs.AddOrUpdate(DateTime.Now.Ticks, (_) => new DraftPageLogItem { Message = text, Level = "Info" }, (d, old) =>
+        HistoryLogs.AddOrUpdate(DateTime.Now.Ticks, (_) => new DraftPageLogItem { Message = text, Level = "Warning" }, (d, old) =>
         {
             if (DateTime.Now - new DateTime(d) > TimeSpan.FromSeconds(1))
             {
@@ -11125,13 +11247,21 @@ public partial class DraftPage : ContentPage, IDraftPage
     public void SetStateFail(string text)
     {
         SetStateFail();
-        Dispatcher.Dispatch(() =>
+        try
         {
-            StatusLabel.TextColor = Colors.Red;
-            StatusLabel.Text = text;
-        });
+            Dispatcher.Dispatch(() =>
+            {
+                try
+                {
+                    StatusLabel.TextColor = Colors.Red;
+                    StatusLabel.Text = text;
+                }
+                catch { }
+            });
+        }
+        catch { }
         if (LogUIMessageToLogger) Log(text, "UI err");
-        HistoryLogs.AddOrUpdate(DateTime.Now.Ticks, (_) => new DraftPageLogItem { Message = text, Level = "Info" }, (d, old) =>
+        HistoryLogs.AddOrUpdate(DateTime.Now.Ticks, (_) => new DraftPageLogItem { Message = text, Level = "Error" }, (d, old) =>
         {
             if (DateTime.Now - new DateTime(d) > TimeSpan.FromSeconds(1))
             {
@@ -11147,11 +11277,19 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     public void SetStatusText(string text)
     {
-        Dispatcher.Dispatch(() =>
+        try
         {
-            StatusLabel.TextColor = Colors.White;
-            StatusLabel.Text = text;
-        });
+            Dispatcher.Dispatch(() =>
+            {
+                try
+                {
+                    StatusLabel.TextColor = Colors.White;
+                    StatusLabel.Text = text;
+                }
+                catch { }
+            });
+        }
+        catch { }
         if (LogUIMessageToLogger) Log(text, "UI msg");
         HistoryLogs.AddOrUpdate(DateTime.Now.Ticks, (_) => new DraftPageLogItem { Message = text, Level = "Info" }, (d, old) =>
         {

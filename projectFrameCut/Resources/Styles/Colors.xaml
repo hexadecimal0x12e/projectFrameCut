@@ -30,6 +30,11 @@
     <Color x:Key="Gray900">#212121</Color>
     <Color x:Key="Gray950">#141414</Color>
 
+    <Color x:Key="PopupBackgroundColorLight">#FFFFFF</Color>
+    <Color x:Key="PopupBackgroundColorDark">#2D2D30</Color>
+    <Color x:Key="PopupBorderColorLight">#C8C8C8</Color>
+    <Color x:Key="PopupBorderColorDark">#3E3E42</Color>
+
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
     <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>

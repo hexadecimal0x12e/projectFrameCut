@@ -154,9 +154,7 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
                 }) ?? new Dictionary<string, EffectParameterInfo>(),
                 EffectType = effect.IsContinuousEffect
                     ? EffectType.ContinuousEffect
-                    : effect.IsVariableArgumentEffect
-                        ? EffectType.BindableEffect
-                        : EffectType.NormalEffect
+                    : EffectType.NormalEffect
             };
     }
 

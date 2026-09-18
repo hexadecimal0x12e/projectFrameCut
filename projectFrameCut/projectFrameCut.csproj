@@ -1,9 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net10.0-android;net10.0_linux</TargetFrameworks>
+		<TargetFrameworks>net11.0-android;net11.0_linux</TargetFrameworks>
 		<TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net11.0-ios</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net11.0-windows10.0.19041.0</TargetFrameworks>
 
 		<!-- Note for MacCatalyst:
 			The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
@@ -23,7 +23,6 @@
 		<SingleProject>true</SingleProject>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-
 
 		<!-- Display name -->
 		<ApplicationTitle>projectFrameCut</ApplicationTitle>
@@ -68,7 +67,6 @@
 		<GenerateTestArtifacts>True</GenerateTestArtifacts>
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 		<AppxPackageDir>bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\AppPackages\</AppxPackageDir>
-
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
@@ -85,9 +83,10 @@
 		<ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
 		<StartupObject>projectFrameCut.WinUI.Program</StartupObject>
 		<DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN;DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION;MAUISDK</DefineConstants>
+	  <SelectedPackageManifest>Platforms\Windows\Package.$(PackageFlavor).appxmanifest</SelectedPackageManifest>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
 		<ApplicationId>hexadecimal0x12e.projectframecut</ApplicationId>
 	</PropertyGroup>
 
@@ -150,14 +149,19 @@
 
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.AI" Version="10.8.0" />
-		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.8.0" />
-		<PackageReference Include="OpenAI" Version="2.12.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
+		<PackageReference Include="Microsoft.Extensions.AI" Version="10.10.0" />
+		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.10.0" />
+		<PackageReference Include="OpenAI" Version="2.13.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="$(ExtensionsVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(ExtensionsConfigurationVersion)" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(ExtensionsVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Diagnostics.Abstractions" Version="$(ExtensionsVersion)" />
+		<PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="$(ExtensionsVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="$(ExtensionsVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Primitives" Version="$(ExtensionsConfigurationVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="$(MauiVersion)" />
-		<PackageReference Include="CommunityToolkit.Maui" Version="14.2.0" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="15.0.1" />
 		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="10.0.0" />
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
 		<PackageReference Include="Kawazu" Version="1.1.4" ExcludeAssets="contentFiles" />
@@ -190,15 +194,35 @@
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<PackageReference Include="Microsoft.Graphics.Win2D" Version="1.4.0" />
 		<PackageReference Include="Woohoo.Platform.Windows" Version="0.1.0" />
-		<PackageReference Include="System.Management" Version="*" /> <!-- pwsh SDK relys on this library so we don't fix the version -->
+		<PackageReference Include="System.Management" Version="11.0.0-rc.1.26425.128" />
+		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
 		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
 		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<MauiAsset Include="Platforms\Windows\pjfc-cli.exe" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(BuildingInsideVisualStudio)' != 'true' and '$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">
-		<PackageReference Include="Microsoft.Windows.SDK.BuildTools.MSIX" Version="1.7.260610101" />
+	<ItemGroup Condition="'$(BuildingInsideVisualStudio)' != 'true' and '$(TargetFramework)' == 'net11.0-windows10.0.19041.0'">
+		<PackageReference Include="Microsoft.Windows.SDK.BuildTools.MSIX" Version="1.7.260903100">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+		</PackageReference>
 	</ItemGroup>
+
+	<PropertyGroup Condition="'$(PackageFlavor)' == ''">
+	  <SelectedPackageManifest>Platforms\Windows\Package.appxmanifest</SelectedPackageManifest>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(PackageFlavor)' == 'MSStore' and '$(TargetFramework)' == 'net11.0-windows10.0.19041.0'">
+		<PublishReadyToRun>true</PublishReadyToRun>
+		<PublishSelfContained>true</PublishSelfContained>
+	</PropertyGroup>
+
+	<Target Name="SelectWindowsPackageManifest" BeforeTargets="MauiGeneratePackageAppxManifest" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<ItemGroup>
+			<AppxManifest Remove="@(AppxManifest)" />
+			<AppxManifest Include="$(SelectedPackageManifest)" />
+		</ItemGroup>
+	</Target>
 
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
@@ -207,16 +231,16 @@
 		<AndroidNativeLibrary Include="Platforms\Android\nativeLibs\**\*.so" />
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
+	<ItemGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net11.0-android'">
 		<AndroidMavenLibrary Include="com.github.L-JINBIN:MTDataFilesProvider" Version="1.0.0" Repository="https://jitpack.io" />
 	</ItemGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net11.0-android'">
 		<AndroidKeyStore>False</AndroidKeyStore>
 		<DefineConstants>$(DefineConstants);ANDROID;MAUISDK</DefineConstants>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Release|net10.0-android'">
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Release|net11.0-android'">
 		<AndroidKeyStore>True</AndroidKeyStore>
 		<AndroidSigningKeyStore>0x12e.keystore</AndroidSigningKeyStore>
 		<AndroidSigningKeyAlias>123456</AndroidSigningKeyAlias>
@@ -232,20 +256,20 @@
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
 	</ItemGroup>
 
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
 		<TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
-		<TargetFrameworkVersion>v10.0</TargetFrameworkVersion>
-		<TargetFrameworkMoniker>.NETCoreApp,Version=v10.0</TargetFrameworkMoniker>
+		<TargetFrameworkVersion>v11.0</TargetFrameworkVersion>
+		<TargetFrameworkMoniker>.NETCoreApp,Version=v11.0</TargetFrameworkMoniker>
 		<DefineConstants>$(DefineConstants);LINUX</DefineConstants>
 	</PropertyGroup>
 
-	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
-		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4" Version="0.1.0-preview.12.26368.2" />
-		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4.Essentials" Version="0.1.0-preview.12.26368.2" />
+	<ItemGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
+		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4" Version="$(MAUIGTK4Version)" />
+		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4.Essentials" Version="$(MAUIGTK4Version)" />
 	</ItemGroup>
 
 	<Target Name="RestorePlatformCompileItems" BeforeTargets="CoreCompile">
-		<ItemGroup Condition="'$(TargetFramework)' == 'net10.0_linux'">
+		<ItemGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
 			<Compile Include="Platforms\Linux\**\*.cs" />
 		</ItemGroup>
 	</Target>
@@ -367,6 +391,9 @@
 		</None>
 		<None Update="LandingPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="Platforms\Windows\Package.MSStore.appxmanifest">
+		  <SubType>Designer</SubType>
 		</None>
 		<None Update="RenderPage.xaml">
 			<Generator>MSBuild:Compile</Generator>

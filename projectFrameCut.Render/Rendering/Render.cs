@@ -184,9 +184,9 @@ namespace projectFrameCut.Render.Rendering
         private static readonly ConcurrentDictionary<string, bool> ComputerBatchSupportCache = new();
 
         // Running totals for O(1) average elapsed statistics (avoids scanning the bags on every stat log)
-        private long _renderElapsedTicksTotal; 
+        private long _renderElapsedTicksTotal;
         private int _renderElapsedCount;
-        private long _prepareElapsedTicksTotal; 
+        private long _prepareElapsedTicksTotal;
         private int _prepareElapsedCount;
 
         public static bool IsProfilerAttached =>
@@ -1209,7 +1209,7 @@ namespace projectFrameCut.Render.Rendering
             };
             preparer.Start();
 
-            if(BlockPreparingBeforeRendering)
+            if (BlockPreparingBeforeRendering)
             {
                 Log($"[Render] Blocking until preparer finishes before starting rendering.");
                 preparer.Join();
@@ -1791,12 +1791,12 @@ namespace projectFrameCut.Render.Rendering
             else if (item.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(item, clipTargetWidth, clipTargetHeight))
             {
                 frame = sre.Compute(
-                        item, 
-                        PluginManager.CreateComputer(sre.NeedComputer), 
-                        item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb), 
-                        clipTargetWidth, 
-                        clipTargetHeight, 
-                        item.GetRelativeFrameIndex(frameIndex) 
+                        item,
+                        PluginManager.CreateComputer(sre.NeedComputer),
+                        item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb),
+                        clipTargetWidth,
+                        clipTargetHeight,
+                        item.GetRelativeFrameIndex(frameIndex)
                             ?? throw new IndexOutOfRangeException($"Frame #{frameIndex} is not in clip [{StartFrame}, {StartFrame + item.GetEffectiveDuration()})."), ppb);
             }
             else
@@ -1913,7 +1913,7 @@ namespace projectFrameCut.Render.Rendering
                                     float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
                                     frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
                                     frame = c.Render(frame, continuousProgress, computer, TargetWidth, TargetHeight);
-                                    continue; 
+                                    continue;
                                 case EffectType.ContinuousClipPositionProvider:
                                     if (item is not IContinuousClipPositionProvider cp) goto notdefined;
                                     var pos = cp.GetPosition(clip, targetFrame, TargetWidth, TargetHeight);
@@ -1983,10 +1983,10 @@ namespace projectFrameCut.Render.Rendering
 
 
                     notdefined:
-                        if (item is IBindableArgumentEffect be)
+                        if (item is INormalEffect n)
                         {
                             frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
-                            EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, be, computer, TargetWidth, TargetHeight);
+                            frame = n.Render(frame, computer, TargetWidth, TargetHeight);
                         }
                         else if (item is IContinuousEffect c)
                         {
@@ -1996,11 +1996,6 @@ namespace projectFrameCut.Render.Rendering
                             float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
                             frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
                             frame = c.Render(frame, continuousProgress, computer, TargetWidth, TargetHeight);
-                        }
-                        else if (item is INormalEffect n)
-                        {
-                            frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
-                            frame = n.Render(frame, computer, TargetWidth, TargetHeight);
                         }
                         else if (item is IClipPositionProvider p)
                         {
@@ -2026,7 +2021,7 @@ namespace projectFrameCut.Render.Rendering
                                 targetPos = new(x, y, w, h, false);
                             }
                         }
-                        else if(item is IValueProviderEffect)
+                        else if (item is IValueProviderEffect)
                         {
                             throw new InvalidOperationException($"Effect {item.Name} ({item.Id}) of clip {clip.Id} is a IValueProviderEffect and should have been handled in the EffectBindingHelper.RebuildAllEffects. This indicates a logic error.");
                         }
@@ -2254,7 +2249,7 @@ namespace projectFrameCut.Render.Rendering
                     continue;
                 }
 
-                if (item.NeedComputer is null || item.TypeOfEffect is EffectType.BindableEffect)
+                if (item.NeedComputer is null)
                 {
                     if (batch.Count > 0) break;
                     nextIndex = i + 1;
@@ -2352,8 +2347,6 @@ namespace projectFrameCut.Render.Rendering
         private static bool IsGpuBatchable(IEffect effect)
         {
             if (!effect.Enabled || effect.NeedComputer is null)
-                return false;
-            if (effect.TypeOfEffect == EffectType.BindableEffect)
                 return false;
             return ComputerSupportsBatching(effect.NeedComputer);
         }

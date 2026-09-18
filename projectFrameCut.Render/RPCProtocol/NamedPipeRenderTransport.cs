@@ -69,6 +69,7 @@ public sealed class NamedPipeRenderServer(IRenderService service, bool allowAddi
                     await RenderPipeFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(handshakeResponse), handshakeTimeout.Token).ConfigureAwait(false);
                     if (!accepted) continue;
                     connected = true;
+                    if (service is IRenderConnectionObserver observer) observer.Connected(handshake.ClientId);
 
                     using var connectionCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     var writeGate = new SemaphoreSlim(1, 1);
@@ -339,8 +340,10 @@ public sealed class NamedPipeRenderServer(IRenderService service, bool allowAddi
             finally { _pipeLifetimes.TryRemove(token, out _); }
         }
 
-        private sealed class ExternalVideoSourcePipeService(AdditionalPipeHost host, IRenderService inner, Guid clientId, string clientName) : IRenderService, IExternalVideoSourceConnectionHost
+        private sealed class ExternalVideoSourcePipeService(AdditionalPipeHost host, IRenderService inner, Guid clientId, string clientName) : IRenderService, IExternalVideoSourceConnectionHost, IRenderConnectionObserver
         {
+            public void Connected(string connectedClientId) => (inner as IRenderConnectionObserver)?.Connected(connectedClientId);
+
             public IDisposable Connect(string connectedClientId, Func<RenderRequestEnvelope, CancellationToken, ValueTask<RenderResponseEnvelope>> callback)
             {
                 if (!string.Equals(connectedClientId, clientId.ToString("D"), StringComparison.OrdinalIgnoreCase))
@@ -364,8 +367,10 @@ public sealed class NamedPipeRenderServer(IRenderService service, bool allowAddi
             }
         }
 
-        private sealed class ExternalRpcMetadataPipeService(IRenderService inner, string clientName) : IRenderService
+        private sealed class ExternalRpcMetadataPipeService(IRenderService inner, string clientName) : IRenderService, IRenderConnectionObserver
         {
+            public void Connected(string _) => (inner as IRenderConnectionObserver)?.Connected(clientName);
+
             public ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
             {
                 if (request.Operation == RenderOperation.InvokeGuiProject)
@@ -413,4 +418,9 @@ public sealed class NamedPipeRenderServer(IRenderService service, bool allowAddi
             if (!cancellation.IsCancellationRequested) cancellation.Cancel();
         });
     }
+}
+
+internal interface IRenderConnectionObserver
+{
+    void Connected(string clientId);
 }

@@ -395,25 +395,9 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                         RelativeHeight = effect.RelativeHeight,
                         RelativeWidth = effect.RelativeWidth,
                         IsContinuousEffect = effect.TypeOfEffect == EffectType.ContinuousEffect,
-                        IsVariableArgumentEffect = false,
                         ImplementType = effect.ImplementType,
                         BindedEffectGroupID = effect.BindedEffectProvidingSystemID ?? "",
                     };
-
-                    if (effect is IBindableArgumentEffect bindableEffect)
-                    {
-                        structure.Id = bindableEffect.Id;
-                        structure.BindedInputID = bindableEffect.BindedArgumentProviderID;
-                        if (bindableEffect is IBindableArgumentEffectManyToOneValueProcesser mpe)
-                        {
-                            structure.BindedInputIDs = mpe.BindedArgumentProviderIDs;
-                        }
-                        else if (bindableEffect is IBindableArgumentEffectManyInputResultGenerator mpg)
-                        {
-                            structure.BindedInputIDs = mpg.BindedArgumentProviderIDs;
-                        }
-                        structure.Enabled = true;
-                    }
 
                     return structure;
                 }).ToArray(),

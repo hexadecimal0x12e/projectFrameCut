@@ -1093,8 +1093,7 @@ public partial class RenderPage : ContentPage
         var hdr = vm.HDREnabled || (_project is not null && ProjectUsesHDR);
         var preferHardware = (_hardwareAccelerationOverride
             ?? SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelEncoding", true))
-            && !OperatingSystem.IsAndroid()
-            && !OperatingSystem.IsIOS();
+            && (hdr || (!OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS()));
         var available = GetAvailableVideoEncoders();
 
         if (!string.IsNullOrWhiteSpace(vm.Encoding))
@@ -1111,7 +1110,7 @@ public partial class RenderPage : ContentPage
 
         foreach (var family in families)
         {
-            if (!hdr && preferHardware && FindHardwareEncoder(family, available) is string hardwareEncoder)
+            if (preferHardware && FindHardwareEncoder(family, available, hdr) is string hardwareEncoder)
                 return CreateEncoderSelection(hardwareEncoder, true);
             if (FindSoftwareEncoder(family, available) is string softwareEncoder)
                 return CreateEncoderSelection(softwareEncoder, false);
@@ -1141,16 +1140,16 @@ public partial class RenderPage : ContentPage
         var family = GetCodecFamily(requested);
         if (family is not null && requested is not "libx264" and not "libx265")
         {
-            if (!hdr && preferHardware && FindHardwareEncoder(family, available) is string hardwareEncoder)
+            if (preferHardware && FindHardwareEncoder(family, available, hdr) is string hardwareEncoder)
                 return (hardwareEncoder, true);
             if (FindSoftwareEncoder(family, available) is string softwareEncoder)
                 return (softwareEncoder, false);
         }
 
         if (available.Contains(requested) || available.Count == 0)
-            return (requested, !hdr && IsHardwareEncoder(requested));
+            return (requested, IsHardwareEncoder(requested) && (!hdr || HDRVideoWriter.CanUseHardwareHdrEncoder(requested)));
 
-        return (requested, !hdr && IsHardwareEncoder(requested));
+        return (requested, IsHardwareEncoder(requested) && (!hdr || HDRVideoWriter.CanUseHardwareHdrEncoder(requested)));
     }
 
     private static HashSet<string> GetAvailableVideoEncoders()
@@ -1180,7 +1179,7 @@ public partial class RenderPage : ContentPage
         return candidates.FirstOrDefault(available.Contains);
     }
 
-    private static string? FindHardwareEncoder(string family, HashSet<string> available)
+    private static string? FindHardwareEncoder(string family, HashSet<string> available, bool requireHdr)
     {
         string[] roots = family == "hevc" ? ["hevc", "h265"] : [family];
         var suffixes = GetHardwareEncoderSuffixes();
@@ -1189,10 +1188,12 @@ public partial class RenderPage : ContentPage
             foreach (var suffix in suffixes)
             {
                 var candidate = root + suffix;
-                if (available.Contains(candidate)) return candidate;
+                if (available.Contains(candidate) && (!requireHdr || HDRVideoWriter.CanUseHardwareHdrEncoder(candidate))) return candidate;
             }
         }
-        return available.FirstOrDefault(c => IsHardwareEncoder(c) && GetCodecFamily(c) == family);
+        return available.FirstOrDefault(c => IsHardwareEncoder(c)
+            && GetCodecFamily(c) == family
+            && (!requireHdr || HDRVideoWriter.CanUseHardwareHdrEncoder(c)));
     }
 
     private static string[] GetHardwareEncoderSuffixes()

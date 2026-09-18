@@ -407,66 +407,6 @@ namespace projectFrameCut.Render.Compose
                     current = continuous.Process(current, clipLocalSampleIndex);
                     continue;
                 }
-
-                if (effect is IBindableArgumentAudioEffectValueProvider vp)
-                {
-                    string key = string.IsNullOrWhiteSpace(vp.Id) ? Guid.NewGuid().ToString() : vp.Id;
-                    object value = vp.GenerateValue(current);
-                    if (vp.GenerateOnce)
-                    {
-                        globalBindableCache[key] = value;
-                    }
-                    else
-                    {
-                        localBindableCache[key] = value;
-                    }
-                    continue;
-                }
-
-                if (effect is IBindableArgumentAudioEffectOneInputResultGenerator one)
-                {
-                    if (string.IsNullOrWhiteSpace(one.BindedArgumentProviderID))
-                    {
-                        continue;
-                    }
-
-                    if (!TryGetCachedValue(one.BindedArgumentProviderID, localBindableCache, globalBindableCache, out object sourceValue))
-                    {
-                        continue;
-                    }
-
-                    if (one.IsContinuous && !RangeOverlaps((int)clipLocalSampleIndex, input.SampleCount, one.StartPoint, one.EndPoint))
-                    {
-                        continue;
-                    }
-
-                    current = one.GenerateResult(sourceValue, clipLocalSampleIndex);
-                    localBindableCache[string.IsNullOrWhiteSpace(one.Id) ? Guid.NewGuid().ToString() : one.Id] = current;
-                    continue;
-                }
-
-                if (effect is IBindableArgumentAudioEffectManyInputResultGenerator many)
-                {
-                    if (!RangeOverlaps((int)clipLocalSampleIndex, input.SampleCount, many.StartPoint, many.EndPoint))
-                    {
-                        continue;
-                    }
-
-                    object[] values = many.BindedArgumentProviderIDs
-                        .Where(id => !string.IsNullOrWhiteSpace(id))
-                        .Where(id => TryGetCachedValue(id, localBindableCache, globalBindableCache, out _))
-                        .Select(id => GetCachedValue(id, localBindableCache, globalBindableCache))
-                        .ToArray();
-
-                    if (values.Length == 0)
-                    {
-                        continue;
-                    }
-
-                    current = many.GenerateResult(values, clipLocalSampleIndex);
-                    localBindableCache[string.IsNullOrWhiteSpace(many.Id) ? Guid.NewGuid().ToString() : many.Id] = current;
-                    continue;
-                }
             }
 
             return ToFloatSamples(current);

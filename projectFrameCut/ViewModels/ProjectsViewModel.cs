@@ -1,5 +1,6 @@
 ﻿using Microsoft.Maui.Handlers;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -16,6 +17,8 @@ namespace projectFrameCut.ViewModels
         public DateTime? _lastChanged;
         public string _thumbPath = string.Empty;
         public string _projectPath = string.Empty;
+        private ImageSource? _thumbImage;
+        private bool _thumbImageLoaded;
 
         public ProjectsViewModel(string name, DateTime? lastChanged, string thumbPath)
         {
@@ -59,21 +62,29 @@ namespace projectFrameCut.ViewModels
         {
             get
             {
+                if (_thumbPath == "!!CreateButton!!")
+                {
+                    return ImageHelper.LoadFromAsset("icon_add_png");
+                }
+                if (_thumbImageLoaded)
+                {
+                    return _thumbImage;
+                }
+
+                _thumbImageLoaded = true;
                 try
                 {
-                    if (_thumbPath == "!!CreateButton!!")
-                    {
-                        return ImageHelper.LoadFromAsset("icon_add_png");
-                    }
-                    if (!File.Exists(_thumbPath) && new FileInfo(_thumbPath).Length <= 16)
+                    if (!File.Exists(_thumbPath) || new FileInfo(_thumbPath).Length <= 16)
                     {
                         return null;
                     }
-                    return ImageSource.FromFile(_thumbPath);
+
+                    byte[] data = File.ReadAllBytes(_thumbPath);
+                    return _thumbImage = ImageSource.FromStream(() => new MemoryStream(data, writable: false));
                 }
                 catch (Exception ex)
                 {
-                    //Log(ex, $"Get thumb for {_thumbPath}", this); //this is okay for not logging
+                    Logger.Log(ex, $"Get project thumbnail {_thumbPath}", this);
                     return null;
                 }
             }

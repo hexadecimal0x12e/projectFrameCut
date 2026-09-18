@@ -277,7 +277,7 @@ public interface ISimpleLocalizerBase
     
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy (like '
-    /// 由 .NET 10 和 .NET MAUI 驱动
+    /// 由 .NET 11 和 .NET MAUI 驱动
     ///')
     /// </summary>
     public string AboutPage_PoweredBy { get; }
@@ -9268,10 +9268,10 @@ public class __ISimpleLocalizerBase_zh_CN__ : ISimpleLocalizerBase
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in zh-CN (like '
-    /// 由 .NET 10 和 .NET MAUI 驱动
+    /// 由 .NET 11 和 .NET MAUI 驱动
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $"由 .NET 10 和 .NET MAUI 驱动";
+    public static string AboutPage_PoweredBy => $"由 .NET 11 和 .NET MAUI 驱动";
     
     string ISimpleLocalizerBase.AIAssistant_AIReplyCopyPopup_Copy => AIAssistant_AIReplyCopyPopup_Copy;
     /// <summary>
@@ -24183,10 +24183,10 @@ For security reasons, the executable file '{cmdName}' is not allowed to run. Ple
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in en-US (like '
-    /// Powered by .NET 10 and .NET MAUI
+    /// Powered by .NET 11 and .NET MAUI
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $"Powered by .NET 10 and .NET MAUI";
+    public static string AboutPage_PoweredBy => $"Powered by .NET 11 and .NET MAUI";
     
     string ISimpleLocalizerBase.HomePage_Continue(string name) => HomePage_Continue(name);
     /// <summary>
@@ -32034,10 +32034,10 @@ $""""
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in zh-TW (like '
-    /// 由 .NET 10 與 .NET MAUI 驅動
+    /// 由 .NET 11 與 .NET MAUI 驅動
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $"由 .NET 10 與 .NET MAUI 驅動";
+    public static string AboutPage_PoweredBy => $"由 .NET 11 與 .NET MAUI 驅動";
     
     string ISimpleLocalizerBase.AboutPage_HomePage => AboutPage_HomePage;
     /// <summary>
@@ -40142,10 +40142,10 @@ $""""
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in ja-JP (like '
-    /// .NET 10 と .NET MAUI で動作
+    /// .NET 11 と .NET MAUI で動作
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $".NET 10 と .NET MAUI で動作";
+    public static string AboutPage_PoweredBy => $".NET 11 と .NET MAUI で動作";
     
     string ISimpleLocalizerBase.HomePage_Continue(string name) => HomePage_Continue(name);
     /// <summary>
@@ -48237,10 +48237,10 @@ $""""
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in ko-KR (like '
-    /// .NET 10 및 .NET MAUI로 구동
+    /// .NET 11 및 .NET MAUI로 구동
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $".NET 10 및 .NET MAUI로 구동";
+    public static string AboutPage_PoweredBy => $".NET 11 및 .NET MAUI로 구동";
     
     string ISimpleLocalizerBase.HomePage_Continue(string name) => HomePage_Continue(name);
     /// <summary>
@@ -56274,10 +56274,10 @@ $""""
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in fr-FR (like '
-    /// Propulsé par .NET 10 et .NET MAUI
+    /// Propulsé par .NET 11 et .NET MAUI
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $"Propulsé par .NET 10 et .NET MAUI";
+    public static string AboutPage_PoweredBy => $"Propulsé par .NET 11 et .NET MAUI";
     
     string ISimpleLocalizerBase.HomePage_GoDraft_DeprecatedFeatureWarn(int nextAPIVer, string features) => HomePage_GoDraft_DeprecatedFeatureWarn(nextAPIVer,features);
     /// <summary>
@@ -64265,10 +64265,10 @@ $""""
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in ar-SA (like '
-    /// مدعوم بواسطة .NET 10 و .NET MAUI
+    /// مدعوم بواسطة .NET 11 و .NET MAUI
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $"مدعوم بواسطة .NET 10 و .NET MAUI";
+    public static string AboutPage_PoweredBy => $"مدعوم بواسطة .NET 11 و .NET MAUI";
     
     string ISimpleLocalizerBase.AboutPage_Copyrignt => AboutPage_Copyrignt;
     /// <summary>
@@ -72137,10 +72137,10 @@ Möchten Sie "{name}" wirklich löschen? Diese Aktion kann nicht rückgängig ge
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in de-DE (like '
-    /// Unterstützt von .NET 10 und .NET MAUI
+    /// Unterstützt von .NET 11 und .NET MAUI
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $"Unterstützt von .NET 10 und .NET MAUI";
+    public static string AboutPage_PoweredBy => $"Unterstützt von .NET 11 und .NET MAUI";
     
     string ISimpleLocalizerBase.HomePage_Continue(string name) => HomePage_Continue(name);
     /// <summary>
@@ -80025,10 +80025,10 @@ Introduce tu respuesta personalizada a continuación y pulsa Aceptar;{Environmen
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in es-ES (like '
-    /// Impulsado por .NET 10 y .NET MAUI
+    /// Impulsado por .NET 11 y .NET MAUI
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $"Impulsado por .NET 10 y .NET MAUI";
+    public static string AboutPage_PoweredBy => $"Impulsado por .NET 11 y .NET MAUI";
     
     string ISimpleLocalizerBase.AboutPage_Copyrignt => AboutPage_Copyrignt;
     /// <summary>
@@ -88025,10 +88025,10 @@ Continua a lavorare al progetto "{name}"
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in it-IT (like '
-    /// Basato su .NET 10 e .NET MAUI
+    /// Basato su .NET 11 e .NET MAUI
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $"Basato su .NET 10 e .NET MAUI";
+    public static string AboutPage_PoweredBy => $"Basato su .NET 11 e .NET MAUI";
     
     string ISimpleLocalizerBase.HomePage_GoDraft_OneWayDestructiveUpdateWarn(string features) => HomePage_GoDraft_OneWayDestructiveUpdateWarn(features);
     /// <summary>
@@ -95963,10 +95963,10 @@ Ten projekt zawiera starszą strukturę danych, dlatego {AppBrand} nie może go 
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in pl-PL (like '
-    /// Obsługiwane przez .NET 10 i .NET MAUI
+    /// Obsługiwane przez .NET 11 i .NET MAUI
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $"Obsługiwane przez .NET 10 i .NET MAUI";
+    public static string AboutPage_PoweredBy => $"Obsługiwane przez .NET 11 i .NET MAUI";
     
     string ISimpleLocalizerBase.HomePage_GoDraft_OneWayUpdateWarn(string features) => HomePage_GoDraft_OneWayUpdateWarn(features);
     /// <summary>
@@ -103913,10 +103913,10 @@ Continuar trabalhando no projeto "{name}"
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in pt-BR (like '
-    /// Desenvolvido com .NET 10 e .NET MAUI
+    /// Desenvolvido com .NET 11 e .NET MAUI
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $"Desenvolvido com .NET 10 e .NET MAUI";
+    public static string AboutPage_PoweredBy => $"Desenvolvido com .NET 11 e .NET MAUI";
     
     string ISimpleLocalizerBase.HomePage_GoDraft_DeprecatedFeatureWarn(int nextAPIVer, string features) => HomePage_GoDraft_DeprecatedFeatureWarn(nextAPIVer,features);
     /// <summary>
@@ -111781,10 +111781,10 @@ $""""
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in ru-RU (like '
-    /// Работает на базе .NET 10 и .NET MAUI
+    /// Работает на базе .NET 11 и .NET MAUI
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $"Работает на базе .NET 10 и .NET MAUI";
+    public static string AboutPage_PoweredBy => $"Работает на базе .NET 11 и .NET MAUI";
     
     string ISimpleLocalizerBase.HomePage_GoDraft_DeprecatedFeatureWarn(int nextAPIVer, string features) => HomePage_GoDraft_DeprecatedFeatureWarn(nextAPIVer,features);
     /// <summary>
@@ -119721,10 +119721,10 @@ $""""
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in tr-TR (like '
-    /// .NET 10 ve .NET MAUI ile güçlendirilmiştir
+    /// .NET 11 ve .NET MAUI ile güçlendirilmiştir
     /// ')
     /// </summary>
-    public static string AboutPage_PoweredBy => $".NET 10 ve .NET MAUI ile güçlendirilmiştir";
+    public static string AboutPage_PoweredBy => $".NET 11 ve .NET MAUI ile güçlendirilmiştir";
     
     string ISimpleLocalizerBase.HomePage_Continue(string name) => HomePage_Continue(name);
     /// <summary>
@@ -120733,7 +120733,7 @@ public class __ISimpleLocalizerBase_qps_ploc__ : ISimpleLocalizerBase
     string ISimpleLocalizerBase.AboutPage_PoweredBy => AboutPage_PoweredBy;
     /// <summary>
     /// Get the localized string for AboutPage_PoweredBy in qps-ploc (like '
-    /// 由 .NET 10 和 .NET MAUI 驱动
+    /// 由 .NET 11 和 .NET MAUI 驱动
     /// ')
     /// </summary>
     public static string AboutPage_PoweredBy => "Localized item:AboutPage_PoweredBy";

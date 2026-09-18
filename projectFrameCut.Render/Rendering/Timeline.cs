@@ -308,11 +308,6 @@ namespace projectFrameCut.Render.Rendering
                             effected = ResizeForEffectIfNeeded(effected, effect, clipPos.TargetWidth, clipPos.TargetHeight);
                             effected = n.Render(effected, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
-                        else if (effect is IBindableArgumentEffect b)
-                        {
-                            effected = ResizeForEffectIfNeeded(effected, effect, clipPos.TargetWidth, clipPos.TargetHeight);
-                            _ = EffectProcessing.ProcessBindableArgsEffect(frameIndex, ref effected, ref bindableEffectResultCache, bindableEffectResultCache2, srcFrame.ParentClip, b, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight); //single frame render, no need to remove
-                        }
                         else if (effect is IClipPositionProvider p)
                         {
                             (var x, var y, var w, var h, bool delta) = p.GetPosition(srcFrame.ParentClip, targetWidth, targetHeight);

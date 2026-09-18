@@ -847,6 +847,23 @@ namespace projectFrameCut
             var jsonOptions = new JsonSerializerOptions { NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
             var projectFile = File.Exists(Path.Combine(projectRoot, "project.pjfc")) ? "project.pjfc" : "project.json";
             var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(projectRoot, projectFile)), jsonOptions) ?? new();
+            bool useHdr = project.Properties.TryGetValue("EnableHDR", out var enableHdrText)
+                && bool.TryParse(enableHdrText, out var enableHdr)
+                && enableHdr;
+            bool preferHdrHardware = bool.TryParse(
+                switches.GetValueOrDefault("preferHwAccelEncoder", "false"),
+                out var preferHdrHardwareValue) && preferHdrHardwareValue;
+            int maximumHdrBrightness = project.Properties.TryGetValue("HdrMaximumBrightness", out var maximumHdrBrightnessText)
+                && int.TryParse(maximumHdrBrightnessText, out var parsedMaximumHdrBrightness)
+                    ? parsedMaximumHdrBrightness
+                    : 1000;
+            int sdrBrightnessInHdr = project.Properties.TryGetValue("SdrClipBrightness", out var sdrBrightnessText)
+                && int.TryParse(sdrBrightnessText, out var parsedSdrBrightness)
+                    ? parsedSdrBrightness
+                    : project.Properties.TryGetValue("sdrClipBrightness", out var legacySdrBrightnessText)
+                        && int.TryParse(legacySdrBrightnessText, out var parsedLegacySdrBrightness)
+                            ? parsedLegacySdrBrightness
+                            : 203;
             if (project.ProjectPlugins?.Any(x => x.Enabled) == true)
             {
                 var projectPluginLoad = await ProjectPluginService.LoadProjectPluginsAsync(projectRoot, project, _ => Task.FromResult(false), cancellationToken);
@@ -887,7 +904,9 @@ namespace projectFrameCut
 #endif
             IVideoWriter CreateConfiguredWriter(string path, bool intermediateChunk)
             {
-                IVideoWriter writer = PluginManager.CreateVideoWriter(output[4]);
+                IVideoWriter writer = useHdr
+                    ? new HDRVideoWriter { PreferHardwareAcceleration = preferHdrHardware }
+                    : PluginManager.CreateVideoWriter(output[4]);
                 writer.Width = width;
                 writer.Height = height;
                 writer.FramePerSecond = fps;
@@ -954,6 +973,9 @@ namespace projectFrameCut
                     CompletedFramesBeforeChunk = startFrame,
                     TotalProjectFrames = duration,
                     Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
+                    UseHDR = useHdr,
+                    MaximumHDRBrightness = maximumHdrBrightness,
+                    SDRClipsBrightnessInHDRMode = sdrBrightnessInHdr,
                     GCOption = gcOption,
                     MaxThreads = Math.Max(1, renderThreads),
                     OneByOneRender = serial,

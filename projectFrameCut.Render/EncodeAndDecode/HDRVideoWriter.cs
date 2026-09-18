@@ -135,6 +135,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public bool PreferToSpeed { get; set; }
 
+        public bool PreferHardwareAcceleration { get; set; }
+
+        public string? ActiveEncoderName { get; private set; }
+
         public static bool DetectCodec(string codec)
         {
             if (FFmpegHelper.CodecUtils.GetCodecsByType(AVMediaType.AVMEDIA_TYPE_VIDEO, true).Find(c => c.Name.Equals(codec, StringComparison.OrdinalIgnoreCase)) != null)
@@ -208,67 +212,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
             _fmtCtx = oc;
 
-            AVCodec* codec = ffmpeg.avcodec_find_encoder_by_name(CodecName);
-            if (codec == null) throw new EntryPointNotFoundException($"Could not found the encoder '{CodecName}'. Try install codec extension-pack, or reinstall projectFrameCut.");
-
-            if (_enableHdrSignaling && _preferAppleHevcTag && codec->id == AVCodecID.AV_CODEC_ID_HEVC)
-            {
-                AVPixelFormat requestedPixelFormat = _pixelFormat;
-                AVPixelFormat adjustedPixelFormat = SelectAppleCompatibleHevcHdrPixelFormat(requestedPixelFormat);
-                if (adjustedPixelFormat != requestedPixelFormat)
-                {
-                    _pixelFormat = adjustedPixelFormat;
-                    Log($"[HDRVideoWriter] Adjusted HDR HEVC pixel format for Apple compatibility: {requestedPixelFormat} -> {_pixelFormat}.");
-                }
-            }
+            AVPixelFormat requestedPixelFormat = _pixelFormat;
+            AVCodec* codec = OpenBestEncoder(requestedPixelFormat);
 
             _videoStream = ffmpeg.avformat_new_stream(_fmtCtx, codec);
             if (_videoStream == null) throw new InvalidOperationException("Failed to create a stream to write video.");
-
-            _codecCtx = ffmpeg.avcodec_alloc_context3(codec);
-            if (_codecCtx == null) throw new InvalidOperationException("Failed to allocate a context for video.");
-
-            _codecCtx->codec_id = codec->id;
-            _codecCtx->codec_type = AVMediaType.AVMEDIA_TYPE_VIDEO;
-            _codecCtx->width = Width;
-            _codecCtx->height = Height;
-            _codecCtx->pix_fmt = _pixelFormat;
-            _codecCtx->time_base = new AVRational { num = 1, den = FramePerSecond };
             _videoStream->time_base = _codecCtx->time_base;
-            _codecCtx->framerate = new AVRational { num = FramePerSecond, den = 1 };
-            _codecCtx->gop_size = 12;
-            _codecCtx->max_b_frames = _enableHdrSignaling ? 0 : 2;
-            _codecCtx->bit_rate = _bitRate;
-
-            if (_enableHdrSignaling)
-            {
-                _codecCtx->color_primaries = AVColorPrimaries.AVCOL_PRI_BT2020;
-                _codecCtx->color_trc = AVColorTransferCharacteristic.AVCOL_TRC_SMPTE2084;
-                _codecCtx->colorspace = AVColorSpace.AVCOL_SPC_BT2020_NCL;
-                _codecCtx->color_range = AVColorRange.AVCOL_RANGE_MPEG;
-            }
-
-            if ((_fmtCtx->oformat->flags & ffmpeg.AVFMT_GLOBALHEADER) != 0)
-                _codecCtx->flags |= ffmpeg.AV_CODEC_FLAG_GLOBAL_HEADER;
-
-            AVDictionary* opts = null;
-            if (_codecCtx->codec_id == AVCodecID.AV_CODEC_ID_H264)
-            {
-                ffmpeg.av_dict_set(&opts, "preset", "veryfast", 0);
-                ffmpeg.av_dict_set(&opts, "tune", "zerolatency", 0);
-            }
-            else if (PreferToSpeed && _codecCtx->codec_id == AVCodecID.AV_CODEC_ID_HEVC)
-            {
-                ffmpeg.av_dict_set(&opts, "preset", "veryfast", 0);
-            }
-
-            if (_enableHdrSignaling)
-            {
-                ConfigureHdrEncoderOptions(codec, &opts, _streamMaximumBrightness, _streamMaxCll, _streamMaxFall);
-            }
-
-            FFmpegHelper.Throw(ffmpeg.avcodec_open2(_codecCtx, codec, &opts), "Open target codec stream");
-            ffmpeg.av_dict_free(&opts);
 
             FFmpegHelper.Throw(ffmpeg.avcodec_parameters_from_context(_videoStream->codecpar, _codecCtx),
                 "avcodec_parameters_from_context");
@@ -343,7 +292,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 Log("[HDRVideoWriter] WARNING: sws_getCoefficients returned null, using default sws colorspace conversion.");
             }
 
-            Log($"[HDRVideoWriter] Successfully initialized encoder for {OutputPath}");
+            Log($"[HDRVideoWriter] Successfully initialized '{ActiveEncoderName}' with {_pixelFormat} for {OutputPath}");
 
             _inited = true;
         }
@@ -998,6 +947,204 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
             }
         }
+
+        private AVCodec* OpenBestEncoder(AVPixelFormat requestedPixelFormat)
+        {
+            int lastError = ffmpeg.AVERROR_ENCODER_NOT_FOUND;
+            foreach (string name in GetEncoderCandidates(CodecName, PreferHardwareAcceleration))
+            {
+                AVCodec* codec = ffmpeg.avcodec_find_encoder_by_name(name);
+                if (codec == null || !TrySelectHdrPixelFormat(codec, requestedPixelFormat, out var pixelFormat)) continue;
+
+                AVCodecContext* ctx = ffmpeg.avcodec_alloc_context3(codec);
+                if (ctx == null) continue;
+
+                ctx->codec_id = codec->id;
+                ctx->codec_type = AVMediaType.AVMEDIA_TYPE_VIDEO;
+                ctx->width = Width;
+                ctx->height = Height;
+                ctx->pix_fmt = pixelFormat;
+                ctx->time_base = new AVRational { num = 1, den = FramePerSecond };
+                ctx->framerate = new AVRational { num = FramePerSecond, den = 1 };
+                ctx->gop_size = 12;
+                ctx->max_b_frames = _enableHdrSignaling ? 0 : 2;
+                ctx->bit_rate = _bitRate;
+
+                if (_enableHdrSignaling)
+                {
+                    ctx->color_primaries = AVColorPrimaries.AVCOL_PRI_BT2020;
+                    ctx->color_trc = AVColorTransferCharacteristic.AVCOL_TRC_SMPTE2084;
+                    ctx->colorspace = AVColorSpace.AVCOL_SPC_BT2020_NCL;
+                    ctx->color_range = AVColorRange.AVCOL_RANGE_MPEG;
+                }
+
+                if ((_fmtCtx->oformat->flags & ffmpeg.AVFMT_GLOBALHEADER) != 0)
+                    ctx->flags |= ffmpeg.AV_CODEC_FLAG_GLOBAL_HEADER;
+
+                AVDictionary* opts = null;
+                ConfigureEncoderOptions(codec, &opts);
+                int ret = ffmpeg.avcodec_open2(ctx, codec, &opts);
+                ffmpeg.av_dict_free(&opts);
+                if (ret >= 0)
+                {
+                    _codecCtx = ctx;
+                    _pixelFormat = pixelFormat;
+                    ActiveEncoderName = name;
+                    CodecName = name;
+                    return codec;
+                }
+
+                lastError = ret;
+                Log($"[HDRVideoWriter] Encoder '{name}' failed with {pixelFormat}: {FFmpegHelper.GetErrorString(ret) ?? $"error code {ret}"}. Trying the next HDR encoder.", "warn");
+                ffmpeg.avcodec_free_context(&ctx);
+            }
+
+            throw new InvalidOperationException($"No HDR encoder could be opened for '{CodecName}'. Last error: {FFmpegHelper.GetErrorString(lastError) ?? $"error code {lastError}"}.")
+            {
+                HResult = lastError
+            };
+        }
+
+        private void ConfigureEncoderOptions(AVCodec* codec, AVDictionary** opts)
+        {
+            string name = Marshal.PtrToStringAnsi((IntPtr)codec->name) ?? string.Empty;
+            if (name.Contains("nvenc", StringComparison.OrdinalIgnoreCase))
+            {
+                ffmpeg.av_dict_set(opts, "preset", PreferToSpeed ? "p2" : "p5", 0);
+                ffmpeg.av_dict_set(opts, "tune", PreferToSpeed ? "ll" : "hq", 0);
+            }
+            else if (name.Contains("amf", StringComparison.OrdinalIgnoreCase))
+            {
+                ffmpeg.av_dict_set(opts, "quality", PreferToSpeed ? "speed" : "quality", 0);
+            }
+            else if (name.Contains("qsv", StringComparison.OrdinalIgnoreCase))
+            {
+                ffmpeg.av_dict_set(opts, "preset", PreferToSpeed ? "veryfast" : "medium", 0);
+            }
+            else if (codec->id == AVCodecID.AV_CODEC_ID_H264)
+            {
+                ffmpeg.av_dict_set(opts, "preset", "veryfast", 0);
+                ffmpeg.av_dict_set(opts, "tune", "zerolatency", 0);
+            }
+            else if (PreferToSpeed && codec->id == AVCodecID.AV_CODEC_ID_HEVC)
+            {
+                ffmpeg.av_dict_set(opts, "preset", "veryfast", 0);
+            }
+
+            if (_enableHdrSignaling)
+                ConfigureHdrEncoderOptions(codec, opts, _streamMaximumBrightness, _streamMaxCll, _streamMaxFall);
+        }
+
+        public static bool CanUseHardwareHdrEncoder(string encoderName)
+        {
+            if (!IsHardwareEncoder(encoderName)) return false;
+            AVCodec* codec = ffmpeg.avcodec_find_encoder_by_name(encoderName);
+            return codec != null && TrySelectHdrPixelFormat(codec, AVPixelFormat.AV_PIX_FMT_YUV420P10LE, out _);
+        }
+
+        private static bool TrySelectHdrPixelFormat(AVCodec* codec, AVPixelFormat requested, out AVPixelFormat selected)
+        {
+            selected = requested;
+            AVPixelFormat* configs = null;
+            int count = 0;
+            try
+            {
+                int ret = ffmpeg.avcodec_get_supported_config(null, codec, AVCodecConfig.AV_CODEC_CONFIG_PIX_FORMAT, 0, (void**)&configs, &count);
+                if (ret >= 0 && configs != null && count > 0)
+                {
+                    AVPixelFormat[] preferred = IsHardwareEncoder(Marshal.PtrToStringAnsi((IntPtr)codec->name) ?? string.Empty)
+                        ? [AVPixelFormat.AV_PIX_FMT_P010LE, AVPixelFormat.AV_PIX_FMT_YUV420P10LE, AVPixelFormat.AV_PIX_FMT_P016LE, AVPixelFormat.AV_PIX_FMT_YUV444P10LE]
+                        : [requested, AVPixelFormat.AV_PIX_FMT_YUV420P10LE, AVPixelFormat.AV_PIX_FMT_P010LE, AVPixelFormat.AV_PIX_FMT_YUV444P10LE];
+                    foreach (var format in preferred)
+                    {
+                        for (int i = 0; i < count; i++)
+                        {
+                            if (configs[i] != format) continue;
+                            selected = format;
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            }
+            catch (EntryPointNotFoundException)
+            {
+            }
+
+            string name = Marshal.PtrToStringAnsi((IntPtr)codec->name) ?? string.Empty;
+            if (IsHardwareEncoder(name))
+            {
+                selected = AVPixelFormat.AV_PIX_FMT_P010LE;
+            }
+            return true;
+        }
+
+        private static List<string> GetEncoderCandidates(string requested, bool preferHardware)
+        {
+            string family = GetCodecFamily(requested);
+            var result = new List<string>();
+            void Add(string name)
+            {
+                if (!string.IsNullOrWhiteSpace(name) && !result.Contains(name, StringComparer.OrdinalIgnoreCase)) result.Add(name);
+            }
+
+            if (preferHardware)
+            {
+                foreach (string suffix in GetPlatformHardwareSuffixes()) Add(family + suffix);
+                if (IsHardwareEncoder(requested)) Add(requested);
+            }
+            else if (!IsHardwareEncoder(requested))
+            {
+                Add(requested);
+            }
+
+            if (family == "hevc")
+            {
+                Add("libx265");
+                Add("hevc");
+            }
+            else if (family == "av1")
+            {
+                Add("libaom-av1");
+                Add("libsvtav1");
+                Add("svtav1");
+            }
+            else
+            {
+                Add("libx264");
+                Add("h264");
+            }
+
+            Add("libx265");
+            Add("libaom-av1");
+            Add("libsvtav1");
+            return result;
+        }
+
+        private static string GetCodecFamily(string codec)
+        {
+            string name = codec.Trim().ToLowerInvariant();
+            if (name.Contains("265") || name.StartsWith("hevc") || name.StartsWith("h265")) return "hevc";
+            if (name.StartsWith("av1") || name.Contains("aom") || name.Contains("svtav1")) return "av1";
+            return "h264";
+        }
+
+        private static string[] GetPlatformHardwareSuffixes()
+        {
+            if (OperatingSystem.IsMacOS() || OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS()) return ["_videotoolbox"];
+            if (OperatingSystem.IsAndroid()) return ["_mediacodec"];
+            if (OperatingSystem.IsWindows()) return ["_nvenc", "_amf", "_qsv", "_mf"];
+            return ["_vaapi", "_nvenc", "_qsv"];
+        }
+
+        private static bool IsHardwareEncoder(string encoder)
+            => encoder.Contains("_nvenc", StringComparison.OrdinalIgnoreCase)
+                || encoder.Contains("_amf", StringComparison.OrdinalIgnoreCase)
+                || encoder.Contains("_qsv", StringComparison.OrdinalIgnoreCase)
+                || encoder.Contains("_vaapi", StringComparison.OrdinalIgnoreCase)
+                || encoder.Contains("_videotoolbox", StringComparison.OrdinalIgnoreCase)
+                || encoder.Contains("_mediacodec", StringComparison.OrdinalIgnoreCase)
+                || encoder.EndsWith("_mf", StringComparison.OrdinalIgnoreCase);
 
         private static bool IsHdrPixelFormat(AVPixelFormat fmt)
         {

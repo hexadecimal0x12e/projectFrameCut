@@ -1085,6 +1085,7 @@ public partial class HomePage : ContentPage
         }
         DraftPage? page = null;
         var origContent = Content;
+        using var loadCancellation = new CancellationTokenSource();
         var cancelButton = new Button
         {
             Text = Localized._Cancel
@@ -1092,6 +1093,7 @@ public partial class HomePage : ContentPage
         cancelButton.Clicked += async (s, e) =>
         {
             cancelled = true;
+            loadCancellation.Cancel();
             await Dispatcher.DispatchAsync(() =>
             {
                 Content = origContent;
@@ -1115,8 +1117,7 @@ public partial class HomePage : ContentPage
         }
         catch { }
         */
-        await Dispatcher.DispatchAsync(
-            async () =>
+        await Dispatcher.DispatchAsync(() =>
             Content = new VerticalStackLayout
             {
                 HorizontalOptions = LayoutOptions.Center,
@@ -1146,6 +1147,7 @@ public partial class HomePage : ContentPage
                     */
                 }
             });
+        await Task.Delay(50);
         ProjectJSONStructure project = new();
         try
         {
@@ -1193,12 +1195,14 @@ public partial class HomePage : ContentPage
 
         await Task.Run(async () =>
         {
+            Task? startRenderRpcTask = null;
             try
             {
                 while (!MauiProgram.IsAppReady)
                 {
-                    await Task.Delay(500);
+                    await Task.Delay(500, loadCancellation.Token);
                 }
+                loadCancellation.Token.ThrowIfCancellationRequested();
                 if (!Directory.Exists(draftSourcePath))
                 {
                     throw new DirectoryNotFoundException("Working path not found: " + draftSourcePath);
@@ -1310,7 +1314,7 @@ public partial class HomePage : ContentPage
                     }
                     if (!(skipAskForRecover ?? false) && timeline.Clips.Any(c => c.Effects is { Length: > 0 } && (c.Effects?.Any(d => d.IsVariableArgumentEffect) ?? false)))
                     {
-                        await DisplayAlertAsync(Localized._Info, Localized.HomePage_GoDraft_DeprecatedFeatureWarn(IPluginBase.CurrentPluginAPIVersion + 1, "- BindableEffect"), Localized._Confirm);
+                        await DisplayAlertAsync(Localized._Info, Localized.HomePage_GoDraft_OneWayDestructiveUpdateWarn("- BindableEffect"), Localized._Confirm);
                     }
                 });
                 (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline, project);
@@ -1342,67 +1346,8 @@ public partial class HomePage : ContentPage
                         notfounds.Add(item.Value?.AssetId ?? Guid.NewGuid().ToString(), item.Value);
                     }
                 }
-                //                if (notfounds.Any())
-                //                {
-                //                    var notFoundStr = notfounds.Select(kv => $"- {kv.Value.Name} ({kv.Value.Path})").Aggregate((a, b) => $"{a}{Environment.NewLine}{b}");
-                //                    await Dispatcher.DispatchAsync(async () =>
-                //                    {
-                //                        int result = 0;
-                //#if WINDOWS
-                //                        Microsoft.UI.Xaml.Controls.ContentDialog diag = new Microsoft.UI.Xaml.Controls.ContentDialog
-                //                        {
-                //                            Title = Localized.HomePage_SourceNotFound_Title,
-                //                            Content = $"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}",
-                //                            CloseButtonText = Localized._Cancel,
-                //                            PrimaryButtonText = Localized.HomePage_SourceNotFound_Continue,
-                //                            SecondaryButtonText = Localized.HomePage_SourceNotFound_RemoveThem
-                //                        };
-
-                //                        var services = Application.Current?.Handler?.MauiContext?.Services;
-                //                        var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
-                //                        if (dialogueHelper != null)
-                //                        {
-                //                            var r = await dialogueHelper.ShowContentDialogue(diag);
-                //                            result = (int)r;
-                //                        }
-                //#else
-                //                        string[] opts = [Localized.HomePage_SourceNotFound_RemoveThem, Localized.HomePage_SourceNotFound_Continue];
-
-                //                        var select = await DisplayActionSheetAsync($"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}", null, Localized._Cancel, opts);
-                //                        if (select == Localized.HomePage_SourceNotFound_RemoveThem) result = 2;
-                //                        else if (select == Localized.HomePage_SourceNotFound_Continue) result = 1;
-                //                        else result = 0;
-                //#endif
-
-
-                //                        switch (result)
-                //                        {
-                //                            case 0:
-                //                                {
-                //                                    page = null;
-                //                                    return;
-                //                                }
-                //                            case 1:
-                //                                {
-                //                                    break;
-                //                                }
-                //                            case 2:
-                //                                {
-                //                                    var input = await DisplayPromptAsync(Localized._Warn, Localized.HomePage_SourceNotFound_RemoveThem_Conf, Localized._OK, Localized._Cancel, "no", -1, null, null);
-                //                                    if (input != "yes") return;
-                //                                    foreach (var item in notfounds)
-                //                                    {
-                //                                        dict = new(dict.RemoveRange(dict.Where(c => c.Value.SourcePath == item.Value.Path)));
-                //                                        assetDict = new(assetDict.RemoveRange(assetDict.Where(c => c.Key == item.Key)));
-                //                                    }
-
-                //                                    break;
-                //                                }
-                //                        }
-                //                    });
-                //                }
                 if (!(SettingsManager.IsSettingExists("Edit_UseDynamicPreview") || SettingsManager.IsSettingExists("Edit_LiveVideoPreviewDefaultResolution"))) SettingsManager.WriteSetting("Edit_UseDynamicPreview", true.ToString());
-                var startRenderRpcTask = Task.Run(() => RenderRpcBootstrap.Initialize(draftSourcePath, false, projectName: project?.ProjectName ?? "Project"));
+                startRenderRpcTask = Task.Run(() => RenderRpcBootstrap.Initialize(draftSourcePath, false, projectName: project?.ProjectName ?? "Project"));
                 DraftPage? createdPage = null;
                 bool pageCreationCancelled = false;
                 await Dispatcher.DispatchAsync(async () =>
@@ -1413,7 +1358,7 @@ public partial class HomePage : ContentPage
                     {
                         try
                         {
-                            var p = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.ProjectName ?? "?", isReadonly)
+                            var p = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.ProjectName ?? "?", isReadonly, deferLoadedUiInitialization: true)
                             {
                                 ProjectName = project?.ProjectName ?? "?",
                                 IsReadonly = isReadonly,
@@ -1432,7 +1377,8 @@ public partial class HomePage : ContentPage
                                 UseCommunityToolkitPopupInsteadOfOverlayLayer = SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer"),
                                 PreviewAreaHeight = double.TryParse(SettingsManager.GetSetting("Edit_UpperContentHeight", "250"), out var upperHeight) ? upperHeight : 250d,
                                 UseCompactLayout = overrideLayoutOption ?? DeviceInfo.Idiom == DeviceIdiom.Phone,
-                                EnableClipInfoPopup = SettingsManager.IsBoolSettingTrue("Edit_EnableClipInfoPopup")
+                                EnableClipInfoPopup = SettingsManager.IsBoolSettingTrue("Edit_EnableClipInfoPopup"),
+                                BetterAccessibilityMode = SettingsManager.IsBoolSettingTrue("Edit_BetterAccessibility")
                             };
                             if (!SettingsManager.IsBoolSettingTrue("Edit_UseDynamicPreview"))
                             {
@@ -1448,13 +1394,16 @@ public partial class HomePage : ContentPage
                                     p.DefaultPreviewHeight = 720;
                                 }
                             }
+                            await p.InitializeLoadedUiAsync(true, loadCancellation.Token);
                             await p.PostInit();
+                            loadCancellation.Token.ThrowIfCancellationRequested();
                             //var projectPluginsItem = new MenuFlyoutItem { Text = "Project plugins" };
                             //projectPluginsItem.Clicked += async (_, _) => await p.Navigation.PushAsync(new ProjectPluginPage(p));
                             //p.ExtensionsMenuBar.Add(projectPluginsItem);\
                             bool hasAddItems = false;
                             foreach (var plugin in PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>())
                             {
+                                loadCancellation.Token.ThrowIfCancellationRequested();
                                 try
                                 {
                                     plugin.InjectUI(p);
@@ -1475,7 +1424,7 @@ public partial class HomePage : ContentPage
                                         return;
                                     }
                                 }
-
+                                await Task.Delay(1, loadCancellation.Token);
                             }
 
                             if (!hasAddItems)
@@ -1486,6 +1435,10 @@ public partial class HomePage : ContentPage
                             createdPage = p;
                             break;
                         }
+                        catch (OperationCanceledException) when (loadCancellation.IsCancellationRequested)
+                        {
+                            throw;
+                        }
                         catch (Exception ex)
                         {
                             attempt++;
@@ -1494,12 +1447,13 @@ public partial class HomePage : ContentPage
                             {
                                 throw;
                             }
-                            await Task.Delay(500);
+                            await Task.Delay(500, loadCancellation.Token);
                             continue;
                         }
                     }
                 });
                 await startRenderRpcTask;
+                loadCancellation.Token.ThrowIfCancellationRequested();
                 if (pageCreationCancelled)
                 {
                     page = null;
@@ -1509,6 +1463,7 @@ public partial class HomePage : ContentPage
 
                 foreach (var item in PluginManager.LoadedPlugins)
                 {
+                    loadCancellation.Token.ThrowIfCancellationRequested();
                     try
                     {
                         project = item.Value.OnProjectLoad(project) ?? project;
@@ -1568,9 +1523,25 @@ public partial class HomePage : ContentPage
 
                 });
 #endif
+                if (page is null) throw new InvalidOperationException("The project page was not initialized.");
+                await page.PrepareRenderBackendAsync(loadCancellation.Token);
+            }
+            catch (OperationCanceledException) when (loadCancellation.IsCancellationRequested)
+            {
+                if (startRenderRpcTask is not null)
+                {
+                    _ = startRenderRpcTask.ContinueWith(
+                        t => Log(t.Exception!, $"Initialize render RPC for cancelled project {project?.ProjectName}", this),
+                        CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted,
+                        TaskScheduler.Default);
+                }
+                page = null;
+                LogDiagnostic($"Cancelled loading project {project?.ProjectName}.");
             }
             catch (Exception ex4)
             {
+                page = null;
                 Log(ex4, $"Load project {project?.ProjectName}", this);
                 if (throwOnException)
                 {
@@ -1581,16 +1552,6 @@ public partial class HomePage : ContentPage
                     await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_FailByException(ex4), Localized._OK);
                 });
             }
-        });
-        MainThread.BeginInvokeOnMainThread(() =>
-        {
-            try
-            {
-                cancelButton.IsVisible = false;
-                Content.InvalidateMeasure();
-                Content = origContent;
-            }
-            catch { }
         });
         initTimer.Stop();
         LogDiagnostic($"Initialize project {project?.ProjectName} cost {initTimer.ElapsedMilliseconds} ms.");
@@ -1660,10 +1621,20 @@ public partial class HomePage : ContentPage
 
                     await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_FailByException(ex), "OK");
                 }
+                finally
+                {
+                    cancelButton.IsVisible = false;
+                    Content = origContent;
+                }
             });
         }
         else
         {
+            await Dispatcher.DispatchAsync(() =>
+            {
+                cancelButton.IsVisible = false;
+                Content = origContent;
+            });
             await ProjectPluginService.UnloadProjectPluginsAsync();
         }
     }

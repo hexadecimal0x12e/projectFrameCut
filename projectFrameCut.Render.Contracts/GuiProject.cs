@@ -34,6 +34,7 @@ public sealed class GuiProjectWork
 {
     [ProtoMember(1)] public Guid SessionId { get; set; }
     [ProtoMember(2)] public GuiProjectRequest? Request { get; set; }
+    [ProtoMember(3)] public string ConnectedClientName { get; set; } = string.Empty;
 }
 
 [ProtoContract]

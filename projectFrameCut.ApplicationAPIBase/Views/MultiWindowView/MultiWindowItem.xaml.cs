@@ -203,17 +203,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             private set => SetValue(CanGoBackPropertyKey, value);
         }
 
-        private static readonly BindablePropertyKey CanGoForwardPropertyKey =
-            BindableProperty.CreateReadOnly(nameof(CanGoForward), typeof(bool), typeof(MultiWindowItem), false);
-
-        public static readonly BindableProperty CanGoForwardProperty = CanGoForwardPropertyKey.BindableProperty;
-
-        public bool CanGoForward
-        {
-            get => (bool)GetValue(CanGoForwardProperty);
-            private set => SetValue(CanGoForwardPropertyKey, value);
-        }
-
         private static readonly BindablePropertyKey IsMinimizedPropertyKey =
             BindableProperty.CreateReadOnly(nameof(IsMinimized), typeof(bool), typeof(MultiWindowItem), false);
 
@@ -227,17 +216,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         public bool IsInStandaloneWindowMode => _isInWindowMode;
 
-#pragma warning disable CS0618
-        [Obsolete("Go forward is an unusual design for stack-based navigation (you can't put back a disappeared things back). Consider using navigation within the window content instead.", false)] // I don't know why I did this hah
-        public bool AllowGoForward
-        {
-            get => (bool)GetValue(AllowGoForwardProperty);
-            set => SetValue(AllowGoForwardProperty, value);
-        }
 
-        public static readonly BindableProperty AllowGoForwardProperty =
-            BindableProperty.Create(nameof(AllowGoForward), typeof(bool), typeof(MultiWindowItem), false);
-#pragma warning restore CS0618 
 
         /// <summary>
         /// A Id to mark this window. Used for comparing.
@@ -1311,10 +1290,6 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (CanGoBack) GoBack();
         }
 
-        private void OnForwardTapped(object sender, EventArgs e)
-        {
-            if (CanGoForward) GoForward();
-        }
 
         private async void OnPopOutTapped(object sender, EventArgs e)
         {
@@ -1783,34 +1758,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             }
         }
 
-        /// <summary>
-        /// Go forward is an unusual operation in .NET MAUI's Navigation stack, but we implement it here for MDI-style navigation. It will only work if the current content was previously navigated back from.
-        /// Go forward to the next content if any in the forward stack. 
-        /// </summary>
-        public void GoForward()
-        {
-            if (_hostWindow is not null)
-            {
-                throw new InvalidOperationException("Cannot go forward in standalone window mode, because of .NET MAUI's Navigation stack doesn't allow this. Use NavigateTo instead.");
-            }
-            if (_forwardStack.Count > 0)
-            {
-                if (Content != null)
-                {
-                    _backStack.Push((View)Content);
-                }
-
-                var view = _forwardStack.Pop();
-                Content = view;
-                UpdateNavigationState();
-                OnNavigate?.Invoke(this, (view, Content));
-            }
-        }
-
         private void UpdateNavigationState()
         {
             CanGoBack = _backStack.Count > 0;
-            CanGoForward = _forwardStack.Count > 0;
         }
 
         #endregion

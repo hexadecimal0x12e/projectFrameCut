@@ -27,13 +27,6 @@ namespace projectFrameCut.Services
             newEffect.RelativeWidth = page?.ProjectInfo?.RelativeWidth ?? 1920;
             newEffect.RelativeHeight = page?.ProjectInfo?.RelativeHeight ?? 1080;
 
-            // Preserve IBindableArgumentEffect properties
-            if (effect is IBindableArgumentEffect oldBindable && newEffect is IBindableArgumentEffect newBindable)
-            {
-                newBindable.Id = oldBindable.Id;
-                newBindable.BindedArgumentProviderID = oldBindable.BindedArgumentProviderID;
-            }
-
             // Preserve BindedEffectGroupID
             newEffect.BindedEffectProvidingSystemID = effect.BindedEffectProvidingSystemID;
 
@@ -107,15 +100,15 @@ namespace projectFrameCut.Services
                 {
                     Shared.EffectType.ContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
                     Shared.EffectType.AudioContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
-                    Shared.EffectType.BindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
-                    Shared.EffectType.AudioBindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
+                    (Shared.EffectType)2 => PPLocalizedResources.Effect_BindableArgsEffect,
+                    (Shared.EffectType)5 => PPLocalizedResources.Effect_BindableArgsEffect,
                     Shared.EffectType.TextEffect => PPLocalizedResources.Effect_TextEffect,
                     Shared.EffectType.ContinuousTextEffect => PPLocalizedResources.Effect_ContinuousTextEffect,
                     _ => PPLocalizedResources.Effect_GeneralEffect,
                 };
                 if (!haveSubFix)
                 {
-                    return PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);   
+                    return PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);
                 }
                 else if (instance.FromPlugin == InternalPluginBase.InternalPluginBaseID || SettingsManager.IsBoolSettingTrue("edit_AlwaysShowEffectsSource"))
                 {

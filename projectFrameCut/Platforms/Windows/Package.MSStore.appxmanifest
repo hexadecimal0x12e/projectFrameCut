@@ -1,0 +1,98 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+	xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+	xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+	xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+	xmlns:uap4="http://schemas.microsoft.com/appx/manifest/uap/windows10/4">
+
+	<Identity Name="0xeeeeeeeeeeee.projectFrameCut" Publisher="CN=0AD263CD-E10E-4A8B-A187-25C0A41C69D7" Version="1.7.0.0" />
+
+	<mp:PhoneIdentity PhoneProductId="3ef3c1fc-97c7-447a-9209-ead7b7c85288" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+
+	<Properties>
+		<DisplayName>projectFrameCut</DisplayName>
+		<PublisherDisplayName>hexadecimal0x12e</PublisherDisplayName>
+		<Logo>$placeholder$.png</Logo>
+	</Properties>
+
+	<Dependencies>
+		<TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.19041.0" MaxVersionTested="10.0.22000.0" />
+		<TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.22000.0" />
+	</Dependencies>
+
+	<Resources>
+		<Resource Language="zh-CN"/>
+		<Resource Language="en-US"/>
+		<Resource Language="zh-TW"/>
+		<Resource Language="ja-JP"/>
+		<Resource Language="ko-KR"/>
+		<Resource Language="fr-FR"/>
+		<Resource Language="ar-SA"/>
+		<Resource Language="de-DE"/>
+		<Resource Language="es-ES"/>
+		<Resource Language="it-IT"/>
+		<Resource Language="pl-PL"/>
+		<Resource Language="pt-BR"/>
+		<Resource Language="ru-RU"/>
+		<Resource Language="tr-TR"/>
+	</Resources>
+
+	<Applications>
+		<Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="$targetentrypoint$">
+			<uap:VisualElements
+        DisplayName="projectFrameCut"
+        Description="$placeholder$"
+        Square150x150Logo="$placeholder$.png"
+        Square44x44Logo="$placeholder$.png"
+        BackgroundColor="transparent">
+				<uap:DefaultTile Square71x71Logo="$placeholder$.png" Wide310x150Logo="$placeholder$.png" Square310x310Logo="$placeholder$.png" />
+				<uap:SplashScreen Image="$placeholder$.png" />
+			</uap:VisualElements>
+			<Extensions>
+				<desktop:Extension Category="windows.toastNotificationActivation">
+					<desktop:ToastNotificationActivation ToastActivatorCLSID="6e919706-2634-4d97-a93c-2213b2acc334" />
+				</desktop:Extension>
+				<com:Extension Category="windows.comServer">
+					<com:ComServer>
+						<com:ExeServer Executable="projectFrameCut.exe" DisplayName="$targetnametoken$" Arguments="----AppNotificationActivated:">
+							<com:Class Id="6e919706-2634-4d97-a93c-2213b2acc334" />
+						</com:ExeServer>
+					</com:ComServer>
+				</com:Extension>
+			</Extensions>
+		</Application>
+
+		<Application Id="projectFrameCutCompatible" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
+			<uap:VisualElements DisplayName="projectFrameCut (DO NOT DISABLE THIS ALIAS, OR YOU WILL BREAK THE APPLICATION)" Description="the entrypoint for the projectFrameCut CLI (version-specific alias), this should be hidden" AppListEntry="none" 
+													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
+			<Extensions>
+				<uap3:Extension Category="windows.appExecutionAlias" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
+					<uap3:AppExecutionAlias>
+						<desktop:ExecutionAlias Alias="projectFrameCutCompatible_0xeeeeeeeeeeee.projectFrameCut_1.7.0.0.exe" />
+					</uap3:AppExecutionAlias>
+				</uap3:Extension>
+			</Extensions>
+		</Application>
+		
+		<Application Id="InSandboxWorkerNoConsole" Executable="projectFrameCut.exe" uap10:TrustLevel="appContainer" uap10:RuntimeBehavior="packagedClassicApp" uap10:SupportsMultipleInstances="true">
+			<uap:VisualElements DisplayName="projectFrameCut Sandbox runner (No Console)" Description="AppContainer isolated environment helper" AppListEntry="none" 
+													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
+		</Application>
+		<Application Id="InSandboxWorkerConsole" Executable="pjfc-cli.exe" uap10:TrustLevel="appContainer" uap10:RuntimeBehavior="packagedClassicApp" uap10:SupportsMultipleInstances="true">
+			<uap:VisualElements DisplayName="projectFrameCut Sandbox runner (Console)" Description="AppContainer isolated environment helper" AppListEntry="none" 
+													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
+		</Application>
+	</Applications>
+
+	<Capabilities>
+		<rescap:Capability Name="runFullTrust" />
+		<Capability Name="internetClientServer"/>
+		<Capability Name="internetClient"/>
+	</Capabilities>
+
+</Package>

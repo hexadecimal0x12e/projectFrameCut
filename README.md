@@ -134,7 +134,7 @@ MCP Server 和软件内 AI ToolCall 使用同一套项目接口；如果目标�
 
 ### 如何编译
 
-项目基于.NET 10和MAUI开发，请先确保你的电脑里安装了Visual Studio或者VS Code，**确认你安装了.NET 10 的SDK和MAUI的组件**，
+项目基于.NET 11和MAUI开发，请先确保你的电脑里安装了Visual Studio或者VS Code，**确认你安装了.NET 11 的SDK和MAUI的组件**，
 
 0. 配置projectFrameCut.Drawing库
     a. 克隆[projectFrameCut.Drawing](https://github.com/hexadecimal0x12e/projectFrameCut.Drawing)项目到本地，和`projectFrameCut`项目放在同一层级的目录下。
@@ -201,7 +201,7 @@ c:\path\to\your\folder\Android
 
 ```xml
 
-<PropertyGroup Condition="'$(TargetFramework)'=='net10.0-ios'">
+<PropertyGroup Condition="'$(TargetFramework)'=='net11.0-ios'">
     <CodesignKey>你的Codesign Key</CodesignKey>
     <CodesignProvision>你的描述文件的名字</CodesignProvision>
 

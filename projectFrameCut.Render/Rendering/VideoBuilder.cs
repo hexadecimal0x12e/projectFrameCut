@@ -1,4 +1,5 @@
 ﻿using FFmpeg.AutoGen;
+using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
@@ -203,6 +204,16 @@ namespace projectFrameCut.Render.Rendering
             writer.FramePerSecond = framerate;
             writer.PixelFormat = fmt;
             writer.OutputPath = outputPath;
+            if (writer is HDRVideoWriter hdrWriter)
+            {
+                hdrWriter.PreferHardwareAcceleration = encoder.Contains("_nvenc", StringComparison.OrdinalIgnoreCase)
+                    || encoder.Contains("_amf", StringComparison.OrdinalIgnoreCase)
+                    || encoder.Contains("_qsv", StringComparison.OrdinalIgnoreCase)
+                    || encoder.Contains("_vaapi", StringComparison.OrdinalIgnoreCase)
+                    || encoder.Contains("_videotoolbox", StringComparison.OrdinalIgnoreCase)
+                    || encoder.Contains("_mediacodec", StringComparison.OrdinalIgnoreCase)
+                    || encoder.EndsWith("_mf", StringComparison.OrdinalIgnoreCase);
+            }
 
             if (!string.IsNullOrWhiteSpace(writerType))
             {

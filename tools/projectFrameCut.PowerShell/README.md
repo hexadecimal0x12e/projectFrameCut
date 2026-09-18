@@ -1,16 +1,16 @@
 # projectFrameCut.PowerShell
 
-PowerShell 7.6.0+（Core）/ .NET 10 模块。既可以离线管理本地项目，也可以操作授权窗口中已打开的 GUI 项目。
+PowerShell 7.6.0+（Core）/ .NET 11 模块。既可以离线管理本地项目，也可以操作授权窗口中已打开的 GUI 项目。
 
 ## 打包和导入
 
 ```powershell
-dotnet publish projectFrameCut.PowerShell.csproj -f net10.0-windows10.0.19041.0 -c Release -o ./artifacts/projectFrameCut.PowerShell
+dotnet publish projectFrameCut.PowerShell.csproj -f net11.0-windows10.0.19041.0 -c Release -o ./artifacts/projectFrameCut.PowerShell
 Import-Module ./artifacts/projectFrameCut.PowerShell/projectFrameCut.PowerShell.psd1
 Get-Command -Module projectFrameCut.PowerShell
 ```
 
-在 Linux 或 macOS 上将目标框架改为 `net10.0`。
+在 Linux 或 macOS 上将目标框架改为 `net11.0`。
 
 分发整个输出目录，保留 Contracts、RpcClient 和 protobuf 依赖。调用方自行安装 PowerShell；不需要安装模块到系统目录，也不会自动修改 Profile。
 

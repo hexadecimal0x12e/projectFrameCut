@@ -80,20 +80,6 @@
                                         </DataTrigger>
                                     </Border.Triggers>
                                 </Border>
-
-                                <!-- Forward Button -->
-                                <Border Style="{DynamicResource MultiWindowItemWindowButtonStyle}" x:Name="ForwardBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_GoForward}" IsVisible="{TemplateBinding AllowGoForward}">
-                                    <Border.GestureRecognizers>
-                                        <TapGestureRecognizer Tapped="OnForwardTapped"/>
-                                    </Border.GestureRecognizers>
-                                    <Label Text="►" InputTransparent="True" TextColor="{AppThemeBinding Dark=White, Light=#333333}" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12"/>
-                                    <Border.Triggers>
-                                        <DataTrigger TargetType="Border" Binding="{Binding CanGoForward, Source={x:Reference Self}}" Value="False">
-                                            <Setter Property="Opacity" Value="0.3"/>
-                                            <Setter Property="InputTransparent" Value="True"/>
-                                        </DataTrigger>
-                                    </Border.Triggers>
-                                </Border>
                             </HorizontalStackLayout>
                             
                             <!-- Window Controls: Min, Max, Close -->

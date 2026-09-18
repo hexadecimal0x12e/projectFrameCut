@@ -82,6 +82,7 @@ public partial class GeneralSettingPage : ContentPage
 #if WINDOWS
             .AddCheckbox("General_NoRebootAfterCrash", SettingLocalizedResources.General_NoRebootAfterCrash(), IsBoolSettingTrue("General_NoRebootAfterCrash"), null)
 #endif
+            .AddCheckbox("Edit_BetterAccessibility", SettingLocalizedResources.Edit_BetterAccessibility, IsBoolSettingTrue("Edit_BetterAccessibility"))
             .AddButton("setUISafeZone", SettingLocalizedResources.GeneralUI_SetupSafeZone)
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralCodec_Title, SettingLocalizedResources.GeneralCodec_SubTitle, 20, 12))
@@ -310,6 +311,21 @@ public partial class GeneralSettingPage : ContentPage
                         await Navigation.PushAsync(page);
                     });
                     break;
+                case "Edit_BetterAccessibility":
+                    {
+                        if (Convert.ToBoolean(args.Value))
+                        {
+                            if (await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Edit_BetterAccessibility_Warn, Localized._OK, Localized._Cancel))
+                            {
+                                WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                            }
+                        }
+                        else
+                        {
+                            WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                        }
+                        break;
+                    }
                 case "locate":
                     {
                         var locateDispName = args.Value?.ToString() ?? "default";

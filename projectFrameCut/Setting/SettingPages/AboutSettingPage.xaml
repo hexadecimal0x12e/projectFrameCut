@@ -47,10 +47,10 @@
                            Margin="0,0,0,4" />
                     <Label x:Name="AppRuntimeVersionLabel" FontSize="22"
                            TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
-                           Text="Runtime: .NET 10.0.?" />
+                           Text="Runtime: .NET 11.0.?" />
                     <Label x:Name="AppMauiVersionLabel" FontSize="22"
                            TextColor="{x:AppThemeBinding Dark=Gray,Light=#80000000}"
-                           Text="MAUI: Microsoft.Maui.Controls 10.0.?" />
+                           Text="MAUI: Microsoft.Maui.Controls 11.0.?" />
                 </VerticalStackLayout>
             </HorizontalStackLayout>
 

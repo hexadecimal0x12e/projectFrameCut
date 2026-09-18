@@ -142,10 +142,6 @@ internal static class ClipPreviewRenderer
                 {
                     effected = normal.Render(effected, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                 }
-                else if (effect is IBindableArgumentEffect bindable)
-                {
-                    _ = EffectProcessing.ProcessBindableArgsEffect(frameIndex, ref effected, ref globalBindableCache, frameBindableCache, source.ParentClip, bindable, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
-                }
                 else if (effect is not (IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect))
                 {
                     throw new NotSupportedException($"Effect {effect.TypeName}/{effect.Name} is not supported by the clip preview pipeline.");

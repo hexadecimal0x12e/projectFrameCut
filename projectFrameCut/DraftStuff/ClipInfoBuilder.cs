@@ -63,8 +63,6 @@ using projectFrameCut.Platforms.iOS;
 
 #endif
 
-#pragma warning disable CS0618 // We need the old TextClipEntry for compatibility with old projects, so we will keep it for now.
-
 namespace projectFrameCut.DraftStuff
 {
     public class ClipInfoBuilder
@@ -2956,8 +2954,9 @@ namespace projectFrameCut.DraftStuff
                     {
                         Shared.EffectType.ContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
                         Shared.EffectType.AudioContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
-                        Shared.EffectType.BindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
-                        Shared.EffectType.AudioBindableEffect => PPLocalizedResources.Effect_BindableArgsEffect,
+                        // Deprecated effect types are not used in the new system, but we still provide a localized name for them.
+                        (EffectType)2 => PPLocalizedResources.Effect_BindableArgsEffect,
+                        (EffectType)5 => PPLocalizedResources.Effect_BindableArgsEffect,
                         Shared.EffectType.TextEffect => PPLocalizedResources.Effect_TextEffect,
                         Shared.EffectType.ContinuousTextEffect => PPLocalizedResources.Effect_ContinuousTextEffect,
                         _ => PPLocalizedResources.Effect_GeneralEffect,
@@ -3730,57 +3729,6 @@ namespace projectFrameCut.DraftStuff
                        onTrue: c => c.AddCustomChild("Binded IEffectProvider", new Label { Text = $"{eb.Name} ({effect.BindedEffectProvidingSystemID})" })
                                      .AddCustomChild("IEffectProvider.EffectTarget", new Label { Text = eb?.Target is not null ? eb.Target.ToString() : "No bundle" }),
                        onFalse: c => c.AddCustomChild("Binded IEffectProvider", new Label { Text = $"Unknown bundle '{effect.BindedEffectProvidingSystemID}'" }));
-                    if (effect is IBindableArgumentEffect be)
-                    {
-                        ppb.AddSeparator();
-                        ppb.AddText("IBindableArgumentEffect effect prop:");
-                        switch (be.EffectRole)
-                        {
-                            case BindableArgumentEffectType.ValueProvider:
-                                ppb.AddCustomChild("Output anchor name", new Label { Text = (be as IBindableArgumentEffectValueProvider)?.OutputAnchorName ?? "none" });
-                                break;
-                            case BindableArgumentEffectType.OneInputValueProcessor:
-                                ppb.AddCustomChild($"Input anchor {(be as IBindableArgumentEffectOneInputResultGenerator)?.InputAnchorName ?? "unknown"}", new Label { Text = $"{be.BindedArgumentProviderID} " });
-                                ppb.AddCustomChild("Output anchor name", new Label { Text = (be as IBindableArgumentEffectOneInputResultGenerator)?.OutputAnchorName ?? "none" });
-                                break;
-                            case BindableArgumentEffectType.ManyInputValueProcessor:
-                                if (be is IBindableArgumentEffectManyToOneValueProcesser mpe)
-                                {
-                                    foreach (var item in mpe.BindedArgumentProviderIDs)
-                                    {
-                                        var idx = mpe.BindedArgumentProviderIDs.IndexOf(item);
-                                        string inAnchorName = "unknown";
-                                        if (idx >= 0 && mpe.InputAnchorDisplayNames.Length < idx) inAnchorName = mpe.InputAnchorDisplayNames[idx];
-                                        ppb.AddCustomChild($"Input anchor {inAnchorName}", new Label { Text = item });
-
-                                    }
-                                }
-                                ppb.AddCustomChild("Output anchor name", new Label { Text = (be as IBindableArgumentEffectOneInputResultGenerator)?.OutputAnchorName ?? "none" });
-                                break;
-                            case BindableArgumentEffectType.OneInputResultGenerator:
-                                ppb.AddCustomChild($"Input anchor {(be as IBindableArgumentEffectOneInputResultGenerator)?.InputAnchorName ?? "unknown"}", new Label { Text = $"{be.BindedArgumentProviderID} " });
-                                break;
-
-                            case BindableArgumentEffectType.ManyInputResultGenerator:
-                                if (be is IBindableArgumentEffectManyInputResultGenerator mpg)
-                                {
-                                    foreach (var item in mpg.BindedArgumentProviderIDs)
-                                    {
-                                        var idx = mpg.BindedArgumentProviderIDs.IndexOf(item);
-                                        string inAnchorName = "unknown";
-                                        if (idx >= 0 && mpg.InputAnchorDisplayNames.Length < idx) inAnchorName = mpg.InputAnchorDisplayNames[idx];
-                                        ppb.AddCustomChild($"Input anchor {inAnchorName}", new Label { Text = item });
-
-                                    }
-                                }
-                                break;
-                            default:
-                                ppb.AddText(PPLocalizedResources.EffectProp_UnknownRole);
-                                break;
-
-
-                        }
-                    }
                     ppb.AddButton($"Effect|{effectKey}|Remove", PPLocalizedResources.EffectProp_Remove);
                     ppb.AddSeparator();
                 }

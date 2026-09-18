@@ -2,6 +2,9 @@
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-		<MauiVersion>10.0.100</MauiVersion>
+		<MauiVersion>11.0.0-preview.6.26360.8</MauiVersion>
+		<ExtensionsVersion>11.0.0-preview.6.26359.118</ExtensionsVersion>
+		<ExtensionsConfigurationVersion>11.0.0-preview.7.26381.103</ExtensionsConfigurationVersion>
+		<MAUIGTK4Version>0.1.0-preview.12.26421.1</MAUIGTK4Version>
   </PropertyGroup>
 </Project>

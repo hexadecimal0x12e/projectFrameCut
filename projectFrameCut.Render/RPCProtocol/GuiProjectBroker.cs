@@ -10,7 +10,7 @@ public sealed class GuiProjectBroker : IDisposable
     private sealed class Session(string owner)
     {
         public string Owner { get; } = owner;
-        public Channel<GuiProjectRequest> Queue { get; } = Channel.CreateBounded<GuiProjectRequest>(128);
+        public Channel<GuiProjectWork> Queue { get; } = Channel.CreateBounded<GuiProjectWork>(128);
         public ConcurrentDictionary<Guid, TaskCompletionSource<GuiProjectResult>> Pending { get; } = new();
         public CancellationTokenSource Lifetime { get; } = new();
     }
@@ -61,7 +61,7 @@ public sealed class GuiProjectBroker : IDisposable
         timeout.CancelAfter(TimeSpan.FromSeconds(request.TimeoutSeconds));
         try
         {
-            await session.Queue.Writer.WriteAsync(request, timeout.Token).ConfigureAwait(false);
+            await session.Queue.Writer.WriteAsync(new() { SessionId = id, Request = request }, timeout.Token).ConfigureAwait(false);
             return await completion.Task.WaitAsync(timeout.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (session.Lifetime.IsCancellationRequested)
@@ -79,8 +79,8 @@ public sealed class GuiProjectBroker : IDisposable
         {
             while (true)
             {
-                var request = await session.Queue.Reader.ReadAsync(timeout.Token).ConfigureAwait(false);
-                if (session.Pending.ContainsKey(request.RequestId)) return new() { SessionId = id, Request = request };
+                var work = await session.Queue.Reader.ReadAsync(timeout.Token).ConfigureAwait(false);
+                if (work.Request is null || session.Pending.ContainsKey(work.Request.RequestId)) return work;
             }
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested && !session.Lifetime.IsCancellationRequested)
@@ -93,10 +93,18 @@ public sealed class GuiProjectBroker : IDisposable
         if (Get(result.SessionId).Pending.TryGetValue(result.RequestId, out var completion)) completion.TrySetResult(result);
     }
 
+    public void NotifyConnected(Guid id, string clientName)
+    {
+        if (string.IsNullOrWhiteSpace(clientName)) return;
+        Get(id).Queue.Writer.TryWrite(new() { SessionId = id, ConnectedClientName = clientName });
+    }
+
     public IRenderService Bind(Guid id) => new BoundService(this, id);
 
-    private sealed class BoundService(GuiProjectBroker broker, Guid id) : IRenderService
+    private sealed class BoundService(GuiProjectBroker broker, Guid id) : IRenderService, IRenderConnectionObserver
     {
+        public void Connected(string clientId) => broker.NotifyConnected(id, clientId);
+
         public async ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
         {
             broker.Get(id);

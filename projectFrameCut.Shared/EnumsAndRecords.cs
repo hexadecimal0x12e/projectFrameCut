@@ -42,22 +42,20 @@ namespace projectFrameCut.Shared
 
     public enum EffectType
     {
-        NormalEffect,
-        ContinuousEffect,
-        [Obsolete("All BindableEffect is deprecated. Use EffectProvider, and mark a EffectProvider with a not IPicture output as NonIPictureOutputValueProvider.")]
-        BindableEffect,
-        AudioNormalEffect,
-        AudioContinuousEffect,
-        [Obsolete("All BindableEffect is deprecated. Use EffectProvider, and mark a EffectProvider with a not IPicture output as NonIPictureOutputValueProvider.")]
-        AudioBindableEffect,
-        SpeedVarianceProvider,
-        ClipPositionProvider,
-        ContinuousClipPositionProvider,
-        MixtureProvider,
-        TextEffect,
-        ContinuousTextEffect,
-        SourceReplacement,
-        NonIPictureOutputValueProvider,
+        NormalEffect = 0,
+        ContinuousEffect = 1,
+        // DO NOT use 2 as it is reserved for deprecated BindableEffect effects.
+        AudioNormalEffect = 3,
+        AudioContinuousEffect = 4,
+        // DO NOT use 5 as it is reserved for deprecated BindableEffect effects.
+        SpeedVarianceProvider = 6,
+        ClipPositionProvider = 7,
+        ContinuousClipPositionProvider = 8,
+        MixtureProvider = 9,
+        TextEffect = 10,
+        ContinuousTextEffect = 11,
+        SourceReplacement = 12,
+        NonIPictureOutputValueProvider = 13,
         NotSpecified = -1,
     }
 
@@ -78,18 +76,6 @@ namespace projectFrameCut.Shared
         IsNotVisibleInEffectEditor = 1 << 17,
         IsNotVisibleInNewEffectSelector = 1 << 18,
         InternalUse = 1 << 19,
-    }
-
-    [Obsolete("All BindableEffect is deprecated, no longer be processed and will be removed in API V9, please use EffectProvider with a dynamic EffectParamField instead.")]
-    public enum BindableArgumentEffectType
-    {
-        ValueProvider,
-        NoInputValueProvider,
-        OneInputValueProcessor,
-        ManyInputValueProcessor,
-        OneInputResultGenerator,
-        ManyInputResultGenerator,
-        ContinuousResultGenerator,
     }
 
     /// <summary>

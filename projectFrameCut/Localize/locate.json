@@ -265,7 +265,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": "\u7531 .NET 10 \u548C .NET MAUI \u9A71\u52A8",
+        "Value": "\u7531 .NET 11 \u548C .NET MAUI \u9A71\u52A8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -19283,7 +19283,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": "Powered by .NET 10 and .NET MAUI",
+        "Value": "Powered by .NET 11 and .NET MAUI",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29831,7 +29831,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": "\u7531 .NET 10 \u8207 .NET MAUI \u9A45\u52D5",
+        "Value": "\u7531 .NET 11 \u8207 .NET MAUI \u9A45\u52D5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -40347,7 +40347,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": ".NET 10 \u3068 .NET MAUI \u3067\u52D5\u4F5C",
+        "Value": ".NET 11 \u3068 .NET MAUI \u3067\u52D5\u4F5C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -50856,7 +50856,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": ".NET 10 \uBC0F .NET MAUI\uB85C \uAD6C\uB3D9",
+        "Value": ".NET 11 \uBC0F .NET MAUI\uB85C \uAD6C\uB3D9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -61382,7 +61382,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": "Propuls\u00E9 par .NET 10 et .NET MAUI",
+        "Value": "Propuls\u00E9 par .NET 11 et .NET MAUI",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -71935,7 +71935,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": "\u0645\u062F\u0639\u0648\u0645 \u0628\u0648\u0627\u0633\u0637\u0629 .NET 10 \u0648 .NET MAUI",
+        "Value": "\u0645\u062F\u0639\u0648\u0645 \u0628\u0648\u0627\u0633\u0637\u0629 .NET 11 \u0648 .NET MAUI",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -82433,7 +82433,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": "Unterst\u00FCtzt von .NET 10 und .NET MAUI",
+        "Value": "Unterst\u00FCtzt von .NET 11 und .NET MAUI",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -92954,7 +92954,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": "Impulsado por .NET 10 y .NET MAUI",
+        "Value": "Impulsado por .NET 11 y .NET MAUI",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -103508,7 +103508,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": "Basato su .NET 10 e .NET MAUI",
+        "Value": "Basato su .NET 11 e .NET MAUI",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -114074,7 +114074,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": "Obs\u0142ugiwane przez .NET 10 i .NET MAUI",
+        "Value": "Obs\u0142ugiwane przez .NET 11 i .NET MAUI",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -124548,7 +124548,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": "Desenvolvido com .NET 10 e .NET MAUI",
+        "Value": "Desenvolvido com .NET 11 e .NET MAUI",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -135073,7 +135073,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": "\u0420\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u043D\u0430 \u0431\u0430\u0437\u0435 .NET 10 \u0438 .NET MAUI",
+        "Value": "\u0420\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u043D\u0430 \u0431\u0430\u0437\u0435 .NET 11 \u0438 .NET MAUI",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -145555,7 +145555,7 @@
       },
       {
         "Id": "AboutPage_PoweredBy",
-        "Value": ".NET 10 ve .NET MAUI ile g\u00FC\u00E7lendirilmi\u015Ftir",
+        "Value": ".NET 11 ve .NET MAUI ile g\u00FC\u00E7lendirilmi\u015Ftir",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

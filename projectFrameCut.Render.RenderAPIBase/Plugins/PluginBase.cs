@@ -256,19 +256,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                     effect.Enabled = s.Enabled;
                 }
 
-                // Restore IBindableArgumentEffect properties
-                if (effect is IBindableArgumentEffect bindableEffect)
-                {
-                    if (!string.IsNullOrEmpty(s.Id))
-                    {
-                        bindableEffect.Id = s.Id;
-                    }
-                    if (!string.IsNullOrEmpty(s.BindedInputID))
-                    {
-                        bindableEffect.BindedArgumentProviderID = s.BindedInputID;
-                    }
-                }
-
                 return effect;
             }
 

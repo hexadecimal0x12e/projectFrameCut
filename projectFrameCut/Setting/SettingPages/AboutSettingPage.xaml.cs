@@ -25,14 +25,14 @@ public partial class AboutSettingPage : ContentPage
         AppLogoIcon.Source = ImageHelper.LoadFromAsset("projectframecut");
         AppLogoIcon_Narrow.Source = ImageHelper.LoadFromAsset("projectframecut");
         AppRuntimeVersionLabel.Text = $"Runtime: {RuntimeInformation.FrameworkDescription}";
-        AppMauiVersionLabel.Text = $"MAUI: Microsoft.Maui.Controls {typeof(View).Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "10.0.?"}";
+        AppMauiVersionLabel.Text = $"MAUI: Microsoft.Maui.Controls {typeof(View).Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "11.0.?"}";
         AppVersionLabel.Text = $"Version {Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}";
         AppVersionLabel_Narrow.Text = AppVersionLabel.Text;
         try
         {
             var renderType = typeof(Renderer).Assembly;
             var drawingType = typeof(Drawing.Base.IPicture).Assembly;
-            string renderHash = "", drawingHash = "", drawingCommit = "unknown", programDate = "?", channel = "N/A";
+            string renderHash = "", drawingHash = "", drawingCommit = "unknown", programDate = "?", channel = "N/A", fullName = AppInfo.PackageName;
             try
             {
 #pragma warning disable IL3000 // we have already detected that the assembly is not dynamic, so it's safe to get the location
@@ -51,6 +51,7 @@ public partial class AboutSettingPage : ContentPage
                 drawingCommit = (drawingType.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Split('+').Last().Substring(0, 8);
 #if WINDOWS
                 channel = WinUI.Program.ChannelId ?? "NotDef";
+                fullName = WinUI.App.GetPackageFullName() ?? "NotDef";
 #endif
 
             }
@@ -58,13 +59,15 @@ public partial class AboutSettingPage : ContentPage
 
             AppDetailVersionLabel.Text =
                 $"""
-                IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion} | RPC Protocol: v{RenderProtocol.CurrentVersion} ({RenderProtocol.PipeProtocolVersion}, {RenderProtocol.MinimumSupportedVersion})
-                {renderType.GetName().Name}: v{renderType.GetName().Version} hash:{renderHash}
-                {drawingType.GetName().Name}: v{drawingType.GetName().Version}({drawingCommit}) hash:{drawingHash}
-                Package: {AppInfo.PackageName} | Channel: {channel} | Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")}
+                Instance ID: {AppInfo.PackageName}
+                RPC Protocol: v{RenderProtocol.CurrentVersion} ({RenderProtocol.PipeProtocolVersion}, {RenderProtocol.MinimumSupportedVersion})
+                IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+                Full package Name: {fullName} | Channel: {channel} | Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")}
                 """;
             AppBuildInfoLabel.Text = $"{MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit} {programDate}";
             AppDetailVersionLabel_Narrow.Text = AppDetailVersionLabel.Text;
+            AppDetailVersionLabel.StyleId = "SelectableLabel";
+            AppDetailVersionLabel_Narrow.StyleId = "SelectableLabel";
         }
         catch { }
     }

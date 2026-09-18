@@ -29,19 +29,11 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public object[] Compute(object[] args);
     }
 
-    [Obsolete("No longer used. Migrate to IEffectProvider and IEffectArgumentField with Enum types.")]
-    public interface IEffectArgsEnumHandler
-    {
-        public int Parse(string value);
-        public string FromEnum(int value);
-        public Dictionary<int, string> Mapping { get; }
-    }
-
     public class EffectAndMixtureJSONStructure
     {
         public string BindedEffectGroupID { get; set; } = string.Empty;
         public bool IsContinuousEffect { get; set; } = false;
-        [Obsolete("No longer used.")]
+        [Obsolete("No longer used. Keep for fallback detection purposes only.")]
         public bool IsVariableArgumentEffect { get; set; } = false;
         public string FromPlugin { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
@@ -53,10 +45,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public EffectImplementType ImplementType { get; set; } = EffectImplementType.NotSpecified;
         public Dictionary<string, object>? Parameters { get; set; }
         public string? Id { get; set; }
-        [Obsolete("No longer used. The binding will be calculated at render time.")]
-        public string? BindedInputID { get; set; } = null;
-        [Obsolete("No longer used. The binding will be calculated at render time.")]
-        public string[]? BindedInputIDs { get; set; } = null;
     }
 
     /// <summary>
@@ -79,7 +67,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public Dictionary<string, object>? MetaData { get; set; }
     }
 
-    [Obsolete("No longer used, and keep for auto-migration purposes only. Migrate to IEffectProvider.")]
+    [Obsolete("No longer used, and keep for auto-migration purposes only. Migrate to IEffectProvider.", false)]
     public class EffectBundleJSONStructure
     {
         private static readonly Guid NoConnectionGuid = new("00001234-5678-90ab-cdef-012345678900");
@@ -121,7 +109,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
         [Obsolete("No longer used as there is a new DynamicParam.Resolve can do this.")]
-        public static Dictionary<string, object> ConvertElementDictToObjectDict(Dictionary<string, object> elements, Dictionary<string, string> ParametersType, IEffectArgsEnumHandler? EnumHandler = null)
+        public static Dictionary<string, object> ConvertElementDictToObjectDict(Dictionary<string, object> elements, Dictionary<string, string> ParametersType)
         {
             var result = new Dictionary<string, object>();
 
@@ -144,7 +132,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                         "string" => Convert.ToString(kvp.Value)!,
                         "bool" => Convert.ToBoolean(kvp.Value),
                         "long" => Convert.ToInt64(kvp.Value),
-                        "enum" => EnumHandler is not null ? EnumHandler.Parse(Convert.ToString(kvp.Value)!) : throw new NotSupportedException($"Source is enum but no handler provided."),
                         "ImplementTypeEnum" => Enum.TryParse<EffectImplementType>(Convert.ToString(kvp.Value), out var implementType) ? implementType : throw new NotSupportedException($"Source is ImplementType but value '{kvp.Value}' is not a valid EffectImplementType."),
                         _ => throw new NotImplementedException($"Parameter type '{ParametersType[kvp.Key]}' is not implemented."),
                     };
@@ -177,13 +164,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                         case "long":
                             value = source.GetInt64();
                             break;
-                        case "enum":
-                            if (EnumHandler is not null)
-                            {
-                                value = EnumHandler.Parse(source.GetString());
-                                break;
-                            }
-                            throw new NotSupportedException($"Source is enum but no handler provided.");
                         default:
                             throw new NotImplementedException($"Parameter type '{ParametersType[kvp.Key]}' is not implemented.");
                     }
