@@ -9,6 +9,9 @@ namespace projectFrameCut.Render.Contracts.Tests;
 [TestClass]
 public sealed class ExternalRpcRequestTests
 {
+    public ExternalRpcRequestTests() =>
+        ExternalRpcAuthorizationStore.SetEncryptionKey(new byte[32]);
+
     [TestMethod]
     public async Task PersistentAuthorizationUsesClientIdAndSignature()
     {
@@ -18,7 +21,7 @@ public sealed class ExternalRpcRequestTests
         using var rsa = RSA.Create(3072);
         var publicKey = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo());
         var clientId = Guid.NewGuid();
-        ExternalRpcAuthorizationStore.Add(ExternalRpcAuthorizationStore.GetPath(directory), new()
+        var authorization = ExternalRpcAuthorizationStore.Add(ExternalRpcAuthorizationStore.GetPath(directory), new()
         {
             ClientId = clientId,
             AppName = "Persistent test",
@@ -32,7 +35,7 @@ public sealed class ExternalRpcRequestTests
             .RunAsync(pipe, "owner", cancellationToken: lifetime.Token);
         try
         {
-            await using var owner = new RenderClient(new NamedPipeRenderClientTransport(pipe, "owner", "test"));
+            await using var owner = new RenderClient(new NamedPipeRenderClientTransport(pipe, "owner", "test", [authorization]));
             var sessionId = Guid.NewGuid();
             await owner.RegisterGuiProjectAsync(new() { SessionId = sessionId }, lifetime.Token);
             var request = new ExternalRpcRequest

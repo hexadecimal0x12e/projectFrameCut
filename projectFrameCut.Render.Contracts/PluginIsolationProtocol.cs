@@ -116,6 +116,62 @@ public sealed class IsolationPluginDescriptor
     [ProtoMember(21)] public List<string> VideoWriters { get; set; } = [];
     [ProtoMember(22)] public bool ProvidesClips { get; set; }
     [ProtoMember(23)] public bool ProvidesVectorComponents { get; set; }
+    [ProtoMember(24)] public List<IsolationAIProviderDescriptor> AIProviders { get; set; } = [];
+}
+
+[ProtoContract]
+public sealed class IsolationAIProviderDescriptor
+{
+    [ProtoMember(1)] public string ProviderId { get; set; } = string.Empty;
+    [ProtoMember(2)] public string DescriptorJson { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public sealed class IsolationAIProviderContext
+{
+    [ProtoMember(1)] public string ProfileId { get; set; } = string.Empty;
+    [ProtoMember(2)] public string ProviderKey { get; set; } = string.Empty;
+    [ProtoMember(3)] public string ModelId { get; set; } = string.Empty;
+    [ProtoMember(4)] public Dictionary<string, string> Configuration { get; set; } = [];
+    [ProtoMember(5)] public Dictionary<string, string> Secrets { get; set; } = [];
+}
+
+[ProtoContract]
+public sealed class IsolationAIInvokeRequest
+{
+    [ProtoMember(1)] public string ProviderId { get; set; } = string.Empty;
+    [ProtoMember(2)] public IsolationAIProviderContext Context { get; set; } = new();
+    [ProtoMember(3)] public string RequestJson { get; set; } = string.Empty;
+    [ProtoMember(4)] public string OperationKind { get; set; } = string.Empty;
+    [ProtoMember(5)] public List<IsolationPayloadReference> Payloads { get; set; } = [];
+}
+
+[ProtoContract]
+public sealed class IsolationAIJsonResponse
+{
+    [ProtoMember(1)] public string Json { get; set; } = string.Empty;
+    [ProtoMember(2)] public List<IsolationPayloadReference> Payloads { get; set; } = [];
+}
+
+[ProtoContract]
+public sealed class IsolationAIBeginResponse
+{
+    [ProtoMember(1)] public string OperationId { get; set; } = string.Empty;
+}
+
+[ProtoContract]
+public sealed class IsolationAIOperationRequest
+{
+    [ProtoMember(1)] public string OperationId { get; set; } = string.Empty;
+    [ProtoMember(2)] public int WaitMilliseconds { get; set; } = 15000;
+    [ProtoMember(3)] public int MaximumEvents { get; set; } = 32;
+}
+
+[ProtoContract]
+public sealed class IsolationAIPollResponse
+{
+    [ProtoMember(1)] public List<IsolationAIJsonResponse> Events { get; set; } = [];
+    [ProtoMember(2)] public bool Completed { get; set; }
 }
 
 [ProtoContract]

@@ -80,6 +80,8 @@ namespace projectFrameCut
 
         }
 
+        protected override void OnStart() => MauiProgram.InitializeExternalRpcAuthorizationStore();
+
         protected override async void OnAppLinkRequestReceived(Uri uri)
         {
             base.OnAppLinkRequestReceived(uri);

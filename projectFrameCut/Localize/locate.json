@@ -9022,8 +9022,32 @@
         "DontTranslate": false
       },
       {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "\u5E94\u7528\u7A0B\u5E8F\u6570\u636E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "UserDataManagePage_CategoryAsset",
         "Value": "\u4F60\u7684\u7D20\u6750",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "\u5171\u4EAB\u7D20\u6750",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "\u7F13\u5B58",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9038,8 +9062,40 @@
         "DontTranslate": false
       },
       {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "\u914D\u7F6E\u548C\u8D44\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "\u65E5\u5FD7\u3001\u72B6\u6001\u4E0E\u8BCA\u65AD\u6570\u636E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "UserDataManagePage_CategoryDraft",
         "Value": "\u4F60\u7684\u9879\u76EE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "\u53EF\u7528\u7A7A\u95F4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "\u5176\u4ED6\u5DF2\u7528\u7A7A\u95F4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9054,11 +9110,87 @@
         "DontTranslate": false
       },
       {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "\u9879\u76EE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "UserDataManagePage_CategoryTemplate",
         "Value": "\u4F60\u7684\u6A21\u677F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "\u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "\u6E05\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ClearWarn",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u6C38\u4E45\u5220\u9664\u300C{type}\u300D\u5417\uFF1F\r\u8FD9\u5C06\u4F1A\u91CA\u653E\u6389\u7EA6 {size} \u7684\u78C1\u76D8\u7A7A\u95F4\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "type"
+          },
+          {
+            "Key": "string",
+            "Value": "size"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "type",
+            "Value": ""
+          },
+          {
+            "Key": "size",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ClearWarn2",
+        "Value": "\u8B66\u544A\uFF1A\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\u3002\r\u8FD9\u5C06\u6C38\u4E45\u7684\u5220\u9664\u6240\u6709\u300C{type}\u300D\u6570\u636E\uFF0C\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "type"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "type",
+            "Value": ""
+          }
+        ],
         "DontTranslate": false
       },
       {
@@ -9096,8 +9228,88 @@
         "DontTranslate": false
       },
       {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "\u5E94\u7528\u6570\u636E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "\u7528\u6237/\u5E94\u7528\u6570\u636E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "\u78C1\u76D8\u5360\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "\u65E0\u6CD5\u83B7\u53D6\u6B64\u78C1\u76D8\u7684\u5BB9\u91CF\u4FE1\u606F\uFF0C\u4EC5\u663E\u793A projectFrameCut \u6570\u636E\u6784\u6210\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "\u7528\u6237\u6570\u636E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "UserDataManagePage_OpenActionNotSupported",
         "Value": "\u4F60\u7684\u5E73\u53F0\u53EF\u80FD\u4E0D\u652F\u6301\u6B64\u529F\u80FD\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "\u7D20\u6750",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "\u7F13\u5B58\uFF08\u7F29\u7565\u56FE\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "\u9879\u76EE\u3001\u5386\u53F2\u548C\u8D44\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "\u4EE3\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "\u5E94\u7528\u7A0B\u5E8F\u9700\u8981\u8FD9\u4E9B\u6570\u636E\u624D\u80FD\u6B63\u786E\u8FD0\u884C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9662,6 +9874,14 @@
       {
         "Id": "WelocmePage_Start",
         "Value": "\u5F00\u59CB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryUnspecified",
+        "Value": "\u5176\u4ED6\uFF08\u7528\u6237\u6570\u636E\u76EE\u5F55\u4E0B\u7684\u975E\u6570\u636E\u6587\u4EF6\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20175,6 +20395,174 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "Unset localization item:UserDataManagePage_DiskOverview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "Unset localization item:UserDataManagePage_DiskCombined()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "Unset localization item:UserDataManagePage_DiskUser()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "Unset localization item:UserDataManagePage_DiskUnavailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "Unset localization item:UserDataManagePage_CategoryOtherUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "Unset localization item:UserDataManagePage_CategoryFree()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "Unset localization item:UserDataManagePage_CategoryProjects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "Unset localization item:UserDataManagePage_CategoryTemplates()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "Unset localization item:UserDataManagePage_CategoryPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "Unset localization item:UserDataManagePage_CategoryCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "Unset localization item:UserDataManagePage_CategoryDiagnostics()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "Unset localization item:UserDataManagePage_CategoryConfigResources()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "Unset localization item:UserDataManagePage_ApplicationData()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "Unset localization item:UserDataManagePage_ReadOnlyCategory()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "Unset localization item:UserDataManagePage_Clear()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "Unset localization item:UserDataManagePage_ProjectCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "Unset localization item:UserDataManagePage_ProjectProxy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "Unset localization item:UserDataManagePage_ProjectAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "Unset localization item:UserDataManagePage_ProjectOther()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "Unset localization item:UserDataManagePage_DiskApplication()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -30703,6 +31091,174 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "Unset localization item:UserDataManagePage_DiskOverview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "Unset localization item:UserDataManagePage_DiskCombined()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "Unset localization item:UserDataManagePage_DiskUser()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "Unset localization item:UserDataManagePage_DiskUnavailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "Unset localization item:UserDataManagePage_CategoryOtherUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "Unset localization item:UserDataManagePage_CategoryFree()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "Unset localization item:UserDataManagePage_CategoryProjects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "Unset localization item:UserDataManagePage_CategoryTemplates()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "Unset localization item:UserDataManagePage_CategoryPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "Unset localization item:UserDataManagePage_CategoryCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "Unset localization item:UserDataManagePage_CategoryDiagnostics()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "Unset localization item:UserDataManagePage_CategoryConfigResources()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "Unset localization item:UserDataManagePage_ApplicationData()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "Unset localization item:UserDataManagePage_ReadOnlyCategory()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "Unset localization item:UserDataManagePage_Clear()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "Unset localization item:UserDataManagePage_ProjectCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "Unset localization item:UserDataManagePage_ProjectProxy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "Unset localization item:UserDataManagePage_ProjectAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "Unset localization item:UserDataManagePage_ProjectOther()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "Unset localization item:UserDataManagePage_DiskApplication()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -41238,6 +41794,174 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "Unset localization item:UserDataManagePage_DiskOverview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "Unset localization item:UserDataManagePage_DiskCombined()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "Unset localization item:UserDataManagePage_DiskUser()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "Unset localization item:UserDataManagePage_DiskUnavailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "Unset localization item:UserDataManagePage_CategoryOtherUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "Unset localization item:UserDataManagePage_CategoryFree()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "Unset localization item:UserDataManagePage_CategoryProjects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "Unset localization item:UserDataManagePage_CategoryTemplates()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "Unset localization item:UserDataManagePage_CategoryPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "Unset localization item:UserDataManagePage_CategoryCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "Unset localization item:UserDataManagePage_CategoryDiagnostics()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "Unset localization item:UserDataManagePage_CategoryConfigResources()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "Unset localization item:UserDataManagePage_ApplicationData()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "Unset localization item:UserDataManagePage_ReadOnlyCategory()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "Unset localization item:UserDataManagePage_Clear()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "Unset localization item:UserDataManagePage_ProjectCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "Unset localization item:UserDataManagePage_ProjectProxy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "Unset localization item:UserDataManagePage_ProjectAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "Unset localization item:UserDataManagePage_ProjectOther()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "Unset localization item:UserDataManagePage_DiskApplication()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -51757,6 +52481,174 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "Unset localization item:UserDataManagePage_DiskOverview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "Unset localization item:UserDataManagePage_DiskCombined()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "Unset localization item:UserDataManagePage_DiskUser()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "Unset localization item:UserDataManagePage_DiskUnavailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "Unset localization item:UserDataManagePage_CategoryOtherUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "Unset localization item:UserDataManagePage_CategoryFree()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "Unset localization item:UserDataManagePage_CategoryProjects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "Unset localization item:UserDataManagePage_CategoryTemplates()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "Unset localization item:UserDataManagePage_CategoryPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "Unset localization item:UserDataManagePage_CategoryCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "Unset localization item:UserDataManagePage_CategoryDiagnostics()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "Unset localization item:UserDataManagePage_CategoryConfigResources()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "Unset localization item:UserDataManagePage_ApplicationData()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "Unset localization item:UserDataManagePage_ReadOnlyCategory()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "Unset localization item:UserDataManagePage_Clear()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "Unset localization item:UserDataManagePage_ProjectCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "Unset localization item:UserDataManagePage_ProjectProxy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "Unset localization item:UserDataManagePage_ProjectAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "Unset localization item:UserDataManagePage_ProjectOther()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "Unset localization item:UserDataManagePage_DiskApplication()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -62273,6 +63165,174 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "Unset localization item:UserDataManagePage_DiskOverview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "Unset localization item:UserDataManagePage_DiskCombined()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "Unset localization item:UserDataManagePage_DiskUser()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "Unset localization item:UserDataManagePage_DiskUnavailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "Unset localization item:UserDataManagePage_CategoryOtherUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "Unset localization item:UserDataManagePage_CategoryFree()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "Unset localization item:UserDataManagePage_CategoryProjects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "Unset localization item:UserDataManagePage_CategoryTemplates()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "Unset localization item:UserDataManagePage_CategoryPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "Unset localization item:UserDataManagePage_CategoryCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "Unset localization item:UserDataManagePage_CategoryDiagnostics()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "Unset localization item:UserDataManagePage_CategoryConfigResources()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "Unset localization item:UserDataManagePage_ApplicationData()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "Unset localization item:UserDataManagePage_ReadOnlyCategory()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "Unset localization item:UserDataManagePage_Clear()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "Unset localization item:UserDataManagePage_ProjectCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "Unset localization item:UserDataManagePage_ProjectProxy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "Unset localization item:UserDataManagePage_ProjectAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "Unset localization item:UserDataManagePage_ProjectOther()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "Unset localization item:UserDataManagePage_DiskApplication()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -72800,6 +73860,174 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "Unset localization item:UserDataManagePage_DiskOverview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "Unset localization item:UserDataManagePage_DiskCombined()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "Unset localization item:UserDataManagePage_DiskUser()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "Unset localization item:UserDataManagePage_DiskUnavailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "Unset localization item:UserDataManagePage_CategoryOtherUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "Unset localization item:UserDataManagePage_CategoryFree()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "Unset localization item:UserDataManagePage_CategoryProjects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "Unset localization item:UserDataManagePage_CategoryTemplates()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "Unset localization item:UserDataManagePage_CategoryPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "Unset localization item:UserDataManagePage_CategoryCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "Unset localization item:UserDataManagePage_CategoryDiagnostics()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "Unset localization item:UserDataManagePage_CategoryConfigResources()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "Unset localization item:UserDataManagePage_ApplicationData()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "Unset localization item:UserDataManagePage_ReadOnlyCategory()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "Unset localization item:UserDataManagePage_Clear()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "Unset localization item:UserDataManagePage_ProjectCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "Unset localization item:UserDataManagePage_ProjectProxy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "Unset localization item:UserDataManagePage_ProjectAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "Unset localization item:UserDataManagePage_ProjectOther()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "Unset localization item:UserDataManagePage_DiskApplication()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -83325,6 +84553,174 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "Unset localization item:UserDataManagePage_DiskOverview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "Unset localization item:UserDataManagePage_DiskCombined()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "Unset localization item:UserDataManagePage_DiskUser()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "Unset localization item:UserDataManagePage_DiskUnavailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "Unset localization item:UserDataManagePage_CategoryOtherUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "Unset localization item:UserDataManagePage_CategoryFree()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "Unset localization item:UserDataManagePage_CategoryProjects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "Unset localization item:UserDataManagePage_CategoryTemplates()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "Unset localization item:UserDataManagePage_CategoryPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "Unset localization item:UserDataManagePage_CategoryCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "Unset localization item:UserDataManagePage_CategoryDiagnostics()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "Unset localization item:UserDataManagePage_CategoryConfigResources()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "Unset localization item:UserDataManagePage_ApplicationData()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "Unset localization item:UserDataManagePage_ReadOnlyCategory()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "Unset localization item:UserDataManagePage_Clear()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "Unset localization item:UserDataManagePage_ProjectCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "Unset localization item:UserDataManagePage_ProjectProxy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "Unset localization item:UserDataManagePage_ProjectAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "Unset localization item:UserDataManagePage_ProjectOther()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "Unset localization item:UserDataManagePage_DiskApplication()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -93845,6 +95241,174 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "Unset localization item:UserDataManagePage_DiskOverview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "Unset localization item:UserDataManagePage_DiskCombined()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "Unset localization item:UserDataManagePage_DiskUser()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "Unset localization item:UserDataManagePage_DiskUnavailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "Unset localization item:UserDataManagePage_CategoryOtherUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "Unset localization item:UserDataManagePage_CategoryFree()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "Unset localization item:UserDataManagePage_CategoryProjects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "Unset localization item:UserDataManagePage_CategoryTemplates()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "Unset localization item:UserDataManagePage_CategoryPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "Unset localization item:UserDataManagePage_CategoryCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "Unset localization item:UserDataManagePage_CategoryDiagnostics()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "Unset localization item:UserDataManagePage_CategoryConfigResources()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "Unset localization item:UserDataManagePage_ApplicationData()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "Unset localization item:UserDataManagePage_ReadOnlyCategory()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "Unset localization item:UserDataManagePage_Clear()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "Unset localization item:UserDataManagePage_ProjectCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "Unset localization item:UserDataManagePage_ProjectProxy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "Unset localization item:UserDataManagePage_ProjectAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "Unset localization item:UserDataManagePage_ProjectOther()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "Unset localization item:UserDataManagePage_DiskApplication()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -104372,6 +105936,174 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "Unset localization item:UserDataManagePage_DiskOverview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "Unset localization item:UserDataManagePage_DiskCombined()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "Unset localization item:UserDataManagePage_DiskUser()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "Unset localization item:UserDataManagePage_DiskUnavailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "Unset localization item:UserDataManagePage_CategoryOtherUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "Unset localization item:UserDataManagePage_CategoryFree()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "Unset localization item:UserDataManagePage_CategoryProjects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "Unset localization item:UserDataManagePage_CategoryTemplates()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "Unset localization item:UserDataManagePage_CategoryPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "Unset localization item:UserDataManagePage_CategoryCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "Unset localization item:UserDataManagePage_CategoryDiagnostics()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "Unset localization item:UserDataManagePage_CategoryConfigResources()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "Unset localization item:UserDataManagePage_ApplicationData()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "Unset localization item:UserDataManagePage_ReadOnlyCategory()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "Unset localization item:UserDataManagePage_Clear()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "Unset localization item:UserDataManagePage_ProjectCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "Unset localization item:UserDataManagePage_ProjectProxy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "Unset localization item:UserDataManagePage_ProjectAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "Unset localization item:UserDataManagePage_ProjectOther()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "Unset localization item:UserDataManagePage_DiskApplication()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -114890,6 +116622,174 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "Unset localization item:UserDataManagePage_DiskOverview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "Unset localization item:UserDataManagePage_DiskCombined()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "Unset localization item:UserDataManagePage_DiskUser()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "Unset localization item:UserDataManagePage_DiskUnavailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "Unset localization item:UserDataManagePage_CategoryOtherUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "Unset localization item:UserDataManagePage_CategoryFree()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "Unset localization item:UserDataManagePage_CategoryProjects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "Unset localization item:UserDataManagePage_CategoryTemplates()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "Unset localization item:UserDataManagePage_CategoryPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "Unset localization item:UserDataManagePage_CategoryCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "Unset localization item:UserDataManagePage_CategoryDiagnostics()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "Unset localization item:UserDataManagePage_CategoryConfigResources()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "Unset localization item:UserDataManagePage_ApplicationData()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "Unset localization item:UserDataManagePage_ReadOnlyCategory()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "Unset localization item:UserDataManagePage_Clear()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "Unset localization item:UserDataManagePage_ProjectCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "Unset localization item:UserDataManagePage_ProjectProxy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "Unset localization item:UserDataManagePage_ProjectAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "Unset localization item:UserDataManagePage_ProjectOther()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "Unset localization item:UserDataManagePage_DiskApplication()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -125411,6 +127311,174 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "Unset localization item:UserDataManagePage_DiskOverview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "Unset localization item:UserDataManagePage_DiskCombined()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "Unset localization item:UserDataManagePage_DiskUser()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "Unset localization item:UserDataManagePage_DiskUnavailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "Unset localization item:UserDataManagePage_CategoryOtherUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "Unset localization item:UserDataManagePage_CategoryFree()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "Unset localization item:UserDataManagePage_CategoryProjects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "Unset localization item:UserDataManagePage_CategoryTemplates()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "Unset localization item:UserDataManagePage_CategoryPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "Unset localization item:UserDataManagePage_CategoryCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "Unset localization item:UserDataManagePage_CategoryDiagnostics()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "Unset localization item:UserDataManagePage_CategoryConfigResources()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "Unset localization item:UserDataManagePage_ApplicationData()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "Unset localization item:UserDataManagePage_ReadOnlyCategory()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "Unset localization item:UserDataManagePage_Clear()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "Unset localization item:UserDataManagePage_ProjectCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "Unset localization item:UserDataManagePage_ProjectProxy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "Unset localization item:UserDataManagePage_ProjectAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "Unset localization item:UserDataManagePage_ProjectOther()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "Unset localization item:UserDataManagePage_DiskApplication()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -135936,6 +138004,174 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "Unset localization item:UserDataManagePage_DiskOverview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "Unset localization item:UserDataManagePage_DiskCombined()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "Unset localization item:UserDataManagePage_DiskUser()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "Unset localization item:UserDataManagePage_DiskUnavailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "Unset localization item:UserDataManagePage_CategoryOtherUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "Unset localization item:UserDataManagePage_CategoryFree()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "Unset localization item:UserDataManagePage_CategoryProjects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "Unset localization item:UserDataManagePage_CategoryTemplates()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "Unset localization item:UserDataManagePage_CategoryPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "Unset localization item:UserDataManagePage_CategoryCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "Unset localization item:UserDataManagePage_CategoryDiagnostics()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "Unset localization item:UserDataManagePage_CategoryConfigResources()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "Unset localization item:UserDataManagePage_ApplicationData()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "Unset localization item:UserDataManagePage_ReadOnlyCategory()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "Unset localization item:UserDataManagePage_Clear()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "Unset localization item:UserDataManagePage_ProjectCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "Unset localization item:UserDataManagePage_ProjectProxy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "Unset localization item:UserDataManagePage_ProjectAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "Unset localization item:UserDataManagePage_ProjectOther()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "Unset localization item:UserDataManagePage_DiskApplication()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -146455,6 +148691,174 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskOverview",
+        "Value": "Unset localization item:UserDataManagePage_DiskOverview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskCombined",
+        "Value": "Unset localization item:UserDataManagePage_DiskCombined()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUser",
+        "Value": "Unset localization item:UserDataManagePage_DiskUser()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskUnavailable",
+        "Value": "Unset localization item:UserDataManagePage_DiskUnavailable()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryOtherUsed",
+        "Value": "Unset localization item:UserDataManagePage_CategoryOtherUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryFree",
+        "Value": "Unset localization item:UserDataManagePage_CategoryFree()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryProjects",
+        "Value": "Unset localization item:UserDataManagePage_CategoryProjects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryTemplates",
+        "Value": "Unset localization item:UserDataManagePage_CategoryTemplates()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryPlugins",
+        "Value": "Unset localization item:UserDataManagePage_CategoryPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryCache",
+        "Value": "Unset localization item:UserDataManagePage_CategoryCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryDiagnostics",
+        "Value": "Unset localization item:UserDataManagePage_CategoryDiagnostics()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryConfigResources",
+        "Value": "Unset localization item:UserDataManagePage_CategoryConfigResources()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ApplicationData",
+        "Value": "Unset localization item:UserDataManagePage_ApplicationData()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ReadOnlyCategory",
+        "Value": "Unset localization item:UserDataManagePage_ReadOnlyCategory()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_Clear",
+        "Value": "Unset localization item:UserDataManagePage_Clear()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectCache",
+        "Value": "Unset localization item:UserDataManagePage_ProjectCache()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectProxy",
+        "Value": "Unset localization item:UserDataManagePage_ProjectProxy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectAssets",
+        "Value": "Unset localization item:UserDataManagePage_ProjectAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_ProjectOther",
+        "Value": "Unset localization item:UserDataManagePage_ProjectOther()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_DiskApplication",
+        "Value": "Unset localization item:UserDataManagePage_DiskApplication()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "UserDataManagePage_CategoryAssets",
+        "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ]

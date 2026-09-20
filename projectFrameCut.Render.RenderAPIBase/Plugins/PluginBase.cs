@@ -603,6 +603,15 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 }
             }
 
+            if (pluginBase is IAIProviderPlugin aiPlugin && aiPlugin.AIProviderFactories.Count > 0)
+            {
+                providedContent.AppendLine("AIProvider:");
+                foreach (var item in aiPlugin.AIProviderFactories)
+                {
+                    providedContent.AppendLine($"- {item.Key}");
+                }
+            }
+
             // ----- Localization -----
             if (pluginBase.LocalizationProvider.Any())
             {

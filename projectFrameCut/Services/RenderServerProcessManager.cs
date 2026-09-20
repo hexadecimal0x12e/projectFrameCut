@@ -203,7 +203,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
 
                 }
 
-                var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId);
+                var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId, GetPersistentAuthorizations());
                 var client = new RenderClient(transport, _clientId);
                 _transport = transport;
                 _client = client;
@@ -271,7 +271,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             CliPreviewPath = registration.PreviewPath;
             _pipeName = registration.PipeName;
             _token = registration.Token;
-            var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId);
+            var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId, GetPersistentAuthorizations());
             var client = new RenderClient(transport, _clientId);
             _transport = transport;
             _client = client;
@@ -373,7 +373,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
 
     private void ConnectAndroidTransport()
     {
-        var transport = new UnixSocketRenderClientTransport(_pipeName, _token, _clientId);
+        var transport = new UnixSocketRenderClientTransport(_pipeName, _token, _clientId, GetPersistentAuthorizations());
         var client = new RenderClient(transport, _clientId);
         _transport = transport;
         _client = client;
@@ -424,7 +424,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
 
                 _process = Process.Start(startInfo) ?? throw new InvalidOperationException("Unable to start the CLI renderer.");
                 AttachProcessLogging(_process);
-                var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId);
+                var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId, GetPersistentAuthorizations());
                 var client = new RenderClient(transport, _clientId);
                 _transport = transport;
                 _client = client;
@@ -462,6 +462,10 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         process.BeginOutputReadLine();
     }
 
+    private static IReadOnlyList<ExternalRpcClientAuthorization> GetPersistentAuthorizations() =>
+        ExternalRpcAuthorizationStore.Read(
+            ExternalRpcAuthorizationStore.GetPath(Path.Combine(MauiProgram.BasicDataPath, "RpcRequest"))).ToList();
+
     private string RegistrationPath => Path.Combine(MauiProgram.BasicDataPath, "RenderJobs", "worker.json");
 
     private bool TryConnectRegisteredWorker()
@@ -485,7 +489,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             }
             _pipeName = registration.PipeName;
             _token = registration.Token;
-            var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId);
+            var transport = new NamedPipeRenderClientTransport(_pipeName, _token, _clientId, GetPersistentAuthorizations());
             var client = new RenderClient(transport, _clientId);
             _transport = transport;
             _client = client;

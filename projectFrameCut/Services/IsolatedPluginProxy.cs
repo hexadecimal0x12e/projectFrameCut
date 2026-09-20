@@ -19,7 +19,7 @@ using RenderTransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITrans
 
 namespace projectFrameCut.Services;
 
-internal class IsolatedPluginProxy : IPluginBase
+internal class IsolatedPluginProxy : IPluginBase, IAIProviderPlugin
 {
     protected readonly IPluginBase Inner;
     private readonly PluginIsolationClient _client;
@@ -38,6 +38,7 @@ internal class IsolatedPluginProxy : IPluginBase
         TransformProvider = client.CreateTransforms();
         ComputerProvider = client.CreateComputers();
         SoundTrackProvider = client.CreateSoundTracks();
+        AIProviderFactories = client.CreateAIProviders();
     }
 
     public string PluginID => Inner.PluginID;
@@ -58,6 +59,7 @@ internal class IsolatedPluginProxy : IPluginBase
     public Dictionary<string, IVideoSource> VideoSourceProvider { get; }
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; }
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; }
+    public IReadOnlyDictionary<string, Func<projectFrameCut.AIContracts.IAIProvider>> AIProviderFactories { get; }
     public Dictionary<string, string> Configuration { get => Inner.Configuration; set => Inner.Configuration = value; }
     public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString => Inner.ConfigurationDisplayString;
 
@@ -121,7 +123,7 @@ internal class IsolatedPluginProxy : IPluginBase
     }
 }
 
-internal sealed class ExternalPluginProxy : IPluginBase
+internal sealed class ExternalPluginProxy : IPluginBase, IAIProviderPlugin
 {
     private readonly PluginMetadata _metadata;
     private readonly PluginIsolationClient _client;
@@ -152,6 +154,7 @@ internal sealed class ExternalPluginProxy : IPluginBase
         if (descriptor.VideoWriters.Count > 0) capabilities |= ExternalPluginCapabilities.VideoWriters;
         if (descriptor.ProvidesClips) capabilities |= ExternalPluginCapabilities.Clips;
         if (descriptor.ProvidesVectorComponents) capabilities |= ExternalPluginCapabilities.VectorComponents;
+        if (descriptor.AIProviders.Count > 0) capabilities |= ExternalPluginCapabilities.AIProviders;
         if (capabilities != metadata.ExternalBackend!.Capabilities)
             throw new InvalidDataException($"The external backend capabilities '{capabilities}' do not match the signed declaration '{metadata.ExternalBackend.Capabilities}'.");
         Properties = descriptor.Properties;
@@ -165,6 +168,7 @@ internal sealed class ExternalPluginProxy : IPluginBase
         TransformProvider = client.CreateTransforms();
         ComputerProvider = client.CreateComputers();
         SoundTrackProvider = client.CreateSoundTracks();
+        AIProviderFactories = client.CreateAIProviders();
     }
 
     public string PluginID => _metadata.PluginID;
@@ -185,6 +189,7 @@ internal sealed class ExternalPluginProxy : IPluginBase
     public Dictionary<string, IVideoSource> VideoSourceProvider { get; }
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; }
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; }
+    public IReadOnlyDictionary<string, Func<projectFrameCut.AIContracts.IAIProvider>> AIProviderFactories { get; }
     public Dictionary<string, string> Configuration
     {
         get => _configuration;

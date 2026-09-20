@@ -95,18 +95,30 @@ public sealed class ExternalRpcConnection
     public string PipeName { get; set; } = "";
 }
 
+[ProtoContract]
 public sealed class ExternalRpcClientAuthorization
 {
+    [ProtoMember(1)]
     public Guid ClientId { get; set; } = Guid.NewGuid();
+    [ProtoMember(2)]
     public string AppName { get; set; } = "";
+    [ProtoMember(3)]
     public string Author { get; set; } = "";
+    [ProtoMember(4)]
     public string Purpose { get; set; } = "";
+    [ProtoMember(5)]
     public string PublicKey { get; set; } = "";
+    [ProtoMember(6)]
     public string PublicKeyFingerprint { get; set; } = "";
+    [ProtoMember(7)]
     public string? ExecutablePath { get; set; }
+    [ProtoMember(8)]
     public string? LaunchArguments { get; set; }
+    [ProtoMember(9)]
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    [ProtoMember(10)]
     public DateTimeOffset? LastUsedAt { get; set; }
+    [ProtoMember(11)]
     public bool Revoked { get; set; }
 }
 

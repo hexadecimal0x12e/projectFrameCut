@@ -10974,7 +10974,13 @@ public partial class DraftPage : ContentPage, IDraftPage
         finally
         {
             if (leavingProject)
+            {
                 await ProjectPluginService.UnloadProjectPluginsAsync();
+#if WINDOWS
+                try { Platforms.Windows.WindowsPluginIsolationPlatform.ClearCurrentProjectLink(WorkingPath); }
+                catch (Exception ex) { Log(ex, "remove current project directory link", this); }
+#endif
+            }
         }
 
     }

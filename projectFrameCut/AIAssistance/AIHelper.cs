@@ -1,4 +1,5 @@
 ﻿using OpenAI.Images;
+using projectFrameCut.AIContracts;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Shared;
 using System;
@@ -21,23 +22,23 @@ namespace projectFrameCut.AIAssistance
         public static VideoGenAIOption CurrentVideoOption = new();
         public static bool IsAnthropicAsChatModel = false;
 
-        public static async Task<ProviderInfo> GetModelProviderInfos(string apiServer, string apiKey) //the code from EasyAIConnector
+        public static async Task<ProviderInfo> GetModelProviderInfos(string apiServer, string apiKey, CancellationToken cancellationToken = default) //the code from EasyAIConnector
         {
             var info = new ProviderInfo();
-            var client = new HttpClient();
+            using var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Get, new Uri(apiServer + "/api/tags"));//ollama
             request.Headers.Add("Accept", "application/json");
             request.Headers.Add("Authorization", $"Bearer {apiKey}");
-            var response = await client.SendAsync(request);
+            var response = await client.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 request = new HttpRequestMessage(HttpMethod.Get, new Uri(apiServer + "/models"));//openai
                 request.Headers.Add("Accept", "application/json");
                 request.Headers.Add("Authorization", $"Bearer {apiKey}");
-                response = await client.SendAsync(request);
+                response = await client.SendAsync(request, cancellationToken);
                 if (!response.IsSuccessStatusCode)
                 {
-                    throw new InvalidOperationException($"Failed to retrieve models from the API server. Response: {await response.Content.ReadAsStringAsync()}, Code: {response.StatusCode}");
+                    throw new InvalidOperationException($"Failed to retrieve models from the API server. Response: {await response.Content.ReadAsStringAsync(cancellationToken)}, Code: {response.StatusCode}");
                 }
                 else
                 {
@@ -48,7 +49,7 @@ namespace projectFrameCut.AIAssistance
             {
                 info.Type = "ollama";
             }
-            var data = await response.Content.ReadAsStringAsync();
+            var data = await response.Content.ReadAsStringAsync(cancellationToken);
             Models? body = JsonSerializer.Deserialize<Models>(data);
             foreach (var item in body?.data ?? body?.models)
             {
@@ -58,11 +59,11 @@ namespace projectFrameCut.AIAssistance
             return info;
         }
 
-        public static async Task<string[]> GetModels(string baseAddress, string apiKey)
+        public static async Task<string[]> GetModels(string baseAddress, string apiKey, CancellationToken cancellationToken = default)
         {
             try
             {
-                var rsp = await GetModelProviderInfos(baseAddress, apiKey);
+                var rsp = await GetModelProviderInfos(baseAddress, apiKey, cancellationToken);
                 return rsp.Models.ToArray();
             }
             catch (Exception ex)
@@ -91,6 +92,31 @@ namespace projectFrameCut.AIAssistance
         {
             try
             {
+                if (option is null && AIProviderService.Current is { } service)
+                {
+                    options ??= new ImageGenerationOptions();
+                    var response = await service.GenerateImageAsync(new AIImageGenerationRequest
+                    {
+                        Prompt = prompt,
+                        Width = options.Width,
+                        Height = options.Height,
+                        NegativePrompt = options.NegativePrompt,
+                        Options = new Dictionary<string, JsonElement>
+                        {
+                            ["style"] = JsonSerializer.SerializeToElement(options.Style.ToString()),
+                            ["quality"] = JsonSerializer.SerializeToElement(options.Quality.ToString()),
+                        },
+                    });
+                    var asset = response.Value?.Assets.FirstOrDefault();
+                    string? location = asset is null ? null : await service.MaterializeAssetAsync(asset);
+                    return new ImageGenerationResult
+                    {
+                        Success = response.Success && asset is not null,
+                        ImageUrl = location,
+                        Description = asset?.Description,
+                        ErrorMessage = response.Error?.Message,
+                    };
+                }
                 option ??= CurrentImageOption;
                 if (string.IsNullOrWhiteSpace(option.BaseAddress) || string.IsNullOrWhiteSpace(option.Key) || string.IsNullOrWhiteSpace(option.Model))
                 {
@@ -118,6 +144,29 @@ namespace projectFrameCut.AIAssistance
         {
             try
             {
+                if (option is null && AIProviderService.Current is { } service)
+                {
+                    options ??= new VideoGenerationOptions();
+                    var response = await service.GenerateVideoAsync(new AIVideoGenerationRequest
+                    {
+                        Prompt = prompt,
+                        Width = options.Width,
+                        Height = options.Height,
+                        DurationSeconds = options.Duration,
+                        GenerateAudio = options.GenerateAudio,
+                        Options = ToProviderOptions(options),
+                    });
+                    var asset = response.Value?.Assets.FirstOrDefault();
+                    string? location = asset is null ? null : await service.MaterializeAssetAsync(asset);
+                    return new VideoGenerationResult
+                    {
+                        Success = response.Success && asset is not null,
+                        VideoUrl = location,
+                        Description = asset?.Description,
+                        TaskId = asset?.ProviderTaskId,
+                        ErrorMessage = response.Error?.Message,
+                    };
+                }
                 option ??= CurrentVideoOption;
                 if (string.IsNullOrWhiteSpace(option.BaseAddress) || string.IsNullOrWhiteSpace(option.Key) || string.IsNullOrWhiteSpace(option.Text2VideoModel) || string.IsNullOrWhiteSpace(option.Image2VideoModel))
                 {
@@ -146,6 +195,35 @@ namespace projectFrameCut.AIAssistance
         {
             try
             {
+                if (option is null && AIProviderService.Current is { } service)
+                {
+                    options ??= new VideoGenerationOptions();
+                    using var first = new MemoryStream();
+                    using var last = new MemoryStream();
+                    firstFrame.SaveToPng(first);
+                    lastFrame.SaveToPng(last);
+                    var response = await service.GenerateVideoAsync(new AIVideoGenerationRequest
+                    {
+                        Prompt = prompt,
+                        Width = options.Width,
+                        Height = options.Height,
+                        DurationSeconds = options.Duration,
+                        GenerateAudio = options.GenerateAudio,
+                        FirstFrame = new() { Kind = AIMediaReferenceKind.Inline, MimeType = "image/png", Data = first.ToArray() },
+                        LastFrame = new() { Kind = AIMediaReferenceKind.Inline, MimeType = "image/png", Data = last.ToArray() },
+                        Options = ToProviderOptions(options),
+                    });
+                    var asset = response.Value?.Assets.FirstOrDefault();
+                    string? location = asset is null ? null : await service.MaterializeAssetAsync(asset);
+                    return new VideoGenerationResult
+                    {
+                        Success = response.Success && asset is not null,
+                        VideoUrl = location,
+                        Description = asset?.Description,
+                        TaskId = asset?.ProviderTaskId,
+                        ErrorMessage = response.Error?.Message,
+                    };
+                }
                 option ??= CurrentVideoOption;
                 if (string.IsNullOrWhiteSpace(option.BaseAddress) || string.IsNullOrWhiteSpace(option.Key) || string.IsNullOrWhiteSpace(option.Text2VideoModel) || string.IsNullOrWhiteSpace(option.Image2VideoModel))
                 {
@@ -168,7 +246,17 @@ namespace projectFrameCut.AIAssistance
             }
         }
 
-        private static async Task<ImageGenerationResult> GenerateImageWithOpenAI(string prompt, ImageGenerationOptions options, AIOption aiOption)
+        private static Dictionary<string, JsonElement> ToProviderOptions(VideoGenerationOptions options) => new()
+        {
+            ["promptExtend"] = JsonSerializer.SerializeToElement(options.PromptExtend),
+            ["watermark"] = JsonSerializer.SerializeToElement(options.Watermark),
+            ["shotType"] = JsonSerializer.SerializeToElement(options.ShotType),
+            ["resolution"] = JsonSerializer.SerializeToElement(options.Resolution),
+            ["ratio"] = JsonSerializer.SerializeToElement(options.Ratio),
+            ["seed"] = JsonSerializer.SerializeToElement(options.Seed),
+        };
+
+        internal static async Task<ImageGenerationResult> GenerateImageWithOpenAI(string prompt, ImageGenerationOptions options, AIOption aiOption)
         {
             try
             {
@@ -243,7 +331,7 @@ namespace projectFrameCut.AIAssistance
         //    }
         //}
 
-        private static async Task<ImageGenerationResult> GenerateImageWithQwen(string prompt, ImageGenerationOptions options, AIOption aiOption)
+        internal static async Task<ImageGenerationResult> GenerateImageWithQwen(string prompt, ImageGenerationOptions options, AIOption aiOption)
         {
             try
             {
@@ -313,7 +401,7 @@ namespace projectFrameCut.AIAssistance
             }
         }
 
-        private static async Task<VideoGenerationResult> GenerateVideoWithQwen(string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
+        internal static async Task<VideoGenerationResult> GenerateVideoWithQwen(string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
         {
             try
             {
@@ -490,7 +578,7 @@ namespace projectFrameCut.AIAssistance
             return "9:16";
         }
 
-        private static async Task<VideoGenerationResult> GenerateVideoWithHappyHorse(string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
+        internal static async Task<VideoGenerationResult> GenerateVideoWithHappyHorse(string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
         {
             try
             {
@@ -636,7 +724,7 @@ namespace projectFrameCut.AIAssistance
             }
         }
 
-        private static async Task<VideoGenerationResult> GenerateVideoWithDoubao(string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
+        internal static async Task<VideoGenerationResult> GenerateVideoWithDoubao(string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
         {
             try
             {
@@ -800,7 +888,7 @@ namespace projectFrameCut.AIAssistance
             }
         }
 
-        private static async Task<VideoGenerationResult> GenerateVideoWithQwenFrames(IPicture firstFrame, IPicture lastFrame, string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
+        internal static async Task<VideoGenerationResult> GenerateVideoWithQwenFrames(IPicture firstFrame, IPicture lastFrame, string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
         {
             try
             {
@@ -949,7 +1037,7 @@ namespace projectFrameCut.AIAssistance
             }
         }
 
-        private static async Task<VideoGenerationResult> GenerateVideoWithHappyHorseFrames(IPicture firstFrame, IPicture lastFrame, string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
+        internal static async Task<VideoGenerationResult> GenerateVideoWithHappyHorseFrames(IPicture firstFrame, IPicture lastFrame, string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
         {
             try
             {
@@ -1107,7 +1195,7 @@ namespace projectFrameCut.AIAssistance
             }
         }
 
-        private static async Task<VideoGenerationResult> GenerateVideoWithOpenAI(string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
+        internal static async Task<VideoGenerationResult> GenerateVideoWithOpenAI(string prompt, VideoGenerationOptions options, VideoGenAIOption aiOption)
         {
             try
             {

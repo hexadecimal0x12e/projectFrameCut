@@ -69,6 +69,8 @@ public sealed class NamedPipeRenderServer(IRenderService service, bool allowAddi
                     await RenderPipeFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(handshakeResponse), handshakeTimeout.Token).ConfigureAwait(false);
                     if (!accepted) continue;
                     connected = true;
+                    if (service is IExternalRpcAuthorizationHost authorizationHost)
+                        authorizationHost.SetAuthorizations(handshake.PersistentAuthorizations);
                     if (service is IRenderConnectionObserver observer) observer.Connected(handshake.ClientId);
 
                     using var connectionCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -212,14 +214,14 @@ public sealed class NamedPipeRenderServer(IRenderService service, bool allowAddi
         catch (ObjectDisposedException) { }
     }
 
-    private sealed class AdditionalPipeHost(IRenderService service, CancellationToken cancellationToken, string? requestDirectory) : IRenderService, IAsyncDisposable
+    private sealed class AdditionalPipeHost(IRenderService service, CancellationToken cancellationToken, string? requestDirectory) : IRenderService, IAsyncDisposable, IExternalRpcAuthorizationHost
     {
         private readonly CancellationTokenSource _lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         private readonly object _gate = new();
         private readonly List<Task> _listeners = [];
         private readonly ConcurrentDictionary<string, CancellationTokenSource> _pipeLifetimes = new();
-        private readonly ExternalRpcRequestBroker? _requests = requestDirectory is null ? null : new(requestDirectory, cancellationToken);
-        private readonly string? _authorizationPath = requestDirectory is null ? null : ExternalRpcAuthorizationStore.GetPath(requestDirectory);
+        private readonly ExternalRpcRequestBroker? _requests = requestDirectory is null ? null : new(requestDirectory, [], cancellationToken);
+        private IReadOnlyDictionary<Guid, ExternalRpcClientAuthorization> _authorizations = new Dictionary<Guid, ExternalRpcClientAuthorization>();
         private bool _disposed;
         private readonly GuiProjectBroker _gui = new();
 
@@ -383,8 +385,15 @@ public sealed class NamedPipeRenderServer(IRenderService service, bool allowAddi
             }
         }
 
-        private bool IsAuthorized(Guid clientId) => _authorizationPath is not null
-            && ExternalRpcAuthorizationStore.Find(_authorizationPath, clientId) is { Revoked: false };
+        void IExternalRpcAuthorizationHost.SetAuthorizations(IReadOnlyList<ExternalRpcClientAuthorization> authorizations)
+        {
+            var map = authorizations.ToDictionary(item => item.ClientId, item => item);
+            Volatile.Write(ref _authorizations, map);
+            _requests?.SetAuthorizations(authorizations);
+        }
+
+        private bool IsAuthorized(Guid clientId) =>
+            Volatile.Read(ref _authorizations).TryGetValue(clientId, out var authorization) && !authorization.Revoked;
 
         public async ValueTask DisposeAsync()
         {
@@ -418,6 +427,11 @@ public sealed class NamedPipeRenderServer(IRenderService service, bool allowAddi
             if (!cancellation.IsCancellationRequested) cancellation.Cancel();
         });
     }
+}
+
+internal interface IExternalRpcAuthorizationHost
+{
+    void SetAuthorizations(IReadOnlyList<ExternalRpcClientAuthorization> authorizations);
 }
 
 internal interface IRenderConnectionObserver

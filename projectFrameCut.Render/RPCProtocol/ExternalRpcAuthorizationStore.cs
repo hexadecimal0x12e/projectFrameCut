@@ -1,24 +1,32 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.RPCProtocol;
 
 public static class ExternalRpcAuthorizationStore
 {
+    private const string EncryptedFileName = "ExternalRpcClients.dat";
+    private const string LegacyFileName = "ExternalRpcClients.json";
     private static readonly object Gate = new();
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private static byte[]? _encryptionKey;
 
-    public static string GetPath(string requestDirectory) => Path.Combine(Path.GetDirectoryName(Path.GetFullPath(requestDirectory))!, "ExternalRpcClients.json");
+    public static string GetPath(string requestDirectory) => Path.Combine(Path.GetDirectoryName(Path.GetFullPath(requestDirectory))!, EncryptedFileName);
+
+    public static void SetEncryptionKey(byte[] key)
+    {
+        if (key is null || key.Length is not (16 or 24 or 32)) throw new ArgumentException("The encryption key must be 128, 192, or 256 bits.", nameof(key));
+        _encryptionKey = key.ToArray();
+    }
 
     public static IReadOnlyList<ExternalRpcClientAuthorization> Read(string path)
     {
         lock (Gate)
         {
             using var crossProcessLock = AcquireCrossProcessLock(path);
-            if (!File.Exists(path)) return [];
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-            return JsonSerializer.Deserialize<List<ExternalRpcClientAuthorization>>(stream) ?? [];
+            return ReadUnsafe(path);
         }
     }
 
@@ -81,9 +89,18 @@ public static class ExternalRpcAuthorizationStore
 
     private static List<ExternalRpcClientAuthorization> ReadUnsafe(string path)
     {
-        if (!File.Exists(path)) return [];
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        return JsonSerializer.Deserialize<List<ExternalRpcClientAuthorization>>(stream) ?? [];
+        var actualPath = File.Exists(path) ? path : GetLegacyPath(path);
+        if (!File.Exists(actualPath)) return [];
+
+        var data = File.ReadAllBytes(actualPath);
+        if (string.Equals(Path.GetExtension(actualPath), ".json", StringComparison.OrdinalIgnoreCase))
+        {
+            var legacyItems = JsonSerializer.Deserialize<List<ExternalRpcClientAuthorization>>(data) ?? [];
+            WriteUnsafe(path, legacyItems);
+            return legacyItems;
+        }
+
+        return JsonSerializer.Deserialize<List<ExternalRpcClientAuthorization>>(FileCryptoService.Decrypt(GetEncryptionKey(), data)) ?? [];
     }
 
     private static void WriteUnsafe(string path, List<ExternalRpcClientAuthorization> items)
@@ -92,10 +109,19 @@ public static class ExternalRpcAuthorizationStore
         var temporary = path + $".{Guid.NewGuid():N}.tmp";
         try
         {
-            File.WriteAllText(temporary, JsonSerializer.Serialize(items, JsonOptions));
+            var json = JsonSerializer.SerializeToUtf8Bytes(items, JsonOptions);
+            File.WriteAllBytes(temporary, FileCryptoService.Encrypt(GetEncryptionKey(), json));
             File.Move(temporary, path, true);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
+
+    private static string GetLegacyPath(string path) => Path.Combine(Path.GetDirectoryName(path)!, LegacyFileName);
+
+    private static byte[] GetEncryptionKey()
+    {
+        return _encryptionKey?.ToArray()
+            ?? throw new InvalidOperationException("External RPC authorization encryption has not been initialized by the application.");
     }
 
     private sealed class MutexReleaser(Mutex mutex) : IDisposable

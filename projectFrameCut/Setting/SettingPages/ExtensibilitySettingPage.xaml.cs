@@ -2,12 +2,15 @@
 using projectFrameCut.ApplicationAPIBase.Plugins;
 
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
+using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationPluginBase;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Reflection;
 using System.Text;
@@ -21,6 +24,7 @@ public partial class ExtensibilitySettingPage : ContentPage
 {
     public PropertyPanelBuilder rootPPB;
     string AdvanceConfigPageViewing = "";
+    string selectedTab = "UserPlugins";
 
     public ExtensibilitySettingPage()
     {
@@ -41,108 +45,10 @@ public partial class ExtensibilitySettingPage : ContentPage
             await BuildAdvancedConfig(AdvanceConfigPageViewing);
         }
         Title = Localized.MainSettingsPage_Tab_Extensibility;
-        rootPPB = new();
-        rootPPB
-            .AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_ManagePlugins, 20))
-            .AddButton("addButton", SettingLocalizedResources.Plugin_AddOne);
-
-        foreach (var item in PluginManager.LoadedPlugins)
-        {
-            var plugin = item.Value;
-            var name = plugin.ReadLocalizationItem("_PluginBase_Name_", Localized._LocaleId_) ?? plugin.Name;
-            var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", Localized._LocaleId_) ?? plugin.Description;
-            var author = plugin.ReadLocalizationItem("_PluginBase_Author_", Localized._LocaleId_) ?? plugin.Author;
-            rootPPB
-                .AddSeparator()
-                .AddText(new TitleAndDescriptionLineLabel(name, desc))
-                .AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailInfo(author, plugin.Version, plugin.PluginID), 12))
-                .AddButton($"MoreOption,{item.Key}", SettingLocalizedResources.Plugin_MoreOption);
-
-
-        }
-
-        var disabledPlugins = PluginService.GetDisabledPlugins();
-        if (PluginService.FailedLoadPlugin.Any() || disabledPlugins.Any())
-        {
-            rootPPB
-                .AddSeparator()
-                .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_FailLoad, SettingLocalizedResources.Plugin_FailLoad_Subtitle));
-
-            foreach (var disabledPlugin in disabledPlugins)
-            {
-                rootPPB
-                    .AddText(new TitleAndDescriptionLineLabel(disabledPlugin.Id, SettingLocalizedResources.Plugin_FailLoad_Disabled))
-                    .AddButton($"EnablePlugin,{disabledPlugin.Id}", SettingLocalizedResources.Plugin_Enable(disabledPlugin.Id));
-            }
-            foreach (var failedPlugin in PluginService.FailedLoadPlugin)
-            {
-                rootPPB
-                    .AddText(new TitleAndDescriptionLineLabel(failedPlugin.Key, SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(failedPlugin.Value)))
-                    .AddButton($"RemoveFailedPlugin,{failedPlugin.Key}", SettingLocalizedResources.Plugin_Remove);
-            }
-        }
-
-
-        rootPPB.AddSeparator().AddButton(SettingLocalizedResources.Plugin_ReloadAllButton, async (s, e) =>
-        {
-            try
-            {
-                PluginManager.ForceUnloadAll();
-            }
-            catch (Exception ex)
-            {
-                Log(ex, $"unload all");
-            }
-            try
-            {
-                var internalBase = new InternalApplicationPluginBase();
-                List<IPluginBase> plugins =
-                [
-                    internalBase,
-#if ANDROID
-                    new Render.HwAccelEngine.HwAccelEnginePlugin() { DefaultComputeBackend = SettingsManager.GetSetting("render_AndroidHWAccelType", "vulkan") },
-
-#elif WINDOWS
-                    new projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin(),
-#elif iDevices
-
-#endif
-                    ..MauiProgram.IntegratedPlugins,
-                    ..PluginService.LoadUserPlugins(),
-                ];
-
-
-                PluginManager.Init(plugins);
-                await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.Advanced_Success, Localized._OK);
-
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Load plugins", this);
-            }
-
-        })
-        .AddCheckbox("DisablePluginEngine", SettingLocalizedResources.Advanced_DisablePluginEngine, IsBoolSettingTrue("DisablePluginEngine"));
-
-        rootPPB
-            .AddSeparator()
-            .AddText(new SingleLineLabel(SettingLocalizedResources.ExternalRpc_Clients, 25));
-        var clients = ExternalRpcAuthorizationStore.Read(ExternalRpcAuthorizationStore.GetPath(Path.Combine(CLIProgram.AppDataPath, "RpcRequest")))
-            .Where(c => !c.Revoked).OrderBy(c => c.AppName).ToArray();
-        if (clients.Length == 0)
-            rootPPB.AddText(new SingleLineLabel(SettingLocalizedResources.ExternalRpc_NoClients, 14));
-        foreach (var client in clients)
-        {
-            rootPPB
-                .AddText(new TitleAndDescriptionLineLabel(client.AppName, $"{client.Author} ({client.ClientId})"))
-                .AddText($"{Localized.VideoCacheManagePage_LastAccessIn}{client.LastUsedAt?.ToLocalTime().ToString("g") ?? "-"}")
-                .AddButton($"ExternalRpcRevoke,{client.ClientId}", SettingLocalizedResources.ExternalRpc_Revoke);
-        }
-
-        var scv = rootPPB.AddSeparator().ListenToChanges((e) => SettingInvoker(e, this)).Build();
-        DropGestureRecognizer drop = new();
-        drop.AllowDrop = true;
-        drop.Drop += async (s, e) =>
+        rootPPB = BuildUserPlugins();
+        var userPlugins = rootPPB.ListenToChanges((e) => SettingInvoker(e, this)).Build();
+        var drop = new DropGestureRecognizer { AllowDrop = true };
+        drop.Drop += async (_, e) =>
         {
             Dispatcher.Dispatch(() =>
             {
@@ -150,14 +56,8 @@ public partial class ExtensibilitySettingPage : ContentPage
                 {
                     Children =
                     {
-                        new ActivityIndicator
-                        {
-                            IsRunning = true,
-                        },
-                        new Label
-                        {
-                            Text = Localized.LandingPage_Loading,
-                        }
+                        new ActivityIndicator { IsRunning = true },
+                        new Label { Text = Localized.LandingPage_Loading }
                     },
                     HorizontalOptions = LayoutOptions.Center,
                     VerticalOptions = LayoutOptions.Center
@@ -169,11 +69,143 @@ public partial class ExtensibilitySettingPage : ContentPage
             }
             BuildPPB();
         };
-        scv.GestureRecognizers.Add(drop);
-        Content = new ScrollView { Content = scv };
+        userPlugins.GestureRecognizers.Clear();
+        userPlugins.GestureRecognizers.Add(drop);
 
-
+        var tabs = new CompactTabView
+        {
+            TabItems = new ObservableCollection<TabbedViewItem>
+            {
+                new() { Header = SettingLocalizedResources.Plugin_ManagePlugins, Tag = "UserPlugins", Content = new ScrollView { Content = userPlugins } },
+                new() { Header = SettingLocalizedResources.Plugin_AIProviderPlugin, Tag = "AIProviders", LazyContentFactory = BuildAIProviders().BuildWithScrollView },
+                new() { Header = SettingLocalizedResources.ExternalRpc_Clients, Tag = "ExternalRpc", LazyContentFactory = BuildExternalRpcClients().ListenToChanges((e) => SettingInvoker(e, this)).BuildWithScrollView },
+                new() { Header = Localized.MainSettingsPage_Tab_Advanced, Tag = "Advanced", LazyContentFactory = BuildPluginAdvanced().ListenToChanges((e) => SettingInvoker(e, this)).BuildWithScrollView }
+            }
+        };
+        tabs.OnTabSwitched += (_, item) => selectedTab = item.Tag;
+        tabs.SelectByTag(selectedTab);
+        Content = tabs;
     }
+
+    private PropertyPanelBuilder BuildUserPlugins()
+    {
+        var ppb = new PropertyPanelBuilder();
+        foreach (var item in PluginManager.LoadedPlugins.Where(c => !IsInternalPlugin(c.Value)))
+        {
+            AddPlugin(ppb, item.Key, item.Value);
+        }
+
+        var disabledPlugins = PluginService.GetDisabledPlugins();
+        if (PluginService.FailedLoadPlugin.Any() || disabledPlugins.Any())
+        {
+            ppb.AddSeparator()
+                .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_FailLoad, SettingLocalizedResources.Plugin_FailLoad_Subtitle));
+            foreach (var plugin in disabledPlugins)
+            {
+                ppb.AddText(new TitleAndDescriptionLineLabel(plugin.Id, SettingLocalizedResources.Plugin_FailLoad_Disabled))
+                    .AddButton($"EnablePlugin,{plugin.Id}", SettingLocalizedResources.Plugin_Enable(plugin.Id));
+            }
+            foreach (var plugin in PluginService.FailedLoadPlugin)
+            {
+                ppb.AddText(new TitleAndDescriptionLineLabel(plugin.Key, SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(plugin.Value)))
+                    .AddButton($"RemoveFailedPlugin,{plugin.Key}", SettingLocalizedResources.Plugin_Remove);
+            }
+        }
+        return ppb.AddButton("addButton", SettingLocalizedResources.Plugin_AddOne);
+    }
+
+    private PropertyPanelBuilder BuildPluginAdvanced()
+    {
+        var ppb = new PropertyPanelBuilder();
+        ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_InternalPlugins, 20));
+        foreach (var item in PluginManager.LoadedPlugins.Where(c => IsInternalPlugin(c.Value)))
+        {
+            AddPlugin(ppb, item.Key, item.Value);
+        }
+        ppb.AddSeparator()
+            .AddText(new SingleLineLabel(Localized.MainSettingsPage_Tab_Advanced, 20))
+            .AddButton(SettingLocalizedResources.Plugin_ReloadAllButton, async (_, _) =>
+            {
+                try
+                {
+                    PluginManager.ForceUnloadAll();
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "unload all");
+                }
+                try
+                {
+                    List<IPluginBase> plugins =
+                    [
+                        new InternalApplicationPluginBase(),
+                        new Render.HwAccelEngine.HwAccelEnginePlugin()
+                        {
+#if ANDROID
+                            DefaultComputeBackend = GetSetting("render_AndroidHWAccelType", "vulkan")
+#endif
+                        },
+                        ..MauiProgram.IntegratedPlugins,
+                        ..PluginService.LoadUserPlugins(),
+                    ];
+                    PluginManager.Init(plugins);
+                    await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.Advanced_Success, Localized._OK);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Load plugins", this);
+                }
+            })
+            .AddCheckbox("DisablePluginEngine", SettingLocalizedResources.Advanced_DisablePluginEngine, IsBoolSettingTrue("DisablePluginEngine"));
+
+        return ppb;
+    }
+
+    private static PropertyPanelBuilder BuildAIProviders()
+    {
+        var ppb = new PropertyPanelBuilder();
+        var providers = AIProviderService.Current?.Registry.Providers.Values;
+        if (providers is null) return ppb;
+        foreach (var item in providers.OrderBy(c => c.Provider.Descriptor.DisplayName))
+        {
+            var provider = item.Provider.Descriptor;
+            ppb.AddSeparator()
+                .AddText(new TitleAndDescriptionLineLabel(provider.DisplayName, provider.Description))
+                .AddText(new SingleLineLabel($"{item.Key}{Environment.NewLine}{provider.Capabilities}", 12));
+        }
+        return ppb;
+    }
+
+    private static PropertyPanelBuilder BuildExternalRpcClients()
+    {
+        var ppb = new PropertyPanelBuilder()；
+        var clients = ExternalRpcAuthorizationStore.Read(ExternalRpcAuthorizationStore.GetPath(Path.Combine(CLIProgram.AppDataPath, "RpcRequest")))
+            .Where(c => !c.Revoked).OrderBy(c => c.AppName).ToArray();
+        if (clients.Length == 0)
+            ppb.AddText(new SingleLineLabel(SettingLocalizedResources.ExternalRpc_NoClients, 14));
+        foreach (var client in clients)
+        {
+            ppb.AddSeparator()
+                .AddText(new TitleAndDescriptionLineLabel(client.AppName, $"{client.Author} ({client.ClientId})"))
+                .AddText($"{Localized.VideoCacheManagePage_LastAccessIn}{client.LastUsedAt?.ToLocalTime().ToString("g") ?? "-"}")
+                .AddButton($"ExternalRpcRevoke,{client.ClientId}", SettingLocalizedResources.ExternalRpc_Revoke);
+        }
+        return ppb;
+    }
+
+    private static void AddPlugin(PropertyPanelBuilder ppb, string id, IPluginBase plugin)
+    {
+        var name = plugin.ReadLocalizationItem("_PluginBase_Name_", Localized._LocaleId_) ?? plugin.Name;
+        var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", Localized._LocaleId_) ?? plugin.Description;
+        var author = plugin.ReadLocalizationItem("_PluginBase_Author_", Localized._LocaleId_) ?? plugin.Author;
+        ppb.AddSeparator()
+            .AddText(new TitleAndDescriptionLineLabel(name, desc))
+            .AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailInfo(author, plugin.Version, plugin.PluginID), 12))
+            .AddButton($"MoreOption,{id}", SettingLocalizedResources.Plugin_MoreOption);
+    }
+
+    private static bool IsInternalPlugin(IPluginBase plugin) =>
+        plugin.Properties.TryGetValue("IsInternalPlugin", out var value) && bool.TryParse(value, out var result) && result;
 
     private async Task BuildAdvancedConfig(string id)
     {
@@ -248,7 +280,7 @@ public partial class ExtensibilitySettingPage : ContentPage
         ppb.AddSeparator()
            .AddText(new SingleLineLabel(Localized.HomePage_ProjectContextMenu(name), 20, FontAttributes.None))
            .AddButton($"ViewProvided,{id}", SettingLocalizedResources.Plugin_ViewWhatProvided(plugin.Name));
-        if (plugin.Properties.TryGetValue("IsInternalPlugin", out var isInternal) && bool.TryParse(isInternal, out var result) && result)
+        if (IsInternalPlugin(plugin))
         {
             ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_CannotRemoveInternalPlugin, 14, default, Colors.Grey));
         }

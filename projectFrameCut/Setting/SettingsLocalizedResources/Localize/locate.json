@@ -749,6 +749,22 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_BetterAccessibility",
+        "Value": "\u63D0\u9AD8\u65E0\u969C\u788D\u529F\u80FD\u7684\u517C\u5BB9\u6027",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_BetterAccessibility_Warn",
+        "Value": "\u6B64\u529F\u80FD\u4F1A\u5BFC\u81F4\u4E00\u90E8\u5206\u5FEB\u6377\u952E\u3001\u6309\u94AE\u548C\u89C6\u56FE\u7684\u884C\u4E3A\u53D1\u751F\u53D8\u5316\uFF0C\u4F60\u786E\u8BA4\u8981\u542F\u7528\u5417\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DefaultInfLengthClipLength",
         "Value": "\u65E0\u9650\u957F\u5EA6\u7247\u6BB5\u7684\u9ED8\u8BA4\u957F\u5EA6 (\u5E27)",
         "Mode": "ConstString",
@@ -2047,7 +2063,7 @@
       },
       {
         "Id": "Plugin_ManagePlugins",
-        "Value": "\u7BA1\u7406\u63D2\u4EF6",
+        "Value": "\u7528\u6237\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2990,16 +3006,16 @@
         "DontTranslate": false
       },
       {
-        "Id": "Edit_BetterAccessibility",
-        "Value": "\u63D0\u9AD8\u65E0\u969C\u788D\u529F\u80FD\u7684\u517C\u5BB9\u6027",
+        "Id": "Plugin_InternalPlugins",
+        "Value": "\u5185\u5EFA\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       },
       {
-        "Id": "Edit_BetterAccessibility_Warn",
-        "Value": "\u6B64\u529F\u80FD\u4F1A\u5BFC\u81F4\u4E00\u90E8\u5206\u5FEB\u6377\u952E\u3001\u6309\u94AE\u548C\u89C6\u56FE\u7684\u884C\u4E3A\u53D1\u751F\u53D8\u5316\uFF0C\u4F60\u786E\u8BA4\u8981\u542F\u7528\u5417\uFF1F",
+        "Id": "Plugin_AIProviderPlugin",
+        "Value": "AI\u670D\u52A1\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

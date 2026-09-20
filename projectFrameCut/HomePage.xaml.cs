@@ -1180,8 +1180,33 @@ public partial class HomePage : ContentPage
             project.SnapshotIDMapping = ProjectJSONStructure.RebuildSnapshotMappingFromSlots(draftSourcePath, DraftPage.DraftJSONOption);
         }
 
+#if WINDOWS
+        bool currentProjectLinkCreated = false;
+        void ClearCurrentProjectLink()
+        {
+            if (!currentProjectLinkCreated) return;
+            try { WindowsPluginIsolationPlatform.ClearCurrentProjectLink(draftSourcePath); }
+            catch (Exception ex) { Log(ex, "remove current project directory link", this); }
+        }
+        if (WinUI.App.IsPackaged())
+        {
+            try
+            {
+                await Task.Run(() => WindowsPluginIsolationPlatform.PrepareCurrentProjectAccess(draftSourcePath));
+                currentProjectLinkCreated = true;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "prepare current project access for AppContainer plugins", this);
+            }
+        }
+#endif
+
         if (!await LoadProjectPluginsForProjectAsync(draftSourcePath, project))
         {
+#if WINDOWS
+            ClearCurrentProjectLink();
+#endif
             await Dispatcher.DispatchAsync(async () => Content = origContent);
             return;
         }
@@ -1189,6 +1214,9 @@ public partial class HomePage : ContentPage
         if (!await CheckProjectVersionCompatibility(project))
         {
             await ProjectPluginService.UnloadProjectPluginsAsync();
+#if WINDOWS
+            ClearCurrentProjectLink();
+#endif
             await Dispatcher.DispatchAsync(async () => Content = origContent);
             return;
         }
@@ -1545,6 +1573,9 @@ public partial class HomePage : ContentPage
                 Log(ex4, $"Load project {project?.ProjectName}", this);
                 if (throwOnException)
                 {
+#if WINDOWS
+                    ClearCurrentProjectLink();
+#endif
                     throw;
                 }
                 await Dispatcher.DispatchAsync(async () =>
@@ -1636,6 +1667,9 @@ public partial class HomePage : ContentPage
                 Content = origContent;
             });
             await ProjectPluginService.UnloadProjectPluginsAsync();
+#if WINDOWS
+            ClearCurrentProjectLink();
+#endif
         }
     }
 

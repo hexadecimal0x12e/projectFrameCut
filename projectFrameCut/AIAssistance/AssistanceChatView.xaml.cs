@@ -6,7 +6,6 @@ using CommunityToolkit.Maui.Views;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls.Shapes;
-using OpenAI;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Workspace;
 using projectFrameCut.ApplicationAPIBase.Workspace.Modules;
@@ -24,7 +23,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
-using OpenAIChatClient = OpenAI.Chat.ChatClient;
 using Path = System.IO.Path;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Base;
@@ -3746,30 +3744,10 @@ public partial class AssistanceChatView : ContentView
 
     public static IChatClient? CreateChatClient()
     {
-        string apiKey = AIHelper.CurrentOption.Key;
-        string model = AIHelper.CurrentOption.Model;
-        string endpoint = AIHelper.CurrentOption.BaseAddress;
-        if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(model) || string.IsNullOrEmpty(endpoint))
-        {
-            return null;
-        }
-
-        OpenAIChatClient chatClient;
-        if (Uri.TryCreate(endpoint, UriKind.Absolute, out var endpointUri))
-        {
-            var options = new OpenAIClientOptions
-            {
-                Endpoint = endpointUri,
-
-            };
-            chatClient = new OpenAIChatClient(model, new System.ClientModel.ApiKeyCredential(apiKey), options);
-        }
-        else
-        {
-            chatClient = new OpenAIChatClient(model, apiKey);
-        }
-
-        return chatClient.AsIChatClient()
+        if (AIProviderService.Current is not { } service) return null;
+        try { service.Resolve(AISelectionKeys.Chat); }
+        catch { return null; }
+        return new AIProviderChatClient(service)
             .AsBuilder()
             .UseFunctionInvocation(AILoggerFactory, invoker =>
             {

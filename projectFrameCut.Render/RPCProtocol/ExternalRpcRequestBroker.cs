@@ -8,7 +8,7 @@ namespace projectFrameCut.Render.RPCProtocol;
 internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
 {
     private readonly string _directory;
-    private readonly string _authorizationPath;
+    private IReadOnlyDictionary<Guid, ExternalRpcClientAuthorization> _authorizations;
     private readonly CancellationTokenSource _lifetime;
     private readonly SemaphoreSlim _gate = new(1);
     private readonly Task _poll;
@@ -17,14 +17,17 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
     private Guid _claim;
     private DateTimeOffset _frontendUntil;
 
-    public ExternalRpcRequestBroker(string directory, CancellationToken ct)
+    public ExternalRpcRequestBroker(string directory, IReadOnlyList<ExternalRpcClientAuthorization> authorizations, CancellationToken ct)
     {
         _directory = Path.GetFullPath(directory);
-        _authorizationPath = ExternalRpcAuthorizationStore.GetPath(_directory);
+        _authorizations = CreateAuthorizationMap(authorizations);
         _lifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
         Directory.CreateDirectory(_directory);
         _poll = PollAsync();
     }
+
+    public void SetAuthorizations(IReadOnlyList<ExternalRpcClientAuthorization> authorizations) =>
+        Volatile.Write(ref _authorizations, CreateAuthorizationMap(authorizations));
 
     public async Task<PendingExternalRpcRequest> GetAsync(CancellationToken ct)
     {
@@ -102,8 +105,9 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
             ExternalRpcClientAuthorization? authorization = null;
             if (_request.IsPersistent)
             {
-                authorization = ExternalRpcAuthorizationStore.Find(_authorizationPath, _request.ClientId)
-                    ?? throw new UnauthorizedAccessException("Persistent RPC client is not authorized.");
+                _authorizations.TryGetValue(_request.ClientId, out authorization);
+                if (authorization is null)
+                    throw new UnauthorizedAccessException("Persistent RPC client is not authorized.");
                 if (authorization.Revoked || authorization.PublicKey != _request.PublicKey)
                     throw new UnauthorizedAccessException("Persistent RPC client is not authorized.");
                 if (!_request.VerifySignature()) throw new UnauthorizedAccessException("Persistent RPC request signature is invalid.");
@@ -132,7 +136,7 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
                 Log($"Started persistent external RPC client {authorization.ClientId} for service '{_request.ServiceId}'.");
             }
             WriteResult("approved");
-            if (authorization is not null) ExternalRpcAuthorizationStore.MarkUsed(_authorizationPath, authorization.ClientId);
+            if (authorization is not null) authorization.LastUsedAt = DateTimeOffset.UtcNow;
         }
         catch
         {
@@ -179,4 +183,7 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
         finally { _gate.Release(); }
         _lifetime.Dispose();
     }
+
+    private static IReadOnlyDictionary<Guid, ExternalRpcClientAuthorization> CreateAuthorizationMap(IReadOnlyList<ExternalRpcClientAuthorization> authorizations) =>
+        authorizations.ToDictionary(item => item.ClientId, item => item);
 }

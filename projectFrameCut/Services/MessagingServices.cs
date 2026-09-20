@@ -28,7 +28,36 @@ namespace projectFrameCut.Services
             if (inited) return;
             inited = true;
             messaging = new GeneralMessagingService();
-            messaging.RegisterCallBack(ProgramCallerID, "GetSetting", InternalCallBack_GetSetting);
+            messaging.RegisterCallBack(ProgramCallerID, new PluginCommandDescriptor
+            {
+                Command = "GetSetting",
+                Description = "Gets an application setting by key.",
+                Parameters =
+                [
+                    new()
+                    {
+                        Name = "key",
+                        Type = "string",
+                        Description = "The setting key.",
+                        Required = true,
+                    },
+                ],
+            }, InternalCallBack_GetSetting);
+            messaging.RegisterCallBack(ProgramCallerID, new PluginCommandDescriptor
+            {
+                Command = "GetOneTimeProjectRPCToken",
+                Description = "Gets an one-time RPC token for connecting to backend, allow project modifications, scripting and automation.",
+                Parameters =
+                [
+                    new()
+                    {
+                        Name = "purpose",
+                        Type = "string",
+                        Description = "The purpose of the token.",
+                        Required = true,
+                    },
+                ],
+            }, InternalCallBack_GetRPCToken);
         }
 
         private static object? InternalCallBack_GetSetting(object[] arg)
@@ -38,6 +67,10 @@ namespace projectFrameCut.Services
                 return null;
             }
             return SettingsManager.GetSetting(key);
+        }
+        private static object? InternalCallBack_GetRPCToken(object[] arg)
+        {
+            return "TODO";
         }
     }
 }

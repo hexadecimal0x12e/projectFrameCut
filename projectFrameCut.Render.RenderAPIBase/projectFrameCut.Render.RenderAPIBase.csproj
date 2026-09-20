@@ -20,6 +20,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\projectFrameCut.AIContracts\projectFrameCut.AIContracts.csproj" />
     <ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
   </ItemGroup>
 

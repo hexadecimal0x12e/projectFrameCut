@@ -22,6 +22,7 @@ using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Render.TemplateSystem;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
@@ -68,6 +69,7 @@ namespace projectFrameCut
     public static class MauiProgram
     {
         internal static IReadOnlyList<IPluginBase> IntegratedPlugins { get; private set; } = [];
+
         public static StreamWriter LogWriter;
 
         public static string LogPath { get; private set; }
@@ -399,7 +401,11 @@ namespace projectFrameCut
                 SettingsManager.WriteSetting("_SettingFailLoad", "True");
                 SettingsManager.WriteSetting("_SettingFailLoadMsg", $"An unhandled {ex.GetType().Name} exception: {ex.Message}");
 
-
+                try
+                {
+                    Directory.Delete(Path.Combine(BasicDataPath, "RpcRequest"), true);
+                }
+                catch { }
             }
             var locate = SettingsManager.GetSetting("locate", "default");
 #if !ANDROID
@@ -761,6 +767,21 @@ namespace projectFrameCut
             }
         }
 
+        public static void InitializeExternalRpcAuthorizationStore()
+        {
+            var keyText = TaskHelper.SyncWait(
+                () => SecureStorage.Default.GetAsync("external_rpc_authorization_key"),
+                CancellationToken.None);
+            if (string.IsNullOrWhiteSpace(keyText))
+            {
+                keyText = FileCryptoService.GenerateBase64Key();
+                TaskHelper.SyncWait(
+                    async () => { await SecureStorage.Default.SetAsync("external_rpc_authorization_key", keyText); return 1; },
+                    CancellationToken.None);
+            }
+            ExternalRpcAuthorizationStore.SetEncryptionKey(Convert.FromBase64String(keyText));
+        }
+
         [ModuleInitializerAttribute]
         public static void LoadModuleConfig()
         {
@@ -1078,6 +1099,21 @@ namespace projectFrameCut
 
             try
             {
+                var aiRegistry = new AIProviderRegistry();
+                aiRegistry.Rebuild(BuiltInAIProviders.CreateRegistrations());
+                var aiProfiles = Task.Run(() => AIProfileStore.LoadAsync(BasicDataPath, new MauiAISecretStore())).GetAwaiter().GetResult();
+                AIProviderService.Initialize(aiRegistry, aiProfiles);
+            }
+            catch (Exception ex)
+            {
+                Log($"AI profile initialization failed with {ex.GetType().FullName}.", "error");
+                var aiRegistry = new AIProviderRegistry();
+                aiRegistry.Rebuild(BuiltInAIProviders.CreateRegistrations());
+                AIProviderService.Initialize(aiRegistry, AIProfileStore.CreateEmpty(BasicDataPath, new MauiAISecretStore(), ex));
+            }
+
+            try
+            {
 
                 if (!File.Exists(Path.Combine(DataPath, "My Assets", "@WARNING.txt")))
                 {
@@ -1178,28 +1214,6 @@ namespace projectFrameCut
                 }
             }
             catch { }
-
-            try
-            {
-
-                if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_text.json")))
-                {
-                    AIHelper.CurrentOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_text.json"))) ?? new AIOption { Provider = "OpenAI" };
-                }
-                if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_image.json")))
-                {
-                    AIHelper.CurrentImageOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_image.json"))) ?? new AIOption { Provider = "OpenAI" };
-                }
-                if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json")))
-                {
-                    AIHelper.CurrentVideoOption = JsonSerializer.Deserialize<VideoGenAIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json"))) ?? new VideoGenAIOption { Provider = "OpenAI" };
-                }
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Init AI Config", CreateMauiApp);
-            }
-
 
             try
             {

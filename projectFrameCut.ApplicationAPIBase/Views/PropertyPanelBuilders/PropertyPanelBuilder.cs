@@ -24,7 +24,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
     public class PropertyPanelBuilder
     {
         /// <summary>
-        /// Set the default width of the <see cref="WidthOfContent"/>.
+        /// Set the global default width of the <see cref="WidthOfContent"/>.
         /// </summary>
         public static double DefaultWidthOfContent = 5;
 
@@ -1133,7 +1133,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
                         Properties[kvp.Key] = kvp.Value;
                         if (firePropertyChanged)
                         {
-                            _InvokeInternal(new pppcea(kvp.Key, kvp.Value, old));
+                            InvokeInternal(new pppcea(kvp.Key, kvp.Value, old));
                         }
                     }
                 }
@@ -1142,7 +1142,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
                     Properties.Add(kvp.Key, kvp.Value);
                     if (firePropertyChanged)
                     {
-                        _InvokeInternal(new pppcea(kvp.Key, kvp.Value, null));
+                        InvokeInternal(new pppcea(kvp.Key, kvp.Value, null));
                     }
                 }
             }
@@ -1152,7 +1152,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
                 var old = Properties.Remove(item);
                 if (firePropertyChanged)
                 {
-                    _InvokeInternal(new pppcea(item, null, old));
+                    InvokeInternal(new pppcea(item, null, old));
                 }
             }
 
@@ -1193,18 +1193,37 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             return layout;
         }
 
-        public ScrollView BuildWithScrollView(Action<ScrollView>? Configurer = null)
+        /// <summary>
+        /// Build the property panel and wrap it in a <seealso cref="ScrollView"/> for scrolling.
+        /// </summary>
+        /// <returns></returns>
+        public ScrollView BuildWithScrollView()
         {
             var scrollView = new ScrollView
             {
                 Content = Build(),
                 BindingContext = this
             };
-            Configurer?.Invoke(scrollView);
             return scrollView;
         }
 
-        internal void _InvokeInternal(pppcea e)
+        /// <summary>
+        /// Build the property panel and wrap it in a <seealso cref="ScrollView"/> for scrolling, with an optional configuration action for the <seealso cref="ScrollView"/>.
+        /// </summary>
+        /// <param name="Configurer"></param>
+        /// <returns></returns>
+        public ScrollView BuildWithScrollView(Action<ScrollView>? Configure = null)
+        {
+            var scrollView = new ScrollView
+            {
+                Content = Build(),
+                BindingContext = this
+            };
+            Configure?.Invoke(scrollView);
+            return scrollView;
+        }
+
+        internal void InvokeInternal(pppcea e)
         {
             PropertyChanged?.Invoke(this, e);
         }
@@ -1319,7 +1338,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         public static void CreateAndInvoke(PropertyPanelBuilder b, string id, object value)
         {
             var e = new pppcea(id, value, b.Properties.TryGetValue(id, out var val) ? val : null);
-            b._InvokeInternal(e);
+            b.InvokeInternal(e);
             b.Properties[id] = value;
         }
         /// <summary>
@@ -1333,7 +1352,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         /// <param name="e">The <see cref="pppcea"/> message body.</param>
         public static void CreateAndInvoke(PropertyPanelBuilder s, pppcea e)
         {
-            s._InvokeInternal(e);
+            s.InvokeInternal(e);
             s.Properties[e.Id] = e.Value;
         }
 

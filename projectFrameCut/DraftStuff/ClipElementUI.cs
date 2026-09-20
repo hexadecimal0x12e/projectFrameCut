@@ -627,6 +627,12 @@ namespace projectFrameCut.DraftStuff
             return palette[Random.Shared.Next(palette.Length)];
         }
 
+        internal static Color GetPaletteColor(int index)
+        {
+            var palette = GetPalette();
+            return palette[index % palette.Length] is SolidColorBrush brush ? brush.Color : Colors.Gray;
+        }
+
     }
 
 }

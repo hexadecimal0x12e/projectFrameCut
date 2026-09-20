@@ -3,6 +3,7 @@ using projectFrameCut.Render.PluginIsolation;
 using projectFrameCut.Shared;
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Runtime.Versioning;
 
 namespace projectFrameCut.Services;
 
@@ -11,10 +12,13 @@ internal sealed class ExternalPluginBackendPlatform(ExternalPluginBackendLaunchO
     internal static string InstanceName => $"external-{Environment.ProcessId}";
     internal static string SessionDirectory => Path.Combine(MauiProgram.CachePath, "plugin-external-backend");
 
+    [UnsupportedOSPlatform("ios")]
+    [UnsupportedOSPlatform("maccatalyst")]
+    [UnsupportedOSPlatform("android")]
     public async ValueTask<IPluginIsolationSession> StartAsync(PluginIsolationLaunchContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if(!OperatingSystem.IsWindows() || !OperatingSystem.IsLinux() || !OperatingSystem.IsMacOS())
+        if (!(OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()))
             throw new PlatformNotSupportedException("External plugin backends are only supported on Windows, Linux, and macOS.");
         if (context.Transport.ControlMode is not (IsolationControlMode.Auto or IsolationControlMode.NamedPipe))
             throw new NotSupportedException($"External plugin backends do not support control mode '{context.Transport.ControlMode}'.");

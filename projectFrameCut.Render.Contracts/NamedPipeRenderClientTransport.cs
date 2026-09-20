@@ -9,6 +9,7 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
     private readonly string _pipeName;
     private readonly string _token;
     private readonly string _clientId;
+    private readonly IReadOnlyList<ExternalRpcClientAuthorization> _persistentAuthorizations;
     private readonly SemaphoreSlim _connectGate = new(1, 1);
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private readonly ConcurrentDictionary<Guid, TaskCompletionSource<RenderResponseEnvelope>> _pending = new();
@@ -21,7 +22,7 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
 
     public IRenderService? CallbackService { get; set; }
 
-    public NamedPipeRenderClientTransport(string pipeName, string token, string clientId)
+    public NamedPipeRenderClientTransport(string pipeName, string token, string clientId, IReadOnlyList<ExternalRpcClientAuthorization>? persistentAuthorizations = null)
     {
         if (string.IsNullOrWhiteSpace(pipeName)) throw new ArgumentException("Pipe name is required.", nameof(pipeName));
         if (string.IsNullOrWhiteSpace(token)) throw new ArgumentException("Pipe token is required.", nameof(token));
@@ -29,6 +30,7 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
         _pipeName = pipeName;
         _token = token;
         _clientId = clientId;
+        _persistentAuthorizations = persistentAuthorizations ?? [];
     }
 
     public NamedPipeRenderClientTransport(string pipeName, string clientId)
@@ -97,7 +99,12 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
                 using var connectTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 connectTimeout.CancelAfter(TimeSpan.FromSeconds(2));
                 await pipe.ConnectAsync(connectTimeout.Token).ConfigureAwait(false);
-                var handshake = new RenderPipeHandshake { ClientId = _clientId, Token = _token };
+                var handshake = new RenderPipeHandshake
+                {
+                    ClientId = _clientId,
+                    Token = _token,
+                    PersistentAuthorizations = _persistentAuthorizations.ToList(),
+                };
                 await RenderPipeFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(handshake), cancellationToken).ConfigureAwait(false);
                 var responseBytes = await RenderPipeFrame.ReadAsync(pipe, cancellationToken).ConfigureAwait(false)
                     ?? throw new RenderPipeException("Render server closed the pipe during handshake.");

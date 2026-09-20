@@ -16,6 +16,8 @@ namespace projectFrameCut.Platforms.Windows;
 
 internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationPlatform
 {
+    private static readonly object CurrentProjectLinkLock = new();
+
     internal static string PackageFamilyName
     {
         get
@@ -28,8 +30,54 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         }
     }
 
-    internal static string SessionDirectory => Path.Combine(ApplicationData.Current.LocalFolder.Path, "plugin-isolation");
-    internal static string ProjectPluginDirectory => Path.Combine(ApplicationData.Current.LocalFolder.Path, "project-plugins");
+    internal static string SessionDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "plugin-isolation");
+    internal static string ProjectPluginDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "project-plugins");
+
+    internal static void PrepareCurrentProjectAccess(string projectRoot)
+    {
+        var fullProjectRoot = Path.GetFullPath(projectRoot);
+        if (!Directory.Exists(fullProjectRoot)) throw new DirectoryNotFoundException(fullProjectRoot);
+
+        var appContainerSid = DeriveAppContainerSid(PackageFamilyName);
+        var directory = new DirectoryInfo(fullProjectRoot);
+        var security = directory.GetAccessControl();
+        security.SetAccessRule(new FileSystemAccessRule(
+            appContainerSid,
+            FileSystemRights.Modify | FileSystemRights.ReadAndExecute,
+            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+            PropagationFlags.None,
+            AccessControlType.Allow));
+        directory.SetAccessControl(security);
+
+        lock (CurrentProjectLinkLock)
+        {
+            var linkPath = Path.Combine(ApplicationData.Current.LocalFolder.Path, "CurrentProject");
+            var link = new DirectoryInfo(linkPath);
+            if (link.LinkTarget is not null)
+            {
+                link.Delete();
+            }
+            else if (link.Exists || File.Exists(linkPath))
+            {
+                throw new IOException($"'{linkPath}' already exists and is not a directory link.");
+            }
+
+            Directory.CreateSymbolicLink(linkPath, fullProjectRoot);
+        }
+    }
+
+    internal static void ClearCurrentProjectLink(string projectRoot)
+    {
+        var fullProjectRoot = Path.GetFullPath(projectRoot);
+        lock (CurrentProjectLinkLock)
+        {
+            var link = new DirectoryInfo(Path.Combine(ApplicationData.Current.LocalFolder.Path, "CurrentProject"));
+            var linkTarget = link.LinkTarget;
+            if (linkTarget is null || !string.Equals(Path.GetFullPath(linkTarget, link.Parent!.FullName), fullProjectRoot, StringComparison.OrdinalIgnoreCase)) return;
+            link.Delete();
+            projectFrameCut.Shared.Logger.Log($"Removed the current project directory link for '{fullProjectRoot}'.");
+        }
+    }
 
     public static bool IsInAppContainer()
     {
@@ -254,7 +302,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         try
         {
             var result = new SecurityIdentifier(sid);
-            projectFrameCut.Shared.Logger.Log($"Derived AppContainer SID '{result.Value}' for '{packageFamilyName}'.");
+            projectFrameCut.Shared.Logger.LogDiagnostic($"Derived AppContainer SID '{result.Value}' for '{packageFamilyName}'.");
             return result;
         }
         finally { NativeMethods.FreeSid(sid); }
@@ -277,7 +325,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
                     continue;
                 // Copy the SID before freeing the enumeration buffer that owns it.
                 var sid = new SecurityIdentifier(container.Sid);
-                projectFrameCut.Shared.Logger.Log($"Found registered AppContainer SID '{sid.Value}' for '{packageFamilyName}'.");
+                projectFrameCut.Shared.Logger.LogDiagnostic($"Found registered AppContainer SID '{sid.Value}' for '{packageFamilyName}'.");
                 return sid;
             }
             throw new InvalidOperationException($"No registered AppContainer SID was found for '{packageFamilyName}' among {count} containers.");

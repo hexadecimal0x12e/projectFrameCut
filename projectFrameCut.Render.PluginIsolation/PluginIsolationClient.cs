@@ -37,6 +37,15 @@ public sealed class PluginIsolationClient : IAsyncDisposable
         }));
     }
 
+    public IReadOnlyDictionary<string, Func<projectFrameCut.AIContracts.IAIProvider>> CreateAIProviders()
+    {
+        var plugin = _plugin ?? throw new InvalidOperationException("The remote plugin has not been loaded.");
+        return plugin.AIProviders.ToDictionary(
+            x => x.ProviderId,
+            x => (Func<projectFrameCut.AIContracts.IAIProvider>)(() => new RemoteAIProvider(_session, x)),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
     public Dictionary<string, IVideoSource> CreateVideoSources()
     {
         var plugin = _plugin ?? throw new InvalidOperationException("The remote plugin has not been loaded.");

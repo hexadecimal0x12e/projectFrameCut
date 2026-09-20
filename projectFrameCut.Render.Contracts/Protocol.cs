@@ -22,6 +22,7 @@ public sealed class RenderPipeHandshake
     [ProtoMember(4)] public bool Accepted { get; set; }
     [ProtoMember(5)] public string Error { get; set; } = string.Empty;
     [ProtoMember(6)] public RenderCapabilities? Capabilities { get; set; }
+    [ProtoMember(7)] public List<ExternalRpcClientAuthorization> PersistentAuthorizations { get; set; } = [];
 }
 
 [ProtoContract]
@@ -134,6 +135,12 @@ public enum RenderOperation
     [ProtoEnum] IsolationMapSpeedLength = 2048,
     [ProtoEnum] IsolationGetClipPosition = 2049,
     [ProtoEnum] IsolationGetEffectValue = 2050,
+    [ProtoEnum] IsolationAIValidateConfiguration = 2051,
+    [ProtoEnum] IsolationAIListModels = 2052,
+    [ProtoEnum] IsolationAIBeginOperation = 2053,
+    [ProtoEnum] IsolationAIPollOperation = 2054,
+    [ProtoEnum] IsolationAICancelOperation = 2055,
+    [ProtoEnum] IsolationAIReleaseOperation = 2056,
 }
 
 [ProtoContract]

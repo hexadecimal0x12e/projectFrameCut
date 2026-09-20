@@ -98,23 +98,23 @@ namespace projectFrameCut.Services
                 };
                 border.GestureRecognizers.Add(rightTap);
             }
-#elif ANDROID || IOS               
-            var pointerGesture = new PointerGestureRecognizer();
-            DateTime pointerDownTime = DateTime.MinValue;
-            pointerGesture.PointerPressed += (_, __) => pointerDownTime = DateTime.Now;
-            pointerGesture.PointerReleased += async (_, __) =>
+#elif ANDROID || IOS
+            if (OnClicked is not null)
             {
-                var duration = (DateTime.Now - pointerDownTime).TotalMilliseconds;
-                if (duration >= ContextMenuMinTime)
+                var tapGesture = new TapGestureRecognizer { NumberOfTapsRequired = 1 };
+                tapGesture.Tapped += (_, __) => OnClicked();
+                border.GestureRecognizers.Add(tapGesture);
+            }
+
+            if (OnContextMenuClick is not null)
+            {
+                var longPressGesture = new LongPressGestureRecognizer
                 {
-                    OnContextMenuClick?.Invoke(); 
-                }
-                else
-                {
-                    OnClicked?.Invoke();    
-                }
-            };
-            border.GestureRecognizers.Add(pointerGesture);
+                    MinimumPressDuration = ContextMenuMinTime
+                };
+                longPressGesture.LongPressed += (_, __) => OnContextMenuClick();
+                border.GestureRecognizers.Add(longPressGesture);
+            }
 #endif
         }
 
