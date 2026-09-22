@@ -13,6 +13,7 @@ using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.LivePreview;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -172,6 +173,18 @@ public sealed class DynamicPreview : IDisposable
         var canvasHeight = Math.Max(1, (int)Math.Round(projectHeight * scale, MidpointRounding.AwayFromZero));
 
         return (canvasWidth, canvasHeight);
+    }
+
+    public uint ResolvePlaybackFrame(PreviewAudioClock clock, double frameRate, uint fallbackFrame, ref double correctedFrame)
+    {
+        var target = clock.HasAudio && clock.SampleRate > 0
+            ? clock.StartFrame + clock.PlayedSamples * Math.Max(1d, frameRate) / clock.SampleRate
+            : fallbackFrame;
+        if (correctedFrame < 0 || Math.Abs(target - correctedFrame) > 2d)
+            correctedFrame = target;
+        else
+            correctedFrame += Math.Clamp(target - correctedFrame, -0.5d, 0.5d);
+        return (uint)Math.Max(0, Math.Floor(correctedFrame));
     }
 
     public async Task<IReadOnlyList<PreparedPreview>> GetFinalRequests(uint frameIndex, int projectWidth, int projectHeight, long prepareVersion, int canvasWidth, int canvasHeight, CancellationToken token, bool applyClipTargetLayout = true)

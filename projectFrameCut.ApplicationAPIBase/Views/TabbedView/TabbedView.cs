@@ -11,6 +11,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
     public partial class TabbedView : ContentView
     {
         private readonly Dictionary<TabbedViewItem, View?> _pendingTabContents = new();
+        private Grid _contentHost;
+        private View? _displayingContent;
 
         public HorizontalStackLayout HeadersPanel { get; private set; }
         public ContentView ContentPresenter { get; private set; }
@@ -18,7 +20,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
 
         public event EventHandler<TabbedViewItem>? OnTabSwitched;
 
-        public View DisplayingContent => ContentPresenter.Content;
+        public View? DisplayingContent => _displayingContent;
 
         public TabbedView()
         {
@@ -79,7 +81,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             };
             Grid.SetRow(headersBorder, 0);
 
-            ContentPresenter = new ContentView();
+            _contentHost = new Grid();
+            ContentPresenter = new ContentView
+            {
+                Content = _contentHost
+            };
 
             var contentBorder = new Border
             {
@@ -190,6 +196,36 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             RebuildHeaders();
         }
 
+        private void AddContentToHost(View content)
+        {
+            if (!_contentHost.Children.Contains(content))
+            {
+                content.IsVisible = false;
+                _contentHost.Children.Add(content);
+            }
+        }
+
+        private void ShowContent(TabbedViewItem? item, View? content)
+        {
+            foreach (var child in _contentHost.Children.OfType<View>())
+            {
+                child.IsVisible = false;
+            }
+
+            if (item is not null && content is not null)
+            {
+                AddContentToHost(content);
+                content.IsVisible = true;
+            }
+            else if (content is not null)
+            {
+                AddContentToHost(content);
+                content.IsVisible = true;
+            }
+
+            _displayingContent = content;
+        }
+
         private void RebuildHeaders()
         {
             HeadersPanel.Children.Clear();
@@ -257,7 +293,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
         {
             if (TabItems == null || TabItems.Count == 0)
             {
-                ContentPresenter.Content = null;
+                ShowContent(null, null);
                 SelectedItem = null;
                 return;
             }
@@ -316,7 +352,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
                     HorizontalOptions = LayoutOptions.Center,
                     VerticalOptions = LayoutOptions.Center
                 };
-                ContentPresenter.Content = indicator;
+                AddContentToHost(indicator);
+                ShowContent(null, indicator);
 
                 View? lazyContent = null;
                 try
@@ -373,8 +410,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
                     else
                     {
                         // Remove the indicator if loading failed or returned null and clear pending entry.
-                        if (ContentPresenter.Content == indicator)
-                            ContentPresenter.Content = null;
+                        indicator.IsVisible = false;
+                        if (ReferenceEquals(_displayingContent, indicator))
+                            ShowContent(null, null);
                         _pendingTabContents[selectedItem] = null;
                     }
                 });
@@ -387,30 +425,24 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
                 var selectedContent = selectedItem.Content;
                 if (selectedContent == null && _pendingTabContents.TryGetValue(selectedItem, out var pendingContent))
                 {
-                    // Keep the tab content detached from TabbedViewItem itself.
-                    // Otherwise the same View instance would be mounted both under
-                    // TabbedViewItem and under ContentPresenter, which causes MAUI/WinUI
-                    // to throw when switching tabs.
                     selectedContent = pendingContent;
                 }
 
-                if (!ReferenceEquals(ContentPresenter.Content, selectedContent))
+                if (selectedContent is not null)
                 {
                     if (Dispatcher.IsDispatchRequired)
                     {
                         await Dispatcher.DispatchAsync(() =>
                         {
-                            // Re-check on UI thread because another UpdateSelection call may
-                            // have already assigned the same view before this queued work runs.
-                            if (!ReferenceEquals(ContentPresenter.Content, selectedContent))
+                            if (ReferenceEquals(SelectedItem, selectedItem))
                             {
-                                ContentPresenter.Content = selectedContent;
+                                ShowContent(selectedItem, selectedContent);
                             }
                         });
                     }
                     else
                     {
-                        ContentPresenter.Content = selectedContent;
+                        ShowContent(selectedItem, selectedContent);
                     }
                 }
             }

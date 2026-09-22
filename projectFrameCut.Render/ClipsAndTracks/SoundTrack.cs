@@ -6,11 +6,122 @@ using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
+    public static class SoundTrackMetadata
+    {
+        public const string SourceClipIdKey = "SourceClipId";
+        public const string GeneratedFromVideoKey = "GeneratedFromVideo";
+        public const string EnabledKey = "Enabled";
+        public const string VolumeKey = "Volume";
+        public const string DetachedKey = "AudioDetached";
+        public const string ProbeSourceKey = "AudioProbeSource";
+        public const string ProbeHasStreamKey = "AudioProbeHasStream";
+
+        public static bool ReadBool(IReadOnlyDictionary<string, object>? data, string key, bool fallback = false)
+        {
+            if (data is null || !data.TryGetValue(key, out var value) || value is null) return fallback;
+            if (value is bool result) return result;
+            if (value is JsonElement element)
+            {
+                if (element.ValueKind == JsonValueKind.True) return true;
+                if (element.ValueKind == JsonValueKind.False) return false;
+                if (element.ValueKind == JsonValueKind.String && bool.TryParse(element.GetString(), out result)) return result;
+            }
+            return bool.TryParse(value.ToString(), out result) ? result : fallback;
+        }
+
+        public static float ReadVolume(IReadOnlyDictionary<string, object>? data, float fallback = 1f)
+        {
+            if (data is null || !data.TryGetValue(VolumeKey, out var value) || value is null) return fallback;
+            if (value is double doubleValue) return (float)doubleValue;
+            if (value is float floatValue) return floatValue;
+            if (value is JsonElement element && element.TryGetDouble(out var jsonValue)) return (float)jsonValue;
+            return float.TryParse(value.ToString(), System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var result) ? result : fallback;
+        }
+
+        public static Guid? ReadSourceClipId(IReadOnlyDictionary<string, object>? data)
+        {
+            if (data is null || !data.TryGetValue(SourceClipIdKey, out var value) || value is null) return null;
+            if (value is JsonElement element && element.ValueKind == JsonValueKind.String)
+                return Guid.TryParse(element.GetString(), out var jsonGuid) ? jsonGuid : null;
+            return Guid.TryParse(value.ToString(), out var guid) ? guid : null;
+        }
+
+        private static float ReadRatio(IClip clip)
+        {
+            var value = clip.GetType().GetProperty("SecondPerFrameRatio")?.GetValue(clip);
+            if (value is float ratio && ratio > 0) return ratio;
+            if (value is double doubleRatio && doubleRatio > 0) return (float)doubleRatio;
+            return 1f;
+        }
+
+        public static NormalSoundTrack CreateLegacyTrack(IClip clip)
+        {
+            var data = clip.ExtraData is null
+                ? new Dictionary<string, object>()
+                : new Dictionary<string, object>(clip.ExtraData);
+            data[SourceClipIdKey] = clip.Id.ToString("D");
+            data[GeneratedFromVideoKey] = clip.ClipType == ClipMode.VideoClip;
+            data[EnabledKey] = ReadBool(data, EnabledKey, true);
+            data[VolumeKey] = ReadVolume(data);
+            return new NormalSoundTrack
+            {
+                Id = string.IsNullOrWhiteSpace(clip.BindedSoundTrack) ? $"legacy-audio-{clip.Id:N}" : clip.BindedSoundTrack,
+                Name = $"{clip.Name}'s Audio",
+                LayerIndex = clip.LayerIndex,
+                StartFrame = clip.StartFrame,
+                RelativeStartFrame = clip.RelativeStartFrame,
+                Duration = clip.Duration,
+                Ratio = ReadRatio(clip),
+                Volume = ReadVolume(data),
+                FilePath = clip.FilePath,
+                Effects = clip.Effects,
+                EffectsInstances = clip.EffectsInstances,
+                ExtraData = data
+            };
+        }
+
+        public static void ReInit(ISoundTrack track)
+        {
+            track.ReInit();
+            track.EffectsInstances = EffectHelper.GetEffectsInstancesAndSpeedVariance(track.Effects).Effects;
+        }
+
+        public static void AddMissingLegacyTracks(IEnumerable<IClip> clips, ICollection<ISoundTrack> tracks, Action<string>? log = null)
+        {
+            foreach (var clip in clips.Where(c => c.ClipType is ClipMode.AudioClip or ClipMode.VideoClip))
+            {
+                if (ReadBool(clip.ExtraData, DetachedKey)) continue;
+                if (clip.ExtraData?.ContainsKey(ProbeHasStreamKey) == true
+                    && !ReadBool(clip.ExtraData, ProbeHasStreamKey)) continue;
+                if ((!string.IsNullOrWhiteSpace(clip.BindedSoundTrack) && tracks.Any(t => t.Id == clip.BindedSoundTrack))
+                    || tracks.Any(t => ReadSourceClipId(t.ExtraData) == clip.Id))
+                    continue;
+
+                var track = CreateLegacyTrack(clip);
+                try
+                {
+                    ReInit(track);
+                    if (track.SamplePerSecond <= 0) throw new InvalidOperationException("The media has no readable audio stream.");
+                    tracks.Add(track);
+                    log?.Invoke($"Migrated legacy clip audio {clip.Id} to soundtrack {track.Id}.");
+                }
+                catch (Exception ex)
+                {
+                    track.Dispose();
+                    log?.Invoke($"Clip {clip.Id}/{clip.Name} has no readable audio stream: {ex.Message}");
+                }
+            }
+        }
+    }
+
     public class NormalSoundTrack : ISoundTrack
     {
         private bool disposedValue;
@@ -44,6 +155,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit()
         {
+            AudioSource?.Dispose();
+            AudioSource = null;
             AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null;
         }
 

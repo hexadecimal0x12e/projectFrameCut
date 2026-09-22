@@ -123,6 +123,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
 
+            page.SyncGeneratedSoundTracks();
+
             var clips = new List<ClipDraftDTO>();
             var soundtracks = new List<SoundtrackDTO>();
 
@@ -148,7 +150,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
                         if (elem.ClipType == ClipMode.AudioClip)
                         {
-                            if (wrapSoundtrackAsClip)
+                            bool generatedSoundTrack = SoundTrackMetadata.ReadBool(elem.ExtraData, SoundTrackMetadata.GeneratedFromVideoKey);
+                            if (wrapSoundtrackAsClip && !generatedSoundTrack)
                             {
                                 var clipDto = CreateClipDraftDTO(page, border, elem, (uint)trackKey, true);
                                 clips.Add(clipDto);
@@ -168,6 +171,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                                     Duration = durationFrames,
                                     SecondPerFrameRatio = elem.SecondPerFrameRatio,
                                     FilePath = elem.SourcePath,
+                                    ShouldDisplayInUI = elem.ShouldDisplayInUI,
+                                    Effects = SerializeEffects(elem),
                                     MetaData = elem.ExtraData
                                 };
                                 soundtracks.Add(dto);
@@ -216,6 +221,17 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
             }
 
+            foreach (var track in soundtracks)
+            {
+                var end = (ulong)track.StartFrame + track.Duration;
+                if (end > uint.MaxValue)
+                {
+                    Log($"Ignoring overflowing soundtrack end during draft export: {track.Id}/{track.Name}, start={track.StartFrame}, duration={track.Duration}.", "warn");
+                    end = (ulong)track.StartFrame + 1;
+                }
+                audMax = Math.Max((long)end, audMax);
+            }
+
             if (max > uint.MaxValue)
             {
                 throw new OverflowException($"Project duration overflow, total frames exceed {uint.MaxValue}.");
@@ -228,7 +244,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 Duration = (uint)max,
                 SavedAt = DateTime.Now
             };
-            if (wrapSoundtrackAsClip) d.AudioDuration = (uint)audMax;
+            d.AudioDuration = (uint)audMax;
             if (fixOverlap)
             {
                 try
@@ -279,6 +295,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 {
                     Id = elem.Id,
                     Name = name,
+                    BindedSoundTrack = elem.BindedSoundTrack,
                     FromPlugin = InternalPluginBase.InternalPluginBaseID,
                     TypeName = nameof(SoundTrackToClipWrapper),
                     ClipType = ClipMode.AudioClip,
@@ -352,6 +369,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             {
                 Id = elem.Id,
                 Name = name,
+                BindedSoundTrack = elem.BindedSoundTrack,
                 FromPlugin = elem.FromPlugin,
                 TypeName = elem.TypeName,
                 ClipType = elem.ClipType,
@@ -373,34 +391,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 StartingX = elem.StartingX,
                 StartingY = elem.StartingY,
                 MetaData = normalizedMeta2,
-                Effects = elem.Effects?.Select((kv) =>
-                {
-                    var effect = kv.Value;
-                    // Filter out Func<object> dynamic values from effect.Parameters (they cannot be serialized).
-                    // The binding state is preserved in the provider-level Fields serialization.
-                    var parameters = effect.Parameters is { Count: > 0 }
-                        ? effect.Parameters
-                            .Where(kvp => !DynamicParam.IsDynamicValue(kvp.Value))
-                            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
-                        : effect.Parameters;
-
-                    var structure = new EffectAndMixtureJSONStructure
-                    {
-                        Name = kv.Key,
-                        FromPlugin = effect.FromPlugin,
-                        TypeName = effect.TypeName,
-                        Parameters = parameters,
-                        Index = effect.Index,
-                        Enabled = effect.Enabled,
-                        RelativeHeight = effect.RelativeHeight,
-                        RelativeWidth = effect.RelativeWidth,
-                        IsContinuousEffect = effect.TypeOfEffect == EffectType.ContinuousEffect,
-                        ImplementType = effect.ImplementType,
-                        BindedEffectGroupID = effect.BindedEffectProvidingSystemID ?? "",
-                    };
-
-                    return structure;
-                }).ToArray(),
+                Effects = SerializeEffects(elem),
                 EffectBundles = null,
                 EffectProviders = elem.EffectProviders?.Values
                     .Select(p => new EffectProviderJSONStructure
@@ -419,6 +410,30 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                         MetaData = p.MetaData is { Count: > 0 } ? p.MetaData : null,
                     }).ToArray()
             };
+        }
+
+        private static EffectAndMixtureJSONStructure[]? SerializeEffects(ClipElementUI elem)
+        {
+            return elem.Effects?.Select(kv =>
+            {
+                var effect = kv.Value;
+                return new EffectAndMixtureJSONStructure
+                {
+                    Name = kv.Key,
+                    FromPlugin = effect.FromPlugin,
+                    TypeName = effect.TypeName,
+                    Parameters = effect.Parameters is { Count: > 0 }
+                        ? effect.Parameters.Where(p => !DynamicParam.IsDynamicValue(p.Value)).ToDictionary(p => p.Key, p => p.Value)
+                        : effect.Parameters,
+                    Index = effect.Index,
+                    Enabled = effect.Enabled,
+                    RelativeHeight = effect.RelativeHeight,
+                    RelativeWidth = effect.RelativeWidth,
+                    IsContinuousEffect = effect.TypeOfEffect == EffectType.ContinuousEffect,
+                    ImplementType = effect.ImplementType,
+                    BindedEffectGroupID = effect.BindedEffectProvidingSystemID ?? ""
+                };
+            }).ToArray();
         }
 
         private static void ResolveExportTiming(
@@ -610,6 +625,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 var trackJson = JsonSerializer.SerializeToElement(track);
                 var trackInstance = PluginManager.CreateSoundTrack(trackJson);
                 trackInstance.ExtraData = track.MetaData ?? new();
+                trackInstance.Ratio = track.SecondPerFrameRatio > 0 ? track.SecondPerFrameRatio : 1f;
 
                 if (trackInstance.ExtraData.TryGetValue("Volume", out var trackVolObj))
                 {
@@ -654,7 +670,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                     }
                 }
 
-                if (InitAtLoad) trackInstance.ReInit();
+                if (InitAtLoad && SoundTrackMetadata.ReadBool(trackInstance.ExtraData, SoundTrackMetadata.EnabledKey, true)) SoundTrackMetadata.ReInit(trackInstance);
                 tracksList.Add(trackInstance);
             }
 
@@ -906,6 +922,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 element.ShouldDisplayInUI = dto.ShouldDisplayInUI;
                 element.Clip.IsVisible = dto.ShouldDisplayInUI;
                 element.SourcePath = dto.FilePath ?? (dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
+                element.BindedSoundTrack = dto.BindedSoundTrack;
                 element.ClipType = dto.ClipType;
                 element.ExtraData = dto.MetaData ?? new();
                 element.sourceSecondPerFrame = dto.FrameTime;
@@ -985,19 +1002,20 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 element.SourcePath = dto.FilePath ?? (dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
                 element.ClipType = ClipMode.AudioClip;
                 element.ExtraData = dto.MetaData ?? new();
+                element.ShouldDisplayInUI = dto.ShouldDisplayInUI;
+                element.Clip.IsVisible = dto.ShouldDisplayInUI;
                 element.sourceSecondPerFrame = 1f / proj.TargetFrameRate;
                 //element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
                 element.ApplySpeedRatio();
                 element.TypeName = dto.TypeName;
                 element.FromPlugin = dto.FromPlugin;
-                element.Effects = new Dictionary<string, IEffect>();
+                InitializeEffects(element, new ClipDraftDTO { Effects = dto.Effects }, proj.RelativeWidth, proj.RelativeHeight);
 
                 clipsDict.AddOrUpdate(element.Id, element, (_, _) => element);
             }
 
             return (clipsDict, trackCount);
         }
-
 
         public static void FixSmallOverlaps(DraftStructureJSON draft, uint thresholdFrames = 3)
         {
@@ -1136,6 +1154,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             element.ShouldDisplayInUI = clip.ShouldDisplayInUI;
             element.Clip.IsVisible = clip.ShouldDisplayInUI;
             element.SourcePath = clip.FilePath ?? (clip.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
+            element.BindedSoundTrack = clip.BindedSoundTrack;
             element.ClipType = clip.ClipType;
             element.ExtraData = clip.MetaData ?? new();
             element.sourceSecondPerFrame = clip.FrameTime;

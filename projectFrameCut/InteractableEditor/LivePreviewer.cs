@@ -63,6 +63,7 @@ namespace projectFrameCut.LivePreview
         private IReadOnlyDictionary<uint, string> FrameHashLookup { get; set; } = new Dictionary<uint, string>();
         private IReadOnlyDictionary<Guid, IReadOnlyDictionary<uint, string>> ClipHashLookup { get; set; }
             = new Dictionary<Guid, IReadOnlyDictionary<uint, string>>();
+        private readonly SemaphoreSlim _updateDraftGate = new(1, 1);
         public string ProjectRoot => string.IsNullOrWhiteSpace(TempPath) ? string.Empty : Directory.GetParent(Path.GetFullPath(TempPath))?.FullName ?? string.Empty;
         public string ProjectName { get; set; } = "Untitled Project";
         public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Automatic;
@@ -71,7 +72,9 @@ namespace projectFrameCut.LivePreview
         {
             if (Clips == null) return false;
             if (frameIndex >= TotalDuration) return false;
-            var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash) ? indexedHash : "nullframe";
+            var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash)
+                ? indexedHash
+                : Timeline.GetFrameHash(Clips, frameIndex);
             return Directory.Exists(TempPath)
                 && Directory.EnumerateFiles(TempPath, $"projectFrameCut_Render_{StaticFrameCacheVersion}_{frameHash}_*.png", SearchOption.TopDirectoryOnly).Any();
         }
@@ -118,7 +121,9 @@ namespace projectFrameCut.LivePreview
         private string RenderFrameCore(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token)
         {
             ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
-            var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash) ? indexedHash : "nullframe";
+            var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash)
+                ? indexedHash
+                : Timeline.GetFrameHash(Clips, frameIndex);
             var cachedPath = Path.Combine(ProjectRoot, "thumbs", $"projectFrameCut_Render_{StaticFrameCacheVersion}_{frameHash}_{targetWidth}x{targetHeight}.png");
             if (File.Exists(cachedPath)) return cachedPath;
             var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineFrameAsync(new TimelineFrameRequest
@@ -165,10 +170,7 @@ namespace projectFrameCut.LivePreview
                     throw new NotSupportedException("The render backend did not return an FP16 scRGB preview artifact.");
 
                 var scRgbPath = ResolveArtifactPath(artifact, token);
-                var fallback = DefaultOutputMode == NativePreviewOutputMode.Automatic
-                    ? RenderFrame(frameIndex, targetWidth, targetHeight, token)
-                    : null;
-                return new PreviewFrameSource(scRgbPath, fallback, artifact.Width, artifact.Height, artifact.Stride, artifact.PixelFormat, artifact.ColorSpace, DefaultOutputMode == NativePreviewOutputMode.Required);
+                return new PreviewFrameSource(scRgbPath, null, artifact.Width, artifact.Height, artifact.Stride, artifact.PixelFormat, artifact.ColorSpace, DefaultOutputMode == NativePreviewOutputMode.Required);
             }
             catch when (DefaultOutputMode == NativePreviewOutputMode.Automatic && !token.IsCancellationRequested)
             {
@@ -179,11 +181,14 @@ namespace projectFrameCut.LivePreview
 
         public async Task UpdateDraft(DraftStructureJSON json)
         {
-            var clips = json.Clips;
-            clips ??= [];
+            await _updateDraftGate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                var clips = json.Clips;
+                clips ??= [];
 
-            var clipsList = new List<IClip>();
-            var reinitTasks = new List<Task>();
+                var clipsList = new List<IClip>();
+                var reinitTasks = new List<Task>();
 
             foreach (var clip in clips)
             {
@@ -267,7 +272,7 @@ namespace projectFrameCut.LivePreview
                     }
                     try
                     {
-                        if (RpcClient is null)
+                        if (RpcClient is null && clipInstance.ClipType != ClipMode.AudioClip)
                         {
                             clipInstance.ReInit(8);
                             if (!ClipInitializationFailure.HasDeferredFailures(clipInstance.ExtraData))
@@ -294,7 +299,9 @@ namespace projectFrameCut.LivePreview
             await Task.WhenAll(reinitTasks);
 
             Clips = clipsList.ToArray();
-            SoundTracks = DraftImportAndExportHelper.JSONToISoundTracks(json).ToArray();
+            var soundTracks = DraftImportAndExportHelper.JSONToISoundTracks(json).ToList();
+            SoundTrackMetadata.AddMissingLegacyTracks(Clips, soundTracks, message => Log($"[LiveRender] {message}", "warn"));
+            SoundTracks = soundTracks.ToArray();
             ulong max = 0;
             foreach (var clip in Clips)
             {
@@ -344,13 +351,22 @@ namespace projectFrameCut.LivePreview
                     .ToDictionary(group => group.Key, group => group.Last().Hash));
             TotalDuration = session.Duration;
 
-            Log($"[LiveRender] Updated clips, total {Clips.Length} clips.");
+                Log($"[LiveRender] Updated clips, total {Clips.Length} clips.");
+            }
+            finally
+            {
+                _updateDraftGate.Release();
+            }
         }
 
         public string RenderClipFrame(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token)
         {
-            if (ClipHashLookup.TryGetValue(clipId, out var clipHashes)
-                && clipHashes.TryGetValue(frameIndex, out var clipHash))
+            string? clipHash = null;
+            if (ClipHashLookup.TryGetValue(clipId, out var clipHashes))
+                clipHashes.TryGetValue(frameIndex, out clipHash);
+            if (clipHash is null && Clips is { } clips && clips.FirstOrDefault(clip => clip.Id == clipId) is { } clip)
+                clipHash = Timeline.GetClipFrameHash(clips, clip, frameIndex);
+            if (clipHash is not null)
             {
                 var cachedPath = Path.Combine(
                     ProjectRoot,
@@ -402,10 +418,7 @@ namespace projectFrameCut.LivePreview
                     throw new NotSupportedException("The render backend did not return an FP16 scRGB clip-preview artifact.");
 
                 var scRgbPath = ResolveArtifactPath(artifact, token);
-                var fallback = DefaultOutputMode == NativePreviewOutputMode.Automatic
-                    ? RenderClipFrame(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token)
-                    : null;
-                return new PreviewFrameSource(scRgbPath, fallback, artifact.Width, artifact.Height, artifact.Stride, artifact.PixelFormat, artifact.ColorSpace, DefaultOutputMode == NativePreviewOutputMode.Required);
+                return new PreviewFrameSource(scRgbPath, null, artifact.Width, artifact.Height, artifact.Stride, artifact.PixelFormat, artifact.ColorSpace, DefaultOutputMode == NativePreviewOutputMode.Required);
             }
             catch when (DefaultOutputMode == NativePreviewOutputMode.Automatic && !token.IsCancellationRequested)
             {
@@ -416,12 +429,10 @@ namespace projectFrameCut.LivePreview
 
         public bool HasAudioSources()
         {
-            var hasAudioClip = Clips?.Any(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip) ?? false;
-            var hasSoundTrack = SoundTracks?.Any() ?? false;
-            return hasAudioClip || hasSoundTrack;
+            return SoundTracks?.Any(track => SoundTrackMetadata.ReadBool(track.ExtraData, SoundTrackMetadata.EnabledKey, true)) ?? false;
         }
 
-        public async Task ResetAudioPlaybackSources(int ppb = 8)
+        public async Task ResetAudioPlaybackSources()
         {
             // Remote source paths belong to the render server and cannot be reopened by the UI
             // process. The remote OpenProject call already initialized these sources; playback
@@ -431,19 +442,11 @@ namespace projectFrameCut.LivePreview
                 return;
             }
 
-            if (Clips is not null)
-            {
-                foreach (var clip in Clips.Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip))
-                {
-                    await Task.Run(() => clip.ReInit(ppb));
-                }
-            }
-
             if (SoundTracks is not null)
             {
-                foreach (var track in SoundTracks)
+                foreach (var track in SoundTracks.Where(track => SoundTrackMetadata.ReadBool(track.ExtraData, SoundTrackMetadata.EnabledKey, true)))
                 {
-                    await Task.Run(track.ReInit);
+                    await Task.Run(() => SoundTrackMetadata.ReInit(track));
                 }
             }
         }
@@ -464,6 +467,39 @@ namespace projectFrameCut.LivePreview
                 Channels = channels,
             }, token).ConfigureAwait(false);
             return await ResolveArtifactPathAsync(artifact, token).ConfigureAwait(false);
+        }
+
+        public async Task<PreviewAudioClock> StartPreviewAudioAsync(uint startFrame, int frameRate, CancellationToken token)
+        {
+            if (!HasAudioSources())
+                return new PreviewAudioClock { StartFrame = startFrame, SampleRate = 48000, Channels = 2 };
+            return await (RpcClient ?? RenderRpcBootstrap.Client).ControlPreviewAudioAsync(new PreviewAudioCommandRequest
+            {
+                SessionId = RenderSessionId,
+                Command = PreviewAudioCommand.Start,
+                StartFrame = startFrame,
+                FrameRate = Math.Max(1, frameRate),
+            }, token).ConfigureAwait(false);
+        }
+
+        public async Task<PreviewAudioClock> GetPreviewAudioClockAsync(long generation, CancellationToken token)
+            => await (RpcClient ?? RenderRpcBootstrap.Client).GetPreviewAudioClockAsync(new PreviewAudioClockRequest
+            {
+                SessionId = RenderSessionId,
+                Generation = generation,
+            }, token).ConfigureAwait(false);
+
+        public async Task StopPreviewAudioAsync(CancellationToken token = default)
+        {
+            try
+            {
+                await (RpcClient ?? RenderRpcBootstrap.Client).ControlPreviewAudioAsync(new PreviewAudioCommandRequest
+                {
+                    SessionId = RenderSessionId,
+                    Command = PreviewAudioCommand.Stop,
+                }, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         }
 
         public async Task<string> RenderSomeFrames(int startIndex, int length, int targetWidth, int targetFramerate, int targetHeight, CancellationToken token, bool includeAudio = true)

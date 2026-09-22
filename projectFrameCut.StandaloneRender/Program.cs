@@ -4,6 +4,7 @@ using ILGPU.Runtime;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -1103,28 +1104,24 @@ namespace projectFrameCut.StandaloneRender
             void composeAudio(string resultPath)
             {
                 var clips = JSONToIClips(timeline, assets, bpp).Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip).ToArray();
-                var tracks = JSONToISoundTracks(timeline, assets).ToArray();
+                var tracks = JSONToISoundTracks(timeline, assets).ToList();
+                SoundTrackMetadata.AddMissingLegacyTracks(clips, tracks, message => Log(message, "warn"));
 
-                if (!clips.ArrayAny() && !tracks.ArrayAny())
+                if (tracks.Count == 0)
                 {
+                    foreach (var clip in clips) clip.Dispose();
                     Log("No sound clips in the whole draft. returning...");
                     return;
                 }
 
-                Log($"Found {clips.Length} audio clips.");
-
-                Log("Initializing all clips...");
-                foreach (IClip clip in clips)
-                {
-                    clip.ReInit(8);
-                }
+                Log($"Found {tracks.Count} soundtracks.");
 
                 var writer = new AudioWriter(outputPath, 96000, 2, "pcm_s16le");
 
                 var composer = new AudioComposer<float>
                 {
-                    Clips = clips,
-                    SoundTracks = tracks,
+                    Clips = [],
+                    SoundTracks = tracks.ToArray(),
                     Writer = writer
                 };
                 if (!Environment.GetCommandLineArgs().Contains("--nolog"))
@@ -1145,6 +1142,10 @@ namespace projectFrameCut.StandaloneRender
                 foreach (var item in clips)
                 {
                     item?.Dispose();
+                }
+                foreach (var item in tracks)
+                {
+                    item.Dispose();
                 }
                 return;
             }
@@ -2310,7 +2311,7 @@ namespace projectFrameCut.StandaloneRender
                         throw;
                     }
                 }
-                clipInstance.ReInit(bpp);
+                if (clipInstance.ClipType != ClipMode.AudioClip) clipInstance.ReInit(bpp);
                 clipsList.Add(clipInstance);
 
             }
@@ -2332,6 +2333,7 @@ namespace projectFrameCut.StandaloneRender
                 var trackJson = JsonSerializer.SerializeToElement(track);
                 var trackInstance = PluginManager.CreateSoundTrack(trackJson);
                 trackInstance.ExtraData = track.MetaData ?? new();
+                trackInstance.Ratio = track.SecondPerFrameRatio > 0 ? track.SecondPerFrameRatio : 1f;
 
                 if (trackInstance.ExtraData.TryGetValue("Volume", out var trackVolObj))
                 {
@@ -2381,7 +2383,7 @@ namespace projectFrameCut.StandaloneRender
                     }
                 }
 
-                trackInstance.ReInit();
+                if (SoundTrackMetadata.ReadBool(trackInstance.ExtraData, SoundTrackMetadata.EnabledKey, true)) SoundTrackMetadata.ReInit(trackInstance);
                 tracksList.Add(trackInstance);
             }
 

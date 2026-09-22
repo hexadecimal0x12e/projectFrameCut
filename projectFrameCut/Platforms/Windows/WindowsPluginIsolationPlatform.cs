@@ -16,7 +16,7 @@ namespace projectFrameCut.Platforms.Windows;
 
 internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationPlatform
 {
-    private static readonly object CurrentProjectLinkLock = new();
+    private static readonly object DirectoryLinkLock = new();
 
     internal static string PackageFamilyName
     {
@@ -32,14 +32,24 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
 
     internal static string SessionDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "plugin-isolation");
     internal static string ProjectPluginDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "project-plugins");
+    internal static SecurityIdentifier AppContainerSid => GetAppContainerSid(PackageFamilyName);
+    internal static SecurityIdentifier GetAppContainerSid(string packageFamilyName) => DeriveAppContainerSid(packageFamilyName);
+    internal static NamedPipeServerStream CreateRpcPipe(string name, bool isolated) =>
+        isolated ? CreatePipe(name, AppContainerSid) : new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
 
-    internal static void PrepareCurrentProjectAccess(string projectRoot)
+    internal static void PrepareCurrentProjectAccess(string projectRoot) =>
+        PrepareDirectoryAccess(projectRoot, "CurrentProject");
+
+    internal static void PrepareAssetsLibraryAccess(string assetsRoot) =>
+        PrepareDirectoryAccess(assetsRoot, "AssetsLibrary");
+
+    private static void PrepareDirectoryAccess(string targetRoot, string linkName)
     {
-        var fullProjectRoot = Path.GetFullPath(projectRoot);
-        if (!Directory.Exists(fullProjectRoot)) throw new DirectoryNotFoundException(fullProjectRoot);
+        var fullTargetRoot = Path.GetFullPath(targetRoot);
+        if (!Directory.Exists(fullTargetRoot)) throw new DirectoryNotFoundException(fullTargetRoot);
 
         var appContainerSid = DeriveAppContainerSid(PackageFamilyName);
-        var directory = new DirectoryInfo(fullProjectRoot);
+        var directory = new DirectoryInfo(fullTargetRoot);
         var security = directory.GetAccessControl();
         security.SetAccessRule(new FileSystemAccessRule(
             appContainerSid,
@@ -49,12 +59,17 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
             AccessControlType.Allow));
         directory.SetAccessControl(security);
 
-        lock (CurrentProjectLinkLock)
+        lock (DirectoryLinkLock)
         {
-            var linkPath = Path.Combine(ApplicationData.Current.LocalFolder.Path, "CurrentProject");
+            var linkPath = Path.Combine(ApplicationData.Current.LocalFolder.Path, linkName);
             var link = new DirectoryInfo(linkPath);
-            if (link.LinkTarget is not null)
+            var existingTarget = link.LinkTarget;
+            if (existingTarget is not null)
             {
+                if (string.Equals(Path.GetFullPath(existingTarget, link.Parent!.FullName), fullTargetRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
                 link.Delete();
             }
             else if (link.Exists || File.Exists(linkPath))
@@ -62,20 +77,19 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
                 throw new IOException($"'{linkPath}' already exists and is not a directory link.");
             }
 
-            Directory.CreateSymbolicLink(linkPath, fullProjectRoot);
+            Directory.CreateSymbolicLink(linkPath, fullTargetRoot);
         }
     }
 
     internal static void ClearCurrentProjectLink(string projectRoot)
     {
         var fullProjectRoot = Path.GetFullPath(projectRoot);
-        lock (CurrentProjectLinkLock)
+        lock (DirectoryLinkLock)
         {
             var link = new DirectoryInfo(Path.Combine(ApplicationData.Current.LocalFolder.Path, "CurrentProject"));
             var linkTarget = link.LinkTarget;
             if (linkTarget is null || !string.Equals(Path.GetFullPath(linkTarget, link.Parent!.FullName), fullProjectRoot, StringComparison.OrdinalIgnoreCase)) return;
             link.Delete();
-            projectFrameCut.Shared.Logger.Log($"Removed the current project directory link for '{fullProjectRoot}'.");
         }
     }
 
@@ -296,7 +310,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         }
         if (sid == IntPtr.Zero)
         {
-            projectFrameCut.Shared.Logger.Log($"SID derivation returned no SID for '{packageFamilyName}'; looking up the registered AppContainer.");
+            projectFrameCut.Shared.Logger.LogDiagnostic($"SID derivation returned no SID for '{packageFamilyName}'; looking up the registered AppContainer.");
             return FindRegisteredAppContainerSid(packageFamilyName);
         }
         try

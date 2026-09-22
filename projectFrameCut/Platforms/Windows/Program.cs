@@ -117,13 +117,17 @@ namespace projectFrameCut.WinUI
 
                 if (Platforms.Windows.WindowsPluginIsolationPlatform.IsInAppContainer())
                 {
+#if !DEBUG
                     _ = MessageBox(IntPtr.Zero,
-                        $"projectFrameCut cannot run in AppContainer. Launch app from start menu, 'pjfc gui' or file/project directly. \r\n" +
-                        $"If you have installed any plugin and get this message, please feedback this bug to us. \r\n" +
+                        $"projectFrameCut has been launched under wrong mode.\r\n"
+                      + $"Please take a screenshot of this message, and feedback this bug to us. \r\n" +
                         $"Command line: {string.Join(", ", Environment.GetCommandLineArgs())}",
                         "projectFrameCut",
                         0x10 | 0x4);
                         return 255;
+#else
+                    Log("App is running AppContainer, some function may not work.", "warn");
+#endif
                 }
 
                 try
@@ -160,7 +164,7 @@ namespace projectFrameCut.WinUI
 
                 projectFrameCut.Helper.HelperProgram.AppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
                 PackageFamilyName = WinUI.App.GetPackageFamilyName();
-                projectFrameCut.Helper.HelperProgram.AppChannel = "OSS";
+                projectFrameCut.Helper.HelperProgram.AppChannel = PackageFamilyName.StartsWith("0xeeeeeeeeeeee") ? "Store" : "OSS";
 
                 if (args.Length > 0 && args[0].StartsWith("pjfc:", StringComparison.OrdinalIgnoreCase))
                 {

@@ -126,6 +126,17 @@ namespace projectFrameCut.DraftStuff
                 Content = BuildGeneralTab(clip, handler),
                 Tag = "general"
             });
+            if (clip.ClipType == ClipMode.VideoClip) page.EnsureGeneratedSoundTrack(clip);
+            if (clip.ClipType == ClipMode.AudioClip
+                || (clip.ClipType == ClipMode.VideoClip && page.GetBoundSoundTrack(clip) is not null))
+            {
+                tabbedView.TabItems.Add(new TabbedViewItem
+                {
+                    Header = PPLocalizedResources.General_Audio,
+                    LazyContentFactory = () => BuildAudioTab(clip, handler),
+                    Tag = "audio"
+                });
+            }
             if (clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
             {
                 tabbedView.TabItems.Add(new TabbedViewItem
@@ -693,10 +704,6 @@ namespace projectFrameCut.DraftStuff
                 }, "solidColor", currentSolidColorHex)
                 .AddPositionTupleInputBox("place", new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20), PositionTupleMode.XYWH, (valX, valY, valW, valH), entryWidth: 70)
                 .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, 0))
-            .AppendWhen(clip.ClipType == ClipMode.AudioClip,
-            (c) =>
-                c.AddText(new SingleLineLabel(PPLocalizedResources.General_Audio, 20))
-                 .AddSlider("volume", PPLocalizedResources.General_Audio_Volume, clip.ExtraData.TryGetValue("Volume", out var volume) ? (double)volume : 1d, 0, 1))
             .AppendWhen(clip.ClipType == ClipMode.VideoClip,
             (c) =>
                 c.AddText(new SingleLineLabel(PPLocalizedResources.General_VideoCodec, 20))
@@ -719,7 +726,7 @@ namespace projectFrameCut.DraftStuff
                     pp => pp.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label { Text = "Unknown" })
                 )
             .AppendWhen(clip.ClipType == ClipMode.MarkingClip,
-                c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip))))
+                c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip)))
             .AppendWhen(clip.ClipType is ClipMode.TextClip or ClipMode.SubtitleClip or ClipMode.VectorCanvasClip,
                 c =>
                 {
@@ -815,7 +822,7 @@ namespace projectFrameCut.DraftStuff
 
 
                     });
-                });
+                }));
 
 
             ppb.PropertyChanged += async (s, e) =>
@@ -968,15 +975,6 @@ namespace projectFrameCut.DraftStuff
                     case "displayName":
                         clip.DisplayName = e.Value?.ToString() ?? clip.DisplayName;
                         break;
-                    case "volume":
-                        {
-                            if (e.Value is double vol || double.TryParse(e.Value as string, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out vol))
-                            {
-                                clip.ExtraData ??= new Dictionary<string, object>();
-                                clip.ExtraData["Volume"] = vol;
-                            }
-                            break;
-                        }
                     //case "speedRatio":
                     //    {
                     //        if (e.Value is double ratio || double.TryParse(e.Value as string, out ratio))
@@ -993,6 +991,46 @@ namespace projectFrameCut.DraftStuff
                             break;
                         }
                 }
+
+                handler?.Invoke(s, e);
+            };
+            return ppb.BuildWithScrollView();
+        }
+
+        #endregion
+
+        #region audio
+
+        public View BuildAudioTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            var track = clip.ClipType == ClipMode.VideoClip ? page.GetBoundSoundTrack(clip)
+                : clip.ClipType == ClipMode.AudioClip ? clip : null;
+            if (track is null) return new Grid();
+
+            var ppb = new PropertyPanelBuilder()
+                .AddCheckbox("audioEnabled", PPLocalizedResources._Enabled,
+                    SoundTrackMetadata.ReadBool(track.ExtraData, SoundTrackMetadata.EnabledKey, true))
+                .AddSlider("volume", PPLocalizedResources.General_Audio_Volume, 0, 1,
+                    SoundTrackMetadata.ReadVolume(track.ExtraData));
+
+            if (clip.ClipType == ClipMode.VideoClip
+                && SoundTrackMetadata.ReadBool(track.ExtraData, SoundTrackMetadata.GeneratedFromVideoKey))
+            {
+                ppb.AddButton(PPLocalizedResources.General_Unbind, async (s, e) =>
+                {
+                    await page.UnbindClipAudioAsync(clip);
+                    page.RefreshPropertyPanel(clip);
+                });
+            }
+
+            ppb.PropertyChanged += (s, e) =>
+            {
+                if (e.Id == "audioEnabled")
+                    page.SetClipAudioEnabled(clip, Convert.ToBoolean(e.Value));
+                else if (e.Id == "volume")
+                    page.SetClipAudioVolume(clip, Convert.ToDouble(e.Value, System.Globalization.CultureInfo.InvariantCulture));
+                else
+                    return;
 
                 handler?.Invoke(s, e);
             };

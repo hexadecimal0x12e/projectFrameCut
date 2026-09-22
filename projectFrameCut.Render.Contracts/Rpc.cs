@@ -37,6 +37,7 @@ public interface IRenderClient : IAsyncDisposable
     ValueTask<GuiProjectResult> InvokeGuiProjectAsync(GuiProjectRequest request, CancellationToken cancellationToken = default);
     ValueTask<GuiProjectSession> GetGuiProjectSessionAsync(EmptyRequest request, CancellationToken cancellationToken = default);
     ValueTask<CreateAdditionalPipeResponse> CreateGuiProjectPipeAsync(GuiProjectSession request, CancellationToken cancellationToken = default);
+    ValueTask<CreateAdditionalPipeResponse> CreateGuiProjectPipeAsync(CreateGuiProjectPipeRequest request, CancellationToken cancellationToken = default);
     ValueTask<ProjectHistory> GetProjectHistoryAsync(ProjectHistoryRequest request, CancellationToken cancellationToken = default);
     ValueTask<ProjectHistoryState> UndoProjectHistoryAsync(ProjectHistoryRequest request, CancellationToken cancellationToken = default);
     ValueTask<ProjectHistoryState> RedoProjectHistoryAsync(ProjectHistoryRequest request, CancellationToken cancellationToken = default);
@@ -57,6 +58,8 @@ public interface IRenderClient : IAsyncDisposable
     ValueTask<RenderArtifact> RenderTimelineFrameAsync(TimelineFrameRequest request, CancellationToken cancellationToken = default);
     ValueTask<RenderArtifact> RenderTimelineSegmentAsync(TimelineSegmentRequest request, CancellationToken cancellationToken = default);
     ValueTask<RenderArtifact> RenderAudioSegmentAsync(AudioSegmentRequest request, CancellationToken cancellationToken = default);
+    ValueTask<PreviewAudioClock> ControlPreviewAudioAsync(PreviewAudioCommandRequest request, CancellationToken cancellationToken = default);
+    ValueTask<PreviewAudioClock> GetPreviewAudioClockAsync(PreviewAudioClockRequest request, CancellationToken cancellationToken = default);
     ValueTask<RenderArtifact> RenderClipPreviewAsync(ClipPreviewRequest request, CancellationToken cancellationToken = default);
     ValueTask<ClipPreviewBatchResponse> RenderClipPreviewBatchAsync(ClipPreviewBatchRequest request, CancellationToken cancellationToken = default);
     ValueTask<RenderJob> RenderProjectAsync(RenderProjectRequest request, CancellationToken cancellationToken = default);
@@ -121,6 +124,7 @@ public sealed class RenderClient : IRenderClient
     public ValueTask<GuiProjectResult> InvokeGuiProjectAsync(GuiProjectRequest request, CancellationToken ct = default) => SendAsync<GuiProjectRequest, GuiProjectResult>(RenderOperation.InvokeGuiProject, request, ct);
     public ValueTask<GuiProjectSession> GetGuiProjectSessionAsync(EmptyRequest request, CancellationToken ct = default) => SendAsync<EmptyRequest, GuiProjectSession>(RenderOperation.GetGuiProjectSession, request, ct);
     public ValueTask<CreateAdditionalPipeResponse> CreateGuiProjectPipeAsync(GuiProjectSession request, CancellationToken ct = default) => SendAsync<GuiProjectSession, CreateAdditionalPipeResponse>(RenderOperation.CreateGuiProjectPipe, request, ct);
+    public ValueTask<CreateAdditionalPipeResponse> CreateGuiProjectPipeAsync(CreateGuiProjectPipeRequest request, CancellationToken ct = default) => SendAsync<CreateGuiProjectPipeRequest, CreateAdditionalPipeResponse>(RenderOperation.CreateGuiProjectPipe, request, ct);
     public ValueTask<ProjectHistory> GetProjectHistoryAsync(ProjectHistoryRequest request, CancellationToken ct = default) => SendAsync<ProjectHistoryRequest, ProjectHistory>(RenderOperation.GetProjectHistory, request, ct);
     public ValueTask<ProjectHistoryState> UndoProjectHistoryAsync(ProjectHistoryRequest request, CancellationToken ct = default) => SendAsync<ProjectHistoryRequest, ProjectHistoryState>(RenderOperation.UndoProjectHistory, request, ct);
     public ValueTask<ProjectHistoryState> RedoProjectHistoryAsync(ProjectHistoryRequest request, CancellationToken ct = default) => SendAsync<ProjectHistoryRequest, ProjectHistoryState>(RenderOperation.RedoProjectHistory, request, ct);
@@ -143,6 +147,8 @@ public sealed class RenderClient : IRenderClient
     public ValueTask<RenderArtifact> RenderTimelineFrameAsync(TimelineFrameRequest request, CancellationToken ct = default) => SendAsync<TimelineFrameRequest, RenderArtifact>(RenderOperation.RenderTimelineFrame, request, ct);
     public ValueTask<RenderArtifact> RenderTimelineSegmentAsync(TimelineSegmentRequest request, CancellationToken ct = default) => SendAsync<TimelineSegmentRequest, RenderArtifact>(RenderOperation.RenderTimelineSegment, request, ct);
     public ValueTask<RenderArtifact> RenderAudioSegmentAsync(AudioSegmentRequest request, CancellationToken ct = default) => SendAsync<AudioSegmentRequest, RenderArtifact>(RenderOperation.RenderAudioSegment, request, ct);
+    public ValueTask<PreviewAudioClock> ControlPreviewAudioAsync(PreviewAudioCommandRequest request, CancellationToken ct = default) => SendAsync<PreviewAudioCommandRequest, PreviewAudioClock>(RenderOperation.ControlPreviewAudio, request, ct);
+    public ValueTask<PreviewAudioClock> GetPreviewAudioClockAsync(PreviewAudioClockRequest request, CancellationToken ct = default) => SendAsync<PreviewAudioClockRequest, PreviewAudioClock>(RenderOperation.GetPreviewAudioClock, request, ct);
     public ValueTask<RenderArtifact> RenderClipPreviewAsync(ClipPreviewRequest request, CancellationToken ct = default) => SendAsync<ClipPreviewRequest, RenderArtifact>(RenderOperation.RenderClipPreview, request, ct);
     public ValueTask<ClipPreviewBatchResponse> RenderClipPreviewBatchAsync(ClipPreviewBatchRequest request, CancellationToken ct = default) => SendAsync<ClipPreviewBatchRequest, ClipPreviewBatchResponse>(RenderOperation.RenderClipPreviewBatch, request, ct);
     public ValueTask<RenderJob> RenderProjectAsync(RenderProjectRequest request, CancellationToken ct = default) => SendAsync<RenderProjectRequest, RenderJob>(RenderOperation.RenderProject, request, ct);

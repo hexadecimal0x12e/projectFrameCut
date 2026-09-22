@@ -219,17 +219,15 @@ namespace projectFrameCut
                 catch //use the default path (/data/data/...)           
                 { }
 #elif WINDOWS
-                if (projectFrameCut.Helper.HelperProgram.AppChannel.Equals("MS Store", StringComparison.InvariantCultureIgnoreCase)) // <AppContainer Data>\LocalState
+                if (Platforms.Windows.WindowsPluginIsolationPlatform.IsInAppContainer() || WinUI.Program.IsStoreModeEnabled ||projectFrameCut.Helper.HelperProgram.AppChannel.Equals("Store", StringComparison.InvariantCultureIgnoreCase)) // <AppContainer Data>\LocalState
                 {
-                    Directory.CreateDirectory(Path.Combine(FileSystem.AppDataDirectory, "AppData"));
-                    Directory.CreateDirectory(Path.Combine(FileSystem.AppDataDirectory, "UserData"));
-                    DataPath = Path.Combine(FileSystem.AppDataDirectory, "UserData");
-                    BasicDataPath = Path.Combine(FileSystem.AppDataDirectory, "AppData");
+                    DataPath = Windows.Storage.ApplicationData.Current.RoamingFolder.Path;
                 }
                 else
                 {
                     DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
                 }
+
                 if (Program.UserDataPathOverride != null || Program.BasicDataPathOverride != null)
                 {
                     if (!string.IsNullOrWhiteSpace(Program.BasicDataPathOverride))
@@ -240,9 +238,9 @@ namespace projectFrameCut
                     {
                         DataPath = Program.UserDataPathOverride;
                     }
-                    loggingDir = System.IO.Path.Combine(BasicDataPath, "logging");
                 }
 
+                loggingDir = System.IO.Path.Combine(BasicDataPath, "logging");
                 IsStoreMode = WinUI.Program.IsStoreModeEnabled;
 #elif IOS
                 DataPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -449,6 +447,7 @@ namespace projectFrameCut
                     if (!Directory.Exists(newPath))
                     {
                         Log($"User defined UserData path '{newPath}' is not exist, ignore the override.");
+                        HomePage.IsUserDataFailed = true;
                     }
                     else
                     {
@@ -467,12 +466,22 @@ namespace projectFrameCut
             catch (Exception ex)
             {
                 Log(ex, "setup user data dir", CreateMauiApp);
-#if ANDROID
-                Android.Util.Log.Wtf("projectFrameCut", $"Failed to init the userdata because of a {ex.GetType().Name} exception:{ex.Message}");
-#elif WINDOWS
-                _ = WinUI.App.MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot init the UserData directory because of a {ex.GetType().Name} exception:{ex.Message}\r\nYou may found your options disappeared.\r\nTry reset the data directory.", "projectFrameCut", 0U);
-#endif
+                HomePage.IsUserDataFailed = true;
             }
+
+#if WINDOWS
+            if (WinUI.App.IsPackaged())
+            {
+                try
+                {
+                    Platforms.Windows.WindowsPluginIsolationPlatform.PrepareAssetsLibraryAccess(Path.Combine(DataPath, "My Assets"));
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "prepare asset library access for AppContainer plugins", CreateMauiApp);
+                }
+            }
+#endif
 
             try
             {
@@ -481,6 +490,14 @@ namespace projectFrameCut
                 builder
 #if MAUISDK
                        .UseMauiApp<App>()
+                       .UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
+                       {
+                           options.SetDefaultAndroidViewType(AndroidViewType.TextureView);
+                       })
+                       .ConfigureEssentials(essentials =>
+                       {
+                           essentials.UseVersionTracking();
+                       })
 #elif LINUX
                        .UseMauiAppLinuxGtk4<App>()
                        .AddLinuxGtk4Essentials()
@@ -497,42 +514,18 @@ namespace projectFrameCut
 #elif ANDROID
                     handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Android.ToggleButtonHandler>();
                     handlers.AddHandler<projectFrameCut.InteractableEditor.InteractableEditor, projectFrameCut.Platforms.Android.InteractableEditorHandler>();
+                    handlers.AddHandler<NativeGLSurfaceView, NativeGLSurfaceViewHandler>();
+                    handlers.AddHandler<NativeVulkanSurfaceView, NativeVulkanSurfaceViewHandler>();
 #elif IOS
                     handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.iOS.ToggleButtonHandler>();
 #elif LINUX
                     handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Linux.ToggleButtonHandler>();
+                    handlers.AddHandler<Border, projectFrameCut.Platforms.Linux.LinuxBorderHandler>();
 #endif
                 });
-#if MAUISDK && (ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER || IOS15_0_OR_GREATER)
-                builder.UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
-                {
-                    options.SetDefaultAndroidViewType(AndroidViewType.TextureView);
-                });
-#endif
-#if MAUISDK
-                builder.ConfigureEssentials(essentials =>
-                {
-                    essentials.UseVersionTracking();
-                });
-#endif
 
 #pragma warning restore CA1416
                 var lastPath = SettingsManager.GetSetting("General_LastOpenedProject", "");
-                if (!string.IsNullOrWhiteSpace(lastPath) && Directory.Exists(lastPath))
-                {
-#if MAUISDK
-                    try
-                    {
-                        var dirName = Path.GetFileName(Path.GetDirectoryName(lastPath).TrimEnd(Path.DirectorySeparatorChar));
-                        builder = builder.ConfigureEssentials(essentials =>
-                        {
-                            essentials.AddAppAction("--continue", Localized.HomePage_Continue(dirName?.Split('\\')?.Last() ?? "Project"), icon: "icon_project")
-                                      .OnAppAction(HomePage.HandleAppActionLaunch);
-                        });
-                    }
-                    catch { }
-#endif
-                }
                 try
                 {
                     Log($"StoreMode: {IsStoreMode}, StoreModeOverride: {SettingsManager.GetSetting("StoreModeOverride", "disable")}");
@@ -561,14 +554,6 @@ namespace projectFrameCut
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
 #elif ANDROID
-                builder.ConfigureMauiHandlers(handlers =>
-                {
-                    handlers.AddHandler<NativeGLSurfaceView, NativeGLSurfaceViewHandler>();
-                    handlers.AddHandler<NativeVulkanSurfaceView, NativeVulkanSurfaceViewHandler>();
-                });
-
-
-
                 try
                 {
                     MyLoggerExtensions.OnLog += [DebuggerNonUserCode()] (msg, level) =>
@@ -700,15 +685,6 @@ namespace projectFrameCut
                         }
                     });
 
-#if LINUX
-                    builder.ConfigureMauiHandlers(handlers =>
-                    {
-                        handlers.AddHandler<
-                            Border,
-                            projectFrameCut.Platforms.Linux.LinuxBorderHandler>();
-                    });
-#endif
-
                 }
                 catch
                 {
@@ -782,7 +758,7 @@ namespace projectFrameCut
             ExternalRpcAuthorizationStore.SetEncryptionKey(Convert.FromBase64String(keyText));
         }
 
-        [ModuleInitializerAttribute]
+        [ModuleInitializer]
         public static void LoadModuleConfig()
         {
             try
@@ -1225,6 +1201,9 @@ namespace projectFrameCut
                 Log(ex, "init services", CreateMauiApp);
             }
 
+#if WINDOWS
+            if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
+#endif
 
             Log("Background init completed.");
 

@@ -178,7 +178,7 @@ public partial class ExtensibilitySettingPage : ContentPage
 
     private static PropertyPanelBuilder BuildExternalRpcClients()
     {
-        var ppb = new PropertyPanelBuilder()；
+        var ppb = new PropertyPanelBuilder();
         var clients = ExternalRpcAuthorizationStore.Read(ExternalRpcAuthorizationStore.GetPath(Path.Combine(CLIProgram.AppDataPath, "RpcRequest")))
             .Where(c => !c.Revoked).OrderBy(c => c.AppName).ToArray();
         if (clients.Length == 0)

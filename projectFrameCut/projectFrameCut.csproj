@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFrameworks>net11.0-android;net11.0_linux</TargetFrameworks>
@@ -254,9 +254,6 @@
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
 	</ItemGroup>
 
-	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
-	</ItemGroup>
-
 	<PropertyGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
 		<TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
 		<TargetFrameworkVersion>v11.0</TargetFrameworkVersion>
@@ -272,6 +269,15 @@
 	<Target Name="RestorePlatformCompileItems" BeforeTargets="CoreCompile">
 		<ItemGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
 			<Compile Include="Platforms\Linux\**\*.cs" />
+		</ItemGroup>
+		<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+			<Compile Include="Platforms\iDevices\**\*.cs" />
+		</ItemGroup>
+		<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'macos'">
+			<Compile Include="Platforms\iDevices\**\*.cs" />
+		</ItemGroup>
+		<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+			<Compile Include="Platforms\iDevices\**\*.cs" />
 		</ItemGroup>
 	</Target>
 

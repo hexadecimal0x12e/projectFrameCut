@@ -137,7 +137,8 @@ public sealed class RenderRpcService : Service
             await using var backend = new RenderBackendService(
                 stateRoot: dataRoot,
                 completionSink: RenderCompletionNotifier.Notify,
-                progressSink: RenderCompletionNotifier.NotifyProgress);
+                progressSink: RenderCompletionNotifier.NotifyProgress,
+                previewAudioSinkFactory: PreviewAudioSinkFactory.Instance);
             await new UnixSocketRenderServer(backend)
                 .RunAsync(socketPath, token, cancellationToken)
                 .ConfigureAwait(false);

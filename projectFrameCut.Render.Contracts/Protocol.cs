@@ -68,6 +68,8 @@ public enum RenderOperation
     [ProtoEnum] UndoProjectHistory = 38,
     [ProtoEnum] RedoProjectHistory = 39,
     [ProtoEnum] RestoreProjectHistory = 40,
+    [ProtoEnum] ControlPreviewAudio = 41,
+    [ProtoEnum] GetPreviewAudioClock = 42,
     [ProtoEnum] OpenHeadlessProject = 100,
     [ProtoEnum] GetHeadlessProjectSnapshot = 101,
     [ProtoEnum] ReloadHeadlessProject = 102,
@@ -464,6 +466,46 @@ public sealed class AudioSegmentRequest
     [ProtoMember(4)] public int FrameRate { get; set; }
     [ProtoMember(5)] public int SampleRate { get; set; } = 96000;
     [ProtoMember(6)] public int Channels { get; set; } = 2;
+}
+
+[ProtoContract]
+public enum PreviewAudioCommand
+{
+    [ProtoEnum] Start = 0,
+    [ProtoEnum] Pause = 1,
+    [ProtoEnum] Resume = 2,
+    [ProtoEnum] Seek = 3,
+    [ProtoEnum] Stop = 4,
+}
+
+[ProtoContract]
+public sealed class PreviewAudioCommandRequest
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public PreviewAudioCommand Command { get; set; }
+    [ProtoMember(3)] public uint StartFrame { get; set; }
+    [ProtoMember(4)] public int FrameRate { get; set; }
+}
+
+[ProtoContract]
+public sealed class PreviewAudioClockRequest
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public long Generation { get; set; }
+}
+
+[ProtoContract]
+public sealed class PreviewAudioClock
+{
+    [ProtoMember(1)] public long Generation { get; set; }
+    [ProtoMember(2)] public uint StartFrame { get; set; }
+    [ProtoMember(3)] public int SampleRate { get; set; } = 48000;
+    [ProtoMember(4)] public int Channels { get; set; } = 2;
+    [ProtoMember(5)] public long PlayedSamples { get; set; }
+    [ProtoMember(6)] public long BufferedSamples { get; set; }
+    [ProtoMember(7)] public bool IsRunning { get; set; }
+    [ProtoMember(8)] public bool IsPaused { get; set; }
+    [ProtoMember(9)] public bool HasAudio { get; set; }
 }
 
 [ProtoContract]

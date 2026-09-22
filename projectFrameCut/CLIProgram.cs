@@ -8,6 +8,7 @@ using projectFrameCut.IntegratedAPIServer;
 using projectFrameCut.IntegratedAPIServer.Headless;
 using projectFrameCut.IntegratedAPIServer.MCP;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
@@ -39,6 +40,7 @@ using IPicture = projectFrameCut.Drawing.Base.IPicture;
 #if WINDOWS
 using projectFrameCut.Render.WindowsRender;
 using ILGPU;
+using System.Security.Principal;
 
 #elif ANDROID
 
@@ -79,6 +81,11 @@ namespace projectFrameCut
             FFmpeg.AutoGen.DynamicallyLoadedBindings.EnableAutoInitialization = false; //avoid ready check exploding FFmpeg.AutoGen library before we set the root path
 
             args ??= Array.Empty<string>();
+
+            if (args.Contains("--logDiagnostic"))
+            {
+                Log($"Command line args: {Environment.NewLine}{string.Join(Environment.NewLine, args.Select(c => $"- {c}"))}");
+            }
 
             if (args.Length == 0 || IsHelpOption(args[0]))
             {
@@ -164,6 +171,8 @@ namespace projectFrameCut
                     return RunRender(args.Skip(1).ToArray());
                 case "plugin_worker":
                     return RunPluginWorker(args.Skip(1).ToArray());
+                case "plugin_network_policy":
+                    return RunPluginNetworkPolicy(args.Skip(1).ToArray());
                 case "user_data_root":
                     {
                         using Stream output = Console.OpenStandardError();
@@ -219,6 +228,12 @@ namespace projectFrameCut
             if (command.Equals("user_data_root", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("Usage: pjfc user_data_root [--quiet]\nReturns the resolved projectFrameCut user data root.");
+                return SuccessExitCode;
+            }
+
+            if (command.Equals("plugin_network_policy", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("Usage: pjfc plugin_network_policy --target=internet|server|loopback --enabled=true|false --packageFamilyName=<PFN>\nConfigures the isolated-plugin network policy. Windows administrator privileges are required.");
                 return SuccessExitCode;
             }
 
@@ -680,11 +695,17 @@ namespace projectFrameCut
             await using var service = new RenderBackendService(
                 stateRoot: dataRoot,
                 completionSink: RenderCompletionNotifier.Notify,
-                progressSink: RenderCompletionNotifier.NotifyProgress);
+                progressSink: RenderCompletionNotifier.NotifyProgress,
+                previewAudioSinkFactory: PreviewAudioSinkFactory.Instance);
             await using var httpHost = httpListenUri is null
                 ? null
                 : await StartHttpRpcServerAsync(service, httpListenUri, httpToken!, httpProjectRoot, dataRoot, cancellationToken).ConfigureAwait(false);
-            await new NamedPipeRenderServer(service, allowAdditionalPipes: true, requestDirectory: Path.Combine(AppDataPath, "RpcRequest"))
+            await new NamedPipeRenderServer(service, allowAdditionalPipes: true, requestDirectory: Path.Combine(AppDataPath, "RpcRequest"),
+#if WINDOWS
+                additionalPipeFactory: Platforms.Windows.WindowsPluginIsolationPlatform.CreateRpcPipe)
+#else
+                additionalPipeFactory: null)
+#endif
                 .RunAsync(pipe, token, parentPid, cancellationToken).ConfigureAwait(false);
             return SuccessExitCode;
         }
@@ -740,7 +761,7 @@ namespace projectFrameCut
             try
             {
 #if WINDOWS
-                if(args.Contains("--appContainer"))
+                if (args.Contains("--appContainer"))
                 {
                     Platforms.Windows.WindowsPluginIsolationPlatform.ValidateWorkerProcess();
                 }
@@ -1070,12 +1091,15 @@ namespace projectFrameCut
             void RenderAudio(string path)
             {
                 var clips = DraftImportAndExportHelper.JSONToIClips(timeline, false, IPicture.PicturePixelMode.BytePicture).Where(c => c.ClipType is ClipMode.AudioClip or ClipMode.VideoClip).ToArray();
-                var tracks = DraftImportAndExportHelper.JSONToISoundTracks(timeline).ToArray();
-                if (clips.Length == 0 && tracks.Length == 0) return;
-                foreach (var clip in clips) clip.ReInit(IPicture.PicturePixelMode.BytePicture);
-                foreach (var track in tracks) track.ReInit();
+                var tracks = DraftImportAndExportHelper.JSONToISoundTracks(timeline).ToList();
+                SoundTrackMetadata.AddMissingLegacyTracks(clips, tracks, message => Log(message, "warn"));
+                if (tracks.Count == 0)
+                {
+                    foreach (var clip in clips) clip.Dispose();
+                    return;
+                }
                 using var writer = new AudioWriter(path, 96000, 2, "pcm_s16le");
-                new AudioComposer<float> { Clips = clips, SoundTracks = tracks, Writer = writer }.Compose(fps, 96000, 2, 4096, consoleCancellation.Token);
+                new AudioComposer<float> { Clips = [], SoundTracks = tracks.ToArray(), Writer = writer }.Compose(fps, 96000, 2, 4096, consoleCancellation.Token);
                 writer.Finish();
                 foreach (var clip in clips) clip.Dispose();
                 foreach (var track in tracks) track.Dispose();
@@ -1773,6 +1797,45 @@ namespace projectFrameCut
                 Environment.Exit(InvalidCommandExitCode);
             }
             return value;
+        }
+
+        private static int RunPluginNetworkPolicy(string[] args)
+        {
+#if WINDOWS
+            try
+            {
+                using var identity = WindowsIdentity.GetCurrent();
+                if (!new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator))
+                {
+                    Console.Error.WriteLine("ERROR: plugin_network_policy requires administrator privileges.");
+                    return 1;
+                }
+
+                var target = GetOption(args, "target", false);
+                var enabledText = GetOption(args, "enabled", false);
+                var packageFamilyName = GetOption(args, "packageFamilyName", false);
+                if (string.IsNullOrWhiteSpace(target)
+                    || string.IsNullOrWhiteSpace(packageFamilyName)
+                    || !bool.TryParse(enabledText, out var enabled))
+                {
+                    Console.Error.WriteLine("ERROR: Required options are --target=internet|server|loopback, --enabled=true|false, and --packageFamilyName=<PFN>.");
+                    return InvalidCommandExitCode;
+                }
+
+                Setting.SettingPages.SecuritySettingPage.ConfigureIsolatedPluginNetworkPolicy(target, enabled, packageFamilyName);
+                Console.WriteLine($"Configured isolated plugin network policy '{target}' to '{enabled}'.");
+                return SuccessExitCode;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "configure the isolated plugin network policy", typeof(CLIProgram));
+                Console.Error.WriteLine($"ERROR: {ex.Message}");
+                return 1;
+            }
+#else
+            Console.Error.WriteLine("ERROR: plugin_network_policy is only available on Windows.");
+            return InvalidCommandExitCode;
+#endif
         }
 
         #endregion

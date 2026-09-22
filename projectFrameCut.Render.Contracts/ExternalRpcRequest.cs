@@ -114,9 +114,7 @@ public sealed class ExternalRpcClientAuthorization
     public string? ExecutablePath { get; set; }
     [ProtoMember(8)]
     public string? LaunchArguments { get; set; }
-    [ProtoMember(9)]
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-    [ProtoMember(10)]
     public DateTimeOffset? LastUsedAt { get; set; }
     [ProtoMember(11)]
     public bool Revoked { get; set; }

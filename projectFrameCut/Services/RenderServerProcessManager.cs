@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.Versioning;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using FFmpeg.AutoGen;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -106,7 +108,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
 
         if (!SupportsCliRenderProcess)
         {
-            _directHost = new RenderServiceHost(_clientId);
+            _directHost = new RenderServiceHost(_clientId, previewAudioSinkFactory: PreviewAudioSinkFactory.Instance);
             _client = _directHost.Client;
             return;
         }
@@ -184,6 +186,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
 
             try
             {
+                LogDiagnostic($"Starting worker {startInfo.FileName} with args: {JsonSerializer.Serialize(startInfo.ArgumentList)}");
                 _process = Process.Start(startInfo)
                     ?? throw new InvalidOperationException("Unable to start pjfc-cli.exe RPC server.");
                 if (noConsole)
@@ -212,6 +215,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             }
             catch (Exception ex)
             {
+                Log(ex, $"Start RPC worker '{execPath}'", this);
                 try { _client?.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
                 try { _process?.Kill(entireProcessTree: true); } catch { }
                 _process?.Dispose();

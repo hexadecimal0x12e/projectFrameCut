@@ -43,6 +43,12 @@ namespace projectFrameCut.WinUI
         {
             try
             {
+                if (Convert.ToString(e.Exception.Data["RestrictedDescription"])?.Trim()?.StartsWith("Cannot create CanvasImageSource sized") == true)
+                {
+                    //safely ignore this exception caused by Win2D vector Canvas,
+                    //as it is a known issue and does not affect the functionality of the application.
+                    return; 
+                }
                 if (SettingsManager.Settings is not null)
                 {
                     if (SettingsManager.IsSettingExists("DontPanicOnUnhandledException"))

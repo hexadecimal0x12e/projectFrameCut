@@ -114,6 +114,7 @@
                 <MenuFlyoutItem.KeyboardAccelerators>
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe413;}" Command="{Binding ShowAssetPanelCommand}" />
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_MenuBar_Edit_Combine}, FalseObject={l:Localized Key=DraftPage_MenuBar_Edit_Spilt}}}" Command="{Binding SpiltOrCombineCommand}" IsEnabled="{Binding SelectedAnyClip}">
                 <MenuFlyoutItem.IconImageSource>

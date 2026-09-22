@@ -120,7 +120,8 @@ public sealed class RenderWorkerService : Service
         await using var backend = new RenderBackendService(
             stateRoot: dataRoot,
             completionSink: RenderCompletionNotifier.Notify,
-            progressSink: RenderCompletionNotifier.NotifyProgress);
+            progressSink: RenderCompletionNotifier.NotifyProgress,
+            previewAudioSinkFactory: PreviewAudioSinkFactory.Instance);
         await new UnixSocketRenderServer(backend)
             .RunAsync(host.SocketPath, token, host.Cancellation.Token)
             .ConfigureAwait(false);

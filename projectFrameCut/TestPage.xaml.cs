@@ -16,6 +16,7 @@ using projectFrameCut.Drawing.Processing.Converting;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Drawing.Vector;
+using projectFrameCut.IntegratedAPIServer;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
@@ -29,6 +30,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
@@ -60,6 +63,8 @@ namespace projectFrameCut;
 
 public partial class TestPage : ContentPage
 {
+    private IntegratedApiServer? networkTestServer;
+
     public TestPage()
     {
         InitializeComponent();
@@ -1337,6 +1342,129 @@ public partial class TestPage : ContentPage
 
 
 
+
+    #endregion
+
+    #region network isolation test
+
+    private async void NetworkInternetTestButton_Clicked(object sender, EventArgs e)
+    {
+        await RunNetworkTestAsync("Internet access", async () =>
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+            using var response = await client.GetAsync("https://example.com/", HttpCompletionOption.ResponseHeadersRead);
+            return $"HTTPS request returned {(int)response.StatusCode} ({response.StatusCode}).";
+        });
+    }
+
+    private async void NetworkServerTestButton_Clicked(object sender, EventArgs e)
+    {
+        await StartNetworkTestServerAsync(loopback: false);
+    }
+
+    private async void NetworkLoopbackTestButton_Clicked(object sender, EventArgs e)
+    {
+        await StartNetworkTestServerAsync(loopback: true);
+    }
+
+    private async void StopNetworkServerButton_Clicked(object sender, EventArgs e)
+    {
+        await StopNetworkTestServerAsync();
+    }
+
+    private async Task RunNetworkTestAsync(string name, Func<Task<string>> test)
+    {
+        NetworkInternetTestButton.IsEnabled = false;
+        NetworkTestResultLabel.Text = $"{name} test is running...";
+        try
+        {
+            NetworkTestResultLabel.Text = $"{name}: {await test()}";
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"run the {name} network isolation test", this);
+            NetworkTestResultLabel.Text = $"{name} failed: {ex.GetType().Name}: {ex.Message}";
+        }
+        finally
+        {
+            NetworkInternetTestButton.IsEnabled = true;
+        }
+    }
+
+    private async Task StartNetworkTestServerAsync(bool loopback)
+    {
+        try
+        {
+            await StopNetworkTestServerAsync();
+            var address = loopback ? IPAddress.Loopback : await GetLocalIpv4AddressAsync()
+                ?? throw new InvalidOperationException("No local IPv4 address is available for the Web server test.");
+            var port = loopback ? 23456 : 23457;
+            var listenUri = new Uri($"http://{address}:{port}");
+            var server = new IntegratedApiServer();
+            try
+            {
+                await server.StartAsync(
+                    new IntegratedApiServerOptions
+                    {
+                        ListenUri = listenUri,
+                        EnableMcp = false,
+                    },
+                    new TestIntegratedApiBackend());
+            }
+            catch
+            {
+                await server.DisposeAsync();
+                throw;
+            }
+            networkTestServer = server;
+            NetworkServerTestButton.IsEnabled = false;
+            NetworkLoopbackTestButton.IsEnabled = false;
+            StopNetworkServerButton.IsEnabled = true;
+            NetworkTestResultLabel.Text = $"Web server is listening at {listenUri}/health. Test it from the AppContainer, then stop it here.";
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "start the network isolation test server", this);
+            NetworkTestResultLabel.Text = $"Web server failed to start: {ex.GetType().Name}: {ex.Message}";
+            NetworkServerTestButton.IsEnabled = true;
+            NetworkLoopbackTestButton.IsEnabled = true;
+        }
+    }
+
+    private async Task StopNetworkTestServerAsync()
+    {
+        var server = networkTestServer;
+        networkTestServer = null;
+        StopNetworkServerButton.IsEnabled = false;
+        if (server is not null)
+            await server.DisposeAsync();
+        NetworkServerTestButton.IsEnabled = true;
+        NetworkLoopbackTestButton.IsEnabled = true;
+        if (server is not null)
+            NetworkTestResultLabel.Text = "Web server stopped.";
+    }
+
+    private static async Task<IPAddress?> GetLocalIpv4AddressAsync()
+    {
+        try
+        {
+            var addresses = await Dns.GetHostAddressesAsync(Dns.GetHostName());
+            return addresses.FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(address));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private sealed class TestIntegratedApiBackend : IIntegratedApiBackend
+    {
+        public ValueTask<JsonElement> ExecuteAsync(IntegratedApiOperation operation, JsonElement arguments, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("The network isolation test server does not expose RPC operations.");
+
+        public ValueTask<bool> RequestAuthorizationAsync(IntegratedApiAuthorizationRequest request, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(false);
+    }
 
     #endregion
 

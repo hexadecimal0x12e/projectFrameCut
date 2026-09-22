@@ -19,6 +19,14 @@ public sealed class GuiProjectSession
 }
 
 [ProtoContract]
+public sealed class CreateGuiProjectPipeRequest
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public bool Isolated { get; set; }
+    [ProtoMember(3)] public string ClientName { get; set; } = string.Empty;
+}
+
+[ProtoContract]
 public sealed class GuiProjectRequest
 {
     [ProtoMember(1)] public Guid RequestId { get; set; } = Guid.NewGuid();

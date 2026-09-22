@@ -84,6 +84,7 @@ public partial class HomePage : ContentPage
     public static bool HasAlreadyLaunchedFromFile = false;
     public static bool IsFontLoaded = false;
     public static bool IsWelcomePageShown = false;
+    public static bool IsUserDataFailed = false;
 
 
     public HomePage()
@@ -1399,6 +1400,7 @@ public partial class HomePage : ContentPage
                                 DynamicPreviewResolutionDivisor = SettingsManager.GetSettingAs<int>("Edit_DynamicPreviewResolutionDivisor", 1, 1),
                                 DynamicPreviewTimeout = SettingsManager.GetSettingAs<int>("Edit_DynamicPreviewTimeout", 5000, 5000),
                                 UseDynamicPreview = SettingsManager.IsBoolSettingTrue("Edit_UseDynamicPreview"),
+                                UseLightweightDynamicPreviewHost = SettingsManager.IsBoolSettingTrueOrDefault("Edit_UseLightweightDynamicPreviewHost", true),
                                 ProxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none"),
                                 AutoSavePreviewAreaHeight = SettingsManager.IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave"),
                                 LockScrollViewAfterSelection = SettingsManager.IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection", true),
@@ -2008,19 +2010,20 @@ public partial class HomePage : ContentPage
 #if !iDevices
         try
         {
-            if (File.Exists(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt")) && !Directory.Exists(File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"))))
+            if (IsUserDataFailed)
             {
-                await DisplayAlertAsync(Localized._Warn, Localized.HomePage_UserdataPathNotFoundWarn(File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"))), Localized._OK);
-
+                var path = "<unknown>";
+                try
+                {
+                    path = File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"));
+                }
+                catch { }
+                await DisplayAlertAsync(Localized._Warn, Localized.HomePage_UserdataPathNotFoundWarn(path), Localized._OK);
             }
         }
         catch { }
 #endif
         MainSettingsPage.SyncSettingToModules();
-#if WINDOWS
-        if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
-
-#endif
     }
 
     private async void MenuOpen_Clicked(object? sender, EventArgs e)

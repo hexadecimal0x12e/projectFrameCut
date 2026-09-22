@@ -42,6 +42,17 @@
             </Border>
 
             <Border StrokeThickness="4">
+                <VerticalStackLayout Padding="8" Spacing="6">
+                    <Label Text="AppContainer network isolation test" FontAttributes="Bold" />
+                    <Button x:Name="NetworkInternetTestButton" Text="Test internet access" Clicked="NetworkInternetTestButton_Clicked" />
+                    <Button x:Name="NetworkServerTestButton" Text="Test Web server capability" Clicked="NetworkServerTestButton_Clicked" />
+                    <Button x:Name="NetworkLoopbackTestButton" Text="Test loopback access" Clicked="NetworkLoopbackTestButton_Clicked" />
+                    <Button x:Name="StopNetworkServerButton" Text="Stop test Web server" Clicked="StopNetworkServerButton_Clicked" IsEnabled="False" />
+                    <Label x:Name="NetworkTestResultLabel" Text="No network test has run." LineBreakMode="WordWrap" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border StrokeThickness="4">
                 <VerticalStackLayout>
                     <Button x:Name="TestFFmpegButton" Text="Test decode" Clicked="TestFFmpegButton_Clicked"/>
                     <Button x:Name="TestPlaceButton" Text="Test place" Clicked="TestPlaceButton_Clicked"/>

@@ -1,4 +1,4 @@
-using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
@@ -41,65 +41,58 @@ namespace projectFrameCut.Render.Compose
 
             var (contexts, totalSamples) = BuildAudioContexts(videoFramerate, samplerate);
 
-            try
-            {
-                Writer.SamplePerSecond = samplerate;
-                Writer.ChannelCount = channels;
-                Writer.Initialize();
+            Writer.SamplePerSecond = samplerate;
+            Writer.ChannelCount = channels;
+            Writer.Initialize();
 
-                if (totalSamples <= 0)
+            if (totalSamples <= 0)
+            {
+                return;
+            }
+            Stopwatch elapsed = Stopwatch.StartNew();
+            ConcurrentDictionary<string, object> globalBindableCache = new();
+            Log($"[AudioComposer] Total {totalSamples} samples need to compose.");
+            for (int chunkStart = 0; chunkStart < totalSamples; chunkStart += chunkSampleCount)
+            {
+                if (cancellationToken?.IsCancellationRequested == true)
                 {
+                    Log($"[AudioComposer] Cancellation requested, stopping composition.");
                     return;
                 }
-                Stopwatch elapsed = Stopwatch.StartNew();
-                ConcurrentDictionary<string, object> globalBindableCache = new();
-                Log($"[AudioComposer] Total {totalSamples} samples need to compose.");
-                for (int chunkStart = 0; chunkStart < totalSamples; chunkStart += chunkSampleCount)
+                int chunkLength = Math.Min(chunkSampleCount, totalSamples - chunkStart);
+                float[][] mixed = CreateZeroChannels(channels, chunkLength);
+
+                foreach (var context in contexts)
                 {
-                    if (cancellationToken?.IsCancellationRequested == true)
-                    {
-                        Log($"[AudioComposer] Cancellation requested, stopping composition.");
-                        return;
-                    }
-                    int chunkLength = Math.Min(chunkSampleCount, totalSamples - chunkStart);
-                    float[][] mixed = CreateZeroChannels(channels, chunkLength);
-
-                    foreach (var context in contexts)
-                    {
-                        MixContextIntoChunk(context, chunkStart, chunkLength, samplerate, channels, mixed, globalBindableCache);
-                    }
-
-                    Writer.Append(new FloatAudioSamples
-                    {
-                        Channels = mixed,
-                        SampleCount = chunkLength,
-                        SamplePerSecond = samplerate
-                    });
-
-                    var prog = (double)(chunkStart + chunkLength) / totalSamples;
-                    TimeSpan etr = TimeSpan.Zero;
-                    if (prog > 0.005)
-                    {
-                        double totalEst = elapsed.Elapsed.TotalSeconds / prog;
-                        double remaining = totalEst - elapsed.Elapsed.TotalSeconds;
-                        if (remaining > 0) etr = TimeSpan.FromSeconds(remaining);
-                    }
-
-                    OnProgressChanged?.Invoke(prog, etr);
-
-                    if (LogState && chunkStart % 200 == 0) Log($"[AudioComposer] Finished {(float)(chunkStart / (float)totalSamples):p2} ({chunkStart} of {totalSamples})");
-
+                    MixContextIntoChunk(context, chunkStart, chunkLength, samplerate, channels, mixed, globalBindableCache);
                 }
-            }
-            finally
-            {
-                DisposeContexts(contexts);
+
+                Writer.Append(new FloatAudioSamples
+                {
+                    Channels = mixed,
+                    SampleCount = chunkLength,
+                    SamplePerSecond = samplerate
+                });
+
+                var prog = (double)(chunkStart + chunkLength) / totalSamples;
+                TimeSpan etr = TimeSpan.Zero;
+                if (prog > 0.005)
+                {
+                    double totalEst = elapsed.Elapsed.TotalSeconds / prog;
+                    double remaining = totalEst - elapsed.Elapsed.TotalSeconds;
+                    if (remaining > 0) etr = TimeSpan.FromSeconds(remaining);
+                }
+
+                OnProgressChanged?.Invoke(prog, etr);
+
+                if (LogState && chunkStart % 200 == 0) Log($"[AudioComposer] Finished {(float)(chunkStart / (float)totalSamples):p2} ({chunkStart} of {totalSamples})");
+
             }
         }
 
 
 
-        private (List<AudioClipContext> contexts, int totalSamples) BuildAudioContexts(
+        private (List<SoundTrackContext> contexts, int totalSamples) BuildAudioContexts(
             int videoFramerate,
             int outputSampleRate)
         {
@@ -112,111 +105,18 @@ namespace projectFrameCut.Render.Compose
                 ? int.MaxValue
                 : SafeAdd(renderStartSample, requestedDurationSamples.Value);
 
-            Dictionary<string, ISoundTrack> trackMap = new();
-            if (SoundTracks != null)
-            {
-                foreach (var track in SoundTracks)
-                {
-                    trackMap[track.Id] = track;
-                }
-            }
-
-            List<AudioClipContext> contexts = new();
+            List<SoundTrackContext> contexts = new();
             int totalSamples = requestedDurationSamples ?? 0;
 
-            foreach (var clip in Clips)
-            {
-                if (clip.ClipType != ClipMode.AudioClip && clip.ClipType != ClipMode.VideoClip)
-                {
-                    continue;
-                }
-
-                if (string.IsNullOrWhiteSpace(clip.FilePath))
-                {
-                    continue;
-                }
-
-                IAudioSource? source;
-                try
-                {
-                    source = PluginManager.CreateAudioSource(clip.FilePath);
-                }
-                catch
-                {
-                    source = null;
-                }
-
-                if (source is null)
-                {
-                    continue;
-                }
-
-                float ratio = ResolveSpeedRatio(clip);
-                int clipStartSample = FrameToSample(clip.StartFrame, videoFramerate, outputSampleRate);
-                int durationFrames = (int)Math.Max(0, Math.Round(clip.Duration * ratio));
-                int clipDurationSamples = FrameToSample(durationFrames, videoFramerate, outputSampleRate);
-                if (clipDurationSamples <= 0)
-                {
-                    source.Dispose();
-                    continue;
-                }
-
-                int sourceStartSample = FrameToSample(clip.RelativeStartFrame, videoFramerate, Math.Max(1, source.SamplePerSecond));
-
-                ISoundTrack? bindedTrack = null;
-                float volume = 1.0f;
-                string? bindedSoundTrackId = clip.BindedSoundTrack;
-                if (!string.IsNullOrWhiteSpace(bindedSoundTrackId)
-                    && trackMap.TryGetValue(bindedSoundTrackId!, out ISoundTrack? track)
-                    && track is not null)
-                {
-                    bindedTrack = track;
-                    volume = track.Volume;
-                }
-
-                IEffect[] effects = (clip.EffectsInstances ?? Array.Empty<IEffect>())
-                    .Where(e => e.Enabled)
-                    .OrderBy(e => e.Index)
-                    .ToArray();
-
-                int clipEndSample = clipStartSample + clipDurationSamples;
-                int overlapStartSample = Math.Max(clipStartSample, renderStartSample);
-                int overlapEndSample = Math.Min(clipEndSample, renderEndSample);
-                if (overlapEndSample <= overlapStartSample)
-                {
-                    source.Dispose();
-                    continue;
-                }
-
-                int localSampleOffset = overlapStartSample - clipStartSample;
-                contexts.Add(new AudioClipContext
-                {
-                    Clip = clip,
-                    SoundTrack = bindedTrack,
-                    Source = source,
-                    SourceSampleRate = Math.Max(1, source.SamplePerSecond),
-                    TimelineStartSample = overlapStartSample - renderStartSample,
-                    TimelineEndSample = overlapEndSample - renderStartSample,
-                    SourceStartSample = sourceStartSample,
-                    LocalSampleOffset = localSampleOffset,
-                    Volume = volume,
-                    Ratio = ratio,
-                    Effects = effects
-                });
-
-                totalSamples = Math.Max(totalSamples, overlapEndSample - renderStartSample);
-            }
-
             if (SoundTracks != null)
             {
                 foreach (var track in SoundTracks)
                 {
-                    if (track.NeedFilePath && string.IsNullOrWhiteSpace(track.FilePath))
+                    if (!SoundTrackMetadata.ReadBool(track.ExtraData, SoundTrackMetadata.EnabledKey, true))
                     {
                         continue;
                     }
-
-                    if (string.IsNullOrWhiteSpace(track.FilePath))
+                    if (track.NeedFilePath && string.IsNullOrWhiteSpace(track.FilePath))
                     {
                         continue;
                     }
@@ -256,13 +156,10 @@ namespace projectFrameCut.Render.Compose
                     }
 
                     int localSampleOffset = overlapStartSample - trackStartSample;
-                    contexts.Add(new AudioClipContext
+                    contexts.Add(new SoundTrackContext
                     {
-                        Clip = null,
                         SoundTrack = track,
-                        Source = null,
                         SourceSampleRate = sourceSampleRate,
-                        OwnsSource = false,
                         TimelineStartSample = overlapStartSample - renderStartSample,
                         TimelineEndSample = overlapEndSample - renderStartSample,
                         SourceStartSample = sourceStartSample,
@@ -281,7 +178,7 @@ namespace projectFrameCut.Render.Compose
 
 
         private static void MixContextIntoChunk(
-            AudioClipContext context,
+            SoundTrackContext context,
             int chunkStart,
             int chunkLength,
             int outputSampleRate,
@@ -319,7 +216,7 @@ namespace projectFrameCut.Render.Compose
         }
 
         private static FloatAudioSamples ReadClipWindowToFloat(
-            AudioClipContext context,
+            SoundTrackContext context,
             int clipOutputOffset,
             int outputCount,
             int outputSampleRate,
@@ -336,10 +233,7 @@ namespace projectFrameCut.Render.Compose
             int sourceReadStart = Math.Max(0, context.SourceStartSample + sourceIntStart);
             int sourceReadCount = Math.Max(2, (int)Math.Ceiling(sourceStartFrac + (outputCount - 1) * sourceStep) + 2);
 
-            IAudioSamples raw = context.Clip is null && context.SoundTrack is not null
-                ? context.SoundTrack.GetAudioSamplesRelatedToStartPointOfSource((uint)sourceReadStart, sourceReadCount)
-                : context.Source?.GetSample((uint)sourceReadStart, sourceReadCount)
-                    ?? throw new InvalidOperationException("Audio composition context has no source.");
+            IAudioSamples raw = context.SoundTrack.GetAudioSamplesRelatedToStartPointOfSource((uint)sourceReadStart, sourceReadCount);
 
             float[][] sourceChannels = ToFloatChannels(raw);
             int sourceChannelCount = Math.Max(1, raw.channelCount);
@@ -371,7 +265,7 @@ namespace projectFrameCut.Render.Compose
         }
 
         private static FloatAudioSamples ApplyAudioEffects(
-            AudioClipContext context,
+            SoundTrackContext context,
             FloatAudioSamples input,
             uint clipLocalSampleIndex,
             ConcurrentDictionary<string, object> globalBindableCache)
@@ -431,47 +325,6 @@ namespace projectFrameCut.Render.Compose
             }
 
             return (int)Math.Max(0, Math.Round(frame / fps * sampleRate));
-        }
-
-        private static float ResolveSpeedRatio(IClip clip)
-        {
-            if (clip.Duration == 0)
-            {
-                return 1f;
-            }
-
-            ISpeedVarianceProvider? provider = clip.SpeedVarianceProviderInstance;
-            if (provider is null)
-            {
-                return 1f;
-            }
-
-            if (provider is ClassicSpeedVarianceProvider classic)
-            {
-                float ratio = classic.Ratio;
-                if (ratio > 0f && !float.IsNaN(ratio) && !float.IsInfinity(ratio))
-                {
-                    return ratio;
-                }
-            }
-
-            try
-            {
-                uint effectiveDuration = provider.GetEffectiveLength(clip.Duration);
-                if (effectiveDuration > 0)
-                {
-                    float ratio = effectiveDuration / (float)clip.Duration;
-                    if (ratio > 0f && !float.IsNaN(ratio) && !float.IsInfinity(ratio))
-                    {
-                        return ratio;
-                    }
-                }
-            }
-            catch
-            {
-            }
-
-            return 1f;
         }
 
         private static int SafeAdd(int left, int right)
@@ -584,27 +437,10 @@ namespace projectFrameCut.Render.Compose
             throw new KeyNotFoundException($"Cached value with key '{key}' not found.");
         }
 
-        private static void DisposeContexts(IEnumerable<AudioClipContext> contexts)
+        private sealed class SoundTrackContext
         {
-            foreach (var context in contexts)
-            {
-                try
-                {
-                    if (context.OwnsSource) context.Source?.Dispose();
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        private sealed class AudioClipContext
-        {
-            public IClip? Clip { get; init; }
-            public ISoundTrack? SoundTrack { get; init; }
-            public IAudioSource? Source { get; init; }
+            public required ISoundTrack SoundTrack { get; init; }
             public int SourceSampleRate { get; init; }
-            public bool OwnsSource { get; init; } = true;
             public int TimelineStartSample { get; init; }
             public int TimelineEndSample { get; init; }
             public int SourceStartSample { get; init; }

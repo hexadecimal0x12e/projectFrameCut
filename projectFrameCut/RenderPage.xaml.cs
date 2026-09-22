@@ -28,6 +28,7 @@ using IPicture = projectFrameCut.Drawing.Base.IPicture;
 
 using static System.Net.Mime.MediaTypeNames;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.ClipsAndTracks;
 using System.Reflection;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.HwAccelEngine;
@@ -1663,32 +1664,24 @@ public partial class RenderPage : ContentPage
         }
 
         var clips = DraftImportAndExportHelper.JSONToIClips(draftSrc, false).Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip).ToArray();
-        var tracks = DraftImportAndExportHelper.JSONToISoundTracks(draftSrc).ToArray();
+        var tracks = DraftImportAndExportHelper.JSONToISoundTracks(draftSrc).ToList();
+        SoundTrackMetadata.AddMissingLegacyTracks(clips, tracks, message => Log(message, "warn"));
 
-        if (!clips.ArrayAny() && !tracks.ArrayAny())
+        if (tracks.Count == 0)
         {
+            foreach (var clip in clips) clip.Dispose();
             Log("No sound clips in the whole draft. returning...");
             return;
         }
 
-        Log($"Found {clips.Length} audio clips.");
-
-        Log("Initializing all clips...");
-        foreach (var clip in clips)
-        {
-            await Task.Run(() => clip.ReInit(8));
-        }
-        foreach (var track in tracks)
-        {
-            await Task.Run(track.ReInit);
-        }
+        Log($"Found {tracks.Count} soundtracks.");
 
         var writer = new AudioWriter(outputPath, 96000, 2, "pcm_s16le");
 
         var composer = new AudioComposer<float>
         {
-            Clips = clips,
-            SoundTracks = tracks,
+            Clips = [],
+            SoundTracks = tracks.ToArray(),
             Writer = writer
         };
 

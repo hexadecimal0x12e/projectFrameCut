@@ -348,6 +348,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string TypeName { get; set; } = string.Empty;
         public Guid Id { get; set; } = Guid.Empty;
         public string Name { get; set; } = string.Empty;
+        public string BindedSoundTrack { get; set; } = string.Empty;
         public uint LayerIndex { get; set; }
         public uint SubLayerIndex { get; set; }
         public uint StartFrame { get; set; }
@@ -388,6 +389,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float SecondPerFrameRatio { get; set; }
+        public bool ShouldDisplayInUI { get; set; } = true;
+        public EffectAndMixtureJSONStructure[]? Effects { get; set; }
 
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }
