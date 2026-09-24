@@ -24,7 +24,7 @@ using System.Runtime.InteropServices;
 
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using System.Globalization;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 
 using static System.Net.Mime.MediaTypeNames;
 using projectFrameCut.Render.Compose;
@@ -35,7 +35,7 @@ using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.RenderAPIBase.Context;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Contracts;
-using PictureExtensions = projectFrameCut.Drawing.Base.PictureExtensions;
+
 
 
 
@@ -773,6 +773,7 @@ public partial class RenderPage : ContentPage
             EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true),
             PrepareInWorker = SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorker", true),
             RenderByLayer = SettingsManager.IsBoolSettingTrueOrDefault("render_RenderByLayer", true),
+            ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
             ChunkRender = chunkOptions.Enabled && !writeToVoid,
             ChunkFrames = chunkOptions.ChunkFrames,
             ChunkSeconds = chunkOptions.ChunkSeconds,
@@ -1476,6 +1477,8 @@ public partial class RenderPage : ContentPage
                 AllowReorderEffect = SettingsManager.IsBoolSettingTrueOrDefault("render_allowEffectOutOfOrder", true),
                 EnableGPUBatchProcess = SettingsManager.IsBoolSettingTrueOrDefault("render_enableBatchProcess", true),
                 RenderByLayers = SettingsManager.IsBoolSettingTrueOrDefault("render_RenderByLayer", true),
+                ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
+                DynamicPreviewCacheProjectRoot = _workingPath,
                 EnableRenderWatchdogForceStart = DeviceInfo.Idiom != DeviceIdiom.Desktop,
                 MinSchedulePreparedFrames = parallelThreadCount,
                 MaxPendingWriteFrames = SettingsManager.GetSettingAs("render_maxPendingWriteFrames", (int)(Environment.WorkingSet / ((width * height * (bpp.Value / 8) * 3) + 32)) / 2, 150),
@@ -2225,6 +2228,7 @@ public partial class RenderPage : ContentPage
         var maxThreads = Math.Max(1, (int)Math.Round(MaxParallelThreadsCount.Value));
         args.Add($"-maxParallelThreads={maxThreads}");
         args.Add($"-preferHwAccelEncoder={useHardwareAcceleration}");
+        args.Add($"-reuseDynamicPreviewCache={SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false)}");
 
         if (SettingsManager.IsBoolSettingTrue("render_BlockWrite"))
         {

@@ -33,7 +33,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using static projectFrameCut.Shared.Logger;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 
 
 
@@ -910,6 +910,7 @@ namespace projectFrameCut
             if (gcOption == 2) GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
             var serial = bool.TryParse(switches.GetValueOrDefault("oneByOneRender", "false"), out var one) && one;
             var renderByLayers = bool.TryParse(switches.GetValueOrDefault("renderByLayer", "false"), out var layers) && layers;
+            var reuseDynamicPreviewCache = bool.TryParse(switches.GetValueOrDefault("reuseDynamicPreviewCache", "false"), out var reusePreview) && reusePreview;
             var prepareInWorkers = bool.TryParse(switches.GetValueOrDefault("prepareInWorker", "false"), out var prepare) && prepare;
             var affinity = bool.TryParse(switches.GetValueOrDefault("enableThreadAffinity", "true"), out var threadAffinity) && threadAffinity;
             var maxThreads = int.TryParse(switches.GetValueOrDefault("maxParallelThreads", Environment.ProcessorCount.ToString()), out var mt) ? Math.Max(1, mt) : Environment.ProcessorCount;
@@ -1001,6 +1002,10 @@ namespace projectFrameCut
                     MaxThreads = Math.Max(1, renderThreads),
                     OneByOneRender = serial,
                     RenderByLayers = renderByLayers,
+                    ReuseDynamicPreviewCache = reuseDynamicPreviewCache,
+                    DynamicPreviewCacheProjectRoot = projectRoot,
+                    DynamicPreviewCacheProjectWidth = Math.Max(1, project.RelativeWidth),
+                    DynamicPreviewCacheProjectHeight = Math.Max(1, project.RelativeHeight),
                     PrepareInWorkerThreads = prepareInWorkers,
                     EnableThreadAffinity = affinity,
                     MinSchedulePreparedFrames = 1
@@ -1056,7 +1061,7 @@ namespace projectFrameCut
                     duration,
                     fps,
                     Path.GetExtension(path),
-                    $"{width}x{height}|{fps}|{pixelFormat}|{output[4]}|bpp={bpp}|bitrate={requestedBitRate}|serial={serial}|layers={renderByLayers}|prepare={prepareInWorkers}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}",
+                    $"{width}x{height}|{fps}|{pixelFormat}|{output[4]}|bpp={bpp}|bitrate={requestedBitRate}|serial={serial}|layers={renderByLayers}|prepare={prepareInWorkers}|reusePreview={reuseDynamicPreviewCache}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}",
                     maxThreads,
                     chunkOptions);
                 await coordinator.InitializeAsync(consoleCancellation.Token).ConfigureAwait(false);
@@ -2162,6 +2167,7 @@ Usage:
                 [-target=video|audio|all|void] [-assetDbFile=<database.json>]
                 [-maxParallelThreads=<number>] [-oneByOneRender=true|false]
                 [-renderByLayer=true|false] [-prepareInWorker=true|false]
+                [-reuseDynamicPreviewCache=true|false]
                 [-enableThreadAffinity=true|false] [-GCOptions=0|1|2]
                 [-chunkRender=true|false] [-chunkFrames=<number>|-chunkSeconds=<number>]
                 [-chunkParallelism=<number>] [-chunkResume=true|false]

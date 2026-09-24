@@ -23,7 +23,7 @@
 		<ProjectReference Include="..\..\projectFrameCut.Drawing\projectFrameCut.Drawing\projectFrameCut.Drawing.csproj" />
 
 	</ItemGroup>
-
-
-
+	
+	
+	
 </Project>

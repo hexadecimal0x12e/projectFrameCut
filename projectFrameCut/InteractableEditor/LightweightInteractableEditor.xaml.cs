@@ -9,6 +9,14 @@ namespace projectFrameCut.InteractableEditor;
 
 public partial class LightweightInteractableEditor : ContentView, IInteractableEditor
 {
+    public static readonly BindableProperty UseCheckerboardBackgroundProperty = BindableProperty.Create(
+        nameof(UseCheckerboardBackground),
+        typeof(bool),
+        typeof(LightweightInteractableEditor),
+        false,
+        propertyChanged: static (bindable, _, _) =>
+            ((LightweightInteractableEditor)bindable).CheckerboardBackgroundView.Invalidate());
+
     private readonly Dictionary<Guid, PreviewState> _states = new();
     private readonly Dictionary<Guid, IInteractableElement> _elements = new();
     private double _canvasWidth;
@@ -21,6 +29,8 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
     public LightweightInteractableEditor()
     {
         InitializeComponent();
+        CheckerboardBackgroundView.Drawable = new CheckerboardDrawable();
+        CanvasBackground.ZIndex = int.MinValue;
         SizeChanged += (_, _) =>
         {
             if (Width > 0 && Height > 0)
@@ -28,6 +38,12 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
                 SetCanvasSize(Width, Height);
             }
         };
+    }
+
+    public bool UseCheckerboardBackground
+    {
+        get => (bool)GetValue(UseCheckerboardBackgroundProperty);
+        set => SetValue(UseCheckerboardBackgroundProperty, value);
     }
 
     public void SetInteractiveElements(IReadOnlyCollection<IInteractableElement> elements)
@@ -127,6 +143,11 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
 
     private void LayoutPreviews()
     {
+        if (_canvasWidth > 0 && _canvasHeight > 0 && _videoWidth > 0 && _videoHeight > 0)
+        {
+            AbsoluteLayout.SetLayoutBounds(CanvasBackground, GetRenderRect());
+        }
+
         foreach (var state in _states.Values)
         {
             if (state.HasView) LayoutPreview(state);
@@ -231,6 +252,29 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
     public IInteractableEditor ConfigureBlankAreaClicked(Func<Task>? callback) => this;
     public IInteractableEditor ConfigureElementChanged(InteractiveElementChangedHandler? callback) => this;
     public IInteractableEditor ConfigureCustomHandles(CustomHandleProvider? provider, CustomHandleDragHandler? dragHandler) => this;
+
+    private sealed class CheckerboardDrawable : IDrawable
+    {
+        private const float CellSize = 12;
+
+        public void Draw(ICanvas canvas, RectF dirtyRect)
+        {
+            canvas.FillColor = Color.FromArgb("#E0E0E0");
+            canvas.FillRectangle(dirtyRect);
+            canvas.FillColor = Color.FromArgb("#B8B8B8");
+
+            for (float y = 0; y < dirtyRect.Bottom; y += CellSize)
+            {
+                for (float x = 0; x < dirtyRect.Right; x += CellSize)
+                {
+                    if (((int)(x / CellSize) + (int)(y / CellSize)) % 2 == 0)
+                    {
+                        canvas.FillRectangle(x, y, CellSize, CellSize);
+                    }
+                }
+            }
+        }
+    }
 
     private sealed class PreviewState(Guid id)
     {

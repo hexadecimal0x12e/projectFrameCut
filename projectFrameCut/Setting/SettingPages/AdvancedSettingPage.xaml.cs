@@ -13,7 +13,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 
 namespace projectFrameCut.Setting.SettingPages;
 

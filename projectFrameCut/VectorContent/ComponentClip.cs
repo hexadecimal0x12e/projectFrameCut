@@ -12,7 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 using Point = projectFrameCut.Drawing.Vector.Point;
 
 namespace projectFrameCut.Render.ClipsAndTracks;

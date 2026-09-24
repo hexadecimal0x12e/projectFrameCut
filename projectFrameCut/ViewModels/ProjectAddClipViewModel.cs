@@ -30,7 +30,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows.Input;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 
 namespace projectFrameCut.ViewModels;
 

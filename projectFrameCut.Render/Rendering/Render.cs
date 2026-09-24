@@ -76,6 +76,10 @@ namespace projectFrameCut.Render.Rendering
         public bool AllowReorderEffect { get; set; } = true;
         public bool EnableEffectAutoRetry { get; set; } = true;
         public bool ProcessEffectFromCanvas { get; set; } = true;
+        public bool ReuseDynamicPreviewCache { get; set; } = false;
+        public string? DynamicPreviewCacheProjectRoot { get; set; }
+        public int DynamicPreviewCacheProjectWidth { get; set; }
+        public int DynamicPreviewCacheProjectHeight { get; set; }
 
         public int MaxRenderScheduleTimeout { get; set; } = 500;
         public int MinSchedulePreparedFrames { get => field > 0 ? field : MaxThreads; set; }
@@ -141,6 +145,10 @@ namespace projectFrameCut.Render.Rendering
         private bool running { get; set; } = false;
 
         ConcurrentDictionary<Guid, ConcurrentDictionary<uint, IPicture>> FrameCache = new();
+        private readonly ConditionalWeakTable<IPicture, object> _dynamicPreviewFrames = new();
+        private static readonly object DynamicPreviewFrameMarker = new();
+        private IClip[] _dynamicPreviewHashClips = [];
+        private readonly ConcurrentDictionary<Guid, Dictionary<string, List<(string Path, int ProjectWidth, int ProjectHeight, int CanvasWidth, int CanvasHeight)>>> _dynamicPreviewFiles = new();
         ConcurrentDictionary<string, IPicture> ImmutableContentCache = new();
         ConcurrentDictionary<uint, IClip[]> ClipNeedForFrame = new();
 
@@ -292,6 +300,8 @@ namespace projectFrameCut.Render.Rendering
 
         private void InitializeRenderCaches()
         {
+            _dynamicPreviewHashClips = Clips.ToArray();
+            _dynamicPreviewFiles.Clear();
             _preparedFlagArray = new int[Duration];
             _ppb = Use16Bit ? 16 : 8;
             if (builder is not null)
@@ -1682,6 +1692,8 @@ namespace projectFrameCut.Render.Rendering
                     && cachedFrame is not null)
                 {
                     frame = cachedFrame.Clone();
+                    if (_dynamicPreviewFrames.TryGetValue(cachedFrame, out _))
+                        _dynamicPreviewFrames.Add(frame, DynamicPreviewFrameMarker);
                     LogDiagnostic($"[ReRenderFrame] Frame {frameIndex}: clip {clip.Id} from FrameCache.");
                 }
                 else
@@ -1728,6 +1740,12 @@ namespace projectFrameCut.Render.Rendering
         /// <returns>解码后的画面；输入缺失且不抛异常时返回 null</returns>
         private IPicture? DecodeClipSourceFrame(IClip item, uint frameIndex, IPicture.PicturePixelMode ppb, bool throwOnMissingTransformInput = true)
         {
+            if (TryLoadDynamicPreviewFrame(item, frameIndex, ppb, out var previewFrame))
+            {
+                _dynamicPreviewFrames.Add(previewFrame, DynamicPreviewFrameMarker);
+                return previewFrame;
+            }
+
             IPicture? frame;
             int clipTargetWidth = ResolveClipOutputWidth(item, TargetWidth, ProjectRelativeWidth);
             int clipTargetHeight = ResolveClipOutputHeight(item, TargetHeight, ProjectRelativeHeight);
@@ -1815,6 +1833,97 @@ namespace projectFrameCut.Render.Rendering
             return frame;
         }
 
+        private bool TryLoadDynamicPreviewFrame(IClip clip, uint frameIndex, IPicture.PicturePixelMode ppb, out IPicture frame)
+        {
+            frame = null!;
+            if (!ReuseDynamicPreviewCache || string.IsNullOrWhiteSpace(DynamicPreviewCacheProjectRoot))
+                return false;
+
+            var directory = Path.Combine(DynamicPreviewCacheProjectRoot, "thumbs", "perClip", clip.Id.ToString(), "dynamic");
+            if (!Directory.Exists(directory)) return false;
+
+            var hashClip = _dynamicPreviewHashClips.FirstOrDefault(c => c.Id == clip.Id) ?? clip;
+            var hash = Timeline.GetClipFrameHash(_dynamicPreviewHashClips, hashClip, frameIndex);
+            if (hash == "__error__") return false;
+            var format = ppb == IPicture.PicturePixelMode.UShortPicture ? "vfd16" : "vfd8";
+            var expectedWidth = ResolveClipOutputWidth(clip, TargetWidth, ProjectRelativeWidth);
+            var expectedHeight = ResolveClipOutputHeight(clip, TargetHeight, ProjectRelativeHeight);
+            var candidates = new List<(string Path, long Area)>();
+            try
+            {
+                var files = _dynamicPreviewFiles.GetOrAdd(clip.Id, _ => IndexDynamicPreviewFiles(directory));
+                if (!files.TryGetValue($"{hash}_{format}", out var matches)) return false;
+                foreach (var candidate in matches)
+                {
+                    if (candidate.ProjectWidth != (DynamicPreviewCacheProjectWidth > 0 ? DynamicPreviewCacheProjectWidth : ProjectRelativeWidth)
+                        || candidate.ProjectHeight != (DynamicPreviewCacheProjectHeight > 0 ? DynamicPreviewCacheProjectHeight : ProjectRelativeHeight))
+                        continue;
+
+                    var width = ResolveClipOutputWidth(clip, candidate.CanvasWidth, candidate.ProjectWidth);
+                    var height = ResolveClipOutputHeight(clip, candidate.CanvasHeight, candidate.ProjectHeight);
+                    if (width >= expectedWidth && height >= expectedHeight)
+                        candidates.Add((candidate.Path, (long)width * height));
+                }
+
+                foreach (var candidate in candidates.OrderBy(x => x.Area))
+                {
+                    try
+                    {
+                        using var stream = new FileStream(candidate.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                        if (!Drawing.Base.PictureExtensions.SharedVfdPictureDecoder.TryLoad(stream, out IPicture? loaded)
+                            || loaded is null)
+                            continue;
+                        if (loaded.BitPerPixel != ppb || loaded.Width < expectedWidth || loaded.Height < expectedHeight)
+                        {
+                            loaded.Dispose();
+                            continue;
+                        }
+                        frame = loaded;
+                        LogDiagnostic($"[Render] Reused dynamic preview for clip {clip.Id}, frame {frameIndex}: {candidate.Path}");
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"Reading dynamic preview for clip {clip.Id}, frame {frameIndex}", this);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Finding dynamic preview for clip {clip.Id}, frame {frameIndex}", this);
+            }
+            return false;
+        }
+
+        private Dictionary<string, List<(string Path, int ProjectWidth, int ProjectHeight, int CanvasWidth, int CanvasHeight)>> IndexDynamicPreviewFiles(string directory)
+        {
+            var files = new Dictionary<string, List<(string Path, int ProjectWidth, int ProjectHeight, int CanvasWidth, int CanvasHeight)>>(StringComparer.Ordinal);
+            const string prefix = "dynamic_v4-vfd_";
+            foreach (var path in Directory.EnumerateFiles(directory, $"{prefix}*.vfd"))
+            {
+                var name = Path.GetFileNameWithoutExtension(path);
+                if (!name.StartsWith(prefix, StringComparison.Ordinal)) continue;
+                var parts = name[prefix.Length..].Split('_');
+                if (parts.Length != 4 || (parts[3] != "vfd8" && parts[3] != "vfd16")
+                    || !TryParsePreviewSize(parts[1], out var projectWidth, out var projectHeight)
+                    || !TryParsePreviewSize(parts[2], out var canvasWidth, out var canvasHeight))
+                    continue;
+                var key = $"{parts[0]}_{parts[3]}";
+                if (!files.TryGetValue(key, out var group)) files[key] = group = new();
+                group.Add((path, projectWidth, projectHeight, canvasWidth, canvasHeight));
+            }
+            return files;
+        }
+
+        private static bool TryParsePreviewSize(string value, out int width, out int height)
+        {
+            width = height = 0;
+            var separator = value.IndexOf('x');
+            return separator > 0 && int.TryParse(value.AsSpan(0, separator), out width)
+                && int.TryParse(value.AsSpan(separator + 1), out height)
+                && width > 0 && height > 0;
+        }
+
         /// <summary>
         /// Applies all effects to a single clip's frame, computes placement, handles HDR conversion,
         /// and composites the clip onto the accumulating result picture. Shared by frame-level and
@@ -1847,6 +1956,7 @@ namespace projectFrameCut.Render.Rendering
 
             try
             {
+                var reusedPreview = _dynamicPreviewFrames.TryGetValue(frame, out _);
                 ClipPositionTuple targetPos = new(
                     clip.TargetX,
                     clip.TargetY,
@@ -1873,6 +1983,8 @@ namespace projectFrameCut.Render.Rendering
                     for (int _effectIdx = 0; _effectIdx < effects.Length; _effectIdx++)
                     {
                         var item = effects[_effectIdx];
+                        if (reusedPreview && item is not IClipPositionProvider and not IContinuousClipPositionProvider)
+                            continue;
                         // Try GPU batch processing (2+ consecutive GPU effects)
                         if (EnableGPUBatchProcess)
                         {

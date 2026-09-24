@@ -7,4 +7,16 @@
 		<ExtensionsConfigurationVersion>11.0.0-preview.7.26381.103</ExtensionsConfigurationVersion>
 		<MAUIGTK4Version>0.1.0-preview.12.26421.1</MAUIGTK4Version>
   </PropertyGroup>
+
+	<ItemGroup>
+		<Using Include="projectFrameCut.Drawing.Base.IPicture">
+			<Alias>IPicture</Alias>
+		</Using>
+		<Using Include="projectFrameCut.Drawing.Base.PictureExtensions">
+			<Alias>PictureExtensions</Alias>
+		</Using>
+		<Using Include="projectFrameCut.Shared.Logger">
+			<Static>True</Static>
+		</Using>
+	</ItemGroup>
 </Project>

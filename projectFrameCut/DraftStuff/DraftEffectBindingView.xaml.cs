@@ -28,7 +28,7 @@ using System.Threading.Tasks;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using Color = Microsoft.Maui.Graphics.Color;
 using Image = Microsoft.Maui.Controls.Image;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 using Point = Microsoft.Maui.Graphics.Point;
 using Rect = Microsoft.Maui.Graphics.Rect;
 

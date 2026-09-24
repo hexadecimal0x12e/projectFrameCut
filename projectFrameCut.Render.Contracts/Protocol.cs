@@ -7,8 +7,8 @@ namespace projectFrameCut.Render.Contracts;
 public static class RenderProtocol
 {
     public const string AdditionalPipePrefix = "projectFrameCut-rpc-";
-    public const int CurrentVersion = 1;
-    public const int MinimumSupportedVersion = 1;
+    public const int CurrentVersion = 2;
+    public const int MinimumSupportedVersion = 2;
     public const int PipeProtocolVersion = 1;
     public const int MaxPipeFrameBytes = 256 * 1024 * 1024;
 }
@@ -405,6 +405,7 @@ public enum PreviewPixelFormat
 {
     [ProtoEnum] EncodedImage = 0,
     [ProtoEnum] Rgba16FloatScRgb = 1,
+    [ProtoEnum] VfdPicture = 2,
 }
 
 [ProtoContract]

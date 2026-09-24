@@ -6,7 +6,7 @@ using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.WindowsRender;
 using projectFrameCut.Shared;
 using System.Diagnostics;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 
 namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
 {

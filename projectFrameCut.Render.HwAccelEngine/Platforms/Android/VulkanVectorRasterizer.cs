@@ -3,7 +3,7 @@ using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
 using projectFrameCut.Shared;
 using Silk.NET.Shaderc;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 
 namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 {

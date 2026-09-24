@@ -11,7 +11,7 @@ using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 
 namespace projectFrameCut;
 

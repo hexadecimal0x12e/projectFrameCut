@@ -8,7 +8,7 @@ using projectFrameCut.Shared;
 using System.Diagnostics;
 using System.Numerics;
 using Windows.Graphics.DirectX;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 using Point = projectFrameCut.Drawing.Vector.Point;
 
 namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows

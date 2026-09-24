@@ -156,6 +156,7 @@ public partial class RenderSettingPage : ContentPage
             .AddCheckbox("render_enableBatchProcess", SettingLocalizedResources.Render_EnableBatchProcess, IsBoolSettingTrueOrDefault("render_enableBatchProcess", true))
             .AddSeparator()
             .AddCheckbox("render_RenderByLayer", SettingLocalizedResources.Render_RenderByLayer, IsBoolSettingTrue("render_RenderByLayer"), null)
+            .AddCheckbox("render_reuseDynamicPreviewCache", SettingLocalizedResources.Render_ReuseDynamicPreviewCache, IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false))
             .AddCheckbox("render_prepareInWorkerThreads", SettingLocalizedResources.Render_PrepareInWorkerThreads, IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true))
             .AppendWhen(IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true) && PluginManager.LoadedPlugins.Any(c => !c.Key.StartsWith("projectFrameCut")), p => p.AddText(new Label { Text = SettingLocalizedResources.Render_PrepareInWorkerThreads_3rdPluginWarn, TextColor = Colors.Yellow }))
             .AddCheckbox("render_enableChunkRender", SettingLocalizedResources.Render_ChunkRender_Enable, IsBoolSettingTrueOrDefault("render_enableChunkRender", false))

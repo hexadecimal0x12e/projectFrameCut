@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media.Imaging;
 using projectFrameCut.Controls;
 using projectFrameCut.LivePreview;
+using projectFrameCut.Render.Contracts;
 using System.Numerics;
 using System.Runtime.InteropServices.WindowsRuntime;
 using CanvasDirectXPixelFormat = Windows.Graphics.DirectX.DirectXPixelFormat;
@@ -104,38 +105,28 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(frame.FallbackImagePath))
-            await LoadFallbackAsync(frame.FallbackImagePath, version);
-
         if (version != Volatile.Read(ref _updateVersion)) return;
-        if (string.IsNullOrWhiteSpace(frame.ScRgbPath))
+        if (frame.TargetPixelFormat != PreviewPixelFormat.Rgba16FloatScRgb)
         {
             _panel.Visibility = Visibility.Collapsed;
             SetSurfaceVisibility(false);
-            if (frame.RequireSwapChain)
-                ShowError("FP16 scRGB preview data is unavailable.");
+            await LoadFallbackAsync(frame.VfdPath, version);
             return;
         }
 
         try
         {
-            var expectedStride = checked(frame.Width * 8);
-            if (frame.Width <= 0 || frame.Height <= 0 || frame.Stride != expectedStride)
-                throw new InvalidDataException($"Invalid FP16 preview layout: {frame.Width}x{frame.Height}, stride {frame.Stride}.");
-
-            var bytes = await File.ReadAllBytesAsync(frame.ScRgbPath);
+            var materialized = await Task.Run(() => PreviewFrameMaterializer.ToScRgb(frame.VfdPath));
             if (version != Volatile.Read(ref _updateVersion)) return;
-            if (bytes.Length != checked(frame.Stride * frame.Height))
-                throw new InvalidDataException($"Invalid FP16 preview payload length {bytes.Length}.");
 
             _device ??= CanvasDevice.GetSharedDevice();
             if (!_device.IsPixelFormatSupported(CanvasDirectXPixelFormat.R16G16B16A16Float))
                 throw new NotSupportedException("The active Direct3D device does not support R16G16B16A16_FLOAT.");
 
-            if (HasTransparentPixels(bytes))
-                PresentTransparentFrame(bytes, frame.Width, frame.Height);
+            if (materialized.HasTransparency)
+                PresentTransparentFrame(materialized.Bytes, materialized.Width, materialized.Height);
             else
-                PresentOpaqueHdrFrame(bytes, frame.Width, frame.Height);
+                PresentOpaqueHdrFrame(materialized.Bytes, materialized.Width, materialized.Height);
 
             if (version != Volatile.Read(ref _updateVersion)) return;
             ShowError(null);
@@ -158,9 +149,7 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
             else
             {
                 ShowError(null);
-                _fallback.Visibility = string.IsNullOrWhiteSpace(frame.FallbackImagePath)
-                    ? Visibility.Collapsed
-                    : Visibility.Visible;
+                await LoadFallbackAsync(frame.VfdPath, version);
             }
         }
     }
@@ -169,8 +158,9 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
     {
         try
         {
-            using var file = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            using var stream = file.AsRandomAccessStream();
+            var bytes = await Task.Run(() => PreviewFrameMaterializer.ToPngBytes(path));
+            using var memory = new MemoryStream(bytes, writable: false);
+            using var stream = memory.AsRandomAccessStream();
             var bitmap = new BitmapImage();
             await bitmap.SetSourceAsync(stream);
             if (version != Volatile.Read(ref _updateVersion)) return;
@@ -188,19 +178,6 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
     {
         _error.Text = message ?? string.Empty;
         _error.Visibility = string.IsNullOrWhiteSpace(message) ? Visibility.Collapsed : Visibility.Visible;
-    }
-
-    private static bool HasTransparentPixels(byte[] bytes)
-    {
-        // The backend writes one little-endian Half per RGBA channel. Half(1) is 0x3c00.
-        // The payload length was validated above, so every alpha sample has two bytes.
-        for (var alphaOffset = 6; alphaOffset < bytes.Length; alphaOffset += 8)
-        {
-            if (bytes[alphaOffset] != 0x00 || bytes[alphaOffset + 1] != 0x3c)
-                return true;
-        }
-
-        return false;
     }
 
     private void PresentOpaqueHdrFrame(byte[] bytes, int width, int height)

@@ -10,4 +10,10 @@
     <Title>projectFrameCut AI provider contracts</Title>
   </PropertyGroup>
 
+	<ItemGroup>
+		<Using Remove="projectFrameCut.Shared.Logger"/>
+		<Using Remove="projectFrameCut.Drawing.Base.IPicture"/>
+		<Using Remove="projectFrameCut.Drawing.Base.PictureExtensions"/>
+	</ItemGroup>
+
 </Project>

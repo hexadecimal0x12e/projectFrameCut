@@ -408,6 +408,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("enableThreadAffinity", options.EnableThreadAffinity.ToString());
                 Add("prepareInWorker", options.PrepareInWorker.ToString());
                 Add("renderByLayer", options.RenderByLayer.ToString());
+                Add("reuseDynamicPreviewCache", options.ReuseDynamicPreviewCache.ToString());
                 Add("preferHwAccelDecoder", options.UseHwAccelDecoder.ToString());
                 Add("preferHwAccelEncoder", options.UseHwAccelEncoder.ToString());
                 Add("chunkRender", options.ChunkRender.ToString());
@@ -719,6 +720,7 @@ internal sealed record CliRenderProcessOptions
     public bool EnableThreadAffinity { get; init; } = true;
     public bool PrepareInWorker { get; init; } = true;
     public bool RenderByLayer { get; init; } = true;
+    public bool ReuseDynamicPreviewCache { get; init; }
     public bool ChunkRender { get; init; }
     public uint? ChunkFrames { get; init; }
     public double? ChunkSeconds { get; init; }

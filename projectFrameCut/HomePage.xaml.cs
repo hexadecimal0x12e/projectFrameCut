@@ -30,7 +30,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Application = Microsoft.Maui.Controls.Application;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Contracts;

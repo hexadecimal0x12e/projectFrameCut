@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Drawing.Base;

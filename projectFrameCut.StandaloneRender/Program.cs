@@ -126,6 +126,7 @@ namespace projectFrameCut.StandaloneRender
                         [-maxParallelThreads=<number>]
                         [-maxPendingWriteFrames=<number>]
                         [-oneByOneRender=<true|false> -renderByLayer=<true|false> -prepareInWorker=<true|false> -enableThreadAffinity=<true|false>]
+                        [-reuseDynamicPreviewCache=<true|false>]
                         [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-multiAccelerator=<true|false>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
@@ -721,6 +722,7 @@ namespace projectFrameCut.StandaloneRender
             int[]? renderWorkerAffinityCpuIndexes = null, preparerAffinityCpuIndexes = null;
             if (!bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out oneByOneRender) && oneByOneRender) oneByOneRender = false;
             if (!bool.TryParse(switches.GetOrAdd("renderByLayer", "false"), out renderByLayer)) renderByLayer = false;
+            bool reuseDynamicPreviewCache = bool.TryParse(switches.GetOrAdd("reuseDynamicPreviewCache", "false"), out var reusePreview) && reusePreview;
             if (!bool.TryParse(switches.GetOrAdd("prepareInWorker", "false"), out prepareInWorker)) prepareInWorker = false;
             if (!bool.TryParse(switches.GetOrAdd("enableThreadAffinity", "true"), out enableThreadAffinity)) enableThreadAffinity = true;
             if (switches.TryGetValue("renderWorkerAffinity", out var renderWorkerAffinityRaw) && !string.IsNullOrWhiteSpace(renderWorkerAffinityRaw))
@@ -969,6 +971,10 @@ namespace projectFrameCut.StandaloneRender
                     MaxThreads = Math.Max(1, renderThreads),
                     MaxPendingWriteFrames = maxPendingWriteFrames > 0 ? maxPendingWriteFrames : 0,
                     RenderByLayers = renderByLayer,
+                    ReuseDynamicPreviewCache = reuseDynamicPreviewCache,
+                    DynamicPreviewCacheProjectRoot = workingPath,
+                    DynamicPreviewCacheProjectWidth = Math.Max(1, project.RelativeWidth),
+                    DynamicPreviewCacheProjectHeight = Math.Max(1, project.RelativeHeight),
                     PrepareInWorkerThreads = prepareInWorker,
                     OneByOneRender = oneByOneRender,
                     EnableThreadAffinity = enableThreadAffinity,
@@ -1082,7 +1088,7 @@ namespace projectFrameCut.StandaloneRender
                     timeline.Duration,
                     fps,
                     Path.GetExtension(resultPath),
-                    $"{width}x{height}|{fps}|{outputFormat}|{outputEncoder}|16bit={use16Bit}|bitrate={requestedBitRate}|serial={oneByOneRender}|layers={renderByLayer}|prepare={prepareInWorker}|approx={ClassicOverlayMixture.EnableApproximatePath}|effect={EffectHelper.ForcePreferToType}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}",
+                    $"{width}x{height}|{fps}|{outputFormat}|{outputEncoder}|16bit={use16Bit}|bitrate={requestedBitRate}|serial={oneByOneRender}|layers={renderByLayer}|prepare={prepareInWorker}|reusePreview={reuseDynamicPreviewCache}|approx={ClassicOverlayMixture.EnableApproximatePath}|effect={EffectHelper.ForcePreferToType}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}",
                     maxParallelThreads,
                     chunkOptions);
                 await coordinator.InitializeAsync(cts.Token).ConfigureAwait(false);

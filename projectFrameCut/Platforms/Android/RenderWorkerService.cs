@@ -148,6 +148,7 @@ public sealed class RenderWorkerService : Service
             $"--enableThreadAffinity={options.EnableThreadAffinity}",
             $"--prepareInWorker={options.PrepareInWorker}",
             $"--renderByLayer={options.RenderByLayer}",
+            $"--reuseDynamicPreviewCache={options.ReuseDynamicPreviewCache}",
             $"--rpcSocket={host.SocketPath}",
             $"--rpcToken={token}",
             $"--jobId={options.JobId:D}",

@@ -8,7 +8,6 @@ using projectFrameCut.Render.PreviewAudio;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
-using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
@@ -19,8 +18,8 @@ namespace projectFrameCut.Render.RPCProtocol;
 
 public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = null, string? stateRoot = null, Action<RenderJob>? completionSink = null, Action<RenderJob>? progressSink = null, IAudioPreviewSinkFactory? previewAudioSinkFactory = null) : IRenderService, IAsyncDisposable
 {
-    private const string TimelineFrameCacheVersion = "v3-preview-pixel-format";
-    private const string ClipPreviewCacheVersion = "v3-preview-pixel-format";
+    private const string TimelineFrameCacheVersion = "v4-vfd";
+    private const string ClipPreviewCacheVersion = "v4-vfd";
     private const string TimelineSegmentCacheVersion = "v2-audio-source";
     private const string AudioSegmentCacheVersion = "v2-track-source";
     private const string FrameHashIndexVersion = "v2-lazy-frame-clip";
@@ -108,8 +107,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             .ToList(),
         Encoders = ["libx264"],
         Features = _previewAudioSinkFactory is null
-            ? ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "thumbs-cache", "render-jobs", "persistent-render-jobs", "artifact-files"]
-            : ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "thumbs-cache", "render-jobs", "persistent-render-jobs", "artifact-files", "preview-audio-device-clock"],
+            ? ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "thumbs-cache", "vfd-preview", "render-jobs", "persistent-render-jobs", "artifact-files"]
+            : ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "thumbs-cache", "vfd-preview", "render-jobs", "persistent-render-jobs", "artifact-files", "preview-audio-device-clock"],
     };
 
     private async ValueTask<PreviewAudioClock> ControlPreviewAudioAsync(PreviewAudioCommandRequest request, CancellationToken cancellationToken)
@@ -394,9 +393,9 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             var frameHash = session.GetFrameHash(request.FrameIndex);
             var namespacePrefix = string.IsNullOrEmpty(session.CacheNamespace) ? string.Empty : $"{session.CacheNamespace}_";
             var wantsScRgb = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb;
-            var formatSuffix = wantsScRgb ? "rgba16f-scrgb" : "png";
+            var formatSuffix = wantsScRgb ? "vfd16" : "vfd8";
             var cacheKey = $"{TimelineFrameCacheVersion}_{namespacePrefix}{frameHash}_{width}x{height}_{formatSuffix}";
-            var relativePath = $"thumbs/projectFrameCut_Render_{cacheKey}.{(wantsScRgb ? "rgba16f" : "png")}";
+            var relativePath = $"thumbs/projectFrameCut_Render_{cacheKey}.vfd";
             var finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
             var cacheHit = File.Exists(finalPath);
             if (!cacheHit)
@@ -413,10 +412,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                     }
                     var layers = Timeline.GetFramesInOneFrame(visualClips, request.FrameIndex, width, height, projectRelativeWidth: session.Width, projectRelativeHeight: session.Height);
                     picture = Timeline.MixtureLayers(layers, request.FrameIndex, width, height, autoCenterImplicitClip: true, projectRelativeWidth: session.Width, projectRelativeHeight: session.Height);
-                    if (wantsScRgb)
-                        WriteScRgbFrame(picture, temporaryPath);
-                    else
-                        picture.ToBitPerPixel(8).SaveToPng(temporaryPath);
+                    picture.SaveToDisk(temporaryPath, Drawing.Base.PictureExtensions.SharedVfdPictureEncoder);
                     _artifacts.CommitTemporaryFile(temporaryPath, finalPath);
                 }
                 catch
@@ -431,11 +427,11 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             }
             var artifact = _artifacts.Register(
                 session.Id, session.ProjectRoot, relativePath,
-                wantsScRgb ? "application/x-projectframecut-rgba16f" : "image/png",
+                "application/x-projectframecut-vfd",
                 cacheHit, isPreview: true, width, height, session.FrameRate,
-                wantsScRgb ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage,
-                wantsScRgb ? checked(width * 8) : 0,
-                wantsScRgb ? "scRGB-linear-P709" : string.Empty);
+                PreviewPixelFormat.VfdPicture,
+                0,
+                "vfd-native");
             TrackPreviewCacheAccess(session.ProjectRoot, relativePath, null, request.FrameIndex, $"{width}x{height}:{formatSuffix}");
             return artifact;
         }
@@ -468,8 +464,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             var clipHash = session.GetClipFrameHash(clip.Id, request.FrameIndex);
             var namespacePrefix = string.IsNullOrEmpty(session.CacheNamespace) ? string.Empty : $"{session.CacheNamespace}_";
             var wantsScRgb = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb;
-            var formatSuffix = wantsScRgb ? "rgba16f-scrgb" : "png";
-            var relativePath = $"thumbs/perClip/{clip.Id}/dynamic/dynamic_{ClipPreviewCacheVersion}_{namespacePrefix}{clipHash}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}_{formatSuffix}.{(wantsScRgb ? "rgba16f" : "png")}";
+            var formatSuffix = wantsScRgb ? "vfd16" : "vfd8";
+            var relativePath = $"thumbs/perClip/{clip.Id}/dynamic/dynamic_{ClipPreviewCacheVersion}_{namespacePrefix}{clipHash}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}_{formatSuffix}.vfd";
             var finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
             var cacheHit = File.Exists(finalPath);
             if (!cacheHit)
@@ -494,10 +490,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                         cancellationToken,
                         wantsScRgb ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture)
                         ?? throw new InvalidOperationException($"Clip '{clip.Id}' did not produce a preview frame.");
-                    if (wantsScRgb)
-                        WriteScRgbFrame(picture, temporaryPath);
-                    else
-                        picture.ToBitPerPixel(8).SaveToPng(temporaryPath);
+                    picture.SaveToDisk(temporaryPath, Drawing.Base.PictureExtensions.SharedVfdPictureEncoder);
                     _artifacts.CommitTemporaryFile(temporaryPath, finalPath);
                 }
                 catch
@@ -512,11 +505,11 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             }
             var artifact = _artifacts.Register(
                 session.Id, session.ProjectRoot, relativePath,
-                wantsScRgb ? "application/x-projectframecut-rgba16f" : "image/png",
+                "application/x-projectframecut-vfd",
                 cacheHit, isPreview: true, previewWidth, previewHeight, session.FrameRate,
-                wantsScRgb ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage,
-                wantsScRgb ? checked(previewWidth * 8) : 0,
-                wantsScRgb ? "scRGB-linear-P709" : string.Empty);
+                PreviewPixelFormat.VfdPicture,
+                0,
+                "vfd-native");
             TrackPreviewCacheAccess(session.ProjectRoot, relativePath, clip.Id, request.FrameIndex, $"project:{projectWidth}x{projectHeight};canvas:{canvasWidth}x{canvasHeight};output:{previewWidth}x{previewHeight};format:{formatSuffix}");
             return artifact;
         }
@@ -541,103 +534,6 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             }
         }
         return response;
-    }
-
-    private static void WriteScRgbFrame(IPicture picture, string path)
-    {
-        ArgumentNullException.ThrowIfNull(picture);
-        var width = Math.Max(1, picture.Width);
-        var height = Math.Max(1, picture.Height);
-        var row = new byte[checked(width * 8)];
-        using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, row.Length, FileOptions.SequentialScan);
-
-        if (picture is IPicture<ushort> picture16)
-        {
-            var hdr = picture16 as IHDRPicture<ushort>;
-            var isPqHdr = hdr is not null && float.IsFinite(hdr.MaximumBrightness) && hdr.MaximumBrightness > 300f;
-            for (var y = 0; y < height; y++)
-            {
-                var baseIndex = y * width;
-                for (var x = 0; x < width; x++)
-                {
-                    var index = baseIndex + x;
-                    var alpha = ResolveAlpha(picture16.a, picture16.HasAlphaChannel, index);
-                    var red = picture16.r[index] / 65535f;
-                    var green = picture16.g[index] / 65535f;
-                    var blue = picture16.b[index] / 65535f;
-                    var color = isPqHdr
-                        ? PqBt2020ToScRgb(red, green, blue)
-                        : (SrgbToLinear(red), SrgbToLinear(green), SrgbToLinear(blue));
-                    WriteHalfPixel(row, x * 8, color.Item1 * alpha, color.Item2 * alpha, color.Item3 * alpha, alpha);
-                }
-                stream.Write(row);
-            }
-            return;
-        }
-
-        if (picture is not IPicture<byte> picture8)
-            throw new NotSupportedException($"Cannot export {picture.GetType().Name} as an FP16 preview frame.");
-
-        for (var y = 0; y < height; y++)
-        {
-            var baseIndex = y * width;
-            for (var x = 0; x < width; x++)
-            {
-                var index = baseIndex + x;
-                var alpha = ResolveAlpha(picture8.a, picture8.HasAlphaChannel, index);
-                var red = SrgbToLinear(picture8.r[index] / 255f) * alpha;
-                var green = SrgbToLinear(picture8.g[index] / 255f) * alpha;
-                var blue = SrgbToLinear(picture8.b[index] / 255f) * alpha;
-                WriteHalfPixel(row, x * 8, red, green, blue, alpha);
-            }
-            stream.Write(row);
-        }
-    }
-
-    private static float ResolveAlpha(float[]? alpha, bool hasAlpha, int index)
-        => hasAlpha && alpha is not null && index < alpha.Length && float.IsFinite(alpha[index])
-            ? Math.Clamp(alpha[index], 0f, 1f)
-            : 1f;
-
-    private static void WriteHalfPixel(byte[] destination, int offset, float red, float green, float blue, float alpha)
-    {
-        BinaryPrimitives.WriteUInt16LittleEndian(destination.AsSpan(offset, 2), BitConverter.HalfToUInt16Bits((Half)Math.Clamp(red, -0.5f, 125f)));
-        BinaryPrimitives.WriteUInt16LittleEndian(destination.AsSpan(offset + 2, 2), BitConverter.HalfToUInt16Bits((Half)Math.Clamp(green, -0.5f, 125f)));
-        BinaryPrimitives.WriteUInt16LittleEndian(destination.AsSpan(offset + 4, 2), BitConverter.HalfToUInt16Bits((Half)Math.Clamp(blue, -0.5f, 125f)));
-        BinaryPrimitives.WriteUInt16LittleEndian(destination.AsSpan(offset + 6, 2), BitConverter.HalfToUInt16Bits((Half)Math.Clamp(alpha, 0f, 1f)));
-    }
-
-    private static (float Red, float Green, float Blue) PqBt2020ToScRgb(float red, float green, float blue)
-    {
-        const float nitsPerScRgbUnit = 80f;
-        var r2020 = DecodePq(red) * 10000f / nitsPerScRgbUnit;
-        var g2020 = DecodePq(green) * 10000f / nitsPerScRgbUnit;
-        var b2020 = DecodePq(blue) * 10000f / nitsPerScRgbUnit;
-
-        return (
-            1.660491f * r2020 - 0.587641f * g2020 - 0.072850f * b2020,
-            -0.124550f * r2020 + 1.132900f * g2020 - 0.008349f * b2020,
-            -0.018151f * r2020 - 0.100579f * g2020 + 1.118730f * b2020);
-    }
-
-    private static float DecodePq(float signal)
-    {
-        const float m1 = 2610f / 16384f;
-        const float m2 = 2523f / 32f;
-        const float c1 = 3424f / 4096f;
-        const float c2 = 2413f / 128f;
-        const float c3 = 2392f / 128f;
-        var p = MathF.Pow(Math.Clamp(signal, 0f, 1f), 1f / m2);
-        var denominator = c2 - c3 * p;
-        return denominator <= 0f ? 0f : MathF.Pow(MathF.Max(p - c1, 0f) / denominator, 1f / m1);
-    }
-
-    private static float SrgbToLinear(float signal)
-    {
-        signal = Math.Clamp(signal, 0f, 1f);
-        return signal <= 0.04045f
-            ? signal / 12.92f
-            : MathF.Pow((signal + 0.055f) / 1.055f, 2.4f);
     }
 
     private static int ResolveClipPreviewDimension(int clipDimension, int projectDimension, int canvasDimension)
@@ -1122,7 +1018,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
 
     private static string ResolveMediaType(string path) => Path.GetExtension(path).ToLowerInvariant() switch
     {
-        ".png" => "image/png", ".jpg" or ".jpeg" => "image/jpeg", ".wav" => "audio/wav", ".mp3" => "audio/mpeg",
+        ".vfd" => "application/x-projectframecut-vfd", ".png" => "image/png", ".jpg" or ".jpeg" => "image/jpeg", ".wav" => "audio/wav", ".mp3" => "audio/mpeg",
         ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".webm" => "video/webm", _ => "application/octet-stream",
     };
 
@@ -1281,7 +1177,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             .Concat(Directory.Exists(Path.Combine(thumbsRoot, "perClip"))
                 ? Directory.EnumerateFiles(Path.Combine(thumbsRoot, "perClip"), "dynamic_*", SearchOption.AllDirectories)
                 : Enumerable.Empty<string>());
-        foreach (var path in files.Where(static path => Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase)
+        foreach (var path in files.Where(static path => Path.GetExtension(path).Equals(".vfd", StringComparison.OrdinalIgnoreCase)
+            || Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase)
             || Path.GetExtension(path).Equals(".rgba16f", StringComparison.OrdinalIgnoreCase)))
         {
             var directory = Directory.GetParent(path);

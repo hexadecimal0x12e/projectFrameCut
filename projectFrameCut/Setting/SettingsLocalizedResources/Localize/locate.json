@@ -1070,6 +1070,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_UseLightweightDynamicPreviewHost",
+        "Value": "\u63D0\u5347\u52A8\u6001\u89C6\u9891\u9884\u89C8\u7684\u6027\u80FD\uFF08\u64AD\u653E\u65F6\u5C06\u4E0D\u80FD\u548C\u753B\u5E03\u4EA4\u4E92\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "ExternalRpc_ClientInfo",
         "Value": "\u6388\u6743\u8BE6\u60C5",
         "Mode": "ConstString",
@@ -1759,6 +1767,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Plugin_AIProviderPlugin",
+        "Value": "AI\u670D\u52A1\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Plugin_CannotCreateInstance",
         "Value": "\u6211\u4EEC\u65E0\u6CD5\u521D\u59CB\u5316\u63D2\u4EF6\uFF0C\u56E0\u4E3A\uFF1A{reason} ",
         "Mode": "InterpolationString",
@@ -1978,6 +1994,14 @@
             "Value": ""
           }
         ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Plugin_InternalPlugins",
+        "Value": "\u5185\u5EFA\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {
@@ -2855,6 +2879,38 @@
         "DontTranslate": false
       },
       {
+        "Id": "Security_IsolatedPlugins",
+        "Value": "\u9694\u79BB\u63D2\u4EF6\u7F51\u7EDC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_IsolatedPlugins_AllowInternet",
+        "Value": "\u5141\u8BB8\u9694\u79BB\u63D2\u4EF6\u8BBF\u95EE\u4E92\u8054\u7F51",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_IsolatedPlugins_AllowLoopback",
+        "Value": "\u5141\u8BB8\u9694\u79BB\u63D2\u4EF6\u8BBF\u95EE\u56DE\u73AF\u8FDE\u63A5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Security_IsolatedPlugins_AllowServer",
+        "Value": "\u5141\u8BB8\u9694\u79BB\u63D2\u4EF6\u63A5\u53D7\u5165\u7AD9\u7F51\u7EDC\u8FDE\u63A5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Security_RemoteContent",
         "Value": "\u8FDC\u7A0B\u5185\u5BB9",
         "Mode": "ConstString",
@@ -3007,56 +3063,24 @@
         "DontTranslate": false
       },
       {
-        "Id": "Plugin_InternalPlugins",
-        "Value": "\u5185\u5EFA\u63D2\u4EF6",
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "\u9884\u89C8\u9884\u70ED",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       },
       {
-        "Id": "Plugin_AIProviderPlugin",
-        "Value": "AI\u670D\u52A1\u63D2\u4EF6",
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "\u9884\u89C8\u9884\u70ED\u65F6\u957F\uFF08\u79D2\uFF0C1\u201360\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       },
       {
-        "Id": "Security_IsolatedPlugins",
-        "Value": "\u9694\u79BB\u63D2\u4EF6\u7F51\u7EDC",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_IsolatedPlugins_AllowInternet",
-        "Value": "\u5141\u8BB8\u9694\u79BB\u63D2\u4EF6\u8BBF\u95EE\u4E92\u8054\u7F51",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_IsolatedPlugins_AllowServer",
-        "Value": "\u5141\u8BB8\u9694\u79BB\u63D2\u4EF6\u63A5\u53D7\u5165\u7AD9\u7F51\u7EDC\u8FDE\u63A5",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Security_IsolatedPlugins_AllowLoopback",
-        "Value": "\u5141\u8BB8\u9694\u79BB\u63D2\u4EF6\u8BBF\u95EE\u56DE\u73AF\u8FDE\u63A5",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Edit_UseLightweightDynamicPreviewHost",
-        "Value": "\u64AD\u653E\u52A8\u6001\u9884\u89C8\u65F6\u4F7F\u7528\u8F7B\u91CF\u7EA7\u4E3B\u673A",
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "\u590D\u7528\u52A8\u6001\u9884\u89C8\u7F13\u5B58",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6391,6 +6415,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "Unset localization item:Edit_PreviewWarmupEnabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "Unset localization item:Edit_PreviewWarmupSeconds()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "Reuse dynamic preview cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -9718,6 +9766,30 @@
       {
         "Id": "Edit_UseLightweightDynamicPreviewHost",
         "Value": "\u64AD\u653E\u52D5\u614B\u9810\u89BD\u6642\u4F7F\u7528\u8F15\u91CF\u7D1A\u4E3B\u6A5F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "Unset localization item:Edit_PreviewWarmupEnabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "Unset localization item:Edit_PreviewWarmupSeconds()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "\u91CD\u7528\u52D5\u614B\u9810\u89BD\u5FEB\u53D6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13057,6 +13129,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "Unset localization item:Edit_PreviewWarmupEnabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "Unset localization item:Edit_PreviewWarmupSeconds()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "\u52D5\u7684\u30D7\u30EC\u30D3\u30E5\u30FC\u30AD\u30E3\u30C3\u30B7\u30E5\u3092\u518D\u5229\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -16381,6 +16477,30 @@
       {
         "Id": "Edit_UseLightweightDynamicPreviewHost",
         "Value": "\uB3D9\uC801 \uBBF8\uB9AC\uBCF4\uAE30 \uC7AC\uC0DD \uC911 \uACBD\uB7C9 \uD638\uC2A4\uD2B8 \uC0AC\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "Unset localization item:Edit_PreviewWarmupEnabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "Unset localization item:Edit_PreviewWarmupSeconds()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "\uB3D9\uC801 \uBBF8\uB9AC\uBCF4\uAE30 \uCE90\uC2DC \uC7AC\uC0AC\uC6A9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -19710,6 +19830,30 @@
       {
         "Id": "Edit_UseLightweightDynamicPreviewHost",
         "Value": "Utiliser le mode leger pendant la lecture dynamique",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "Unset localization item:Edit_PreviewWarmupEnabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "Unset localization item:Edit_PreviewWarmupSeconds()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "R\u00E9utiliser le cache des aper\u00E7us dynamiques",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -23046,6 +23190,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "Unset localization item:Edit_PreviewWarmupEnabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "Unset localization item:Edit_PreviewWarmupSeconds()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "\u0625\u0639\u0627\u062F\u0629 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0644\u0644\u0645\u0639\u0627\u064A\u0646\u0629 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -26370,6 +26538,30 @@
       {
         "Id": "Edit_UseLightweightDynamicPreviewHost",
         "Value": "Leichten Host bei dynamischer Vorschauwiedergabe verwenden",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "Unset localization item:Edit_PreviewWarmupEnabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "Unset localization item:Edit_PreviewWarmupSeconds()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "Dynamischen Vorschaucache wiederverwenden",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29705,6 +29897,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "Unset localization item:Edit_PreviewWarmupEnabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "Unset localization item:Edit_PreviewWarmupSeconds()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "Reutilizar la cach\u00E9 de vista previa din\u00E1mica",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -33031,6 +33247,30 @@
       {
         "Id": "Edit_UseLightweightDynamicPreviewHost",
         "Value": "Usa host leggero durante la riproduzione dinamica",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "Unset localization item:Edit_PreviewWarmupEnabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "Unset localization item:Edit_PreviewWarmupSeconds()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "Riutilizza la cache delle anteprime dinamiche",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36365,6 +36605,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "Unset localization item:Edit_PreviewWarmupEnabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "Unset localization item:Edit_PreviewWarmupSeconds()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "U\u017Cyj ponownie pami\u0119ci podr\u0119cznej podgl\u0105du dynamicznego",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -39691,6 +39955,30 @@
       {
         "Id": "Edit_UseLightweightDynamicPreviewHost",
         "Value": "Usar host leve durante a reproducao dinamica",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "Unset localization item:Edit_PreviewWarmupEnabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "Unset localization item:Edit_PreviewWarmupSeconds()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "Reutilizar cache de pr\u00E9via din\u00E2mica",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -43029,6 +43317,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "Unset localization item:Edit_PreviewWarmupEnabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "Unset localization item:Edit_PreviewWarmupSeconds()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "\u041F\u043E\u0432\u0442\u043E\u0440\u043D\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u043A\u044D\u0448 \u0434\u0438\u043D\u0430\u043C\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u043F\u0440\u0435\u0434\u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -46357,6 +46669,30 @@
       {
         "Id": "Edit_UseLightweightDynamicPreviewHost",
         "Value": "Dinamik onizleme oynatilirken hafif ana bilgisayari kullan",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupEnabled",
+        "Value": "Unset localization item:Edit_PreviewWarmupEnabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_PreviewWarmupSeconds",
+        "Value": "Unset localization item:Edit_PreviewWarmupSeconds()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ReuseDynamicPreviewCache",
+        "Value": "Dinamik \u00F6nizleme \u00F6nbelle\u011Fini yeniden kullan",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

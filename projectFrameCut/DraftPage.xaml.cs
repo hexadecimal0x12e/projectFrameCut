@@ -831,6 +831,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             : Path.Combine(WorkingPath, "thumbs");
         previewer.ProjectName = ProjectName;
         DynamicPreviewProvider.SetLivePreviewer(ref previewer!);
+        DynamicPreviewProvider.PreviewWarmupSeconds = SettingsManager.GetSettingAs("Edit_PreviewWarmupSeconds", 5, 5);
+        DynamicPreviewProvider.PreviewWarmupEnabled = SettingsManager.IsBoolSettingTrueOrDefault("Edit_PreviewWarmupEnabled", true);
         ClipEditor.UpdateVideoResolution(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
         FastPreviewEditor.SetVideoSize(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
 
@@ -5125,6 +5127,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         if (_selected is null) return;
         var clip = _selected;
+        if (ShouldWarmClipPreview(e.Id)) DynamicPreviewProvider.CancelClipWarmup(clip.Id);
 
         if (e.Id == "__EFFECT_BINDING_CHANGED__")
         {
@@ -5145,6 +5148,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 await previewer.UpdateDraft(d);
                 DynamicPreviewProvider.SetClips(previewer.Clips);
                 await RefreshPreviewFromCurrentProviderAsync();
+                StartClipPreviewWarmup(changedClip.Id);
             }
             catch (Exception refreshEx)
             {
@@ -5167,6 +5171,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 await previewer.UpdateDraft(d);
                 DynamicPreviewProvider.SetClips(previewer.Clips);
                 await RefreshPreviewFromCurrentProviderAsync();
+                StartClipPreviewWarmup(clip.Id);
             }
             catch (Exception refreshEx)
             {
@@ -5235,11 +5240,28 @@ public partial class DraftPage : ContentPage, IDraftPage
             await previewer.UpdateDraft(d);
             DynamicPreviewProvider.SetClips(previewer.Clips);
             _ = RefreshDynamicPreviewOverlay();
+            StartClipPreviewWarmup(clip.Id);
         }
 
         SetStatusText(Localized.DraftPage_ClipPropertyUpdated(clip.DisplayName));
 
 
+    }
+
+    private static bool ShouldWarmClipPreview(string? propertyId)
+        => !string.IsNullOrWhiteSpace(propertyId)
+            && propertyId is not ("rotationDeg" or "allowFreeScaleResize" or "ExtendToWholeDraft")
+            && !propertyId.StartsWith("place_", StringComparison.Ordinal);
+
+    private void StartClipPreviewWarmup(Guid clipId)
+    {
+        if (AlreadyDisappeared) return;
+        if (!DynamicPreviewProvider.PreviewWarmupEnabled) return;
+        var (width, height) = DynamicPreviewProvider.ResolveDimensions(
+            ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight, ClipEditor.Width, ClipEditor.Height);
+        DynamicPreviewProvider.WarmClipFrames(clipId, (uint)Math.Clamp(_currentFrame, 0d, uint.MaxValue),
+            Math.Max(1, (int)Math.Round((double)ProjectInfo.TargetFrameRate)), width, height,
+            Math.Max(1, ProjectInfo.RelativeWidth), Math.Max(1, ProjectInfo.RelativeHeight));
     }
 
     public async void RefreshPropertyPanel(ClipElementUI clip, bool keepTab = true)
@@ -8135,10 +8157,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         var scale = (double)InitialStaticPreviewLongEdge / Math.Max(projectWidth, projectHeight);
         var width = Math.Max(1, (int)Math.Round(projectWidth * scale));
         var height = Math.Max(1, (int)Math.Round(projectHeight * scale));
-        var path = await Task.Run(() => previewer.RenderFrame(frame, width, height));
-        if (!File.Exists(path)) return null;
-
-        var content = await File.ReadAllBytesAsync(path);
+        var content = await Task.Run(() => previewer.RenderFramePngBytes(frame, width, height));
         LogDiagnostic($"Rendered overview frame {frame} at {width}x{height}");
         return ImageSource.FromStream(() => new MemoryStream(content, writable: false));
     }
@@ -8262,15 +8281,15 @@ public partial class DraftPage : ContentPage, IDraftPage
             try
             {
                 await renderThrottle.WaitAsync(token);
-                string path;
+                byte[] content;
                 try
                 {
-                    path = await Task.Run(() =>
+                    content = await Task.Run(() =>
                     {
                         token.ThrowIfCancellationRequested();
-                        var renderedPath = previewer.RenderFrame(frameIndex, width, height);
+                        var rendered = previewer.RenderFramePngBytes(frameIndex, width, height, token);
                         token.ThrowIfCancellationRequested();
-                        return renderedPath;
+                        return rendered;
                     }, token);
                 }
                 finally
@@ -8289,20 +8308,9 @@ public partial class DraftPage : ContentPage, IDraftPage
                     }
 
                     token.ThrowIfCancellationRequested();
-                    if (IsRemoteProject)
-                    {
-                        // WinUI may accept a file:// LocalCache URI without throwing and then fail the
-                        // asynchronous decode, leaving the Image empty. Read the downloaded artifact
-                        // through an authorized stream instead.
-                        byte[] content = await File.ReadAllBytesAsync(path, token);
-                        await Dispatcher.DispatchAsync(() =>
-                            ClipEditor.StaticPreviewOverlayImage.Source = ImageSource.FromStream(
-                                () => new MemoryStream(content, writable: false)));
-                    }
-                    else
-                    {
-                        await ClipEditor.StaticPreviewOverlayImage.ForceLoadPNGToAImage(path);
-                    }
+                    await Dispatcher.DispatchAsync(() =>
+                        ClipEditor.StaticPreviewOverlayImage.Source = ImageSource.FromStream(
+                            () => new MemoryStream(content, writable: false)));
                     token.ThrowIfCancellationRequested();
                     displayedTier = tier;
                     await Dispatcher.DispatchAsync(() => ClipEditor.SetStaticPreviewVisible(true));
@@ -9230,6 +9238,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false));
 
             await Task.Run(() => RenderRpcBootstrap.Restart(WorkingPath, ProjectName));
+            previewer.CleanupMaterializedPreviews();
             previewer.RenderSessionId = Guid.NewGuid();
             await previewer.UpdateDraft(draft).ConfigureAwait(false);
             _renderBackendDisconnectedSinceUtc = null;
@@ -9315,6 +9324,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             FastPreviewEditor.SetCurrentFrame((uint)Math.Max(0, _currentFrame));
             DynamicPreviewProvider.SetClips(previewer.Clips);
             await RefreshPreviewFromCurrentProviderAsync();
+            if (e.Reason == ClipUpdateReason.PropertyChanged && e.SourceId is Guid clipId && ShouldWarmClipPreview(e.DetailInfo))
+                StartClipPreviewWarmup(clipId);
             SetStatusText(Localized.DraftPage_ChangesApplied);
             SetStateOK();
         }
@@ -11305,6 +11316,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
             if (leavingProject)
             {
+                DynamicPreviewProvider.CancelClipWarmups();
+                previewer.CleanupMaterializedPreviews();
                 try { await RenderRpcBootstrap.DisposeAsync(); }
                 catch (Exception ex) { Log(ex, "Dispose render RPC backend", this); }
                 try
@@ -11349,21 +11362,15 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (string.IsNullOrWhiteSpace(WorkingPath)) return;
 
             var projectThumbPath = ProjectInfo.ThumbPath;
-            var thumbPath = !string.IsNullOrWhiteSpace(projectThumbPath) && File.Exists(projectThumbPath)
-                ? projectThumbPath
-                : previewer.TryRenderFrame(0U, 1280, 720);
-            if (string.IsNullOrWhiteSpace(thumbPath) || !File.Exists(thumbPath))
-            {
-                Log("Project thumbnail render failed; keeping the previous thumbnail.", "warn");
-                return;
-            }
-
             var destPath = Path.Combine(WorkingPath, "thumbs", "_project.png");
             var tempPath = $"{destPath}.{Guid.NewGuid():N}.tmp";
             Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
             try
             {
-                File.Copy(thumbPath, tempPath, true);
+                if (!string.IsNullOrWhiteSpace(projectThumbPath) && File.Exists(projectThumbPath))
+                    File.Copy(projectThumbPath, tempPath, true);
+                else
+                    File.WriteAllBytes(tempPath, previewer.RenderFramePngBytes(0U, 1280, 720));
                 File.Move(tempPath, destPath, true);
                 LogDiagnostic($"Project thumbnail saved before exit: {destPath}");
             }

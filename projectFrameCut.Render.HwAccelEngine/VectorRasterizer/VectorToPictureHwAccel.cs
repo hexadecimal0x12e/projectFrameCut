@@ -2,7 +2,7 @@
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Shared;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
+
 
 namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
 {

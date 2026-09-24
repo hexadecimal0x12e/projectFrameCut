@@ -61,6 +61,9 @@ public partial class EditSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_PreviewOption, SettingLocalizedResources.Edit_PreviewOption_Subtitle))
             .AddCheckbox("Edit_UseDynamicPreview", SettingLocalizedResources.Edit_UseDynamicPreview, IsBoolSettingTrue("Edit_UseDynamicPreview"))
             .AddPicker("Edit_PreviewOutputMode", SettingLocalizedResources.Edit_NativePreviewOutputMode, PreviewOutputModeStringMapping.Keys.ToArray(), PreviewOutputModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Automatic)), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_NativePreviewOutputMode_Automatic, "")).Key, null)
+            .AddCheckbox("Edit_PreviewWarmupEnabled", SettingLocalizedResources.Edit_PreviewWarmupEnabled, IsBoolSettingTrueOrDefault("Edit_PreviewWarmupEnabled", true))
+            .AppendWhen(IsBoolSettingTrueOrDefault("Edit_PreviewWarmupEnabled", true),
+                c => c.AddEntry("Edit_PreviewWarmupSeconds", SettingLocalizedResources.Edit_PreviewWarmupSeconds, GetSetting("Edit_PreviewWarmupSeconds", "5"), "5"))
             .AppendWhen(IsBoolSettingTrue("Edit_UseDynamicPreview"),
                 c => c.AddCheckbox("Edit_UseLightweightDynamicPreviewHost", SettingLocalizedResources.Edit_UseLightweightDynamicPreviewHost, IsBoolSettingTrueOrDefault("Edit_UseLightweightDynamicPreviewHost", true))
                       .AddEntry("Edit_DynamicPreviewResolutionDivisor", SettingLocalizedResources.Edit_DynamicPreviewResolutionDivisor, GetSetting("Edit_DynamicPreviewResolutionDivisor", "1"), "1")
@@ -120,6 +123,11 @@ public partial class EditSettingPage : ContentPage
                         WriteSetting(args.Id, mode);
                         return;
                     }
+                case "Edit_PreviewWarmupSeconds":
+                    if (int.TryParse(args.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds)
+                        && seconds is >= 1 and <= 60)
+                        WriteSetting(args.Id, seconds.ToString(CultureInfo.InvariantCulture));
+                    return;
                 case "TextTemplates":
                     {
                         File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "TextTemplates.json"), System.Text.Json.JsonSerializer.Serialize(TextTemplates));
@@ -128,6 +136,7 @@ public partial class EditSettingPage : ContentPage
                     }
                 case "Edit_UpperContentHeight_AutoSave":
                 case "Edit_UseDynamicPreview":
+                case "Edit_PreviewWarmupEnabled":
                 case "Edit_EnableMultiWindow":
                     if (args.Value != null)
                     {

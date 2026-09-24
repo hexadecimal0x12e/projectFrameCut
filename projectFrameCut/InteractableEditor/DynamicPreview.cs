@@ -26,12 +26,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Buffers.Binary;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
-using IPicture = projectFrameCut.Drawing.Base.IPicture;
 using MauiPoint = Microsoft.Maui.Graphics.Point;
 using Path = System.IO.Path;
 using RenderITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
@@ -78,6 +76,7 @@ public sealed class DynamicPreview : IDisposable
     private long _prepareVersion;
     private readonly object _preparedOverlayCacheGate = new();
     private IReadOnlyList<PreparedPreview> _lastPreparedOverlayPreviews = [];
+    private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _clipWarmups = new();
 
     public event Action<Guid, string>? ClipInitializationFailed;
     public event Action<Guid>? ClipInitializationRecovered;
@@ -88,6 +87,19 @@ public sealed class DynamicPreview : IDisposable
     }
 
     public IClip[]? Clips => _clips;
+
+    public bool PreviewWarmupEnabled
+    {
+        get;
+        set
+        {
+            if (field == value) return;
+            field = value;
+            if (!value) CancelClipWarmups();
+        }
+    } = true;
+
+    public int PreviewWarmupSeconds { get; set { field = Math.Clamp(value, 1, 60); } } = 5;
 
     /// <summary>
     /// Retained for settings compatibility. Dynamic preview effects are now always rendered by the
@@ -310,6 +322,8 @@ public sealed class DynamicPreview : IDisposable
             return;
         }
 
+        CancelClipWarmups();
+
         IClip[]? batchToDispose = null;
         lock (_clipsGate)
         {
@@ -369,12 +383,76 @@ public sealed class DynamicPreview : IDisposable
 
     public void Dispose()
     {
+        CancelClipWarmups();
         Interlocked.Increment(ref _renderVersion);
         Interlocked.Increment(ref _prepareVersion);
         DisposeClips();
         ResetFallbackLogs();
         CacheOverlayPreparedPreviews([]);
     }
+
+    public void CancelClipWarmup(Guid clipId)
+    {
+        if (_clipWarmups.TryGetValue(clipId, out var cts))
+        {
+            try { cts.Cancel(); } catch (ObjectDisposedException) { }
+        }
+    }
+
+    public void CancelClipWarmups()
+    {
+        foreach (var clipId in _clipWarmups.Keys) CancelClipWarmup(clipId);
+    }
+
+    public void WarmClipFrames(Guid clipId, uint playhead, int frameRate, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight)
+    {
+        CancelClipWarmup(clipId);
+        if (!PreviewWarmupEnabled || _previewer is null || _clips?.FirstOrDefault(c => c.Id == clipId) is not { } clip) return;
+
+        var cts = new CancellationTokenSource();
+        _clipWarmups[clipId] = cts;
+        var previewer = _previewer;
+        var seconds = PreviewWarmupSeconds;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                cts.Token.ThrowIfCancellationRequested();
+                var dir = Path.Combine(previewer.ProjectRoot, "thumbs", "perClip", clipId.ToString(), "dynamic");
+                if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                if (clip.ClipType == ClipMode.AudioClip) return;
+
+                var radius = Math.Max(1, frameRate) * seconds;
+                var rendered = 0;
+                for (var distance = 0; distance <= radius; distance++)
+                {
+                    cts.Token.ThrowIfCancellationRequested();
+                    var index = (long)playhead + distance;
+                    if (index > uint.MaxValue || !clip.ContainsFrame((uint)index)) continue;
+                    previewer.RenderClipFrameForDisplay(clipId, (uint)index, canvasWidth, canvasHeight, projectWidth, projectHeight, cts.Token);
+                    rendered++;
+                }
+                for (var distance = 1; distance <= radius; distance++)
+                {
+                    cts.Token.ThrowIfCancellationRequested();
+                    var index = (long)playhead - distance;
+                    if (index < 0 || !clip.ContainsFrame((uint)index)) continue;
+                    previewer.RenderClipFrameForDisplay(clipId, (uint)index, canvasWidth, canvasHeight, projectWidth, projectHeight, cts.Token);
+                    rendered++;
+                }
+                LogDiagnostic($"[DynamicPreview] Warmed {rendered} frames for clip {clipId} around {playhead}.");
+            }
+            catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
+            catch (Exception ex) { Log(ex, $"Warm dynamic preview for clip {clipId}", this); }
+            finally
+            {
+                if (_clipWarmups.TryGetValue(clipId, out var current) && ReferenceEquals(current, cts))
+                    _clipWarmups.TryRemove(clipId, out _);
+                cts.Dispose();
+            }
+        });
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public async Task<IReadOnlyList<PreparedPreview>?> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, bool applyClipTargetLayout, bool checkVersion, long prepareVersion, CancellationToken token)
     {
@@ -592,7 +670,7 @@ public sealed class DynamicPreview : IDisposable
             {
                 var displayFrame = _previewer.RenderClipFrameForDisplay(request.Clip.Id, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token);
 #if WINDOWS
-                if (displayFrame.ScRgbPath is not null || displayFrame.RequireSwapChain)
+                if (displayFrame.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb || displayFrame.RequireSwapChain)
                 {
                     return new PreparedPreview(request.Clip.Id, () => new HdrPreviewView
                     {
@@ -600,19 +678,10 @@ public sealed class DynamicPreview : IDisposable
                         HorizontalOptions = LayoutOptions.Fill,
                         VerticalOptions = LayoutOptions.Fill,
                         AutomationId = $"hdr-clip={request.Clip.ClipType},id={request.Clip.Id}",
-                    }, null, request.Clip, isTransparentAt: displayFrame.ScRgbPath is null
-                        ? null
-                        : CreateScRgbTransparencyHitTest(displayFrame.ScRgbPath, displayFrame.Width, displayFrame.Height, displayFrame.Stride));
+                    }, null, request.Clip, isTransparentAt: CreateVfdTransparencyHitTest(displayFrame.VfdPath));
                 }
 #endif
-                var artifactPath = displayFrame.FallbackImagePath
-                    ?? throw new InvalidOperationException("The preview did not provide a displayable frame.");
-                // FileImageSource/BitmapImage.UriSource can silently fail for absolute files under a
-                // packaged WinUI app's LocalCache (the remote-artifact location). A stream source is
-                // decoded through the app's already-authorized file handle and works for local paths too.
-                source = _previewer.ArtifactResolver is not null
-                    ? CreateFileStreamImageSource(artifactPath)
-                    : ImageSource.FromFile(artifactPath);
+                source = PreviewFrameMaterializer.CreateImageSource(displayFrame.VfdPath);
 
                 return new PreparedPreview(request.Clip.Id, () => new Image
                 {
@@ -621,7 +690,7 @@ public sealed class DynamicPreview : IDisposable
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.Fill,
                     AutomationId = $"clip={request.Clip.ClipType},id={request.Clip.Id}",
-                }, null, request.Clip, isTransparentAt: CreatePngTransparencyHitTest(artifactPath));
+                }, null, request.Clip, isTransparentAt: CreateVfdTransparencyHitTest(displayFrame.VfdPath));
             }
             else
             {
@@ -761,11 +830,11 @@ public sealed class DynamicPreview : IDisposable
         }
     }
 
-    private static Func<double, double, bool>? CreatePngTransparencyHitTest(string path)
+    private static Func<double, double, bool>? CreateVfdTransparencyHitTest(string path)
     {
         try
         {
-            using var picture = new Picture8bpp(path);
+            using var picture = PreviewFrameMaterializer.LoadVfd(path);
             return CreateTransparencyHitTest(picture);
         }
         catch (Exception ex)
@@ -784,30 +853,6 @@ public sealed class DynamicPreview : IDisposable
         }
 
         return CreateTransparencyHitTest(picture.Width, picture.Height, i => i < alpha.Length && float.IsFinite(alpha[i]) && alpha[i] == 0f);
-    }
-
-    private static Func<double, double, bool>? CreateScRgbTransparencyHitTest(string path, int width, int height, int stride)
-    {
-        try
-        {
-            width = Math.Max(1, width);
-            height = Math.Max(1, height);
-            stride = stride > 0 ? stride : checked(width * 8);
-            var bytes = File.ReadAllBytes(path);
-            return CreateTransparencyHitTest(width, height, i =>
-            {
-                var y = i / width;
-                var x = i - y * width;
-                var offset = checked(y * stride + x * 8 + 6);
-                return offset + 2 <= bytes.Length
-                    && (BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(offset, 2)) & 0x7fff) == 0;
-            });
-        }
-        catch (Exception ex)
-        {
-            Log(ex, $"Read HDR preview transparency from {path}", typeof(DynamicPreview));
-            return null;
-        }
     }
 
     private static Func<double, double, bool>? CreateTransparencyHitTest(int width, int height, Func<int, bool> isTransparent)
@@ -860,12 +905,6 @@ public sealed class DynamicPreview : IDisposable
                 VerticalTextAlignment = Microsoft.Maui.TextAlignment.Center,
             },
         };
-
-    private static ImageSource CreateFileStreamImageSource(string path)
-    {
-        byte[] content = File.ReadAllBytes(path);
-        return ImageSource.FromStream(() => new MemoryStream(content, writable: false));
-    }
 
     private IPicture? ReadTransformPreviewSource(TransformContainer transformClip, int width, int height, uint frameIndex, IPicture.PicturePixelMode pixelMode)
     {
@@ -2073,7 +2112,7 @@ public sealed class DynamicPreview : IDisposable
         {
             try
             {
-                frame = new Picture8bpp(diskPath);
+                frame = PreviewFrameMaterializer.LoadVfd(diskPath);
                 CacheFallbackFrame(key, frame);
                 TouchFallbackDiskEntry(diskPath);
                 return true;
@@ -2211,7 +2250,9 @@ public sealed class DynamicPreview : IDisposable
 
         try
         {
-            resizedFrame = new Picture8bpp(diskPath).Resize(targetKey.TargetWidth, targetKey.TargetHeight, preserveAspect: true);
+            using var source = PreviewFrameMaterializer.LoadVfd(diskPath);
+            resizedFrame = source.Resize(targetKey.TargetWidth, targetKey.TargetHeight, preserveAspect: true);
+            if (ReferenceEquals(resizedFrame, source)) resizedFrame = source.Clone();
             TouchFallbackDiskEntry(diskPath);
             return true;
         }
@@ -2264,7 +2305,7 @@ public sealed class DynamicPreview : IDisposable
                     Directory.CreateDirectory(dir);
                 }
 
-                frame.SaveToPng(diskPath);
+                frame.SaveToDisk(diskPath, PictureExtensions.SharedVfdPictureEncoder);
                 TouchFallbackDiskEntry(diskPath);
                 TrimFallbackDiskCacheIfNeeded();
             }
@@ -2306,7 +2347,10 @@ public sealed class DynamicPreview : IDisposable
         var clipId = SanitizePathSegment(key.ClipId.ToString());
         var dimension = $"{key.TargetWidth}x{key.TargetHeight}";
         var fingerprint = key.SourceFingerprint.ToString("X16");
-        return Path.Combine(DiskCacheRoot, clipId, dimension, fingerprint, $"{key.FrameIndex}.png");
+        var directory = Path.Combine(DiskCacheRoot, clipId, dimension, fingerprint);
+        var legacyPath = Path.Combine(directory, $"{key.FrameIndex}.png");
+        try { if (File.Exists(legacyPath)) File.Delete(legacyPath); } catch { }
+        return Path.Combine(directory, $"{key.FrameIndex}.vfd");
     }
 
     [DebuggerStepThrough()]
