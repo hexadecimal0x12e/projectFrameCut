@@ -27,7 +27,7 @@ namespace projectFrameCut.Render.HwAccelEngine
 
         string IPluginBase.PluginID => "projectFrameCut.Render.HwAccelEngine";
 
-        int IPluginBase.PluginAPIVersion => 1;
+        int IPluginBase.PluginAPIVersion => IPluginBase.CurrentPluginAPIVersion;
 
         string IPluginBase.Name => "GPU Accelerator provider Plugin";
 
@@ -212,6 +212,35 @@ namespace projectFrameCut.Render.HwAccelEngine
 
 
         public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider => new Dictionary<string, Func<IEffectProvider>> { };
+
+        public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider =>
+            new Dictionary<EffectImplementationKey, Func<IEffect>>
+            {
+                [new("Blur", EffectImplementType.HwAcceleration)] = () => CreateEffect("BlurEffect_HwAccel"),
+                [new("Crop", EffectImplementType.HwAcceleration)] = () => CreateEffect("CropEffect_HwAccel"),
+                [new("ProgressCrop", EffectImplementType.HwAcceleration)] = () => CreateEffect("ProgressCropper_HwAccel"),
+                [new("Resize", EffectImplementType.HwAcceleration)] = () => CreateEffect("ResizeEffect_HwAccel"),
+                [new("Flip", EffectImplementType.HwAcceleration)] = () => CreateEffect("FlipEffect_HwAccel"),
+                [new("Sharpen", EffectImplementType.HwAcceleration)] = () => CreateEffect("SharpenEffect_HwAccel"),
+                [new("Vignette", EffectImplementType.HwAcceleration)] = () => CreateEffect("VignetteEffect_HwAccel"),
+                [new("FadeOpacity", EffectImplementType.HwAcceleration)] = () => CreateEffect("FadeOpacityEffect_HwAccel"),
+                [new("ColorAdjustment", EffectImplementType.HwAcceleration)] = () => CreateEffect("ColorAdjustmentEffect_HwAccel"),
+                [new("Rotation", EffectImplementType.HwAcceleration)] = () => CreateEffect("RotationEffect_HwAccel"),
+                [new("Place", EffectImplementType.HwAcceleration)] = () => CreateEffect("PlaceEffect_HwAccel"),
+                [new("RemoveColor", EffectImplementType.HwAcceleration)] = () => CreateEffect("RemoveColorEffect_HwAccel"),
+                [new("ClassicOverlayMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("ClassicOverlayMixture", "Compose"),
+                [new("AddMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("AddMixture", "Compose"),
+                [new("SubtractMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("SubtractMixture", "Compose"),
+                [new("MultiplyMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("MultiplyMixture", "Compose"),
+                [new("ScreenMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("ScreenMixture", "Compose"),
+                [new("OverlayBlendMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("OverlayBlendMixture", "Compose"),
+                [new("DarkenMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("DarkenMixture", "Compose"),
+                [new("LightenMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("LightenMixture", "Compose"),
+                [new("DifferenceMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("DifferenceMixture", "Compose"),
+            };
+
+        private static IEffect CreateEffect(string typeName, string ns = "Effect") =>
+            (IEffect)Activator.CreateInstance(Type.GetType($"projectFrameCut.Render.{ns}.{typeName}, projectFrameCut.Render", true)!)!;
 
         Dictionary<string, IVideoSource> IPluginBase.VideoSourceProvider => new();
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new Dictionary<string, Func<string, string, ISoundTrack>> { };

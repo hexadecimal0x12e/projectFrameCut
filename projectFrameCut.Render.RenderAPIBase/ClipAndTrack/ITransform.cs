@@ -7,17 +7,17 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 {
-    public interface ITransform
+    public interface ITransform : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject
     {
         /// <summary>
         /// Gets the ID of the plugin that provided this value.
         /// </summary>
-        public string FromPlugin { get; }
+        public new string FromPlugin { get; }
 
         /// <summary>
         /// The type of this transform.
         /// </summary>
-        public string TypeName { get; }
+        public new string TypeName { get; }
 
         /// <summary>
         /// Get which kind of ITransform is.
@@ -38,14 +38,6 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public uint Duration { get; set; }
 
         /// <summary>
-        /// Indicates whether this transform needs a specific computer with the computer which it's ID is <see cref="NeedComputer"/> to run.
-        /// Or be null indicates this effect does not need a specific computer.
-        /// </summary>
-        [JsonIgnore]
-        public string? NeedComputer { get; }
-
-
-        /// <summary>
         /// Override this method to do some init jobs before use.
         /// </summary>
         public virtual void Init() { }
@@ -60,10 +52,10 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Get the transform's frame at the specified progress. 
         /// </summary>
         /// <remarks>
-        /// It's pretty similar to <see cref="IEffect.Render(IPicture, IComputer?, int, int)"/>, but with 2 input.
+        /// It's similar to an effect render operation, but with two inputs.
         /// </remarks>
         /// <param name="progress">The progress of this render request. 0 for start and 1 for end.</param>
-        public IPicture GetFrame(IPicture left, IPicture right, IComputer? computer, int targetWidth, int targetHeight);
+        public IPicture GetFrame(IPicture left, IPicture right, int targetWidth, int targetHeight);
 
     }
     public interface IOneInputSingleFrameTransform : ITransform
@@ -74,10 +66,10 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Get the transform's frame at the specified progress. 
         /// </summary>
         /// <remarks>
-        /// It's pretty similar to <see cref="IContinuousEffect.Render(IPicture, uint, IComputer?, int, int)"/>
+        /// It's similar to a continuous effect render operation.
         /// </remarks>
         /// <param name="progress">The progress of this render request. 0 for start and 1 for end.</param>
-        public IPicture GetFrame(IPicture input, double progress, IComputer? computer, int targetWidth, int targetHeight);
+        public IPicture GetFrame(IPicture input, double progress, int targetWidth, int targetHeight);
 
     }
     public interface IContinuousTransform : ITransform
@@ -88,10 +80,10 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Get the transform's frame at the specified progress. 
         /// </summary>
         /// <remarks>
-        /// It's pretty similar to <see cref="IContinuousEffect.Render(IPicture, uint, IComputer?, int, int)"/>
+        /// It's similar to a continuous effect render operation.
         /// </remarks>
         /// <param name="progress">The progress of this render request. 0 for start and 1 for end.</param>
-        public IPicture GetFrame(IPicture left, IPicture right, double progress, IComputer? computer, int targetWidth, int targetHeight);
+        public IPicture GetFrame(IPicture left, IPicture right, double progress, int targetWidth, int targetHeight);
 
     }
 

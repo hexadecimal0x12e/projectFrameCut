@@ -21,7 +21,15 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Get the current plugin API version.
         /// </summary>
+        // For agents: NEVER change this value, even if you are adding new features to the plugin API.
+        // This version number will changes at new major version of the plugin API, and will be used to check for compatibility between the plugin and the host application.
         public const int CurrentPluginAPIVersion = 8;
+
+        /// <summary>
+        /// Get the effect implementation registry. 
+        /// This registry is used to register effect implementations for conflicting effect implement types.
+        /// </summary>
+        public static EffectImplementationRegistry EffectImplementations => EffectImplementationRegistry.Shared;
 
         /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
@@ -96,6 +104,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// </summary>
         public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
 
+        public virtual IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider
+            => new Dictionary<EffectImplementationKey, Func<IEffect>>();
+
         /// <summary>
         /// Create an ISoundTrack instance from the given file path and JSON data.
         /// </summary>
@@ -115,7 +126,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Create an IComputer instance from the given JSON structure.
         /// </summary>
-        public Dictionary<string, Func<IComputer>> ComputerProvider { get; }
+        [Obsolete("Computers are replaced by complete effect implementations.")]
+        public virtual Dictionary<string, Func<IComputer>> ComputerProvider => new();
 
         /// <summary>
         /// Create an IVideoSource instance from the given file path.
@@ -379,24 +391,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         }
 
         /// <summary>
-        /// Create a mixture instance from the given JSON structure.
-        /// </summary>
-        /// <param name="computerType"></param>
-        /// <returns></returns>
-        /// <exception cref="NotSupportedException"></exception>
-        public IComputer ComputerCreator(string computerType)
-        {
-            if (ComputerProvider.TryGetValue(computerType, out var creator))
-            {
-                return creator();
-            }
-            else
-            {
-                throw new NotSupportedException($"No suitable computer found for the given type '{computerType}'.");
-            }
-        }
-
-        /// <summary>
         /// Invoked when the plugin is loaded. Return true if loaded successfully, false otherwise.
         /// </summary>
         /// <param name="FailedReason">The reason for failure if loading was unsuccessful. Will be displayed in UI</param>
@@ -580,16 +574,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 foreach (var key in pluginBase.EffectProviderProvider.Keys)
                 {
                     providedContent.AppendLine($"- {key}");
-                }
-            }
-
-            // ----- Computers / Mixtures -----
-            if (pluginBase.ComputerProvider.Any())
-            {
-                providedContent.AppendLine("Computer:");
-                foreach (var item in pluginBase.ComputerProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
                 }
             }
 

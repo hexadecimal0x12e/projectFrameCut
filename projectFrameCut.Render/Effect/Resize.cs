@@ -2,6 +2,7 @@ using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,6 +12,7 @@ namespace projectFrameCut.Render.Effect
 {
     public class ResizeEffect_HwAccel : INormalEffect
     {
+        private readonly IComputer? computer = PluginManager.CreateComputer("ResizeComputer");
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
@@ -27,7 +29,6 @@ namespace projectFrameCut.Render.Effect
 
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public string? NeedComputer => "ResizeComputer";
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
 
@@ -47,7 +48,7 @@ namespace projectFrameCut.Render.Effect
 
         public string TypeName => "Resize";
 
-        void IEffect.Initialize()
+        void IExtensibleObject.Initialize()
         {
             Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
         }
@@ -79,7 +80,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         {
             var sw = Stopwatch.StartNew();
             int resizeWidth = DynamicParam.Resolve(Parameters.GetValueOrDefault("Width"), Width);
@@ -238,7 +239,6 @@ namespace projectFrameCut.Render.Effect
 
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public string? NeedComputer => null;
         public EffectImplementType ImplementType => EffectImplementType.IPicture;
         public bool IsReorderable => true;
 
@@ -259,7 +259,7 @@ namespace projectFrameCut.Render.Effect
         public string TypeName => "Resize";
 
 
-        void IEffect.Initialize()
+        void IExtensibleObject.Initialize()
         {
             Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
         }
@@ -291,7 +291,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         {
             int resizeWidth = DynamicParam.Resolve(Parameters.GetValueOrDefault("Width"), Width);
             int resizeHeight = DynamicParam.Resolve(Parameters.GetValueOrDefault("Height"), Height);

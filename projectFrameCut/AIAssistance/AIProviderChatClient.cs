@@ -14,13 +14,15 @@ public sealed class AIProviderChatClient(AIProviderService service) : IChatClien
         var contents = new List<AIContent>();
         ChatFinishReason? finishReason = null;
         UsageDetails? usage = null;
+        AIChatContentPart? done = null;
         await foreach (var update in GetStreamingResponseAsync(messages, options, cancellationToken))
         {
             contents.AddRange(update.Contents);
             finishReason ??= update.FinishReason;
             if (update.Contents.OfType<UsageContent>().LastOrDefault() is { } usageContent) usage = usageContent.Details;
+            if (update.RawRepresentation is AIChatContentPart { Kind: AIContentPartKind.Done } part) done = part;
         }
-        return new ChatResponse(new ExtensionsMessage(ChatRole.Assistant, contents)) { FinishReason = finishReason, Usage = usage };
+        return new ChatResponse(new ExtensionsMessage(ChatRole.Assistant, contents)) { FinishReason = finishReason, Usage = usage, RawRepresentation = done };
     }
 
     public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
@@ -43,32 +45,47 @@ public sealed class AIProviderChatClient(AIProviderService service) : IChatClien
 
         await foreach (var item in service.StreamChatAsync(request, cancellationToken))
         {
-            if (item.Kind == AIChatEventKind.Error)
-                throw new InvalidOperationException(item.Error?.Message ?? "The AI provider returned an error.");
             var update = new ChatResponseUpdate(ChatRole.Assistant, []);
             switch (item.Kind)
             {
-                case AIChatEventKind.TextDelta:
+                case AIContentPartKind.Text:
                     update.Contents.Add(new TextContent(item.Text ?? string.Empty));
                     break;
-                case AIChatEventKind.ReasoningDelta:
+                case AIContentPartKind.Media when item.Media?.Data is { } data:
+                    update.Contents.Add(new DataContent(data, item.Media.MimeType) { Name = item.Media.Name });
+                    break;
+                case AIContentPartKind.Media when Uri.TryCreate(item.Media?.Uri, UriKind.Absolute, out var uri):
+                    update.Contents.Add(new DataContent(uri, item.Media!.MimeType) { Name = item.Media.Name });
+                    break;
+                case AIContentPartKind.Thinking:
                     update.Contents.Add(new TextReasoningContent(item.Text ?? string.Empty));
                     break;
-                case AIChatEventKind.ToolCall:
-                    update.Contents.Add(new FunctionCallContent(item.ToolCallId ?? string.Empty, item.ToolName ?? string.Empty, DeserializeArguments(item.ArgumentsJson)));
+                case AIContentPartKind.ToolCall:
+                    update.Contents.Add(new FunctionCallContent(item.ToolCallId ?? string.Empty, item.ToolName ?? string.Empty, DeserializeArguments(item.Json)));
                     break;
-                case AIChatEventKind.Usage when item.Usage is { } usage:
-                    update.Contents.Add(new UsageContent(new UsageDetails
+                case AIContentPartKind.ToolResult:
+                    update.Contents.Add(new FunctionResultContent(item.ToolCallId ?? string.Empty, item.Json));
+                    break;
+                case AIContentPartKind.Done:
+                    if (item.Done?.Usage is { } usage)
                     {
-                        InputTokenCount = usage.InputTokens,
-                        OutputTokenCount = usage.OutputTokens,
-                        TotalTokenCount = usage.InputTokens + usage.OutputTokens,
-                    }));
+                        update.Contents.Add(new UsageContent(new UsageDetails
+                        {
+                            InputTokenCount = usage.InputTokens,
+                            OutputTokenCount = usage.OutputTokens,
+                            TotalTokenCount = usage.InputTokens + usage.OutputTokens,
+                        }) { RawRepresentation = item });
+                    }
+                    else update.Contents.Add(new AIContent { RawRepresentation = item });
+                    update.FinishReason = string.IsNullOrWhiteSpace(item.Done?.FinishReason) ? ChatFinishReason.Stop : new(item.Done.FinishReason);
                     break;
-                case AIChatEventKind.Completed:
-                    update.FinishReason = string.IsNullOrWhiteSpace(item.FinishReason) ? ChatFinishReason.Stop : new(item.FinishReason);
+                case AIContentPartKind.Retrying:
+                case AIContentPartKind.KeepAlive:
+                case AIContentPartKind.Error:
+                    update.Contents.Add(new AIContent { RawRepresentation = item });
                     break;
             }
+            update.RawRepresentation = item;
             yield return update;
         }
     }
@@ -83,8 +100,14 @@ public sealed class AIProviderChatClient(AIProviderService service) : IChatClien
         {
             switch (content)
             {
+                case AIContent { RawRepresentation: AIChatContentPart part }:
+                    contents.Add(part);
+                    break;
                 case TextContent text:
                     contents.Add(new() { Kind = AIContentPartKind.Text, Text = text.Text });
+                    break;
+                case TextReasoningContent reasoning:
+                    contents.Add(new() { Kind = AIContentPartKind.Thinking, Text = reasoning.Text });
                     break;
                 case DataContent data when !data.Data.IsEmpty:
                     contents.Add(new() { Kind = AIContentPartKind.Media, Media = new() { Kind = AIMediaReferenceKind.Inline, Data = data.Data.ToArray(), MimeType = data.MediaType, Name = data.Name } });

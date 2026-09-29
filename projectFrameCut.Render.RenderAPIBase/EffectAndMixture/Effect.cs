@@ -14,19 +14,19 @@ using projectFrameCut.Drawing.Base;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
-    public interface IEffect
+    public interface IEffect : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject
     {
         /// <summary>
         /// Indicates which plugin this effect comes from.
         /// </summary>
-        public string FromPlugin { get; }
+        public new string FromPlugin { get; }
         /// <summary>
         /// Define the type name of the effect. 
         /// </summary>
         /// <remarks>
         /// it SHOULD equals to <see cref="IEffectProvider.TypeName"/> and so on.
         /// </remarks>
-        public string TypeName { get; }
+        public new string TypeName { get; }
         /// <summary>
         /// Get which kind of effect is. 
         /// </summary>
@@ -53,18 +53,18 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// DO NOT set this property manually. It will be set when the effect is created. 
         /// Manually setting this property may cause unexpected behavior, such as effect instance reference issues.
         /// </remarks>
-        public string Id { get; set; }
+        public new string Id { get; set; }
 
         /// <summary>
         /// Parameters of the effect.
         /// </summary>
         public Dictionary<string, object> Parameters { get; }
 
-
         /// <summary>
         /// Get or set whether the effect is enabled.
         /// </summary>
         public bool Enabled { get; set; }
+
         /// <summary>
         /// The index of the effect in the effect stack.
         /// </summary>
@@ -81,14 +81,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         [JsonIgnore]
         public bool CanProcessFromCanvas => false;
-
-        /// <summary>
-        /// Indicates whether this effect needs a specific computer with the computer which it's ID is <see cref="NeedComputer"/> to run.
-        /// Or be null indicates this effect does not need a specific computer.
-        /// </summary>
-        [JsonIgnore]
-        public string? NeedComputer { get; }
-
 
         /// <summary>
         /// Get the relative width of the effect.
@@ -113,13 +105,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <param name="parameters"></param>
         /// <returns></returns>
         public IEffect WithParameters(Dictionary<string, object> parameters);
-
-        /// <summary>
-        /// If you'd like to initialize the effect before use, override it.
-        /// </summary>
-        public virtual void Initialize()
-        {
-        }
 
         /// <summary>
         /// Get the info of this effect. Used in MCP calling in agent.
@@ -159,11 +144,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Render the effect on the source picture to produce a new picture with the target width and height.
         /// </summary>
         /// <param name="source">The input frame.</param>
-        /// <param name="computer">A provided computer for accelerated computing.</param>
         /// <param name="targetWidth">Output canvas' width.</param>
         /// <param name="targetHeight">Output canvas' height.</param>
         /// <returns>the processed frame</returns>
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight);
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight);
 
     }
 
@@ -173,10 +157,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Adjust the target frame.
         /// </summary>
         /// <param name="source"></param>
-        /// <param name="computer"></param>
         /// <returns>the processed frame</returns>
-        public IPicture Process(IPicture source, IComputer? computer);
-        IPicture INormalEffect.Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight) => Process(source, computer);
+        public IPicture Process(IPicture source);
+        IPicture INormalEffect.Render(IPicture source, int targetWidth, int targetHeight) => Process(source);
 
         bool IEffect.Enabled { get => true; set { } }
         int IEffect.RelativeWidth { get => -1; set { } }

@@ -449,7 +449,7 @@ public sealed class DecoderTestPage : ContentPage
                     var output = picture;
                     if (effect is INormalEffect normal)
                     {
-                        var processed = normal.Render(picture, PluginManager.CreateComputer(effect.NeedComputer), picture.Width, picture.Height);
+                        var processed = normal.Render(picture, picture.Width, picture.Height);
                         if (!ReferenceEquals(processed, picture)) output = processed;
                     }
                     using var stream = new MemoryStream();

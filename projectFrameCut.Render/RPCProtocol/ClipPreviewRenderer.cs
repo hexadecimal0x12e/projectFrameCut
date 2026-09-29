@@ -48,7 +48,6 @@ internal static class ClipPreviewRenderer
                 {
                     frame = replacement.Compute(
                         clip,
-                        PluginManager.CreateComputer(replacement.NeedComputer),
                         clip.GetFrame(frameIndex, sourceWidth, sourceHeight, pixelMode),
                         sourceWidth,
                         sourceHeight,
@@ -136,11 +135,11 @@ internal static class ClipPreviewRenderer
                     var scopedEnd = continuous.IsScoped ? continuous.EndPoint : (int)(source.ParentClip.StartFrame + source.ParentClip.GetEffectiveDuration());
                     if (scopedEnd <= scopedStart || frameIndex < scopedStart || frameIndex >= scopedEnd) continue;
                     var progress = Math.Clamp((float)(frameIndex - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
-                    effected = continuous.Render(effected, progress, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                    effected = continuous.Render(effected, progress, targetWidth, targetHeight);
                 }
                 else if (effect is INormalEffect normal)
                 {
-                    effected = normal.Render(effected, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                    effected = normal.Render(effected, targetWidth, targetHeight);
                 }
                 else if (effect is not (IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect))
                 {

@@ -23,7 +23,7 @@ namespace projectFrameCut.StandaloneRender
 
         string IPluginBase.PluginID => "projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin";
 
-        int IPluginBase.PluginAPIVersion => 1;
+        int IPluginBase.PluginAPIVersion => IPluginBase.CurrentPluginAPIVersion;
 
         string IPluginBase.Name => "ILGPU CUDA/OpenCL Accelerator Plugin";
 
@@ -75,6 +75,32 @@ namespace projectFrameCut.StandaloneRender
 
 
         public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider => new Dictionary<string, Func<IEffectProvider>> { };
+
+        public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider =>
+            new Dictionary<EffectImplementationKey, Func<IEffect>>
+            {
+                [new("Blur", EffectImplementType.HwAcceleration)] = () => new BlurEffect_HwAccel(),
+                [new("Crop", EffectImplementType.HwAcceleration)] = () => new CropEffect_HwAccel(),
+                [new("ProgressCrop", EffectImplementType.HwAcceleration)] = () => new ProgressCropper_HwAccel(),
+                [new("Resize", EffectImplementType.HwAcceleration)] = () => new ResizeEffect_HwAccel(),
+                [new("Flip", EffectImplementType.HwAcceleration)] = () => new FlipEffect_HwAccel(),
+                [new("Sharpen", EffectImplementType.HwAcceleration)] = () => new SharpenEffect_HwAccel(),
+                [new("Vignette", EffectImplementType.HwAcceleration)] = () => new VignetteEffect_HwAccel(),
+                [new("FadeOpacity", EffectImplementType.HwAcceleration)] = () => new FadeOpacityEffect_HwAccel(),
+                [new("ColorAdjustment", EffectImplementType.HwAcceleration)] = () => new ColorAdjustmentEffect_HwAccel(),
+                [new("Rotation", EffectImplementType.HwAcceleration)] = () => new RotationEffect_HwAccel(),
+                [new("Place", EffectImplementType.HwAcceleration)] = () => new PlaceEffect_HwAccel(),
+                [new("RemoveColor", EffectImplementType.HwAcceleration)] = () => new RemoveColorEffect_HwAccel(),
+                [new("ClassicOverlayMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.ClassicOverlayMixture(),
+                [new("AddMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.AddMixture(),
+                [new("SubtractMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.SubtractMixture(),
+                [new("MultiplyMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.MultiplyMixture(),
+                [new("ScreenMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.ScreenMixture(),
+                [new("OverlayBlendMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.OverlayBlendMixture(),
+                [new("DarkenMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.DarkenMixture(),
+                [new("LightenMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.LightenMixture(),
+                [new("DifferenceMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.DifferenceMixture(),
+            };
 
         //Dictionary<string, Func<string, string, IClip>> IPluginBase.ClipProvider => new Dictionary<string, Func<string, string, IClip>> { };
         Dictionary<string, IVideoSource> IPluginBase.VideoSourceProvider => new Dictionary<string, IVideoSource> { };

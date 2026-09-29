@@ -715,7 +715,7 @@ public partial class TestPage : ContentPage
                 var t = HDRPicture16bpp.ToHDRPictureBySignal(textFrame, 5000);
                 Log(t.GetDiagnosticsInfo());
                 t.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-t-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
-                var r = ClassicOverlayMixture.Default.Mix(f, t, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
+                var r = ClassicOverlayMixture.Default.Mix(f, t, 16);
                 r.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-r-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
                 w.Append(r);
                 Log($"Wrote frame {i}, r:{r.GetDiagnosticsInfo()}");
@@ -760,7 +760,7 @@ public partial class TestPage : ContentPage
             g = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
             b = Enumerable.Repeat((ushort)0, f.Pixels).ToArray(),
             a = f.Brightness.Select(c => Math.Clamp(1 - c, 0, 1)).ToArray()
-        }, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), 16);
+        }, 16);
         fReplaceAlphaAndComposeMask.SaveToPng(Path.Combine(MauiProgram.CachePath, $"hdrtest-replaceAlphaAndComposeMask-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png"));
         var w = new HDRVideoWriter
         {
@@ -784,7 +784,7 @@ public partial class TestPage : ContentPage
             StartX = 50,
             StartY = 120
         };
-        var result = p.Render(src, null, 2560, 1440);
+        var result = p.Render(src, 2560, 1440);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
@@ -811,10 +811,10 @@ public partial class TestPage : ContentPage
             Width = 1000,
             PreserveAspectRatio = false
         };
-        var resized = r.Render(src, null, 2560, 1440);
-        var placed = p.Render(resized, null, 2560, 1440);
+        var resized = r.Render(src, 2560, 1440);
+        var placed = p.Render(resized, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = ClassicOverlayMixture.Default.Mix(canvas, placed, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Drawing.Base.IPicture.PicturePixelMode.BytePicture);
+        var final = ClassicOverlayMixture.Default.Mix(canvas, placed, Drawing.Base.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
@@ -894,9 +894,9 @@ public partial class TestPage : ContentPage
             StartX = 50,
             StartY = 120
         };
-        var result = p.Render(src, null, 2560, 1440);
+        var result = p.Render(src, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = ClassicOverlayMixture.Default.Mix(canvas, result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false), Drawing.Base.IPicture.PicturePixelMode.BytePicture);
+        var final = ClassicOverlayMixture.Default.Mix(canvas, result, Drawing.Base.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();

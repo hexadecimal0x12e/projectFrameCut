@@ -350,7 +350,6 @@ public partial class BenchmarkPage : ContentPage
             LogRenderState = false,
             LogStaticsData = false,
             GCOption = gcOption,
-            EnableGPUBatchProcess = true,
             AllowReorderEffect = true,
             AutoSetupRenderContext = false,
             UseHDR = false,

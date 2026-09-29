@@ -61,6 +61,7 @@ namespace projectFrameCut.Render.Plugin
             {
                 if (plugin.Properties.TryGetValue("IsInternalPlugin", out var value) && bool.TryParse(value, out var result) && result) plugin.OnLoaded(out _);
                 loadedPlugins.Add(plugin.PluginID, plugin);
+                IPluginBase.EffectImplementations.Register(plugin.PluginID, plugin.EffectImplementationProvider);
                 Logger.Log($"Plugin {plugin.PluginID} loaded.");
             }
 
@@ -77,6 +78,8 @@ namespace projectFrameCut.Render.Plugin
                 }
                 catch { }
                 loadedPlugins.Remove(id);
+                IPluginBase.EffectImplementations.Unregister(id);
+                ComputerCache.Clear();
                 projectPluginIds.Remove(id);
                 Logger.Log($"Plugin {id} unloaded.");
             }
@@ -92,8 +95,10 @@ namespace projectFrameCut.Render.Plugin
                     item.Value.OnClosing();
                 }
                 catch { }
+                IPluginBase.EffectImplementations.Unregister(item.Key);
             }
             loadedPlugins.Clear();
+            ComputerCache.Clear();
             projectPluginIds.Clear();
         }
 
@@ -106,7 +111,15 @@ namespace projectFrameCut.Render.Plugin
                 {
                     if (!loadedPlugins.TryAdd(pluginInstance.PluginID, pluginInstance))
                     {
+                        var old = loadedPlugins[pluginInstance.PluginID];
                         loadedPlugins[pluginInstance.PluginID] = pluginInstance;
+                        IPluginBase.EffectImplementations.Register(pluginInstance.PluginID, pluginInstance.EffectImplementationProvider);
+                        ComputerCache.Clear();
+                        try { old.OnClosing(); } catch { }
+                    }
+                    else
+                    {
+                        IPluginBase.EffectImplementations.Register(pluginInstance.PluginID, pluginInstance.EffectImplementationProvider);
                     }
                 }
                 else
@@ -117,6 +130,7 @@ namespace projectFrameCut.Render.Plugin
             catch (Exception ex)
             {
                 Logger.Log(ex, "load plugins from assembly", "PluginManager");
+                return;
             }
 
             Logger.Log($"Plugin {pluginInstance.PluginID} loaded.");
@@ -131,6 +145,7 @@ namespace projectFrameCut.Render.Plugin
             if (loadedPlugins.ContainsKey(pluginInstance.PluginID))
                 throw new InvalidOperationException($"Plugin id '{pluginInstance.PluginID}' is already loaded.");
             loadedPlugins.Add(pluginInstance.PluginID, pluginInstance);
+            IPluginBase.EffectImplementations.Register(pluginInstance.PluginID, pluginInstance.EffectImplementationProvider);
             projectPluginIds.Add(pluginInstance.PluginID);
             Logger.Log($"Project plugin {pluginInstance.PluginID} loaded.");
         }
@@ -148,6 +163,8 @@ namespace projectFrameCut.Render.Plugin
             {
                 value.OnClosing();
                 loadedPlugins.Remove(id);
+                IPluginBase.EffectImplementations.Unregister(id);
+                ComputerCache.Clear();
                 projectPluginIds.Remove(id);
                 Logger.Log($"Plugin {id} unloaded.");
             }
@@ -276,22 +293,12 @@ namespace projectFrameCut.Render.Plugin
                 if (replaced) stru.Parameters = stripped;
                 try
                 {
-                    try
-                    {
-                        effect = plugin.EffectCreator(stru, type);
-                    }
-                    catch
-                    {
-                        try
-                        {
-                            effect = plugin.EffectCreator(stru, EffectImplementType.NotSpecified);
-                        }
-                        catch (Exception ex)
-                        {
-                            Log(ex, $"Create effect {stru.Name}/{stru.TypeName}", effect);
-                            throw;
-                        }
-                    }
+                    effect = plugin.EffectCreator(stru, type);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Create effect {stru.Name}/{stru.TypeName}", effect);
+                    throw;
                 }
                 finally
                 {
@@ -321,39 +328,7 @@ namespace projectFrameCut.Render.Plugin
             // Only use the provided resolution as fallback when the effect doesn't have its own
             if (stru.RelativeWidth <= 0) stru.RelativeWidth = relativeWidth;
             if (stru.RelativeHeight <= 0) stru.RelativeHeight = relativeHeight;
-            if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
-            {
-                var originalParameters = stru.Parameters;
-                var stripped = StripBindings(originalParameters ?? new Dictionary<string, object>());
-                bool replaced = !ReferenceEquals(stripped, originalParameters);
-                if (replaced) stru.Parameters = stripped;
-                IEffect effect;
-                try
-                {
-                    effect = plugin.EffectCreator(stru);
-                }
-                finally
-                {
-                    if (replaced) stru.Parameters = originalParameters;
-                }
-                effect.Index = stru.Index;
-                effect.Enabled = stru.Enabled;
-                effect.BindedEffectProvidingSystemID = stru.BindedEffectGroupID;
-                try
-                {
-                    effect.Initialize();
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, $"Init effect {effect.Name}", effect);
-                    throw;
-                }
-                return effect;
-            }
-            else
-            {
-                throw new ArgumentException($"Plugin not found: {stru.FromPlugin}");
-            }
+            return CreateEffect(stru, stru.ImplementType);
         }
 
         public static IVideoSource CreateVideoSource(string filePath, IPicture.PicturePixelMode? PreferredTargetPPB = null)

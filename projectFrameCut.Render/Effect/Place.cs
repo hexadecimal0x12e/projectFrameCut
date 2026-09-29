@@ -4,6 +4,7 @@ using projectFrameCut.Drawing.Effect;
 using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,6 +14,7 @@ namespace projectFrameCut.Render.Effect
 {
     public class PlaceEffect_HwAccel : INormalEffect
     {
+        private readonly IComputer? computer = PluginManager.CreateComputer("PlaceComputer");
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Place";
@@ -24,7 +26,6 @@ namespace projectFrameCut.Render.Effect
         public int StartY { get; set; }
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public string? NeedComputer => "PlaceComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
@@ -44,7 +45,7 @@ namespace projectFrameCut.Render.Effect
         public string TypeName => "Place";
         public string? BindedEffectProvidingSystemID { get; set; }
 
-        void IEffect.Initialize()
+        void IExtensibleObject.Initialize()
         {
             Log("Place and Resize effects are deprecated. Consider migrate to IClipPositionProvider.", "warn");
         }
@@ -72,7 +73,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         {
             if (targetWidth <= 0 || targetHeight <= 0)
             {

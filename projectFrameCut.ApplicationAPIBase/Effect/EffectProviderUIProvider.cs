@@ -6,7 +6,7 @@ using System.Text;
 
 namespace projectFrameCut.ApplicationAPIBase.Effect
 {
-    public interface IEffectProviderUIProvider
+    public interface IEffectProviderUIProvider : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject
     {
         /// <summary>
         /// Create the Effect property UI for the given source.

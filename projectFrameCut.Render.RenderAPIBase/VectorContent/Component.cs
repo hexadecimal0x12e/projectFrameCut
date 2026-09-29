@@ -6,17 +6,17 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.RenderAPIBase.VectorContent
 {
-    public interface IVectorComponent
+    public interface IVectorComponent : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject
     {
         /// <summary>
         /// Indicates which plugin this component comes from.
         /// </summary>
-        public string FromPlugin { get; }
+        public new string FromPlugin { get; }
 
         /// <summary>
         /// Define the type name of the component. 
         /// </summary>
-        public string TypeName { get; }
+        public new string TypeName { get; }
 
         /// <summary>
         /// Indicates all animatable fields of this component, with their current values and animation tracks.
@@ -35,7 +35,7 @@ namespace projectFrameCut.Render.RenderAPIBase.VectorContent
         /// <remarks>
         /// DO NOT set this property manually. It will be set when the component is created.
         /// </remarks>
-        public Guid Id { get; set; }
+        public new Guid Id { get; set; }
 
         /// <summary>
         /// Parameters of the component.

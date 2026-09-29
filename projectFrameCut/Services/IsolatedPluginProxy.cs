@@ -32,11 +32,13 @@ internal class IsolatedPluginProxy : IPluginBase, IAIProviderPlugin
             .Where(x => !IsPictureEffect(x.Value().TypeOfEffect))
             .ToDictionary();
         foreach (var item in client.CreateEffectProviders()) EffectProviderProvider[item.Key] = item.Value;
+        var implementations = inner.EffectImplementationProvider.ToDictionary();
+        foreach (var item in client.CreateEffectImplementations()) implementations[item.Key] = item.Value;
+        EffectImplementationProvider = implementations;
         VideoSourceProvider = client.CreateVideoSources();
         AudioSourceProvider = client.CreateAudioSources();
         VideoWriterProvider = client.CreateVideoWriters();
         TransformProvider = client.CreateTransforms();
-        ComputerProvider = client.CreateComputers();
         SoundTrackProvider = client.CreateSoundTracks();
         AIProviderFactories = client.CreateAIProviders();
     }
@@ -53,9 +55,9 @@ internal class IsolatedPluginProxy : IPluginBase, IAIProviderPlugin
     public IReadOnlyDictionary<string, string> Properties => Inner.Properties;
     public Dictionary<string, Dictionary<string, string>> LocalizationProvider => Inner.LocalizationProvider;
     public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
+    public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider { get; }
     public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
     public Dictionary<string, Func<Guid, Guid, RenderTransform>> TransformProvider { get; }
-    public Dictionary<string, Func<IComputer>> ComputerProvider { get; }
     public Dictionary<string, IVideoSource> VideoSourceProvider { get; }
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; }
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; }
@@ -150,7 +152,6 @@ internal sealed class ExternalPluginProxy : IPluginBase, IAIProviderPlugin
         if (descriptor.AudioSources.Count > 0) capabilities |= ExternalPluginCapabilities.AudioSources;
         if (descriptor.SoundTracks.Count > 0) capabilities |= ExternalPluginCapabilities.SoundTracks;
         if (descriptor.Transforms.Count > 0) capabilities |= ExternalPluginCapabilities.Transforms;
-        if (descriptor.Computers.Count > 0) capabilities |= ExternalPluginCapabilities.Computers;
         if (descriptor.VideoWriters.Count > 0) capabilities |= ExternalPluginCapabilities.VideoWriters;
         if (descriptor.ProvidesClips) capabilities |= ExternalPluginCapabilities.Clips;
         if (descriptor.ProvidesVectorComponents) capabilities |= ExternalPluginCapabilities.VectorComponents;
@@ -162,11 +163,11 @@ internal sealed class ExternalPluginProxy : IPluginBase, IAIProviderPlugin
         ConfigurationDisplayString = descriptor.ConfigurationDisplayStrings.ToDictionary(x => x.Key, x => x.Value.Values);
         _configuration = descriptor.Configuration;
         EffectProviderProvider = client.CreateEffectProviders();
+        EffectImplementationProvider = client.CreateEffectImplementations();
         VideoSourceProvider = client.CreateVideoSources();
         AudioSourceProvider = client.CreateAudioSources();
         VideoWriterProvider = client.CreateVideoWriters();
         TransformProvider = client.CreateTransforms();
-        ComputerProvider = client.CreateComputers();
         SoundTrackProvider = client.CreateSoundTracks();
         AIProviderFactories = client.CreateAIProviders();
     }
@@ -183,9 +184,9 @@ internal sealed class ExternalPluginProxy : IPluginBase, IAIProviderPlugin
     public IReadOnlyDictionary<string, string> Properties { get; }
     public Dictionary<string, Dictionary<string, string>> LocalizationProvider { get; }
     public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
+    public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider { get; }
     public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
     public Dictionary<string, Func<Guid, Guid, RenderTransform>> TransformProvider { get; }
-    public Dictionary<string, Func<IComputer>> ComputerProvider { get; }
     public Dictionary<string, IVideoSource> VideoSourceProvider { get; }
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; }
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; }
@@ -261,6 +262,7 @@ internal sealed class RemoteProjectPluginProxy : IApplicationPluginBase, IRemote
         if (client.ProjectTools.Count > 0 && !declaration.Capabilities.HasFlag(ProjectPluginCapability.Tools))
             throw new InvalidDataException("The plugin exposes tools without declaring the Tools capability.");
         EffectProviderProvider = client.CreateEffectProviders();
+        EffectImplementationProvider = client.CreateEffectImplementations();
         VideoSourceProvider = client.CreateVideoSources();
         if (EffectProviderProvider.Count > 0 && !declaration.Capabilities.HasFlag(ProjectPluginCapability.Effects))
             throw new InvalidDataException("The plugin exposes effects without declaring the Effects capability.");
@@ -284,9 +286,9 @@ internal sealed class RemoteProjectPluginProxy : IApplicationPluginBase, IRemote
     };
     public Dictionary<string, Dictionary<string, string>> LocalizationProvider { get; } = [];
     public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
+    public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider { get; }
     public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; } = [];
     public Dictionary<string, Func<Guid, Guid, RenderTransform>> TransformProvider { get; } = [];
-    public Dictionary<string, Func<IComputer>> ComputerProvider { get; } = [];
     public Dictionary<string, IVideoSource> VideoSourceProvider { get; }
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; } = [];
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; } = [];

@@ -78,7 +78,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     RelativeWidth = 0,
                     RelativeHeight = 0,
                 };
-                return cropper.Render(source, PluginManager.CreateComputer(cropper.NeedComputer), targetWidth, targetHeight).ToBitPerPixel(targetPPB);
+                return cropper.Render(source, targetWidth, targetHeight).ToBitPerPixel(targetPPB);
             }
             else
             {

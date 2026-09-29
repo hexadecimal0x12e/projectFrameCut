@@ -28,6 +28,8 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
+		<Using Remove="projectFrameCut.Drawing.Base.IPicture"/>
+		<Using Remove="projectFrameCut.Drawing.Base.PictureExtensions"/>
 	</ItemGroup>
 
 	<ItemGroup>

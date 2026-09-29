@@ -22,7 +22,8 @@
   <ItemGroup>
     <ProjectReference Include="..\projectFrameCut.AIContracts\projectFrameCut.AIContracts.csproj" />
     <ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
-  </ItemGroup>
+		<ProjectReference Include="..\..\projectFrameCut.Drawing\projectFrameCut.Drawing\projectFrameCut.Drawing.csproj" />
+	</ItemGroup>
 
 
   <ItemGroup>

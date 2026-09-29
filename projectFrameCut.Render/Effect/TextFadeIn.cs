@@ -11,7 +11,6 @@ namespace projectFrameCut.Render.Effect
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
-        public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "TextFadeIn";
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;

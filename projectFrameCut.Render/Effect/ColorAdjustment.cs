@@ -35,7 +35,6 @@ namespace projectFrameCut.Render.Effect
 
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
 
@@ -86,7 +85,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Process(IPicture source, IComputer? computer)
+        public IPicture Process(IPicture source)
         {
             var p = new AdjustmentParams(
                 DynamicParam.Resolve(Parameters.GetValueOrDefault("Brightness"), Brightness),
@@ -542,6 +541,7 @@ namespace projectFrameCut.Render.Effect
 
     public class ColorAdjustmentEffect_HwAccel : IColorAdjustEffect
     {
+        private readonly IComputer? computer = PluginManager.CreateComputer("ColorAdjustmentComputer");
         public string Name { get; set; } = "ColorAdjustment";
 
         public float Brightness { get; init; } = 1f;
@@ -556,7 +556,6 @@ namespace projectFrameCut.Render.Effect
         public float Opacity { get; init; } = 1f;
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public string? NeedComputer => "ColorAdjustmentComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
 
@@ -604,7 +603,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Process(IPicture source, IComputer? computer)
+        public IPicture Process(IPicture source)
         {
             float brightness = DynamicParam.Resolve(Parameters.GetValueOrDefault("Brightness"), Brightness);
             float contrast = DynamicParam.Resolve(Parameters.GetValueOrDefault("Contrast"), Contrast);
@@ -645,7 +644,7 @@ namespace projectFrameCut.Render.Effect
                     Invert = invert,
                     Grayscale = grayscale,
                     Opacity = opacity
-                }.Process(source, null);
+                }.Process(source);
 
             var sw = Stopwatch.StartNew();
             float maxVal = source.BitPerPixel == 8 ? 255f : 65535f;

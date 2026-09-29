@@ -15,12 +15,12 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 {
-    public interface IClip : IDisposable
+    public interface IClip : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject, IDisposable
     {
         /// <summary>
         /// Gets the ID of the plugin that provided this value.
         /// </summary>
-        public string FromPlugin { get; }
+        public new string FromPlugin { get; }
         /// <summary>
         /// Mode of this clip. Mostly for compatibility purpose.
         /// </summary>
@@ -28,12 +28,12 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <summary>
         /// The type name of this clip. You must override it when you're creating a new clip type in plugin.
         /// </summary>
-        public virtual string TypeName => ClipType != ClipMode.ExtendClip ? ClipType.ToString() : throw new InvalidOperationException("ClipType is ExtendClip, and you must override it when you're creating a new clip type in plugin.");
+        public new virtual string TypeName => ClipType != ClipMode.ExtendClip ? ClipType.ToString() : throw new InvalidOperationException("ClipType is ExtendClip, and you must override it when you're creating a new clip type in plugin.");
 
         /// <summary>
         /// The unique identifier of this clip.
         /// </summary>
-        public Guid Id { get; init; }
+        public new Guid Id { get; init; }
 
         /// <summary>
         /// The name of this clip. Mostly used for display purpose.

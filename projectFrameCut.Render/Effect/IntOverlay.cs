@@ -28,7 +28,6 @@ namespace projectFrameCut.Render.Effect
 
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.NotSpecified;
         public bool IsReorderable => true;
@@ -48,7 +47,7 @@ namespace projectFrameCut.Render.Effect
 
         public void Initialize() { }
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         {
             if (source is null) throw new ArgumentNullException(nameof(source));
             if (targetWidth <= 0 || targetHeight <= 0)

@@ -21,7 +21,6 @@ namespace projectFrameCut.Render.Effect
         public float Opacity { get; init; } = 0.8f;
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public bool IsReorderable => true;
@@ -56,7 +55,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         {
             float opacity = DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity);
             return OpacityEffect.Process(source, opacity);
@@ -65,6 +64,7 @@ namespace projectFrameCut.Render.Effect
 
     public class FadeOpacityEffect_HwAccel : INormalEffect
     {
+        private readonly IComputer? computer = PluginManager.CreateComputer("OpacityComputer");
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "FadeOpacity";
@@ -74,7 +74,6 @@ namespace projectFrameCut.Render.Effect
         public float Opacity { get; init; } = 0.8f;
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public string? NeedComputer => "OpacityComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
@@ -107,7 +106,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         {
             float opacity = DynamicParam.Resolve(Parameters.GetValueOrDefault("Opacity"), Opacity);
             if (computer is null)

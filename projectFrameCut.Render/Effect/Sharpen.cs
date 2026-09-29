@@ -21,7 +21,6 @@ namespace projectFrameCut.Render.Effect
         public float Amount { get; init; } = 1f;
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public bool IsReorderable => true;
@@ -56,7 +55,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         {
             float amount = DynamicParam.Resolve(Parameters.GetValueOrDefault("Amount"), Amount);
             return SharpenEffect.Process(source, amount);
@@ -65,6 +64,7 @@ namespace projectFrameCut.Render.Effect
 
     public class SharpenEffect_HwAccel : INormalEffect
     {
+        private readonly IComputer? computer = PluginManager.CreateComputer("SharpenComputer");
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Sharpen";
@@ -74,7 +74,6 @@ namespace projectFrameCut.Render.Effect
         public float Amount { get; init; } = 1f;
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public string? NeedComputer => "SharpenComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
@@ -107,7 +106,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         {
             float amount = DynamicParam.Resolve(Parameters.GetValueOrDefault("Amount"), Amount);
             if (computer is null)

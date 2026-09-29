@@ -30,7 +30,6 @@ namespace projectFrameCut.Render.Effect
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.NotSpecified;
         public bool IsReorderable => false;
-        public string? NeedComputer => null;
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
 

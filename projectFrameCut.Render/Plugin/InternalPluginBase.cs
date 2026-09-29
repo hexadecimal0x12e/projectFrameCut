@@ -95,6 +95,32 @@ public class InternalPluginBase : IPluginBase
         { "DifferenceMixture", () => new BlendModeMixtureProvider { MixtureType = "Difference" } },
     };
 
+    public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider =>
+        new Dictionary<EffectImplementationKey, Func<IEffect>>
+        {
+            [new("Blur", EffectImplementType.IPicture)] = () => new BlurEffect_IPicture(),
+            [new("Crop", EffectImplementType.IPicture)] = () => new CropEffect_IPicture(),
+            [new("ProgressCrop", EffectImplementType.IPicture)] = () => new ProgressCropper_IPicture(),
+            [new("Resize", EffectImplementType.IPicture)] = () => new ResizeEffect_IPicture(),
+            [new("Flip", EffectImplementType.IPicture)] = () => new FlipEffect_IPicture(),
+            [new("Sharpen", EffectImplementType.IPicture)] = () => new SharpenEffect_IPicture(),
+            [new("Vignette", EffectImplementType.IPicture)] = () => new VignetteEffect_IPicture(),
+            [new("FadeOpacity", EffectImplementType.IPicture)] = () => new FadeOpacityEffect_IPicture(),
+            [new("ColorAdjustment", EffectImplementType.IPicture)] = () => new ColorAdjustmentEffect_IPicture(),
+            [new("Rotation", EffectImplementType.IPicture)] = () => new RotationEffect_IPicture(),
+            [new("ZoomIn", EffectImplementType.IPicture)] = () => new ZoomInContinuousEffect(),
+            [new("TextFadeIn", EffectImplementType.IPicture)] = () => new TextFadeInContinuousEffect(),
+            [new("Jitter", EffectImplementType.NotSpecified)] = () => new JitterEffect(),
+            [new("ProgressPlacer", EffectImplementType.NotSpecified)] = () => new ProgressPlacer(),
+            [new("ClassicSpeedVarianceProvider", EffectImplementType.NotSpecified)] = () => new ClassicSpeedVarianceProvider(),
+            [new("IntConstant", EffectImplementType.NotSpecified)] = () => new IntConstantValueProviderEffect(),
+            [new("IntOverlay", EffectImplementType.NotSpecified)] = () => new IntOverlayEffect(),
+            [new("IntArithmeticAdd", EffectImplementType.NotSpecified)] = () => new IntArithmeticValueProviderEffect { TypeName = "IntArithmeticAdd", Operation = IntArithmeticOperation.Add },
+            [new("IntArithmeticSubtract", EffectImplementType.NotSpecified)] = () => new IntArithmeticValueProviderEffect { TypeName = "IntArithmeticSubtract", Operation = IntArithmeticOperation.Subtract },
+            [new("IntArithmeticMultiply", EffectImplementType.NotSpecified)] = () => new IntArithmeticValueProviderEffect { TypeName = "IntArithmeticMultiply", Operation = IntArithmeticOperation.Multiply },
+            [new("IntArithmeticDivide", EffectImplementType.NotSpecified)] = () => new IntArithmeticValueProviderEffect { TypeName = "IntArithmeticDivide", Operation = IntArithmeticOperation.Divide },
+        };
+
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>
     {
         {"AddComputer", () => new Compose.AddComputer() },

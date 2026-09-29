@@ -12,17 +12,17 @@ namespace projectFrameCut.ApplicationAPIBase.Text
     /// <summary>
     /// A interface for making many text clips into a uniform group, also provide a way to build TextClipEntry and PropertyPanel for the TextClip based on the parameters in this ITextClipStyleProvider.
     /// </summary>
-    public interface ITextClipStyleProvider
+    public interface ITextClipStyleProvider : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject
     {
         /// <summary>
         /// Indicates which plugin this ITextClipStyleProvider from.
         /// </summary>
-        public string FromPlugin { get; }
+        public new string FromPlugin { get; }
 
         /// <summary>
         /// The type of this style.
         /// </summary>
-        public string TypeName { get; }
+        public new string TypeName { get; }
 
         /// <summary>
         /// The basic text of this style.

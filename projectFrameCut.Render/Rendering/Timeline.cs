@@ -25,7 +25,6 @@ namespace projectFrameCut.Render.Rendering
 {
     public static class Timeline
     {
-        //public static ConcurrentDictionary<string, IComputer> ComputerCache = new();
         public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture16bpp.GenerateSolidColor(w, h, 0, 0, 0, null);
         public static bool ProcessEffectFromCanvas { get; set; } = true;
         private static readonly ConcurrentDictionary<Guid, object> FrameHashLocks = new();
@@ -96,7 +95,7 @@ namespace projectFrameCut.Render.Rendering
                         }
                         else if (clip.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(clip, clipTargetWidth, clipTargetHeight))
                         {
-                            frame = sre.Compute(clip, PluginManager.CreateComputer(sre.NeedComputer), clip.GetFrameRelativeToStartPointOfSource(actualFrame, clipTargetWidth, clipTargetHeight, ppb), clipTargetWidth, clipTargetHeight, actualFrame, ppb);
+                            frame = sre.Compute(clip, clip.GetFrameRelativeToStartPointOfSource(actualFrame, clipTargetWidth, clipTargetHeight, ppb), clipTargetWidth, clipTargetHeight, actualFrame, ppb);
                         }
                         else
                         {
@@ -301,12 +300,12 @@ namespace projectFrameCut.Render.Rendering
                             if (scopedEnd <= scopedStart || frameIndex < scopedStart || frameIndex >= scopedEnd) continue;
                             float continuousProgress = Math.Clamp((float)(frameIndex - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
                             effected = ResizeForEffectIfNeeded(effected, effect, clipPos.TargetWidth, clipPos.TargetHeight);
-                            effected = c.Render(effected, continuousProgress, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                            effected = c.Render(effected, continuousProgress, targetWidth, targetHeight);
                         }
                         else if (effect is INormalEffect n)
                         {
                             effected = ResizeForEffectIfNeeded(effected, effect, clipPos.TargetWidth, clipPos.TargetHeight);
-                            effected = n.Render(effected, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                            effected = n.Render(effected, targetWidth, targetHeight);
                         }
                         else if (effect is IClipPositionProvider p)
                         {
@@ -386,7 +385,6 @@ namespace projectFrameCut.Render.Rendering
                     LogDiagnostic($"Clip {srcFrame.ParentClip.Name}: {clipX},{clipY} in ({targetWidth}*{targetHeight})");
 
                     var mixer = srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default;
-                    var computerId = mixer.NeedComputer ?? ClassicOverlayMixture.ComputerId;
                     if (result is null)
                     {
                         if (!needsPlacement)
@@ -398,7 +396,6 @@ namespace projectFrameCut.Render.Rendering
                             result = mixer.Mix(
                                 FallBackImageGetter(targetWidth, targetHeight),
                                 effected,
-                                PluginManager.CreateComputer(computerId),
                                 targetPPB,
                                 clipX,
                                 clipY,
@@ -411,7 +408,6 @@ namespace projectFrameCut.Render.Rendering
                         result = mixer.Mix(
                             result,
                             effected,
-                            PluginManager.CreateComputer(computerId),
                             targetPPB,
                             clipX,
                             clipY,
@@ -430,11 +426,11 @@ namespace projectFrameCut.Render.Rendering
                 }
                 else
                 {
-                    result = Placer.Render(result, null, targetWidth, targetHeight);
+                    result = Placer.Render(result, targetWidth, targetHeight);
                 }
             ok:
                 result = ClassicOverlayMixture.Default
-                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId), targetPPB)
+                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, targetPPB)
                                .Resize(targetWidth, targetHeight, true);
                 if (MyLoggerExtensions.SaveDiagResult)
                 {

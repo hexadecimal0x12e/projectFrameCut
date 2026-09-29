@@ -12,7 +12,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     /// The IEffectProvider can replace every <see cref="IBindableArgumentEffect"/> and <see cref="EffectFactory"/>,
     /// with <see cref="IValueProviderEffect"/> allows dynamic value binding.
     /// </remarks>
-    public interface IEffectProvider
+    public interface IEffectProvider : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject
     {
         /// <summary>
         /// The ID for input anchor.
@@ -38,12 +38,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <remarks>
         /// it SHOULD equals to <see cref="IEffect.TypeName"/> and so on.
         /// </remarks>
-        public string TypeName { get; }
+        public new string TypeName { get; }
 
         /// <summary>
         /// Indicate which plugin this effect comes from, which is used to determine which plugin to use when creating the effect.
         /// </summary>
-        public string FromPlugin { get; }
+        public new string FromPlugin { get; }
 
         /// <summary>
         /// Get the type of the effect, which is used to determine how to process this effect.
@@ -66,7 +66,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <remarks>
         /// DO NOT set this property manually. It will be set when the effect group is created.
         /// </remarks>
-        public Guid Id { get; set; }
+        public new Guid Id { get; set; }
 
         /// <summary>
         /// Get or set the name for the EffectGroup.

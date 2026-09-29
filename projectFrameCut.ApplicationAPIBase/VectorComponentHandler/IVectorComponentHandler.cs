@@ -3,16 +3,16 @@ using projectFrameCut.Render.RenderAPIBase.VectorContent;
 
 namespace projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 
-public interface IVectorComponentHandler
+public interface IVectorComponentHandler : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject
 {
     /// <summary>
     /// Define the type name of the component. This is used to identify the component type in serialization and deserialization processes.
     /// </summary>
-    public string TypeName { get; }
+    public new string TypeName { get; }
     /// <summary>
     /// Indicates which plugin this component handler comes from. 
     /// </summary>
-    public string FromPlugin { get; }
+    public new string FromPlugin { get; }
     /// <summary>
     /// Get a user-friendly display name for this component type
     /// </summary>

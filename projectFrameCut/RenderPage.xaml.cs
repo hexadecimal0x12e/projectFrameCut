@@ -35,6 +35,8 @@ using projectFrameCut.Render.HwAccelEngine;
 using projectFrameCut.Render.RenderAPIBase.Context;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Drawing.Base.Picture;
+
 
 
 
@@ -1431,12 +1433,22 @@ public partial class RenderPage : ContentPage
                         | (vm.PreserveHdrBrightness ? AuxiliaryVideoChannels.Brightness : AuxiliaryVideoChannels.None);
                     builder = new VideoBuilder(new AlphaBrightnessVideoWriter
                     {
-                        Width = width, Height = height, FramePerSecond = fps, OutputPath = outputPath,
-                        CodecName = enc, PixelFormat = fmt, Metadata = metadata, Channels = channels
+                        Width = width,
+                        Height = height,
+                        FramePerSecond = fps,
+                        OutputPath = outputPath,
+                        CodecName = enc,
+                        PixelFormat = fmt,
+                        Metadata = metadata,
+                        Channels = channels
                     })
                     {
-                        EnablePreview = true, DoGCAfterEachWrite = gcOption > 0, DisposeFrameAfterEachWrite = true,
-                        Duration = duration, LogStat = false, BlockWrite = blockwrite
+                        EnablePreview = true,
+                        DoGCAfterEachWrite = gcOption > 0,
+                        DisposeFrameAfterEachWrite = true,
+                        Duration = duration,
+                        LogStat = false,
+                        BlockWrite = blockwrite
                     };
                 }
                 else
@@ -1446,8 +1458,12 @@ public partial class RenderPage : ContentPage
                         : encoderSelection.UseHardwareAcceleration ? "VideoWriterHWAccel" : "VideoWriter";
                     builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt, writerType)
                     {
-                        EnablePreview = true, DoGCAfterEachWrite = gcOption > 0, DisposeFrameAfterEachWrite = true,
-                        Duration = duration, LogStat = false, BlockWrite = blockwrite
+                        EnablePreview = true,
+                        DoGCAfterEachWrite = gcOption > 0,
+                        DisposeFrameAfterEachWrite = true,
+                        Duration = duration,
+                        LogStat = false,
+                        BlockWrite = blockwrite
                     };
                 }
             }
@@ -1475,7 +1491,6 @@ public partial class RenderPage : ContentPage
                 OneByOneRender = blockwrite,
                 PrepareInWorkerThreads = SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true),
                 AllowReorderEffect = SettingsManager.IsBoolSettingTrueOrDefault("render_allowEffectOutOfOrder", true),
-                EnableGPUBatchProcess = SettingsManager.IsBoolSettingTrueOrDefault("render_enableBatchProcess", true),
                 RenderByLayers = SettingsManager.IsBoolSettingTrueOrDefault("render_RenderByLayer", true),
                 ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
                 DynamicPreviewCacheProjectRoot = _workingPath,
@@ -1549,8 +1564,29 @@ public partial class RenderPage : ContentPage
             SetSubProg("Render");
             Log("Start render...");
 
+            IPicture? cover = null;
+            try
+            {
+                if (_project.ThumbPath is string p && !string.IsNullOrWhiteSpace(p))
+                {
+                    if (File.Exists(p))
+                    {
+                        cover = new Picture8bpp(p);
+                        Log($"Loaded cover image from {_project.ThumbPath}");
+                    }
+                    else
+                    {
+                        Log($"Cover image path {_project.ThumbPath} set but does not exist.", "warn");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Load cover", this);
+            }
+
             sw1.Restart();
-            await Task.Run(async () => await renderer.GoRender(_cts.Token), _cts.Token);
+            await Task.Run(async () => await renderer.GoRender(_cts.Token, cover), _cts.Token);
             Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
 
             if (blockwrite)

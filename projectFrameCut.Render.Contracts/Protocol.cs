@@ -121,8 +121,6 @@ public enum RenderOperation
     [ProtoEnum] IsolationCreateTransform = 2032,
     [ProtoEnum] IsolationInitializeTransform = 2033,
     [ProtoEnum] IsolationProcessTransform = 2034,
-    [ProtoEnum] IsolationCreateComputer = 2035,
-    [ProtoEnum] IsolationCompute = 2036,
     [ProtoEnum] IsolationCreateClip = 2037,
     [ProtoEnum] IsolationReadClipFrame = 2038,
     [ProtoEnum] IsolationReinitializeClip = 2039,
@@ -143,6 +141,7 @@ public enum RenderOperation
     [ProtoEnum] IsolationAIPollOperation = 2054,
     [ProtoEnum] IsolationAICancelOperation = 2055,
     [ProtoEnum] IsolationAIReleaseOperation = 2056,
+    [ProtoEnum] IsolationCreateEffectImplementation = 2057,
 }
 
 [ProtoContract]

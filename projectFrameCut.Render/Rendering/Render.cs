@@ -7,6 +7,7 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Context;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
@@ -72,7 +73,6 @@ namespace projectFrameCut.Render.Rendering
         public int MaxThreads { get => field > 0 ? field : (int)(Environment.ProcessorCount * 1.75); set; }
         public int GCOption = 0;
 
-        public bool EnableGPUBatchProcess { get; set; } = true;
         public bool AllowReorderEffect { get; set; } = true;
         public bool EnableEffectAutoRetry { get; set; } = true;
         public bool ProcessEffectFromCanvas { get; set; } = true;
@@ -181,15 +181,18 @@ namespace projectFrameCut.Render.Rendering
         private IPicture BlankFrame = null!;
 
         // Thread-local: PlaceEffect_HwAccel has mutable state and is not thread-safe
-        private ThreadLocal<PlaceEffect_HwAccel> _threadLocalBlankPlace =
-            new(() => new PlaceEffect_HwAccel { StartX = 0, StartY = 0 });
+        private ThreadLocal<INormalEffect> _threadLocalBlankPlace =
+            new(() => (INormalEffect)IPluginBase.EffectImplementations.Create(
+                "Place",
+                EffectImplementType.HwAcceleration,
+                EffectImplementType.HwAcceleration,
+                new Dictionary<string, object> { ["StartX"] = 0, ["StartY"] = 0 }));
 
         // Thread-local pool for frame-level cache dictionaries to reduce GC pressure
         private ThreadLocal<Stack<Dictionary<string, object>>> _frameLocalCachePool =
             new(() => new Stack<Dictionary<string, object>>(4));
 
         // Caches whether a computer type supports GPU batching, avoiding per-frame computer lookups
-        private static readonly ConcurrentDictionary<string, bool> ComputerBatchSupportCache = new();
 
         // Running totals for O(1) average elapsed statistics (avoids scanning the bags on every stat log)
         private long _renderElapsedTicksTotal;
@@ -400,7 +403,6 @@ namespace projectFrameCut.Render.Rendering
                 }
 
                 if (AllowReorderEffect)
-                    effectInstances = ReorderEffectsForGpuBatching(effectInstances);
 
                 if (item.AlternativeSource is ISourceReplacementEffect sre)
                 {
@@ -459,14 +461,14 @@ namespace projectFrameCut.Render.Rendering
         #endregion
 
         #region render
-        public async Task GoRender(CancellationToken token)
+        public async Task GoRender(CancellationToken token, IPicture? cover = null)
         {
-
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             if ((ClipNeedForFrame.IsEmpty && BlankFrames.IsEmpty) || Duration <= 0)
             {
                 throw new InvalidOperationException("Either the project is empty, Duration is not set, or PrepareRender is not called yet. Please ensure that the project has clips and call PrepareRender before rendering.");
             }
+            if (cover is not null) builder?.Writer?.Append(cover);
             _renderTotalStopwatch.Restart();
             if (AutoSetupRenderContext) IRenderContext.Current = this;
             if (OneByOneRender || builder?.BlockWrite == true || MaxThreads == 1)
@@ -1787,7 +1789,6 @@ namespace projectFrameCut.Render.Rendering
                     {
                         f = sre.Compute(
                                 item,
-                                PluginManager.CreateComputer(sre.NeedComputer),
                                item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb),
                                 clipTargetWidth,
                                 clipTargetHeight,
@@ -1810,7 +1811,6 @@ namespace projectFrameCut.Render.Rendering
             {
                 frame = sre.Compute(
                         item,
-                        PluginManager.CreateComputer(sre.NeedComputer),
                         item.GetFrame(frameIndex, clipTargetWidth, clipTargetHeight, ppb),
                         clipTargetWidth,
                         clipTargetHeight,
@@ -1968,10 +1968,6 @@ namespace projectFrameCut.Render.Rendering
                 {
                     // Copy is only materialized when a bindable effect actually gets removed
                     List<IEffect>? effectCopy = null;
-                    // Cache Computer by NeedComputer string to avoid per-effect CreateComputer overhead
-                    // (many effects in a chain often share the same computer type)
-                    string? lastComputerType = null;
-                    IComputer? cachedComputer = null;
                     // Begin the per-frame value-provider context: pre-fills the built-in frame/progress
                     // sources and clears provider values. Value-provider effects write into it during
                     // the effect loop and consumer dynamic parameters read from it.
@@ -1985,27 +1981,6 @@ namespace projectFrameCut.Render.Rendering
                         var item = effects[_effectIdx];
                         if (reusedPreview && item is not IClipPositionProvider and not IContinuousClipPositionProvider)
                             continue;
-                        // Try GPU batch processing (2+ consecutive GPU effects)
-                        if (EnableGPUBatchProcess)
-                        {
-                            var batch = CollectGpuBatch(effects, _effectIdx, ProcessEffectFromCanvas, out var nextBatchIdx);
-                            if (batch.Count >= 2)
-                            {
-                                frame = ResizeForEffectIfNeeded(frame, batch[0], targetPos.TargetWidth, targetPos.TargetHeight);
-                                frame = ProcessGpuBatch(frame, batch, frame.Width, frame.Height);
-                                _effectIdx = nextBatchIdx - 1; // -1 because for loop will increment
-                                continue;
-                            }
-                        }
-
-
-                        // Reuse Computer instance when NeedComputer hasn't changed within the same clip chain
-                        if (item.NeedComputer != lastComputerType)
-                        {
-                            cachedComputer = item.NeedComputer is not null ? PluginManager.CreateComputer(item.NeedComputer) : null;
-                            lastComputerType = item.NeedComputer;
-                        }
-                        var computer = cachedComputer;
                         IRenderContext.CurrentFrameBuffer = frame;
 
                         try
@@ -2015,7 +1990,7 @@ namespace projectFrameCut.Render.Rendering
                                 case EffectType.NormalEffect:
                                     if (item is not INormalEffect e) goto notdefined;
                                     frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
-                                    frame = e.Render(frame, computer, TargetWidth, TargetHeight);
+                                    frame = e.Render(frame, TargetWidth, TargetHeight);
                                     continue;
                                 case EffectType.ContinuousEffect:
                                     if (item is not IContinuousEffect c) goto notdefined;
@@ -2024,7 +1999,7 @@ namespace projectFrameCut.Render.Rendering
                                     if (scopedEnd <= scopedStart || targetFrame < scopedStart || targetFrame >= scopedEnd) continue;
                                     float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
                                     frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
-                                    frame = c.Render(frame, continuousProgress, computer, TargetWidth, TargetHeight);
+                                    frame = c.Render(frame, continuousProgress, TargetWidth, TargetHeight);
                                     continue;
                                 case EffectType.ContinuousClipPositionProvider:
                                     if (item is not IContinuousClipPositionProvider cp) goto notdefined;
@@ -2098,7 +2073,7 @@ namespace projectFrameCut.Render.Rendering
                         if (item is INormalEffect n)
                         {
                             frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
-                            frame = n.Render(frame, computer, TargetWidth, TargetHeight);
+                            frame = n.Render(frame, TargetWidth, TargetHeight);
                         }
                         else if (item is IContinuousEffect c)
                         {
@@ -2107,7 +2082,7 @@ namespace projectFrameCut.Render.Rendering
                             if (scopedEnd <= scopedStart || targetFrame < scopedStart || targetFrame >= scopedEnd) continue;
                             float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
                             frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
-                            frame = c.Render(frame, continuousProgress, computer, TargetWidth, TargetHeight);
+                            frame = c.Render(frame, continuousProgress, TargetWidth, TargetHeight);
                         }
                         else if (item is IClipPositionProvider p)
                         {
@@ -2197,16 +2172,14 @@ namespace projectFrameCut.Render.Rendering
                     else
                     {
                         var mixer = clip.MixtureInstance ?? ClassicOverlayMixture.Default;
-                        var computer = PluginManager.CreateComputer(mixer.NeedComputer);
-                        var mixResult = mixer.Mix(BlankFrame, frame, computer, _ppb, clipX, clipY, TargetWidth, TargetHeight);
+                        var mixResult = mixer.Mix(BlankFrame, frame, _ppb, clipX, clipY, TargetWidth, TargetHeight);
                         return mixResult;
                     }
                 }
                 else
                 {
                     var mixer = clip.MixtureInstance ?? ClassicOverlayMixture.Default;
-                    var computer = PluginManager.CreateComputer(mixer.NeedComputer);
-                    var temp = mixer.Mix(currentResult, frame, computer, _ppb, clipX, clipY, TargetWidth, TargetHeight);
+                    var temp = mixer.Mix(currentResult, frame, _ppb, clipX, clipY, TargetWidth, TargetHeight);
                     currentResult.Dispose();
                     return temp;
                 }
@@ -2258,7 +2231,7 @@ namespace projectFrameCut.Render.Rendering
 
                 if (result.Width < TargetWidth || result.Height < TargetHeight)
                 {
-                    result = _threadLocalBlankPlace.Value!.Render(result, null, TargetWidth, TargetHeight);
+                    result = _threadLocalBlankPlace.Value!.Render(result, TargetWidth, TargetHeight);
                 }
                 else if (result.Width > TargetWidth || result.Height > TargetHeight)
                 {
@@ -2338,164 +2311,6 @@ namespace projectFrameCut.Render.Rendering
             IRenderContext.CurrentFrameBuffer = resized;
             return resized;
         }
-
-        #region GPU batch
-
-        /// <summary>
-        /// Collect consecutive GPU effects starting at <paramref name="startIndex"/>
-        /// that can be batched into a single GPU session.
-        /// Returns the batch only if it contains at least 2 effects.
-        /// </summary>
-        static List<IEffect> CollectGpuBatch(IReadOnlyList<IEffect> effects, int startIndex, bool splitByCanvasSupport, out int nextIndex)
-        {
-            var batch = new List<IEffect>();
-            string? fromPlugin = null;
-            bool canProcessFromCanvas = false;
-
-            for (int i = startIndex; i < effects.Count; i++)
-            {
-                var item = effects[i];
-                if (!item.Enabled)
-                {
-                    if (batch.Count > 0) break;
-                    continue;
-                }
-
-                if (item.NeedComputer is null)
-                {
-                    if (batch.Count > 0) break;
-                    nextIndex = i + 1;
-                    return batch;
-                }
-
-                if (ComputerSupportsBatching(item.NeedComputer))
-                {
-                    if (batch.Count == 0)
-                    {
-                        fromPlugin = item.FromPlugin;
-                        canProcessFromCanvas = item.CanProcessFromCanvas;
-                        batch.Add(item);
-                    }
-                    else if (item.FromPlugin == fromPlugin
-                        && (!splitByCanvasSupport || item.CanProcessFromCanvas == canProcessFromCanvas))
-                    {
-                        batch.Add(item);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    if (batch.Count > 0) break;
-                    nextIndex = i + 1;
-                    return batch;
-                }
-            }
-
-            nextIndex = startIndex + batch.Count;
-            return batch;
-        }
-
-        /// <summary>
-        /// Process a batch of GPU effects in a single GPU session:
-        /// one upload → chain of kernels → one download.
-        /// </summary>
-        /// <summary>
-        /// Reorder effects within each contiguous block of <see cref="IEffect.IsReorderable"/> effects
-        /// to group GPU-batchable effects from the same plugin together, maximizing batch size.
-        /// Non-reorderable effects stay in their original positions as anchors.
-        /// </summary>
-        private IEffect[] ReorderEffectsForGpuBatching(IEffect[] effects)
-        {
-            if (effects.Length <= 1) return effects;
-
-            var list = effects.ToList();
-            bool changed = false;
-
-            int i = 0;
-            while (i < list.Count)
-            {
-                if (!list[i].IsReorderable) { i++; continue; }
-
-                int blockStart = i;
-                bool canProcessFromCanvas = list[i].CanProcessFromCanvas;
-                while (i < list.Count && list[i].IsReorderable
-                    && (!ProcessEffectFromCanvas || list[i].CanProcessFromCanvas == canProcessFromCanvas))
-                    i++;
-                int blockEnd = i;
-
-                if (blockEnd - blockStart <= 1) continue;
-
-                var reorderable = list.GetRange(blockStart, blockEnd - blockStart);
-                var gpuBatchable = new List<IEffect>();
-                var others = new List<IEffect>();
-                foreach (var effect in reorderable)
-                {
-                    if (IsGpuBatchable(effect))
-                        gpuBatchable.Add(effect);
-                    else
-                        others.Add(effect);
-                }
-
-                if (gpuBatchable.Count < 2) continue;
-
-                var gpuGroups = gpuBatchable.GroupBy(e => e.FromPlugin).ToList();
-
-                var reordered = new List<IEffect>(reorderable.Count);
-                reordered.AddRange(others);
-                foreach (var group in gpuGroups)
-                    reordered.AddRange(group);
-
-                list.RemoveRange(blockStart, blockEnd - blockStart);
-                list.InsertRange(blockStart, reordered);
-                changed = true;
-            }
-
-            return changed ? list.ToArray() : effects;
-        }
-
-        private static bool IsGpuBatchable(IEffect effect)
-        {
-            if (!effect.Enabled || effect.NeedComputer is null)
-                return false;
-            return ComputerSupportsBatching(effect.NeedComputer);
-        }
-
-        /// <summary>
-        /// Checks (and caches) whether the computer type supports GPU session batching,
-        /// avoiding a per-frame computer lookup and type test for every effect.
-        /// </summary>
-        private static bool ComputerSupportsBatching(string computerType)
-            => ComputerBatchSupportCache.GetOrAdd(computerType,
-                static id => PluginManager.CreateComputer(id) is ISessionComputer sc && sc.SupportsBatching);
-
-        private static IPicture ProcessGpuBatch(IPicture frame, List<IEffect> batch, int targetWidth, int targetHeight)
-        {
-            var (r, g, b, a, hasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(frame);
-
-            var firstComputer = (ISessionComputer)PluginManager.CreateComputer(batch[0].NeedComputer)!;
-            using var session = firstComputer.CreateSession(r, g, b, a, targetWidth, targetHeight);
-
-            foreach (var effect in batch)
-            {
-                var computer = (ISessionComputer)PluginManager.CreateComputer(effect.NeedComputer)!;
-                var parameters = new Dictionary<string, object>(effect.Parameters)
-                {
-                    ["BuiltIn.TargetWidth"] = targetWidth,
-                    ["BuiltIn.TargetHeight"] = targetHeight
-                };
-                computer.ExecuteOnSession(session, parameters);
-            }
-
-            var (rOut, gOut, bOut, aOut) = session.Download();
-
-            var result = HwAccelEffectHelper.BuildPicture(frame, targetWidth, targetHeight, rOut, gOut, bOut, aOut, hasAlpha);
-            try { frame.Dispose(); } catch { }
-            return result;
-        }
-        #endregion
 
         #region layer-by-layer render helpers
 
@@ -2611,15 +2426,13 @@ namespace projectFrameCut.Render.Rendering
                     if (layerPic == null) continue;
 
                     var mixer = GetLayerMixer(allClips, layerGroups, layerIdx);
-                    var computer = PluginManager.CreateComputer(mixer.NeedComputer ?? ClassicOverlayMixture.ComputerId);
-
                     if (merged == null)
                     {
-                        merged = mixer.Mix(BlankFrame, layerPic, computer, _ppb);
+                        merged = mixer.Mix(BlankFrame, layerPic, _ppb);
                     }
                     else
                     {
-                        var temp = mixer.Mix(merged, layerPic, computer, _ppb);
+                        var temp = mixer.Mix(merged, layerPic, _ppb);
                         merged.Dispose();
                         merged = temp;
                     }
@@ -2632,7 +2445,7 @@ namespace projectFrameCut.Render.Rendering
 
                 if (merged.Width < TargetWidth || merged.Height < TargetHeight)
                 {
-                    merged = _threadLocalBlankPlace.Value!.Render(merged, null, TargetWidth, TargetHeight);
+                    merged = _threadLocalBlankPlace.Value!.Render(merged, TargetWidth, TargetHeight);
                 }
                 else if (merged.Width > TargetWidth || merged.Height > TargetHeight)
                 {

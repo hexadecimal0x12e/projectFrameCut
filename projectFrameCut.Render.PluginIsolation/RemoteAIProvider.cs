@@ -37,10 +37,10 @@ internal sealed class RemoteAIProvider : IAIChatProvider, IAIImageProvider, IAIV
             ?? throw new InvalidDataException("The isolated AI model list is invalid.");
     }
 
-    public async IAsyncEnumerable<AIChatEvent> StreamChatAsync(AIProviderContext context, AIChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<AIChatContentPart> StreamChatAsync(AIProviderContext context, AIChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await foreach (var json in RunAsync(await RequestAsync(context, "chat", JsonSerializer.Serialize(request), cancellationToken), cancellationToken))
-            yield return JsonSerializer.Deserialize<AIChatEvent>(json) ?? throw new InvalidDataException("The isolated AI chat event is invalid.");
+            yield return JsonSerializer.Deserialize<AIChatContentPart>(json) ?? throw new InvalidDataException("The isolated AI chat content is invalid.");
     }
 
     public async ValueTask<AIResult<AIGenerationResponse>> GenerateImageAsync(AIProviderContext context, AIImageGenerationRequest request, CancellationToken cancellationToken = default) =>

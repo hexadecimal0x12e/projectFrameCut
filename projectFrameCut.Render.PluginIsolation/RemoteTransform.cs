@@ -19,7 +19,6 @@ internal sealed class RemoteTransform : ISingleFrameTransform, IOneInputSingleFr
         TypeName = state.TypeName;
         TransformType = (TransformType)state.TransformType;
         Name = state.Name;
-        NeedComputer = string.IsNullOrWhiteSpace(state.NeedComputer) ? null : state.NeedComputer;
         Apply(state);
     }
 
@@ -30,14 +29,13 @@ internal sealed class RemoteTransform : ISingleFrameTransform, IOneInputSingleFr
     public Guid BindedLeftClip { get; set; }
     public Guid BindedRightClip { get; set; }
     public uint Duration { get; set; }
-    public string? NeedComputer { get; }
 
     public void Init() => Apply(Invoke<IsolationTransformState, IsolationTransformState>(RenderOperation.IsolationInitializeTransform, State()));
-    public IPicture GetFrame(IPicture left, IPicture right, IComputer? computer, int targetWidth, int targetHeight) =>
+    public IPicture GetFrame(IPicture left, IPicture right, int targetWidth, int targetHeight) =>
         Process(left, right, 0, false, targetWidth, targetHeight);
-    public IPicture GetFrame(IPicture input, double progress, IComputer? computer, int targetWidth, int targetHeight) =>
+    public IPicture GetFrame(IPicture input, double progress, int targetWidth, int targetHeight) =>
         Process(input, null, progress, true, targetWidth, targetHeight);
-    public IPicture GetFrame(IPicture left, IPicture right, double progress, IComputer? computer, int targetWidth, int targetHeight) =>
+    public IPicture GetFrame(IPicture left, IPicture right, double progress, int targetWidth, int targetHeight) =>
         Process(left, right, progress, true, targetWidth, targetHeight);
 
     private IPicture Process(IPicture input, IPicture? second, double progress, bool hasProgress, int width, int height)
@@ -77,7 +75,6 @@ internal sealed class RemoteTransform : ISingleFrameTransform, IOneInputSingleFr
         LeftClipId = BindedLeftClip.ToString(),
         RightClipId = BindedRightClip.ToString(),
         Duration = Duration,
-        NeedComputer = NeedComputer ?? string.Empty,
     };
 
     private void Apply(IsolationTransformState state)

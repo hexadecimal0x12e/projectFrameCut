@@ -12,6 +12,7 @@ namespace projectFrameCut.Render.Effect
 {
     public class RemoveColorEffect_HwAccel : INormalEffect
     {
+        private readonly IComputer? computer = PluginManager.CreateComputer("RemoveColorComputer");
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
@@ -29,7 +30,6 @@ namespace projectFrameCut.Render.Effect
 
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public string NeedComputer => "RemoveColorComputer";
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
         bool IEffect.CanProcessFromCanvas => true;
@@ -83,7 +83,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         {
             ushort colorR = DynamicParam.Resolve(Parameters.GetValueOrDefault("R"), R);
             ushort colorG = DynamicParam.Resolve(Parameters.GetValueOrDefault("G"), G);

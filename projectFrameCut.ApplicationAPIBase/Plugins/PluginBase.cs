@@ -30,6 +30,8 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// <summary>
         /// Get the current Application-level plugin API version.
         /// </summary>
+        // For agents: NEVER change this value, even if you are adding new features to the plugin API.
+        // This version number will changes at new major version of the plugin API, and will be used to check for compatibility between the plugin and the host application.
         public static int CurrentAppLevelPluginAPIVersion => 7;
 
         /// <summary>

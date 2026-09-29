@@ -1016,7 +1016,27 @@ namespace projectFrameCut.StandaloneRender
                 sw1.Restart();
                 try
                 {
-                    await localRenderer.GoRender(cts.Token);
+                    IPicture? cover = null;
+                    try
+                    {
+                        if (project.ThumbPath is string p && !string.IsNullOrWhiteSpace(p))
+                        {
+                            if (File.Exists(p))
+                            {
+                                cover = new Picture8bpp(p);
+                                Log($"Loaded cover image from {project.ThumbPath}");
+                            }
+                            else
+                            {
+                                Log($"Cover image path {project.ThumbPath} set but does not exist.", "warn");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "Load cover");
+                    }
+                    await localRenderer.GoRender(cts.Token, cover);
                     Log($"Render done,total elapsed {sw1}, avg elapsed {localRenderer.EachElapsedForPreparing.DefaultIfEmpty().Average(t => t.TotalSeconds)} spf to prepare and {localRenderer.EachElapsed.DefaultIfEmpty().Average(t => t.TotalSeconds)} spf to render");
                 }
                 catch (TaskCanceledException)
@@ -1570,7 +1590,6 @@ namespace projectFrameCut.StandaloneRender
                 TargetWidth = width,
                 ProjectRelativeWidth = width,
                 ProjectRelativeHeight = height,
-                EnableGPUBatchProcess = true,
                 AllowReorderEffect = true,
                 AutoSetupRenderContext = false,
                 UseHDR = false,

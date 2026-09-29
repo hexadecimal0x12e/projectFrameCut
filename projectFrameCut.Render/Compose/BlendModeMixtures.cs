@@ -13,7 +13,8 @@ namespace projectFrameCut.Render.Compose
     public abstract class BlendModeMixtureBase : IMixture
     {
         public abstract string TypeName { get; }
-        public abstract string? NeedComputer { get; }
+        protected abstract string ComputerId { get; }
+        private IComputer? computer;
         public bool IsReorderable => true;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string Name { get; set; }
@@ -21,15 +22,15 @@ namespace projectFrameCut.Render.Compose
         public Dictionary<string, object> Parameters { get; set; }
         public string? BindedEffectProvidingSystemID { get; set; }
 
-        public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)
+        public IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB)
             => MixInternal(
-                basePicture, topPicture, computer, targetPPB,
+                basePicture, topPicture, computer ??= PluginManager.CreateComputer(ComputerId), targetPPB,
                 resizeTopWhenDimensionMismatch: true,
                 topStartX: 0, topStartY: 0,
                 targetWidth: basePicture.Width, targetHeight: basePicture.Height);
 
         public IPicture Mix(
-            IPicture basePicture, IPicture topPicture, IComputer? computer,
+            IPicture basePicture, IPicture topPicture,
             IPicture.PicturePixelMode targetPPB,
             int topStartX, int topStartY, int targetWidth, int targetHeight)
         {
@@ -37,14 +38,16 @@ namespace projectFrameCut.Render.Compose
                 throw new ArgumentException("targetWidth and targetHeight must be positive.");
 
             return MixInternal(
-                basePicture, topPicture, computer, targetPPB,
+                basePicture, topPicture, computer ??= PluginManager.CreateComputer(ComputerId), targetPPB,
                 resizeTopWhenDimensionMismatch: false,
                 topStartX, topStartY, targetWidth, targetHeight);
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters)
         {
-            throw new NotImplementedException();
+            var effect = (BlendModeMixtureBase)Activator.CreateInstance(GetType())!;
+            effect.Parameters = parameters;
+            return effect;
         }
 
         protected static IPicture MixInternal(
@@ -460,49 +463,49 @@ namespace projectFrameCut.Render.Compose
     public class AddMixture : BlendModeMixtureBase
     {
         public override string TypeName => "AddMixture";
-        public override string? NeedComputer => "AddComputer";
+        protected override string ComputerId => "AddComputer";
     }
 
     public class SubtractMixture : BlendModeMixtureBase
     {
         public override string TypeName => "SubtractMixture";
-        public override string? NeedComputer => "SubtractComputer";
+        protected override string ComputerId => "SubtractComputer";
     }
 
     public class MultiplyMixture : BlendModeMixtureBase
     {
         public override string TypeName => "MultiplyMixture";
-        public override string? NeedComputer => "MultiplyComputer";
+        protected override string ComputerId => "MultiplyComputer";
     }
 
     public class ScreenMixture : BlendModeMixtureBase
     {
         public override string TypeName => "ScreenMixture";
-        public override string? NeedComputer => "ScreenComputer";
+        protected override string ComputerId => "ScreenComputer";
     }
 
     public class OverlayBlendMixture : BlendModeMixtureBase
     {
         public override string TypeName => "OverlayBlendMixture";
-        public override string? NeedComputer => "OverlayBlendComputer";
+        protected override string ComputerId => "OverlayBlendComputer";
     }
 
     public class DarkenMixture : BlendModeMixtureBase
     {
         public override string TypeName => "DarkenMixture";
-        public override string? NeedComputer => "DarkenComputer";
+        protected override string ComputerId => "DarkenComputer";
     }
 
     public class LightenMixture : BlendModeMixtureBase
     {
         public override string TypeName => "LightenMixture";
-        public override string? NeedComputer => "LightenComputer";
+        protected override string ComputerId => "LightenComputer";
     }
 
     public class DifferenceMixture : BlendModeMixtureBase
     {
         public override string TypeName => "DifferenceMixture";
-        public override string? NeedComputer => "DifferenceComputer";
+        protected override string ComputerId => "DifferenceComputer";
     }
 
     public class BlendModeMixtureFactory
@@ -575,7 +578,7 @@ namespace projectFrameCut.Render.Compose
             ];
         }
 
-        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration];
 
         protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {

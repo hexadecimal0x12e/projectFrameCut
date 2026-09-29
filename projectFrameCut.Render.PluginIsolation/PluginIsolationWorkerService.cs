@@ -100,8 +100,7 @@ internal sealed class PluginIsolationWorkerService(
                     RenderOperation.IsolationCreateTransform => CreateTransform(request),
                     RenderOperation.IsolationInitializeTransform => InitializeTransform(request),
                     RenderOperation.IsolationProcessTransform => await ProcessTransformAsync(request, cancellationToken).ConfigureAwait(false),
-                    RenderOperation.IsolationCreateComputer => CreateComputer(request),
-                    RenderOperation.IsolationCompute => await ComputeAsync(request, cancellationToken).ConfigureAwait(false),
+                    RenderOperation.IsolationCreateEffectImplementation => CreateEffectImplementation(request),
                     RenderOperation.IsolationCreateClip => CreateClip(request),
                     RenderOperation.IsolationReadClipFrame => await ReadClipFrameAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationReinitializeClip => ReinitializeClip(request),
@@ -230,6 +229,7 @@ internal sealed class PluginIsolationWorkerService(
         foreach (var item in request.Configuration)
             if (_plugin.Configuration.ContainsKey(item.Key)) _plugin.Configuration[item.Key] = item.Value;
         if (!_plugin.OnLoaded(out var reason)) throw new InvalidOperationException(string.IsNullOrWhiteSpace(reason) ? "Plugin OnLoaded failed." : reason);
+        IPluginBase.EffectImplementations.Register(_plugin.PluginID, _plugin.EffectImplementationProvider);
         if (_externalPluginFactory is not null)
         {
             foreach (var item in _plugin.EffectProviderProvider)
@@ -252,6 +252,11 @@ internal sealed class PluginIsolationWorkerService(
                 .Where(x => (_externalPluginFactory is not null || IsPictureEffect(x.Provider.TypeOfEffect))
                     && !x.Provider.InFields.Values.Any(f => f.FieldType.HasFlag(EffectArgumentFieldType.CustomType)))
                 .Select(x => new IsolationProviderCatalogItem { TypeName = x.Key }).ToList(),
+            EffectImplementations = _plugin.EffectImplementationProvider.Keys.Select(x => new IsolationEffectImplementationCatalogItem
+            {
+                TypeName = x.TypeName,
+                ImplementType = (int)x.ImplementType,
+            }).ToList(),
             VideoSources = _plugin.VideoSourceProvider.Select(x => DescribeVideoSource(x.Value)).ToList(),
             ProjectTools = (_plugin as IProjectPluginToolProvider)?.ProjectTools.Keys.ToList() ?? [],
             PluginApiMinorVersion = _plugin.PluginAPIMinorVersion,
@@ -267,7 +272,6 @@ internal sealed class PluginIsolationWorkerService(
             ConfigurationDisplayStrings = _plugin.ConfigurationDisplayString.ToDictionary(x => x.Key, x => new IsolationStringMap { Values = new(x.Value) }),
             SoundTracks = _plugin.SoundTrackProvider.Keys.ToList(),
             Transforms = _plugin.TransformProvider.Keys.ToList(),
-            Computers = _plugin.ComputerProvider.Keys.ToList(),
             AudioSources = _plugin.AudioSourceProvider.Select(x => new IsolationAudioSourceCatalogItem
             {
                 TypeName = x.Key,
@@ -342,6 +346,17 @@ internal sealed class PluginIsolationWorkerService(
             if (!retained)
                 foreach (var picture in pictures.Values) picture.Dispose();
         }
+    }
+
+    private RenderResponseEnvelope CreateEffectImplementation(RenderRequestEnvelope envelope)
+    {
+        var request = Read<IsolationEffectImplementationCatalogItem>(envelope);
+        var key = new EffectImplementationKey(request.TypeName, (EffectImplementType)request.ImplementType);
+        if (!RequirePlugin().EffectImplementationProvider.TryGetValue(key, out var factory))
+            throw new KeyNotFoundException($"Effect implementation '{key.TypeName}/{key.ImplementType}' was not found.");
+        var effect = factory();
+        effect.Initialize();
+        return Success(envelope, DescribeEffect(AddObject(effect), effect, null));
     }
 
     private RenderResponseEnvelope CreateVectorComponent(RenderRequestEnvelope envelope)
@@ -464,9 +479,14 @@ internal sealed class PluginIsolationWorkerService(
     {
         var request = Read<IsolationCloneEffectRequest>(envelope);
         var source = Require<IEffect>(request.ObjectId);
-        var clone = source.WithParameters(request.Parameters.ToDictionary(x => x.Key, x => IsolationValueConverter.ToObject(x.Value)!));
+        var parameters = request.Parameters.ToDictionary(x => x.Key, x => IsolationValueConverter.ToObject(x.Value)!);
+        foreach (var item in request.DynamicParameters)
+            parameters[item.Key] = (Func<object>)(() => ValueProviderFrameContext.Get(item.Value)!);
+        var clone = source.WithParameters(parameters);
         clone.Initialize();
-        return Success(envelope, DescribeEffect(AddObject(clone), clone, null));
+        var descriptor = DescribeEffect(AddObject(clone), clone, null);
+        descriptor.DynamicProviderIds = request.DynamicParameters.Values.Distinct().ToList();
+        return Success(envelope, descriptor);
     }
 
     private RenderResponseEnvelope ReleaseObject(RenderRequestEnvelope envelope)
@@ -482,7 +502,7 @@ internal sealed class PluginIsolationWorkerService(
         var effect = Require<INormalEffect>(request.ObjectId);
         ApplyEffectState(effect, request.State);
         using var source = await PicturePayloadCodec.ReadAsync(request.Source, _payloads, cancellationToken).ConfigureAwait(false);
-        return await WithFrameContextAsync(envelope, request, () => effect.Render(source, ResolveComputer(effect), request.TargetWidth, request.TargetHeight), cancellationToken).ConfigureAwait(false);
+        return await WithFrameContextAsync(envelope, request, () => effect.Render(source, request.TargetWidth, request.TargetHeight), cancellationToken).ConfigureAwait(false);
     }
 
     private async ValueTask<RenderResponseEnvelope> ProcessContinuousAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
@@ -491,7 +511,7 @@ internal sealed class PluginIsolationWorkerService(
         var effect = Require<IContinuousEffect>(request.ObjectId);
         ApplyEffectState(effect, request.State);
         using var source = await PicturePayloadCodec.ReadAsync(request.Source, _payloads, cancellationToken).ConfigureAwait(false);
-        return await WithFrameContextAsync(envelope, request, () => effect.Render(source, request.Progress, ResolveComputer(effect), request.TargetWidth, request.TargetHeight), cancellationToken).ConfigureAwait(false);
+        return await WithFrameContextAsync(envelope, request, () => effect.Render(source, request.Progress, request.TargetWidth, request.TargetHeight), cancellationToken).ConfigureAwait(false);
     }
 
     private async ValueTask<RenderResponseEnvelope> ProcessMixtureAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
@@ -502,8 +522,8 @@ internal sealed class PluginIsolationWorkerService(
         using var source = await PicturePayloadCodec.ReadAsync(request.Source, _payloads, cancellationToken).ConfigureAwait(false);
         using var top = await PicturePayloadCodec.ReadAsync(request.SecondSource ?? throw new InvalidDataException("Mixture top picture is missing."), _payloads, cancellationToken).ConfigureAwait(false);
         return await WithFrameContextAsync(envelope, request, () => request.UsePositionedMixture
-            ? effect.Mix(source, top, ResolveComputer(effect), request.TargetPixelMode, request.TopStartX, request.TopStartY, request.TargetWidth, request.TargetHeight)
-            : effect.Mix(source, top, ResolveComputer(effect), request.TargetPixelMode), cancellationToken).ConfigureAwait(false);
+            ? effect.Mix(source, top, request.TargetPixelMode, request.TopStartX, request.TopStartY, request.TargetWidth, request.TargetHeight)
+            : effect.Mix(source, top, request.TargetPixelMode), cancellationToken).ConfigureAwait(false);
     }
 
     private RenderResponseEnvelope SupportsSourceReplacement(RenderRequestEnvelope envelope)
@@ -522,7 +542,7 @@ internal sealed class PluginIsolationWorkerService(
         ApplyEffectState(effect, request.State);
         using var clip = new SnapshotClip(request.Clip ?? throw new InvalidDataException("Source replacement clip snapshot is missing."));
         using var source = await PicturePayloadCodec.ReadAsync(request.Source, _payloads, cancellationToken).ConfigureAwait(false);
-        return await WithFrameContextAsync(envelope, request, () => effect.Compute(clip, ResolveComputer(effect), source, request.TargetWidth, request.TargetHeight, request.TargetFrame, request.TargetPixelMode), cancellationToken).ConfigureAwait(false);
+        return await WithFrameContextAsync(envelope, request, () => effect.Compute(clip, source, request.TargetWidth, request.TargetHeight, request.TargetFrame, request.TargetPixelMode), cancellationToken).ConfigureAwait(false);
     }
 
     private RenderResponseEnvelope CreateVideoSource(RenderRequestEnvelope envelope)
@@ -729,16 +749,14 @@ internal sealed class PluginIsolationWorkerService(
         ApplyTransformState(transform, request.State);
         using var input = await PicturePayloadCodec.ReadAsync(request.Input, _payloads, cancellationToken).ConfigureAwait(false);
         using var second = request.SecondInput is null ? null : await PicturePayloadCodec.ReadAsync(request.SecondInput, _payloads, cancellationToken).ConfigureAwait(false);
-        var computer = string.IsNullOrWhiteSpace(transform.NeedComputer) ? null :
-            RequirePlugin().ComputerProvider.TryGetValue(transform.NeedComputer, out var factory) ? factory() : null;
         using var output = second is null
             ? (transform as IOneInputSingleFrameTransform ?? throw new NotSupportedException("The transform does not accept one input."))
-                .GetFrame(input, request.Progress, computer, request.TargetWidth, request.TargetHeight)
+                .GetFrame(input, request.Progress, request.TargetWidth, request.TargetHeight)
             : request.HasProgress
                 ? (transform as IContinuousTransform ?? throw new NotSupportedException("The transform does not accept continuous progress."))
-                    .GetFrame(input, second, request.Progress, computer, request.TargetWidth, request.TargetHeight)
+                    .GetFrame(input, second, request.Progress, request.TargetWidth, request.TargetHeight)
                 : (transform as ISingleFrameTransform ?? throw new NotSupportedException("The transform does not accept two single-frame inputs."))
-                    .GetFrame(input, second, computer, request.TargetWidth, request.TargetHeight);
+                    .GetFrame(input, second, request.TargetWidth, request.TargetHeight);
         var lease = await PicturePayloadCodec.WriteAsync(output, _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
         return Success(envelope, new IsolationPictureResponse { Picture = lease.Reference });
     }
@@ -760,64 +778,7 @@ internal sealed class PluginIsolationWorkerService(
         LeftClipId = transform.BindedLeftClip.ToString(),
         RightClipId = transform.BindedRightClip.ToString(),
         Duration = transform.Duration,
-        NeedComputer = transform.NeedComputer ?? string.Empty,
     };
-
-    private RenderResponseEnvelope CreateComputer(RenderRequestEnvelope envelope)
-    {
-        var typeName = Read<IsolationProviderCatalogItem>(envelope).TypeName;
-        if (!RequirePlugin().ComputerProvider.TryGetValue(typeName, out var factory))
-            throw new KeyNotFoundException($"Computer '{typeName}' was not found.");
-        var computer = factory();
-        return Success(envelope, new IsolationComputerDescriptor
-        {
-            ObjectId = AddObject(computer),
-            TypeName = typeName,
-            FromPlugin = computer.FromPlugin,
-            SupportedEffectOrMixture = computer.SupportedEffectOrMixture,
-        });
-    }
-
-    private async ValueTask<RenderResponseEnvelope> ComputeAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
-    {
-        var request = Read<IsolationComputeRequest>(envelope);
-        var inputs = new object?[request.Arguments.Count];
-        var pictures = new List<IPicture>();
-        try
-        {
-            for (var i = 0; i < request.Arguments.Count; i++)
-            {
-                var argument = request.Arguments[i];
-                if (argument.Picture is not null)
-                {
-                    var picture = await PicturePayloadCodec.ReadAsync(argument.Picture, _payloads, cancellationToken).ConfigureAwait(false);
-                    pictures.Add(picture);
-                    inputs[i] = picture;
-                }
-                else if (argument.Value is not null) inputs[i] = IsolationValueConverter.ToObject(argument.Value);
-                else throw new InvalidDataException("A compute argument contains no supported value.");
-            }
-            var output = Require<IComputer>(request.ObjectId).Compute(inputs!);
-            var response = new IsolationComputeResponse();
-            foreach (var item in output)
-            {
-                if (item is IPicture picture)
-                {
-                    using (picture)
-                    {
-                        var lease = await PicturePayloadCodec.WriteAsync(picture, _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
-                        response.Results.Add(new() { Picture = lease.Reference });
-                    }
-                }
-                else response.Results.Add(new() { Value = IsolationValueConverter.FromObject(item) });
-            }
-            return Success(envelope, response);
-        }
-        finally
-        {
-            foreach (var picture in pictures) picture.Dispose();
-        }
-    }
 
     private RenderResponseEnvelope CreateClip(RenderRequestEnvelope envelope)
     {
@@ -1013,7 +974,7 @@ internal sealed class PluginIsolationWorkerService(
                 Logger.Log($"Isolated AI operation '{request.OperationKind}' failed with {ex.GetType().FullName}.", "error");
                 var error = new AIProviderError(AIErrorCode.Unknown, "The isolated AI provider request failed.");
                 if (request.OperationKind == "chat")
-                    await state.Events.Writer.WriteAsync(new IsolationAIJsonResponse { Json = JsonSerializer.Serialize(new AIChatEvent { Kind = AIChatEventKind.Error, Error = error }) }).ConfigureAwait(false);
+                    await state.Events.Writer.WriteAsync(new IsolationAIJsonResponse { Json = JsonSerializer.Serialize(new AIChatContentPart { Kind = AIContentPartKind.Error, Error = error }) }).ConfigureAwait(false);
                 else
                     await state.Events.Writer.WriteAsync(new IsolationAIJsonResponse { Json = JsonSerializer.Serialize(AIResult<object>.FromError(error)) }).ConfigureAwait(false);
                 state.Events.Writer.TryComplete();
@@ -1148,6 +1109,7 @@ internal sealed class PluginIsolationWorkerService(
             try { item.Dispose(); } catch { }
         _objects.Clear();
         try { _plugin?.OnClosing(); } catch { }
+        if (_plugin is not null) IPluginBase.EffectImplementations.Unregister(_plugin.PluginID);
         MyLoggerExtensions.OnLog -= CaptureLog;
     }
 
@@ -1173,13 +1135,6 @@ internal sealed class PluginIsolationWorkerService(
             foreach (var picture in pictures) picture.Dispose();
             ValueProviderFrameContext.EndFrame();
         }
-    }
-
-    private IComputer? ResolveComputer(IEffect effect)
-    {
-        if (string.IsNullOrWhiteSpace(effect.NeedComputer)) return null;
-        var plugin = RequirePlugin();
-        return plugin.ComputerProvider.TryGetValue(effect.NeedComputer, out var factory) ? factory() : null;
     }
 
     private void ApplyProviderState(IEffectProvider provider, IsolationProviderState state, IReadOnlyDictionary<string, IPicture> pictures)
@@ -1252,7 +1207,6 @@ internal sealed class PluginIsolationWorkerService(
         Index = effect.Index,
         IsReorderable = effect.IsReorderable,
         CanProcessFromCanvas = effect.CanProcessFromCanvas,
-        NeedComputer = effect.NeedComputer ?? string.Empty,
         RelativeWidth = effect.RelativeWidth,
         RelativeHeight = effect.RelativeHeight,
         StartPoint = effect switch { IContinuousEffect x => x.StartPoint, IAudioContinuousEffect x => x.StartPoint, IContinuousTextEffect x => x.StartPoint, _ => 0 },

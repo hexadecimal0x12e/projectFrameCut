@@ -6,7 +6,7 @@ namespace projectFrameCut.Render.Contracts;
 
 public static class PluginIsolationProtocol
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
     public const long DefaultMaximumPayloadBytes = 2L * 1024 * 1024 * 1024;
 }
 

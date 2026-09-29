@@ -3,7 +3,7 @@ using projectFrameCut.Drawing.Base.Picture;
 
 namespace projectFrameCut.Render.RenderAPIBase.Sources
 {
-    public interface IVideoWriter : IDisposable
+    public interface IVideoWriter : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject, IDisposable
     {
         public int Width { get; set; }
         public int Height { get; set; }
@@ -36,7 +36,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
 
         public IPicture.PicturePixelMode? TargetPPB { get; }
 
-        public void Initialize();
+        public new void Initialize();
         public virtual bool TryInitialize()
         {
             try
@@ -69,7 +69,5 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
             else if (source.BitPerPixel == 8) Append((IPicture<byte>)source);
             else throw new NotSupportedException($"Unsupported pixel mode.");
         }
-
-
     }
 }

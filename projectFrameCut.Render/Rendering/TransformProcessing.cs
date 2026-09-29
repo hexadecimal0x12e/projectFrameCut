@@ -26,8 +26,6 @@ namespace projectFrameCut.Render.Rendering
         /// <returns>The resulting composited frame.</returns>
         public static IPicture ProcessTransform(IClip left, IClip? right, ITransform source, int width, int height, uint frameIndex, IPicture.PicturePixelMode targetPPB)
         {
-            var computer = PluginManager.CreateComputer(source.NeedComputer);
-
             // Helper: clamp a global frameIndex into a valid frame index for a clip
             static uint ClampFrameForClip(IClip clip, uint globalFrame)
             {
@@ -67,7 +65,7 @@ namespace projectFrameCut.Render.Rendering
                     {
                         var leftFrame = left.GetFrame(ClampFrameForClip(left, frameIndex), width, height, targetPPB);
                         var rightFrame = right.GetFrame(ClampFrameForClip(right, frameIndex), width, height, targetPPB);
-                        return sft.GetFrame(leftFrame, rightFrame, computer, width, height);
+                        return sft.GetFrame(leftFrame, rightFrame, width, height);
                     }
                     if (source is IOneInputSingleFrameTransform oneInput)
                     {
@@ -78,7 +76,7 @@ namespace projectFrameCut.Render.Rendering
                         long distToLeft = Math.Abs((long)frameIndex - (long)left.StartFrame - (long)left.Duration + 1);
                         long distToRight = Math.Abs((long)frameIndex - (long)right.StartFrame);
                         var input = distToRight <= distToLeft ? right.GetFrame(clampRight, width, height, targetPPB) : left.GetFrame(clampLeft, width, height, targetPPB);
-                        return oneInput.GetFrame(input, progress, computer, width, height);
+                        return oneInput.GetFrame(input, progress, width, height);
                     }
                     break;
                 case TransformType.ContinuousTransform:
@@ -86,7 +84,7 @@ namespace projectFrameCut.Render.Rendering
                     {
                         var leftFrame = left.GetFrame(ClampFrameForClip(left, frameIndex), width, height, targetPPB);
                         var rightFrame = right.GetFrame(ClampFrameForClip(right, frameIndex), width, height, targetPPB);
-                        return cont.GetFrame(leftFrame, rightFrame, progress, computer, width, height);
+                        return cont.GetFrame(leftFrame, rightFrame, progress, width, height);
                     }
                     break;
                 default:

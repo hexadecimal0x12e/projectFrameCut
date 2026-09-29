@@ -8,7 +8,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
     /// <summary>
     /// Provide a unified way for calculate something with GPU.
-    /// </summary>
+    /// </summary> 
+    [Obsolete("Consider to Migrate to IEffectImplement system, for better efficiency and maintainability.")]
     public interface IComputer
     {
         /// <summary>

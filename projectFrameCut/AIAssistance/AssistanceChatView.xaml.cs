@@ -6,6 +6,7 @@ using CommunityToolkit.Maui.Views;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls.Shapes;
+using projectFrameCut.AIContracts;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Workspace;
 using projectFrameCut.ApplicationAPIBase.Workspace.Modules;
@@ -20,6 +21,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
@@ -83,8 +85,32 @@ public partial class AssistanceChatView : ContentView
     /// </summary>
     private string GetSessionMediaDirectory()
     {
-        string chatsDir = Path.Combine(_projectPath ?? throw new InvalidOperationException("_projectPath was not set, this is not excepted."), "chats");
+        string projectPath = string.IsNullOrWhiteSpace(_projectPath) ? Environment.CurrentDirectory : _projectPath;
+        string chatsDir = Path.Combine(Path.GetFullPath(projectPath), "chats");
         return Path.Combine(chatsDir, _sessionId.ToString("N"));
+    }
+
+    private StreamWriter? CreateTranscriptWriter(ChatMessageItem item)
+    {
+        try
+        {
+            string directory = GetSessionMediaDirectory();
+            Directory.CreateDirectory(directory);
+            item.TranscriptPath = Path.Combine(directory, $"transcript_{Guid.NewGuid():N}.jsonl");
+            LogDiagnostic($"Writing chat transcript to '{item.TranscriptPath}'.");
+            return new StreamWriter(item.TranscriptPath, false, new UTF8Encoding(false));
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Create chat transcript for {_sessionId}", this);
+            item.TranscriptPath = null;
+            return null;
+        }
+    }
+
+    private string ResolveTranscriptPath(string storedPath)
+    {
+        return Path.Combine(GetSessionMediaDirectory(), Path.GetFileName(storedPath));
     }
 
     /// <summary>
@@ -453,6 +479,7 @@ public partial class AssistanceChatView : ContentView
         Dictionary<string, ChatContentSegmentSnapshot> toolCallSegmentsByKey = new(StringComparer.Ordinal);
         StringBuilder pendingTextSegment = new();
         string? terminalContentSegment = null;
+        StreamWriter? transcriptWriter = null;
         try
         {
             if (_chatClient is null)
@@ -469,6 +496,8 @@ public partial class AssistanceChatView : ContentView
                     ContentSegments = [],
                 };
                 _messages.Add(streamingItem);
+
+                transcriptWriter = CreateTranscriptWriter(streamingItem);
 
                 // 创建 StreamingMarkdownView 并添加到 ContentViews（替代旧的 StreamConverter）
                 currentMarkdownView = new StreamingMarkdownView();
@@ -497,6 +526,24 @@ public partial class AssistanceChatView : ContentView
                     {
                         await foreach (ChatResponseUpdate update in _chatClient.GetStreamingResponseAsync(_chatHistory, new ChatOptions { Tools = BuildTool() }, attemptCancellation.Token))
                         {
+                            if (transcriptWriter is not null)
+                            {
+                                try
+                                {
+                                    foreach (AIChatContentPart part in GetTranscriptParts(update))
+                                    {
+                                        await transcriptWriter.WriteLineAsync(JsonSerializer.Serialize(part));
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log(ex, $"Write chat transcript for {_sessionId}", this);
+                                    transcriptWriter.Dispose();
+                                    transcriptWriter = null;
+                                    streamingItem.TranscriptPath = null;
+                                }
+                            }
+
                             if (MemoryManager.Revision != memoryRevisionAtRequestStart
                                 || SkillRegistry.GetLoadedSkills().Any(skill => !skillsAtRequestStart.Contains(skill)))
                             {
@@ -673,6 +720,13 @@ public partial class AssistanceChatView : ContentView
                         _cts.Token.ThrowIfCancellationRequested();
                         await RefreshSystemPromptAsync();
 
+                        if (transcriptWriter is not null)
+                        {
+                            await transcriptWriter.FlushAsync();
+                            transcriptWriter.BaseStream.SetLength(0);
+                            transcriptWriter.BaseStream.Position = 0;
+                        }
+
                         await MainThread.InvokeOnMainThreadAsync(() =>
                         {
                             streamingItem.Message = string.Empty;
@@ -714,6 +768,8 @@ public partial class AssistanceChatView : ContentView
             terminalContentSegment = Localized.AIAssistant_ChatView_ChatFail_Cancelled;
             if (streamingItem is not null)
             {
+                streamingItem.TranscriptPath = null;
+                streamingItem.TranscriptSha256 = string.Empty;
                 currentMarkdownView?.Flush();
                 streamingItem.Message = assistantText;
                 streamingItem.ContentViews.Add(new Label
@@ -734,6 +790,8 @@ public partial class AssistanceChatView : ContentView
             terminalContentSegment = $"{Environment.NewLine}{Environment.NewLine}---{Environment.NewLine}{Localized.AIAssistant_ChatView_ChatFail_Exception(ex)}";
             if (streamingItem is not null)
             {
+                streamingItem.TranscriptPath = null;
+                streamingItem.TranscriptSha256 = string.Empty;
                 currentMarkdownView?.Flush();
                 streamingItem.Message = assistantText;
                 streamingItem.ContentViews.Add(new Label
@@ -745,6 +803,31 @@ public partial class AssistanceChatView : ContentView
                     Margin = new Thickness(0, 4, 0, 0),
                 });
                 ScrollToEnd();
+            }
+        }
+
+        if (transcriptWriter is not null)
+        {
+            try
+            {
+                await transcriptWriter.FlushAsync();
+                transcriptWriter.Dispose();
+                transcriptWriter = null;
+                if (streamingItem?.TranscriptPath is { } transcriptPath)
+                {
+                    streamingItem.TranscriptSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(transcriptPath))).ToLowerInvariant();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Finalize chat transcript for {_sessionId}", this);
+                transcriptWriter?.Dispose();
+                transcriptWriter = null;
+                if (streamingItem is not null)
+                {
+                    streamingItem.TranscriptPath = null;
+                    streamingItem.TranscriptSha256 = string.Empty;
+                }
             }
         }
 
@@ -1732,18 +1815,22 @@ public partial class AssistanceChatView : ContentView
 
         string mediaDir = GetSessionMediaDirectory();
         bool isFirstRun = true;
+        var deferredTranscripts = new List<ChatMessageItem>();
         foreach (AssistanceChatMessageSnapshot message in session.Messages)
         {
+            ChatContentSegmentSnapshot? transcript = message.ContentSegments?.FirstOrDefault(x => x.Kind == ChatContentSegmentKinds.Transcript);
             var item = new ChatMessageItem
             {
                 Sender = message.Sender,
                 Message = message.Message,
                 IsUser = message.IsUser,
-                ReasoningText = message.ReasoningText,
-                ToolCallsText = message.ToolCallsText,
-                ContentSegments = CloneContentSegments(message.ContentSegments) ?? [],
+                ReasoningText = transcript is null ? message.ReasoningText : string.Empty,
+                ToolCallsText = transcript is null ? message.ToolCallsText : string.Empty,
+                ContentSegments = transcript is null ? CloneContentSegments(message.ContentSegments) ?? [] : [],
                 HasFeedbackSubmitted = message.HasFeedbackSubmitted,
-                IsFirstTurn = isFirstRun
+                IsFirstTurn = isFirstRun,
+                TranscriptPath = transcript is null ? null : ResolveTranscriptPath(transcript.Text),
+                TranscriptSha256 = transcript?.ResultText ?? string.Empty,
             };
 
             // 恢复附件元数据以便 PersistSession 序列化
@@ -1755,14 +1842,18 @@ public partial class AssistanceChatView : ContentView
             // Rebuild ContentViews
             if (!item.IsUser)
             {
-                if (!string.IsNullOrWhiteSpace(message.ReasoningText))
+                if (transcript is not null)
+                {
+                    deferredTranscripts.Add(item);
+                }
+                else if (!string.IsNullOrWhiteSpace(message.ReasoningText))
                 {
                     var card = new ThinkingCardView(message.ReasoningText);
                     card.ToggleExpanded(); // collapsed by default on load
                     item.ContentViews.Add(card.View);
                 }
 
-                if (message.ContentSegments?.Count > 0)
+                if (transcript is null && message.ContentSegments?.Count > 0)
                 {
                     foreach (ChatContentSegmentSnapshot segment in message.ContentSegments)
                     {
@@ -1777,13 +1868,13 @@ public partial class AssistanceChatView : ContentView
                         }
                     }
                 }
-                else if (!string.IsNullOrWhiteSpace(message.ToolCallsText))
+                else if (transcript is null && !string.IsNullOrWhiteSpace(message.ToolCallsText))
                 {
                     var card = new ToolCallCardView(message.ToolCallsText);
                     item.ContentViews.Add(card.View);
                 }
 
-                if (message.ContentSegments?.Count is not > 0 && !string.IsNullOrWhiteSpace(message.Message))
+                if (transcript is null && message.ContentSegments?.Count is not > 0 && !string.IsNullOrWhiteSpace(message.Message))
                 {
                     View mdView = Markdown2XAML.Convert(message.Message);
                     item.ContentViews.Add(mdView);
@@ -1830,6 +1921,278 @@ public partial class AssistanceChatView : ContentView
         }
 
         RefreshSubAgentPanel();
+
+        if (deferredTranscripts.Count > 0)
+        {
+            _ = ReplayTranscriptsAsync(deferredTranscripts);
+        }
+    }
+
+    private async Task ReplayTranscriptsAsync(IEnumerable<ChatMessageItem> items)
+    {
+        foreach (ChatMessageItem item in items)
+        {
+            try
+            {
+                string? path = item.TranscriptPath;
+                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                {
+                    throw new FileNotFoundException("Chat transcript was not found.", path);
+                }
+
+                byte[] bytes = await File.ReadAllBytesAsync(path).ConfigureAwait(false);
+                string hash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+                if (!string.Equals(hash, item.TranscriptSha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidDataException($"Chat transcript hash mismatch: {Path.GetFileName(path)}");
+                }
+
+                var parts = new List<AIChatContentPart>();
+                using var reader = new StringReader(Encoding.UTF8.GetString(bytes));
+                while (reader.ReadLine() is { } line)
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                    {
+                        parts.Add(JsonSerializer.Deserialize<AIChatContentPart>(line)
+                            ?? throw new JsonException("Chat transcript contains an empty content part."));
+                    }
+                }
+
+                if (parts.Count == 0)
+                {
+                    throw new InvalidDataException("Chat transcript is empty.");
+                }
+
+                await MainThread.InvokeOnMainThreadAsync(() => ReplayTranscript(item, parts));
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Replay chat transcript for {_sessionId}", this);
+                item.TranscriptPath = null;
+                item.TranscriptSha256 = string.Empty;
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    item.ContentViews.Clear();
+                    if (!string.IsNullOrWhiteSpace(item.Message))
+                    {
+                        item.ContentViews.Add(Markdown2XAML.Convert(item.Message));
+                    }
+                    item.ContentViews.Add(CreateErrorBanner(Localized.AIAssistant_ChatView_ChatFail_Exception(ex)));
+                });
+            }
+        }
+    }
+
+    private static void ReplayTranscript(ChatMessageItem item, IEnumerable<AIChatContentPart> parts)
+    {
+        item.ContentViews.Clear();
+        item.ContentSegments.Clear();
+        item.Message = string.Empty;
+        item.ReasoningText = string.Empty;
+        item.ToolCallsText = string.Empty;
+
+        var markdownView = new StreamingMarkdownView();
+        item.ContentViews.Add(markdownView);
+        ThinkingCardView? thinkingCard = null;
+        var toolCallCardsByKey = new Dictionary<string, ToolCallCardView>(StringComparer.Ordinal);
+        var toolCallSegmentsByKey = new Dictionary<string, ChatContentSegmentSnapshot>(StringComparer.Ordinal);
+        var toolCallsById = new Dictionary<string, ToolCallDisplayState>(StringComparer.Ordinal);
+        var textBuilder = new StringBuilder();
+        var reasoningBuilder = new StringBuilder();
+        var pendingTextSegment = new StringBuilder();
+        int anonymousToolCallCounter = 0;
+
+        foreach (AIChatContentPart part in parts)
+        {
+            ChatResponseUpdate update = CreateReplayUpdate(part);
+            string textChunk = !string.IsNullOrEmpty(update.Text) ? update.Text : ExtractTextFromContents(update);
+            if (string.IsNullOrEmpty(textChunk))
+            {
+                textChunk = ExtractContentChunk(update);
+            }
+            string reasoningChunk = ExtractReasoningChunk(update);
+            bool toolCallChanged = TryUpdateToolCallState(update, toolCallsById, ref anonymousToolCallCounter,
+                out string toolCallsText, out IReadOnlyList<ToolCallDisplayState> changedToolCalls);
+            bool toolResultChanged = TryUpdateToolCallResultState(update, toolCallsById,
+                out IReadOnlyList<ToolCallDisplayState> changedToolResults);
+
+            if (!string.IsNullOrEmpty(textChunk))
+            {
+                textBuilder.Append(textChunk);
+                pendingTextSegment.Append(textChunk);
+                item.Message = textBuilder.ToString();
+                markdownView.Feed(textChunk);
+            }
+
+            if (!string.IsNullOrEmpty(reasoningChunk))
+            {
+                reasoningBuilder.Append(reasoningChunk);
+                item.ReasoningText = reasoningBuilder.ToString();
+                if (thinkingCard is null)
+                {
+                    thinkingCard = new ThinkingCardView(item.ReasoningText);
+                    markdownView.InsertContentView(thinkingCard.View);
+                }
+                else
+                {
+                    thinkingCard.UpdateText(item.ReasoningText);
+                }
+            }
+
+            if (toolCallChanged)
+            {
+                item.ToolCallsText = toolCallsText;
+                foreach (ToolCallDisplayState state in changedToolCalls)
+                {
+                    string text = BuildToolCallDisplayText([state]);
+                    if (!toolCallSegmentsByKey.TryGetValue(state.Key, out ChatContentSegmentSnapshot? segment))
+                    {
+                        AppendPendingTextSegment(item.ContentSegments, pendingTextSegment);
+                        segment = new ChatContentSegmentSnapshot { Kind = ChatContentSegmentKinds.ToolCall, Text = text };
+                        toolCallSegmentsByKey[state.Key] = segment;
+                        item.ContentSegments.Add(segment);
+                    }
+                    else
+                    {
+                        segment.Text = text;
+                    }
+
+                    if (toolCallCardsByKey.TryGetValue(state.Key, out ToolCallCardView? card))
+                    {
+                        card.UpdateText(text);
+                    }
+                    else
+                    {
+                        card = new ToolCallCardView(text);
+                        toolCallCardsByKey[state.Key] = card;
+                        markdownView.InsertContentView(card.View);
+                    }
+                }
+            }
+
+            if (toolResultChanged)
+            {
+                foreach (ToolCallDisplayState state in changedToolResults)
+                {
+                    string text = BuildToolCallDisplayText([state]);
+                    if (!toolCallSegmentsByKey.TryGetValue(state.Key, out ChatContentSegmentSnapshot? segment))
+                    {
+                        AppendPendingTextSegment(item.ContentSegments, pendingTextSegment);
+                        segment = new ChatContentSegmentSnapshot { Kind = ChatContentSegmentKinds.ToolCall, Text = text };
+                        toolCallSegmentsByKey[state.Key] = segment;
+                        item.ContentSegments.Add(segment);
+                    }
+                    segment.ResultText = state.Result;
+
+                    if (!toolCallCardsByKey.TryGetValue(state.Key, out ToolCallCardView? card))
+                    {
+                        card = new ToolCallCardView(text);
+                        toolCallCardsByKey[state.Key] = card;
+                        markdownView.InsertContentView(card.View);
+                    }
+                    card.UpdateResult(state.Result);
+                }
+            }
+        }
+
+        AppendPendingTextSegment(item.ContentSegments, pendingTextSegment);
+        markdownView.Flush();
+        thinkingCard?.ToggleExpanded();
+    }
+
+    private static ChatResponseUpdate CreateReplayUpdate(AIChatContentPart part)
+    {
+        var update = new ChatResponseUpdate(ChatRole.Assistant, []) { RawRepresentation = part };
+        switch (part.Kind)
+        {
+            case AIContentPartKind.Text:
+                update.Contents.Add(new TextContent(part.Text ?? string.Empty));
+                break;
+            case AIContentPartKind.Media when part.Media?.Data is { } data:
+                update.Contents.Add(new DataContent(data, part.Media.MimeType) { Name = part.Media.Name });
+                break;
+            case AIContentPartKind.Media when Uri.TryCreate(part.Media?.Uri, UriKind.Absolute, out var uri):
+                update.Contents.Add(new DataContent(uri, part.Media!.MimeType) { Name = part.Media.Name });
+                break;
+            case AIContentPartKind.Thinking:
+                update.Contents.Add(new TextReasoningContent(part.Text ?? string.Empty));
+                break;
+            case AIContentPartKind.ToolCall:
+                update.Contents.Add(new FunctionCallContent(part.ToolCallId ?? string.Empty, part.ToolName ?? string.Empty,
+                    string.IsNullOrWhiteSpace(part.Json)
+                        ? new Dictionary<string, object?>()
+                        : JsonSerializer.Deserialize<Dictionary<string, object?>>(part.Json) ?? []));
+                break;
+            case AIContentPartKind.ToolResult:
+                update.Contents.Add(new FunctionResultContent(part.ToolCallId ?? string.Empty, part.Json));
+                break;
+        }
+        return update;
+    }
+
+    private static IEnumerable<AIChatContentPart> GetTranscriptParts(ChatResponseUpdate update)
+    {
+        if (update.RawRepresentation is AIChatContentPart rawPart)
+        {
+            yield return rawPart;
+            yield break;
+        }
+
+        foreach (AIContent content in update.Contents)
+        {
+            switch (content)
+            {
+                case TextContent text:
+                    yield return new AIChatContentPart { Kind = AIContentPartKind.Text, Text = text.Text };
+                    break;
+                case TextReasoningContent reasoning:
+                    yield return new AIChatContentPart { Kind = AIContentPartKind.Thinking, Text = reasoning.Text };
+                    break;
+                case DataContent data when !data.Data.IsEmpty:
+                    yield return new AIChatContentPart
+                    {
+                        Kind = AIContentPartKind.Media,
+                        Media = new AIMediaReference
+                        {
+                            Kind = AIMediaReferenceKind.Inline,
+                            Data = data.Data.ToArray(),
+                            MimeType = data.MediaType,
+                            Name = data.Name,
+                        },
+                    };
+                    break;
+                case DataContent data:
+                    yield return new AIChatContentPart
+                    {
+                        Kind = AIContentPartKind.Media,
+                        Media = new AIMediaReference
+                        {
+                            Kind = AIMediaReferenceKind.Uri,
+                            Uri = data.Uri,
+                            MimeType = data.MediaType,
+                            Name = data.Name,
+                        },
+                    };
+                    break;
+                case FunctionCallContent call:
+                    yield return new AIChatContentPart
+                    {
+                        Kind = AIContentPartKind.ToolCall,
+                        ToolCallId = call.CallId,
+                        ToolName = call.Name,
+                        Json = JsonSerializer.Serialize(call.Arguments),
+                    };
+                    break;
+                case FunctionResultContent result:
+                    yield return new AIChatContentPart
+                    {
+                        Kind = AIContentPartKind.ToolResult,
+                        ToolCallId = result.CallId,
+                        Json = JsonSerializer.Serialize(result.Result),
+                    };
+                    break;
+            }
+        }
     }
 
     private void AddAssistantWelcomeMessage()
@@ -2063,22 +2426,36 @@ public partial class AssistanceChatView : ContentView
             _sessionTitle = persistedSession.Title;
         }
 
-        var messages = _messages.Select(x => new AssistanceChatMessageSnapshot
+        var messages = _messages.Select(x =>
         {
-            Sender = x.Sender,
-            Message = x.Message,
-            IsUser = x.IsUser,
-            ReasoningText = x.ReasoningText,
-            ToolCallsText = x.ToolCallsText,
-            ContentSegments = CloneContentSegments(x.ContentSegments),
-            HasFeedbackSubmitted = x.HasFeedbackSubmitted,
-            Attachments = x.Attachments?.Select(a => new ChatAttachmentSnapshot
+            bool hasTranscript = !x.IsUser
+                && x.TranscriptPath is { } path
+                && File.Exists(path)
+                && !string.IsNullOrWhiteSpace(x.TranscriptSha256);
+            return new AssistanceChatMessageSnapshot
             {
-                FileName = a.FileName,
-                MimeType = a.MimeType,
-                FileSize = a.FileSize,
-                StoredRelativePath = a.StoredRelativePath,
-            }).ToList(),
+                Sender = x.Sender,
+                Message = x.Message,
+                IsUser = x.IsUser,
+                ReasoningText = hasTranscript ? string.Empty : x.ReasoningText,
+                ToolCallsText = hasTranscript ? string.Empty : x.ToolCallsText,
+                ContentSegments = hasTranscript
+                    ? [new ChatContentSegmentSnapshot
+                    {
+                        Kind = ChatContentSegmentKinds.Transcript,
+                        Text = Path.GetFileName(x.TranscriptPath),
+                        ResultText = x.TranscriptSha256,
+                    }]
+                    : CloneContentSegments(x.ContentSegments),
+                HasFeedbackSubmitted = x.HasFeedbackSubmitted,
+                Attachments = x.Attachments?.Select(a => new ChatAttachmentSnapshot
+                {
+                    FileName = a.FileName,
+                    MimeType = a.MimeType,
+                    FileSize = a.FileSize,
+                    StoredRelativePath = a.StoredRelativePath,
+                }).ToList(),
+            };
         }).ToList();
 
         var history = _chatHistory.Select(x => new AssistanceChatHistorySnapshot
@@ -3742,6 +4119,35 @@ public partial class AssistanceChatView : ContentView
         }
     }
 
+    private static View CreateErrorBanner(string message)
+    {
+        return new Border
+        {
+            StrokeThickness = 0,
+            BackgroundColor = Color.FromArgb("#18FFA500"),
+            StrokeShape = new RoundRectangle { CornerRadius = 6 },
+            Padding = new Thickness(10, 6),
+            Margin = new Thickness(0, 6, 0, 2),
+            HorizontalOptions = LayoutOptions.Start,
+            Content = new HorizontalStackLayout
+            {
+                Spacing = 6,
+                Children =
+                {
+                    new Label
+                    {
+                        Text = message,
+                        FontSize = Markdown2XAML.BodyFontSize - 1,
+                        TextColor = Color.FromArgb("#FFA500"),
+                        VerticalOptions = LayoutOptions.Center,
+                        LineBreakMode = LineBreakMode.WordWrap,
+                        StyleId = "MarkdownCodeBlock",
+                    },
+                },
+            },
+        };
+    }
+
     public static IChatClient? CreateChatClient()
     {
         if (AIProviderService.Current is not { } service) return null;
@@ -3915,6 +4321,16 @@ public partial class AssistanceChatView : ContentView
 
     private static string ExtractReasoningChunk(ChatResponseUpdate update)
     {
+        if (update.RawRepresentation is AIChatContentPart { Kind: AIContentPartKind.Thinking } part)
+        {
+            return part.Text ?? string.Empty;
+        }
+
+        if (update.Contents?.OfType<TextReasoningContent>().FirstOrDefault() is { } reasoningContent)
+        {
+            return reasoningContent.Text;
+        }
+
         string fromPayload = ExtractFieldFromPayload(update, "reasoning_content");
         if (!string.IsNullOrWhiteSpace(fromPayload))
         {
@@ -5224,6 +5640,10 @@ public sealed partial class ChatMessageItem : INotifyPropertyChanged
     /// 此消息的附件元数据（仅用于加载历史时传递数据，不参与 UI 渲染）。
     /// </summary>
     public List<ChatAttachmentSnapshot>? Attachments { get; set; }
+
+    internal string? TranscriptPath { get; set; }
+
+    internal string TranscriptSha256 { get; set; } = string.Empty;
 
     private bool _hasFeedbackSubmitted;
 

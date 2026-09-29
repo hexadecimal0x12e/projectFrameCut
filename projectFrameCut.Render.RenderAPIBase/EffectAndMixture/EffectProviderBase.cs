@@ -247,12 +247,28 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// The supported implementation types, resolved by <see cref="SupportedImplementTypes"/>.
         /// </summary>
-        public EffectImplementType[] SupportsImplementTypes => SupportedImplementTypes();
+        public EffectImplementType[] SupportsImplementTypes
+        {
+            get
+            {
+                var typeName = TypeName == "Crop" && MetaData.ContainsKey(IsContinuousEffectParameterKey)
+                    ? "ProgressCrop"
+                    : TypeName;
+                return Plugins.IPluginBase.EffectImplementations.GetImplementTypes(typeName);
+            }
+        }
 
         /// <summary>
         /// The default implementation type, derived from the first supported type.
         /// </summary>
-        public EffectImplementType DefaultImplementType => SupportsImplementTypes.Length > 0 ? SupportsImplementTypes[0] : EffectImplementType.NotSpecified;
+        public EffectImplementType DefaultImplementType
+        {
+            get
+            {
+                var declared = SupportedImplementTypes();
+                return declared.Length > 0 ? declared[0] : EffectImplementType.NotSpecified;
+            }
+        }
 
         /// <summary>
         /// The supported implementation types of this provider. Defaults to <see cref="EffectImplementType.NotSpecified"/>.
@@ -265,7 +281,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public IEffect RestoreInstance(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
             var p = parameters ?? BuildDynamicParameters();
-            var effects = BuildEffects(implementType, p);
+            var effects = BuildRegisteredEffects(implementType, p);
             if (effects is null || effects.Length == 0)
             {
                 throw new InvalidOperationException($"EffectProvider '{TypeName}' returned no effects from BuildEffects.");
@@ -320,7 +336,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         /// <param name="implementType">the resolved implementation type.</param>
         /// <param name="parameters">the normalized parameters (reserved keys stripped, values typed).</param>
-        protected abstract IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters);
+        [Obsolete("Effect implementations are created through IPluginBase.EffectImplementations.")]
+        protected virtual IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters) =>
+            throw new NotSupportedException("Effect providers cannot create implementations directly.");
 
         /// <summary>
         /// Stateful build: resolves the <see cref="ImplementTypeParameterKey"/> from the current
@@ -330,7 +348,16 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         {
             var imp = ResolveImplementType(SupportedImplementTypes(), DefaultImplementType);
             var p = BuildDynamicParameters();
-            return BuildEffects(imp, p);
+            return BuildRegisteredEffects(imp, p);
+        }
+
+        private IEffect[] BuildRegisteredEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
+        {
+            var typeName = TypeName;
+            if (typeName == "Crop" && (MetaData.Remove(IsContinuousEffectParameterKey, out _) || parameters.Remove(IsContinuousEffectParameterKey, out _)))
+                typeName = "ProgressCrop";
+
+            return [Plugins.IPluginBase.EffectImplementations.Create(typeName, implementType, DefaultImplementType, parameters)];
         }
 
         /// <summary>

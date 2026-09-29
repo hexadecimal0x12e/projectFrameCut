@@ -22,7 +22,6 @@ namespace projectFrameCut.Render.Transform
 
         public Guid NextClipId { get; init; }
 
-        public string? NeedComputer => null;
 
         public Dictionary<string, object> Parameters { get; set; }
 
@@ -39,7 +38,7 @@ namespace projectFrameCut.Render.Transform
         /// <summary>
         /// progress: 0.0 => fully previous, 1.0 => fully next
         /// </summary>
-        public IPicture GetFrame(IPicture prevPic, IPicture nextPic, double progress, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture GetFrame(IPicture prevPic, IPicture nextPic, double progress, int targetWidth, int targetHeight)
         {
             IPicture? result = null;
 

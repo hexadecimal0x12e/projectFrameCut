@@ -19,24 +19,23 @@ namespace projectFrameCut.Render.Compose
         private const float DefaultHdrMaximumBrightness = 1000f;
 
         public static bool EnableApproximatePath { get; set; } = true;
+        private readonly IComputer? computer = PluginManager.CreateComputer(EnableApproximatePath ? ApproximateComputerId : ComputerId);
 
         public static ClassicOverlayMixture Default { get; } = new();
         public string TypeName => "ClassicOverlayMixture";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public string? NeedComputer => EnableApproximatePath ? ApproximateComputerId : ComputerId;
         public bool IsReorderable => true;
         public string Name { get; set; }
         public string Id { get; set; }
         public Dictionary<string, object> Parameters { get; set; }
         public string? BindedEffectProvidingSystemID { get; set; }
 
-        public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)
+        public IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB)
             => MixInternal(basePicture, topPicture, computer, targetPPB, true, 0, 0, basePicture.Width, basePicture.Height);
 
         public IPicture Mix(
             IPicture basePicture,
             IPicture topPicture,
-            IComputer? computer,
             IPicture.PicturePixelMode targetPPB,
             int topStartX,
             int topStartY,
@@ -1266,7 +1265,7 @@ namespace projectFrameCut.Render.Compose
         {
             { "AccuracyMode", "string" }
         };
-        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.NotSpecified];
+        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.HwAcceleration];
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -1301,7 +1300,7 @@ namespace projectFrameCut.Render.Compose
             ];
         }
 
-        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration];
 
         protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {

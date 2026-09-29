@@ -780,7 +780,7 @@ public sealed class DynamicPreview : IDisposable
                 if (clip.AlternativeSource is ISourceReplacementEffect replacement
                     && replacement.SupportsSourceReplacement(clip, sourceWidth, sourceHeight))
                 {
-                    frame = replacement.Compute(clip, PluginManager.CreateComputer(replacement.NeedComputer), clip.GetFrame(frameIndex, sourceWidth, sourceHeight, pixelMode), sourceWidth, sourceHeight, actualFrame, pixelMode);
+                    frame = replacement.Compute(clip, clip.GetFrame(frameIndex, sourceWidth, sourceHeight, pixelMode), sourceWidth, sourceHeight, actualFrame, pixelMode);
                 }
                 else
                 {
@@ -975,11 +975,11 @@ public sealed class DynamicPreview : IDisposable
                     }
 
                     var progress = Math.Clamp((float)(frameIndex - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
-                    effected = continuous.Render(effected, progress, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                    effected = continuous.Render(effected, progress, targetWidth, targetHeight);
                 }
                 else if (effect is INormalEffect normal)
                 {
-                    effected = normal.Render(effected, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                    effected = normal.Render(effected, targetWidth, targetHeight);
                 }
                 else if (effect is IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect)
                 {
@@ -1822,7 +1822,7 @@ public sealed class DynamicPreview : IDisposable
             {
                 try
                 {
-                    frame = effect.Process(frame, PluginManager.CreateComputer(effect.NeedComputer));
+                    frame = effect.Process(frame);
                 }
                 catch (Exception ex)
                 {
@@ -1891,7 +1891,7 @@ public sealed class DynamicPreview : IDisposable
             {
                 if (effect is INormalEffect normalEffect)
                 {
-                    frame = normalEffect.Render(frame, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                    frame = normalEffect.Render(frame, targetWidth, targetHeight);
                 }
             }
             catch (Exception ex)

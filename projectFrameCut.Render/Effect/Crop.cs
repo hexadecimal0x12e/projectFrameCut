@@ -26,7 +26,6 @@ namespace projectFrameCut.Render.Effect
         public float Angle { get; init; }
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public string? NeedComputer => null;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public bool IsReorderable => true;
@@ -88,7 +87,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         {
             int cropX = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartX"), StartX);
             int cropY = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartY"), StartY);
@@ -550,6 +549,7 @@ namespace projectFrameCut.Render.Effect
 
     public class CropEffect_HwAccel : INormalEffect
     {
+        private readonly IComputer? computer = PluginManager.CreateComputer("CropComputer");
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Crop";
@@ -563,7 +563,6 @@ namespace projectFrameCut.Render.Effect
         public float Angle { get; init; }
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public string? NeedComputer => "CropComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
@@ -626,7 +625,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         {
             int cropX = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartX"), StartX);
             int cropY = DynamicParam.Resolve(Parameters.GetValueOrDefault("StartY"), StartY);

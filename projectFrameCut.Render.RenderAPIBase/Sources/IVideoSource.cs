@@ -14,12 +14,12 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
     /// <summary>
     /// The interface for video source (decoder) implementations.
     /// </summary>
-    public interface IVideoSource : IDisposable
+    public interface IVideoSource : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject, IDisposable
     {
         /// <summary>
         /// Get the type name of this decoder. Should be the same as the class name.
         /// </summary>
-        public string TypeName { get; }
+        public new string TypeName { get; }
 
         /// <summary>
         /// Initialize the video source. This method should prepare the video source for frame extraction.
@@ -28,7 +28,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// If the file path is null, please just return without doing anything. 
         /// This is because <see cref="IPluginBase.VideoSourceCreator"/> need an instance of this to get <see cref="PreferredExtension"/> to determine which plugin to use.
         /// </remarks>
-        public abstract void Initialize();
+        public new abstract void Initialize();
         /// <summary>
         /// Try to initialize the video source. Returns true if successful, false otherwise.
         /// </summary>

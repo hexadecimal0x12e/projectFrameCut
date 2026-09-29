@@ -159,6 +159,11 @@ public enum AIContentPartKind
     Media,
     ToolCall,
     ToolResult,
+    Thinking,
+    Done,
+    Retrying,
+    KeepAlive,
+    Error,
 }
 
 public enum AIMediaReferenceKind
@@ -187,6 +192,9 @@ public sealed record AIChatContentPart
     public string? ToolCallId { get; init; }
     public string? ToolName { get; init; }
     public string? Json { get; init; }
+    public AIChatDoneInfo? Done { get; init; }
+    public AIRetryInfo? Retrying { get; init; }
+    public AIProviderError? Error { get; init; }
 }
 
 public sealed record AIChatMessage(AIChatRole Role, IReadOnlyList<AIChatContentPart> Content);
@@ -208,33 +216,27 @@ public sealed record AIChatRequest
     public IReadOnlyDictionary<string, JsonElement> Options { get; init; } = new Dictionary<string, JsonElement>();
 }
 
-public enum AIChatEventKind
-{
-    TextDelta,
-    ReasoningDelta,
-    ToolCall,
-    Usage,
-    Completed,
-    Error,
-}
-
 public sealed record AIUsage(long InputTokens = 0, long OutputTokens = 0);
 
-public sealed record AIChatEvent
+public sealed record AIChatDoneInfo
 {
-    public AIChatEventKind Kind { get; init; }
-    public string? Text { get; init; }
-    public string? ToolCallId { get; init; }
-    public string? ToolName { get; init; }
-    public string? ArgumentsJson { get; init; }
-    public string? FinishReason { get; init; }
     public AIUsage? Usage { get; init; }
+    public IReadOnlyList<string> SuggestedReplies { get; init; } = [];
+    public string? Recap { get; init; }
+    public string? FinishReason { get; init; }
+    public IReadOnlyDictionary<string, JsonElement> Metadata { get; init; } = new Dictionary<string, JsonElement>();
+}
+
+public sealed record AIRetryInfo
+{
+    public int Attempt { get; init; }
+    public TimeSpan? RetryAfter { get; init; }
     public AIProviderError? Error { get; init; }
 }
 
 public interface IAIChatProvider : IAIProvider
 {
-    IAsyncEnumerable<AIChatEvent> StreamChatAsync(AIProviderContext context, AIChatRequest request, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<AIChatContentPart> StreamChatAsync(AIProviderContext context, AIChatRequest request, CancellationToken cancellationToken = default);
 }
 
 public sealed record AIImageGenerationRequest
@@ -292,12 +294,12 @@ public static class AIProviderDefaults
     public const string EndpointField = "endpoint";
     public const string ApiKeyField = "apiKey";
 
-    public static async IAsyncEnumerable<AIChatEvent> ErrorStream(
+    public static async IAsyncEnumerable<AIChatContentPart> ErrorStream(
         AIProviderError error,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        yield return new AIChatEvent { Kind = AIChatEventKind.Error, Error = error };
+        yield return new AIChatContentPart { Kind = AIContentPartKind.Error, Error = error };
         await Task.CompletedTask;
     }
 }

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace projectFrameCut.Render.RenderAPIBase.Sources
 {
-    public interface IAudioSource : IDisposable
+    public interface IAudioSource : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject, IDisposable
     {
         /// <summary>
         /// Initialize the audio source. This method should prepare the audio source for frame extraction.
@@ -13,7 +13,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// If the file path is null, please just return without doing anything. 
         /// This is because <see cref="IPluginBase.AudioSourceCreator"/> need an instance of this to get <see cref="PreferredExtension"/> to determine which plugin to use.
         /// </remarks>
-        public abstract void Initialize();
+        public new abstract void Initialize();
         /// <summary>
         /// Try to initialize the audio source. Returns true if successful, false otherwise.
         /// </summary>

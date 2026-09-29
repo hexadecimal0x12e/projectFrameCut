@@ -37,6 +37,20 @@ public sealed class PluginIsolationClient : IAsyncDisposable
         }));
     }
 
+    public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> CreateEffectImplementations()
+    {
+        var plugin = _plugin ?? throw new InvalidOperationException("The remote plugin has not been loaded.");
+        return plugin.EffectImplementations.ToDictionary(
+            x => new EffectImplementationKey(x.TypeName, (EffectImplementType)x.ImplementType),
+            x => (Func<IEffect>)(() =>
+            {
+                var descriptor = Invoke<IsolationEffectImplementationCatalogItem, IsolationEffectDescriptor>(
+                    RenderOperation.IsolationCreateEffectImplementation,
+                    new() { TypeName = x.TypeName, ImplementType = x.ImplementType });
+                return RemoteEffectFactory.Create(_session, descriptor);
+            }));
+    }
+
     public IReadOnlyDictionary<string, Func<projectFrameCut.AIContracts.IAIProvider>> CreateAIProviders()
     {
         var plugin = _plugin ?? throw new InvalidOperationException("The remote plugin has not been loaded.");
@@ -77,17 +91,6 @@ public sealed class PluginIsolationClient : IAsyncDisposable
             var state = Invoke<IsolationCreateTransformRequest, IsolationTransformState>(RenderOperation.IsolationCreateTransform,
                 new() { TypeName = x, LeftClipId = left.ToString(), RightClipId = right.ToString() });
             return new RemoteTransform(_session, state);
-        }));
-    }
-
-    public Dictionary<string, Func<IComputer>> CreateComputers()
-    {
-        var plugin = _plugin ?? throw new InvalidOperationException("The remote plugin has not been loaded.");
-        return plugin.Computers.ToDictionary(x => x, x => (Func<IComputer>)(() =>
-        {
-            var descriptor = Invoke<IsolationProviderCatalogItem, IsolationComputerDescriptor>(RenderOperation.IsolationCreateComputer,
-                new() { TypeName = x });
-            return new RemoteComputer(_session, descriptor);
         }));
     }
 

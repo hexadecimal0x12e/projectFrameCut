@@ -24,7 +24,6 @@ public sealed class ExampleInvertEffect : INormalEffect
     public bool Enabled { get; set; } = true;
     public int Index { get; set; }
     public bool IsReorderable => true;
-    public string? NeedComputer => null;
     public int RelativeWidth { get; set; }
     public int RelativeHeight { get; set; }
     public string? BindedEffectProvidingSystemID { get; set; }
@@ -36,7 +35,7 @@ public sealed class ExampleInvertEffect : INormalEffect
         return new ExampleInvertEffect(Convert.ToSingle(value));
     }
 
-    public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+    public IPicture Render(IPicture source, int targetWidth, int targetHeight)
     {
         if (source is IPicture<byte> byteSource)
         {
@@ -76,3 +75,5 @@ public sealed class ExampleInvertEffect : INormalEffect
     private byte Mix(byte value, byte max) => (byte)Math.Clamp((int)Math.Round(value * (1 - _amount) + (max - value) * _amount), 0, byte.MaxValue);
     private ushort Mix(ushort value, ushort max) => (ushort)Math.Clamp((int)Math.Round(value * (1 - _amount) + (max - value) * _amount), 0, ushort.MaxValue);
 }
+    public ExampleInvertEffect() : this(1) { }
+

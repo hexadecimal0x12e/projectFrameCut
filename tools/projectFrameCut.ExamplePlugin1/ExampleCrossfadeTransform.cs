@@ -19,9 +19,8 @@ public sealed class ExampleCrossfadeTransform : IContinuousTransform
     public Guid BindedLeftClip { get; set; }
     public Guid BindedRightClip { get; set; }
     public uint Duration { get; set; } = 30;
-    public string? NeedComputer => null;
 
-    public IPicture GetFrame(IPicture left, IPicture right, double progress, IComputer? computer, int targetWidth, int targetHeight)
+    public IPicture GetFrame(IPicture left, IPicture right, double progress, int targetWidth, int targetHeight)
     {
         progress = Math.Clamp(progress, 0, 1);
         if (left is IPicture<byte> l8 && right is IPicture<byte> r8)

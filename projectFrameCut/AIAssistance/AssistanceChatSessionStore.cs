@@ -93,6 +93,7 @@ internal static class ChatContentSegmentKinds
 {
     public const string Text = "text";
     public const string ToolCall = "tool_call";
+    public const string Transcript = "transcript";
 }
 
 public sealed class ChatAttachmentSnapshot

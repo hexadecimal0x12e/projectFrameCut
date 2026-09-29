@@ -14,7 +14,6 @@ namespace projectFrameCut.Render.Effect
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
-        public string? NeedComputer => null;
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "ZoomIn";
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
@@ -33,7 +32,7 @@ namespace projectFrameCut.Render.Effect
         public Dictionary<string, object> Parameters { get; set; } = new();
 
 
-        public IPicture Render(IPicture source, float progress, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, float progress, int targetWidth, int targetHeight)
         {
             double clampedProgress = Math.Clamp(progress, 0.0, 1.0);
 

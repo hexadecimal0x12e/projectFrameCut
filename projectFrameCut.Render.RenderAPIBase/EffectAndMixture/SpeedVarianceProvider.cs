@@ -26,7 +26,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         EffectType IEffect.TypeOfEffect => EffectType.SpeedVarianceProvider;
         EffectImplementType IEffect.ImplementType => EffectImplementType.NotSpecified;
         bool IEffect.Enabled { get => false; set { } } // the simplest way to prevent rendering of ISpeedVarianceProvider is to make it always disabled,
-        string? IEffect.NeedComputer => null;
         int IEffect.RelativeWidth { get => -1; set { } }
         int IEffect.RelativeHeight { get => -1; set { } }
         int IEffect.Index { get => int.MaxValue; set { } }

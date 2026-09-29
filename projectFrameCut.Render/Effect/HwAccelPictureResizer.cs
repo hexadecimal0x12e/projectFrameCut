@@ -18,7 +18,6 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class HwAccelPictureResizer : IPictureResizer
     {
-        private IComputer? _cachedComputer;
         private IResizeComputer? _cachedResizeComputer;
         private bool _computerResolved;
 
@@ -41,16 +40,11 @@ namespace projectFrameCut.Render.Effect
             if (!_computerResolved)
             {
                 var computer = PluginManager.CreateComputer("ResizeComputer", forceCreate: false);
-                _cachedComputer = computer;
                 _cachedResizeComputer = computer as IResizeComputer;
                 _computerResolved = true;
             }
             return _cachedResizeComputer;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private IComputer? GetComputer() => _computerResolved ? _cachedComputer
-            : (GetResizeComputer(), _cachedComputer).Item2;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static (int destW, int destH) ComputeDestSize(

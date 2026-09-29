@@ -92,12 +92,11 @@ public enum ExternalPluginCapabilities
     AudioSources = 1 << 2,
     SoundTracks = 1 << 3,
     Transforms = 1 << 4,
-    Computers = 1 << 5,
     VideoWriters = 1 << 6,
     Clips = 1 << 7,
     VectorComponents = 1 << 8,
     AIProviders = 1 << 9,
-    All = Effects | VideoSources | AudioSources | SoundTracks | Transforms | Computers | VideoWriters | Clips | VectorComponents | AIProviders,
+    All = Effects | VideoSources | AudioSources | SoundTracks | Transforms | VideoWriters | Clips | VectorComponents | AIProviders,
 }
 
 public sealed class PluginPackageManifest

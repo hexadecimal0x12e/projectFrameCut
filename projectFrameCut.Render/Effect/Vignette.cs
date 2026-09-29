@@ -22,7 +22,6 @@ namespace projectFrameCut.Render.Effect
         public float Radius { get; init; } = 0.65f;
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public string? NeedComputer => null;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
         public bool IsReorderable => true;
@@ -59,7 +58,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         {
             float strength = DynamicParam.Resolve(Parameters.GetValueOrDefault("Strength"), Strength);
             float radius = DynamicParam.Resolve(Parameters.GetValueOrDefault("Radius"), Radius);
@@ -69,6 +68,7 @@ namespace projectFrameCut.Render.Effect
 
     public class VignetteEffect_HwAccel : INormalEffect
     {
+        private readonly IComputer? computer = PluginManager.CreateComputer("VignetteComputer");
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Vignette";
@@ -79,7 +79,6 @@ namespace projectFrameCut.Render.Effect
         public float Radius { get; init; } = 0.65f;
         public Dictionary<string, object> Parameters { get; set; } = new();
 
-        public string? NeedComputer => "VignetteComputer";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
         public bool IsReorderable => true;
@@ -114,7 +113,7 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         {
             float strength = DynamicParam.Resolve(Parameters.GetValueOrDefault("Strength"), Strength);
             float radius = DynamicParam.Resolve(Parameters.GetValueOrDefault("Radius"), Radius);

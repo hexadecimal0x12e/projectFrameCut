@@ -46,7 +46,7 @@ internal static class PluginIsolationFactory
         bool hasAIProviders = local is IAIProviderPlugin aiPlugin && aiPlugin.AIProviderFactories.Count > 0;
         bool hasIsolatableCapabilities = hasPictureProviders || local.VideoSourceProvider.Count > 0 ||
             local.AudioSourceProvider.Count > 0 || local.VideoWriterProvider.Count > 0 ||
-            local.TransformProvider.Count > 0 || local.ComputerProvider.Count > 0 ||
+            local.TransformProvider.Count > 0 ||
             local.SoundTrackProvider.Count > 0 ||
             HasCustomImplementation(local, nameof(IPluginBase.ClipCreator)) ||
             HasCustomImplementation(local, nameof(IPluginBase.VectComponentCreator)) || hasAIProviders;

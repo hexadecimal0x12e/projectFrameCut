@@ -105,7 +105,7 @@ internal sealed class BuiltInAIProvider : IAIChatProvider, IAIImageProvider, IAI
         return Descriptor.RecommendedModels.Where(x => x.Capability.HasFlag(query.Capability)).ToArray();
     }
 
-    public async IAsyncEnumerable<AIChatEvent> StreamChatAsync(AIProviderContext context, AIChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<AIChatContentPart> StreamChatAsync(AIProviderContext context, AIChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (!Descriptor.Capabilities.HasFlag(AICapability.Chat))
         {
@@ -125,22 +125,25 @@ internal sealed class BuiltInAIProvider : IAIChatProvider, IAIImageProvider, IAI
                 JsonDocument.Parse(x.ParametersJsonSchema).RootElement.Clone(),
                 null)).ToList(),
         };
+        AIUsage? usage = null;
+        string? finishReason = null;
         await foreach (var update in client.GetStreamingResponseAsync(request.Messages.Select(ToExtensionsMessage), options, cancellationToken))
         {
             foreach (var content in update.Contents)
             {
                 if (content is TextReasoningContent reasoning && !string.IsNullOrEmpty(reasoning.Text))
-                    yield return new() { Kind = AIChatEventKind.ReasoningDelta, Text = reasoning.Text };
+                    yield return new() { Kind = AIContentPartKind.Thinking, Text = reasoning.Text };
                 else if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
-                    yield return new() { Kind = AIChatEventKind.TextDelta, Text = text.Text };
+                    yield return new() { Kind = AIContentPartKind.Text, Text = text.Text };
                 else if (content is FunctionCallContent call)
-                    yield return new() { Kind = AIChatEventKind.ToolCall, ToolCallId = call.CallId, ToolName = call.Name, ArgumentsJson = JsonSerializer.Serialize(call.Arguments) };
-                else if (content is UsageContent usage)
-                    yield return new() { Kind = AIChatEventKind.Usage, Usage = new(usage.Details.InputTokenCount ?? 0, usage.Details.OutputTokenCount ?? 0) };
+                    yield return new() { Kind = AIContentPartKind.ToolCall, ToolCallId = call.CallId, ToolName = call.Name, Json = JsonSerializer.Serialize(call.Arguments) };
+                else if (content is UsageContent usageContent)
+                    usage = new(usageContent.Details.InputTokenCount ?? 0, usageContent.Details.OutputTokenCount ?? 0);
             }
             if (update.FinishReason is { } finish)
-                yield return new() { Kind = AIChatEventKind.Completed, FinishReason = finish.Value };
+                finishReason = finish.Value;
         }
+        yield return new() { Kind = AIContentPartKind.Done, Done = new() { Usage = usage, FinishReason = finishReason } };
     }
 
     public async ValueTask<AIResult<AIGenerationResponse>> GenerateImageAsync(AIProviderContext context, AIImageGenerationRequest request, CancellationToken cancellationToken = default)
@@ -232,6 +235,9 @@ internal sealed class BuiltInAIProvider : IAIChatProvider, IAIImageProvider, IAI
             {
                 case AIContentPartKind.Text:
                     contents.Add(new TextContent(part.Text ?? string.Empty));
+                    break;
+                case AIContentPartKind.Thinking:
+                    contents.Add(new TextReasoningContent(part.Text ?? string.Empty));
                     break;
                 case AIContentPartKind.Media when part.Media?.Data is { } data:
                     contents.Add(new DataContent(data, part.Media.MimeType) { Name = part.Media.Name });
@@ -371,5 +377,5 @@ internal sealed class BuiltInAIProvider : IAIChatProvider, IAIImageProvider, IAI
         catch { }
     }
 
-    private static AIChatEvent Error(AIErrorCode code, string message) => new() { Kind = AIChatEventKind.Error, Error = new(code, message) };
+    private static AIChatContentPart Error(AIErrorCode code, string message) => new() { Kind = AIContentPartKind.Error, Error = new(code, message) };
 }

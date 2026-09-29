@@ -39,7 +39,7 @@ public sealed class AIProviderService
         return await provider.ValidateConfigurationAsync(Profiles.CreateContext(profile, string.Empty), cancellationToken);
     }
 
-    public IAsyncEnumerable<AIChatEvent> StreamChatAsync(AIChatRequest request, CancellationToken cancellationToken = default)
+    public IAsyncEnumerable<AIChatContentPart> StreamChatAsync(AIChatRequest request, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -143,7 +143,7 @@ public sealed class AIProviderService
             ? AIResult<AIGenerationResponse>.FromError(new(AIErrorCode.Timeout, "The AI provider timed out.", true))
             : result;
 
-    private static async IAsyncEnumerable<AIChatEvent> StreamWithTimeoutAsync(
+    private static async IAsyncEnumerable<AIChatContentPart> StreamWithTimeoutAsync(
         IAIChatProvider provider,
         AIProviderContext context,
         AIChatRequest request,
@@ -176,7 +176,7 @@ public sealed class AIProviderService
 
             if (error is not null)
             {
-                yield return new() { Kind = AIChatEventKind.Error, Error = error };
+                yield return new() { Kind = AIContentPartKind.Error, Error = error };
                 yield break;
             }
             if (!hasNext) yield break;

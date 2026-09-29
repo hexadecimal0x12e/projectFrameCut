@@ -23,6 +23,7 @@ public class DraftSettingPage
     #region init
 
     private const string SaveSlotDirectoryName = "saveSlots";
+    private const string WriteCoverAsFirstFrameProperty = "WriteCoverAsFirstFrame";
     private readonly string? standaloneProjectPath;
 
     private bool IsStandaloneJsonMode => !string.IsNullOrWhiteSpace(standaloneProjectPath);
@@ -149,17 +150,6 @@ public class DraftSettingPage
                 };
 
                 ToolTipProperties.SetText(popOutButton, ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized?.MultiWindowView_PopOut ?? "As a standalone window");
-
-                var clearOldHistoryButton = new Button
-                {
-                    Text = Localized.DraftSettingPage_Tab_History_Cleanup,
-                    BackgroundColor = Color.FromArgb("#D2691E"),
-                    TextColor = Colors.White,
-                    HorizontalOptions = LayoutOptions.Start
-                };
-                clearOldHistoryButton.Clicked += async (_, _) => await ShowCleanupOptionsAsync();
-
-                clearHistoryButtonsLayout.Children.Add(clearOldHistoryButton);
                 clearHistoryButtonsLayout.Add(popOutButton);
                 tabView.HeaderRightContent = clearHistoryButtonsLayout;
             }
@@ -177,7 +167,10 @@ public class DraftSettingPage
     public ScrollView BuildGeneralTab()
     {
         var enableHDR = parent.ProjectInfo.Properties.TryGetValue("EnableHDR", out var eh) && bool.TryParse(eh, out var result) ? result : false;
+        var hasCover = !string.IsNullOrWhiteSpace(parent.ProjectInfo.ThumbPath) && File.Exists(parent.ProjectInfo.ThumbPath);
+        var writeCoverAsFirstFrame = parent.ProjectInfo.Properties.TryGetValue(WriteCoverAsFirstFrameProperty, out var wcaff) && bool.TryParse(wcaff, out var writeCover) && writeCover;
         PropertyPanelBuilder ppb = new();
+        ppb.AddText(new TitleAndDescriptionLineLabel(Localized.DraftSettingPage_General_TargetSize, Localized.DraftSettingPage_General_TargetSize_Description));
         ppb.AddEntry("targetFrameRate", Localized.DraftSettingPage_General_TargetFramerate, parent.ProjectInfo.TargetFrameRate.ToString(), "60", null, default);
         ppb.AddPicker("relativeResolution", Localized.DraftSettingPage_General_RelativeResultion, resolutions, $"{parent.ProjectInfo.RelativeWidth}x{parent.ProjectInfo.RelativeHeight}", null);
         ppb.AddCheckbox("enableHDR", Localized.DraftSettingPage_General_EnableHDR, enableHDR, null);
@@ -189,7 +182,82 @@ public class DraftSettingPage
                     ? legacySdrClipBrightness
                     : "203"),
             null, null));
+        ppb.AddSeparator();
+        ppb.AddText(new TitleAndDescriptionLineLabel(Localized.DraftSettingPage_General_Cover, Localized.DraftSettingPage_General_Cover_Description));
+        ppb.AddText(new PropertyPanelItemLabel(BuildCoverPicker()));
+        ppb.AddCheckbox("writeCoverAsFirstFrame", Localized.DraftSettingPage_General_Cover_WriteAsFirstFrame, writeCoverAsFirstFrame, c => c.IsEnabled = hasCover);
+        ppb.AppendWhen(!string.IsNullOrWhiteSpace(parent.ProjectInfo.ThumbPath), c =>
+            c.AddButton(Localized.DraftSettingPage_General_Cover_Clear, (_, _) =>
+            {
+                Logger.LogDiagnostic($"Cleared custom project cover: {parent.ProjectInfo.ThumbPath}");
+                parent.ProjectInfo.ThumbPath = null;
+                tabView.SelectedItem.Content = BuildGeneralTab();
+            }));
         return ppb.ListenToChanges(OnPropertiesChanged).BuildWithScrollView(null);
+    }
+
+    private View BuildCoverPicker()
+    {
+        if (!string.IsNullOrWhiteSpace(parent.ProjectInfo.ThumbPath) && File.Exists(parent.ProjectInfo.ThumbPath))
+        {
+            try
+            {
+                var data = File.ReadAllBytes(parent.ProjectInfo.ThumbPath);
+                var cover = new ImageButton
+                {
+                    Source = ImageSource.FromStream(() => new MemoryStream(data, writable: false)),
+                    Aspect = Aspect.AspectFit,
+                    HeightRequest = 240,
+                    Padding = 0,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    AutomationId = "ProjectCover"
+                };
+                cover.Clicked += async (_, _) => await SelectCoverAsync();
+                return cover;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, $"Load custom project cover {parent.ProjectInfo.ThumbPath}", this);
+            }
+        }
+
+        var placeholder = new Button
+        {
+            Text = $"＋\n{Localized.DraftSettingPage_General_Cover_Select}",
+            HeightRequest = 180,
+            HorizontalOptions = LayoutOptions.Fill,
+            AutomationId = "ProjectCoverPlaceholder"
+        };
+        placeholder.Clicked += async (_, _) => await SelectCoverAsync();
+        return placeholder;
+    }
+
+    private async Task SelectCoverAsync()
+    {
+        try
+        {
+            var file = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = Localized.DraftSettingPage_General_Cover_PickerTitle,
+                FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+                {
+                    { DevicePlatform.WinUI, [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"] },
+                    { DevicePlatform.Android, ["image/*"] },
+                    { DevicePlatform.iOS, ["public.image"] },
+                    { DevicePlatform.MacCatalyst, ["public.image"] }
+                })
+            });
+            if (file is null || string.IsNullOrWhiteSpace(file.FullPath)) return;
+
+            parent.ProjectInfo.ThumbPath = file.FullPath;
+            Logger.LogDiagnostic($"Selected custom project cover: {file.FullPath}");
+            tabView.SelectedItem.Content = BuildGeneralTab();
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(ex, "Select project cover", this);
+            await parent.DisplayAlertAsync(Localized._Error, ex.Message, Localized._OK);
+        }
     }
 
     public ScrollView BuildAdvancedTab()
@@ -238,11 +306,13 @@ public class DraftSettingPage
             return new ScrollView { Content = errorLayout };
         }
 
-        return new PropertyPanelBuilder()
+        var ppb = new PropertyPanelBuilder()
+        .AddText(new TitleAndDescriptionLineLabel(Localized.DraftSettingPage_General_TargetSize, Localized.DraftSettingPage_General_TargetSize_Description))
         .AddEntry("targetFrameRate", Localized.DraftSettingPage_General_TargetFramerate, info.TargetFrameRate.ToString(), "60", null, default)
         .AddPicker("relativeResolution", Localized.DraftSettingPage_General_RelativeResultion, resolutions, $"{info.RelativeWidth}x{info.RelativeHeight}", null)
         .AddText(new TitleAndDescriptionLineLabel(Localized.DraftSettingPage_Advanced_UserDefinedProperties, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Subtitle))
         .Foreach(info.UserDefinedProperties, (p, item) => p.AddEntry($"CustomOption,{item.Key}", item.Key, item.Value, Localized.DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove, null, default))
+        .AddSeparator()
         .AddButton(Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add, async (s, e) =>
         {
             var key = await PromptAsync(Localized._Info, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey, string.Empty);
@@ -257,17 +327,11 @@ public class DraftSettingPage
             tabView.SelectedItem.Content = BuildAdvancedTab();
         })
         .AddButton("SaveCustomOption", Localized._Save)
-
+        .AddSeparator();
+        AddProjectMetadata(ppb, info);
+        return ppb
         .AddSeparator()
         .AddText(new SingleLineLabel(SettingsManager.SettingLocalizedResources.Misc_DiagOptions, 25))
-        .AddButton(Localized.DraftSettingPage_Advanced_DiscardUnsavedChange, async (s, e) =>
-        {
-            if ((await (GetHostPage()?.DisplayPromptAsync(Localized._Warn, Localized.DraftSettingPage_Advanced_Warn, Localized._OK, Localized._Cancel) ?? Task.FromResult("")))?.Trim() == "yes")
-            {
-                info.NormallyExited = true;
-                await SaveStandaloneProjectInfo(info);
-            }
-        })
         .AddButton(Localized.DraftSettingPage_Advanced_ForceUpgrade, async (s, e) =>
         {
             if ((await (GetHostPage()?.DisplayPromptAsync(Localized._Warn, Localized.DraftSettingPage_Advanced_Warn, Localized._OK, Localized._Cancel) ?? Task.FromResult("")))?.Trim() == "yes")
@@ -279,11 +343,12 @@ public class DraftSettingPage
                 await SaveStandaloneProjectInfo(info);
             }
         })
-        .AddButton(Localized.DraftSettingPage_Advanced_DiscardSaveSlots, async (s, e) =>
+        .AddButton(Localized.DraftSettingPage_Advanced_DiscardUnsavedChange, async (s, e) =>
         {
             if ((await (GetHostPage()?.DisplayPromptAsync(Localized._Warn, Localized.DraftSettingPage_Advanced_Warn, Localized._OK, Localized._Cancel) ?? Task.FromResult("")))?.Trim() == "yes")
             {
-                Directory.Delete(System.IO.Path.Combine(ResolveJsonProjectRoot(), "saveSlots"), true);
+                info.NormallyExited = true;
+                await SaveStandaloneProjectInfo(info);
             }
         })
         .AddButton(Localized.DraftSettingPage_Advanced_ReloadHistory, async (s, e) =>
@@ -350,17 +415,87 @@ public class DraftSettingPage
 
                 await SaveStandaloneProjectInfo(info);
                 tabView.SelectedItem.Content = BuildAdvancedTab();
-                await ShowInfoAsync($"SnapshotIDMapping rebuilt with {newMapping.Count} entries.");
+                await ShowInfoAsync(Localized._Done);
             }
             catch (Exception ex)
             {
+                Log(ex, "rebuild history map");
                 await ShowInfoAsync($"Failed to rebuild SnapshotIDMapping: {ex.Message}");
+            }
+        })
+        .AddButton(Localized.DraftSettingPage_Advanced_DiscardSaveSlots, async (s, e) =>
+        {
+            if (await ConfirmAsync(Localized._Warn, Localized.DraftSettingPage_Tab_History_CleanupAll_Warn) && (await (GetHostPage()?.DisplayPromptAsync(Localized._Warn, Localized.DraftSettingPage_Advanced_Warn, Localized._OK, Localized._Cancel) ?? Task.FromResult("")))?.Trim() == "yes")
+            {
+                try
+                {
+                    Directory.Delete(System.IO.Path.Combine(ResolveJsonProjectRoot(), "saveSlots"), true);
+                    File.Delete(System.IO.Path.Combine(ResolveJsonProjectRoot(), "snapshot_mapping.json"));
+                    Directory.CreateDirectory(System.IO.Path.Combine(ResolveJsonProjectRoot(), "saveSlots"));
+                    await ShowInfoAsync(Localized._Done);
+                }
+                catch { }
+            }
+        })
+        .AddButton(Localized.DraftSettingPage_Advanced_DiscardSystemOptions, async (s, e) =>
+        {
+            if ((await (GetHostPage()?.DisplayPromptAsync(Localized._Warn, Localized.DraftSettingPage_Advanced_Warn, Localized._OK, Localized._Cancel) ?? Task.FromResult("")))?.Trim() == "yes")
+            {
+                info.UserDefinedProperties = new();
+                info.Properties = new();
+                await SaveStandaloneProjectInfo(info);
+                await ShowInfoAsync(Localized._Done);
             }
         })
         .ListenToChanges(OnStandaloneAdvancedPropertiesChanged)
         .BuildWithScrollView(null);
 
 
+    }
+
+    private static void AddProjectMetadata(PropertyPanelBuilder ppb, ProjectJSONStructure info)
+    {
+        ppb.AddText(new TitleAndDescriptionLineLabel(Localized.DraftSettingPage_Advanced_ProjectInfo, Localized.DraftSettingPage_Advanced_ProjectInfo_Subtitle));
+        AddReadOnlyMetadata(ppb, "ProjectInfo.Name", Localized.DraftSettingPage_Advanced_ProjectName, info.ProjectName);
+        AddReadOnlyMetadata(ppb, "ProjectInfo.Id", Localized.DraftSettingPage_Advanced_ProjectId,
+            info.ProjectUniqueId == Guid.Empty ? Localized.DraftSettingPage_Advanced_None : info.ProjectUniqueId.ToString("D"));
+        AddReadOnlyMetadata(ppb, "ProjectInfo.OwnerUserID", Localized.DraftSettingPage_Advanced_ProjectInfo_OwnerUserID,
+            info.Properties.TryGetValue("OwnerUserID", out var ownerUserId) && Guid.TryParse(ownerUserId, out var ownerGuid) ? ownerGuid.ToString("D") : Localized.DraftSettingPage_Advanced_None);
+        AddReadOnlyMetadata(ppb, "ProjectInfo.DraftSettingPage_Advanced_ProjectInfo_Encrypted", Localized.DraftSettingPage_Advanced_ProjectInfo_Encrypted,
+            info.Properties.TryGetValue("DraftSettingPage_Advanced_ProjectInfo_Encrypted", out var enc) && bool.TryParse(enc, out var isEncrypted) && isEncrypted ? Localized.DraftSettingPage_Advanced_Enabled : Localized.DraftSettingPage_Advanced_Disabled);
+        AddReadOnlyMetadata(ppb, "ProjectInfo.LastChanged", Localized.DraftSettingPage_Advanced_LastChanged,
+            info.LastChanged?.ToString("G") ?? Localized.DraftSettingPage_Advanced_None);
+        AddReadOnlyMetadata(ppb, "ProjectInfo.LastClient", Localized.DraftSettingPage_Advanced_LastClient,
+            $"{info.LastOpenAppName} {info.LastOpenAppVersion}{Environment.NewLine}{info.LastOpenAppIdentifier}{Environment.NewLine}API Base {info.LastOpenAPIBaseVersion}");
+
+        AddReadOnlyMetadata(ppb, "ProjectInfo.PluginsUsed", Localized.DraftSettingPage_Advanced_PluginsUsed,
+            JoinMetadata(info.PluginUsed?.Where(c => !string.IsNullOrWhiteSpace(c))));
+        AddReadOnlyMetadata(ppb, "ProjectInfo.ProjectPlugins", Localized.DraftSettingPage_Advanced_ProjectPlugins,
+            JoinMetadata(info.ProjectPlugins?.Where(c => !string.IsNullOrWhiteSpace(c.PluginId)).Select(c =>
+                $"{c.PluginId} · {(c.Enabled ? Localized.DraftSettingPage_Advanced_Enabled : Localized.DraftSettingPage_Advanced_Disabled)} · {c.Capabilities}")));
+
+        ppb.AddSeparator();
+
+        foreach (var kv in info.Properties)
+        {
+            AddReadOnlyMetadata(ppb, $"DictProp_{kv.Key}", kv.Key, kv.Value);
+        }
+
+    }
+
+    private static void AddReadOnlyMetadata(PropertyPanelBuilder ppb, string id, string title, string? value) =>
+        ppb.AddText(new SingleLineLabel(title), new Label
+        {
+            Text = string.IsNullOrWhiteSpace(value) ? Localized.DraftSettingPage_Advanced_None : value,
+            LineBreakMode = LineBreakMode.WordWrap,
+            HorizontalOptions = LayoutOptions.Fill,
+            StyleId = "SelectableLabel"
+        }, id);
+
+    private static string JoinMetadata(IEnumerable<string>? values)
+    {
+        var items = values?.Distinct(StringComparer.Ordinal).ToArray() ?? [];
+        return items.Length == 0 ? Localized.DraftSettingPage_Advanced_None : string.Join(Environment.NewLine, items);
     }
     #endregion
 
@@ -1010,7 +1145,7 @@ public class DraftSettingPage
 
     internal List<SaveSlotHistoryItem> ReadSaveSlotHistory()
     {
-        if (string.IsNullOrWhiteSpace(parent.WorkingPath))
+        if (parent is null || string.IsNullOrWhiteSpace(parent.WorkingPath))
         {
             return [];
         }
@@ -1720,6 +1855,10 @@ public class DraftSettingPage
             case "enableHDR":
                 if (e.Value is bool b)
                     parent.ProjectInfo.Properties["EnableHDR"] = b.ToString();
+                break;
+            case "writeCoverAsFirstFrame":
+                if (e.Value is bool writeCover)
+                    parent.ProjectInfo.Properties[WriteCoverAsFirstFrameProperty] = writeCover.ToString();
                 break;
             case "sdrClipBrightness":
                 try

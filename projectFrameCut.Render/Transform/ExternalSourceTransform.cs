@@ -21,7 +21,6 @@ namespace projectFrameCut.Render.Transform
         public Guid BindedRightClip { get; set; }
         public uint Duration { get; set; }
 
-        public string? NeedComputer => null;
 
         public string SourcePath { get; set; }
         [JsonIgnore]
@@ -33,6 +32,6 @@ namespace projectFrameCut.Render.Transform
             source = PluginManager.CreateVideoSource(SourcePath);
         }
 
-        public IPicture GetFrame(IPicture left, IPicture right, double progress, IComputer? computer, int targetWidth, int targetHeight) => source.GetFrame((uint)(progress * source.TotalFrames)).Resize(targetWidth, targetHeight, true);
+        public IPicture GetFrame(IPicture left, IPicture right, double progress, int targetWidth, int targetHeight) => source.GetFrame((uint)(progress * source.TotalFrames)).Resize(targetWidth, targetHeight, true);
     }
 }

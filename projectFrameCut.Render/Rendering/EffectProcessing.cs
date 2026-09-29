@@ -68,8 +68,7 @@ namespace projectFrameCut.Render.Rendering
                 }
             }
 
-            var computer = PluginManager.CreateComputer(ClassicOverlayMixture.ComputerId, false);
-            var result = ClassicOverlayMixture.Default.Mix(src, overlay, computer, overlay.BitPerPixel);
+            var result = ClassicOverlayMixture.Default.Mix(src, overlay, overlay.BitPerPixel);
             sw.Stop();
             result.ProcessStack = new List<PictureProcessStack>(src.ProcessStack)
             {

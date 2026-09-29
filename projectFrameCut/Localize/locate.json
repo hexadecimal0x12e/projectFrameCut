@@ -4211,8 +4211,32 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "\u5DF2\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "\u5DF2\u7981\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftSettingPage_Advanced_DiscardSaveSlots",
-        "Value": "\u6E05\u9664\u4FDD\u5B58\u69FD\u4F4D",
+        "Value": "\u91CD\u7F6E\u5386\u53F2\u8BB0\u5F55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_DiscardSystemOptions",
+        "Value": "\u5B8C\u5168\u91CD\u7F6E\u9879\u76EE\u5C5E\u6027\uFF08\u53EF\u80FD\u9020\u6210\u610F\u6599\u5916\u7684\u95EE\u9898\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4227,6 +4251,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "\u5DF2\u542F\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftSettingPage_Advanced_ForceUpgrade",
         "Value": "\u5F3A\u5236\u5347\u7EA7\u9879\u76EE\u5143\u6570\u636E",
         "Mode": "ConstString",
@@ -4235,8 +4267,96 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "\u4E0A\u6B21\u4FEE\u6539\u65F6\u95F4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "\u4E0A\u4E00\u6B21\u6253\u5F00\u7684\u5BA2\u6237\u7AEF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "\u65E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "\u5185\u5BB9\u4F7F\u7528\u7684\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "\u9879\u76EE\u552F\u4E00 ID",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "\u9879\u76EE\u4FE1\u606F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Encrypted",
+        "Value": "\u9879\u76EE\u52A0\u5BC6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_OwnerUserID",
+        "Value": "\u9879\u76EE\u62E5\u6709\u8005 (\u7528\u6237ID)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "\u8FD9\u4E9B\u503C\u7531\u7CFB\u7EDF\u914D\u7F6E\uFF0C\u4F60\u4E0D\u53EF\u4FEE\u6539\uFF0C\u4F46\u662F\u6709\u65F6\u5019\u4F60\u53EF\u80FD\u9700\u8981\u4ED6\u4EEC\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "\u9879\u76EE\u540D\u79F0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "\u9879\u76EE\u643A\u5E26\u7684\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftSettingPage_Advanced_ReloadHistory",
-        "Value": "\u5237\u65B0\u5386\u53F2\u8BB0\u5F55",
+        "Value": "\u91CD\u5EFA\u5386\u53F2\u8BB0\u5F55",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4289,6 +4409,62 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u4E0D\u7528\u7FFB\u8BD1\u0022yes\u0022\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "\u5C01\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "\u6E05\u9664\u81EA\u5B9A\u4E49\u5C01\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "\u672A\u8BBE\u7F6E\u81EA\u5B9A\u4E49\u5C01\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "\u9009\u62E9\u56FE\u7247\u4F5C\u4E3A\u9879\u76EE\u7F29\u7565\u56FE\uFF1B\u672A\u8BBE\u7F6E\u65F6\u4F7F\u7528\u7B2C\u4E00\u5E27\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "\u9009\u62E9\u9879\u76EE\u5C01\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "\u9009\u62E9\u5C01\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "\u5C06\u5C01\u9762\u5199\u5165\u89C6\u9891\u7B2C\u4E00\u5E27",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {
@@ -9142,6 +9318,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "UserDataManagePage_CategoryUnspecified",
+        "Value": "\u5176\u4ED6\uFF08\u7528\u6237\u6570\u636E\u76EE\u5F55\u4E0B\u7684\u975E\u6570\u636E\u6587\u4EF6\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "UserDataManagePage_Clear",
         "Value": "\u6E05\u7406",
         "Mode": "ConstString",
@@ -9880,8 +10064,16 @@
         "DontTranslate": false
       },
       {
-        "Id": "UserDataManagePage_CategoryUnspecified",
-        "Value": "\u5176\u4ED6\uFF08\u7528\u6237\u6570\u636E\u76EE\u5F55\u4E0B\u7684\u975E\u6570\u636E\u6587\u4EF6\uFF09",
+        "Id": "DraftSettingPage_General_TargetSize",
+        "Value": "\u8F93\u51FA\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_TargetSize_Description",
+        "Value": "\u914D\u7F6E\u9879\u76EE\u7684\u76EE\u6807\u5C3A\u5BF8\u548C\u5BFC\u51FA\u6A21\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20560,6 +20752,158 @@
       {
         "Id": "UserDataManagePage_CategoryAssets",
         "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "Cover",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "Choose an image to use as the project thumbnail. The first frame is used when none is selected.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "No custom cover selected",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "Select cover",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "Clear custom cover",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "Select project cover",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "Write cover as first video frame",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectId()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastChanged()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastClient()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_PluginsUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Enabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Configured()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31256,6 +31600,158 @@
       {
         "Id": "UserDataManagePage_CategoryAssets",
         "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "\u5C01\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "\u9078\u64C7\u5716\u7247\u4F5C\u70BA\u5C08\u6848\u7E2E\u5716\uFF1B\u672A\u8A2D\u5B9A\u6642\u4F7F\u7528\u7B2C\u4E00\u5E40\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "\u672A\u8A2D\u5B9A\u81EA\u8A02\u5C01\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "\u9078\u64C7\u5C01\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "\u6E05\u9664\u81EA\u8A02\u5C01\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "\u9078\u64C7\u5C08\u6848\u5C01\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "\u5C07\u5C01\u9762\u5BEB\u5165\u5F71\u7247\u7B2C\u4E00\u5E40",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectId()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastChanged()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastClient()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_PluginsUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Enabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Configured()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -41962,6 +42458,158 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "\u30AB\u30D0\u30FC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306E\u30B5\u30E0\u30CD\u30A4\u30EB\u306B\u4F7F\u3046\u753B\u50CF\u3092\u9078\u629E\u3057\u307E\u3059\u3002\u672A\u8A2D\u5B9A\u306E\u5834\u5408\u306F\u5148\u982D\u30D5\u30EC\u30FC\u30E0\u3092\u4F7F\u7528\u3057\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "\u30AB\u30B9\u30BF\u30E0\u30AB\u30D0\u30FC\u306F\u8A2D\u5B9A\u3055\u308C\u3066\u3044\u307E\u305B\u3093",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "\u30AB\u30D0\u30FC\u3092\u9078\u629E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "\u30AB\u30B9\u30BF\u30E0\u30AB\u30D0\u30FC\u3092\u89E3\u9664",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306E\u30AB\u30D0\u30FC\u3092\u9078\u629E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "\u30AB\u30D0\u30FC\u3092\u52D5\u753B\u306E\u5148\u982D\u30D5\u30EC\u30FC\u30E0\u306B\u66F8\u304D\u8FBC\u3080",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectId()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastChanged()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastClient()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_PluginsUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Enabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Configured()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -52649,6 +53297,158 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "\uD45C\uC9C0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "\uD504\uB85C\uC81D\uD2B8 \uC378\uB124\uC77C\uB85C \uC0AC\uC6A9\uD560 \uC774\uBBF8\uC9C0\uB97C \uC120\uD0DD\uD569\uB2C8\uB2E4. \uC120\uD0DD\uD558\uC9C0 \uC54A\uC73C\uBA74 \uCCAB \uD504\uB808\uC784\uC744 \uC0AC\uC6A9\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "\uC0AC\uC6A9\uC790 \uC9C0\uC815 \uD45C\uC9C0\uAC00 \uC120\uD0DD\uB418\uC9C0 \uC54A\uC74C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "\uD45C\uC9C0 \uC120\uD0DD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "\uC0AC\uC6A9\uC790 \uC9C0\uC815 \uD45C\uC9C0 \uC9C0\uC6B0\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "\uD504\uB85C\uC81D\uD2B8 \uD45C\uC9C0 \uC120\uD0DD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "\uD45C\uC9C0\uB97C \uB3D9\uC601\uC0C1\uC758 \uCCAB \uD504\uB808\uC784\uC73C\uB85C \uC4F0\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectId()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastChanged()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastClient()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_PluginsUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Enabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Configured()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -63330,6 +64130,158 @@
       {
         "Id": "UserDataManagePage_CategoryAssets",
         "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "Couverture",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "Choisissez une image comme miniature du projet. Sans s\u00E9lection, la premi\u00E8re image sera utilis\u00E9e.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "Aucune couverture personnalis\u00E9e s\u00E9lectionn\u00E9e",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "S\u00E9lectionner une couverture",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "Effacer la couverture personnalis\u00E9e",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "S\u00E9lectionner la couverture du projet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "Ins\u00E9rer la couverture comme premi\u00E8re image de la vid\u00E9o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectId()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastChanged()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastClient()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_PluginsUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Enabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Configured()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -74028,6 +74980,158 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "\u0627\u0644\u063A\u0644\u0627\u0641",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "\u0627\u062E\u062A\u0631 \u0635\u0648\u0631\u0629 \u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0647\u0627 \u0643\u0635\u0648\u0631\u0629 \u0645\u0635\u063A\u0631\u0629 \u0644\u0644\u0645\u0634\u0631\u0648\u0639\u061B \u0639\u0646\u062F \u0639\u062F\u0645 \u0627\u0644\u062A\u0639\u064A\u064A\u0646\u060C \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0625\u0637\u0627\u0631 \u0627\u0644\u0623\u0648\u0644.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "\u0644\u0645 \u064A\u062A\u0645 \u062A\u0639\u064A\u064A\u0646 \u063A\u0644\u0627\u0641 \u0645\u062E\u0635\u0635",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "\u0627\u062E\u062A\u064A\u0627\u0631 \u063A\u0644\u0627\u0641",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "\u0645\u0633\u062D \u0627\u0644\u063A\u0644\u0627\u0641 \u0627\u0644\u0645\u062E\u0635\u0635",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "\u0627\u062E\u062A\u064A\u0627\u0631 \u063A\u0644\u0627\u0641 \u0627\u0644\u0645\u0634\u0631\u0648\u0639",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "\u0643\u062A\u0627\u0628\u0629 \u0627\u0644\u063A\u0644\u0627\u0641 \u0643\u0627\u0644\u0625\u0637\u0627\u0631 \u0627\u0644\u0623\u0648\u0644 \u0644\u0644\u0641\u064A\u062F\u064A\u0648",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectId()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastChanged()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastClient()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_PluginsUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Enabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Configured()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -84721,6 +85825,158 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "Cover",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "W\u00E4hlen Sie ein Bild als Projektminiatur aus. Ohne Auswahl wird das erste Bild verwendet.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "Kein benutzerdefiniertes Cover ausgew\u00E4hlt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "Cover ausw\u00E4hlen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "Benutzerdefiniertes Cover entfernen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "Projektcover ausw\u00E4hlen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "Cover als erstes Videobild verwenden",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectId()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastChanged()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastClient()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_PluginsUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Enabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Configured()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -95406,6 +96662,158 @@
       {
         "Id": "UserDataManagePage_CategoryAssets",
         "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "Portada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "Elige una imagen como miniatura del proyecto. Si no eliges ninguna, se usar\u00E1 el primer fotograma.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "No se ha seleccionado una portada personalizada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "Seleccionar portada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "Quitar portada personalizada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "Seleccionar portada del proyecto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "Escribir la portada como primer fotograma del v\u00EDdeo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectId()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastChanged()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastClient()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_PluginsUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Enabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Configured()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -106104,6 +107512,158 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "Copertina",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "Scegli una immagine come miniatura del progetto. Se non ne scegli una, verr\u00E0 usato il primo fotogramma.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "Nessuna copertina personalizzata selezionata",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "Seleziona copertina",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "Rimuovi copertina personalizzata",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "Seleziona la copertina del progetto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "Inserisci la copertina come primo fotogramma del video",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectId()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastChanged()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastClient()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_PluginsUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Enabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Configured()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -116787,6 +118347,158 @@
       {
         "Id": "UserDataManagePage_CategoryAssets",
         "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "Ok\u0142adka",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "Wybierz obraz jako miniatur\u0119 projektu. Je\u015Bli go nie wybierzesz, zostanie u\u017Cyta pierwsza klatka.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "Nie wybrano niestandardowej ok\u0142adki",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "Wybierz ok\u0142adk\u0119",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "Usu\u0144 niestandardow\u0105 ok\u0142adk\u0119",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "Wybierz ok\u0142adk\u0119 projektu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "Zapisz ok\u0142adk\u0119 jako pierwsz\u0105 klatk\u0119 filmu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectId()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastChanged()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastClient()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_PluginsUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Enabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Configured()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -127476,6 +129188,158 @@
       {
         "Id": "UserDataManagePage_CategoryAssets",
         "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "Capa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "Escolha uma imagem como miniatura do projeto. Se nenhuma for escolhida, o primeiro quadro ser\u00E1 usado.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "Nenhuma capa personalizada selecionada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "Selecionar capa",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "Limpar capa personalizada",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "Selecionar capa do projeto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "Gravar a capa como primeiro quadro do v\u00EDdeo",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectId()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastChanged()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastClient()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_PluginsUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Enabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Configured()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -138172,6 +140036,158 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "\u041E\u0431\u043B\u043E\u0436\u043A\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0438\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0435 \u0434\u043B\u044F \u043C\u0438\u043D\u0438\u0430\u0442\u044E\u0440\u044B \u043F\u0440\u043E\u0435\u043A\u0442\u0430. \u0415\u0441\u043B\u0438 \u0438\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0435 \u043D\u0435 \u0432\u044B\u0431\u0440\u0430\u043D\u043E, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442\u0441\u044F \u043F\u0435\u0440\u0432\u044B\u0439 \u043A\u0430\u0434\u0440.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "\u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0430\u044F \u043E\u0431\u043B\u043E\u0436\u043A\u0430 \u043D\u0435 \u0432\u044B\u0431\u0440\u0430\u043D\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "\u0412\u044B\u0431\u0440\u0430\u0442\u044C \u043E\u0431\u043B\u043E\u0436\u043A\u0443",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0443\u044E \u043E\u0431\u043B\u043E\u0436\u043A\u0443",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "\u0412\u044B\u0431\u0440\u0430\u0442\u044C \u043E\u0431\u043B\u043E\u0436\u043A\u0443 \u043F\u0440\u043E\u0435\u043A\u0442\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u043E\u0431\u043B\u043E\u0436\u043A\u0443 \u043A\u0430\u043A \u043F\u0435\u0440\u0432\u044B\u0439 \u043A\u0430\u0434\u0440 \u0432\u0438\u0434\u0435\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectId()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastChanged()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastClient()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_PluginsUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Enabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Configured()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -148856,6 +150872,158 @@
       {
         "Id": "UserDataManagePage_CategoryAssets",
         "Value": "Unset localization item:UserDataManagePage_CategoryAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover",
+        "Value": "Kapak",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Description",
+        "Value": "Proje k\u00FC\u00E7\u00FCk resmi olarak kullan\u0131lacak bir g\u00F6rsel se\u00E7in. Se\u00E7ilmezse ilk kare kullan\u0131l\u0131r.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Default",
+        "Value": "\u00D6zel kapak se\u00E7ilmedi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Select",
+        "Value": "Kapak se\u00E7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_Clear",
+        "Value": "\u00D6zel kapa\u011F\u0131 temizle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_PickerTitle",
+        "Value": "Proje kapa\u011F\u0131n\u0131 se\u00E7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_General_Cover_WriteAsFirstFrame",
+        "Value": "Kapa\u011F\u0131 videonun ilk karesi olarak yaz",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectInfo_Subtitle",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectInfo_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectName",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectId",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectId()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastChanged",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastChanged()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_LastClient",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_LastClient()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_PluginsUsed",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_PluginsUsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_ProjectPlugins",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_ProjectPlugins()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_None",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Enabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Enabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Disabled",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_Configured",
+        "Value": "Unset localization item:DraftSettingPage_Advanced_Configured()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

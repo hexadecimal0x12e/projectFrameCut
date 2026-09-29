@@ -11,23 +11,29 @@ namespace projectFrameCut.Render.PluginIsolation;
 
 internal static class RemoteEffectFactory
 {
-    public static IEffect Create(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) => descriptor.EffectType switch
+    public static IEffect Create(IPluginIsolationSession session, IsolationEffectDescriptor descriptor, Dictionary<string, Func<object>>? dynamicGetters = null)
     {
-        (int)EffectType.NormalEffect when descriptor.IsColorAdjust => new RemoteColorAdjustEffect(session, descriptor),
-        (int)EffectType.NormalEffect => new RemoteNormalEffect(session, descriptor),
-        (int)EffectType.ContinuousEffect => new RemoteContinuousEffect(session, descriptor),
-        (int)EffectType.MixtureProvider => new RemoteMixture(session, descriptor),
-        (int)EffectType.SourceReplacement => new RemoteSourceReplacementEffect(session, descriptor),
-        (int)EffectType.AudioNormalEffect => new RemoteAudioNormalEffect(session, descriptor),
-        (int)EffectType.AudioContinuousEffect => new RemoteAudioContinuousEffect(session, descriptor),
-        (int)EffectType.TextEffect => new RemoteTextEffect(session, descriptor),
-        (int)EffectType.ContinuousTextEffect => new RemoteContinuousTextEffect(session, descriptor),
-        (int)EffectType.SpeedVarianceProvider => new RemoteSpeedVarianceProvider(session, descriptor),
-        (int)EffectType.ClipPositionProvider => new RemoteClipPositionProvider(session, descriptor),
-        (int)EffectType.ContinuousClipPositionProvider => new RemoteContinuousClipPositionProvider(session, descriptor),
-        (int)EffectType.NonIPictureOutputValueProvider => new RemoteValueProviderEffect(session, descriptor),
-        _ => throw new NotSupportedException($"Remote effect kind '{descriptor.EffectType}' is not supported."),
-    };
+        IEffect effect = descriptor.EffectType switch
+        {
+            (int)EffectType.NormalEffect when descriptor.IsColorAdjust => new RemoteColorAdjustEffect(session, descriptor),
+            (int)EffectType.NormalEffect => new RemoteNormalEffect(session, descriptor),
+            (int)EffectType.ContinuousEffect => new RemoteContinuousEffect(session, descriptor),
+            (int)EffectType.MixtureProvider => new RemoteMixture(session, descriptor),
+            (int)EffectType.SourceReplacement => new RemoteSourceReplacementEffect(session, descriptor),
+            (int)EffectType.AudioNormalEffect => new RemoteAudioNormalEffect(session, descriptor),
+            (int)EffectType.AudioContinuousEffect => new RemoteAudioContinuousEffect(session, descriptor),
+            (int)EffectType.TextEffect => new RemoteTextEffect(session, descriptor),
+            (int)EffectType.ContinuousTextEffect => new RemoteContinuousTextEffect(session, descriptor),
+            (int)EffectType.SpeedVarianceProvider => new RemoteSpeedVarianceProvider(session, descriptor),
+            (int)EffectType.ClipPositionProvider => new RemoteClipPositionProvider(session, descriptor),
+            (int)EffectType.ContinuousClipPositionProvider => new RemoteContinuousClipPositionProvider(session, descriptor),
+            (int)EffectType.NonIPictureOutputValueProvider => new RemoteValueProviderEffect(session, descriptor),
+            _ => throw new NotSupportedException($"Remote effect kind '{descriptor.EffectType}' is not supported."),
+        };
+        if (effect is RemoteEffectBase remote && dynamicGetters is not null)
+            remote.SetDynamicGetters(dynamicGetters);
+        return effect;
+    }
 }
 
 internal sealed class RemoteAudioNormalEffect(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) : RemoteEffectBase(session, descriptor), IAudioNormalEffect
@@ -159,6 +165,7 @@ internal abstract class RemoteEffectBase : IEffect
     protected readonly IPluginIsolationSession Session;
     protected readonly long ObjectId;
     protected readonly List<string> DynamicProviderIds;
+    private Dictionary<string, Func<object>> _dynamicGetters = [];
 
     protected RemoteEffectBase(IPluginIsolationSession session, IsolationEffectDescriptor descriptor)
     {
@@ -175,7 +182,6 @@ internal abstract class RemoteEffectBase : IEffect
         Index = descriptor.Index;
         IsReorderable = descriptor.IsReorderable;
         CanProcessFromCanvas = descriptor.CanProcessFromCanvas;
-        NeedComputer = string.IsNullOrWhiteSpace(descriptor.NeedComputer) ? null : descriptor.NeedComputer;
         RelativeWidth = descriptor.RelativeWidth;
         RelativeHeight = descriptor.RelativeHeight;
         Parameters = descriptor.Parameters.ToDictionary(x => x.Key, x => IsolationValueConverter.ToObject(x.Value)!);
@@ -192,20 +198,38 @@ internal abstract class RemoteEffectBase : IEffect
     public int Index { get; set; }
     public bool IsReorderable { get; }
     public bool CanProcessFromCanvas { get; }
-    public string? NeedComputer { get; }
     public int RelativeWidth { get; set; }
     public int RelativeHeight { get; set; }
     public string? BindedEffectProvidingSystemID { get; set; }
 
     public IEffect WithParameters(Dictionary<string, object> parameters)
     {
+        var dynamicParameters = new Dictionary<string, string>();
+        var dynamicGetters = new Dictionary<string, Func<object>>();
+        var staticParameters = new Dictionary<string, IsolationValue>();
+        foreach (var item in parameters)
+        {
+            if (item.Value is Func<object> getter)
+            {
+                var id = Guid.NewGuid().ToString();
+                dynamicParameters[item.Key] = id;
+                dynamicGetters[id] = getter;
+            }
+            else
+            {
+                staticParameters[item.Key] = IsolationValueConverter.FromObject(item.Value);
+            }
+        }
         var descriptor = Invoke<IsolationCloneEffectRequest, IsolationEffectDescriptor>(RenderOperation.IsolationCloneEffect, new()
         {
             ObjectId = ObjectId,
-            Parameters = parameters.ToDictionary(x => x.Key, x => IsolationValueConverter.FromObject(x.Value)),
+            Parameters = staticParameters,
+            DynamicParameters = dynamicParameters,
         });
-        return RemoteEffectFactory.Create(Session, descriptor);
+        return RemoteEffectFactory.Create(Session, descriptor, dynamicGetters);
     }
+
+    internal void SetDynamicGetters(Dictionary<string, Func<object>> getters) => _dynamicGetters = getters;
 
     protected IPicture Process(RenderOperation operation, IsolationEffectFrameRequest request, IPicture fallback)
     {
@@ -231,7 +255,7 @@ internal abstract class RemoteEffectBase : IEffect
         catch (Exception ex)
         {
             projectFrameCut.Shared.Logger.Log(ex, $"Run isolated effect '{TypeName}'", this);
-            return fallback;
+            throw;
         }
         finally
         {
@@ -245,7 +269,7 @@ internal abstract class RemoteEffectBase : IEffect
     {
         foreach (var id in DynamicProviderIds)
         {
-            var value = ValueProviderFrameContext.Get(id);
+            var value = _dynamicGetters.TryGetValue(id, out var getter) ? getter() : ValueProviderFrameContext.Get(id);
             if (value is null) continue;
             if (value is IPicture picture)
             {
@@ -279,13 +303,13 @@ internal abstract class RemoteEffectBase : IEffect
 
 internal sealed class RemoteNormalEffect(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) : RemoteEffectBase(session, descriptor), INormalEffect
 {
-    public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+    public IPicture Render(IPicture source, int targetWidth, int targetHeight)
         => Process(RenderOperation.IsolationProcessNormalEffect, IsolationEffectFrameRequestFactory.Create(source, targetWidth, targetHeight), source);
 }
 
 internal sealed class RemoteColorAdjustEffect(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) : RemoteEffectBase(session, descriptor), IColorAdjustEffect
 {
-    public IPicture Process(IPicture source, IComputer? computer)
+    public IPicture Process(IPicture source)
         => Process(RenderOperation.IsolationProcessNormalEffect, IsolationEffectFrameRequestFactory.Create(source, source.Width, source.Height), source);
 }
 
@@ -302,7 +326,7 @@ internal sealed class RemoteContinuousEffect : RemoteEffectBase, IContinuousEffe
     public int EndPoint { get; set; }
     public bool IsScoped { get; set; }
 
-    public IPicture Render(IPicture source, float progress, IComputer? computer, int targetWidth, int targetHeight)
+    public IPicture Render(IPicture source, float progress, int targetWidth, int targetHeight)
     {
         var request = IsolationEffectFrameRequestFactory.Create(source, targetWidth, targetHeight);
         request.Progress = progress;
@@ -312,14 +336,14 @@ internal sealed class RemoteContinuousEffect : RemoteEffectBase, IContinuousEffe
 
 internal sealed class RemoteMixture(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) : RemoteEffectBase(session, descriptor), IMixture
 {
-    public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)
+    public IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB)
     {
         var request = IsolationEffectFrameRequestFactory.Create(basePicture, basePicture.Width, basePicture.Height, topPicture);
         request.TargetPixelMode = targetPPB.Value;
         return Process(RenderOperation.IsolationProcessMixture, request, basePicture);
     }
 
-    public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB, int topStartX, int topStartY, int targetWidth, int targetHeight)
+    public IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB, int topStartX, int topStartY, int targetWidth, int targetHeight)
     {
         var request = IsolationEffectFrameRequestFactory.Create(basePicture, targetWidth, targetHeight, topPicture);
         request.TargetPixelMode = targetPPB.Value;
@@ -353,7 +377,7 @@ internal sealed class RemoteSourceReplacementEffect : RemoteEffectBase, ISourceR
         catch { return false; }
     }
 
-    public IPicture Compute(IClip input, IComputer? computer, IPicture source, int targetWidth, int targetHeight, uint targetFrame, IPicture.PicturePixelMode targetPPB)
+    public IPicture Compute(IClip input, IPicture source, int targetWidth, int targetHeight, uint targetFrame, IPicture.PicturePixelMode targetPPB)
     {
         var request = IsolationEffectFrameRequestFactory.Create(source, targetWidth, targetHeight);
         request.TargetFrame = targetFrame;

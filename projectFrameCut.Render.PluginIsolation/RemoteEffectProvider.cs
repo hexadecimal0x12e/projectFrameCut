@@ -1,5 +1,6 @@
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.PluginIsolation;
@@ -25,7 +26,6 @@ public sealed class RemoteEffectProvider : IEffectProvider
         Fields = descriptor.InputFields
             .Where(x => !((EffectArgumentFieldType)x.FieldType).HasFlag(EffectArgumentFieldType.IPicture))
             .ToDictionary(x => x.Id, ToField);
-        SupportsImplementTypes = descriptor.SupportedImplementTypes.Select(x => (EffectImplementType)x).ToArray();
         DefaultImplementType = (EffectImplementType)descriptor.DefaultImplementType;
     }
 
@@ -41,21 +41,24 @@ public sealed class RemoteEffectProvider : IEffectProvider
     public Dictionary<string, string> AnchorsBindingState { get; set; } = [];
     public Dictionary<string, IEffectArgumentField> Fields { get; set; }
     public Dictionary<string, object> MetaData { get; set; } = [];
-    public EffectImplementType[] SupportsImplementTypes { get; }
+    public EffectImplementType[] SupportsImplementTypes => IPluginBase.EffectImplementations.GetImplementTypes(TypeName);
     public EffectImplementType DefaultImplementType { get; }
 
     public IEffect[] Build()
     {
-        var leases = new List<IsolationPayloadLease>();
-        try
+        var requested = DefaultImplementType;
+        if (MetaData.Remove(EffectProviderBase.ImplementTypeParameterKey, out var raw))
         {
-            var response = Invoke<IsolationBuildProviderRequest, IsolationEffectList>(RenderOperation.IsolationBuildProvider, new() { Provider = CreateState(leases) });
-            return response.Effects.Select(x => RemoteEffectFactory.Create(_session, x)).ToArray();
+            if (raw is EffectImplementType value) requested = value;
+            else if (Enum.TryParse(raw?.ToString(), true, out EffectImplementType parsed)) requested = parsed;
         }
-        finally
-        {
-            foreach (var lease in leases) lease.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        }
+        var parameters = Fields
+            .Where(x => !x.Value.FieldType.HasFlag(EffectArgumentFieldType.IPicture))
+            .ToDictionary(x => x.Key, x => x.Value.IsDynamicAtRenderTime ? (object)x.Value.GetGetter() : x.Value.GetGetter()());
+        var typeName = TypeName == "Crop" && MetaData.ContainsKey(IEffectProvider.IsContinuousEffectParameterKey)
+            ? "ProgressCrop"
+            : TypeName;
+        return [IPluginBase.EffectImplementations.Create(typeName, requested, DefaultImplementType, parameters)];
     }
 
     public IEffect RestoreInstance(EffectImplementType implementType, Dictionary<string, object>? parameters = null)

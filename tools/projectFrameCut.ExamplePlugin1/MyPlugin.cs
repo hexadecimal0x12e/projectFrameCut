@@ -49,6 +49,12 @@ public class MyPlugin : IPluginBase
         ["ExampleInvert"] = () => new ExampleInvertEffectProvider()
     };
 
+    public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider =>
+        new Dictionary<EffectImplementationKey, Func<IEffect>>
+        {
+            [new("ExampleInvert", EffectImplementType.IPicture)] = () => new ExampleInvertEffect()
+        };
+
     public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new()
     {
         ["ExampleToneTrack"] = (id, name) => new ExampleToneTrack(id, name)
@@ -57,11 +63,6 @@ public class MyPlugin : IPluginBase
     public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider => new()
     {
         ["ExampleCrossfade"] = (left, right) => new ExampleCrossfadeTransform(left, right)
-    };
-
-    public Dictionary<string, Func<IComputer>> ComputerProvider => new()
-    {
-        ["ExampleAddComputer"] = () => new ExampleAddComputer()
     };
 
     public Dictionary<string, IVideoSource> VideoSourceProvider => new()

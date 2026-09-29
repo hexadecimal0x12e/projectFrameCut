@@ -10,7 +10,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <returns>the updated entries.</returns>
         public TextEntry[] Process(TextEntry[] source);
 
-        string? IEffect.NeedComputer => null;
         EffectType IEffect.TypeOfEffect => EffectType.TextEffect;
     }
     public interface IContinuousTextEffect : IEffect
@@ -27,7 +26,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <returns>the updated entries.</returns>
         public TextEntry[] Process(TextEntry[] source, float progress);
 
-        string? IEffect.NeedComputer => null;
         EffectType IEffect.TypeOfEffect => EffectType.ContinuousTextEffect;
     }
 }

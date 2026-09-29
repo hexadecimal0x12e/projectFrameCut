@@ -1,6 +1,7 @@
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -53,7 +54,7 @@ namespace projectFrameCut.Render.Effect
             };
         }
 
-        void IEffect.Initialize()
+        void IExtensibleObject.Initialize()
         {
             if (ProgressList is null || ProgressList.Count <= 1)
             {
