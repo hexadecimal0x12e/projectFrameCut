@@ -306,9 +306,6 @@
 		<MauiXaml Update="DraftStuff\ProjectAddClipView.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
-		<MauiXaml Update="VectorContent\VectorContentEditorPage.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
 		<MauiXaml Update="HomePage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
@@ -371,9 +368,6 @@
 		</Compile>
 		<Compile Update="TestPage.xaml.cs">
 			<DependentUpon>TestPage.xaml</DependentUpon>
-		</Compile>
-		<Compile Update="VectorContent\VectorContentEditorPage.xaml.cs">
-			<DependentUpon>VectorContentEditorPage.xaml</DependentUpon>
 		</Compile>
 	</ItemGroup>
 

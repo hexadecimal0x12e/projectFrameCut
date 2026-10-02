@@ -72,7 +72,6 @@ internal static class ProjectModeEditingService
             "updateVectorComponent" => UpdateVectorComponent(workspace, arguments),
             "removeVectorComponent" => RemoveVectorComponent(workspace, arguments),
             "replaceVectorComponents" => ReplaceVectorComponents(workspace, arguments),
-            "setVectorComponentKeyframes" => SetVectorComponentKeyframes(workspace, arguments),
             "addEffectProvider" => AddEffectProvider(workspace, arguments),
             "updateEffectProvider" => UpdateEffectProvider(workspace, arguments),
             "removeEffectProvider" => RemoveEffectProvider(workspace, arguments),
@@ -291,27 +290,6 @@ internal static class ProjectModeEditingService
         EnsureUniqueComponentIds(components);
         WriteVectorComponents(clip, components);
         return new { clipId = clip.Id, components, count = components.Count };
-    }
-
-    private static object SetVectorComponentKeyframes(TimelineProjectWorkspace workspace, JsonElement arguments)
-    {
-        ClipDraftDTO clip = FindClip(workspace.Draft, arguments);
-        EnsureClipType(clip, ClipMode.VectorCanvasClip);
-        Guid componentId = RequiredGuid(arguments, "componentId");
-        string fieldId = RequiredString(arguments, "fieldId");
-        List<VectorAnimationKeyFrame> frames = Required<List<VectorAnimationKeyFrame>>(arguments, "keyframes");
-        ValidateKeyframes(frames, fieldId);
-        var components = ReadVectorComponents(clip);
-        int index = FindComponentIndex(components, componentId);
-        JsonElement componentJson = components[index];
-        var component = CreateComponent(componentJson);
-        if (!component.AnimatableFields.ContainsKey(fieldId))
-            throw new ArgumentException($"Vector component '{component.TypeName}' does not expose animatable field '{fieldId}'.");
-        component.AnimationFrames.RemoveAll(frame => string.Equals(frame.TargetFieldId, fieldId, StringComparison.Ordinal));
-        component.AnimationFrames.AddRange(frames.OrderBy(frame => frame.Time));
-        components[index] = SerializeComponent(component);
-        WriteVectorComponents(clip, components);
-        return new { clipId = clip.Id, componentId, fieldId, keyframes = frames };
     }
 
     private static object AddEffectProvider(TimelineProjectWorkspace workspace, JsonElement arguments)
@@ -694,7 +672,6 @@ internal static class ProjectModeEditingService
         SetCanonicalProperty(normalized, values, "Name", values.TryGetValue("name", out JsonNode? name) ? name?.DeepClone() : System.Text.Json.Nodes.JsonValue.Create(typeName));
         SetCanonicalProperty(normalized, values, "Index", values.TryGetValue("index", out JsonNode? index) ? index?.DeepClone() : System.Text.Json.Nodes.JsonValue.Create(0));
         SetCanonicalProperty(normalized, values, "Parameters", values.TryGetValue("parameters", out JsonNode? parameters) ? parameters?.DeepClone() : new JsonObject());
-        SetCanonicalProperty(normalized, values, "AnimationFrames", values.TryGetValue("animationFrames", out JsonNode? frames) ? frames?.DeepClone() : new JsonArray());
         return SerializeComponent(CreateComponent(JsonSerializer.SerializeToElement(normalized, ComponentJsonOptions)));
     }
 
@@ -736,17 +713,6 @@ internal static class ProjectModeEditingService
             if (!(item.TryGetProperty("Id", out var idValue) || item.TryGetProperty("id", out idValue)) || !idValue.TryGetGuid(out Guid id))
                 throw new ArgumentException("Every vector component requires a UUID id.");
             if (!ids.Add(id)) throw new ArgumentException($"Duplicate vector component id '{id}'.");
-        }
-    }
-
-    private static void ValidateKeyframes(IEnumerable<VectorAnimationKeyFrame> frames, string fieldId)
-    {
-        var times = new HashSet<float>();
-        foreach (var frame in frames)
-        {
-            if (frame.Time is < 0f or > 1f) throw new ArgumentOutOfRangeException("keyframes", "Keyframe time must be between 0 and 1.");
-            if (!times.Add(frame.Time)) throw new ArgumentException($"Duplicate keyframe time '{frame.Time}'.");
-            frame.TargetFieldId = fieldId;
         }
     }
 

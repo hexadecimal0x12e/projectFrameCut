@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using projectFrameCut.Setting.SettingManager;
 using Microsoft.Maui.Storage;
 using projectFrameCut.Render;
 using projectFrameCut.Render.ClipsAndTracks;
@@ -50,7 +51,7 @@ public partial class ProjectAssetView : ContentView
         }
 
         // 加载共享素材
-        foreach (var kvp in AssetDatabase.Assets.Where(c => c.Value.AssetType is AssetType.Video or AssetType.Audio or AssetType.Image))
+        foreach (var kvp in AssetDatabase.Assets.Where(c => c.Value.AssetType is AssetType.Video or AssetType.Audio or AssetType.Image or AssetType.VectorComposition))
         {
             var assetVM = new AssetItemViewModel(kvp.Value, _viewModel, isLocal: false);
             _viewModel.SharedAssets.Add(assetVM);
@@ -80,17 +81,8 @@ public partial class ProjectAssetView : ContentView
             {
                 var result = assetSource ?? (await FilePicker.PickAsync(new PickOptions
                 {
-                    PickerTitle = "Select a asset",
-                    FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
-                    {
-                        { DevicePlatform.WinUI, ["*", ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".pjfc"] },
-                        { DevicePlatform.Android, ["image/*", "video/*"] },
-#if iDevices
-                        {DevicePlatform.iOS , ["public.image", "public.movie", "public.video", "public.mpeg-4", "com.apple.protected-mpeg-4-video", "com.apple.quicktime-movie", "public.avi", "org.matroska.mkv"]},
-                        {DevicePlatform.MacCatalyst , ["public.image", "public.movie", "public.video", "public.mpeg-4", "com.apple.protected-mpeg-4-video", "com.apple.quicktime-movie", "public.avi", "org.matroska.mkv"]}
-#endif
-                    })
-                })).FullPath;
+                    PickerTitle = Localized.AssetPage_AddAAsset
+                }))?.FullPath;
 
                 if (result is not null)
                 {
@@ -102,87 +94,77 @@ public partial class ProjectAssetView : ContentView
                         .AddButton("Cancel", Localized._Cancel);
 
                     TaskCompletionSource tcs = new();
+                    bool adding = false;
 
                     optionPPB.ListenToChanges(async (e) =>
                     {
-                        string resultPath = "";
-                        switch (e.Id)
+                        if (adding || tcs.Task.IsCompleted || e.Id is not ("Copy" or "Reference" or "CopyToShared" or "Cancel")) return;
+                        adding = true;
+                        try
                         {
-                            case "Reference":
-                                {
-                                    resultPath = result;
-                                    await AddAssetToProject(resultPath);
-                                    break;
-                                }
-                            case "Copy":
-                                {
-                                    resultPath = Path.Combine(workingDraft.WorkingPath, "assets", Guid.NewGuid().ToString() + Path.GetExtension(resultPath));
-                                    if (!string.IsNullOrWhiteSpace(workingDraft.WorkingPath))
+                            switch (e.Id)
+                            {
+                                case "Reference":
                                     {
-#if WINDOWS
-                                        File.Copy(result, resultPath, true);
-#else
-                                        File.Move(result, resultPath, true);
-#endif
-                                        await AddAssetToProject(resultPath);
+                                        await AddAssetToProject(result);
+                                        break;
                                     }
-                                    break;
-                                }
-                            case "CopyToShared":
-                                {
-                                    await AssetDatabase.Add(result, workingDraft);
-                                    LoadAssets(); // 重新加载共享素材
-                                    break;
-                                }
+                                case "Copy":
+                                    {
+                                        var resultPath = Path.Combine(workingDraft.WorkingPath, "assets", Guid.NewGuid().ToString("N"), Path.GetFileName(result));
+                                        if (!string.IsNullOrWhiteSpace(workingDraft.WorkingPath))
+                                        {
+                                            Directory.CreateDirectory(Path.GetDirectoryName(resultPath)!);
+                                            File.Copy(result, resultPath, true);
+                                            await AddAssetToProject(resultPath);
+                                        }
+                                        break;
+                                    }
+                                case "CopyToShared":
+                                    {
+                                        await AssetDatabase.Add(result, workingDraft);
+                                        LoadAssets(); // 重新加载共享素材
+                                        break;
+                                    }
+                            }
+                            tcs.TrySetResult();
                         }
-                        tcs.SetResult();
+                        catch (Exception ex)
+                        {
+                            tcs.TrySetException(ex);
+                        }
                     });
 
                     await workingDraft.ShowACenteredPopup(600, 400, optionPPB.Build());
                     try
                     {
-                        var cts = new CancellationTokenSource();
+                        using var cts = new CancellationTokenSource();
                         cts.CancelAfter(60 * 1000);
                         await tcs.Task.WaitAsync(cts.Token);
                     }
-                    catch (TaskCanceledException) { }
-
-                    await workingDraft.HidePopup();
-                    workingDraft.SetStateOK();
+                    catch (OperationCanceledException) { }
+                    finally
+                    {
+                        await workingDraft.HidePopup();
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Log(ex, "Add asset", workingDraft);
+                await workingDraft.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            }
+            finally
+            {
+                workingDraft.SetStateOK();
             }
         });
     }
 
     private async Task AddAssetToProject(string path)
     {
-        var name = Path.GetFileNameWithoutExtension(path);
-        var nameInput = await workingDraft.DisplayPromptAsync(Localized.AssetPage_AddAAsset_InputName, Path.GetFileName(path), Localized._OK, Localized._Cancel, name, 0, null, name);
-        if (!string.IsNullOrEmpty(nameInput)) name = nameInput;
-        var type = AssetItem.GetAssetType(path);
-        if (type == AssetType.Other)
-        {
-            var map = new Dictionary<string, AssetType>
-                {
-                    {Localized.AssetPage_AssetType_Video, AssetType.Video },
-                    {Localized.AssetPage_AssetType_Audio, AssetType.Audio },
-                    {Localized.AssetPage_AssetType_Image, AssetType.Image },
-                    {Localized.AssetPage_AssetType_Font, AssetType.Font },
-                };
-            var selection = await workingDraft.DisplayActionSheetAsync(Localized.AssetPage_AssetType_Unknown(name), null, null, map.Keys.ToArray());
-            if (!map.TryGetValue(selection, out type)) return;
-        }
-        var asset = AssetDatabase.Create(path, nameInput, default);
-        if (asset is not null)
-        {
-            workingDraft.Assets[asset.AssetId] = asset;
-            _viewModel.LocalAssets.Add(new AssetItemViewModel(asset, _viewModel, isLocal: true));
-            _viewModel.FilterAssets(); // 刷新过滤列表
-        }
+        await workingDraft.AddAsset(path, showAssetPanel: false);
+        LoadAssets();
     }
 
     private async Task OnRemoveAsset(AssetItemViewModel assetVM)
@@ -198,6 +180,14 @@ public partial class ProjectAssetView : ContentView
     private async Task OnAddToTrack(AssetItemViewModel assetVM)
     {
         var asset = assetVM.OriginalAsset;
+        if (asset.GetClipMode() == ClipMode.VectorComponentClip)
+        {
+            if (!workingDraft.Tracks.ContainsKey(0)) workingDraft.AddATrack(0);
+            projectFrameCut.Services.VectorClipServices.AddClip(workingDraft, projectFrameCut.Services.VectorClipServices.Import(asset.Path!), 0, 0,
+                Math.Max(1u, SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300)));
+            workingDraft.NotifyVectorAssetChanged();
+            return;
+        }
         var mode = ClipElementUI.DetermineClipMode(asset.Path);
         int trackIndex = 0;
 

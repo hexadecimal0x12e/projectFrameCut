@@ -113,15 +113,6 @@ public readonly record struct CustomHandleDescriptor(
     double Size,
     Func<View>? ViewFactory = null);
 
-/// <summary>Common handle descriptor. Kept under the historical name for plugin migration.</summary>
-public readonly record struct ShapeHandleDescriptor(
-    string Id,
-    float NormalizedX,
-    float NormalizedY,
-    Color FillColor,
-    double Size,
-    Func<View>? HandleGetter = null);
-
 /// <summary>Geometry context supplied while a custom handle is dragged.</summary>
 public readonly record struct CustomHandleDragContext(
     Guid ElementId,

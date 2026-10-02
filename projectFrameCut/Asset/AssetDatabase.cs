@@ -42,13 +42,14 @@ namespace projectFrameCut.Asset
                     {Localized.AssetPage_AssetType_Audio, AssetType.Audio },
                     {Localized.AssetPage_AssetType_Image, AssetType.Image },
                     {Localized.AssetPage_AssetType_Font, AssetType.Font },
+                    {Localized.AssetPage_AssetType_VectorComposition, AssetType.VectorComposition },
                 };
                 var selection = await page.DisplayActionSheetAsync(Localized.AssetPage_AssetType_Unknown(name), null, null, map.Keys.ToArray());
                 if (!map.TryGetValue(selection, out type)) return null;
             }
             if (AssetDatabase.Assets.Any(c => c.Value.Name == name))
             {
-                var existing = AssetDatabase.Assets.Values.First((v) => v.Name == Path.GetFileNameWithoutExtension(path));
+                var existing = AssetDatabase.Assets.Values.First(v => v.Name == name);
                 if (existing is not null)
                 {
                     string opt = await page.DisplayActionSheetAsync(
@@ -180,6 +181,14 @@ namespace projectFrameCut.Asset
             bool fail = false;
             switch (asset.AssetType)
             {
+                case AssetType.VectorComposition:
+                    {
+                        VectorClipServices.Import(sourcePath);
+                        asset.ClipType = ClipMode.VectorComponentClip;
+                        asset.ThumbnailPath = null;
+                        Log($"Created vector composition asset {asset.AssetId}: {sourcePath}");
+                        break;
+                    }
                 case AssetType.Video:
                     {
                         try

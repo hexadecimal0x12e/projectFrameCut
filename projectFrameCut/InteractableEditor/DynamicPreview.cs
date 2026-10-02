@@ -418,8 +418,6 @@ public sealed class DynamicPreview : IDisposable
             try
             {
                 cts.Token.ThrowIfCancellationRequested();
-                var dir = Path.Combine(previewer.ProjectRoot, "thumbs", "perClip", clipId.ToString(), "dynamic");
-                if (Directory.Exists(dir)) Directory.Delete(dir, true);
                 if (clip.ClipType == ClipMode.AudioClip) return;
 
                 var radius = Math.Max(1, frameRate) * seconds;
@@ -661,14 +659,27 @@ public sealed class DynamicPreview : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    private PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, bool _, CancellationToken token)
+    public Task<PreparedPreview> PrepareVectorClipSnapshotAsync(ClipDraftDTO clip, uint frameIndex, int width, int height, CancellationToken token)
+    {
+        var json = JsonSerializer.Serialize(clip);
+        var (projectWidth, projectHeight) = ResolveProjectDimensions(width, height);
+        return Task.Run(() =>
+        {
+            using var document = JsonDocument.Parse(json);
+            using var source = PluginManager.CreateClip(document.RootElement);
+            var preview = GenerateClipPreviewPrepared(new PreviewRequest(source), width, height, projectWidth, projectHeight, frameIndex, false, token, json);
+            return new PreparedPreview(preview.ClipId, preview.ViewFactory, preview.ErrorMessage, null, isTransparentAt: preview.IsTransparentAt);
+        }, token);
+    }
+
+    private PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, bool _, CancellationToken token, string? vectorClipJson = null)
     {
         try
         {
             ImageSource source;
             if (_previewer is not null)
             {
-                var displayFrame = _previewer.RenderClipFrameForDisplay(request.Clip.Id, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token);
+                var displayFrame = _previewer.RenderClipFrameForDisplay(request.Clip.Id, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson);
 #if WINDOWS
                 if (displayFrame.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb || displayFrame.RequireSwapChain)
                 {
@@ -981,7 +992,7 @@ public sealed class DynamicPreview : IDisposable
                 {
                     effected = normal.Render(effected, targetWidth, targetHeight);
                 }
-                else if (effect is IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect)
+                else if (effect is IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect or IVectorComponentEffect)
                 {
                     // These stages are handled when resolving the source or composing layers.
                 }
@@ -1183,7 +1194,7 @@ public sealed class DynamicPreview : IDisposable
         }
         if (token.IsCancellationRequested) return null;
 
-        var willUseEffectFallback = DisableEffectDynamicPreview && enabledEffects.Length > 0;
+        var willUseEffectFallback = clip is projectFrameCut.Render.ClipsAndTracks.VectorComponentClip || (DisableEffectDynamicPreview && enabledEffects.Length > 0);
 
         View? preservedView = null;
         ImageSource? frameSource = null;
@@ -1194,11 +1205,11 @@ public sealed class DynamicPreview : IDisposable
 
         if (willUseEffectFallback)
         {
-            LogOnce(_effectFallbackLogKeys, clip.Id.ToString(), $"Clip {clip.Id}/{clip.Name} has {enabledEffects.Length} effect(s), using clip-local fallback (DisableEffectDynamicPreview=true).");
+            LogOnce(_effectFallbackLogKeys, clip.Id.ToString(), $"Clip {clip.Id}/{clip.Name} has {enabledEffects.Length} effect(s), using clip-local render fallback.");
         }
         else if ((sourceColorAdjustEffects?.Count ?? 0) == 0 && request.Provider is not null)
         {
-            if (clip is IVectorContentClip vectorClip && !DisableVectorPreviewPaths)
+            if (clip is IVectorContentClip vectorClip && clip is not projectFrameCut.Render.ClipsAndTracks.VectorComponentClip && !DisableVectorPreviewPaths)
             {
                 // Vector 路径：Phase 1 只读数据，Phase 2 创建 MAUI Path
                 hasVectorData = true;
@@ -1357,7 +1368,7 @@ public sealed class DynamicPreview : IDisposable
         {
             generatedView = source.PreservedView;
         }
-        else if (source.HasVectorData && clip is IVectorContentClip vectorClip && !DisableVectorPreviewPaths)
+        else if (source.HasVectorData && clip is IVectorContentClip vectorClip && clip is not projectFrameCut.Render.ClipsAndTracks.VectorComponentClip && !DisableVectorPreviewPaths)
         {
             generatedView = BuildVectorPreviewView(vectorClip, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
         }

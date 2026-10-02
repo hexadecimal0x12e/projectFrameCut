@@ -248,7 +248,8 @@ namespace projectFrameCut.Render.Rendering
             Action<IEffect, IPicture>? AfterEffectCallback = null,
             bool autoCenterImplicitClip = false,
             int projectRelativeWidth = 0,
-            int projectRelativeHeight = 0)
+            int projectRelativeHeight = 0,
+            bool transparentBackground = false)
         {
             try
             {
@@ -332,7 +333,7 @@ namespace projectFrameCut.Render.Rendering
                             }
                         }
                         else if (effect is IMixture or ISpeedVarianceProvider //these will be processed later; skip here
-                                        or ITextEffect or IContinuousTextEffect) //these are processed inside TextClip
+                                        or ITextEffect or IContinuousTextEffect or IVectorComponentEffect) //these are processed inside TextClip
                         {
 
                         }
@@ -394,7 +395,7 @@ namespace projectFrameCut.Render.Rendering
                         else
                         {
                             result = mixer.Mix(
-                                FallBackImageGetter(targetWidth, targetHeight),
+                                transparentBackground ? Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0) : FallBackImageGetter(targetWidth, targetHeight),
                                 effected,
                                 targetPPB,
                                 clipX,
@@ -430,7 +431,7 @@ namespace projectFrameCut.Render.Rendering
                 }
             ok:
                 result = ClassicOverlayMixture.Default
-                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, targetPPB)
+                               .Mix(transparentBackground ? Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0) : FallBackImageGetter(targetWidth, targetHeight), result, targetPPB)
                                .Resize(targetWidth, targetHeight, true);
                 if (MyLoggerExtensions.SaveDiagResult)
                 {

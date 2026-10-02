@@ -63,7 +63,8 @@ public enum PostRenderAction
     None,
     CloseApp,
     Shutdown,
-    Hibernate
+    Hibernate,
+    Standby,
 }
 
 public partial class RenderPage : ContentPage
@@ -106,6 +107,10 @@ public partial class RenderPage : ContentPage
     private bool _keepRenderInBackground;
     private bool _renderDetached;
     private CancellationTokenSource? _countdownCts;
+    private RenderSleepRequest? _renderSleepRequest;
+#if !WINDOWS && !MACCATALYST && !MACOS
+    private bool? _previousKeepScreenOn;
+#endif
 
     public RenderPage()
     {
@@ -565,7 +570,6 @@ public partial class RenderPage : ContentPage
                 if (vm.UseAlphaBrightnessPackage) fmt = "AV_PIX_FMT_YUV420P10LE";
 
                 running = true;
-                DeviceDisplay.Current.KeepScreenOn = true;
                 Log($"Output options:\r\n{vm.BuildSummary()}\r\nEncoder: {enc}\r\nHardware acceleration: {encoderSelection.UseHardwareAcceleration}");
                 string vidOutputPath = Path.Combine(cacheDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
                 string audOutputPath = Path.Combine(cacheDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
@@ -602,7 +606,6 @@ public partial class RenderPage : ContentPage
 #elif WINDOWS
                     await FileSystemService.ShowFileInFolderAsync(resultPath);
 #endif
-                    DeviceDisplay.Current.KeepScreenOn = false;
                     return;
                 }
 
@@ -727,7 +730,6 @@ public partial class RenderPage : ContentPage
                 }
 
 
-                DeviceDisplay.Current.KeepScreenOn = false;
             }
         }
         catch (Exception ex)
@@ -949,17 +951,18 @@ public partial class RenderPage : ContentPage
         }
         catch (Exception ex)
         {
+            ReleaseRenderSleepRequest();
             Log(ex, "Restore render job", this);
         }
     }
 
     private void CleanupUIAfterDetach()
     {
+        ReleaseRenderSleepRequest();
         _logUpdateTimer?.Stop();
         _screenSaverTimer?.Stop();
         StopScreenSaverTimer();
         MyLoggerExtensions.OnLog -= _WriteToLogBox;
-        DeviceDisplay.Current.KeepScreenOn = false;
         running = false;
     }
 
@@ -1000,7 +1003,6 @@ public partial class RenderPage : ContentPage
             if (BindingContext is RenderPageViewModel vm)
             {
                 running = true;
-                DeviceDisplay.Current.KeepScreenOn = true;
 
                 if (RenderRpcBootstrap.SupportsCliRenderProcess && !string.IsNullOrWhiteSpace(_workingPath))
                 {
@@ -1014,7 +1016,6 @@ public partial class RenderPage : ContentPage
                     };
                     var voidOutputPath = Path.Combine(MauiProgram.DataPath, "RenderCache", $"render-void-{Guid.NewGuid():N}.tmp");
                     await RenderProjectViaCliAsync(vm, voidOutputPath, encoderSelection.Encoder, fmt, encoderSelection.UseHardwareAcceleration, writeToVoid: true);
-                    DeviceDisplay.Current.KeepScreenOn = false;
                     return;
                 }
 
@@ -1030,7 +1031,6 @@ public partial class RenderPage : ContentPage
                     return;
                 }
 
-                DeviceDisplay.Current.KeepScreenOn = false;
             }
         }
         catch (Exception ex)
@@ -1056,7 +1056,6 @@ public partial class RenderPage : ContentPage
             if (BindingContext is RenderPageViewModel vm)
             {
                 running = true;
-                DeviceDisplay.Current.KeepScreenOn = true;
 
                 try
                 {
@@ -1070,7 +1069,6 @@ public partial class RenderPage : ContentPage
                     return;
                 }
 
-                DeviceDisplay.Current.KeepScreenOn = false;
             }
         }
         catch (Exception ex)
@@ -1824,29 +1822,81 @@ public partial class RenderPage : ContentPage
             vm.IsCountdownVisible = false;
             Log($"Performing post-render action: {action}");
 
+            await ExecutePostRenderPowerActionAsync(action);
+        }
+    }
+
+    private async Task ExecutePostRenderPowerActionAsync(PostRenderAction action)
+    {
+        try
+        {
+            if (action == PostRenderAction.CloseApp) Environment.Exit(32767);
+#if WINDOWS
             switch (action)
             {
                 case PostRenderAction.CloseApp:
                     Environment.Exit(0);
                     break;
                 case PostRenderAction.Shutdown:
-#if WINDOWS
                     WinUI.App.ExitWindowsEx(0x00000001 | 0x00400000 | 0x00000004 | 0x00000010, 0x00040000 | 0x80000000);
-#endif
                     break;
                 case PostRenderAction.Hibernate:
-#if WINDOWS
                     if (!WinUI.App.SetSuspendState(true, true, false)) //user may disabled hibernate
                     {
-                        if (!WinUI.App.SetSuspendState(false, true, false)) //sleep may not available, shutdown
-                        {
-                            WinUI.App.ExitWindowsEx(0x00000001 | 0x00400000 | 0x00000004 | 0x00000010, 0x00040000 | 0x80000000);
-                        }
+                        WinUI.App.EnterStandby();
                     }
-#endif
-
+                    break;
+                case PostRenderAction.Standby:
+                    WinUI.App.EnterStandby();
                     break;
             }
+            return;
+#endif
+            var startInfo = new ProcessStartInfo
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = true
+            };
+            if (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsMacOS())
+            {
+                startInfo.FileName = "/usr/bin/osascript";
+                startInfo.ArgumentList.Add("-e");
+                startInfo.ArgumentList.Add(action == PostRenderAction.Shutdown
+                    ? "tell application \"System Events\" to shut down"
+                    : "tell application \"System Events\" to sleep");
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                startInfo.FileName = "systemctl";
+                startInfo.ArgumentList.Add("--no-ask-password");
+                startInfo.ArgumentList.Add(action switch
+                {
+                    PostRenderAction.Shutdown => "poweroff",
+                    PostRenderAction.Hibernate => "hibernate",
+                    PostRenderAction.Standby => "suspend",
+                    _ => throw new ArgumentOutOfRangeException(nameof(action), action, null)
+                });
+            }
+            else
+            {
+                return;
+            }
+
+            Log($"Starting post-render power command: {startInfo.FileName}, action: {action}");
+            using var process = Process.Start(startInfo)
+                ?? throw new InvalidOperationException($"Unable to start {startInfo.FileName}.");
+            var error = process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+            var message = (await error).Trim();
+            if (process.ExitCode != 0)
+                throw new InvalidOperationException($"{startInfo.FileName} exited with code {process.ExitCode}: {message}");
+            Log($"Post-render power command completed: {action}");
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Post-render power action {action}", this);
+            await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
         }
     }
 
@@ -2187,6 +2237,12 @@ public partial class RenderPage : ContentPage
 
     private async Task PrepareUIForRender()
     {
+#if WINDOWS || MACCATALYST || MACOS
+        _renderSleepRequest ??= RenderSleepRequest.Acquire();
+#else
+        _previousKeepScreenOn ??= DeviceDisplay.Current.KeepScreenOn;
+        DeviceDisplay.Current.KeepScreenOn = true;
+#endif
         running = true;
         Shell.SetNavBarIsVisible(this, false);
         NavigationPage.SetHasNavigationBar(this, false);
@@ -2229,6 +2285,7 @@ public partial class RenderPage : ContentPage
 
     private async Task CleanupUIForRenderDone()
     {
+        ReleaseRenderSleepRequest();
         _logUpdateTimer?.Stop();
         _screenSaverTimer?.Stop();
         ScreenSaverOverlay.IsVisible = false;
@@ -2246,8 +2303,20 @@ public partial class RenderPage : ContentPage
         StopScreenSaverTimer();
         Shell.SetNavBarIsVisible(this, true);
         NavigationPage.SetHasNavigationBar(this, true);
-        DeviceDisplay.Current.KeepScreenOn = false;
         await PerformPostRenderAction();
+    }
+
+    private void ReleaseRenderSleepRequest()
+    {
+        _renderSleepRequest?.Dispose();
+        _renderSleepRequest = null;
+#if !WINDOWS && !MACCATALYST && !MACOS
+        if (_previousKeepScreenOn is bool keepScreenOn)
+        {
+            DeviceDisplay.Current.KeepScreenOn = keepScreenOn;
+            _previousKeepScreenOn = null;
+        }
+#endif
     }
 
     private string BuildStandaloneRenderArgs(int width, int height, int fps, string pixelFormat, string encoder, string outputPath, bool useHardwareAcceleration)
@@ -2426,9 +2495,16 @@ public class RenderPageViewModel : INotifyPropertyChanged
 
     }
 
-    public static Dictionary<string, PostRenderAction> PostRenderActionNames = Enum.GetNames(typeof(PostRenderAction))
-        .Select(s => (Localized.DynamicLookup($"RenderPage_PostRenderAction_{s}"), Enum.Parse<PostRenderAction>(s)))
-        .ToDictionary(t => t.Item1, t => t.Item2);
+    public static PostRenderAction GetPlatformPostRenderAction(PostRenderAction action)
+        => action == PostRenderAction.Hibernate && (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsMacOS())
+            ? PostRenderAction.Standby
+            : action;
+
+    public static Dictionary<string, PostRenderAction> PostRenderActionNames = Enum.GetValues<PostRenderAction>()
+        .Where(a => GetPlatformPostRenderAction(a) == a)
+        .Where(a => a != PostRenderAction.Standby || OperatingSystem.IsWindows()
+            || OperatingSystem.IsMacCatalyst() || OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
+        .ToDictionary(a => Localized.DynamicLookup($"RenderPage_PostRenderAction_{a}"), a => a);
 
     public string[] PostRenderActions { get; } = PostRenderActionNames.Keys.ToArray();
 
@@ -2449,7 +2525,7 @@ public class RenderPageViewModel : INotifyPropertyChanged
         get => _selectedPostRenderAction;
         set
         {
-            _selectedPostRenderAction = value;
+            _selectedPostRenderAction = GetPlatformPostRenderAction(value);
             OnPropertyChanged(nameof(SelectedPostRenderAction));
         }
     }

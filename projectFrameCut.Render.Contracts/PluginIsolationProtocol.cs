@@ -520,6 +520,7 @@ public sealed class IsolationEffectFrameRequest
     [ProtoMember(11)] public uint TargetFrame { get; set; }
     [ProtoMember(12)] public IsolationClipSnapshot? Clip { get; set; }
     [ProtoMember(13)] public Dictionary<string, IsolationValue> DynamicValues { get; set; } = [];
+    [ProtoMember(14)] public List<IsolationVectorElement> VectorElements { get; set; } = [];
     [ProtoMember(14)] public IsolationEffectMutableState State { get; set; } = new();
     [ProtoMember(15)] public Dictionary<string, IsolationPayloadReference> DynamicPictures { get; set; } = [];
 }
@@ -646,8 +647,6 @@ public sealed class IsolationVectorComponentRequest
     [ProtoMember(4)] public string InstanceId { get; set; } = string.Empty;
     [ProtoMember(5)] public int Index { get; set; }
     [ProtoMember(6)] public Dictionary<string, IsolationValue> Parameters { get; set; } = [];
-    [ProtoMember(7)] public string AnimationFramesJson { get; set; } = "[]";
-    [ProtoMember(8)] public float Progress { get; set; }
 }
 
 [ProtoContract]
@@ -660,18 +659,6 @@ public sealed class IsolationVectorComponentDescriptor
     [ProtoMember(5)] public string InstanceId { get; set; } = string.Empty;
     [ProtoMember(6)] public int Index { get; set; }
     [ProtoMember(7)] public Dictionary<string, IsolationValue> Parameters { get; set; } = [];
-    [ProtoMember(8)] public string AnimationFramesJson { get; set; } = "[]";
-    [ProtoMember(9)] public List<IsolationAnimatableField> AnimatableFields { get; set; } = [];
-}
-
-[ProtoContract]
-public sealed class IsolationAnimatableField
-{
-    [ProtoMember(1)] public string Id { get; set; } = string.Empty;
-    [ProtoMember(2)] public string DisplayName { get; set; } = string.Empty;
-    [ProtoMember(3)] public string Description { get; set; } = string.Empty;
-    [ProtoMember(4)] public float MinimumValue { get; set; }
-    [ProtoMember(5)] public float MaximumValue { get; set; }
 }
 
 [ProtoContract]
@@ -691,6 +678,7 @@ public sealed class IsolationVectorElement
     [ProtoMember(6)] public float Rotation { get; set; }
     [ProtoMember(7)] public bool UseUniformScale { get; set; }
     [ProtoMember(8)] public List<IsolationVectorSegment> Segments { get; set; } = [];
+    [ProtoMember(9)] public string SourceClipId { get; set; } = string.Empty;
 }
 
 [ProtoContract]
@@ -714,6 +702,9 @@ public sealed class IsolationEffectInvokeRequest
     [ProtoMember(9)] public int ChannelCount { get; set; }
     [ProtoMember(10)] public int SamplePerSecond { get; set; }
     [ProtoMember(11)] public int SampleCount { get; set; }
+    [ProtoMember(12)] public IsolationEffectMutableState State { get; set; } = new();
+    [ProtoMember(13)] public Dictionary<string, IsolationValue> DynamicValues { get; set; } = [];
+    [ProtoMember(14)] public List<IsolationVectorElement> VectorElements { get; set; } = [];
 }
 
 [ProtoContract]

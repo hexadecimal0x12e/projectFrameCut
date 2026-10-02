@@ -148,7 +148,7 @@ public partial class AssetPicker : ContentView
 	{
 		try
 		{
-			if (currentAsset.AssetType is AssetType.Font or AssetType.Other)
+			if (currentAsset.AssetType is AssetType.Font or AssetType.Other or AssetType.VectorComposition)
 			{
 				if (!string.IsNullOrWhiteSpace(currentAsset.Path) && File.Exists(currentAsset.Path))
 				{

@@ -2041,6 +2041,7 @@ namespace projectFrameCut.Render.Rendering
 
                                 case EffectType.MixtureProvider:
                                 case EffectType.SpeedVarianceProvider:
+                                case EffectType.VectorComponentEffect:
                                 case EffectType.TextEffect:
                                 case EffectType.ContinuousTextEffect:
                                 case EffectType.SourceReplacement:
@@ -2112,7 +2113,7 @@ namespace projectFrameCut.Render.Rendering
                         {
                             throw new InvalidOperationException($"Effect {item.Name} ({item.Id}) of clip {clip.Id} is a IValueProviderEffect and should have been handled in the EffectBindingHelper.RebuildAllEffects. This indicates a logic error.");
                         }
-                        else if (item is IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect or ISourceReplacementEffect)
+                        else if (item is IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect or IVectorComponentEffect or ISourceReplacementEffect)
                         {
                             //skip here, they've processed somewhere else
                             continue;

@@ -111,6 +111,7 @@ internal sealed class PluginIsolationWorkerService(
                     RenderOperation.IsolationComputeVectorComponent => ComputeVectorComponent(request),
                     RenderOperation.IsolationProcessAudioEffect => await ProcessAudioEffectAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationProcessTextEffect => ProcessTextEffect(request),
+                    RenderOperation.IsolationProcessVectorComponentEffect => ProcessVectorComponentEffect(request),
                     RenderOperation.IsolationMapSpeedFrame => MapSpeed(request, false),
                     RenderOperation.IsolationMapSpeedLength => MapSpeed(request, true),
                     RenderOperation.IsolationGetClipPosition => GetClipPosition(request),
@@ -376,9 +377,8 @@ internal sealed class PluginIsolationWorkerService(
         component.Index = request.Index;
         foreach (var item in request.Parameters)
             component.Parameters[item.Key] = IsolationValueConverter.ToObject(item.Value)!;
-        component.AnimationFrames = System.Text.Json.JsonSerializer.Deserialize<List<VectorAnimationKeyFrame>>(request.AnimationFramesJson) ?? [];
         var response = new IsolationVectorElementList();
-        foreach (var element in component.ComputeAll(request.Progress))
+        foreach (var element in component.ComputeAll())
         {
             var target = new IsolationVectorElement
             {
@@ -389,6 +389,7 @@ internal sealed class PluginIsolationWorkerService(
                 LayerIndex = element.LayerIndex,
                 Rotation = element.Rotation,
                 UseUniformScale = element.UseUniformScale,
+                SourceClipId = element is IVectorClipElementTag tag ? tag.SourceClipId.ToString() : string.Empty,
             };
             foreach (var segment in element.Draw())
             {
@@ -426,6 +427,30 @@ internal sealed class PluginIsolationWorkerService(
             SamplePerSecond = output.SamplePerSecond,
             SampleCount = output.SampleCount,
         });
+    }
+
+    private RenderResponseEnvelope ProcessVectorComponentEffect(RenderRequestEnvelope envelope)
+    {
+        var request = Read<IsolationEffectInvokeRequest>(envelope);
+        using var doc = System.Text.Json.JsonDocument.Parse(request.Json);
+        var pluginId = doc.RootElement.GetProperty("FromPlugin").GetString();
+        var authorized = RequirePlugin();
+        var type = Type.GetType("projectFrameCut.Render.Plugin.InternalPluginBase, projectFrameCut.Render", throwOnError: true)!;
+        var builtin = (IPluginBase)Activator.CreateInstance(type)!;
+        var factory = pluginId == authorized.PluginID ? authorized : pluginId == builtin.PluginID ? builtin : null;
+        var manager = Type.GetType("projectFrameCut.Render.Plugin.PluginManager, projectFrameCut.Render");
+        if (manager?.GetField("loadedPlugins", BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null) is System.Collections.IDictionary plugins)
+        {
+            plugins[builtin.PluginID] = builtin;
+            plugins[authorized.PluginID] = authorized;
+        }
+        var input = factory?.VectComponentCreator(doc.RootElement) ?? new SerializedVectorComponent(doc.RootElement, request.VectorElements);
+        var effect = Require<IVectorComponentEffect>(request.ObjectId);
+        ApplyEffectState(effect, request.State);
+        using var context = ValueProviderFrameContext.PushFrame(request.Value, request.Progress);
+        foreach (var item in request.DynamicValues) ValueProviderFrameContext.Set(item.Key, IsolationValueConverter.ToObject(item.Value));
+        var output = effect.Process(input, request.Progress) ?? throw new InvalidDataException("The vector effect returned no component.");
+        return Success(envelope, DescribeVectorComponent(output, AddObject(output)));
     }
 
     private RenderResponseEnvelope ProcessTextEffect(RenderRequestEnvelope envelope)
@@ -1260,15 +1285,6 @@ internal sealed class PluginIsolationWorkerService(
         InstanceId = component.Id.ToString(),
         Index = component.Index,
         Parameters = component.Parameters.ToDictionary(x => x.Key, x => IsolationValueConverter.FromObject(x.Value)),
-        AnimationFramesJson = System.Text.Json.JsonSerializer.Serialize(component.AnimationFrames),
-        AnimatableFields = component.AnimatableFields.Values.Select(x => new IsolationAnimatableField
-        {
-            Id = x.Id,
-            DisplayName = x.DisplayName,
-            Description = x.Description,
-            MinimumValue = x.MinimumValue,
-            MaximumValue = x.MaximumValue,
-        }).ToList(),
     };
 
     private static void ApplyVideoState(IVideoSource source, IsolationVideoSourceStateRequest state)
@@ -1306,7 +1322,7 @@ internal sealed class PluginIsolationWorkerService(
         catch (ReflectionTypeLoadException ex) { return ex.Types.OfType<Type>(); }
     }
 
-    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement;
+    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect;
     private static bool IsSupportedExternalEffect(EffectType type) => type is EffectType.NormalEffect
         or EffectType.ContinuousEffect
         or EffectType.AudioNormalEffect
@@ -1315,6 +1331,7 @@ internal sealed class PluginIsolationWorkerService(
         or EffectType.ClipPositionProvider
         or EffectType.ContinuousClipPositionProvider
         or EffectType.MixtureProvider
+        or EffectType.VectorComponentEffect
         or EffectType.TextEffect
         or EffectType.ContinuousTextEffect
         or EffectType.SourceReplacement

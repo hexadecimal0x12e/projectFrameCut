@@ -382,14 +382,14 @@ namespace projectFrameCut.LivePreview
         public string RenderClipFrame(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token)
             => MaterializePng(RenderClipFrameVfd(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token));
 
-        private string RenderClipFrameVfd(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token)
+        private string RenderClipFrameVfd(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
         {
             string? clipHash = null;
             if (ClipHashLookup.TryGetValue(clipId, out var clipHashes))
                 clipHashes.TryGetValue(frameIndex, out clipHash);
             if (clipHash is null && Clips is { } clips && clips.FirstOrDefault(clip => clip.Id == clipId) is { } clip)
                 clipHash = Timeline.GetClipFrameHash(clips, clip, frameIndex);
-            if (clipHash is not null)
+            if (clipHash is not null && vectorClipJson is null)
             {
                 var cachedPath = Path.Combine(
                     ProjectRoot,
@@ -410,19 +410,20 @@ namespace projectFrameCut.LivePreview
                 ProjectWidth = projectWidth,
                 ProjectHeight = projectHeight,
                 PreferredPixelFormat = PreviewPixelFormat.EncodedImage,
+                VectorClipJson = vectorClipJson,
             }, token).AsTask().GetAwaiter().GetResult();
             if (artifact.PixelFormat != PreviewPixelFormat.VfdPicture)
                 throw new InvalidDataException($"The render backend returned unsupported preview format {artifact.PixelFormat}.");
             return ResolveArtifactPath(artifact, token);
         }
 
-        public PreviewFrameSource RenderClipFrameForDisplay(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token)
+        public PreviewFrameSource RenderClipFrameForDisplay(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
         {
             if (!OperatingSystem.IsWindows() && DefaultOutputMode == NativePreviewOutputMode.Required)
                 throw new PlatformNotSupportedException("Required SwapChain preview is only available on Windows.");
             if (DefaultOutputMode == NativePreviewOutputMode.Disabled || !OperatingSystem.IsWindows())
             {
-                var path = RenderClipFrameVfd(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token);
+                var path = RenderClipFrameVfd(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson);
                 return new PreviewFrameSource(path, canvasWidth, canvasHeight, PreviewPixelFormat.EncodedImage, false);
             }
 
@@ -438,6 +439,7 @@ namespace projectFrameCut.LivePreview
                     ProjectWidth = projectWidth,
                     ProjectHeight = projectHeight,
                     PreferredPixelFormat = PreviewPixelFormat.Rgba16FloatScRgb,
+                    VectorClipJson = vectorClipJson,
                 }, token).AsTask().GetAwaiter().GetResult();
                 if (artifact.PixelFormat != PreviewPixelFormat.VfdPicture)
                     throw new NotSupportedException("The render backend did not return a VFD clip-preview artifact.");
@@ -447,7 +449,7 @@ namespace projectFrameCut.LivePreview
             }
             catch when (DefaultOutputMode == NativePreviewOutputMode.Automatic && !token.IsCancellationRequested)
             {
-                var path = RenderClipFrameVfd(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token);
+                var path = RenderClipFrameVfd(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson);
                 return new PreviewFrameSource(path, canvasWidth, canvasHeight, PreviewPixelFormat.EncodedImage, false);
             }
         }

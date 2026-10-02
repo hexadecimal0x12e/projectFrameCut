@@ -42,7 +42,7 @@ internal static class PluginIsolationFactory
 
     public static async ValueTask<IPluginBase> CreateAsync(IPluginBase local, PluginPackageVerificationResult verification, string pluginRoot, PluginIsolationMode mode, CancellationToken cancellationToken = default)
     {
-        bool hasPictureProviders = local.EffectProviderProvider.Values.Any(x => x().TypeOfEffect is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement);
+        bool hasPictureProviders = local.EffectProviderProvider.Values.Any(x => x().TypeOfEffect is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect);
         bool hasAIProviders = local is IAIProviderPlugin aiPlugin && aiPlugin.AIProviderFactories.Count > 0;
         bool hasIsolatableCapabilities = hasPictureProviders || local.VideoSourceProvider.Count > 0 ||
             local.AudioSourceProvider.Count > 0 || local.VideoWriterProvider.Count > 0 ||

@@ -1,6 +1,7 @@
 ﻿using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.Render.VectorContent.Components;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
@@ -81,7 +82,7 @@ public class ArcHandler : BaseVectorComponentHandler
                 {
                     float cx = GetParam(component, "CenterX", 0.5f);
                     float cy = GetParam(component, "CenterY", 0.5f);
-                    component.Parameters["StartAngle"] = MathF.Atan2(newY - cy, newX - cx);
+                    component.Parameters["StartAngle"] = DragAngle(component, newX - cx, newY - cy, GetParam(component, "StartAngle", 0f));
                     break;
                 }
             case "end":
@@ -89,13 +90,19 @@ public class ArcHandler : BaseVectorComponentHandler
                     float cx = GetParam(component, "CenterX", 0.5f);
                     float cy = GetParam(component, "CenterY", 0.5f);
                     float startA = GetParam(component, "StartAngle", 0f);
-                    float endAngle = MathF.Atan2(newY - cy, newX - cx);
-                    float sweep = endAngle - startA;
-                    if (sweep < 0) sweep += 2 * MathF.PI;
-                    if (sweep < 0.001f) sweep = 0.001f;
-                    component.Parameters["SweepAngle"] = sweep;
+                    float endAngle = DragAngle(component, newX - cx, newY - cy, startA + GetParam(component, "SweepAngle", MathF.PI));
+                    component.Parameters["SweepAngle"] = Math.Clamp(endAngle - startA, -2 * MathF.PI, 2 * MathF.PI);
                     break;
                 }
         }
+    }
+
+    private static float DragAngle(IVectorComponent component, float x, float y, float previous)
+    {
+        x /= Math.Max(0.001f, GetParam(component, "RadiusX", 0.3f));
+        y /= Math.Max(0.001f, GetParam(component, "RadiusY", 0.3f));
+        if (x * x + y * y < 0.000001f) return previous;
+        float angle = MathF.Atan2(y, x);
+        return previous + MathF.IEEERemainder(angle - previous, 2 * MathF.PI);
     }
 }

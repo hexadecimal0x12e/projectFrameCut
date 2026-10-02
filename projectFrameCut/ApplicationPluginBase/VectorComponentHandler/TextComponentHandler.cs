@@ -73,6 +73,7 @@ public class TextComponentHandler : BaseVectorComponentHandler
         PropertyPanelBuilder builder, IVectorComponent component)
     {
         var textComponent = (TextComponent)component;
+
         var provider = RestoreProvider(textComponent);
         if (provider is null) return; // no provider → no text panel
 
@@ -140,6 +141,23 @@ public class TextComponentHandler : BaseVectorComponentHandler
         PropertyPanelPropertyChangedEventArgs args)
     {
         var textComponent = (TextComponent)component;
+
+        if (args.Id is "RelativeX" or "RelativeY" or "Rotation" or "Thickness"
+            or "VectorStrokeColor" or "VectorFillColor"
+            or "StrokeR" or "StrokeG" or "StrokeB" or "StrokeA"
+            or "FillR" or "FillG" or "FillB" or "FillA")
+        {
+            if (args.Id == "Thickness")
+                textComponent.Parameters["StrokeThickness"] = args.Value ?? 0f;
+            else
+                base.HandlePropertyChange(component, args);
+            if (RestoreProvider(textComponent) is { } style)
+            {
+                SyncComponentToProvider(textComponent, style);
+                textComponent.Parameters["TextStyleProvider_Parameters"] = new Dictionary<string, string>(style.Parameters);
+            }
+            return;
+        }
 
         // ── Handle Text property directly (and keep provider in sync) ──
         if (args.Id == "Text")
@@ -287,8 +305,7 @@ public class TextComponentHandler : BaseVectorComponentHandler
         var strokeR = (int)Math.Round(p.GetFloat("StrokeR", 0f) / ushort.MaxValue * 255f);
         var strokeG = (int)Math.Round(p.GetFloat("StrokeG", 0f) / ushort.MaxValue * 255f);
         var strokeB = (int)Math.Round(p.GetFloat("StrokeB", 0f) / ushort.MaxValue * 255f);
-        if (strokeR > 0 || strokeG > 0 || strokeB > 0)
-            provider.Parameters["StrokeColor"] = $"#{strokeR:X2}{strokeG:X2}{strokeB:X2}";
+        provider.Parameters["StrokeColor"] = $"#{strokeR:X2}{strokeG:X2}{strokeB:X2}";
 
         // Font name & style
         if (p.TryGetValue("FontName", out var fn) && fn is string fontName && !string.IsNullOrEmpty(fontName))
@@ -364,7 +381,6 @@ public class TextComponentHandler : BaseVectorComponentHandler
             component.Parameters["StrokeR"] = sr;
             component.Parameters["StrokeG"] = sg;
             component.Parameters["StrokeB"] = sb;
-            component.Parameters["StrokeA"] = 1f;
         }
     }
 

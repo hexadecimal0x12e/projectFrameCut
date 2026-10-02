@@ -142,6 +142,7 @@ public enum RenderOperation
     [ProtoEnum] IsolationAICancelOperation = 2055,
     [ProtoEnum] IsolationAIReleaseOperation = 2056,
     [ProtoEnum] IsolationCreateEffectImplementation = 2057,
+    [ProtoEnum] IsolationProcessVectorComponentEffect = 2058,
 }
 
 [ProtoContract]
@@ -428,6 +429,7 @@ public sealed class ClipPreviewRequest
     [ProtoMember(6)] public int ProjectWidth { get; set; }
     [ProtoMember(7)] public int ProjectHeight { get; set; }
     [ProtoMember(8)] public PreviewPixelFormat PreferredPixelFormat { get; set; } = PreviewPixelFormat.EncodedImage;
+    [ProtoMember(9)] public string? VectorClipJson { get; set; }
 }
 
 [ProtoContract]

@@ -55,6 +55,8 @@ namespace projectFrameCut.DraftStuff
         public bool CanSnapWhileResizing { get; set; } = true;
         public bool AllowFreeScaleResize { get; set; } = false;
         public bool ShowDefaultBorder { get; set; } = true;
+        [JsonIgnore]
+        public bool ShowDefaultHandles { get; set; } = true;
 
         public uint lengthInFrame { get; set; } = 0;
         /// <summary>
@@ -285,7 +287,16 @@ namespace projectFrameCut.DraftStuff
             ClipMode.Special or ClipMode.MarkingClip => EffectTarget.NotSpecified,
             ClipMode.AudioClip => EffectTarget.Audio,
             ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text,
+            ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => EffectTarget.Video | EffectTarget.VectorComponent,
             _ => EffectTarget.Video
+        };
+
+        public EffectTarget GetEffectSelectionTarget() => ClipType switch
+        {
+            ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => EffectTarget.VectorComponent,
+            ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text | EffectTarget.Video,
+            ClipMode.Special or ClipMode.MarkingClip => 0,
+            _ => GetEffectTarget()
         };
 
         public void UpdateContent(View? content)

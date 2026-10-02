@@ -580,7 +580,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ICommand GenerateTextPreviewCommand { get; set; } = null!;
     public ICommand AddSubTitleClipCommand { get; set; } = null!;
     public ICommand AddAlternativeSourceClipCommand { get; set; } = null!;
-    public ICommand AddVectorCompositionCommand { get; set; } = null!;
     public ICommand AddAssetClipCommand { get; set; } = null!;
     public ICommand AddTemplateCommand { get; set; } = null!;
     public ICommand AddReuseableAssetClipCommand { get; set; } = null!;
@@ -621,7 +620,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         AddTransformClipInRightCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, true));
         GenerateTransformPreviewCommand = new Command<TransformItemViewModel?>(async (t) => await GenerateTransformPreviewAsync(t ?? SelectedTransformForPreview));
         SelectTransformForPreviewCommand = new Command<TransformItemViewModel?>(t => SelectedTransformForPreview = t);
-        AddVectorCompositionCommand = new Command(async () => await AddVectorComposition());
 
         DrawingContentUndoCommand = new Command(DrawingUndo);
         DrawingContentRedoCommand = new Command(DrawingRedo);
@@ -813,6 +811,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public async Task AddAssetClip(AssetItemViewModel? assetViewModel)
     {
         if (assetViewModel?.OriginalAsset == null) return;
+
+        if (assetViewModel.OriginalAsset.GetClipMode() == ClipMode.VectorComponentClip)
+        {
+            AddVectorComponent(VectorClipServices.Import(assetViewModel.OriginalAsset.Path!));
+            return;
+        }
 
         var sourcePath = _draftPage.Assets.ContainsKey(assetViewModel.Id) ? assetViewModel.SourcePath : null;
         BeginTimelineClipPlacement((trackIndex, startX) =>
@@ -2003,6 +2007,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public async Task FilterAssets()
     {
+        await MainThread.InvokeOnMainThreadAsync(FilterVectorComponents);
         FilteredLocalAssets.Clear();
         FilteredSharedAssets.Clear();
         FilteredReuseableAssets.Clear();
@@ -2403,40 +2408,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }, name: path);
 
         ClipAdded?.Invoke(this, EventArgs.Empty);
-    }
-
-    /// <summary>
-    /// Creates an empty vector composition clip — no SVG file, user adds
-    /// shapes manually through the Vector Editor.
-    /// </summary>
-    private async Task AddVectorComposition()
-    {
-        BeginTimelineClipPlacement((trackIndex, startX) =>
-        {
-            var targetFps = Math.Max(1u, _draftPage.ProjectInfo.TargetFrameRate);
-
-            var element = _draftPage.CreateAndAddClip(
-                startX: startX,
-                width: _draftPage.FrameToPixel(1000),
-                trackIndex: trackIndex,
-                id: null,
-                labelText: "Vector Composition",
-                background: new SolidColorBrush(Colors.CornflowerBlue),
-                resolveOverlap: true,
-                relativeStart: 0,
-                maxFrames: 0
-            );
-
-            element.ClipType = ClipMode.VectorCanvasClip;
-            element.SourcePath = null; // No SVG — composition only
-            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-            element.isInfiniteLength = true;
-            element.sourceSecondPerFrame = 1;
-            element.ExtraData = new();
-            return element;
-        }, name: "Vector Composition");
-
-        await _draftPage.HidePopup(true);
     }
 
     private static uint ResolveTimelineFrameCount(uint sourceFrames, double sourceSecondPerFrame, uint targetFrameRate)

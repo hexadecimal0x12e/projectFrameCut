@@ -685,11 +685,6 @@ internal static class ProjectModeEditingTools
             Tool("replace_vector_components", "Atomically replace all vector components with validated serialized component objects.", ObjectSchema("""
                 "clipId":{"type":"string","format":"uuid"},"components":{"type":"array","items":{"type":"object"}}
                 """, "clipId", "components"), Edit(controller, "replaceVectorComponents"), requireAuthorization),
-            Tool("set_vector_component_keyframes", "Replace keyframes for one animatable vector component field. Time is normalized to 0..1.", ObjectSchema("""
-                "clipId":{"type":"string","format":"uuid"},"componentId":{"type":"string","format":"uuid"},"fieldId":{"type":"string"},
-                "keyframes":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"time":{"type":"number","minimum":0,"maximum":1},"value":{"type":"number"},"easing":{"type":"string","enum":["Linear","QuadIn","QuadOut","QuadInOut","CubicIn","CubicOut","CubicInOut","SineIn","SineOut","SineInOut","ElasticIn","ElasticOut","BounceOut"]}},"required":["time","value"]}}
-                """, "clipId", "componentId", "fieldId", "keyframes"), Edit(controller, "setVectorComponentKeyframes"), requireAuthorization),
-
             Tool("list_clip_effect_providers", "List complete EffectProvider nodes, fields, ports, values, metadata, and stored bindings on a clip.", ClipIdSchema,
                 Query(controller, "clipEffectProviders"), requireAuthorization),
             Tool("add_effect_provider", "Add an EffectProvider with typed static fields and optional automatic picture-chain connection.", ObjectSchema("""

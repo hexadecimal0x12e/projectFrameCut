@@ -5,10 +5,11 @@ using System.Text.Json;
 
 namespace projectFrameCut.Render.PluginIsolation;
 
-internal sealed class RemoteVectorComponent : IVectorComponent
+internal sealed class RemoteVectorComponent : IVectorComponent, IDisposable
 {
     private readonly IPluginIsolationSession _session;
     private readonly long _objectId;
+    private bool _disposed;
 
     public RemoteVectorComponent(IPluginIsolationSession session, IsolationVectorComponentDescriptor descriptor)
     {
@@ -20,29 +21,26 @@ internal sealed class RemoteVectorComponent : IVectorComponent
         Id = Guid.Parse(descriptor.InstanceId);
         Index = descriptor.Index;
         Parameters = descriptor.Parameters.ToDictionary(x => x.Key, x => IsolationValueConverter.ToObject(x.Value)!);
-        AnimationFrames = JsonSerializer.Deserialize<List<VectorAnimationKeyFrame>>(descriptor.AnimationFramesJson) ?? [];
-        AnimatableFields = descriptor.AnimatableFields.ToDictionary(x => x.Id, x => new AnimatableField
-        {
-            Id = x.Id,
-            DisplayName = x.DisplayName,
-            Description = x.Description,
-            MinimumValue = x.MinimumValue,
-            MaximumValue = x.MaximumValue,
-        });
     }
 
     public string FromPlugin { get; }
     public string TypeName { get; }
-    public IReadOnlyDictionary<string, AnimatableField> AnimatableFields { get; }
     public string Name { get; set; }
     public Guid Id { get; set; }
     public Dictionary<string, object> Parameters { get; }
     public int Index { get; set; }
-    public List<VectorAnimationKeyFrame> AnimationFrames { get; set; }
 
-    public VectorCanvasElement Compute(float index) => ComputeAll(index).First();
+    public VectorCanvasElement Compute() => ComputeAll().First();
 
-    public IEnumerable<VectorCanvasElement> ComputeAll(float index)
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _session.InvokeAsync<IsolationReleaseObjectRequest, EmptyResponse>(RenderOperation.IsolationReleaseObject,
+            new() { ObjectId = _objectId }).AsTask().GetAwaiter().GetResult();
+    }
+
+    public IEnumerable<VectorCanvasElement> ComputeAll()
     {
         var result = _session.InvokeAsync<IsolationVectorComponentRequest, IsolationVectorElementList>(RenderOperation.IsolationComputeVectorComponent, new()
         {
@@ -51,15 +49,14 @@ internal sealed class RemoteVectorComponent : IVectorComponent
             InstanceId = Id.ToString(),
             Index = Index,
             Parameters = Parameters.ToDictionary(x => x.Key, x => IsolationValueConverter.FromObject(x.Value)),
-            AnimationFramesJson = JsonSerializer.Serialize(AnimationFrames),
-            Progress = index,
         }).AsTask().GetAwaiter().GetResult();
         return result.Elements.Select(x => new RemoteVectorCanvasElement(x));
     }
 }
 
-internal sealed class RemoteVectorCanvasElement : VectorCanvasElement
+internal sealed class RemoteVectorCanvasElement : VectorCanvasElement, IVectorClipElementTag
 {
+    public Guid SourceClipId { get; }
     private readonly VectorSegment[] _segments;
 
     public RemoteVectorCanvasElement(IsolationVectorElement element)
@@ -71,6 +68,7 @@ internal sealed class RemoteVectorCanvasElement : VectorCanvasElement
         LayerIndex = element.LayerIndex;
         Rotation = element.Rotation;
         UseUniformScale = element.UseUniformScale;
+        SourceClipId = Guid.TryParse(element.SourceClipId, out var id) ? id : Guid.Empty;
         _segments = element.Segments.Select(x => Deserialize(x.TypeName, x.Json)).ToArray();
     }
 

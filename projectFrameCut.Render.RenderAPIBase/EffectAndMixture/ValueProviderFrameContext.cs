@@ -74,5 +74,18 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         {
             _values = null;
         }
+
+        public static IDisposable PushFrame(uint frameIndex, float progress)
+        {
+            var previous = _values;
+            BeginFrame(frameIndex, progress);
+            return new FrameScope(previous);
+        }
+
+        private sealed class FrameScope(Dictionary<string, object>? previous) : IDisposable
+        {
+            public void Dispose() => _values = previous;
+        }
+
     }
 }

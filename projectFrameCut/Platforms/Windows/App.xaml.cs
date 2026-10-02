@@ -10,6 +10,7 @@ using Microsoft.UI.Xaml.Media;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -99,6 +100,46 @@ namespace projectFrameCut.WinUI
         [DllImport("Powrprof.dll", SetLastError = true)]
         public static extern bool SetSuspendState(bool bHibernate, bool bForceCritical, bool bDisableWakeEvent);
 
+        public static void EnterStandby()
+        {
+            if (!GetPwrCapabilities(out var capabilities))
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+
+            LogDiagnostic($"Windows standby capabilities: AoAc={capabilities.AoAc != 0}, S3={capabilities.SystemS3 != 0}.");
+            if (capabilities.AoAc != 0)
+            {
+                LogDiagnostic("Requesting Modern Standby through WM_SYSCOMMAND / SC_MONITORPOWER (display off).");
+                if (!PostMessage(0xffff, 0x0112, 0xF170, 2))
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
+            else if (capabilities.SystemS3 != 0)
+            {
+                LogDiagnostic("Requesting standby through SetSuspendState.");
+                if (!SetSuspendState(false, false, false))
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
+            else
+            {
+                throw new NotSupportedException("Your device does not support standby (neither Modern Standby nor S3).");
+            }
+        }
+
+        // SYSTEM_POWER_CAPABILITIES has a fixed 76-byte layout on Windows.
+        [StructLayout(LayoutKind.Explicit, Size = 76)]
+        private struct SystemPowerCapabilities
+        {
+            [FieldOffset(5)] public byte SystemS3;
+            [FieldOffset(20)] public byte AoAc;
+        }
+
+        [DllImport("Powrprof.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.U1)]
+        private static extern bool GetPwrCapabilities(out SystemPowerCapabilities capabilities);
+
+        [DllImport("user32.dll", EntryPoint = "PostMessageW", ExactSpelling = true, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool PostMessage(IntPtr hwnd, uint message, nuint wParam, nint lParam);
+
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
         public static extern int GetPackageFullName(IntPtr hProcess, ref int packageFullNameLength, StringBuilder packageFullName);
 
@@ -142,7 +183,7 @@ namespace projectFrameCut.WinUI
                 int length = 0;
                 int rc = GetPackageFullName(h, ref length, null);
                 if (rc == APPMODEL_ERROR_NO_PACKAGE)
-                    return "Not running in AppContainer.";
+                    return "Not running in MSIX Package.";
                 if (length <= 0)
                     return string.Empty;
                 var sb = new StringBuilder(length);
@@ -153,7 +194,7 @@ namespace projectFrameCut.WinUI
                 }
                 else
                 {
-                    return "Not running in AppContainer.";
+                    return "Not running in MSIX Package.";
                 }
             }
             catch
@@ -169,7 +210,7 @@ namespace projectFrameCut.WinUI
                 int length = 0;
                 int rc = GetPackageFamilyName(h, ref length, null);
                 if (rc == APPMODEL_ERROR_NO_PACKAGE)
-                    return "Not running in AppContainer.";
+                    return "Not running in MSIX Package.";
                 if (length <= 0)
                     return string.Empty;
                 var sb = new StringBuilder(length);
@@ -180,7 +221,7 @@ namespace projectFrameCut.WinUI
                 }
                 else
                 {
-                    return "Not running in AppContainer.";
+                    return "Not running in MSIX Package.";
                 }
             }
             catch

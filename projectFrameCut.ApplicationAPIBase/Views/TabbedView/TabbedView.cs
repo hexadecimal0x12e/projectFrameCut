@@ -51,6 +51,24 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
                 Content = HeadersPanel
             };
+#if WINDOWS
+            headersScroll.HandlerChanging += (s, e) =>
+            {
+                if (e.OldHandler?.PlatformView is Microsoft.UI.Xaml.Controls.ScrollViewer sv)
+                {
+                    sv.RemoveHandler(Microsoft.UI.Xaml.UIElement.PointerWheelChangedEvent,
+                        new Microsoft.UI.Xaml.Input.PointerEventHandler(OnHeadersPointerWheelChanged));
+                }
+            };
+            headersScroll.HandlerChanged += (s, e) =>
+            {
+                if (headersScroll.Handler?.PlatformView is Microsoft.UI.Xaml.Controls.ScrollViewer sv)
+                {
+                    sv.AddHandler(Microsoft.UI.Xaml.UIElement.PointerWheelChangedEvent,
+                        new Microsoft.UI.Xaml.Input.PointerEventHandler(OnHeadersPointerWheelChanged), true);
+                }
+            };
+#endif
 
             // 创建右侧内容容器
             HeaderRightContentContainer = new ContentView
@@ -100,6 +118,23 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
 
             Content = grid;
         }
+
+#if WINDOWS
+        private void OnHeadersPointerWheelChanged(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            if (!e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Shift) ||
+                sender is not Microsoft.UI.Xaml.Controls.ScrollViewer sv)
+                return;
+
+            var properties = e.GetCurrentPoint(sv).Properties;
+            if (properties.IsHorizontalMouseWheel || properties.MouseWheelDelta == 0 || sv.ScrollableWidth <= 0)
+                return;
+
+            sv.ChangeView(Math.Clamp(sv.HorizontalOffset - properties.MouseWheelDelta, 0, sv.ScrollableWidth),
+                null, null, true);
+            e.Handled = true;
+        }
+#endif
 
         public static readonly BindableProperty TabItemsProperty =
             BindableProperty.Create(nameof(TabItems), typeof(ObservableCollection<TabbedViewItem>), typeof(TabbedView), null,

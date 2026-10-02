@@ -1,4 +1,4 @@
-﻿using projectFrameCut.ViewModels;
+using projectFrameCut.ViewModels;
 
 namespace projectFrameCut.DraftStuff;
 
@@ -16,6 +16,7 @@ public partial class ProjectAddClipView : ContentView
         InitializeComponent();
         _page = draftPage;
         _viewModel = new ProjectAddClipViewModel(ref draftPage);
+        _viewModel.LoadVectorComponents();
         BindingContext = _viewModel;
         _viewModel.SetDrawingView(DrawingCanvas);
         ParentChanged += (s, e) => (BindingContext as ProjectAddClipViewModel)?.LoadTransforms();
@@ -34,39 +35,10 @@ public partial class ProjectAddClipView : ContentView
     {
         CollapseHeaderControls();
 
-        switch (e.Tag)
-        {
-            case "LocalAssets":
-            case "RpcSources":
-            case "AIGC":
-            case "SharedAssets":
-            case "Templates":
-                {
-                    OrderOptionContainer.IsVisible = true;
-                    break;
-                }
-            default:
-                {
-                    OrderOptionContainer.IsVisible = false;
-                    break;
-                }
-        }
+        OrderOptionContainer.IsVisible = e.Tag is "LocalAssets" or "SharedAssets" or "RpcSources" or "Templates";
+        SearchContainer.IsVisible = e.Tag is not ("Sketch" or "AIGeneratedContent" or "More");
         if (e.Tag == "RpcSources") _ = _viewModel.LoadRpcVideoSources();
-        switch (e.Tag)
-        {
-            case "Sketch":
-            case "AIGC":
-            case "More":
-                {
-                    SearchContainer.IsVisible = false;
-                    break;
-                }
-            default:
-                {
-                    SearchContainer.IsVisible = true;
-                    break;
-                }
-        }
+        if (e.Tag == "Graphics") _viewModel.LoadVectorComponents();
     }
 
     private async void OnAddAssetClicked(object? sender, EventArgs e)

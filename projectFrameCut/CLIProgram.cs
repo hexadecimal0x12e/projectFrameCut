@@ -844,6 +844,7 @@ namespace projectFrameCut
             Action<double, TimeSpan, double>? progress = null,
             Action<string>? stageChanged = null)
         {
+            using var sleepRequest = RenderSleepRequest.Acquire();
             if (!switches.TryGetValue("project", out var projectRoot) || !Directory.Exists(projectRoot))
                 throw new DirectoryNotFoundException("-project must point to a project directory.");
             if (!switches.TryGetValue("output", out var outputPath) || string.IsNullOrWhiteSpace(outputPath))

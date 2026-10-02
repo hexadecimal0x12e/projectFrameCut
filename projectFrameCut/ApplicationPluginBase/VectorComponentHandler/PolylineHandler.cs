@@ -1,7 +1,8 @@
-﻿using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
+using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.Render.VectorContent.Components;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using Point = projectFrameCut.Drawing.Vector.Point;
@@ -29,9 +30,7 @@ public class PolylineHandler : BaseVectorComponentHandler
 
     public override IReadOnlyList<ShapeHandleDescriptor> CreateHandles(IVectorComponent component)
     {
-        var points = component.Parameters.TryGetValue("Points", out var val) && val is List<Point> pts
-            ? pts
-            : new List<Point>();
+        var points = ((PolylineComponent)component).GetPoints();
 
         var handles = new ShapeHandleDescriptor[points.Count];
         for (int i = 0; i < points.Count; i++)
@@ -52,10 +51,8 @@ public class PolylineHandler : BaseVectorComponentHandler
         if (!handleId.StartsWith("v") || !int.TryParse(handleId[1..], out int idx))
             return;
 
-        if (component.Parameters.TryGetValue("Points", out var val) && val is List<Point> pts)
-        {
-            if (idx >= 0 && idx < pts.Count)
-                pts[idx] = new Point(newX, newY);
-        }
+        var pts = ((PolylineComponent)component).GetPoints();
+        if (idx >= 0 && idx < pts.Count)
+            pts[idx] = new Point(newX, newY);
     }
 }

@@ -2158,10 +2158,11 @@ public partial class HomePage : ContentPage
                 return;
             }
             if (!await LoadProjectPluginsForProjectAsync(draftSourcePath, project)) return;
-            (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(tml, project);
-            var draftPage = new DraftPage(project, dict, new(), trackCount, draftSourcePath, project.ProjectName ?? "?", false);
-            var draft = DraftImportAndExportHelper.ExportFromDraftPage(draftPage, true, false);
-            var renderPage = new RenderPage(draftSourcePath, tml.Duration, project, draft);
+            foreach (var clip in tml.Clips)
+                DraftImportAndExportHelper.MigrateLegacyPlaceResizeToTargetRect(clip, project);
+            if (Directory.Exists(draftSourcePath)) Environment.CurrentDirectory = draftSourcePath;
+            Log($"Project loaded: {draftSourcePath}, {tml.Clips.Length} clips, {tml.SoundTracks.Length} soundtracks.");
+            var renderPage = new RenderPage(draftSourcePath, tml.Duration, project, tml);
             await Dispatcher.DispatchAsync(async () =>
             {
                 App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {project.ProjectName}";

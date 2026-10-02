@@ -50,6 +50,7 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
     private CompositionSurfaceBrush? _surfaceBrush;
     private SpriteVisual? _surfaceVisual;
     private int _updateVersion;
+    private bool _connected;
     private int _frameWidth;
     private int _frameHeight;
     private int _swapChainWidth;
@@ -71,6 +72,7 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
     protected override void ConnectHandler(PlatformGrid platformView)
     {
         base.ConnectHandler(platformView);
+        _connected = true;
         _panel.SizeChanged += OnPanelSizeChanged;
         _panel.CompositionScaleChanged += OnCompositionScaleChanged;
         UpdateFrame(VirtualView.Frame);
@@ -78,6 +80,7 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
 
     protected override void DisconnectHandler(PlatformGrid platformView)
     {
+        _connected = false;
         Interlocked.Increment(ref _updateVersion);
         _panel.SizeChanged -= OnPanelSizeChanged;
         _panel.CompositionScaleChanged -= OnCompositionScaleChanged;
@@ -88,10 +91,20 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
         base.DisconnectHandler(platformView);
     }
 
-    private void UpdateFrame(PreviewFrameSource? frame)
+    private bool IsCurrent(int version) => _connected && version == Volatile.Read(ref _updateVersion);
+
+    private async void UpdateFrame(PreviewFrameSource? frame)
     {
         var version = Interlocked.Increment(ref _updateVersion);
-        _ = PresentAsync(frame, version);
+        if (!IsCurrent(version)) return;
+        try
+        {
+            await PresentAsync(frame, version);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Present preview frame '{frame?.VfdPath}'", this);
+        }
     }
 
     private async Task PresentAsync(PreviewFrameSource? frame, int version)
@@ -105,7 +118,7 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
             return;
         }
 
-        if (version != Volatile.Read(ref _updateVersion)) return;
+        if (!IsCurrent(version)) return;
         if (frame.TargetPixelFormat != PreviewPixelFormat.Rgba16FloatScRgb)
         {
             _panel.Visibility = Visibility.Collapsed;
@@ -117,7 +130,7 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
         try
         {
             var materialized = await Task.Run(() => PreviewFrameMaterializer.ToScRgb(frame.VfdPath));
-            if (version != Volatile.Read(ref _updateVersion)) return;
+            if (!IsCurrent(version)) return;
 
             _device ??= CanvasDevice.GetSharedDevice();
             if (!_device.IsPixelFormatSupported(CanvasDirectXPixelFormat.R16G16B16A16Float))
@@ -128,14 +141,14 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
             else
                 PresentOpaqueHdrFrame(materialized.Bytes, materialized.Width, materialized.Height);
 
-            if (version != Volatile.Read(ref _updateVersion)) return;
+            if (!IsCurrent(version)) return;
             ShowError(null);
             _fallback.Visibility = Visibility.Collapsed;
         }
         catch (Exception ex)
         {
-            if (version != Volatile.Read(ref _updateVersion)) return;
-            Log(ex, "Show HDR Preview content", this);
+            if (!IsCurrent(version)) return;
+            Log(ex, $"Show HDR preview content '{frame.VfdPath}'", this);
             DisposeSwapChain();
             ElementCompositionPreview.SetElementChildVisual(PlatformView, null);
             DisposeCompositionResources();
@@ -159,18 +172,23 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
         try
         {
             var bytes = await Task.Run(() => PreviewFrameMaterializer.ToPngBytes(path));
+            if (!IsCurrent(version)) return;
             using var memory = new MemoryStream(bytes, writable: false);
             using var stream = memory.AsRandomAccessStream();
             var bitmap = new BitmapImage();
             await bitmap.SetSourceAsync(stream);
-            if (version != Volatile.Read(ref _updateVersion)) return;
+            if (!IsCurrent(version)) return;
             _fallback.Source = bitmap;
             _fallback.Visibility = Visibility.Visible;
         }
-        catch
+        catch (Exception ex)
         {
-            if (version == Volatile.Read(ref _updateVersion))
+            if (IsCurrent(version))
+            {
+                Log(ex, $"Load preview fallback '{path}'", this);
                 _fallback.Visibility = Visibility.Collapsed;
+                ShowError($"Preview failed: {ex.Message}");
+            }
         }
     }
 

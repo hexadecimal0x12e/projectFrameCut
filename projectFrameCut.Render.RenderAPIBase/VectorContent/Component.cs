@@ -1,8 +1,6 @@
 ﻿using projectFrameCut.Drawing.Vector;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.RenderAPIBase.VectorContent
 {
@@ -17,12 +15,6 @@ namespace projectFrameCut.Render.RenderAPIBase.VectorContent
         /// Define the type name of the component. 
         /// </summary>
         public new string TypeName { get; }
-
-        /// <summary>
-        /// Indicates all animatable fields of this component, with their current values and animation tracks.
-        /// </summary>
-        [JsonIgnore]
-        public IReadOnlyDictionary<string, AnimatableField> AnimatableFields { get; }
 
         /// <summary>
         /// Name of this component. Most for display purpose.
@@ -48,25 +40,19 @@ namespace projectFrameCut.Render.RenderAPIBase.VectorContent
         public int Index { get; set; }
 
         /// <summary>
-        /// The animation frames for this component, defining how its properties change over time.
-        /// </summary>
-        public List<VectorAnimationKeyFrame> AnimationFrames { get; set; }
-
-        /// <summary>
         /// Compute the target <see cref="VectorCanvasElement"/> for this component based on its parameters and state.
         /// </summary>
         /// <returns>The computed <see cref="VectorCanvasElement"/>.</returns>
-        public VectorCanvasElement Compute(float index);
+        public VectorCanvasElement Compute();
 
         /// <summary>
         /// Compute all target <see cref="VectorCanvasElement"/>s for this component.
         /// For simple components this returns a single element; for group components it returns the flattened children.
         /// </summary>
-        /// <param name="index">Normalized progress [0…1].</param>
         /// <returns>The computed elements.</returns>
-        public IEnumerable<VectorCanvasElement> ComputeAll(float index)
+        public IEnumerable<VectorCanvasElement> ComputeAll()
         {
-            var element = Compute(index);
+            var element = Compute();
             if (element is not null)
             {
                 yield return element;

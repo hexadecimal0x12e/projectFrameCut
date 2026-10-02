@@ -6,6 +6,7 @@ using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
 using System;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -56,6 +57,14 @@ public partial class AboutSettingPage : ContentPage
 
             }
             catch { renderHash = "unknown"; }
+            string platformSpecific = "";
+#if WINDOWS
+            try
+            {
+                platformSpecific = $"AppContainer SID: {Platforms.Windows.WindowsPluginIsolationPlatform.AppContainerSid}";
+            }
+            catch { }
+#endif
 
             AppDetailVersionLabel.Text =
                 $"""
@@ -63,6 +72,7 @@ public partial class AboutSettingPage : ContentPage
                 RPC Protocol: v{RenderProtocol.CurrentVersion} ({RenderProtocol.PipeProtocolVersion}, {RenderProtocol.MinimumSupportedVersion})
                 IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
                 Full package Name: {fullName} | Channel: {channel} | Store: {(MauiProgram.IsStoreMode ? "Yes" : "No")}
+                {platformSpecific}
                 """;
             AppBuildInfoLabel.Text = $"{MauiProgram.AssemblyName}: {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit} {programDate}";
             AppDetailVersionLabel_Narrow.Text = AppDetailVersionLabel.Text;

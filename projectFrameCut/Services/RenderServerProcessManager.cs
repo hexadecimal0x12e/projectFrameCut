@@ -183,7 +183,8 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             {
                 startInfo.ArgumentList.Add("--logDiagnostic");
             }
-
+            startInfo.EnvironmentVariables["DOTNET_gcServer"] = "1";
+            startInfo.EnvironmentVariables["DOTNET_GCHeapCount"] = Environment.ProcessorCount.ToString("x");
             try
             {
                 LogDiagnostic($"Starting worker {startInfo.FileName} with args: {JsonSerializer.Serialize(startInfo.ArgumentList)}");

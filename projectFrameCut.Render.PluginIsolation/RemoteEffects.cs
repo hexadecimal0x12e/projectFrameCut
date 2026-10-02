@@ -23,6 +23,7 @@ internal static class RemoteEffectFactory
             (int)EffectType.AudioNormalEffect => new RemoteAudioNormalEffect(session, descriptor),
             (int)EffectType.AudioContinuousEffect => new RemoteAudioContinuousEffect(session, descriptor),
             (int)EffectType.TextEffect => new RemoteTextEffect(session, descriptor),
+            (int)EffectType.VectorComponentEffect => new RemoteVectorComponentEffect(session, descriptor),
             (int)EffectType.ContinuousTextEffect => new RemoteContinuousTextEffect(session, descriptor),
             (int)EffectType.SpeedVarianceProvider => new RemoteSpeedVarianceProvider(session, descriptor),
             (int)EffectType.ClipPositionProvider => new RemoteClipPositionProvider(session, descriptor),
@@ -53,6 +54,35 @@ internal sealed class RemoteAudioContinuousEffect : RemoteEffectBase, IAudioCont
     public int StartPoint { get; set; }
     public int EndPoint { get; set; }
     public IAudioSamples Process(IAudioSamples input, float index) => RemoteEffectInvoke.ProcessAudio(Session, ObjectId, input, index);
+}
+
+internal sealed class RemoteVectorComponentEffect(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) : RemoteEffectBase(session, descriptor), IVectorComponentEffect
+{
+    public projectFrameCut.Render.RenderAPIBase.VectorContent.IVectorComponent Process(projectFrameCut.Render.RenderAPIBase.VectorContent.IVectorComponent source, float progress)
+    {
+        var request = new IsolationEffectInvokeRequest
+        {
+            ObjectId = ObjectId, Json = JsonSerializer.Serialize(source), Progress = progress, State = CreateState(),
+            VectorElements = source.FromPlugin == FromPlugin || source.FromPlugin == "projectFrameCut.Render.Plugins.InternalPluginBase" ? [] : source.ComputeAll().Select(e => new IsolationVectorElement
+            {
+                RelativeX = e.RelativeX, RelativeY = e.RelativeY, BaseX = e.BaseX, BaseY = e.BaseY,
+                Rotation = e.Rotation, LayerIndex = e.LayerIndex, UseUniformScale = e.UseUniformScale,
+                SourceClipId = e is projectFrameCut.Render.RenderAPIBase.VectorContent.IVectorClipElementTag tag ? tag.SourceClipId.ToString() : "",
+                Segments = e.Draw().Select(s => new IsolationVectorSegment { TypeName = s.GetType().Name, Json = JsonSerializer.Serialize(s, s.GetType()) }).ToList()
+            }).ToList(),
+            Value = (uint)Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) ?? 0f)
+        };
+        foreach (var id in DynamicProviderIds)
+        {
+            var value = GetDynamicValue(id);
+            if (value is not null) request.DynamicValues[id] = IsolationValueConverter.FromObject(value);
+        }
+        var response = Invoke<IsolationEffectInvokeRequest, IsolationVectorComponentDescriptor>(RenderOperation.IsolationProcessVectorComponentEffect, request);
+        using var remote = new RemoteVectorComponent(Session, response);
+        var serializer = Type.GetType("projectFrameCut.Render.VectorContent.VectorComponentSerializer, projectFrameCut.Render", throwOnError: true)!;
+        return (projectFrameCut.Render.RenderAPIBase.VectorContent.IVectorComponent)serializer.GetMethod("Restore")!
+            .Invoke(null, [JsonSerializer.SerializeToElement<projectFrameCut.Render.RenderAPIBase.VectorContent.IVectorComponent>(remote)])!;
+    }
 }
 
 internal sealed class RemoteTextEffect(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) : RemoteEffectBase(session, descriptor), ITextEffect
@@ -281,6 +311,9 @@ internal abstract class RemoteEffectBase : IEffect
             try { request.DynamicValues[id] = IsolationValueConverter.FromObject(value); } catch (NotSupportedException) { }
         }
     }
+
+    protected object? GetDynamicValue(string id)
+        => _dynamicGetters.TryGetValue(id, out var getter) ? getter() : ValueProviderFrameContext.Get(id);
 
     protected IsolationEffectMutableState CreateState() => new()
     {

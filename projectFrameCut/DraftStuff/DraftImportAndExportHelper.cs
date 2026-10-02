@@ -97,7 +97,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
         [return: NotNullIfNotNull(nameof(page))]
         [return: NotNullIfNotNull(nameof(element))]
-        public static ClipDraftDTO ExportClipElementFromDraftPage(projectFrameCut.DraftPage? page, ClipElementUI? element, bool wrapSoundtrackAsClip = true)
+        public static ClipDraftDTO ExportClipElementFromDraftPage(projectFrameCut.DraftPage? page, ClipElementUI? element, bool wrapSoundtrackAsClip = true, bool rebuildEffects = true)
         {
             if (page == null || element == null) return null!;
 
@@ -106,7 +106,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 throw new KeyNotFoundException($"Cannot find clip element '{element.Id}' in current draft page tracks.");
             }
 
-            RebuildEffectsForExport(element);
+            if (rebuildEffects) RebuildEffectsForExport(element);
 
             // Ghost/Shadow check: Guid-based IDs cannot use string prefix matching.
             // These clips are filtered upstream in the calling code.

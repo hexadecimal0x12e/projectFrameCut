@@ -355,7 +355,7 @@ public partial class DraftEffectBindingView : ContentView
             {
                 // Skip bundles that are internal/special effects (e.g. Crop, Place, Resize)
                 // to keep consistent with ClipInfoBuilder.BuildEffectTab filtering behavior.
-                if (!showIsNotVisibleInEffectEditorEffect && (bundle.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor) || !bundle.Target.HasFlag(_clip.GetEffectTarget())))
+                if (!showIsNotVisibleInEffectEditorEffect && (bundle.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor) || !EffectBindingHelper.AreTargetsCompatible(bundle.Target, _clip.GetEffectTarget())))
                     continue;
 
                 var node = new NodeViewModel
@@ -2023,7 +2023,7 @@ public partial class DraftEffectBindingView : ContentView
         if (_clip is null || _page is null) return;
 
         AddEffectsPanel.Children.Add(ClipInfoBuilder.BuildAddEffectPanel(
-            _clip.ClipType switch { ClipMode.Special => EffectTarget.NotSpecified, ClipMode.MarkingClip => EffectTarget.NotSpecified, ClipMode.AudioClip => EffectTarget.Audio, _ => EffectTarget.Video },
+            _clip.GetEffectSelectionTarget(),
             _page,
             EffectServices.GetAvailableEffectProviders(),
             new(),
@@ -2048,6 +2048,11 @@ public partial class DraftEffectBindingView : ContentView
         if (providerFactories.TryGetValue(providerTypeName, out var factory))
         {
             var instance = factory();
+            if (!ClipInfoBuilder.CanSelectEffectProvider(instance, _clip.GetEffectSelectionTarget(), hideKeyFramedProviders: true))
+            {
+                Log($"Rejected effect provider {providerTypeName} for clip {_clip.Id} ({_clip.ClipType}).", "warning");
+                return;
+            }
             instance.Id = Guid.NewGuid();
             instance.DisconnectMainInput();
             instance.SetFinalOutputSource(false);

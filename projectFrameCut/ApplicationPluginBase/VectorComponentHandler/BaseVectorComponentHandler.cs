@@ -1,6 +1,8 @@
 ﻿using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.Render.VectorContent;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 
@@ -46,6 +48,12 @@ public abstract class BaseVectorComponentHandler : IVectorComponentHandler
     {
     }
 
+    public virtual View? GetHandlePreview(IVectorComponent component, VectorHandlePreviewContext context, View? currentView = null)
+    {
+        var view = currentView as VectorHandlePreviewView ?? new VectorHandlePreviewView();
+        return view.Update(context) ? view : null;
+    }
+
     /// <summary>
     /// Creates the full property panel UI for the given component.
     /// Builds from <see cref="AddCommonProperties"/> + <see cref="AddShapeSpecificProperties"/>.
@@ -66,10 +74,6 @@ public abstract class BaseVectorComponentHandler : IVectorComponentHandler
         // ── Position section ──
         builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Position, b =>
         {
-            b.AddSlider("RelativeX", PPLocalizedResources.VectorContentHandler_X, 0.0, 1.0, GetParam(component, "RelativeX", 0.5f),
-                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("RelativeY", PPLocalizedResources.VectorContentHandler_Y, 0.0, 1.0, GetParam(component, "RelativeY", 0.5f),
-                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
             b.AddSlider("Rotation", PPLocalizedResources.VectorContentHandler_Rotation, -3.1416, 3.1416, GetParam(component, "Rotation", 0.0f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
         }, defaultExpanded: true);
@@ -77,30 +81,61 @@ public abstract class BaseVectorComponentHandler : IVectorComponentHandler
         // ── Appearance section ──
         builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Appearance, b =>
         {
-            b.AddSlider("Thickness", PPLocalizedResources.VectorContentHandler_Stroke, 0.0, 20.0, GetParam(component, "Thickness", 2.0f),
+            b.AddSlider("Thickness", Localized.VectorContentHandler_StrokeWidth, 0.0, 20.0, GetParam(component, component is projectFrameCut.Render.VectorContent.Components.TextComponent ? "StrokeThickness" : "Thickness", 2.0f),
                 eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
 
-            // Stroke RGBA
-            b.AddSlider("StrokeR", PPLocalizedResources.VectorContentHandler_StrokeR, 0.0, 255.0, GetParam(component, "StrokeR", 255.0f),
-                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("StrokeG", PPLocalizedResources.VectorContentHandler_StrokeG, 0.0, 255.0, GetParam(component, "StrokeG", 255.0f),
-                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("StrokeB", PPLocalizedResources.VectorContentHandler_StrokeB, 0.0, 255.0, GetParam(component, "StrokeB", 255.0f),
-                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("StrokeA", PPLocalizedResources.VectorContentHandler_StrokeA, 0.0, 1.0, GetParam(component, "StrokeA", 1.0f),
-                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSeparator();
-
-            // Fill RGBA
-            b.AddSlider("FillR", PPLocalizedResources.VectorContentHandler_FillR, 0.0, 255.0, GetParam(component, "FillR", 0.0f),
-                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("FillG", PPLocalizedResources.VectorContentHandler_FillG, 0.0, 255.0, GetParam(component, "FillG", 0.0f),
-                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("FillB", PPLocalizedResources.VectorContentHandler_FillB, 0.0, 255.0, GetParam(component, "FillB", 0.0f),
-                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
-            b.AddSlider("FillA", PPLocalizedResources.VectorContentHandler_FillA, 0.0, 1.0, GetParam(component, "FillA", 1.0f),
-                eventCallMode: SliderUpdateEventCallMode.OnValueChanged);
+            AddColorPicker(b, component, "Stroke", Localized.VectorContentHandler_StrokeColor);
+            AddColorPicker(b, component, "Fill", Localized.VectorContentHandler_FillColor);
         }, defaultExpanded: true);
+    }
+
+    private static void AddColorPicker(PropertyPanelBuilder builder, IVectorComponent component, string prefix, PropertyPanelItemLabel title)
+    {
+        var color = Color.FromRgba(
+            component.Parameters.GetUShort(prefix + "R") / 65535.0,
+            component.Parameters.GetUShort(prefix + "G") / 65535.0,
+            component.Parameters.GetUShort(prefix + "B") / 65535.0,
+            Math.Clamp(GetParam(component, prefix + "A", 1f), 0f, 1f));
+        builder.AddCustomChild(title, invoker =>
+        {
+            var swatch = new BoxView { Color = color, WidthRequest = 30, HeightRequest = 30, CornerRadius = 5, VerticalOptions = LayoutOptions.Center };
+            var label = new Label { Text = color.ToArgbHex(), VerticalOptions = LayoutOptions.Center };
+            var layout = new HorizontalStackLayout { Spacing = 8, Children = { swatch, label } };
+            bool opening = false;
+            var tap = new TapGestureRecognizer();
+            tap.Tapped += async (_, _) =>
+            {
+                if (opening || App.GetCurrentPage() is not DraftPage page) return;
+                opening = true;
+                try
+                {
+                    var picker = new ColorPicker { SelectedColor = swatch.Color };
+                    picker.SelectedColorChanged += (_, selected) =>
+                    {
+                        swatch.Color = selected;
+                        label.Text = selected.ToArgbHex();
+                        invoker(selected);
+                    };
+                    await page.ShowAPopup(new ScrollView
+                    {
+                        Content = new VerticalStackLayout
+                        {
+                            Spacing = 10,
+                            Padding = new Thickness(10, 0),
+                            Children =
+                            {
+                                new Button { Text = Localized._Hide, Command = new Command(async () => await page.HidePopup(true)) },
+                                picker
+                            }
+                        }
+                    }, mode: "dialog");
+                }
+                catch (Exception ex) { projectFrameCut.Shared.Logger.Log(ex, $"Open vector {prefix} color picker for {component.Id}", component); }
+                finally { opening = false; }
+            };
+            layout.GestureRecognizers.Add(tap);
+            return layout;
+        }, "Vector" + prefix + "Color", color);
     }
 
     /// <summary>
@@ -111,7 +146,16 @@ public abstract class BaseVectorComponentHandler : IVectorComponentHandler
 
     public virtual void HandlePropertyChange(IVectorComponent component, PropertyPanelPropertyChangedEventArgs args)
     {
-        component.Parameters[args.Id] = args.Value ?? 0f;
+        if ((args.Id is "VectorStrokeColor" or "VectorFillColor") && args.Value is Color color)
+        {
+            string prefix = args.Id == "VectorStrokeColor" ? "Stroke" : "Fill";
+            component.Parameters[prefix + "R"] = (float)Math.Round(Math.Clamp(color.Red, 0f, 1f) * ushort.MaxValue);
+            component.Parameters[prefix + "G"] = (float)Math.Round(Math.Clamp(color.Green, 0f, 1f) * ushort.MaxValue);
+            component.Parameters[prefix + "B"] = (float)Math.Round(Math.Clamp(color.Blue, 0f, 1f) * ushort.MaxValue);
+            component.Parameters[prefix + "A"] = Math.Clamp(color.Alpha, 0f, 1f);
+        }
+        else
+            component.Parameters[args.Id] = args.Value ?? 0f;
     }
 
     public virtual VectorComponentHandlerDisplayItem GetDisplayItem(string? locale = null) =>

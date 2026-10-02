@@ -45,6 +45,8 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>For transferring assets between devices, or connect to a Central Asset Server.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Allows shutting down or putting the Mac to sleep after rendering, when selected.</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>zh-Hans</string>

@@ -5,7 +5,6 @@ namespace projectFrameCut.Render.VectorContent.Components;
 public class ArcComponent : BaseShapeComponent
 {
     public override string TypeName => "Arc";
-    protected override string[] ShapeFieldIds => ["CenterX", "CenterY", "RadiusX", "RadiusY", "StartAngle", "SweepAngle"];
 
     protected override Dictionary<string, object> GetDefaultParameters() =>
         new()

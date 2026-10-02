@@ -1,4 +1,4 @@
-﻿using FFmpeg.AutoGen;
+using FFmpeg.AutoGen;
 using projectFrameCut.Drawing.Processing.Converting;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
@@ -19,6 +19,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
     /// </summary>
     internal static unsafe class VideoDecoderTimestamp
     {
+        public static bool ShouldSeek(uint targetFrame, int nextFrame, double fps)
+        {
+            return targetFrame < nextFrame
+                || (double.IsFinite(fps) && fps > 0 && (long)targetFrame - nextFrame > Math.Max(1, Math.Ceiling(fps)));
+        }
+
         public static bool TryGetFrameNumber(AVFrame* frame, AVStream* stream, double fps, out int frameNumber)
         {
             frameNumber = 0;
@@ -302,8 +308,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     return diskFrame;
                 }
 
-                if (targetFrame < _currentFrameNumber)
+                bool cacheIntermediateFrames = !VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps);
+                if (!cacheIntermediateFrames)
                 {
+                    Log($"[{TypeName}] Seeking '{_path}' from next frame {_currentFrameNumber} to {targetFrame}.", "debug");
                     SmartSeekTo(targetFrame);
                 }
 
@@ -367,6 +375,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                 if (!VideoDecoderTimestamp.TryGetFrameNumber(_frm, _fmt->streams[_videoStreamIndex], _fps, out decodedFrameNumber)
                                     || decodedFrameNumber > targetFrame)
                                 {
+                                    Log($"[{TypeName}] Seek timestamp calibration failed for '{_path}' at target {targetFrame}; restarting from the beginning.", "warning");
+                                    cacheIntermediateFrames = false;
                                     SmartSeekTo(0);
                                     decodedFrameNumber = 0;
                                     restartFromBeginning = true;
@@ -382,7 +392,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                 break;
                             }
 
-                            CacheDecodedFrame((uint)decodedFrameNumber);
+                            if (cacheIntermediateFrames)
+                                CacheDecodedFrame((uint)decodedFrameNumber);
                             decodedFrameNumber++;
                             continue;
                         }
@@ -520,6 +531,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     Log(msg, "warning");
                     throw new InvalidOperationException(msg);
                 }
+                Log($"[{TypeName}] Seek to frame {targetFrame} failed for '{_path}'; restarting from the beginning.", "warning");
                 fellBackToStart = true;
             }
 
@@ -935,8 +947,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     return diskHDRFrame;
                 }
 
-                if (targetFrame < _currentFrameNumber)
+                bool cacheIntermediateFrames = !VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps);
+                if (!cacheIntermediateFrames)
                 {
+                    Log($"[{TypeName}] Seeking '{_path}' from next frame {_currentFrameNumber} to {targetFrame}.", "debug");
                     SmartSeekTo(targetFrame);
                 }
 
@@ -1000,6 +1014,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                 if (!VideoDecoderTimestamp.TryGetFrameNumber(_frm, _fmt->streams[_videoStreamIndex], _fps, out decodedFrameNumber)
                                     || decodedFrameNumber > targetFrame)
                                 {
+                                    Log($"[{TypeName}] Seek timestamp calibration failed for '{_path}' at target {targetFrame}; restarting from the beginning.", "warning");
+                                    cacheIntermediateFrames = false;
                                     SmartSeekTo(0);
                                     decodedFrameNumber = 0;
                                     restartFromBeginning = true;
@@ -1015,7 +1031,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                 break;
                             }
 
-                            CacheDecodedFrame((uint)decodedFrameNumber, hasAlpha);
+                            if (cacheIntermediateFrames)
+                                CacheDecodedFrame((uint)decodedFrameNumber, hasAlpha);
                             decodedFrameNumber++;
                             continue;
                         }
@@ -1154,6 +1171,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     Log(msg, "warning");
                     throw new InvalidOperationException(msg);
                 }
+                Log($"[{TypeName}] Seek to frame {targetFrame} failed for '{_path}'; restarting from the beginning.", "warning");
                 fellBackToStart = true;
             }
 
@@ -1770,8 +1788,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     return diskFrame;
                 }
 
-                if (targetFrame < _currentFrameNumber)
+                bool cacheIntermediateFrames = !VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps);
+                if (!cacheIntermediateFrames)
                 {
+                    Log($"[{TypeName}] Seeking '{_path}' from next frame {_currentFrameNumber} to {targetFrame}.", "debug");
                     SmartSeekTo(targetFrame);
                 }
 
@@ -1835,6 +1855,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                 if (!VideoDecoderTimestamp.TryGetFrameNumber(_frm, _fmt->streams[_videoStreamIndex], _fps, out decodedFrameNumber)
                                     || decodedFrameNumber > targetFrame)
                                 {
+                                    Log($"[{TypeName}] Seek timestamp calibration failed for '{_path}' at target {targetFrame}; restarting from the beginning.", "warning");
+                                    cacheIntermediateFrames = false;
                                     SmartSeekTo(0);
                                     decodedFrameNumber = 0;
                                     restartFromBeginning = true;
@@ -1851,7 +1873,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
                             }
 
                             // Cache intermediate frames during forward decode
-                            CacheDecodedFrame((uint)decodedFrameNumber);
+                            if (cacheIntermediateFrames)
+                                CacheDecodedFrame((uint)decodedFrameNumber);
                             decodedFrameNumber++;
                             continue;
                         }
@@ -1991,6 +2014,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     Log(msg, "warning");
                     throw new InvalidOperationException(msg);
                 }
+                Log($"[{TypeName}] Seek to frame {targetFrame} failed for '{_path}'; restarting from the beginning.", "warning");
                 fellBackToStart = true;
             }
 

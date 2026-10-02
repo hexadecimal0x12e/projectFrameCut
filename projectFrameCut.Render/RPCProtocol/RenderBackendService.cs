@@ -444,8 +444,10 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private async ValueTask<RenderArtifact> RenderClipPreviewAsync(ClipPreviewRequest request, CancellationToken cancellationToken)
     {
         var session = GetSession(request.SessionId);
-        var clip = session.Clips.FirstOrDefault(candidate => candidate.Id == request.ClipId)
+        var savedClip = session.Clips.FirstOrDefault(candidate => candidate.Id == request.ClipId)
             ?? throw new KeyNotFoundException($"Clip '{request.ClipId}' was not found in render session '{request.SessionId}'.");
+        using var snapshot = string.IsNullOrEmpty(request.VectorClipJson) ? null : CreateVectorPreviewSnapshot(request, savedClip, session);
+        var clip = snapshot ?? savedClip;
         if (clip.ClipType == ClipMode.AudioClip)
             throw new NotSupportedException($"Clip '{request.ClipId}' is an audio clip and cannot produce a picture preview.");
         var canvasWidth = Math.Max(1, request.CanvasWidth);
@@ -461,7 +463,9 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             // Use the same full-timeline content hash as static previews. This is
             // important for transform clips whose output depends on bound clips
             // outside the requested clip itself.
-            var clipHash = session.GetClipFrameHash(clip.Id, request.FrameIndex);
+            var clips = snapshot is null ? session.Clips : session.Clips.Select(c => c.Id == clip.Id ? clip : c).ToArray();
+            var clipHash = snapshot is null ? session.GetClipFrameHash(clip.Id, request.FrameIndex)
+                : Timeline.GetClipFrameHash(clips, clip, request.FrameIndex);
             var namespacePrefix = string.IsNullOrEmpty(session.CacheNamespace) ? string.Empty : $"{session.CacheNamespace}_";
             var wantsScRgb = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb;
             var formatSuffix = wantsScRgb ? "vfd16" : "vfd8";
@@ -481,7 +485,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                     }
                     picture = ClipPreviewRenderer.Render(
                         clip,
-                        GetVisualClips(session.Clips),
+                        GetVisualClips(clips),
                         canvasWidth,
                         canvasHeight,
                         projectWidth,
@@ -516,6 +520,28 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         finally
         {
             session.RenderGate.Release();
+        }
+    }
+
+    private IClip CreateVectorPreviewSnapshot(ClipPreviewRequest request, IClip savedClip, BackendSession session)
+    {
+        var dto = JsonSerializer.Deserialize<ClipDraftDTO>(request.VectorClipJson!, _jsonOptions)
+            ?? throw new InvalidDataException("The vector preview snapshot is empty.");
+        if (savedClip.ClipType != ClipMode.VectorComponentClip || dto.ClipType != savedClip.ClipType
+            || dto.Id != savedClip.Id || dto.FromPlugin != savedClip.FromPlugin || dto.TypeName != savedClip.TypeName)
+            throw new InvalidDataException("The vector preview snapshot does not match the session clip.");
+        var clip = PluginManager.CreateClip(JsonSerializer.SerializeToElement(dto, _jsonOptions));
+        try
+        {
+            ResolveSourcePath(clip, dto.FilePath, session.Assets, string.Empty, session.ProjectRoot);
+            clip.ReInit(IPicture.PicturePixelMode.BytePicture);
+            clip.EffectsInstances = EffectHelper.GetClipEffectsInstances(clip);
+            return clip;
+        }
+        catch
+        {
+            clip.Dispose();
+            throw;
         }
     }
 

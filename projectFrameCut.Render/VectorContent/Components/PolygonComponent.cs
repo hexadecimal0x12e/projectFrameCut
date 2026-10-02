@@ -5,7 +5,6 @@ namespace projectFrameCut.Render.VectorContent.Components;
 public class PolygonComponent : BaseShapeComponent
 {
     public override string TypeName => "Polygon";
-    protected override string[] ShapeFieldIds => [];
 
     protected override Dictionary<string, object> GetDefaultParameters() =>
         new()
@@ -20,10 +19,7 @@ public class PolygonComponent : BaseShapeComponent
 
     protected override ShapeCanvasElement BuildBaseShape()
     {
-        var points = Parameters.TryGetValue("Points", out var value) && value is List<Point> pts
-            ? pts
-            : [];
-        return ShapeCanvasElement.DrawPolygon(points.ToArray());
+        return ShapeCanvasElement.DrawPolygon(GetPoints().ToArray());
     }
 }
 

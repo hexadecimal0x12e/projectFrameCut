@@ -26,8 +26,6 @@ public class TextComponent : IVectorComponent
     public Guid Id { get; set; } = Guid.NewGuid();
     public Dictionary<string, object> Parameters { get; set; } = new();
     public int Index { get; set; }
-    public List<VectorAnimationKeyFrame> AnimationFrames { get; set; } = new();
-    public IReadOnlyDictionary<string, AnimatableField> AnimatableFields { get; }
 
     /// <summary>Virtual canvas dimensions used for text layout.</summary>
     private const int RefCanvasW = 1920;
@@ -36,14 +34,6 @@ public class TextComponent : IVectorComponent
     public TextComponent()
     {
         EnsureDefaultParameters();
-
-        var map = new Dictionary<string, AnimatableField>(AnimatableFieldMap.CommonFields);
-        foreach (var fieldId in new[] { "FontSize", "CharacterSpacing", "LineSpacing" })
-        {
-            if (AnimatableFieldMap.ShapeFields.TryGetValue(fieldId, out var field))
-                map[fieldId] = field;
-        }
-        AnimatableFields = map;
     }
 
     private void EnsureDefaultParameters()
@@ -87,12 +77,12 @@ public class TextComponent : IVectorComponent
     //  Rendering
     // ═══════════════════════════════════════════════════════════════
 
-    public VectorCanvasElement Compute(float normalizedProgress)
+    public VectorCanvasElement Compute()
     {
         EnsureDefaultParameters();
 
         var ctx = TextLayoutContext.FromCanvas(RefCanvasW, RefCanvasH);
-        var entries = BuildTextEntries(ctx, normalizedProgress);
+        var entries = BuildTextEntries();
         if (entries.Count == 0)
             return CreateEmptyElement();
 
@@ -102,25 +92,25 @@ public class TextComponent : IVectorComponent
             ? picture.Elements[0]
             : CreateEmptyElement();
 
-        ApplyPosition(element, normalizedProgress);
+        ApplyPosition(element);
         return element;
     }
 
-    public IEnumerable<VectorCanvasElement> ComputeAll(float normalizedProgress)
+    public IEnumerable<VectorCanvasElement> ComputeAll()
     {
         EnsureDefaultParameters();
 
         var ctx = TextLayoutContext.FromCanvas(RefCanvasW, RefCanvasH);
-        var entries = BuildTextEntries(ctx, normalizedProgress);
+        var entries = BuildTextEntries();
         if (entries.Count == 0)
             yield break;
 
         var picture = TextLayoutPipeline.LayoutForRender(entries, ctx, RefCanvasW, RefCanvasH);
 
-        float relX = AnimationFrames.EvaluateField("RelativeX", normalizedProgress, Parameters.GetFloat("RelativeX", 0.5f));
-        float relY = AnimationFrames.EvaluateField("RelativeY", normalizedProgress, Parameters.GetFloat("RelativeY", 0.5f));
-        float rot = AnimationFrames.EvaluateField("Rotation", normalizedProgress, Parameters.GetFloat("Rotation", 0f));
-        int layer = (int)AnimationFrames.EvaluateField("LayerIndex", normalizedProgress, Parameters.GetFloat("LayerIndex", Index));
+        float relX = Parameters.GetFloat("RelativeX", 0.5f);
+        float relY = Parameters.GetFloat("RelativeY", 0.5f);
+        float rot = Parameters.GetFloat("Rotation", 0f);
+        int layer = (int)Parameters.GetFloat("LayerIndex", Index);
 
         foreach (var element in picture.Elements)
         {
@@ -138,23 +128,23 @@ public class TextComponent : IVectorComponent
     //  Helpers
     // ═══════════════════════════════════════════════════════════════
 
-    private void ApplyPosition(VectorCanvasElement element, float progress)
+    private void ApplyPosition(VectorCanvasElement element)
     {
         // GlyphCanvasElement uses UseUniformScale=true; its screen origin is:
         //   originX = BaseX * canvasW + RelativeX * uniform
         // RelativeX is set by the typesetting engine to the glyph's cursor
         // position — we MUST NOT overwrite it.  Instead we store the component
         // position in BaseX/BaseY so the two offsets compose correctly.
-        element.BaseX = AnimationFrames.EvaluateField("RelativeX", progress, Parameters.GetFloat("RelativeX", 0.5f));
-        element.BaseY = AnimationFrames.EvaluateField("RelativeY", progress, Parameters.GetFloat("RelativeY", 0.5f));
-        element.Rotation = AnimationFrames.EvaluateField("Rotation", progress, Parameters.GetFloat("Rotation", 0f));
-        element.LayerIndex = (int)AnimationFrames.EvaluateField("LayerIndex", progress, Parameters.GetFloat("LayerIndex", Index));
+        element.BaseX = Parameters.GetFloat("RelativeX", 0.5f);
+        element.BaseY = Parameters.GetFloat("RelativeY", 0.5f);
+        element.Rotation = Parameters.GetFloat("Rotation", 0f);
+        element.LayerIndex = (int)Parameters.GetFloat("LayerIndex", Index);
     }
 
     private static VectorCanvasElement CreateEmptyElement() =>
         ShapeCanvasElement.DrawRectangle(0, 0);
 
-    private List<TextEntry> BuildTextEntries(TextLayoutContext ctx, float progress)
+    private List<TextEntry> BuildTextEntries()
     {
         string text = Parameters.TryGetValue("Text", out var rawText)
             ? rawText?.ToString() ?? "Text"
@@ -162,7 +152,7 @@ public class TextComponent : IVectorComponent
         if (string.IsNullOrEmpty(text))
             return new List<TextEntry>();
 
-        float fontSize = AnimationFrames.EvaluateField("FontSize", progress, Parameters.GetFloat("FontSize", 120f));
+        float fontSize = Parameters.GetFloat("FontSize", 120f);
 
         var entry = new TextEntry
         {
@@ -172,17 +162,17 @@ public class TextComponent : IVectorComponent
             FontSize = fontSize,
             X = 0f,
             Y = 0f,
-            FillR = (ushort)Math.Clamp(AnimationFrames.EvaluateField("FillR", progress, Parameters.GetFloat("FillR", ushort.MaxValue)), 0f, 65535f),
-            FillG = (ushort)Math.Clamp(AnimationFrames.EvaluateField("FillG", progress, Parameters.GetFloat("FillG", ushort.MaxValue)), 0f, 65535f),
-            FillB = (ushort)Math.Clamp(AnimationFrames.EvaluateField("FillB", progress, Parameters.GetFloat("FillB", ushort.MaxValue)), 0f, 65535f),
-            FillA = AnimationFrames.EvaluateField("FillA", progress, Parameters.GetFloat("FillA", 1f)),
-            StrokeR = (ushort)Math.Clamp(AnimationFrames.EvaluateField("StrokeR", progress, Parameters.GetFloat("StrokeR", 0f)), 0f, 65535f),
-            StrokeG = (ushort)Math.Clamp(AnimationFrames.EvaluateField("StrokeG", progress, Parameters.GetFloat("StrokeG", 0f)), 0f, 65535f),
-            StrokeB = (ushort)Math.Clamp(AnimationFrames.EvaluateField("StrokeB", progress, Parameters.GetFloat("StrokeB", 0f)), 0f, 65535f),
-            StrokeA = AnimationFrames.EvaluateField("StrokeA", progress, Parameters.GetFloat("StrokeA", 0f)),
+            FillR = (ushort)Math.Clamp(Parameters.GetFloat("FillR", ushort.MaxValue), 0f, 65535f),
+            FillG = (ushort)Math.Clamp(Parameters.GetFloat("FillG", ushort.MaxValue), 0f, 65535f),
+            FillB = (ushort)Math.Clamp(Parameters.GetFloat("FillB", ushort.MaxValue), 0f, 65535f),
+            FillA = Parameters.GetFloat("FillA", 1f),
+            StrokeR = (ushort)Math.Clamp(Parameters.GetFloat("StrokeR", 0f), 0f, 65535f),
+            StrokeG = (ushort)Math.Clamp(Parameters.GetFloat("StrokeG", 0f), 0f, 65535f),
+            StrokeB = (ushort)Math.Clamp(Parameters.GetFloat("StrokeB", 0f), 0f, 65535f),
+            StrokeA = Parameters.GetFloat("StrokeA", 0f),
             StrokeThickness = Parameters.GetFloat("StrokeThickness", 2f),
-            CharacterSpacing = AnimationFrames.EvaluateField("CharacterSpacing", progress, Parameters.GetFloat("CharacterSpacing", 0f)),
-            LineSpacing = AnimationFrames.EvaluateField("LineSpacing", progress, Parameters.GetFloat("LineSpacing", 0.3f)),
+            CharacterSpacing = Parameters.GetFloat("CharacterSpacing", 0f),
+            LineSpacing = Parameters.GetFloat("LineSpacing", 0.3f),
             Alignment = (TextAlignment)(int)Parameters.GetFloat("TextAlignment", 0f),
         };
 

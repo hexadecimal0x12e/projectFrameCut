@@ -1,5 +1,6 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
+using projectFrameCut.ApplicationAPIBase.Interaction;
 
 namespace projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 
@@ -48,6 +49,8 @@ public interface IVectorComponentHandler : projectFrameCut.Render.RenderAPIBase.
     /// <param name="newY">the new Y position of the handle</param>
     /// <param name="isLive">indicates whether the drag is in live(dragging) or final(completed) state.</param>
     public void ApplyHandleDrag(IVectorComponent component, string handleId, float newX, float newY, bool isLive);
+    /// <summary>Creates or updates a handle-drag preview on the UI thread, reusing currentView when possible. Return null to use the backend preview.</summary>
+    public View? GetHandlePreview(IVectorComponent component, VectorHandlePreviewContext context, View? currentView = null) => null;
     /// <summary>
     /// Creates a property panel UI for the given vector component. This UI allows users to view and edit the properties of the component.
     /// </summary>

@@ -340,7 +340,7 @@ public class AssetItemViewModel : INotifyPropertyChanged
     public ICommand RemoveAssetCommand { get; set; }
     public ICommand AddToTrackCommand { get; set; }
 
-    public bool IsAddable => OriginalAsset != null && (OriginalAsset.AssetType == AssetType.Video || OriginalAsset.AssetType == AssetType.Image || OriginalAsset.AssetType == AssetType.Audio);
+    public bool IsAddable => OriginalAsset != null && OriginalAsset.AssetType is AssetType.Video or AssetType.Image or AssetType.Audio or AssetType.VectorComposition;
 
     public AssetItem OriginalAsset { get; set; }
 

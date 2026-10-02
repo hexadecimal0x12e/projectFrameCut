@@ -103,7 +103,7 @@ internal class IsolatedPluginProxy : IPluginBase, IAIProviderPlugin
         finally { Inner.OnClosing(); }
     }
 
-    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement;
+    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect;
 
     private IVideoSource CreateVideoSource(string path, string? decoder)
     {

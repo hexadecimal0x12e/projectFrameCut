@@ -1,4 +1,3 @@
-using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Vector;
@@ -14,12 +13,13 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Point = projectFrameCut.Drawing.Vector.Point;
+using projectFrameCut.Render.VectorContent;
 
 namespace projectFrameCut.Render.ClipsAndTracks;
 
 /// <summary>
 /// Lightweight IClip wrapper around an <see cref="IVectorComponent"/> so that
-/// <see cref="InteractableEditor.InteractableEditor"/> can manage component layout
+/// the editor can manage component layout
 /// (drag, resize, snap, reference lines) without knowing about the vector animation domain.
 /// </summary>
 /// <remarks>
@@ -220,9 +220,15 @@ public partial class VectorComponentWrapperClip : IClip
 
     // ── Construction ─────────────────────────────────────────
 
-    public VectorComponentWrapperClip(IVectorComponent component)
+    public VectorComponentWrapperClip(IVectorComponent component) : this(component, 1920, 1080)
+    {
+    }
+
+    public VectorComponentWrapperClip(IVectorComponent component, int canvasWidth, int canvasHeight)
     {
         Component = component ?? throw new ArgumentNullException(nameof(component));
+        ParentCanvasWidth = canvasWidth;
+        ParentCanvasHeight = canvasHeight;
         SyncFromDefinition();
     }
 
@@ -376,10 +382,7 @@ public partial class VectorComponentWrapperClip : IClip
     {
         int w = Math.Max(1, requiredWidth);
         int h = Math.Max(1, requiredHeight);
-        uint duration = Math.Max(1, DurationInFrames);
-        uint frame = Math.Min(frameIndex, duration - 1);
-
-        var elements = ComputeAnimatedElements(this, frame, duration);
+        var elements = BuildElements(Component, CachedSvgElements);
         if (elements is null || elements.Count == 0)
         {
             // Return a transparent placeholder
@@ -400,23 +403,18 @@ public partial class VectorComponentWrapperClip : IClip
     }
 
     /// <summary>
-    /// Computes the animated pixel bounds for the wrapped component at the specified frame.
+    /// Computes the pixel bounds for the wrapped component.
     /// The returned rectangle is in parent-canvas coordinates and can be fed directly to
     /// InteractableEditor's TargetX/TargetY/TargetWidth/TargetHeight.
     /// </summary>
-    public bool TryComputeAnimatedFrameBounds(
-        uint frameIndex,
-        uint clipDuration,
-        out ClipPositionTuple bounds)
+    public bool TryComputeFrameBounds(out ClipPositionTuple bounds)
     {
         bounds = default;
 
-        uint duration = Math.Max(1, clipDuration);
-        uint frame = Math.Min(frameIndex, duration - 1);
         double canvasW = Math.Max(1, ParentCanvasWidth);
         double canvasH = Math.Max(1, ParentCanvasHeight);
 
-        var elements = ComputeAnimatedElements(this, frame, duration);
+        var elements = BuildElements(Component, CachedSvgElements);
         if (elements is null || elements.Count == 0)
         {
             return false;
@@ -479,7 +477,7 @@ public partial class VectorComponentWrapperClip : IClip
     {
         if (component is ComponentGroup group)
         {
-            return group.ComputeAll(0f).ToList();
+            return group.ComputeAll().ToList();
         }
 
         if (cachedSvgElements is { Count: > 0 })
@@ -487,80 +485,7 @@ public partial class VectorComponentWrapperClip : IClip
             return cachedSvgElements.Select(e => e is ShapeCanvasElement shape ? shape.Clone() : e).ToList();
         }
 
-        return component.ComputeAll(0f).ToList();
-    }
-
-    /// <summary>
-    /// Computes animated elements for the given frame.
-    /// For SVG components uses cached elements with per-element progress.
-    /// For <see cref="ComponentGroup"/>s returns flattened children.
-    /// Otherwise uses <see cref="IVectorComponent.ComputeAll"/> so components
-    /// such as <see cref="TextComponent"/> produce every glyph for the preview.
-    /// </summary>
-    public static List<VectorCanvasElement> ComputeAnimatedElements(
-        VectorComponentWrapperClip clip, uint frame, uint duration)
-    {
-        float progress = duration <= 1 ? 0f : Math.Clamp(frame / (float)(duration - 1), 0f, 1f);
-
-        if (clip.Component is ComponentGroup group)
-        {
-            return group.ComputeAll(progress).ToList();
-        }
-
-        if (clip.CachedSvgElements is { Count: > 0 })
-        {
-            // SVG: evaluate component's animation and apply to cached elements
-            var animFrames = clip.Component.AnimationFrames;
-            if (animFrames is { Count: > 0 })
-            {
-                var grouped = animFrames
-                    .Where(kf => !string.IsNullOrWhiteSpace(kf.TargetFieldId))
-                    .GroupBy(kf => kf.TargetFieldId);
-
-                return clip.CachedSvgElements.Select(e =>
-                {
-                    if (e is not ShapeCanvasElement shape) return e;
-                    var cloned = shape.Clone();
-                    foreach (var group in grouped)
-                    {
-                        var ordered = group.OrderBy(kf => kf.Time).ToList();
-                        float value = EvaluateKeyframes(ordered, progress);
-                        Render.VectorContent.AnimationApplier.ApplyFieldValue(cloned, group.Key, value);
-                    }
-                    return cloned;
-                }).ToList();
-            }
-            return clip.CachedSvgElements.ToList();
-        }
-
-        return clip.Component.ComputeAll(progress).ToList();
-    }
-
-    private static float EvaluateKeyframes(List<VectorAnimationKeyFrame> keyframes, float progress)
-    {
-        if (keyframes.Count == 0) return 0f;
-        if (keyframes.Count == 1) return keyframes[0].Value;
-
-        progress = Math.Clamp(progress, 0f, 1f);
-        if (progress <= keyframes[0].Time) return keyframes[0].Value;
-
-        var last = keyframes[^1];
-        if (progress >= last.Time) return last.Value;
-
-        for (int i = 1; i < keyframes.Count; i++)
-        {
-            var prev = keyframes[i - 1];
-            var next = keyframes[i];
-            if (progress >= next.Time) continue;
-
-            float span = next.Time - prev.Time;
-            if (span <= 0f) return next.Value;
-
-            float t = (progress - prev.Time) / span;
-            float eased = EasingFunctions.Apply(prev.Easing, t);
-            return prev.Value + (next.Value - prev.Value) * eased;
-        }
-        return last.Value;
+        return component.ComputeAll().ToList();
     }
 
     // ── Shape parameter helpers (static) ────────────────────
@@ -808,25 +733,12 @@ public partial class VectorComponentWrapperClip : IClip
             return default;
         }
 
-        if (element.UseUniformScale)
-        {
-            var uniform = Math.Min(canvasW, canvasH);
-            var originX = element.BaseX * canvasW + element.RelativeX * uniform;
-            var originY = element.BaseY * canvasH + element.RelativeY * uniform;
-            return new PixelBounds(
-                originX + localBounds.MinX * uniform,
-                originY + localBounds.MinY * uniform,
-                localBounds.Width * uniform,
-                localBounds.Height * uniform);
-        }
-
-        var originXNonUniform = element.RelativeX * canvasW;
-        var originYNonUniform = element.RelativeY * canvasH;
+        var transformed = new VectorViewportElement(element, (float)canvasW, (float)canvasH, 0, 0, (float)canvasW, (float)canvasH);
+        if (!TryComputeElementLocalBounds(transformed, out var rotatedBounds)) return default;
         return new PixelBounds(
-            originXNonUniform + localBounds.MinX * canvasW,
-            originYNonUniform + localBounds.MinY * canvasH,
-            localBounds.Width * canvasW,
-            localBounds.Height * canvasH);
+            (transformed.RelativeX + rotatedBounds.MinX) * canvasW,
+            (transformed.RelativeY + rotatedBounds.MinY) * canvasH,
+            rotatedBounds.Width * canvasW, rotatedBounds.Height * canvasH);
     }
 
     private static bool TryComputeElementLocalBounds(VectorCanvasElement element, out LocalBounds bounds)
@@ -943,129 +855,4 @@ public partial class VectorComponentWrapperClip : IClip
         // No unmanaged resources.
     }
 
-    // Shared hidden Border instances — we don't need visible timeline clips,
-    // but InteractableEditor requires non-null Clip/LeftHandle/RightHandle.
-    private static readonly Border SharedClipBorder = new()
-    {
-        IsVisible = false,
-        WidthRequest = 1,
-        HeightRequest = 1,
-    };
-
-    private static readonly Border SharedLeftHandle = new()
-    {
-        IsVisible = false,
-        WidthRequest = 1,
-        HeightRequest = 1,
-    };
-
-    private static readonly Border SharedRightHandle = new()
-    {
-        IsVisible = false,
-        WidthRequest = 1,
-        HeightRequest = 1,
-    };
-
-    /// <summary>
-    /// Converts a collection of <see cref="VectorComponentWrapperClip"/>s into a dictionary
-    /// keyed by <see cref="IClip.Id"/>, suitable for passing to
-    /// <see cref="InteractableEditor.InteractableEditor.SetClipsFromDraftPage"/>.
-    /// </summary>
-    public static Dictionary<Guid, ClipElementUI> ToClipElementUIDictionary(IEnumerable<VectorComponentWrapperClip> clips, Action<ClipElementUI> clipSetter)
-        => clips.ToDictionary(c => c.Id,
-            clip =>
-            {
-                var ui = CreateClipElementUI(clip);
-                ui.Effects = clip.EffectsInstances?.ToDictionary(c => c.Id, c => c) ?? new();
-                clipSetter(ui);
-                return ui;
-            });
-
-    /// <summary>
-    /// Creates a single <see cref="ClipElementUI"/> from a <see cref="VectorComponentWrapperClip"/>.
-    /// </summary>
-    public static ClipElementUI CreateClipElementUI(VectorComponentWrapperClip clip)
-    {
-        return new ClipElementUI
-        {
-            Id = clip.Id,
-            Clip = SharedClipBorder,
-            LeftHandle = SharedLeftHandle,
-            RightHandle = SharedRightHandle,
-            DisplayName = clip.Name,
-            ClipType = ClipMode.VectorCanvasClip,
-            FromPlugin = clip.FromPlugin,
-            TypeName = "ComponentClip",
-            TargetX = clip.TargetX,
-            TargetY = clip.TargetY,
-            TargetWidth = clip.TargetWidth,
-            TargetHeight = clip.TargetHeight,
-            IsMoveable = true,
-            IsHorizontalResizable = true,
-            IsVerticalResizable = true,
-            ShouldDisplayInUI = true,
-            CanSnapWhilePlacing = true,
-            CanSnapWhileResizing = true,
-            AllowFreeScaleResize = true,
-            layoutX = 0,
-            layoutY = 0,
-            origLength = clip.Duration,
-            SubLayerIndex = (int)clip.LayerIndex,
-            ExtraData = clip.ExtraData,
-        };
-    }
-
-    /// <summary>
-    /// Synchronises the layout properties from a <see cref="ClipElementUI"/>
-    /// (modified by InteractableEditor) back to the <see cref="VectorComponentWrapperClip"/>.
-    /// </summary>
-    public static void SyncToComponentClip(ClipElementUI ui, VectorComponentWrapperClip clip)
-    {
-        clip.TargetX = ui.TargetX;
-        clip.TargetY = ui.TargetY;
-        clip.TargetWidth = ui.TargetWidth;
-        clip.TargetHeight = ui.TargetHeight;
-    }
-}
-
-/// <summary>
-/// A simple wrapper to allow a <see cref="VectorComponentWrapperClip"/> to have dynamic position information.
-/// </summary>
-public class DynamicPositionProviderEffect : IContinuousClipPositionProvider
-{
-    Func<uint, ClipPositionTuple>? _callback = null;
-
-    public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-
-    public string TypeName => "DynamicPositionProviderEffect";
-
-    public string Name { get; set; }
-    public string Id { get; set; }
-
-    public Dictionary<string, object> Parameters => new();
-
-    public bool Enabled { get => true; set { } }
-    public int Index { get; set; }
-
-    public bool IsReorderable => false;
-
-    public string? BindedEffectProvidingSystemID { get; set; }
-
-    public DynamicPositionProviderEffect(Func<uint, ClipPositionTuple> callback)
-    {
-        Name = $"DynamicPositionProviderEffect #{callback.GetHashCode()}";
-        Id = $"dppe@{callback.GetHashCode()}";
-        _callback = callback;
-    }
-
-    public ClipPositionTuple GetPosition(IClip source, uint index, int targetWidth, int targetHeight)
-    {
-        ArgumentNullException.ThrowIfNull(_callback, "Position callback");
-        return _callback(index);
-    }
-
-    public IEffect WithParameters(Dictionary<string, object> parameters)
-    {
-        throw new NotImplementedException("This effect does not support parameters.");
-    }
 }

@@ -406,7 +406,12 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string Name { get; set; } = string.Empty;
         public string? Path { get; set; }
         public string? SourceHash { get; set; }
-        public AssetType AssetType { get; set; } = AssetType.Other;
+        private AssetType assetType = AssetType.Other;
+        public AssetType AssetType
+        {
+            get => assetType == AssetType.Other && ClipType == ClipMode.VectorComponentClip ? AssetType.VectorComposition : assetType;
+            set => assetType = value;
+        }
         public ClipMode ClipType { get; set; }
 
         public long? Duration { get; set; }
@@ -430,6 +435,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 AssetType.Video => ClipMode.VideoClip,
                 AssetType.Image => ClipMode.PhotoClip,
                 AssetType.Audio => ClipMode.AudioClip,
+                AssetType.VectorComposition => ClipMode.VectorComponentClip,
                 _ => ClipType
             };
         }
@@ -449,6 +455,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 projectFrameCut.Shared.AssetType.Image => "\ud83d\uddbc\ufe0f",//🖼️
                 projectFrameCut.Shared.AssetType.Audio => "\ud83c\udfb5",//🎵
                 projectFrameCut.Shared.AssetType.Font => "\ud83d\udd24",//🔤
+                projectFrameCut.Shared.AssetType.VectorComposition => "◈",
                 _ => ClipType switch
                 {
                     projectFrameCut.Shared.ClipMode.VideoClip => "\ud83d\udcfd\ufe0f",//📽️
@@ -487,11 +494,27 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public static AssetType GetAssetType(string path)
         {
             var ext = System.IO.Path.GetExtension(path).ToLower();
+            if (ext == ".json" && System.IO.File.Exists(path))
+            {
+                try
+                {
+                    using var json = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(path));
+                    var root = json.RootElement;
+                    if (root.ValueKind == System.Text.Json.JsonValueKind.Array && root.GetArrayLength() > 0)
+                        root = root[0];
+                    if (root.ValueKind == System.Text.Json.JsonValueKind.Object &&
+                        (root.TryGetProperty("VectorCanvas.Components", out _) ||
+                         (root.TryGetProperty("TypeName", out _) && root.TryGetProperty("Parameters", out _) && root.TryGetProperty("Index", out _))))
+                        return AssetType.VectorComposition;
+                }
+                catch (System.Text.Json.JsonException) { }
+            }
             return ext switch
             {
                 ".mp4" or ".mov" or ".avi" or ".mkv" or ".webm" => AssetType.Video,
                 ".mp3" or ".wav" or ".aac" or ".flac" or ".ogg" => AssetType.Audio,
-                ".jpg" or ".jpeg" or ".png" or ".bmp" or ".svg" or ".gif" or ".svg" => AssetType.Image,
+                ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" => AssetType.Image,
+                ".svg" or ".pjfcvec" => AssetType.VectorComposition,
                 ".ttf" or ".otf" => AssetType.Font,
                 _ => AssetType.Other
             };
@@ -505,6 +528,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 AssetType.Audio => "Audio",
                 AssetType.Image => "Image",
                 AssetType.Font => "Font",
+                AssetType.VectorComposition => "VectorComposition",
                 _ => "Other"
             };
         }

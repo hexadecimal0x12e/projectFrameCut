@@ -20,6 +20,7 @@ namespace projectFrameCut.Shared
         MarkingClip,
         TransformClip,
         VectorCanvasClip,
+        VectorComponentClip,
         Special = -1
     }
 
@@ -29,7 +30,8 @@ namespace projectFrameCut.Shared
         Audio,
         Image,
         Font,
-        Other
+        Other,
+        VectorComposition
     }
 
     public enum TrackMode
@@ -55,6 +57,7 @@ namespace projectFrameCut.Shared
         ContinuousTextEffect = 11,
         SourceReplacement = 12,
         NonIPictureOutputValueProvider = 13,
+        VectorComponentEffect = 14,
         NotSpecified = -1,
     }
 
@@ -70,6 +73,7 @@ namespace projectFrameCut.Shared
         Text = 64,
         SourceReplacement = 128,
         ValueProvider = 256,
+        VectorComponent = 512,
 
         IsKeyFramed = 1 << 16,
         IsNotVisibleInEffectEditor = 1 << 17,

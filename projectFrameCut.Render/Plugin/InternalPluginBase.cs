@@ -223,6 +223,7 @@ public class InternalPluginBase : IPluginBase
             ClipMode.MarkingClip => element.Deserialize<MarkingClip>() ?? throw new NullReferenceException(),
             ClipMode.TransformClip => element.Deserialize<TransformContainer>() ?? throw new NullReferenceException(),
             ClipMode.VectorCanvasClip => element.Deserialize<VectorCanvasClip>() ?? throw new NullReferenceException(),
+            ClipMode.VectorComponentClip => element.Deserialize<VectorComponentClip>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };
     }
@@ -294,6 +295,7 @@ public class InternalPluginBase : IPluginBase
             "Polygon" => element.Deserialize<PolygonComponent>(options)!,
             "Polyline" => element.Deserialize<PolylineComponent>(options)!,
             "ComponentGroup" => element.Deserialize<ComponentGroup>(options)!,
+            "EvaluatedVectorComponent" => element.Deserialize<projectFrameCut.Render.VectorContent.EvaluatedVectorComponent>(options)!,
             "Text" => element.Deserialize<TextComponent>(options)!,
             _ => throw new NotSupportedException($"Unknown component type: {typeName}"),
         };
