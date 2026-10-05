@@ -368,7 +368,7 @@ namespace projectFrameCut.Render.Rendering
                             }
                             if (x != 0 || y != 0 || effected.Width != targetWidth || effected.Height != targetHeight)
                             {
-                                d = PlaceEffect.Process(d, x, y, targetWidth, targetHeight);
+                                d = EffectRuntimeDefaults.Place(d, targetWidth, targetHeight, x, y);
                             }
                             AfterEffectCallback(effect, d);
                         }
@@ -442,7 +442,7 @@ namespace projectFrameCut.Render.Rendering
                 }
                 else
                 {
-                    result = Placer.Render(result, targetWidth, targetHeight);
+                    result = EffectRuntimeDefaults.Place(result, targetWidth, targetHeight);
                 }
             ok:
                 result = ClassicOverlayMixture.Default
@@ -463,11 +463,6 @@ namespace projectFrameCut.Render.Rendering
 
         }
 
-        private static PlaceEffect_HwAccel Placer = new()
-        {
-            StartX = 0,
-            StartY = 0
-        };
 
         private static bool IsFrameInClipRange(IClip clip, uint targetFrame)
             => clip.ContainsFrame(targetFrame);

@@ -3,16 +3,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using projectFrameCut.Drawing.Processing.Resizing;
-using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class RemoveColorEffect_HwAccel : INormalEffect
+
+
+    /// <summary>
+    /// The Render-side provider of the RemoveColor effect.
+    /// </summary>
+    public class RemoveColorEffect_IPicture : INormalEffect
     {
-        private readonly IComputer? computer = PluginManager.CreateComputer("RemoveColorComputer");
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
@@ -30,7 +34,7 @@ namespace projectFrameCut.Render.Effect
 
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
+        public EffectImplementType ImplementType => EffectImplementType.IPicture;
         public bool IsReorderable => true;
         bool IEffect.CanProcessFromCanvas => true;
         public string? BindedEffectProvidingSystemID { get; set; }
@@ -69,7 +73,7 @@ namespace projectFrameCut.Render.Effect
             }
 
 
-            var effect = new RemoveColorEffect_HwAccel
+            var effect = new RemoveColorEffect_IPicture
             {
                 R = DynamicParam.ToUShort(parameters.GetValueOrDefault("R")),
                 G = DynamicParam.ToUShort(parameters.GetValueOrDefault("G")),
@@ -91,7 +95,6 @@ namespace projectFrameCut.Render.Effect
             ushort colorA = DynamicParam.Resolve(Parameters.GetValueOrDefault("A"), A);
             ushort colorTolerance = DynamicParam.Resolve(Parameters.GetValueOrDefault("Tolerance"), Tolerance);
             var sw = Stopwatch.StartNew();
-            ArgumentNullException.ThrowIfNull(computer, nameof(computer));
             float[] r, g, b, a;
             if (source is IPicture<ushort> p16)
             {
@@ -121,9 +124,9 @@ namespace projectFrameCut.Render.Effect
                 b = new float[p8.Pixels];
                 for (int i = 0; i < p8.Pixels; i++)
                 {
-                    r[i] = p8.r[i];
-                    g[i] = p8.g[i];
-                    b[i] = p8.b[i];
+                    r[i] = p8.r[i] * 257f;
+                    g[i] = p8.g[i] * 257f;
+                    b[i] = p8.b[i] * 257f;
                 }
                 if (p8.a is null)
                 {
@@ -141,28 +144,16 @@ namespace projectFrameCut.Render.Effect
             }
 
             float[] alpha;
-            if (computer is IRemoveColorComputer rcc)
-            {
-                alpha = rcc.ComputeRemoveColor(r, g, b, a, colorR, colorG, colorB, colorTolerance, source.Pixels);
-            }
-            else
-            {
-                var alphaArr = computer.Compute(new object[] {
-                    r, g, b, a,
-                    (float)colorR, (float)colorG, (float)colorB, (float)colorTolerance, source.Pixels
-                });
-                if (alphaArr[0] is not float[] alphaOut) throw new InvalidOperationException("The output data from computer is invaild.");
-                alpha = alphaOut;
-            }
+            alpha = ComputeRemoveColor(r, g, b, a, colorR, colorG, colorB, colorTolerance, source.Pixels);
+
 
             if (source is IPicture<ushort> p16_out)
             {
-                p16_out.SetAlpha(true);
                 var result = new Picture16bpp(p16_out)
                 {
-                    r = p16_out.r,
-                    g = p16_out.g,
-                    b = p16_out.b,
+                    r = p16_out.r.ToArray(),
+                    g = p16_out.g.ToArray(),
+                    b = p16_out.b.ToArray(),
                     a = alpha,
                     HasAlphaChannel = true
                 };
@@ -181,7 +172,7 @@ namespace projectFrameCut.Render.Effect
                     new PictureProcessStack
                     {
                         OperationDisplayName = $"Replace color",
-                        Operator = typeof(RemoveColorEffect_HwAccel),
+                        Operator = typeof(RemoveColorEffect_IPicture),
                         ProcessingFuncStackTrace = new StackTrace(true),
                         Properties = new Dictionary<string, object>
                         {
@@ -194,16 +185,15 @@ namespace projectFrameCut.Render.Effect
                     }
                 }).ToList();
 
-                return result.Resize(targetWidth, targetHeight, false);
+                return new EffectPictureResizer(ImplementType).ResizePicture(PictureEffectChannels.PreserveHdr(result, source), targetWidth, targetHeight);
             }
-            else if (source is Picture8bpp p8_out)
+            else if (source is IPicture<byte> p8_out)
             {
-                p8_out.SetAlpha(true);
                 var result = new Picture8bpp(p8_out)
                 {
-                    r = p8_out.r,
-                    g = p8_out.g,
-                    b = p8_out.b,
+                    r = p8_out.r.ToArray(),
+                    g = p8_out.g.ToArray(),
+                    b = p8_out.b.ToArray(),
                     a = alpha,
                     HasAlphaChannel = true
                 };
@@ -222,7 +212,7 @@ namespace projectFrameCut.Render.Effect
                 result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
                 {
                     OperationDisplayName = $"Replace color",
-                    Operator = typeof(RemoveColorEffect_HwAccel),
+                    Operator = typeof(RemoveColorEffect_IPicture),
                     ProcessingFuncStackTrace = new StackTrace(true),
                     Properties = new Dictionary<string, object>
                     {
@@ -235,17 +225,23 @@ namespace projectFrameCut.Render.Effect
                     Elapsed = sw.Elapsed
                 }).ToList();
 
-                return result.Resize(targetWidth, targetHeight, false);
+                return new EffectPictureResizer(ImplementType).ResizePicture(result, targetWidth, targetHeight);
             }
             throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
 
         }
 
+
+        private static float[] ComputeRemoveColor(float[] r, float[] g, float[] b, float[] a,
+            float targetR, float targetG, float targetB, float range, int pixels)
+        {
+            var alpha = new float[pixels];
+            for (int i = 0; i < pixels; i++)
+                alpha[i] = Math.Abs(r[i] - targetR) <= range && Math.Abs(g[i] - targetG) <= range && Math.Abs(b[i] - targetB) <= range ? 0f : a[i];
+            return alpha;
+        }
     }
 
-    /// <summary>
-    /// The Render-side provider of the RemoveColor effect.
-    /// </summary>
     public class RemoveColorEffectProvider : EffectProviderBase
     {
         public RemoveColorEffectProvider()
@@ -281,15 +277,8 @@ namespace projectFrameCut.Render.Effect
             ];
         }
 
-        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration];
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration, EffectImplementType.IPicture];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            if (implementType != EffectImplementType.HwAcceleration)
-            {
-                throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.");
-            }
-            return [RemoveColorEffect_HwAccel.FromParametersDictionary(parameters)];
-        }
+
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Microsoft.Maui.ApplicationModel;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
@@ -96,7 +96,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             float[] packedOutput;
             try
             {
-                packedOutput = ComputerHelper.EnqueueCompute(() =>
+                packedOutput = AndroidExecutionHelper.EnqueueCompute(() =>
                 {
                     var mainThreadTask = MainThread.InvokeOnMainThreadAsync(async () =>
                     {
@@ -111,7 +111,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                             WorkGroupSize = WorkGroupSize,
                         };
 
-                        var handlerReadyTcs = new TaskCompletionSource<NativeGLSurfaceViewHandler>(
+                        using var viewScope = AndroidExecutionHelper.UseView(accelerator);
+                    var handlerReadyTcs = new TaskCompletionSource<NativeGLSurfaceViewHandler>(
                             TaskCreationOptions.RunContinuationsAsynchronously);
                         void OnHandlerChanged(object? sender, EventArgs e)
                         {
@@ -122,7 +123,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                             }
                         }
                         accelerator.HandlerChanged += OnHandlerChanged;
-                        ComputerHelper.AddPlatformComputeViewHandler?.Invoke(accelerator);
+                        AndroidExecutionHelper.AddPlatformComputeViewHandler?.Invoke(accelerator);
 
                         if (accelerator.Handler is NativeGLSurfaceViewHandler existingHandler)
                         {
@@ -142,22 +143,22 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                             throw new InvalidOperationException("GLComputeView not attached.");
 
                         var readyTask = glView.WaitUntilReadyAsync();
-                        if (await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromMilliseconds(ComputerHelper.Timeout))) != readyTask)
+                        if (await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromMilliseconds(AndroidExecutionHelper.Timeout))) != readyTask)
                             throw new TimeoutException("GLComputeView.WaitUntilReadyAsync timed out.");
                         await readyTask;
 
                         var raw = (float[])await glView.RunComputeAsync(GLComputeView.OutputElementType.Float32);
-                        return new object[] { raw };
+                        return raw;
                     });
 
                     if (!mainThreadTask.Wait(TimeSpan.FromSeconds(60)))
                         throw new TimeoutException("OpenGLVectorRasterizer timed out.");
 
-                    var result = (object[])TaskHelper.SyncWait(() => mainThreadTask, CancellationToken.None);
-                    if (result is null || result[0] is not float[] outputArr)
+                    var result = TaskHelper.SyncWait(() => mainThreadTask, CancellationToken.None);
+                    if (result is null)
                         throw new InvalidOperationException("OpenGLVectorRasterizer returned null.");
                     return result;
-                })[0] as float[] ?? throw new InvalidOperationException("Unexpected output type.");
+                });
             }
             catch (Exception ex)
             {

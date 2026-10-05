@@ -147,25 +147,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         public Task<Array> RunComputeAsync(OutputElementType outputElementType)
         {
             if (!_initialized)
-            {
-                // Return zero-filled array of correct type if not initialized
-                // Use parameter, not field, since field might not be set yet
-                if (_length <= 0)
-                {
-                    return Task.FromResult<Array>(
-                        outputElementType == OutputElementType.UInt32 
-                            ? Array.Empty<uint>() 
-                            : (Array)Array.Empty<float>()
-                    );
-                }
+                return Task.FromException<Array>(new InvalidOperationException($"Vulkan effect is not initialized: {_disableReason}"));
 
-                // Return array filled with zeros if not initialized
-                return Task.FromResult<Array>(
-                    outputElementType == OutputElementType.UInt32 
-                        ? new uint[_length] 
-                        : (Array)new float[_length]
-                );
-            }
 
             return Task.Run(() => RunCompute(outputElementType));
         }
@@ -188,10 +171,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 _shaderKind = shaderKind;
                 _outputElementType = outputElementType;
 
-                if (_vulkanComputeDisabled)
-                {
-                    return;
-                }
+                if (_vulkanComputeDisabled) throw new InvalidOperationException(_disableReason);
 
                 if (_initialized)
                 {
@@ -208,6 +188,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                             _initialized = false;
                             DisableVulkanCompute("Shader compiler native dependency is unavailable.", ex);
                         }
+                                            projectFrameCut.Shared.Logger.Log(ex, "Initialize Vulkan effect", this);
+                        throw;
                     }
                 }
                 else if (inputs.Length > 0)
@@ -232,6 +214,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                         {
                             DisableVulkanCompute("Shader compiler native dependency is unavailable.", ex);
                         }
+                                            projectFrameCut.Shared.Logger.Log(ex, "Initialize Vulkan effect", this);
+                        throw;
                     }
                 }
             }
@@ -682,7 +666,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                 System.Diagnostics.Debug.WriteLine($"Disable reason detail: {ex.GetType().Name}: {ex.Message}");
             }
 
-            _readyTcs.TrySetResult(true);
+            _readyTcs.TrySetException(ex ?? new InvalidOperationException(reason));
+            projectFrameCut.Shared.Logger.Log(ex ?? new InvalidOperationException(reason), "Initialize Vulkan effect", this);
         }
 
         private Array RunCompute(OutputElementType outputElementType)
@@ -920,19 +905,17 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
         {
             if (handler.PlatformView is null)
             {
-                return;
+                throw new InvalidOperationException("Vulkan platform view is not attached.");
             }
 
             if (string.IsNullOrWhiteSpace(view.ShaderSource))
             {
-                System.Diagnostics.Debug.WriteLine("ERROR: shaderSource can't be null or whitespace.");
-                return;
+                throw new ArgumentException("Shader source cannot be empty.", nameof(view));
             }
 
             if (view.Inputs == null || view.Inputs.Length == 0 || view.Inputs.Length > 6)
             {
-                System.Diagnostics.Debug.WriteLine($"ERROR: Must provide between 1 and 6 input arrays. Got {view.Inputs?.Length ?? 0}");
-                return;
+                throw new ArgumentException($"Vulkan compute requires between 1 and 6 input arrays, got {view.Inputs?.Length ?? 0}.", nameof(view));
             }
 
             if (handler.PlatformView is VulkanComputeView platformView)
@@ -950,13 +933,13 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                         }
                         else if (platformView.IsVulkanComputeDisabled)
                         {
-                            System.Diagnostics.Debug.WriteLine("MapInputs: Vulkan compute unavailable on this device. Using fallback output.");
+                            throw new InvalidOperationException("Vulkan compute is unavailable on this device.");
                         }
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"ERROR: Failed to initialize Vulkan compute: {ex.GetType().Name}: {ex.Message}");
-                        System.Diagnostics.Debug.WriteLine(ex.StackTrace);
+                        projectFrameCut.Shared.Logger.Log(ex, "Attach Vulkan effect", view);
+                        throw;
                     }
                 }
                 else
@@ -968,7 +951,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"ERROR: Failed to update Vulkan inputs: {ex.GetType().Name}: {ex.Message}");
+                        projectFrameCut.Shared.Logger.Log(ex, "Update Vulkan effect", view);
+                        throw;
                     }
                 }
             }
@@ -999,13 +983,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to create VulkanComputeView: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine(ex.StackTrace);
-                
-                // Return an empty placeholder view instead of throwing
-                // This prevents MAUI handler from failing completely
-                var placeholder = new AndroidView(Context);
-                return placeholder;
+                projectFrameCut.Shared.Logger.Log(ex, "Create Vulkan compute view", this);
+                throw;
             }
         }
 

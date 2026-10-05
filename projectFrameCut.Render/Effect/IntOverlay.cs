@@ -179,9 +179,6 @@ namespace projectFrameCut.Render.Effect
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            return [IntOverlayEffect.FromParametersDictionary(parameters)];
-        }
+
     }
 }

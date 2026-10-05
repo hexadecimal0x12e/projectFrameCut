@@ -8,6 +8,39 @@ namespace projectFrameCut.Render.HwAccelEngine
 {
     public static class AcceleratorsManager
     {
+        private static int activeExecutions;
+        private static bool resetting;
+        public sealed class ExecutionLease : IDisposable
+        {
+            public Accelerator[] Accelerators { get; }
+
+            private bool disposed;
+            internal ExecutionLease(Accelerator[] accelerators) => Accelerators = accelerators;
+            public void Dispose()
+            {
+                lock (InitializationLock)
+                {
+                    if (disposed)
+                        return;
+                    disposed = true;
+                    activeExecutions--;
+                    Monitor.PulseAll(InitializationLock);
+                }
+            }
+        }
+
+        public static ExecutionLease AcquireExecution()
+        {
+            lock (InitializationLock)
+            {
+                while (resetting)
+                    Monitor.Wait(InitializationLock);
+                var accelerators = Accelerators;
+                activeExecutions++;
+                return new(accelerators);
+            }
+        }
+
         private static readonly object InitializationLock = new();
         private static readonly List<Accelerator> ownedAccelerators = [];
         private static Context? context;
@@ -17,7 +50,7 @@ namespace projectFrameCut.Render.HwAccelEngine
         private static volatile bool areRenderingAcceleratorsInitialized;
         private static volatile bool useExternalBackend;
         private static bool isMultiAccelEnabled;
-
+        private static AcceleratorsStore? configurationOverride;
         public static bool UseExternalBackend
         {
             get => useExternalBackend;
@@ -25,19 +58,24 @@ namespace projectFrameCut.Render.HwAccelEngine
             {
                 lock (InitializationLock)
                 {
-                    if (useExternalBackend == value) return;
+                    if (useExternalBackend == value)
+                        return;
                     useExternalBackend = value;
-                    if (value) DisposeOwnedResources();
-                    Logger.Log(value
-                        ? "[AcceleratorsManager] Local ILGPU initialization disabled; compute is handled by the RPC Worker."
-                        : "[AcceleratorsManager] RPC Worker is unavailable; local ILGPU initialization is enabled.");
+                    if (value)
+                        DisposeOwnedResources();
+                    Logger.Log(value ? "[AcceleratorsManager] Local ILGPU initialization disabled; compute is handled by the RPC Worker." : "[AcceleratorsManager] RPC Worker is unavailable; local ILGPU initialization is enabled.");
                 }
             }
         }
 
         public static Accelerator? DefaultAccelerator
         {
-            get { EnsureInitialized(); return defaultAccelerator; }
+            get
+            {
+                EnsureInitialized();
+                return defaultAccelerator;
+            }
+
             set
             {
                 lock (InitializationLock)
@@ -50,7 +88,12 @@ namespace projectFrameCut.Render.HwAccelEngine
 
         public static Accelerator[] AcceleratorsForRendering
         {
-            get { EnsureInitialized(true); return acceleratorsForRendering; }
+            get
+            {
+                EnsureInitialized(true);
+                return acceleratorsForRendering;
+            }
+
             set
             {
                 lock (InitializationLock)
@@ -63,7 +106,6 @@ namespace projectFrameCut.Render.HwAccelEngine
         }
 
         public static bool IsRendering = false;
-
         public static bool IsMultiAccelEnabled
         {
             get
@@ -71,11 +113,12 @@ namespace projectFrameCut.Render.HwAccelEngine
                 if (!areRenderingAcceleratorsInitialized)
                 {
                     var store = ReadConfiguration();
-                    return store is not null && store.EnableMultiAccel &&
-                        store.RenderingAcceleratorNames.Distinct().Skip(1).Any();
+                    return store is not null && store.EnableMultiAccel && store.RenderingAcceleratorNames.Distinct().Skip(1).Any();
                 }
+
                 return isMultiAccelEnabled;
             }
+
             private set => isMultiAccelEnabled = value;
         }
 
@@ -88,7 +131,8 @@ namespace projectFrameCut.Render.HwAccelEngine
             get
             {
                 EnsureInitialized(IsRendering);
-                if (IsRendering) return acceleratorsForRendering;
+                if (IsRendering)
+                    return acceleratorsForRendering;
                 return defaultAccelerator is not null ? [defaultAccelerator] : Array.Empty<Accelerator>();
             }
         }
@@ -112,6 +156,7 @@ namespace projectFrameCut.Render.HwAccelEngine
                         Type = list[i].AcceleratorType.ToString()
                     };
                 }
+
                 return result;
             }
             catch (Exception ex)
@@ -123,7 +168,8 @@ namespace projectFrameCut.Render.HwAccelEngine
 
         private static void EnsureInitialized(bool forRendering = false)
         {
-            if (useExternalBackend || (forRendering ? areRenderingAcceleratorsInitialized : isDefaultInitialized)) return;
+            if (useExternalBackend || (forRendering ? areRenderingAcceleratorsInitialized : isDefaultInitialized))
+                return;
             lock (InitializationLock)
             {
                 if (!useExternalBackend && !(forRendering ? areRenderingAcceleratorsInitialized : isDefaultInitialized))
@@ -140,7 +186,8 @@ namespace projectFrameCut.Render.HwAccelEngine
             lock (InitializationLock)
             {
                 DisposeOwnedResources();
-                if (!useExternalBackend) InitializeCore(IsRendering);
+                if (!useExternalBackend)
+                    InitializeCore(IsRendering);
             }
         }
 
@@ -152,11 +199,11 @@ namespace projectFrameCut.Render.HwAccelEngine
                 context ??= Context.Create(builder => builder.Default().EnableAlgorithms());
                 var allDevices = context.Devices.ToList();
                 var nonCpuDevices = allDevices.Where(c => c.AcceleratorType != AcceleratorType.CPU).ToArray();
-
                 Accelerator GetOrCreateAccelerator(ILGPU.Runtime.Device device)
                 {
                     var existing = ownedAccelerators.FirstOrDefault(a => a.Name == device.Name);
-                    if (existing is not null) return existing;
+                    if (existing is not null)
+                        return existing;
                     var accelerator = device.CreateAccelerator(context);
                     ownedAccelerators.Add(accelerator);
                     return accelerator;
@@ -164,9 +211,7 @@ namespace projectFrameCut.Render.HwAccelEngine
 
                 if (!isDefaultInitialized)
                 {
-                    var mainDevice = store is not null
-                        ? allDevices.FirstOrDefault(c => c.Name == store.MainAcceleratorName)
-                        : null;
+                    var mainDevice = store is not null ? allDevices.FirstOrDefault(c => c.Name == store.MainAcceleratorName) : null;
                     mainDevice ??= nonCpuDevices.FirstOrDefault();
                     defaultAccelerator = mainDevice is not null ? GetOrCreateAccelerator(mainDevice) : null;
                     isDefaultInitialized = true;
@@ -175,16 +220,8 @@ namespace projectFrameCut.Render.HwAccelEngine
 
                 if (initializeRendering && !areRenderingAcceleratorsInitialized)
                 {
-                    var enableMultiAccel = store is not null && store.EnableMultiAccel &&
-                        store.RenderingAcceleratorNames.Length > 0;
-                    acceleratorsForRendering = enableMultiAccel
-                        ? store!.RenderingAcceleratorNames
-                        .Select(name => allDevices.FirstOrDefault(c => c.Name == name))
-                        .Where(device => device is not null)
-                        .Select(device => GetOrCreateAccelerator(device!))
-                        .Distinct()
-                        .ToArray()
-                        : defaultAccelerator is not null ? [defaultAccelerator] : Array.Empty<Accelerator>();
+                    var enableMultiAccel = store is not null && store.EnableMultiAccel && store.RenderingAcceleratorNames.Length > 0;
+                    acceleratorsForRendering = enableMultiAccel ? store!.RenderingAcceleratorNames.Select(name => allDevices.FirstOrDefault(c => c.Name == name)).Where(device => device is not null).Select(device => GetOrCreateAccelerator(device!)).Distinct().ToArray() : defaultAccelerator is not null ? [defaultAccelerator] : Array.Empty<Accelerator>();
                     enableMultiAccel = acceleratorsForRendering.Length > 1;
                     IsMultiAccelEnabled = enableMultiAccel;
                     areRenderingAcceleratorsInitialized = true;
@@ -195,20 +232,18 @@ namespace projectFrameCut.Render.HwAccelEngine
             {
                 Logger.Log(ex, "initialize ILGPU accelerators");
                 DisposeOwnedResources();
-                // Avoid loading GPU drivers and retrying on every property read.
-                isDefaultInitialized = true;
-                areRenderingAcceleratorsInitialized = initializeRendering;
+                throw;
             }
         }
 
         private static AcceleratorsStore? ReadConfiguration()
         {
+            if (configurationOverride is not null)
+                return configurationOverride;
 #if WINDOWS || LINUX
-            var dataPath = HwAccelEnginePlugin.dataRootPath is not null
-                ? Path.Combine(HwAccelEnginePlugin.dataRootPath, "accels.json")
-                : null;
-            if (dataPath is null || !File.Exists(dataPath)) return null;
-
+            var dataPath = HwAccelEnginePlugin.dataRootPath is not null ? Path.Combine(HwAccelEnginePlugin.dataRootPath, "accels.json") : null;
+            if (dataPath is null || !File.Exists(dataPath))
+                return null;
             try
             {
                 return JsonSerializer.Deserialize<AcceleratorsStore>(File.ReadAllText(dataPath));
@@ -225,20 +260,35 @@ namespace projectFrameCut.Render.HwAccelEngine
 
         private static void DisposeOwnedResources()
         {
-            // Only a non-null context marks accelerators owned by this manager.
-            if (context is not null)
+            while (resetting)
+                Monitor.Wait(InitializationLock);
+            resetting = true;
+            try
             {
-                foreach (var accelerator in ownedAccelerators) accelerator.Dispose();
-                context.Dispose();
-            }
+                while (activeExecutions > 0)
+                    Monitor.Wait(InitializationLock);
+                // Only a non-null context marks accelerators owned by this manager.
+                if (context is not null)
+                {
+                    foreach (var accelerator in ownedAccelerators)
+                        accelerator.Dispose();
+                    context.Dispose();
+                }
 
-            ownedAccelerators.Clear();
-            context = null;
-            defaultAccelerator = null;
-            acceleratorsForRendering = Array.Empty<Accelerator>();
-            IsMultiAccelEnabled = false;
-            isDefaultInitialized = false;
-            areRenderingAcceleratorsInitialized = false;
+                ownedAccelerators.Clear();
+                context = null;
+                defaultAccelerator = null;
+                acceleratorsForRendering = Array.Empty<Accelerator>();
+                IsMultiAccelEnabled = false;
+                isDefaultInitialized = false;
+                areRenderingAcceleratorsInitialized = false;
+                projectFrameCut.Render.Effect.EffectHelper.InvalidateImplementations();
+            }
+            finally
+            {
+                resetting = false;
+                Monitor.PulseAll(InitializationLock);
+            }
         }
 
         /// <summary>
@@ -248,8 +298,8 @@ namespace projectFrameCut.Render.HwAccelEngine
         public static void ApplyConfiguration(string mainDeviceName, string[] renderingDeviceNames, bool enableMultiAccel)
         {
 #if WINDOWS || LINUX
-            if (HwAccelEnginePlugin.dataRootPath is null) return;
-
+            if (HwAccelEnginePlugin.dataRootPath is null)
+                return;
             var dataPath = Path.Combine(HwAccelEnginePlugin.dataRootPath, "accels.json");
             var store = new AcceleratorsStore
             {
@@ -258,9 +308,9 @@ namespace projectFrameCut.Render.HwAccelEngine
                 EnableMultiAccel = enableMultiAccel
             };
             var dir = Path.GetDirectoryName(dataPath);
-            if (dir is not null) Directory.CreateDirectory(dir);
+            if (dir is not null)
+                Directory.CreateDirectory(dir);
             File.WriteAllText(dataPath, JsonSerializer.Serialize(store));
-
             lock (InitializationLock)
             {
                 DisposeOwnedResources();
@@ -271,6 +321,29 @@ namespace projectFrameCut.Render.HwAccelEngine
         public static void SetDefaultAccelerator(string deviceName)
         {
             ApplyConfiguration(deviceName, [deviceName], false);
+        }
+
+        public static void ConfigureDevices(string mainDeviceName, string[] renderingDeviceNames, bool enableMultiAccel)
+        {
+            lock (InitializationLock)
+            {
+                DisposeOwnedResources();
+                configurationOverride = new AcceleratorsStore
+                {
+                    MainAcceleratorName = mainDeviceName,
+                    RenderingAcceleratorNames = renderingDeviceNames.ToArray(),
+                    EnableMultiAccel = enableMultiAccel
+                };
+            }
+        }
+
+        public static void ReleaseResources()
+        {
+            lock (InitializationLock)
+            {
+                DisposeOwnedResources();
+                configurationOverride = null;
+            }
         }
 
         private class AcceleratorsStore

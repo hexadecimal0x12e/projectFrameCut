@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Processing.Resizing;
+using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
@@ -180,19 +180,12 @@ namespace projectFrameCut.Render.Rendering
 
         private IPicture BlankFrame = null!;
 
-        // Thread-local: PlaceEffect_HwAccel has mutable state and is not thread-safe
-        private ThreadLocal<INormalEffect> _threadLocalBlankPlace =
-            new(() => (INormalEffect)IPluginBase.EffectImplementations.Create(
-                "Place",
-                EffectImplementType.HwAcceleration,
-                EffectImplementType.HwAcceleration,
-                new Dictionary<string, object> { ["StartX"] = 0, ["StartY"] = 0 }));
+        private readonly EffectRuntimeContext effectRuntime = new();
 
         // Thread-local pool for frame-level cache dictionaries to reduce GC pressure
         private ThreadLocal<Stack<Dictionary<string, object>>> _frameLocalCachePool =
             new(() => new Stack<Dictionary<string, object>>(4));
 
-        // Caches whether a computer type supports GPU batching, avoiding per-frame computer lookups
 
         // Running totals for O(1) average elapsed statistics (avoids scanning the bags on every stat log)
         private long _renderElapsedTicksTotal;
@@ -208,6 +201,7 @@ namespace projectFrameCut.Render.Rendering
         #region prepare
         public void PrepareRender(CancellationToken token)
         {
+            using var effectScope = effectRuntime.Enter();
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             if (AutoSetupRenderContext) IRenderContext.Current = this;
             Log($"[Preparer] Calculating clip visibility for {Duration} frames...");
@@ -463,6 +457,7 @@ namespace projectFrameCut.Render.Rendering
         #region render
         public async Task GoRender(CancellationToken token, IPicture? cover = null)
         {
+            using var effectScope = effectRuntime.Enter();
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             if ((ClipNeedForFrame.IsEmpty && BlankFrames.IsEmpty) || Duration <= 0)
             {
@@ -1587,6 +1582,7 @@ namespace projectFrameCut.Render.Rendering
         /// </returns>
         public IPicture? RenderSpecificFrame(uint frameIndex, CancellationToken token)
         {
+            using var effectScope = effectRuntime.Enter();
 
 
             if (frameIndex < StartFrame || frameIndex >= StartFrame + Duration)
@@ -2220,7 +2216,7 @@ namespace projectFrameCut.Render.Rendering
 
                 if (result.Width < TargetWidth || result.Height < TargetHeight)
                 {
-                    result = _threadLocalBlankPlace.Value!.Render(result, TargetWidth, TargetHeight);
+                    result = EffectRuntimeDefaults.Place(result, TargetWidth, TargetHeight);
                 }
                 else if (result.Width > TargetWidth || result.Height > TargetHeight)
                 {
@@ -2434,7 +2430,7 @@ namespace projectFrameCut.Render.Rendering
 
                 if (merged.Width < TargetWidth || merged.Height < TargetHeight)
                 {
-                    merged = _threadLocalBlankPlace.Value!.Render(merged, TargetWidth, TargetHeight);
+                    merged = EffectRuntimeDefaults.Place(merged, TargetWidth, TargetHeight);
                 }
                 else if (merged.Width > TargetWidth || merged.Height > TargetHeight)
                 {
@@ -2746,7 +2742,11 @@ namespace projectFrameCut.Render.Rendering
                 catch { }
                 ImmutableContentCache.Clear();
 
-                foreach (var clip in Clips) TransformProcessing.Release(clip.ExtraData);
+                foreach (var clip in Clips)
+                {
+                    TransformProcessing.Release(clip.ExtraData);
+                    EffectHelper.ReleaseClipEffects(clip);
+                }
                 foreach (var item in ClipNeedForFrame.Values.SelectMany(c => c))
                 {
                     try
@@ -2769,8 +2769,7 @@ namespace projectFrameCut.Render.Rendering
 
                 try { BlankFrame?.Dispose(true); } catch { }
 
-                // Clean up thread-local BlankPlace
-                try { _threadLocalBlankPlace?.Dispose(); } catch { }
+                effectRuntime.Dispose();
 
                 // Clean up thread-local frame cache pool
                 try { _frameLocalCachePool?.Dispose(); } catch { }

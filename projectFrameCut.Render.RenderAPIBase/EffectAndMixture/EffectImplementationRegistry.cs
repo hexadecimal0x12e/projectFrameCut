@@ -10,6 +10,9 @@ public sealed class EffectImplementationRegistry
 
     private readonly object _sync = new();
     private Dictionary<EffectImplementationKey, Dictionary<string, Func<IEffect>>> _factories = [];
+    private long revision;
+
+    public long Revision => Volatile.Read(ref revision);
 
     public ConcurrentDictionary<EffectImplementationKey, string> PreferredPlugins { get; } = new();
 
@@ -35,6 +38,7 @@ public sealed class EffectImplementationRegistry
                 candidates[pluginId] = factory;
             }
             Volatile.Write(ref _factories, next);
+            Interlocked.Increment(ref revision);
         }
     }
 
@@ -43,11 +47,12 @@ public sealed class EffectImplementationRegistry
         lock (_sync)
         {
             Volatile.Write(ref _factories, CloneWithoutPlugin(pluginId));
+            Interlocked.Increment(ref revision);
         }
     }
 
     public EffectImplementType[] GetImplementTypes(string typeName) => Volatile.Read(ref _factories).Keys
-        .Where(x => x.TypeName == typeName)
+        .Where(x => x.TypeName == ResolveTypeName(typeName, null))
         .Select(x => x.ImplementType)
         .Distinct()
         .Order()
@@ -55,19 +60,44 @@ public sealed class EffectImplementationRegistry
 
     public IEffect Create(string typeName, EffectImplementType requestedType, EffectImplementType defaultType, Dictionary<string, object> parameters)
     {
+        typeName = ResolveTypeName(typeName, parameters);
         var type = requestedType == EffectImplementType.NotSpecified ? defaultType : requestedType;
-        if (!TryGetFactory(new(typeName, type), out var factory) && type != defaultType)
-        {
-            type = defaultType;
-            TryGetFactory(new(typeName, type), out factory);
-        }
-        if (factory is null)
+        if (!TryGetFactory(new(typeName, type), out var factory) || factory is null)
             throw new NotSupportedException($"No effect implementation is registered for '{typeName}' with type '{type}'.");
 
         var blank = factory() ?? throw new InvalidOperationException($"Effect implementation factory returned null for '{typeName}/{type}'.");
-        if (blank.TypeName != typeName || blank.ImplementType != type)
-            throw new InvalidOperationException($"Effect implementation factory returned '{blank.TypeName}/{blank.ImplementType}' for '{typeName}/{type}'.");
-        return blank.WithParameters(parameters);
+        IEffect? effect = null;
+        try
+        {
+            Validate(blank, typeName, type);
+            effect = blank.WithParameters(parameters) ?? throw new InvalidOperationException($"WithParameters returned null for '{typeName}/{type}'.");
+            Validate(effect, typeName, type);
+            return effect;
+        }
+        catch
+        {
+            if (effect is IDisposable d) d.Dispose();
+            throw;
+        }
+        finally
+        {
+            if (!ReferenceEquals(blank, effect) && blank is IDisposable d) d.Dispose();
+        }
+    }
+
+    private static void Validate(IEffect effect, string typeName, EffectImplementType type)
+    {
+        if (effect.TypeName != typeName || effect.ImplementType != type)
+            throw new InvalidOperationException($"Effect implementation returned '{effect.TypeName}/{effect.ImplementType}' for '{typeName}/{type}'.");
+    }
+
+    private static string ResolveTypeName(string typeName, Dictionary<string, object>? parameters)
+    {
+        if (typeName is not ("BlendModeMixture" or "OverlayBlend")) return typeName;
+        var mode = parameters?.GetValueOrDefault("MixtureType")?.ToString() ?? "OverlayBlend";
+        return mode is "Add" or "Subtract" or "Multiply" or "Screen" or "OverlayBlend" or "Darken" or "Lighten" or "Difference"
+            ? mode + "Mixture"
+            : throw new NotSupportedException($"Unsupported mixture type '{mode}'.");
     }
 
     private bool TryGetFactory(EffectImplementationKey key, out Func<IEffect>? factory)

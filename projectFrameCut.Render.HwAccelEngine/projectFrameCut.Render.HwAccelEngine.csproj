@@ -21,8 +21,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<ProjectReference Include="..\projectFrameCut.Render.RenderAPIBase\projectFrameCut.Render.RenderAPIBase.csproj" />
-		<ProjectReference Include="..\projectFrameCut.Render.HwAccelContracts\projectFrameCut.Render.HwAccelContracts.csproj" />
+		<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
 	</ItemGroup>
 

@@ -209,6 +209,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         void IDisposable.Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
             ReleaseDecoderPool();
         }
 
@@ -687,12 +688,14 @@ namespace projectFrameCut.Render.ClipsAndTracks
             VirtualSource.Init(initWidth, initHeight, fps, duration, targetPPB);
 
             // Rebuild effect, speed-variance, and mixture instances from serialized data
+            EffectHelper.ReleaseClipEffects(this);
             (EffectsInstances, SpeedVarianceProviderInstance, MixtureInstance, AlternativeSource)
                 = EffectHelper.GetEffectsInstancesSpeedVarianceAndMixture(Effects);
         }
 
         void IDisposable.Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
             VirtualSource?.Dispose();
         }
     }

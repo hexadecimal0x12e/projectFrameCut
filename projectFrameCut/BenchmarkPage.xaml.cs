@@ -50,8 +50,8 @@ public partial class BenchmarkPage : ContentPage
         OutputModePicker.SelectedIndex = 0;
         BoostModeSwitch.IsToggled = true;
 #if ANDROID
-        Render.HwAccelEngine.Platforms.Android.ComputerHelper.AddPlatformComputeViewHandler = ComputeView.Children.Add;
-        Render.HwAccelEngine.Platforms.Android.ComputerHelper.Init();
+        Render.HwAccelEngine.Platforms.Android.AndroidExecutionHelper.AddPlatformComputeViewHandler = ComputeView.Children.Add;
+        Render.HwAccelEngine.Platforms.Android.AndroidExecutionHelper.Init();
 #elif iDevices
 
 #elif WINDOWS

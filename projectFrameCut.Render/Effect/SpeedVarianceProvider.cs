@@ -35,12 +35,6 @@ namespace projectFrameCut.Render.Effect
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            if (!parameters.ContainsKey("Ratio")) parameters["Ratio"] = 1f;
-            var effect = new ClassicSpeedVarianceProvider { Parameters = parameters };
-            effect.Initialize();
-            return [effect];
-        }
+
     }
 }

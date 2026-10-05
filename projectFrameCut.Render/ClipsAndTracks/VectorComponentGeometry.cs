@@ -852,6 +852,7 @@ public partial class VectorComponentWrapperClip : IClip
 
     public void Dispose()
     {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
         // No unmanaged resources.
     }
 

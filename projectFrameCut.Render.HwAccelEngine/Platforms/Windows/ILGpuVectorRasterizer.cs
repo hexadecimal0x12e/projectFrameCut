@@ -1,4 +1,4 @@
-﻿using ILGPU;
+using ILGPU;
 using ILGPU.Algorithms;
 using ILGPU.Runtime;
 using projectFrameCut.Drawing.Base.Picture;
@@ -27,7 +27,8 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
         {
             Logger.LogDiagnostic($"Ready to start GPU rasterization with {primitives.Count} primitives at {width}x{height} resolution.");
             var sw = Stopwatch.StartNew();
-            var accel = PickAccelerator();
+            using var deviceLease = AcceleratorsManager.AcquireExecution();
+            var accel = PickAccelerator(deviceLease.Accelerators);
             if (accel == null)
                 throw new InvalidOperationException("No ILGPU accelerator available for vector rasterization.");
 
@@ -90,7 +91,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
             bool syncNeeded = accel.AcceleratorType == AcceleratorType.OpenCL;
             if (syncNeeded)
             {
-                using (ILGPUComputerHelper.locker.EnterScope())
+                using (ILGPUExecutionHelper.locker.EnterScope())
                 {
                     kernel(pixels, dPrimInfo.View, dPrimData.View, dEdges.View,
                            width, height, transparent,
@@ -157,7 +158,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
         /// </summary>
         private const float AlphaSaturatedEpsilon = 1e-6f;
 
-        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator,
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Accelerator,
             Action<Index1D,
                 ArrayView<int>, ArrayView<float>, ArrayView<float>,
                 int, int, int,
@@ -172,7 +173,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
             ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>
         GetOrCreateKernel(Accelerator accel)
         {
-            return KernelCache.GetOrAdd(accel, static acc =>
+            return KernelCache.GetValue(accel, static acc =>
                 acc.LoadAutoGroupedStreamKernel((
                     Index1D i,
                     ArrayView<int> primInfo,   // 2 ints per primitive: type, layer
@@ -381,9 +382,8 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
         // ---------------------------------------------------------------
 
         /// <summary>Pick a non-CPU accelerator, preferring CUDA over others.</summary>
-        private static Accelerator? PickAccelerator()
+        private static Accelerator? PickAccelerator(Accelerator[] all)
         {
-            var all = AcceleratorsManager.Accelerators;
             if (all == null || all.Length == 0) return null;
 
             // Prefer CUDA, fall back to any non-CPU accelerator

@@ -372,8 +372,6 @@ public partial class ClipCropConfiguratorView : ContentView
 
     public void LoadFromEffect(CropEffect_IPicture? effect) => LoadFromEffect((IEffect?)effect);
 
-    public void LoadFromEffect(CropEffect_HwAccel? effect) => LoadFromEffect((IEffect?)effect);
-
     public IEffectProvider BuildEffectProvider(Guid? providerId = null)
     {
         _providerId = providerId ?? (_providerId == Guid.Empty ? Guid.NewGuid() : _providerId);

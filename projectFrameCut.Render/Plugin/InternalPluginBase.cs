@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -98,6 +98,17 @@ public class InternalPluginBase : IPluginBase
     public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider =>
         new Dictionary<EffectImplementationKey, Func<IEffect>>
         {
+            [new("Place", EffectImplementType.IPicture)] = () => new PlaceEffect_IPicture(),
+            [new("RemoveColor", EffectImplementType.IPicture)] = () => new RemoveColorEffect_IPicture(),
+            [new("ClassicOverlayMixture", EffectImplementType.IPicture)] = () => new ClassicOverlayMixture(),
+            [new("AddMixture", EffectImplementType.IPicture)] = () => new AddMixture(),
+            [new("SubtractMixture", EffectImplementType.IPicture)] = () => new SubtractMixture(),
+            [new("MultiplyMixture", EffectImplementType.IPicture)] = () => new MultiplyMixture(),
+            [new("ScreenMixture", EffectImplementType.IPicture)] = () => new ScreenMixture(),
+            [new("OverlayBlendMixture", EffectImplementType.IPicture)] = () => new OverlayBlendMixture(),
+            [new("DarkenMixture", EffectImplementType.IPicture)] = () => new DarkenMixture(),
+            [new("LightenMixture", EffectImplementType.IPicture)] = () => new LightenMixture(),
+            [new("DifferenceMixture", EffectImplementType.IPicture)] = () => new DifferenceMixture(),
             [new("Blur", EffectImplementType.IPicture)] = () => new BlurEffect_IPicture(),
             [new("Crop", EffectImplementType.IPicture)] = () => new CropEffect_IPicture(),
             [new("ProgressCrop", EffectImplementType.IPicture)] = () => new ProgressCropper_IPicture(),
@@ -121,17 +132,7 @@ public class InternalPluginBase : IPluginBase
             [new("IntArithmeticDivide", EffectImplementType.NotSpecified)] = () => new IntArithmeticValueProviderEffect { TypeName = "IntArithmeticDivide", Operation = IntArithmeticOperation.Divide },
         };
 
-    public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>
-    {
-        {"AddComputer", () => new Compose.AddComputer() },
-        {"SubtractComputer", () => new Compose.SubtractComputer() },
-        {"MultiplyComputer", () => new Compose.MultiplyComputer() },
-        {"ScreenComputer", () => new Compose.ScreenComputer() },
-        {"OverlayBlendComputer", () => new Compose.OverlayBlendComputer() },
-        {"DarkenComputer", () => new Compose.DarkenComputer() },
-        {"LightenComputer", () => new Compose.LightenComputer() },
-        {"DifferenceComputer", () => new Compose.DifferenceComputer() },
-    };
+
 
 
 
@@ -313,6 +314,7 @@ public class InternalPluginBase : IPluginBase
 
     bool IPluginBase.OnLoaded(out string FailedReason)
     {
+        projectFrameCut.Drawing.Processing.Resizing.PictureResizer.Default = new EffectPictureResizer();
         try
         {
             TextClipFontRegistry.Initialize();

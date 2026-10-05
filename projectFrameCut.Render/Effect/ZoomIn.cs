@@ -16,7 +16,7 @@ namespace projectFrameCut.Render.Effect
         public string Name { get; set; }
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "ZoomIn";
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
+        public EffectImplementType ImplementType => EffectImplementType.IPicture;
         public bool IsReorderable => true;
         public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; }
@@ -60,7 +60,6 @@ namespace projectFrameCut.Render.Effect
             {
                 TargetX = DynamicParam.ToInt32(parameters.GetValueOrDefault("TargetX")),
                 TargetY = DynamicParam.ToInt32(parameters.GetValueOrDefault("TargetY")),
-                ImplementType = this.ImplementType,
                 RelativeWidth = this.RelativeWidth,
                 RelativeHeight = this.RelativeHeight,
                 Name = this.Name,
@@ -108,20 +107,6 @@ namespace projectFrameCut.Render.Effect
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            if (!parameters.ContainsKey("TargetX")) parameters["TargetX"] = 1;
-            if (!parameters.ContainsKey("TargetY")) parameters["TargetY"] = 1;
 
-            return
-            [
-                new ZoomInContinuousEffect
-                {
-                    TargetX = Convert.ToInt32(parameters["TargetX"]),
-                    TargetY = Convert.ToInt32(parameters["TargetY"]),
-                    ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType,
-                }
-            ];
-        }
     }
 }

@@ -17,6 +17,7 @@
 		<PackageReference Include="ILGPU" Version="1.5.3" />
 		<PackageReference Include="ILGPU.Algorithms" Version="1.5.3" />
 		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\Platforms\Windows\**\*.cs" Link="HwAccel\%(RecursiveDir)%(Filename)%(Extension)"></Compile>
+		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\Effect\**\*.cs" Link="HwAccel\Effect\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\AcceleratorsManager.cs" Link="HwAccel\%(RecursiveDir)%(Filename)%(Extension)"></Compile>
 		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\VectorRasterizer\**\*.cs" Link="HwAccel\%(RecursiveDir)%(Filename)%(Extension)"></Compile>
   </ItemGroup>

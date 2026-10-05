@@ -39,6 +39,7 @@ namespace projectFrameCut.InteractableEditor;
 
 public sealed class DynamicPreview : IDisposable
 {
+    private readonly EffectRuntimeContext effectRuntime = new();
     private const int ParallelPreparationThreshold = 2;
     private const int MaxCachedFallbackFrames = 120;
     private const int MaxDiskCachedFallbackFrames = 1500;
@@ -383,6 +384,7 @@ public sealed class DynamicPreview : IDisposable
 
     public void Dispose()
     {
+        effectRuntime.Dispose();
         CancelClipWarmups();
         Interlocked.Increment(ref _renderVersion);
         Interlocked.Increment(ref _prepareVersion);
@@ -459,6 +461,7 @@ public sealed class DynamicPreview : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public async Task<IReadOnlyList<PreparedPreview>?> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, bool applyClipTargetLayout, bool checkVersion, long prepareVersion, CancellationToken token)
     {
+        using var effectScope = effectRuntime.Enter();
         if (requests.Count == 0)
         {
             return [];
@@ -666,6 +669,7 @@ public sealed class DynamicPreview : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public Task<PreparedPreview> PrepareVectorClipSnapshotAsync(ClipDraftDTO clip, uint frameIndex, int width, int height, CancellationToken token)
     {
+        using var effectScope = effectRuntime.Enter();
         var json = JsonSerializer.Serialize(clip);
         var (projectWidth, projectHeight) = ResolveProjectDimensions(width, height);
         return Task.Run(() =>
@@ -2056,6 +2060,7 @@ public sealed class DynamicPreview : IDisposable
             try
             {
                 TransformProcessing.Release(clip.ExtraData);
+                EffectHelper.ReleaseClipEffects(clip);
                 clip.Dispose();
             }
             catch

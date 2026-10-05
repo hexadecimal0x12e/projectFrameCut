@@ -1,4 +1,4 @@
-﻿using ILGPU;
+using ILGPU;
 using ILGPU.Runtime;
 using projectFrameCut.Render.Effect;
 
@@ -18,10 +18,7 @@ namespace projectFrameCut.StandaloneRender
 {
     public class ILGPUPlugin : IPluginBase
     {
-        public static Accelerator[] accelerators = Array.Empty<Accelerator>();
-
-
-        string IPluginBase.PluginID => "projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin";
+        string IPluginBase.PluginID => "projectFrameCut.Render.HwAccelEngine";
 
         int IPluginBase.PluginAPIVersion => IPluginBase.CurrentPluginAPIVersion;
 
@@ -47,60 +44,13 @@ namespace projectFrameCut.StandaloneRender
 
         };
 
-        Dictionary<string, Func<IComputer>> IPluginBase.ComputerProvider =>
-            new Dictionary<string, Func<IComputer>>
-            {
-                {"OverlayComputer", new(() => new OverlayComputer(accelerators,null)) },
-                {"ApproximateOverlayComputer", new(() => new ApproximateOverlayComputer(accelerators,null)) },
-                {"RemoveColorComputer", new(() => new RemoveColorComputer(accelerators,null)) },
-                {"ResizeComputer", new(() => new ResizeComputer(accelerators,null)) },
-                {"CropComputer", new(() => new CropComputer(accelerators,null)) },
-                {"PlaceComputer", new(() => new PlaceComputer(accelerators,null)) },
-                {"AddComputer", new(() => new BlendAddComputer(accelerators,null)) },
-                {"SubtractComputer", new(() => new BlendSubtractComputer(accelerators,null)) },
-                {"MultiplyComputer", new(() => new BlendMultiplyComputer(accelerators,null)) },
-                {"ScreenComputer", new(() => new BlendScreenComputer(accelerators,null)) },
-                {"OverlayBlendComputer", new(() => new BlendOverlayBlendComputer(accelerators,null)) },
-                {"DarkenComputer", new(() => new BlendDarkenComputer(accelerators,null)) },
-                {"LightenComputer", new(() => new BlendLightenComputer(accelerators,null)) },
-                {"DifferenceComputer", new(() => new BlendDifferenceComputer(accelerators,null)) },
-                {"OpacityComputer", new(() => new OpacityComputer(accelerators,null)) },
-                {"VignetteComputer", new(() => new VignetteComputer(accelerators,null)) },
-                {"FlipComputer", new(() => new FlipComputer(accelerators,null)) },
-                {"SharpenComputer", new(() => new SharpenComputer(accelerators,null)) },
-                {"RotationComputer", new(() => new RotationComputer(accelerators,null)) },
-                {"BlurComputer", new(() => new BlurComputer(accelerators,null)) },
-                {"ColorAdjustmentComputer", new(() => new ColorAdjustmentComputer(accelerators,null)) }
-            };
+
 
 
         public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider => new Dictionary<string, Func<IEffectProvider>> { };
 
-        public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider =>
-            new Dictionary<EffectImplementationKey, Func<IEffect>>
-            {
-                [new("Blur", EffectImplementType.HwAcceleration)] = () => new BlurEffect_HwAccel(),
-                [new("Crop", EffectImplementType.HwAcceleration)] = () => new CropEffect_HwAccel(),
-                [new("ProgressCrop", EffectImplementType.HwAcceleration)] = () => new ProgressCropper_HwAccel(),
-                [new("Resize", EffectImplementType.HwAcceleration)] = () => new ResizeEffect_HwAccel(),
-                [new("Flip", EffectImplementType.HwAcceleration)] = () => new FlipEffect_HwAccel(),
-                [new("Sharpen", EffectImplementType.HwAcceleration)] = () => new SharpenEffect_HwAccel(),
-                [new("Vignette", EffectImplementType.HwAcceleration)] = () => new VignetteEffect_HwAccel(),
-                [new("FadeOpacity", EffectImplementType.HwAcceleration)] = () => new FadeOpacityEffect_HwAccel(),
-                [new("ColorAdjustment", EffectImplementType.HwAcceleration)] = () => new ColorAdjustmentEffect_HwAccel(),
-                [new("Rotation", EffectImplementType.HwAcceleration)] = () => new RotationEffect_HwAccel(),
-                [new("Place", EffectImplementType.HwAcceleration)] = () => new PlaceEffect_HwAccel(),
-                [new("RemoveColor", EffectImplementType.HwAcceleration)] = () => new RemoveColorEffect_HwAccel(),
-                [new("ClassicOverlayMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.ClassicOverlayMixture(),
-                [new("AddMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.AddMixture(),
-                [new("SubtractMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.SubtractMixture(),
-                [new("MultiplyMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.MultiplyMixture(),
-                [new("ScreenMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.ScreenMixture(),
-                [new("OverlayBlendMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.OverlayBlendMixture(),
-                [new("DarkenMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.DarkenMixture(),
-                [new("LightenMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.LightenMixture(),
-                [new("DifferenceMixture", EffectImplementType.HwAcceleration)] = () => new Render.Compose.DifferenceMixture(),
-            };
+        public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider => HardwareEffectFactories.Create();
+
 
         //Dictionary<string, Func<string, string, IClip>> IPluginBase.ClipProvider => new Dictionary<string, Func<string, string, IClip>> { };
         Dictionary<string, IVideoSource> IPluginBase.VideoSourceProvider => new Dictionary<string, IVideoSource> { };
@@ -125,20 +75,11 @@ namespace projectFrameCut.StandaloneRender
 
         bool IPluginBase.OnLoaded(out string FailedReason)
         {
-            try
-            {
-                var ctx = Context.Create(builder => builder.Default().EnableAlgorithms());
-                accelerators = ctx.Devices.Where(c => c.AcceleratorType != AcceleratorType.CPU).Select(c => c.CreateAccelerator(ctx)).ToArray();
-                AcceleratorsManager.IsRendering = true;
-                AcceleratorsManager.AcceleratorsForRendering = accelerators;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to initialize default ILGPU accelerators: {ex.Message}");
-                accelerators = Array.Empty<Accelerator>();
-            }
+            AcceleratorsManager.IsRendering = true;
             FailedReason = "";
             return true;
         }
+
+        public void OnClosing() => AcceleratorsManager.ReleaseResources();
     }
 }

@@ -1,3 +1,5 @@
+// For agents: ****NEVER change CurrentPluginAPIVersion****, even if you are adding new features to the plugin API.
+// This version number will changes at new major version of the plugin API, and will be used to check for compatibility between the plugin and the host application.
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -21,7 +23,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Get the current plugin API version.
         /// </summary>
-        // For agents: NEVER change this value, even if you are adding new features to the plugin API.
+        // For agents: ****NEVER change**** this value, even if you are adding new features to the plugin API.
         // This version number will changes at new major version of the plugin API, and will be used to check for compatibility between the plugin and the host application.
         public const int CurrentPluginAPIVersion = 8;
 
@@ -122,12 +124,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// The argument for value is Id of the previous clip, and the second argument is Id of the next clip
         /// </remarks>
         public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider { get; }
-
-        /// <summary>
-        /// Create an IComputer instance from the given JSON structure.
-        /// </summary>
-        [Obsolete("Computers are replaced by complete effect implementations.")]
-        public virtual Dictionary<string, Func<IComputer>> ComputerProvider => new();
 
         /// <summary>
         /// Create an IVideoSource instance from the given file path.
@@ -290,9 +286,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 provider.MetaData[IEffectProvider.IsContinuousEffectParameterKey] = true;
             }
 
-            var effect = (implementType != EffectImplementType.NotSpecified && provider.SupportsImplementTypes.Contains(implementType))
-                ? provider.RestoreInstance(implementType, parameters)
-                : provider.RestoreInstanceWithDefaultType(parameters);
+            var requestedType = implementType == EffectImplementType.NotSpecified ? stru.ImplementType : implementType;
+            var effect = provider.RestoreInstance(requestedType, parameters);
             return ApplyCommonProperties(effect, stru);
 #pragma warning restore CS0618
         }

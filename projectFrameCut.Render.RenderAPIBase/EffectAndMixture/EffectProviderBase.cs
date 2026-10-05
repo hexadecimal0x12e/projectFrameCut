@@ -13,16 +13,16 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     /// </summary>
     /// <remarks>
     /// The instance state is driven by <see cref="Fields"/> / <see cref="AnchorsBindingState"/>.
-    /// Subclasses implement <see cref="BuildEffects"/> to create the final effect(s).
+    /// Implementations are created through the shared registry.
     /// <para />
     /// the stateless factory members (<see cref="RestoreInstance(EffectImplementType, Dictionary{string, object})"/> /
-    /// <see cref="RestoreInstanceWithDefaultType"/>) and the stateful <see cref="Build()"/> all route into it.
+    /// <see cref="RestoreInstanceWithDefaultType"/>) and the stateful <see cref="Build()"/> all route into the shared registry.
     /// </remarks>
     public abstract class EffectProviderBase : IEffectProvider
     {
         /// <summary>
         /// The parameter key used to pass the desired <see cref="EffectImplementType"/> into <see cref="Build()"/>.
-        /// It is consumed and immediately removed by <see cref="ResolveImplementType"/> to avoid leaking into serialized parameters.
+        /// It is stored in provider metadata.
         /// </summary>
         public const string ImplementTypeParameterKey = "ImplementType";
         /// <summary>
@@ -284,7 +284,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             var effects = BuildRegisteredEffects(implementType, p);
             if (effects is null || effects.Length == 0)
             {
-                throw new InvalidOperationException($"EffectProvider '{TypeName}' returned no effects from BuildEffects.");
+                throw new InvalidOperationException($"EffectProvider '{TypeName}' returned no registered effects.");
             }
             return effects[0];
         }
@@ -330,15 +330,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         #region Build pipeline
 
-        /// <summary>
-        /// Create the final effect(s) from the normalized parameters and the resolved implementation type.
-        /// This is the single place a provider implements its effect-creation logic (inlined from the legacy factories).
-        /// </summary>
-        /// <param name="implementType">the resolved implementation type.</param>
-        /// <param name="parameters">the normalized parameters (reserved keys stripped, values typed).</param>
-        [Obsolete("Effect implementations are created through IPluginBase.EffectImplementations.")]
-        protected virtual IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters) =>
-            throw new NotSupportedException("Effect providers cannot create implementations directly.");
 
         /// <summary>
         /// Stateful build: resolves the <see cref="ImplementTypeParameterKey"/> from the current
@@ -354,7 +345,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         private IEffect[] BuildRegisteredEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
             var typeName = TypeName;
-            if (typeName == "Crop" && (MetaData.Remove(IsContinuousEffectParameterKey, out _) || parameters.Remove(IsContinuousEffectParameterKey, out _)))
+            if (typeName == "Crop" && (MetaData.ContainsKey(IsContinuousEffectParameterKey) || parameters.ContainsKey(IsContinuousEffectParameterKey)))
                 typeName = "ProgressCrop";
 
             return [Plugins.IPluginBase.EffectImplementations.Create(typeName, implementType, DefaultImplementType, parameters)];
@@ -402,7 +393,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         }
 
         /// <summary>
-        /// Reads and removes the <see cref="ImplementTypeParameterKey"/> from <see cref="MetaData"/>.
+        /// Reads the <see cref="ImplementTypeParameterKey"/> from <see cref="MetaData"/>.
         /// </summary>
         protected EffectImplementType ResolveImplementType(IReadOnlyList<EffectImplementType> supported, EffectImplementType defaultType = EffectImplementType.NotSpecified)
         {
@@ -413,11 +404,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                 else if (raw is int i && Enum.IsDefined(typeof(EffectImplementType), i)) requested = (EffectImplementType)i;
                 else if (raw is string s && Enum.TryParse<EffectImplementType>(s, out var parsed)) requested = parsed;
                 else if (raw is JsonElement je && je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var ji) && Enum.IsDefined(typeof(EffectImplementType), ji)) requested = (EffectImplementType)ji;
-            }
-            MetaData.Remove(ImplementTypeParameterKey);
-            if (requested != EffectImplementType.NotSpecified && !supported.Contains(requested))
-            {
-                return defaultType;
             }
             return requested;
         }

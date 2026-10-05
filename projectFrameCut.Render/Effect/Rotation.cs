@@ -1,5 +1,4 @@
 using projectFrameCut.Drawing.Effect;
-using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System.Diagnostics;
@@ -30,7 +29,7 @@ namespace projectFrameCut.Render.Effect
         public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
+        public EffectImplementType ImplementType => EffectImplementType.IPicture;
         public bool IsReorderable => true;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
@@ -48,7 +47,7 @@ namespace projectFrameCut.Render.Effect
         public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; } = string.Empty;
 
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.IPicture)
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {
             ArgumentNullException.ThrowIfNull(parameters);
             if (!ParametersNeeded.All(parameters.ContainsKey))
@@ -68,7 +67,6 @@ namespace projectFrameCut.Render.Effect
             {
                 Angle = angle,
                 ExpandCanvas = expandCanvas,
-                ImplementType = implementType,
             };
             effect.Parameters = parameters;
             return effect;
@@ -84,6 +82,10 @@ namespace projectFrameCut.Render.Effect
             bool expandCanvas = DynamicParam.Resolve(Parameters.GetValueOrDefault("ExpandCanvas"), ExpandCanvas);
             var result = RotationEffect.Process(source, angle, expandCanvas);
 
+            float radians = angle * MathF.PI / 180f;
+            result = PictureEffectChannels.MapHdr(result, source, (x, y) =>
+                ((x - result.Width / 2f) * MathF.Cos(radians) - (y - result.Height / 2f) * MathF.Sin(radians) + source.Width / 2f,
+                 (x - result.Width / 2f) * MathF.Sin(radians) + (y - result.Height / 2f) * MathF.Cos(radians) + source.Height / 2f));
             sw.Stop();
             _elapsed = sw.Elapsed;
             result.ProcessStack = source.ProcessStack.Append(GetProcessStack(angle, expandCanvas)).ToList();
@@ -103,123 +105,6 @@ namespace projectFrameCut.Render.Effect
                 { nameof(ExpandCanvas), expandCanvas },
             }
         };
-    }
-
-    public class RotationEffect_HwAccel : INormalEffect
-    {
-        private readonly IComputer? computer = PluginManager.CreateComputer("RotationComputer");
-        public bool Enabled { get; set; } = true;
-        public int Index { get; set; }
-        public string Name { get; set; } = "Rotation";
-        public int RelativeWidth { get; set; }
-        public int RelativeHeight { get; set; }
-
-        public float Angle { get; init; }
-        public bool ExpandCanvas { get; init; } = false;
-        public Dictionary<string, object> Parameters { get; set; } = new();
-
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
-        public bool IsReorderable => true;
-
-        public static List<string> ParametersNeeded { get; } = new List<string> { "Angle" };
-        public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
-        {
-            { "Angle", "float" },
-            { "ExpandCanvas", "bool" },
-        };
-
-        public string TypeName => "Rotation";
-        public string? BindedEffectProvidingSystemID { get; set; }
-        public string Id { get; set; } = string.Empty;
-
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
-        {
-            ArgumentNullException.ThrowIfNull(parameters);
-            if (!ParametersNeeded.All(parameters.ContainsKey))
-            {
-                throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
-            }
-            float angle = DynamicParam.ToFloat(parameters.GetValueOrDefault("Angle"));
-            bool expandCanvas = false;
-            if (parameters.TryGetValue("ExpandCanvas", out var expandVal))
-            {
-                expandCanvas = DynamicParam.ToBool(expandVal);
-            }
-            var effect = new RotationEffect_HwAccel
-            {
-                Angle = angle,
-                ExpandCanvas = expandCanvas
-            };
-            effect.Parameters = parameters;
-            return effect;
-        }
-
-        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
-
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
-        {
-            float angle = DynamicParam.Resolve(Parameters.GetValueOrDefault("Angle"), Angle);
-            bool expandCanvas = DynamicParam.Resolve(Parameters.GetValueOrDefault("ExpandCanvas"), ExpandCanvas);
-            if (Math.Abs(angle % 360f) < float.Epsilon)
-                return source;
-
-            if (computer is null)
-                return RotationEffect.Process(source, angle, expandCanvas);
-
-            float angleRad = angle * MathF.PI / 180f;
-            float cos = MathF.Abs(MathF.Cos(angleRad));
-            float sin = MathF.Abs(MathF.Sin(angleRad));
-
-            int outW, outH;
-            if (expandCanvas)
-            {
-                outW = (int)MathF.Ceiling(source.Width * cos + source.Height * sin);
-                outH = (int)MathF.Ceiling(source.Width * sin + source.Height * cos);
-            }
-            else
-            {
-                outW = source.Width;
-                outH = source.Height;
-            }
-
-            var sw = Stopwatch.StartNew();
-            var (r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
-
-            FourChannelResult computeResult;
-            if (computer is IRotationComputer rc)
-            {
-                computeResult = rc.ComputeRotation(r, g, b, a, source.Width, source.Height, outW, outH, angle);
-            }
-            else
-            {
-                var resultArr = computer.Compute([r, g, b, a, source.Width, source.Height, outW, outH, angle]);
-
-                if (resultArr.Length != 4 ||
-                    resultArr[0] is not float[] rOut ||
-                    resultArr[1] is not float[] gOut ||
-                    resultArr[2] is not float[] bOut ||
-                    resultArr[3] is not float[] aOut)
-                {
-                    throw new InvalidOperationException("RotationComputer did not return expected channel buffers.");
-                }
-
-                computeResult = new FourChannelResult(rOut, gOut, bOut, aOut);
-            }
-
-            var result = HwAccelEffectHelper.BuildPicture(source, outW, outH,
-                computeResult.R, computeResult.G, computeResult.B, computeResult.A, sourceHasAlpha);
-            sw.Stop();
-            result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
-            {
-                Elapsed = sw.Elapsed,
-                OperationDisplayName = "Rotation (GPU)",
-                Operator = typeof(RotationEffect_HwAccel),
-                ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object> { { "Angle", angle }, { "ExpandCanvas", expandCanvas } }
-            }).ToList();
-            return result;
-        }
     }
 
     /// <summary>
@@ -253,19 +138,6 @@ namespace projectFrameCut.Render.Effect
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            if (implementType == EffectImplementType.NotSpecified)
-            {
-                if (!parameters.ContainsKey("Angle")) parameters["Angle"] = 0f;
-                return [RotationEffect_IPicture.FromParametersDictionary(parameters)];
-            }
-            return implementType switch
-            {
-                EffectImplementType.IPicture => [RotationEffect_IPicture.FromParametersDictionary(parameters)],
-                EffectImplementType.HwAcceleration => [RotationEffect_HwAccel.FromParametersDictionary(parameters)],
-                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
-            };
-        }
+
     }
 }

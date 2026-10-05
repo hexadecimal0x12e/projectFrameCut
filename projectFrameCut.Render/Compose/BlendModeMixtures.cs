@@ -1,5 +1,5 @@
 using projectFrameCut.Drawing.Processing.Resizing;
-using projectFrameCut.Render.HwAccelContracts;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -13,8 +13,10 @@ namespace projectFrameCut.Render.Compose
     public abstract class BlendModeMixtureBase : IMixture
     {
         public abstract string TypeName { get; }
-        protected abstract string ComputerId { get; }
-        private IComputer? computer;
+
+        protected abstract (ushort[] Color, float[] Alpha) ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount);
+        private IPicture ResizeTop(IPicture source, int width, int height) => new EffectPictureResizer(ImplementType).ResizePicture(source, width, height);
+        public virtual EffectImplementType ImplementType => EffectImplementType.IPicture;
         public bool IsReorderable => true;
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string Name { get; set; }
@@ -22,62 +24,59 @@ namespace projectFrameCut.Render.Compose
         public Dictionary<string, object> Parameters { get; set; }
         public string? BindedEffectProvidingSystemID { get; set; }
 
-        public IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB)
-            => MixInternal(
-                basePicture, topPicture, computer ??= PluginManager.CreateComputer(ComputerId), targetPPB,
-                resizeTopWhenDimensionMismatch: true,
-                topStartX: 0, topStartY: 0,
-                targetWidth: basePicture.Width, targetHeight: basePicture.Height);
-
-        public IPicture Mix(
-            IPicture basePicture, IPicture topPicture,
-            IPicture.PicturePixelMode targetPPB,
-            int topStartX, int topStartY, int targetWidth, int targetHeight)
+        public virtual IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB) => MixInternal(basePicture, topPicture, targetPPB, resizeTopWhenDimensionMismatch: true, topStartX: 0, topStartY: 0, targetWidth: basePicture.Width, targetHeight: basePicture.Height);
+        public virtual IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB, int topStartX, int topStartY, int targetWidth, int targetHeight)
         {
             if (targetWidth <= 0 || targetHeight <= 0)
                 throw new ArgumentException("targetWidth and targetHeight must be positive.");
-
-            return MixInternal(
-                basePicture, topPicture, computer ??= PluginManager.CreateComputer(ComputerId), targetPPB,
-                resizeTopWhenDimensionMismatch: false,
-                topStartX, topStartY, targetWidth, targetHeight);
+            return MixInternal(basePicture, topPicture, targetPPB, resizeTopWhenDimensionMismatch: false, topStartX, topStartY, targetWidth, targetHeight);
         }
 
-        public IEffect WithParameters(Dictionary<string, object> parameters)
+        public virtual IEffect WithParameters(Dictionary<string, object> parameters)
         {
-            var effect = (BlendModeMixtureBase)Activator.CreateInstance(GetType())!;
+            BlendModeMixtureBase effect = TypeName switch
+            {
+                "AddMixture" => new AddMixture(),
+                "SubtractMixture" => new SubtractMixture(),
+                "MultiplyMixture" => new MultiplyMixture(),
+                "ScreenMixture" => new ScreenMixture(),
+                "OverlayBlendMixture" => new OverlayBlendMixture(),
+                "DarkenMixture" => new DarkenMixture(),
+                "LightenMixture" => new LightenMixture(),
+                "DifferenceMixture" => new DifferenceMixture(),
+                _ => throw new NotSupportedException($"Unsupported mixture '{TypeName}'.")};
             effect.Parameters = parameters;
             return effect;
         }
 
-        protected static IPicture MixInternal(
-            IPicture basePicture, IPicture topPicture, IComputer? computer,
-            IPicture.PicturePixelMode targetPPB,
-            bool resizeTopWhenDimensionMismatch,
-            int topStartX, int topStartY, int targetWidth, int targetHeight)
+        protected IPicture MixInternal(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB, bool resizeTopWhenDimensionMismatch, int topStartX, int topStartY, int targetWidth, int targetHeight)
         {
-            if (computer is null)
-                throw new ArgumentNullException(nameof(computer));
-
             if (targetWidth <= 0 || targetHeight <= 0)
                 throw new ArgumentException("targetWidth and targetHeight must be positive.");
-
             static bool HasValidChannels(IPicture pic)
             {
                 if (pic is Picture8bpp p8)
                 {
-                    if (p8.r is null || p8.g is null || p8.b is null) return false;
-                    if (p8.r.Length != p8.Pixels || p8.g.Length != p8.Pixels || p8.b.Length != p8.Pixels) return false;
-                    if (p8.HasAlphaChannel && (p8.a is null || p8.a.Length != p8.Pixels)) return false;
+                    if (p8.r is null || p8.g is null || p8.b is null)
+                        return false;
+                    if (p8.r.Length != p8.Pixels || p8.g.Length != p8.Pixels || p8.b.Length != p8.Pixels)
+                        return false;
+                    if (p8.HasAlphaChannel && (p8.a is null || p8.a.Length != p8.Pixels))
+                        return false;
                     return true;
                 }
+
                 if (pic is Picture16bpp p16)
                 {
-                    if (p16.r is null || p16.g is null || p16.b is null) return false;
-                    if (p16.r.Length != p16.Pixels || p16.g.Length != p16.Pixels || p16.b.Length != p16.Pixels) return false;
-                    if (p16.HasAlphaChannel && (p16.a is null || p16.a.Length != p16.Pixels)) return false;
+                    if (p16.r is null || p16.g is null || p16.b is null)
+                        return false;
+                    if (p16.r.Length != p16.Pixels || p16.g.Length != p16.Pixels || p16.b.Length != p16.Pixels)
+                        return false;
+                    if (p16.HasAlphaChannel && (p16.a is null || p16.a.Length != p16.Pixels))
+                        return false;
                     return true;
                 }
+
                 return true;
             }
 
@@ -88,27 +87,44 @@ namespace projectFrameCut.Render.Compose
                     r = new float[p16.Pixels];
                     g = new float[p16.Pixels];
                     b = new float[p16.Pixels];
-                    for (int i = 0; i < p16.Pixels; i++) { r[i] = p16.r[i]; g[i] = p16.g[i]; b[i] = p16.b[i]; }
+                    for (int i = 0; i < p16.Pixels; i++)
+                    {
+                        r[i] = p16.r[i];
+                        g[i] = p16.g[i];
+                        b[i] = p16.b[i];
+                    }
+
                     a = p16.HasAlphaChannel ? p16.a : null;
                     return;
                 }
+
                 if (pic is IPicture<byte> p8)
                 {
                     r = new float[p8.Pixels];
                     g = new float[p8.Pixels];
                     b = new float[p8.Pixels];
-                    for (int i = 0; i < p8.Pixels; i++) { r[i] = p8.r[i] * 257f; g[i] = p8.g[i] * 257f; b[i] = p8.b[i] * 257f; }
+                    for (int i = 0; i < p8.Pixels; i++)
+                    {
+                        r[i] = p8.r[i] * 257f;
+                        g[i] = p8.g[i] * 257f;
+                        b[i] = p8.b[i] * 257f;
+                    }
+
                     a = p8.HasAlphaChannel ? p8.a : null;
                     return;
                 }
+
                 throw new NotSupportedException();
             }
 
             static float Clamp01(float value)
             {
-                if (!float.IsFinite(value)) return 0f;
-                if (value < 0f) return 0f;
-                if (value > 1f) return 1f;
+                if (!float.IsFinite(value))
+                    return 0f;
+                if (value < 0f)
+                    return 0f;
+                if (value > 1f)
+                    return 1f;
                 return value;
             }
 
@@ -119,17 +135,23 @@ namespace projectFrameCut.Render.Compose
 
             static float ReadAsFloat(object? src, int index)
             {
-                if (src is float[] f) return f[index];
-                if (src is ushort[] u16) return u16[index];
-                if (src is byte[] u8) return u8[index] * 257f;
+                if (src is float[] f)
+                    return f[index];
+                if (src is ushort[] u16)
+                    return u16[index];
+                if (src is byte[] u8)
+                    return u8[index] * 257f;
                 throw new InvalidOperationException("Invalid output channel type");
             }
 
             static float ReadAsAlpha01(object? src, int index)
             {
-                if (src is float[] f) return Clamp01(f[index]);
-                if (src is ushort[] u16) return Clamp01(u16[index] / 65535f);
-                if (src is byte[] u8) return Clamp01(u8[index] / 255f);
+                if (src is float[] f)
+                    return Clamp01(f[index]);
+                if (src is ushort[] u16)
+                    return Clamp01(u16[index] / 65535f);
+                if (src is byte[] u8)
+                    return Clamp01(u8[index] / 255f);
                 throw new InvalidOperationException("Invalid output alpha type");
             }
 
@@ -142,6 +164,7 @@ namespace projectFrameCut.Render.Compose
                     maximumBrightness = (!float.IsFinite(hdrMax) || hdrMax <= 0f) ? 1000f : hdrMax;
                     return true;
                 }
+
                 brightness = null;
                 maximumBrightness = 1000f;
                 return false;
@@ -149,37 +172,55 @@ namespace projectFrameCut.Render.Compose
 
             static byte[] ConvertToByteChannel(object? src)
             {
-                if (src is byte[] b) return b;
+                if (src is byte[] b)
+                    return b;
                 if (src is ushort[] u16)
                 {
                     var dst = new byte[u16.Length];
-                    for (int i = 0; i < u16.Length; i++) { float v = u16[i] / 257f; dst[i] = (byte)Math.Clamp(v, 0f, 255f); }
+                    for (int i = 0; i < u16.Length; i++)
+                    {
+                        float v = u16[i] / 257f;
+                        dst[i] = (byte)Math.Clamp(v, 0f, 255f);
+                    }
+
                     return dst;
                 }
+
                 if (src is float[] f)
                 {
                     var dst = new byte[f.Length];
-                    for (int i = 0; i < f.Length; i++) { float v = f[i] / 257f; dst[i] = (byte)Math.Clamp(v, 0f, 255f); }
+                    for (int i = 0; i < f.Length; i++)
+                    {
+                        float v = f[i] / 257f;
+                        dst[i] = (byte)Math.Clamp(v, 0f, 255f);
+                    }
+
                     return dst;
                 }
+
                 throw new InvalidOperationException("Invalid output channel type for byte target");
             }
 
             static ushort[] ConvertToUShortChannel(object? src)
             {
-                if (src is ushort[] u16) return u16;
+                if (src is ushort[] u16)
+                    return u16;
                 if (src is byte[] b)
                 {
                     var dst = new ushort[b.Length];
-                    for (int i = 0; i < b.Length; i++) dst[i] = (ushort)(b[i] * 257);
+                    for (int i = 0; i < b.Length; i++)
+                        dst[i] = (ushort)(b[i] * 257);
                     return dst;
                 }
+
                 if (src is float[] f)
                 {
                     var dst = new ushort[f.Length];
-                    for (int i = 0; i < f.Length; i++) dst[i] = (ushort)Math.Clamp(f[i], 0f, 65535f);
+                    for (int i = 0; i < f.Length; i++)
+                        dst[i] = (ushort)Math.Clamp(f[i], 0f, 65535f);
                     return dst;
                 }
+
                 throw new InvalidOperationException("Invalid output channel type for ushort target");
             }
 
@@ -195,10 +236,9 @@ namespace projectFrameCut.Render.Compose
                     Operator = typeof(BlendModeMixtureBase),
                     ProcessingFuncStackTrace = new(true),
                 };
-
                 if (resizeTopWhenDimensionMismatch && (topPicture.Width != targetWidth || topPicture.Height != targetHeight))
                 {
-                    resizedTop = topPicture.Resize(targetWidth, targetHeight, false);
+                    resizedTop = ResizeTop(topPicture, targetWidth, targetHeight);
                     topPicture = resizedTop;
                     topStartX = 0;
                     topStartY = 0;
@@ -211,18 +251,15 @@ namespace projectFrameCut.Render.Compose
 
                 ExtractChannels(basePicture, out float[] baseR, out float[] baseG, out float[] baseB, out float[]? baseA);
                 ExtractChannels(topPicture, out float[] topR, out float[] topG, out float[] topB, out float[]? topA);
-
                 bool baseHasHdr = TryGetHdrBrightness(basePicture, out float[]? baseBrightness, out float baseMaxBrightness);
                 bool topHasHdr = TryGetHdrBrightness(topPicture, out float[]? topBrightness, out float topMaxBrightness);
                 bool shouldComposeHdr = baseHasHdr || topHasHdr;
-
                 int targetPixels = checked(targetWidth * targetHeight);
                 var outR = new float[targetPixels];
                 var outG = new float[targetPixels];
                 var outB = new float[targetPixels];
                 var outA = new float[targetPixels];
                 float[]? outBrightness = shouldComposeHdr ? new float[targetPixels] : null;
-
                 for (int y = 0; y < targetHeight; y++)
                 {
                     int rowTarget = y * targetWidth;
@@ -232,10 +269,15 @@ namespace projectFrameCut.Render.Compose
                         int dstIdx = rowTarget + x;
                         if (!inBaseY || x >= basePicture.Width)
                         {
-                            outR[dstIdx] = 0f; outG[dstIdx] = 0f; outB[dstIdx] = 0f; outA[dstIdx] = 0f;
-                            if (outBrightness != null) outBrightness[dstIdx] = 0f;
+                            outR[dstIdx] = 0f;
+                            outG[dstIdx] = 0f;
+                            outB[dstIdx] = 0f;
+                            outA[dstIdx] = 0f;
+                            if (outBrightness != null)
+                                outBrightness[dstIdx] = 0f;
                             continue;
                         }
+
                         int baseIdx = y * basePicture.Width + x;
                         outR[dstIdx] = baseR[baseIdx];
                         outG[dstIdx] = baseG[baseIdx];
@@ -253,16 +295,13 @@ namespace projectFrameCut.Render.Compose
                 int overlapWidth = Math.Max(0, overlapRight - overlapLeft);
                 int overlapHeight = Math.Max(0, overlapBottom - overlapTop);
                 int overlapPixels = overlapWidth * overlapHeight;
-
                 var pool = ArrayPool<float>.Shared;
                 var intPool = ArrayPool<int>.Shared;
-
                 int[]? mixedIndices = null;
                 float[]? mixTopR = null, mixTopG = null, mixTopB = null;
                 float[]? mixBaseR = null, mixBaseG = null, mixBaseB = null;
                 float[]? mixTopA = null, mixBaseA = null;
                 float[]? mixTopBrightness = null, mixBaseBrightness = null;
-
                 int mixedCount = 0;
                 try
                 {
@@ -294,10 +333,9 @@ namespace projectFrameCut.Render.Compose
                             int topX = x - topStartX;
                             int topIdx = topRow + topX;
                             int dstIdx = dstRow + x;
-
                             float alpha = topA is null ? 1f : Clamp01(topA[topIdx]);
-                            if (alpha <= 0.05f) continue;
-
+                            if (alpha <= 0.05f)
+                                continue;
                             if (alpha >= 0.999f)
                             {
                                 outR[dstIdx] = topR[topIdx];
@@ -318,12 +356,12 @@ namespace projectFrameCut.Render.Compose
                             mixBaseB![mixedCount] = outB[dstIdx];
                             mixTopA![mixedCount] = alpha;
                             mixBaseA![mixedCount] = outA[dstIdx];
-
                             if (shouldComposeHdr)
                             {
                                 mixTopBrightness![mixedCount] = topBrightness != null ? Clamp01(topBrightness[topIdx]) : EstimateBrightness(topR[topIdx], topG[topIdx], topB[topIdx]);
                                 mixBaseBrightness![mixedCount] = outBrightness![dstIdx];
                             }
+
                             mixedCount++;
                         }
                     }
@@ -332,27 +370,13 @@ namespace projectFrameCut.Render.Compose
                     {
                         ushort[] rOutArr, gOutArr, bOutArr;
                         float[] aOutArr;
-
-                        if (computer is IBlendModeComputer bmc)
-                        {
-                            var rResult = bmc.ComputeBlend(mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, mixedCount);
-                            var gResult = bmc.ComputeBlend(mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, mixedCount);
-                            var bResult = bmc.ComputeBlend(mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, mixedCount);
-                            rOutArr = rResult.Color; gOutArr = gResult.Color; bOutArr = bResult.Color;
-                            aOutArr = rResult.Alpha;
-                        }
-                        else
-                        {
-                            object[] outRResult = computer.Compute([mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, 16, mixedCount]);
-                            object[] outGResult = computer.Compute([mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, 16, mixedCount]);
-                            object[] outBResult = computer.Compute([mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, 16, mixedCount]);
-
-                            rOutArr = (ushort[])outRResult[0];
-                            gOutArr = (ushort[])outGResult[0];
-                            bOutArr = (ushort[])outBResult[0];
-                            aOutArr = (float[])outRResult[1];
-                        }
-
+                        var rResult = ComputeBlend(mixTopR!, mixBaseR!, mixTopA!, mixBaseA!, mixedCount);
+                        var gResult = ComputeBlend(mixTopG!, mixBaseG!, mixTopA!, mixBaseA!, mixedCount);
+                        var bResult = ComputeBlend(mixTopB!, mixBaseB!, mixTopA!, mixBaseA!, mixedCount);
+                        rOutArr = rResult.Color;
+                        gOutArr = gResult.Color;
+                        bOutArr = bResult.Color;
+                        aOutArr = rResult.Alpha;
                         for (int i = 0; i < mixedCount; i++)
                         {
                             int idx = mixedIndices![i];
@@ -365,16 +389,13 @@ namespace projectFrameCut.Render.Compose
                         if (shouldComposeHdr)
                         {
                             float[] brightnessAlpha;
-                            if (computer is IOverlayComputer ovcHdr)
+                            brightnessAlpha = new float[mixedCount];
+                            for (int i = 0; i < mixedCount; i++)
                             {
-                                var hdrResult = ovcHdr.OverlayHdr(mixTopBrightness!, mixBaseBrightness!, mixTopA!, mixBaseA!, mixedCount);
-                                brightnessAlpha = hdrResult.Alpha;
+                                float alpha = mixTopA![i] + mixBaseA![i] * (1f - mixTopA[i]);
+                                brightnessAlpha[i] = alpha <= 0f ? 0f : (mixTopBrightness![i] * mixTopA[i] + mixBaseBrightness![i] * mixBaseA[i] * (1f - mixTopA[i])) / alpha;
                             }
-                            else
-                            {
-                                object[] brightnessResult = computer.Compute([mixTopBrightness!, mixBaseBrightness!, mixTopA!, mixBaseA!, 0, mixedCount]);
-                                brightnessAlpha = (float[])brightnessResult[0];
-                            }
+
                             for (int i = 0; i < mixedCount; i++)
                                 outBrightness![mixedIndices![i]] = brightnessAlpha[i];
                         }
@@ -382,30 +403,37 @@ namespace projectFrameCut.Render.Compose
                 }
                 finally
                 {
-                    if (mixedIndices != null) intPool.Return(mixedIndices, clearArray: false);
-                    if (mixTopR != null) pool.Return(mixTopR, clearArray: false);
-                    if (mixTopG != null) pool.Return(mixTopG, clearArray: false);
-                    if (mixTopB != null) pool.Return(mixTopB, clearArray: false);
-                    if (mixBaseR != null) pool.Return(mixBaseR, clearArray: false);
-                    if (mixBaseG != null) pool.Return(mixBaseG, clearArray: false);
-                    if (mixBaseB != null) pool.Return(mixBaseB, clearArray: false);
-                    if (mixTopA != null) pool.Return(mixTopA, clearArray: false);
-                    if (mixBaseA != null) pool.Return(mixBaseA, clearArray: false);
-                    if (mixTopBrightness != null) pool.Return(mixTopBrightness, clearArray: false);
-                    if (mixBaseBrightness != null) pool.Return(mixBaseBrightness, clearArray: false);
+                    if (mixedIndices != null)
+                        intPool.Return(mixedIndices, clearArray: false);
+                    if (mixTopR != null)
+                        pool.Return(mixTopR, clearArray: false);
+                    if (mixTopG != null)
+                        pool.Return(mixTopG, clearArray: false);
+                    if (mixTopB != null)
+                        pool.Return(mixTopB, clearArray: false);
+                    if (mixBaseR != null)
+                        pool.Return(mixBaseR, clearArray: false);
+                    if (mixBaseG != null)
+                        pool.Return(mixBaseG, clearArray: false);
+                    if (mixBaseB != null)
+                        pool.Return(mixBaseB, clearArray: false);
+                    if (mixTopA != null)
+                        pool.Return(mixTopA, clearArray: false);
+                    if (mixBaseA != null)
+                        pool.Return(mixBaseA, clearArray: false);
+                    if (mixTopBrightness != null)
+                        pool.Return(mixTopBrightness, clearArray: false);
+                    if (mixBaseBrightness != null)
+                        pool.Return(mixBaseBrightness, clearArray: false);
                 }
 
                 float outputMaximumBrightness = 1000f;
                 if (shouldComposeHdr)
                 {
-                    outputMaximumBrightness = baseHasHdr && topHasHdr
-                        ? Math.Max(baseMaxBrightness, topMaxBrightness)
-                        : (baseHasHdr ? baseMaxBrightness : topMaxBrightness);
+                    outputMaximumBrightness = baseHasHdr && topHasHdr ? Math.Max(baseMaxBrightness, topMaxBrightness) : (baseHasHdr ? baseMaxBrightness : topMaxBrightness);
                 }
 
-                bool outputHasAlpha = basePicture.HasAlphaChannel || topPicture.HasAlphaChannel
-                    || basePicture.Width != targetWidth || basePicture.Height != targetHeight;
-
+                bool outputHasAlpha = basePicture.HasAlphaChannel || topPicture.HasAlphaChannel || basePicture.Width != targetWidth || basePicture.Height != targetHeight;
                 IPicture result;
                 if ((int)targetPPB == 8)
                 {
@@ -416,7 +444,10 @@ namespace projectFrameCut.Render.Compose
                         b = ConvertToByteChannel(outB),
                         a = outputHasAlpha ? outA : null,
                         HasAlphaChannel = outputHasAlpha,
-                        ProcessStack = new List<PictureProcessStack> { procStack },
+                        ProcessStack = new List<PictureProcessStack>
+                        {
+                            procStack
+                        },
                     };
                 }
                 else
@@ -430,7 +461,10 @@ namespace projectFrameCut.Render.Compose
                             b = ConvertToUShortChannel(outB),
                             a = outputHasAlpha ? outA : null,
                             HasAlphaChannel = outputHasAlpha,
-                            ProcessStack = new List<PictureProcessStack> { procStack },
+                            ProcessStack = new List<PictureProcessStack>
+                            {
+                                procStack
+                            },
                             Brightness = outBrightness ?? new float[targetPixels],
                             MaximumBrightness = outputMaximumBrightness,
                         };
@@ -444,7 +478,10 @@ namespace projectFrameCut.Render.Compose
                             b = ConvertToUShortChannel(outB),
                             a = outputHasAlpha ? outA : null,
                             HasAlphaChannel = outputHasAlpha,
-                            ProcessStack = new List<PictureProcessStack> { procStack },
+                            ProcessStack = new List<PictureProcessStack>
+                            {
+                                procStack
+                            },
                         };
                     }
                 }
@@ -455,7 +492,13 @@ namespace projectFrameCut.Render.Compose
             }
             finally
             {
-                try { resizedTop?.Dispose(); } catch { }
+                try
+                {
+                    resizedTop?.Dispose();
+                }
+                catch
+                {
+                }
             }
         }
     }
@@ -463,90 +506,244 @@ namespace projectFrameCut.Render.Compose
     public class AddMixture : BlendModeMixtureBase
     {
         public override string TypeName => "AddMixture";
-        protected override string ComputerId => "AddComputer";
+
+        protected override (ushort[] Color, float[] Alpha) ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var outC = new ushort[pixelCount];
+            var outA = new float[pixelCount];
+            for (int i = 0; i < pixelCount; i++)
+            {
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f)
+                {
+                    outC[i] = 0;
+                    outA[i] = 0f;
+                }
+                else
+                {
+                    float blended = Math.Min(top[i] + bottom[i], 65535f);
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f);
+                    outA[i] = outAlpha;
+                }
+            }
+
+            return (outC, outA);
+        }
     }
 
     public class SubtractMixture : BlendModeMixtureBase
     {
         public override string TypeName => "SubtractMixture";
-        protected override string ComputerId => "SubtractComputer";
+
+        protected override (ushort[] Color, float[] Alpha) ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var outC = new ushort[pixelCount];
+            var outA = new float[pixelCount];
+            for (int i = 0; i < pixelCount; i++)
+            {
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f)
+                {
+                    outC[i] = 0;
+                    outA[i] = 0f;
+                }
+                else
+                {
+                    float blended = Math.Max(bottom[i] - top[i], 0f);
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f);
+                    outA[i] = outAlpha;
+                }
+            }
+
+            return (outC, outA);
+        }
     }
 
     public class MultiplyMixture : BlendModeMixtureBase
     {
         public override string TypeName => "MultiplyMixture";
-        protected override string ComputerId => "MultiplyComputer";
+
+        protected override (ushort[] Color, float[] Alpha) ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var outC = new ushort[pixelCount];
+            var outA = new float[pixelCount];
+            for (int i = 0; i < pixelCount; i++)
+            {
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f)
+                {
+                    outC[i] = 0;
+                    outA[i] = 0f;
+                }
+                else
+                {
+                    float blended = top[i] * bottom[i] / 65535f;
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f);
+                    outA[i] = outAlpha;
+                }
+            }
+
+            return (outC, outA);
+        }
     }
 
     public class ScreenMixture : BlendModeMixtureBase
     {
         public override string TypeName => "ScreenMixture";
-        protected override string ComputerId => "ScreenComputer";
+
+        protected override (ushort[] Color, float[] Alpha) ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var outC = new ushort[pixelCount];
+            var outA = new float[pixelCount];
+            for (int i = 0; i < pixelCount; i++)
+            {
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f)
+                {
+                    outC[i] = 0;
+                    outA[i] = 0f;
+                }
+                else
+                {
+                    float blended = 65535f - (65535f - top[i]) * (65535f - bottom[i]) / 65535f;
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f);
+                    outA[i] = outAlpha;
+                }
+            }
+
+            return (outC, outA);
+        }
     }
 
     public class OverlayBlendMixture : BlendModeMixtureBase
     {
         public override string TypeName => "OverlayBlendMixture";
-        protected override string ComputerId => "OverlayBlendComputer";
+
+        protected override (ushort[] Color, float[] Alpha) ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var outC = new ushort[pixelCount];
+            var outA = new float[pixelCount];
+            for (int i = 0; i < pixelCount; i++)
+            {
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f)
+                {
+                    outC[i] = 0;
+                    outA[i] = 0f;
+                }
+                else
+                {
+                    float blended;
+                    if (bottom[i] < 32768f)
+                        blended = 2f * top[i] * bottom[i] / 65535f;
+                    else
+                        blended = 65535f - 2f * (65535f - top[i]) * (65535f - bottom[i]) / 65535f;
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f);
+                    outA[i] = outAlpha;
+                }
+            }
+
+            return (outC, outA);
+        }
     }
 
     public class DarkenMixture : BlendModeMixtureBase
     {
         public override string TypeName => "DarkenMixture";
-        protected override string ComputerId => "DarkenComputer";
+
+        protected override (ushort[] Color, float[] Alpha) ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var outC = new ushort[pixelCount];
+            var outA = new float[pixelCount];
+            for (int i = 0; i < pixelCount; i++)
+            {
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f)
+                {
+                    outC[i] = 0;
+                    outA[i] = 0f;
+                }
+                else
+                {
+                    float blended = Math.Min(top[i], bottom[i]);
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f);
+                    outA[i] = outAlpha;
+                }
+            }
+
+            return (outC, outA);
+        }
     }
 
     public class LightenMixture : BlendModeMixtureBase
     {
         public override string TypeName => "LightenMixture";
-        protected override string ComputerId => "LightenComputer";
+
+        protected override (ushort[] Color, float[] Alpha) ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
+        {
+            var outC = new ushort[pixelCount];
+            var outA = new float[pixelCount];
+            for (int i = 0; i < pixelCount; i++)
+            {
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f)
+                {
+                    outC[i] = 0;
+                    outA[i] = 0f;
+                }
+                else
+                {
+                    float blended = Math.Max(top[i], bottom[i]);
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f);
+                    outA[i] = outAlpha;
+                }
+            }
+
+            return (outC, outA);
+        }
     }
 
     public class DifferenceMixture : BlendModeMixtureBase
     {
         public override string TypeName => "DifferenceMixture";
-        protected override string ComputerId => "DifferenceComputer";
-    }
 
-    public class BlendModeMixtureFactory
-    {
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public EffectTarget Target => EffectTarget.Mixture;
-        public List<string> ParametersNeeded { get; } = ["MixtureType"];
-        public Dictionary<string, string> ParametersType { get; } = new() { { "MixtureType", "string" } };
-        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.None];
-
-        public string MixtureType { get; init; } = "Add";
-        public string TypeName => MixtureType + "Mixture";
-
-        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
+        protected override (ushort[] Color, float[] Alpha) ComputeBlend(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int pixelCount)
         {
-            var p = parameters ?? new Dictionary<string, object>();
-            var mixtureType = p.TryGetValue("MixtureType", out var v) ? v?.ToString() ?? MixtureType : MixtureType;
-
-            IMixture mixture = mixtureType switch
+            var outC = new ushort[pixelCount];
+            var outA = new float[pixelCount];
+            for (int i = 0; i < pixelCount; i++)
             {
-                "Add" => new AddMixture(),
-                "Subtract" => new SubtractMixture(),
-                "Multiply" => new MultiplyMixture(),
-                "Screen" => new ScreenMixture(),
-                "OverlayBlend" => new OverlayBlendMixture(),
-                "Darken" => new DarkenMixture(),
-                "Lighten" => new LightenMixture(),
-                "Difference" => new DifferenceMixture(),
-                _ => throw new NotSupportedException($"Unknown mixture type '{mixtureType}'.")
-            };
+                float aA = topAlpha[i], bA = bottomAlpha[i], outAlpha = aA + bA * (1f - aA);
+                if (outAlpha < 1e-6f)
+                {
+                    outC[i] = 0;
+                    outA[i] = 0f;
+                }
+                else
+                {
+                    float blended = Math.Abs(top[i] - bottom[i]);
+                    float result = (blended * aA + bottom[i] * bA * (1f - aA)) / outAlpha;
+                    outC[i] = (ushort)Math.Clamp(result, 0f, 65535f);
+                    outA[i] = outAlpha;
+                }
+            }
 
-            ((BlendModeMixtureBase)mixture).Parameters = p;
-            return mixture;
+            return (outC, outA);
         }
     }
 
     /// <summary>
     /// The Render-side provider of the blend-mode mixtures. Each registered type (AddMixture, SubtractMixture, ...)
-    /// is an instance with the corresponding <see cref="MixtureType"/>, whose <see cref="TypeName"/> is
+    /// is an instance with the corresponding <see cref = "MixtureType"/>, whose <see cref = "TypeName"/> is
     /// <c>MixtureType + "Mixture"</c>. The legacy standalone <c>"BlendModeMixture"</c> type (with a selectable
-    /// <c>MixtureType</c> parameter) is represented by an instance with <see cref="ProviderTypeName"/> set.
+    /// <c>MixtureType</c> parameter) is represented by an instance with <see cref = "ProviderTypeName"/> set.
     /// </summary>
     public class BlendModeMixtureProvider : EffectProviderBase
     {
@@ -556,42 +753,20 @@ namespace projectFrameCut.Render.Compose
         }
 
         public string MixtureType { get; init; } = "Add";
-
         /// <summary>
-        /// When set, overrides <see cref="TypeName"/> (used for the standalone <c>"BlendModeMixture"</c> type).
+        /// When set, overrides <see cref = "TypeName"/> (used for the standalone <c>"BlendModeMixture"</c> type).
         /// </summary>
         public string? ProviderTypeName { get; init; }
-
         public override string TypeName => ProviderTypeName ?? MixtureType + "Mixture";
-
         public override EffectType TypeOfEffect => EffectType.MixtureProvider;
-
         public override EffectTarget Target => EffectTarget.Mixture;
-
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {
-            return
-            [
-                Field("MixtureType", EffectArgumentFieldType.String, "Add", presetOptions: ["Add", "Subtract", "Multiply", "Screen", "OverlayBlend", "Darken", "Lighten", "Difference"])
-            ];
+            return[Field("MixtureType", EffectArgumentFieldType.String, "Add", presetOptions: ["Add", "Subtract", "Multiply", "Screen", "OverlayBlend", "Darken", "Lighten", "Difference"])];
         }
 
-        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration];
-
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            var mixtureType = parameters.TryGetValue("MixtureType", out var v) ? v?.ToString() ?? MixtureType : MixtureType;
-            if (DefineFields().First(f => f.Id == "MixtureType").PresetOptions.Contains(mixtureType))
-            {
-                return [new BlendModeMixtureFactory { MixtureType = mixtureType }.Build(implementType, parameters)];
-            }
-            else
-            {
-                Log($"The mixture type '{mixtureType}' is not supported, fallback to ClassicOverlayMixture.", "error");
-                return [new ClassicOverlayMixture()]; // Fallback to AddMixture
-            }
-        }
+        protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration, EffectImplementType.IPicture];
     }
 }

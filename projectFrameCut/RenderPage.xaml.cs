@@ -1,4 +1,4 @@
-﻿using FFmpeg.AutoGen;
+using FFmpeg.AutoGen;
 using Microsoft.Maui.ApplicationModel;
 using projectFrameCut.Shared;
 using System;
@@ -1372,14 +1372,14 @@ public partial class RenderPage : ContentPage
             Log($"Parallel options: Physical core count: {Environment.ProcessorCount}, Enable Thread Affinity: {EnableThreadAffinity}, Prepare in worker: {SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorker", true)}, Worker target cores: {string.Join(",", CPUAffinityOverride)}, parallelThreadCount: {parallelThreadCount}");
 
 #if ANDROID
-            ComputerHelper.AddPlatformComputeViewHandler = new((v) =>
+            AndroidExecutionHelper.AddPlatformComputeViewHandler = new((v) =>
             {
                 ComputeView.Children.Clear();
                 v.WidthRequest = 50;
                 v.HeightRequest = 50;
                 ComputeView.Children.Add(v);
             });
-            ComputerHelper.Init();
+            AndroidExecutionHelper.Init();
 #elif iDevices
 
 #elif WINDOWS

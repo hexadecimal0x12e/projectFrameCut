@@ -325,97 +325,114 @@ namespace projectFrameCut.Render.Effect
                 }
             }
 
-            if (effectProviders != null)
+            try
             {
-                MaterializeFields(effectProviders.Values);
-                var activePictureProviders = GetActivePictureProviderIds(effectProviders);
-                var inlinedProviderIds = InlineValueProvidersIntoConsumers(effectProviders);
-                var sortedProviders = SortEffectProviders(effectProviders);
-                if (!sortedProviders.ListAny()) return null;
-                foreach (var bundleData in sortedProviders.Where(b => b.Enabled))
+                if (effectProviders != null)
                 {
-                    if (bundleData is not IEffectProvider provider)
+                    MaterializeFields(effectProviders.Values);
+                    var activePictureProviders = GetActivePictureProviderIds(effectProviders);
+                    var inlinedProviderIds = InlineValueProvidersIntoConsumers(effectProviders);
+                    var sortedProviders = SortEffectProviders(effectProviders);
+                    foreach (var bundleData in sortedProviders.Where(b => b.Enabled))
                     {
-                        throw new InvalidOperationException($"{bundleData.TypeName} is not IEffectProvider");
-                    }
-
-                    // 已被内联进某个消费者字段的值提供器：跳过构建，使其不再进入渲染管线。
-                    // 同时清除其可能残留的旧 effect 条目，避免渲染时仍执行它的值提取分支。
-                    if (inlinedProviderIds.Contains(bundleData.Id))
-                    {
-                        RemoveProviderEffects(newEffects, bundleData.Id);
-                        continue;
-                    }
-
-                    bool hadPersistedImplementType = provider.MetaData.TryGetValue(
-                        EffectProviderBase.ImplementTypeParameterKey,
-                        out object? persistedImplementTypeValue);
-                    EffectImplementType? persistedImplementType = persistedImplementTypeValue switch
-                    {
-                        EffectImplementType value => value,
-                        int value when Enum.IsDefined(typeof(EffectImplementType), value) => (EffectImplementType)value,
-                        long value when value is >= int.MinValue and <= int.MaxValue && Enum.IsDefined(typeof(EffectImplementType), (int)value) => (EffectImplementType)(int)value,
-                        string value when Enum.TryParse(value, ignoreCase: true, out EffectImplementType parsed) => parsed,
-                        JsonElement { ValueKind: JsonValueKind.Number } value when value.TryGetInt32(out int parsed) && Enum.IsDefined(typeof(EffectImplementType), parsed) => (EffectImplementType)parsed,
-                        JsonElement { ValueKind: JsonValueKind.String } value when Enum.TryParse(value.GetString(), ignoreCase: true, out EffectImplementType parsed) => parsed,
-                        _ => null,
-                    };
-                    var imp = EffectHelper.ForcePreferToType
-                        ?? persistedImplementType
-                        ?? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{provider.FromPlugin}.{provider.TypeName}", EffectImplementType.NotSpecified);
-                    provider.MetaData[EffectProviderBase.ImplementTypeParameterKey] = imp;
-                    IEffect[] effects;
-                    try
-                    {
-                        effects = provider.Build();
-                    }
-                    finally
-                    {
-                        if (hadPersistedImplementType)
-                            provider.MetaData[EffectProviderBase.ImplementTypeParameterKey] = persistedImplementTypeValue!;
-                        else
-                            provider.MetaData.Remove(EffectProviderBase.ImplementTypeParameterKey);
-                    }
-
-                    for (int i = 0; i < effects.Length; i++)
-                    {
-                        var effect = effects[i];
-                        int subIdx = i;
-                        effect.Name = $"EffectProvider {bundleData.TypeName}({bundleData.Id}){Environment.NewLine} - Subeffect #{subIdx}";
-                        var detached = bundleData.Target.HasFlag(EffectTarget.ValueProvider)
-                            || bundleData.Target.HasFlag(EffectTarget.Mixture)
-                            || bundleData.Target.HasFlag(EffectTarget.SpeedVariance);
-                        effect.Enabled = detached
-                            ? bundleData.Enabled
-                            : bundleData.Enabled && activePictureProviders.Contains(bundleData.Id);
-                        effect.Index = globalIndex++;
-                        effect.BindedEffectProvidingSystemID = bundleData.Id.ToString();
-                        string key = $"{bundleData.Id}_{subIdx}";
-                        if (newEffects.TryGetValue(key, out var previousEffect))
+                        if (bundleData is not IEffectProvider provider)
                         {
-                            if (effect.RelativeWidth <= 0 && previousEffect.RelativeWidth > 0)
-                            {
-                                effect.RelativeWidth = previousEffect.RelativeWidth;
-                            }
+                            throw new InvalidOperationException($"{bundleData.TypeName} is not IEffectProvider");
+                        }
 
-                            if (effect.RelativeHeight <= 0 && previousEffect.RelativeHeight > 0)
-                            {
-                                effect.RelativeHeight = previousEffect.RelativeHeight;
-                            }
-                        }
-                        if (!Guid.TryParse(effect.Id, out _))
+                        // 已被内联进某个消费者字段的值提供器：跳过构建，使其不再进入渲染管线。
+                        // 同时清除其可能残留的旧 effect 条目，避免渲染时仍执行它的值提取分支。
+                        if (inlinedProviderIds.Contains(bundleData.Id))
                         {
-                            effect.Id = Guid.NewGuid().ToString();
+                            RemoveProviderEffects(newEffects, bundleData.Id);
+                            continue;
                         }
-                        newEffects[key] = effect;
+
+                        bool hadPersistedImplementType = provider.MetaData.TryGetValue(
+                            EffectProviderBase.ImplementTypeParameterKey,
+                            out object? persistedImplementTypeValue);
+                        EffectImplementType? persistedImplementType = persistedImplementTypeValue switch
+                        {
+                            EffectImplementType value => value,
+                            int value when Enum.IsDefined(typeof(EffectImplementType), value) => (EffectImplementType)value,
+                            long value when value is >= int.MinValue and <= int.MaxValue && Enum.IsDefined(typeof(EffectImplementType), (int)value) => (EffectImplementType)(int)value,
+                            string value when Enum.TryParse(value, ignoreCase: true, out EffectImplementType parsed) => parsed,
+                            JsonElement { ValueKind: JsonValueKind.Number } value when value.TryGetInt32(out int parsed) && Enum.IsDefined(typeof(EffectImplementType), parsed) => (EffectImplementType)parsed,
+                            JsonElement { ValueKind: JsonValueKind.String } value when Enum.TryParse(value.GetString(), ignoreCase: true, out EffectImplementType parsed) => parsed,
+                            _ => null,
+                        };
+                        var imp = EffectHelper.GetPicturePreference(provider.TypeName)
+                            ?? persistedImplementType
+                            ?? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{provider.FromPlugin}.{provider.TypeName}", EffectImplementType.NotSpecified);
+                        provider.MetaData[EffectProviderBase.ImplementTypeParameterKey] = imp;
+                        IEffect[] effects;
+                        try
+                        {
+                            effects = provider.Build();
+                        }
+                        finally
+                        {
+                            if (hadPersistedImplementType)
+                                provider.MetaData[EffectProviderBase.ImplementTypeParameterKey] = persistedImplementTypeValue!;
+                            else
+                                provider.MetaData.Remove(EffectProviderBase.ImplementTypeParameterKey);
+                        }
+
+                        for (int i = 0; i < effects.Length; i++)
+                        {
+                            var effect = effects[i];
+                            int subIdx = i;
+                            effect.Name = $"EffectProvider {bundleData.TypeName}({bundleData.Id}){Environment.NewLine} - Subeffect #{subIdx}";
+                            var detached = bundleData.Target.HasFlag(EffectTarget.ValueProvider)
+                                || bundleData.Target.HasFlag(EffectTarget.Mixture)
+                                || bundleData.Target.HasFlag(EffectTarget.SpeedVariance);
+                            effect.Enabled = detached
+                                ? bundleData.Enabled
+                                : bundleData.Enabled && activePictureProviders.Contains(bundleData.Id);
+                            effect.Index = globalIndex++;
+                            effect.BindedEffectProvidingSystemID = bundleData.Id.ToString();
+                            string key = $"{bundleData.Id}_{subIdx}";
+                            if (newEffects.TryGetValue(key, out var previousEffect))
+                            {
+                                if (effect.RelativeWidth <= 0 && previousEffect.RelativeWidth > 0)
+                                {
+                                    effect.RelativeWidth = previousEffect.RelativeWidth;
+                                }
+
+                                if (effect.RelativeHeight <= 0 && previousEffect.RelativeHeight > 0)
+                                {
+                                    effect.RelativeHeight = previousEffect.RelativeHeight;
+                                }
+                            }
+                            if (!Guid.TryParse(effect.Id, out _))
+                            {
+                                effect.Id = Guid.NewGuid().ToString();
+                            }
+                            newEffects[key] = effect;
+                        }
                     }
+
                 }
-
+                var result = newEffects
+                    .Where(e => string.IsNullOrWhiteSpace(e.Value.BindedEffectProvidingSystemID)
+                               || (effectProviders?.ContainsKey(Guid.TryParse(e.Value.BindedEffectProvidingSystemID, out var g) ? g : Guid.Empty) ?? false))
+                    .ToDictionary();
+                var retained = result.Values.ToHashSet(ReferenceEqualityComparer.Instance);
+                foreach (var effect in (existingEffects?.Values.AsEnumerable() ?? []).Concat(newEffects.Values).Distinct(ReferenceEqualityComparer.Instance))
+                {
+                    if (!retained.Contains(effect) && effect is IDisposable disposable) disposable.Dispose();
+                }
+                return result;
             }
-            return newEffects
-                .Where(e => string.IsNullOrWhiteSpace(e.Value.BindedEffectProvidingSystemID)
-                           || (effectProviders?.ContainsKey(Guid.TryParse(e.Value.BindedEffectProvidingSystemID, out var g) ? g : Guid.Empty) ?? false))
-                .ToDictionary();
+            catch
+            {
+                var previous = existingEffects?.Values.ToHashSet(ReferenceEqualityComparer.Instance) ?? [];
+                foreach (var effect in newEffects.Values.Distinct(ReferenceEqualityComparer.Instance))
+                {
+                    if (!previous.Contains(effect) && effect is IDisposable disposable) disposable.Dispose();
+                }
+                throw;
+            }
         }
 
         /// <summary>

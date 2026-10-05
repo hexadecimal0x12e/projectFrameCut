@@ -1,5 +1,4 @@
 using projectFrameCut.Drawing.Effect;
-using projectFrameCut.Render.HwAccelContracts;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -23,69 +22,12 @@ namespace projectFrameCut.Render.Effect
         public Dictionary<string, object> Parameters { get; set; } = new();
 
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
+        public EffectImplementType ImplementType => EffectImplementType.IPicture;
         public bool IsReorderable => true;
         bool IEffect.CanProcessFromCanvas => true;
 
         public static List<string> ParametersNeeded { get; } = ["Horizontal", "Vertical"];
 
-        public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
-        {
-            { "Horizontal", "bool" },
-            { "Vertical", "bool" }
-        };
-
-        public string TypeName => "Flip";
-        public string? BindedEffectProvidingSystemID { get; set; }
-        public string Id { get; set; } = string.Empty;
-
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.IPicture)
-        {
-            ArgumentNullException.ThrowIfNull(parameters);
-            if (!ParametersNeeded.All(parameters.ContainsKey))
-            {
-                throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
-            }
-
-            var effect = new FlipEffect_IPicture
-            {
-                Horizontal = DynamicParam.ToBool(parameters.GetValueOrDefault("Horizontal")),
-                Vertical = DynamicParam.ToBool(parameters.GetValueOrDefault("Vertical")),
-                ImplementType = implementType
-            };
-            effect.Parameters = parameters;
-            return effect;
-        }
-
-        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
-
-        public IPicture Render(IPicture source, int targetWidth, int targetHeight)
-        {
-            bool horizontal = DynamicParam.Resolve(Parameters.GetValueOrDefault("Horizontal"), Horizontal);
-            bool vertical = DynamicParam.Resolve(Parameters.GetValueOrDefault("Vertical"), Vertical);
-            return FlipEffect.Process(source, horizontal, vertical);
-        }
-    }
-
-    public class FlipEffect_HwAccel : INormalEffect
-    {
-        private readonly IComputer? computer = PluginManager.CreateComputer("FlipComputer");
-        public bool Enabled { get; set; } = true;
-        public int Index { get; set; }
-        public string Name { get; set; } = "Flip";
-        public int RelativeWidth { get; set; }
-        public int RelativeHeight { get; set; }
-
-        public bool Horizontal { get; init; }
-        public bool Vertical { get; init; }
-        public Dictionary<string, object> Parameters { get; set; } = new();
-
-        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-        public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
-        public bool IsReorderable => true;
-        bool IEffect.CanProcessFromCanvas => true;
-
-        public static List<string> ParametersNeeded { get; } = ["Horizontal", "Vertical"];
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
         {
             { "Horizontal", "bool" },
@@ -103,10 +45,11 @@ namespace projectFrameCut.Render.Effect
             {
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
-            var effect = new FlipEffect_HwAccel
+
+            var effect = new FlipEffect_IPicture
             {
                 Horizontal = DynamicParam.ToBool(parameters.GetValueOrDefault("Horizontal")),
-                Vertical = DynamicParam.ToBool(parameters.GetValueOrDefault("Vertical"))
+                Vertical = DynamicParam.ToBool(parameters.GetValueOrDefault("Vertical")),
             };
             effect.Parameters = parameters;
             return effect;
@@ -118,45 +61,8 @@ namespace projectFrameCut.Render.Effect
         {
             bool horizontal = DynamicParam.Resolve(Parameters.GetValueOrDefault("Horizontal"), Horizontal);
             bool vertical = DynamicParam.Resolve(Parameters.GetValueOrDefault("Vertical"), Vertical);
-            if (computer is null)
-                return FlipEffect.Process(source, horizontal, vertical);
-
-            var sw = Stopwatch.StartNew();
-            var (r, g, b, a, sourceHasAlpha) = HwAccelEffectHelper.ExtractFloatChannels(source);
-
-            FourChannelResult computeResult;
-            if (computer is IFlipComputer fc)
-            {
-                computeResult = fc.ComputeFlip(r, g, b, a, source.Width, source.Height, horizontal, vertical);
-            }
-            else
-            {
-                var resultArr = computer.Compute([r, g, b, a, source.Width, source.Height, horizontal, vertical]);
-
-                if (resultArr.Length != 4 ||
-                    resultArr[0] is not float[] rOut ||
-                    resultArr[1] is not float[] gOut ||
-                    resultArr[2] is not float[] bOut ||
-                    resultArr[3] is not float[] aOut)
-                {
-                    throw new InvalidOperationException("FlipComputer did not return expected channel buffers.");
-                }
-
-                computeResult = new FourChannelResult(rOut, gOut, bOut, aOut);
-            }
-
-            var result = HwAccelEffectHelper.BuildPicture(source, source.Width, source.Height,
-                computeResult.R, computeResult.G, computeResult.B, computeResult.A, sourceHasAlpha);
-            sw.Stop();
-            result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
-            {
-                Elapsed = sw.Elapsed,
-                OperationDisplayName = "Flip (GPU)",
-                Operator = typeof(FlipEffect_HwAccel),
-                ProcessingFuncStackTrace = new StackTrace(true),
-                Properties = new Dictionary<string, object> { { "Horizontal", horizontal }, { "Vertical", vertical } }
-            }).ToList();
-            return result;
+            return PictureEffectChannels.MapHdr(FlipEffect.Process(source, horizontal, vertical), source,
+                (x, y) => (horizontal ? source.Width - 1 - x : x, vertical ? source.Height - 1 - y : y));
         }
     }
 
@@ -191,20 +97,6 @@ namespace projectFrameCut.Render.Effect
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            if (implementType == EffectImplementType.NotSpecified)
-            {
-                if (!parameters.ContainsKey("Horizontal")) parameters["Horizontal"] = false;
-                if (!parameters.ContainsKey("Vertical")) parameters["Vertical"] = false;
-                return [FlipEffect_IPicture.FromParametersDictionary(parameters)];
-            }
-            return implementType switch
-            {
-                EffectImplementType.IPicture => [FlipEffect_IPicture.FromParametersDictionary(parameters)],
-                EffectImplementType.HwAcceleration => [FlipEffect_HwAccel.FromParametersDictionary(parameters)],
-                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
-            };
-        }
+
     }
 }

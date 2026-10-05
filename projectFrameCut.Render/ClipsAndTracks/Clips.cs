@@ -104,6 +104,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
 
         }
 
@@ -220,6 +221,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
         }
 
         public uint? GetClipLength() => null;

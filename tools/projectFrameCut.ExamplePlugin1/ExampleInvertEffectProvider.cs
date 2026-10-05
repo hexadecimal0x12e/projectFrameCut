@@ -18,14 +18,5 @@ public sealed class ExampleInvertEffectProvider : EffectProviderBase
 
     protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture];
 
-    protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-    {
-        if (implementType != EffectImplementType.IPicture)
-            throw new NotSupportedException("ExampleInvert supports the IPicture implementation only.");
 
-        object value = parameters.GetValueOrDefault("Amount", 1f);
-        if (value is Func<object> getter) value = getter();
-        float amount = Math.Clamp(Convert.ToSingle(value), 0, 1);
-        return [new ExampleInvertEffect(amount)];
-    }
 }

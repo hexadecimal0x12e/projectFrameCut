@@ -6,30 +6,6 @@ using System.Text.Json;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
-    /// <summary>
-    /// Provide a unified way for calculate something with GPU.
-    /// </summary> 
-    [Obsolete("Consider to Migrate to IEffectImplement system, for better efficiency and maintainability.")]
-    public interface IComputer
-    {
-        /// <summary>
-        /// Indicates which plugin this computer comes from.
-        /// </summary>
-        public string FromPlugin { get; }
-        /// <summary>
-        /// Represents the effect or mixture type name that this computer supports.
-        /// </summary>
-        public string SupportedEffectOrMixture { get; }
-        /// <summary>
-        /// Compute the output based on the input arguments.
-        /// The <paramref name="args"/> can be any forms you'd like. No any limitations,
-        /// so please make sure to provide enough args in correct order for the computer to compute the result.
-        /// </summary>
-        /// <param name="args">Input data</param>
-        /// <returns>output data</returns>
-        public object[] Compute(object[] args);
-    }
-
     public class EffectAndMixtureJSONStructure
     {
         public string BindedEffectGroupID { get; set; } = string.Empty;

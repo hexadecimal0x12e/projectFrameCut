@@ -13,7 +13,7 @@ namespace projectFrameCut.Render.Effect
         public string Name { get; set; }
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "TextFadeIn";
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
+        public EffectImplementType ImplementType => EffectImplementType.IPicture;
         public bool YieldProcessStep => false;
         public string? BindedEffectProvidingSystemID { get; set; }
         public string Id { get; set; }
@@ -47,7 +47,6 @@ namespace projectFrameCut.Render.Effect
         {
             return new TextFadeInContinuousEffect
             {
-                ImplementType = this.ImplementType,
                 RelativeWidth = this.RelativeWidth,
                 RelativeHeight = this.RelativeHeight,
                 Name = this.Name,
@@ -85,9 +84,6 @@ namespace projectFrameCut.Render.Effect
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            return [new TextFadeInContinuousEffect { ImplementType = implementType == EffectImplementType.NotSpecified ? EffectImplementType.IPicture : implementType }];
-        }
+
     }
 }

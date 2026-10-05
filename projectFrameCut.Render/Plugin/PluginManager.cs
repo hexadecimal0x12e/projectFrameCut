@@ -79,7 +79,6 @@ namespace projectFrameCut.Render.Plugin
                 catch { }
                 loadedPlugins.Remove(id);
                 IPluginBase.EffectImplementations.Unregister(id);
-                ComputerCache.Clear();
                 projectPluginIds.Remove(id);
                 Logger.Log($"Plugin {id} unloaded.");
             }
@@ -98,7 +97,6 @@ namespace projectFrameCut.Render.Plugin
                 IPluginBase.EffectImplementations.Unregister(item.Key);
             }
             loadedPlugins.Clear();
-            ComputerCache.Clear();
             projectPluginIds.Clear();
         }
 
@@ -114,7 +112,6 @@ namespace projectFrameCut.Render.Plugin
                         var old = loadedPlugins[pluginInstance.PluginID];
                         loadedPlugins[pluginInstance.PluginID] = pluginInstance;
                         IPluginBase.EffectImplementations.Register(pluginInstance.PluginID, pluginInstance.EffectImplementationProvider);
-                        ComputerCache.Clear();
                         try { old.OnClosing(); } catch { }
                     }
                     else
@@ -164,7 +161,6 @@ namespace projectFrameCut.Render.Plugin
                 value.OnClosing();
                 loadedPlugins.Remove(id);
                 IPluginBase.EffectImplementations.Unregister(id);
-                ComputerCache.Clear();
                 projectPluginIds.Remove(id);
                 Logger.Log($"Plugin {id} unloaded.");
             }
@@ -314,6 +310,7 @@ namespace projectFrameCut.Render.Plugin
                 catch (Exception ex)
                 {
                     Log(ex, $"Init effect {effect?.Name}/{stru.TypeName}", effect);
+                    if (effect is IDisposable disposable) disposable.Dispose();
                     throw;
                 }
                 return effect;
@@ -548,46 +545,6 @@ namespace projectFrameCut.Render.Plugin
             }
 
             return candidates;
-        }
-
-        private static readonly ConcurrentDictionary<string, IComputer> ComputerCache = new();
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static IComputer? CreateComputer(string? computerType, bool forceCreate = false)
-        {
-            if (computerType is null) return null;
-            if (!forceCreate && ComputerCache.TryGetValue(computerType, out var cachedComputer))
-                return cachedComputer;
-
-            return GetComputerInternal(computerType, forceCreate);
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.AggressiveOptimization)]
-        private static IComputer GetComputerInternal(string computerType, bool forceCreate)
-        {
-            foreach (var plugin in LoadedPlugins.Values)
-            {
-                try
-                {
-                    if (plugin.ComputerProvider.TryGetValue(computerType, out var creator))
-                    {
-                        var computer = creator();
-                        if (computer != null)
-                        {
-                            if (forceCreate)
-                            {
-                                return computer;
-                            }
-                            return ComputerCache.GetOrAdd(computerType, computer);
-                        }
-                    }
-                }
-                catch
-                {
-                    // Ignore and try next plugin
-                }
-            }
-            throw new NotSupportedException($"No suitable computer found for the given type '{computerType}'.");
         }
 
         /// <summary>

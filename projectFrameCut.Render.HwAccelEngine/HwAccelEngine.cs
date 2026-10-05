@@ -1,4 +1,4 @@
-﻿
+
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -52,34 +52,10 @@ namespace projectFrameCut.Render.HwAccelEngine
         };
 
 #if WINDOWS || LINUX
-        static bool? forceSync = null;
+        internal static bool? ForceSync;
         internal static bool disableWin2DRasterizer = false;
 
-        Dictionary<string, Func<IComputer>> IPluginBase.ComputerProvider =>
-            new Dictionary<string, Func<IComputer>>
-            {
-                {"OverlayComputer", new(() => new OverlayComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"ApproximateOverlayComputer", new(() => new ApproximateOverlayComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"RemoveColorComputer", new(() => new RemoveColorComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"ResizeComputer", new(() => new ResizeComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"CropComputer", new(() => new CropComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"PlaceComputer", new(() => new PlaceComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"AddComputer", new(() => new BlendAddComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"SubtractComputer", new(() => new BlendSubtractComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"MultiplyComputer", new(() => new BlendMultiplyComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"ScreenComputer", new(() => new BlendScreenComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"OverlayBlendComputer", new(() => new BlendOverlayBlendComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"DarkenComputer", new(() => new BlendDarkenComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"LightenComputer", new(() => new BlendLightenComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"DifferenceComputer", new(() => new BlendDifferenceComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"OpacityComputer", new(() => new OpacityComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"VignetteComputer", new(() => new VignetteComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"FlipComputer", new(() => new FlipComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"SharpenComputer", new(() => new SharpenComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"RotationComputer", new(() => new RotationComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"BlurComputer", new(() => new BlurComputer(AcceleratorsManager.Accelerators,forceSync)) },
-                {"ColorAdjustmentComputer", new(() => new ColorAdjustmentComputer(AcceleratorsManager.Accelerators,forceSync)) }
-            };
+
 
         private readonly Dictionary<string, string> _configuration = new()
         {
@@ -101,64 +77,9 @@ namespace projectFrameCut.Render.HwAccelEngine
             }
         };
 #elif ANDROID
-        Dictionary<string, Func<IComputer>> IPluginBase.ComputerProvider => GetProvider();
 
-        private Dictionary<string, Func<IComputer>> GetProvider()
-        {
-            if (ComputerHelper.UseVulkanBackend)
-            {
-                return new Dictionary<string, Func<IComputer>>
-                {
-                    {"OverlayComputer", new(() => new VulkanOverlayComputer()) },
-                    {"ApproximateOverlayComputer", new(() => new VulkanApproximateOverlayComputer()) },
-                    {"RemoveColorComputer", new(() => new VulkanRemoveColorComputer()) },
-                    {"ResizeComputer", new(() => new VulkanResizeComputer()) },
-                    {"CropComputer", new(() => new VulkanCropComputer()) },
-                    {"PlaceComputer", new(() => new VulkanPlaceComputer()) },
-                    {"AddComputer", new(() => new VulkanBlendAddComputer()) },
-                    {"SubtractComputer", new(() => new VulkanBlendSubtractComputer()) },
-                    {"MultiplyComputer", new(() => new VulkanBlendMultiplyComputer()) },
-                    {"ScreenComputer", new(() => new VulkanBlendScreenComputer()) },
-                    {"OverlayBlendComputer", new(() => new VulkanBlendOverlayBlendComputer()) },
-                    {"DarkenComputer", new(() => new VulkanBlendDarkenComputer()) },
-                    {"LightenComputer", new(() => new VulkanBlendLightenComputer()) },
-                    {"DifferenceComputer", new(() => new VulkanBlendDifferenceComputer()) },
-                    {"OpacityComputer", new(() => new VulkanOpacityComputer()) },
-                    {"VignetteComputer", new(() => new VulkanVignetteComputer()) },
-                    {"FlipComputer", new(() => new VulkanFlipComputer()) },
-                    {"SharpenComputer", new(() => new VulkanSharpenComputer()) },
-                    {"RotationComputer", new(() => new VulkanRotationComputer()) },
-                    {"BlurComputer", new(() => new VulkanBlurComputer()) },
-                    {"ColorAdjustmentComputer", new(() => new VulkanColorAdjustmentComputer()) }
-                };
-            }
-            else
-            {
-                return new Dictionary<string, Func<IComputer>>
-                {
-                    {"OverlayComputer", new(() => new OverlayComputer()) },
-                    {"ApproximateOverlayComputer", new(() => new ApproximateOverlayComputer()) },
-                    {"ResizeComputer", new(() => new ResizeComputer()) },
-                    {"CropComputer", new(() => new CropComputer()) },
-                    {"PlaceComputer", new(() => new PlaceComputer()) },
-                    {"AddComputer", new(() => new BlendAddComputer()) },
-                    {"SubtractComputer", new(() => new BlendSubtractComputer()) },
-                    {"MultiplyComputer", new(() => new BlendMultiplyComputer()) },
-                    {"ScreenComputer", new(() => new BlendScreenComputer()) },
-                    {"OverlayBlendComputer", new(() => new BlendOverlayBlendComputer()) },
-                    {"DarkenComputer", new(() => new BlendDarkenComputer()) },
-                    {"LightenComputer", new(() => new BlendLightenComputer()) },
-                    {"DifferenceComputer", new(() => new BlendDifferenceComputer()) },
-                    {"OpacityComputer", new(() => new OpacityComputer()) },
-                    {"VignetteComputer", new(() => new VignetteComputer()) },
-                    {"FlipComputer", new(() => new FlipComputer()) },
-                    {"SharpenComputer", new(() => new SharpenComputer()) },
-                    {"RotationComputer", new(() => new RotationComputer()) },
-                    {"BlurComputer", new(() => new BlurComputer()) },
-                    {"ColorAdjustmentComputer", new(() => new ColorAdjustmentComputer()) }
-                };
-            }
-        }
+
+
 
         public string DefaultComputeBackend { get; set; } = "vulkan";
 
@@ -184,7 +105,7 @@ namespace projectFrameCut.Render.HwAccelEngine
             }
         };
 #else
-        public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>> { };
+
         private readonly Dictionary<string, string> _configuration = new()
         {
         };
@@ -213,34 +134,9 @@ namespace projectFrameCut.Render.HwAccelEngine
 
         public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider => new Dictionary<string, Func<IEffectProvider>> { };
 
-        public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider =>
-            new Dictionary<EffectImplementationKey, Func<IEffect>>
-            {
-                [new("Blur", EffectImplementType.HwAcceleration)] = () => CreateEffect("BlurEffect_HwAccel"),
-                [new("Crop", EffectImplementType.HwAcceleration)] = () => CreateEffect("CropEffect_HwAccel"),
-                [new("ProgressCrop", EffectImplementType.HwAcceleration)] = () => CreateEffect("ProgressCropper_HwAccel"),
-                [new("Resize", EffectImplementType.HwAcceleration)] = () => CreateEffect("ResizeEffect_HwAccel"),
-                [new("Flip", EffectImplementType.HwAcceleration)] = () => CreateEffect("FlipEffect_HwAccel"),
-                [new("Sharpen", EffectImplementType.HwAcceleration)] = () => CreateEffect("SharpenEffect_HwAccel"),
-                [new("Vignette", EffectImplementType.HwAcceleration)] = () => CreateEffect("VignetteEffect_HwAccel"),
-                [new("FadeOpacity", EffectImplementType.HwAcceleration)] = () => CreateEffect("FadeOpacityEffect_HwAccel"),
-                [new("ColorAdjustment", EffectImplementType.HwAcceleration)] = () => CreateEffect("ColorAdjustmentEffect_HwAccel"),
-                [new("Rotation", EffectImplementType.HwAcceleration)] = () => CreateEffect("RotationEffect_HwAccel"),
-                [new("Place", EffectImplementType.HwAcceleration)] = () => CreateEffect("PlaceEffect_HwAccel"),
-                [new("RemoveColor", EffectImplementType.HwAcceleration)] = () => CreateEffect("RemoveColorEffect_HwAccel"),
-                [new("ClassicOverlayMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("ClassicOverlayMixture", "Compose"),
-                [new("AddMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("AddMixture", "Compose"),
-                [new("SubtractMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("SubtractMixture", "Compose"),
-                [new("MultiplyMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("MultiplyMixture", "Compose"),
-                [new("ScreenMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("ScreenMixture", "Compose"),
-                [new("OverlayBlendMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("OverlayBlendMixture", "Compose"),
-                [new("DarkenMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("DarkenMixture", "Compose"),
-                [new("LightenMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("LightenMixture", "Compose"),
-                [new("DifferenceMixture", EffectImplementType.HwAcceleration)] = () => CreateEffect("DifferenceMixture", "Compose"),
-            };
+        public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider => HardwareEffectFactories.Create();
 
-        private static IEffect CreateEffect(string typeName, string ns = "Effect") =>
-            (IEffect)Activator.CreateInstance(Type.GetType($"projectFrameCut.Render.{ns}.{typeName}, projectFrameCut.Render", true)!)!;
+
 
         Dictionary<string, IVideoSource> IPluginBase.VideoSourceProvider => new();
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new Dictionary<string, Func<string, string, ISoundTrack>> { };
@@ -261,6 +157,8 @@ namespace projectFrameCut.Render.HwAccelEngine
         }
 #if WINDOWS || LINUX
 
+        public void OnClosing() => AcceleratorsManager.ReleaseResources();
+
         bool IPluginBase.OnLoaded(out string FailedReason)
         {
             dataRootPath = this.GetPluginDataRoot();
@@ -270,11 +168,13 @@ namespace projectFrameCut.Render.HwAccelEngine
         }
         private void ApplyConfiguration()
         {
-            forceSync = Configuration.TryGetValue("forceSync", out var forceSyncStr) && bool.TryParse(forceSyncStr, out var fs) ? fs : null;
+            projectFrameCut.Render.Effect.EffectHelper.InvalidateImplementations();
+            ForceSync = Configuration.TryGetValue("forceSync", out var forceSyncStr) && bool.TryParse(forceSyncStr, out var fs) ? fs : null;
+            ILGPUExecutionHelper.SyncOverride = ForceSync;
             disableWin2DRasterizer = Configuration.TryGetValue("disableWin2DRasterizer", out var disableWin2DRasterizerStr) && bool.TryParse(disableWin2DRasterizerStr, out var r) && r;
 
             Logger.Log("[HwAccelEnginePlugin] ILGPU accelerators will be initialized on first use.");
-            Logger.Log($"[HwAccelEnginePlugin] ForceSync: {forceSync?.ToString() ?? "default"}, Disable Win2D Rasterizer: {disableWin2DRasterizer}");
+            Logger.Log($"[HwAccelEnginePlugin] ForceSync: {ForceSync?.ToString() ?? "default"}, Disable Win2D Rasterizer: {disableWin2DRasterizer}");
         }
 #elif ANDROID
         bool IPluginBase.OnLoaded(out string FailedReason)
@@ -284,15 +184,16 @@ namespace projectFrameCut.Render.HwAccelEngine
             Configuration["computeBackend"] = DefaultComputeBackend;
             ApplyConfiguration();
             FailedReason = string.Empty;
-            Logger.Log($"use vulkan: {ComputerHelper.UseVulkanBackend}");
-            Configuration["useVulkan"] = ComputerHelper.UseVulkanBackend.ToString();
+            Logger.Log($"use vulkan: {AndroidExecutionHelper.UseVulkanBackend}");
+            Configuration["useVulkan"] = AndroidExecutionHelper.UseVulkanBackend.ToString();
             return true;
         }
 
         private void ApplyConfiguration()
         {
-            ComputerHelper.SetPreferredBackend(Configuration.TryGetValue("computeBackend", out var backend) ? backend : "OpenGL");
-            ComputerHelper.Timeout = uint.TryParse(Configuration.TryGetValue("maxGLJobTimeout", out var timeout) ? timeout : "30000", out var to) && to < int.MaxValue ? (int)to : 30000;
+            projectFrameCut.Render.Effect.EffectHelper.InvalidateImplementations();
+            AndroidExecutionHelper.SetPreferredBackend(Configuration.TryGetValue("computeBackend", out var backend) ? backend : "OpenGL");
+            AndroidExecutionHelper.Timeout = uint.TryParse(Configuration.TryGetValue("maxGLJobTimeout", out var timeout) ? timeout : "30000", out var to) && to < int.MaxValue ? (int)to : 30000;
         }
 #else
         private void ApplyConfiguration() { }

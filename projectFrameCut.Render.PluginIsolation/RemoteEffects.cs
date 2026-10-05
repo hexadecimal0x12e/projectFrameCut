@@ -190,8 +190,20 @@ internal static class RemoteEffectInvoke
     }
 }
 
-internal abstract class RemoteEffectBase : IEffect
+internal abstract class RemoteEffectBase : IEffect, IDisposable
 {
+    private int disposed;
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref disposed, 1) != 0) return;
+        try
+        {
+            Session.InvokeAsync<IsolationReleaseObjectRequest, EmptyResponse>(RenderOperation.IsolationReleaseObject,
+                new() { ObjectId = ObjectId }).AsTask().GetAwaiter().GetResult();
+        }
+        catch (Exception ex) { Logger.Log(ex, $"Release isolated effect '{TypeName}'", this); }
+    }
     protected readonly IPluginIsolationSession Session;
     protected readonly long ObjectId;
     protected readonly List<string> DynamicProviderIds;

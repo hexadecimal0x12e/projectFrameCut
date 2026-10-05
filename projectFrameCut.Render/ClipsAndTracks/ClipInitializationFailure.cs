@@ -71,6 +71,7 @@ public static class ClipInitializationFailure
             && stage is "SourceReading" or "SourceNotFound" or "SourceNotMatch")
             stage = "ExternalSourceUnavailable";
         Mark(clip.ExtraData, stage, exception);
+        projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(clip);
         clip.EffectsInstances = [];
         clip.SpeedVarianceProviderInstance = null;
         clip.MixtureInstance = null;

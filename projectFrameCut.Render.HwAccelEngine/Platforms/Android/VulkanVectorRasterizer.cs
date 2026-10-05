@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
 using projectFrameCut.Shared;
@@ -93,17 +93,17 @@ namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
             float[] packedOutput;
             try
             {
-                packedOutput = VulkanComputerRunner.EnqueueCompute(async () =>
+                packedOutput = VulkanExecutionHelper.EnqueueCompute(async () =>
                 {
-                    var (accelerator, handler, vkView) = await VulkanComputerRunner.CreateAcceleratorAsync(
+                    var (accelerator, handler, vkView) = await VulkanExecutionHelper.CreateAcceleratorAsync(
                         shader,
                         new float[][] { dummyFirst, padInfo, padData, padTileOffsets, padTileIndices, padEdges },
                         GLComputeView.OutputElementType.Float32);
 
+                    using var viewScope = AndroidExecutionHelper.UseView(accelerator);
                     var raw = (float[])await vkView.RunComputeAsync();
-                    return new object[] { raw };
-                }, "VulkanVectorRasterizer timed out after 60 seconds.")[0] as float[]
-                    ?? throw new InvalidOperationException("VulkanVectorRasterizer returned null.");
+                    return raw;
+                }, "VulkanVectorRasterizer timed out after 60 seconds.");
             }
             catch (Exception ex)
             {

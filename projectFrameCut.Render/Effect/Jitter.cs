@@ -161,23 +161,6 @@ namespace projectFrameCut.Render.Effect
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
 
-        protected override IEffect[] BuildEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
-        {
-            if (!parameters.ContainsKey("MaxOffsetX")) parameters["MaxOffsetX"] = 0;
-            if (!parameters.ContainsKey("MaxOffsetY")) parameters["MaxOffsetY"] = 0;
-            if (!parameters.ContainsKey("Seed")) parameters["Seed"] = 0;
-            if (!parameters.ContainsKey("Direction")) parameters["Direction"] = JitterEffect.Direction_Both;
 
-            return
-            [
-                new JitterEffect
-                {
-                    MaxOffsetX = Convert.ToInt32(parameters["MaxOffsetX"]),
-                    MaxOffsetY = Convert.ToInt32(parameters["MaxOffsetY"]),
-                    Seed = Convert.ToInt32(parameters["Seed"]),
-                    Direction = parameters["Direction"].ToString() ?? JitterEffect.Direction_Both,
-                }
-            ];
-        }
     }
 }

@@ -69,16 +69,15 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     || bool.TryParse(directCropRaw?.ToString(), out var parsedDirectCrop) && parsedDirectCrop);
             if (directCropEnabled || StartingX > 0 || StartingY > 0)
             {
-                var cropper = new CropEffect_HwAccel
-                {
-                    Width = targetWidth,
-                    Height = targetHeight,
-                    StartX = StartingX,
-                    StartY = StartingY,
-                    RelativeWidth = 0,
-                    RelativeHeight = 0,
-                };
-                return cropper.Render(source, targetWidth, targetHeight).ToBitPerPixel(targetPPB);
+                return EffectRuntimeDefaults.Execute("PhotoCrop", "Crop", EffectImplementType.IPicture,
+                    new() { ["Width"] = targetWidth, ["Height"] = targetHeight, ["StartX"] = StartingX, ["StartY"] = StartingY }, e =>
+                    {
+                        e.Parameters["Width"] = targetWidth;
+                        e.Parameters["Height"] = targetHeight;
+                        e.Parameters["StartX"] = StartingX;
+                        e.Parameters["StartY"] = StartingY;
+                        return ((INormalEffect)e).Render(source, targetWidth, targetHeight).ToBitPerPixel(targetPPB);
+                    });
             }
             else
             {
@@ -111,6 +110,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         void IDisposable.Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
             source?.CanBeDisposed = false;
             source?.Dispose(true);
         }

@@ -852,7 +852,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
 
 #if ANDROID
-        ComputerHelper.AddPlatformComputeViewHandler = new((v) =>
+        AndroidExecutionHelper.AddPlatformComputeViewHandler = new((v) =>
         {
             ComputeView.Children.Clear();
             v.WidthRequest = 50;
@@ -860,9 +860,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             ComputeView.Children.Add(v);
 
         });
-        ComputerHelper.Init();
+        AndroidExecutionHelper.Init();
 #elif IOS
-        MetalComputerHelper.RegisterComputerBridge();
 #elif WINDOWS || LINUX
         if (!projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.UseExternalBackend &&
             projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.DefaultAccelerator is null)

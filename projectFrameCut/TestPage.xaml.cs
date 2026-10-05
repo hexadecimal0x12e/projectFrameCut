@@ -46,6 +46,7 @@ using Path = System.IO.Path;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.Render.ClipsAndTracks.Text;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
 
 
@@ -776,54 +777,6 @@ public partial class TestPage : ContentPage
         w.Finish();
     }
 
-    private void TestPlaceButton_Clicked(object sender, EventArgs e)
-    {
-        Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
-        PlaceEffect_HwAccel p = new()
-        {
-            StartX = 50,
-            StartY = 120
-        };
-        var result = p.Render(src, 2560, 1440);
-        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
-        {
-            MemoryStream ms = new();
-            result.SaveToPng(ms);
-            ms.Position = 0;
-            return ms;
-        });
-
-
-
-    }
-
-    private async void TestPlaceAndResizeButton_Clicked(object sender, EventArgs e)
-    {
-        Picture8bpp src = new Picture8bpp(await FileSystemService.PickFileAsync());
-        PlaceEffect_HwAccel p = new()
-        {
-            StartX = 250,
-            StartY = 180
-        };
-        ResizeEffect_IPicture r = new()
-        {
-            Height = 300,
-            Width = 1000,
-            PreserveAspectRatio = false
-        };
-        var resized = r.Render(src, 2560, 1440);
-        var placed = p.Render(resized, 2560, 1440);
-        Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = ClassicOverlayMixture.Default.Mix(canvas, placed, Drawing.Base.IPicture.PicturePixelMode.BytePicture);
-        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
-        {
-            MemoryStream ms = new();
-            final.SaveToPng(ms);
-            ms.Position = 0;
-            return ms;
-        });
-    }
-
     private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
     {
         try
@@ -884,26 +837,6 @@ public partial class TestPage : ContentPage
         {
             if (await DisplayAlertAsync(Title, Localized._ExceptionTemplate(ex), "throw", "ok")) throw;
         }
-    }
-
-    private void TestMixtureButton_Clicked(object sender, EventArgs e)
-    {
-        Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
-        PlaceEffect_HwAccel p = new()
-        {
-            StartX = 50,
-            StartY = 120
-        };
-        var result = p.Render(src, 2560, 1440);
-        Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = ClassicOverlayMixture.Default.Mix(canvas, result, Drawing.Base.IPicture.PicturePixelMode.BytePicture);
-        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
-        {
-            MemoryStream ms = new();
-            final.SaveToPng(ms);
-            ms.Position = 0;
-            return ms;
-        });
     }
 
     private void ContextMenuTestBtn_Clicked(object sender, EventArgs e)

@@ -9,7 +9,6 @@
 - `ExampleAudioSource` 音频源
 - `ExampleToneTrack` 音轨
 - `ExampleCrossfade` Transform
-- `ExampleAddComputer` Computer
 - `ExampleFrameStream` VideoWriter
 
 ## 构建
@@ -45,7 +44,7 @@ dotnet run --project tools/projectFrameCut.PluginPackageUtility -- pack `
   --publishing-url https://example.com `
   --backend External `
   --windows-entry projectFrameCut.ExternalPluginBackendExample.exe `
-  --external-capabilities Effects,VideoSources,AudioSources,SoundTracks,Transforms,Computers,VideoWriters `
+  --external-capabilities Effects,VideoSources,AudioSources,SoundTracks,Transforms,VideoWriters `
   --certificate .\publisher-plugin-signing.pfx `
   --chain .\publisher-chain.pem `
   --password-env PJFC_PLUGIN_PFX_PASSWORD

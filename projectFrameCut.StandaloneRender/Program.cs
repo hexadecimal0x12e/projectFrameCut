@@ -39,7 +39,7 @@ namespace projectFrameCut.StandaloneRender
 {
     public class Program
     {
-        const int PluginAPIVersion = 1;
+        const int PluginAPIVersion = IPluginBase.CurrentPluginAPIVersion;
 
         static readonly JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
@@ -493,10 +493,16 @@ namespace projectFrameCut.StandaloneRender
 
         private static int InitAccel(ConcurrentDictionary<string, string> switches)
         {
+            if (Enum.TryParse<EffectImplementType>(switches.GetValueOrDefault("ForcePreferToType"), out var type) && type == EffectImplementType.IPicture)
+            {
+                EffectHelper.ForcePreferToType = type;
+                Log("Using CPU picture effects.");
+                return 0;
+            }
             try
             {
 
-                Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
+                using var context = Context.Create(builder => builder.Default().EnableAlgorithms());
                 var devices = context.Devices.ToList();
                 List<Device> picked = new();
                 for (int i = 0; i < devices.Count; i++)
@@ -510,7 +516,7 @@ namespace projectFrameCut.StandaloneRender
                 {
                     var acceleratorId = int.TryParse(switches.GetOrAdd("acceleratorDeviceId", "-1"), out var result1) ? result1 : -1;
                     var accelType = switches.GetOrAdd("acceleratorType", "auto");
-                    var acc = ILGPUComputerHelper.PickOneAccel(accelType, acceleratorId, devices);
+                    var acc = ILGPUExecutionHelper.PickOneAccel(accelType, acceleratorId, devices);
                     if (acc is null)
                     {
                         Log($"ERROR: Cannot pick accelerator device. Check the configuration.");
@@ -542,13 +548,13 @@ namespace projectFrameCut.StandaloneRender
                             .ToList();
                         picked = accelsIds.Select(id =>
                         {
-                            var acc = ILGPUComputerHelper.PickOneAccel("auto", id, devices);
+                            var acc = ILGPUExecutionHelper.PickOneAccel("auto", id, devices);
                             if (acc is null)
                             {
                                 Log($"ERROR: Cannot pick accelerator device with id {id}.");
                             }
                             return acc;
-                        }).ToList()!;
+                        }).OfType<Device>().ToList();
                     }
 
                 }
@@ -565,13 +571,10 @@ namespace projectFrameCut.StandaloneRender
                 }
 
 
-                Accelerator[] accelerators = picked.Select(d => d.CreateAccelerator(context)).ToArray();
-
-                ILGPUPlugin.accelerators = accelerators;
-                AcceleratorsManager.AcceleratorsForRendering = accelerators;
+                AcceleratorsManager.ConfigureDevices(picked[0].Name, picked.Select(d => d.Name).ToArray(), multiAccel);
                 AcceleratorsManager.IsRendering = true;
 
-                if (!switches.TryGetValue("PictureResizer", out var c) || c != "hwaccel") Drawing.Processing.Resizing.PictureResizer.Default = new Render.Effect.HwAccelPictureResizer();
+                if (switches.TryGetValue("PictureResizer", out var c) && c == "hwaccel") Drawing.Processing.Resizing.PictureResizer.Default = new Render.Effect.EffectPictureResizer(EffectImplementType.HwAcceleration);
                 return 0;
 
             }

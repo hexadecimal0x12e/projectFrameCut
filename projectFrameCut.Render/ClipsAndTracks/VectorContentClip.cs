@@ -139,7 +139,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
             EffectHelper.ResolveClipEffects(this);
         }
 
-        public virtual void Dispose() { }
+        public virtual void Dispose() {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this); }
 
         // ── Progress calculation ───────────────────────────
 
@@ -227,6 +228,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
             Picture = null;
         }
 

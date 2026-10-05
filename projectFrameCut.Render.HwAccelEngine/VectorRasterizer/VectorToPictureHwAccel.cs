@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Shared;
@@ -89,7 +89,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             }
 
             IPicture result;
-            if (projectFrameCut.Render.HwAccelEngine.Platforms.Android.ComputerHelper.UseVulkanBackend)
+            if (projectFrameCut.Render.HwAccelEngine.Platforms.Android.AndroidExecutionHelper.UseVulkanBackend)
             {
                 result = Platforms.Android.VulkanVectorRasterizer.Render(primitives, build.Edges, renderWidth, renderHeight, transparentBackground);
             }

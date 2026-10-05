@@ -180,6 +180,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void Dispose()
         {
+            projectFrameCut.Render.Effect.EffectHelper.ReleaseClipEffects(this);
             ClearFrameCache();
         }
 

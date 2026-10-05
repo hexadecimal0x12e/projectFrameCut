@@ -9,7 +9,7 @@ public sealed class ExampleInvertEffect : INormalEffect
 {
     private readonly float _amount;
 
-    public ExampleInvertEffect(float amount)
+    public ExampleInvertEffect(float amount = 1f)
     {
         _amount = Math.Clamp(amount, 0, 1);
         Parameters = new Dictionary<string, object> { ["Amount"] = _amount };
@@ -75,5 +75,4 @@ public sealed class ExampleInvertEffect : INormalEffect
     private byte Mix(byte value, byte max) => (byte)Math.Clamp((int)Math.Round(value * (1 - _amount) + (max - value) * _amount), 0, byte.MaxValue);
     private ushort Mix(ushort value, ushort max) => (ushort)Math.Clamp((int)Math.Round(value * (1 - _amount) + (max - value) * _amount), 0, ushort.MaxValue);
 }
-    public ExampleInvertEffect() : this(1) { }
 
