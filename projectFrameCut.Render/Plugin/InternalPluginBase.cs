@@ -203,6 +203,7 @@ public class InternalPluginBase : IPluginBase
 
     public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider => new Dictionary<string, Func<Guid, Guid, ITransform>>
     {
+        { "Fade", (clipId, _) => new FadeTransform { BindedLeftClip = clipId } },
         {
             "Crossfade",
             (prevId, nextId) => new CrossfadeTransform { PreviousClipId = prevId, NextClipId = nextId }
@@ -221,7 +222,7 @@ public class InternalPluginBase : IPluginBase
             ClipMode.TextClip => element.Deserialize<TextClip>() ?? throw new NullReferenceException(),
             ClipMode.AudioClip => element.Deserialize<SoundTrackToClipWrapper>() ?? throw new NullReferenceException(),
             ClipMode.MarkingClip => element.Deserialize<MarkingClip>() ?? throw new NullReferenceException(),
-            ClipMode.TransformClip => element.Deserialize<TransformContainer>() ?? throw new NullReferenceException(),
+            ClipMode.TransformClip => throw new NotSupportedException("Standalone transform clips are no longer supported."),
             ClipMode.VectorCanvasClip => element.Deserialize<VectorCanvasClip>() ?? throw new NullReferenceException(),
             ClipMode.VectorComponentClip => element.Deserialize<VectorComponentClip>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
@@ -273,6 +274,7 @@ public class InternalPluginBase : IPluginBase
         var typeName = element.GetProperty("TypeName").GetString();
         return typeName switch
         {
+            "Fade" => element.Deserialize<FadeTransform>() ?? throw new NullReferenceException("Failed to deserialize FadeTransform."),
             "Crossfade" => element.Deserialize<CrossfadeTransform>() ?? throw new NullReferenceException("Failed to deserialize CrossfadeTransform."),
             "ExternalSourceTransform" => element.Deserialize<ExternalSourceTransform>() ?? throw new NullReferenceException("Failed to deserialize ExternalSourceTransform."),
             _ => throw new NotSupportedException($"Unknown or unsupported transform type '{typeName}'.")
@@ -303,6 +305,7 @@ public class InternalPluginBase : IPluginBase
 
     string? IPluginBase.ReadLocalizationItem(string key, string locate)
     {
+        if (key == "DisplayName_Transform_Fade" && locate == "zh-CN") return "淡入淡出";
         var loc = ISimpleLocalizerBase_PropertyPanel.GetMapping().FirstOrDefault(x => x.Key == locate, ISimpleLocalizerBase_PropertyPanel.GetMapping().First()).Value;
         if (!loc.IsItemExist(key)) return null;
         return loc.DynamicLookup(key, key);

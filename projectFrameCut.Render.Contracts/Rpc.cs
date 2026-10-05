@@ -29,6 +29,14 @@ public interface IExternalVideoSourceProvider
 
 public interface IRenderClient : IAsyncDisposable
 {
+    ValueTask<ExternalVideoSourceClientCatalog> ListExternalVideoSourceClientsAsync(CancellationToken cancellationToken = default)
+        => ValueTask.FromException<ExternalVideoSourceClientCatalog>(new NotSupportedException("This render client does not support external source management."));
+    ValueTask<EmptyResponse> ManageExternalVideoSourceClientAsync(ManageExternalVideoSourceClientRequest request, CancellationToken cancellationToken = default)
+        => ValueTask.FromException<EmptyResponse>(new NotSupportedException("This render client does not support external source management."));
+    ValueTask<ProjectExternalSourceCatalog> ListProjectExternalSourcesAsync(ProjectExternalSourceCatalogRequest request, CancellationToken cancellationToken = default)
+        => ValueTask.FromException<ProjectExternalSourceCatalog>(new NotSupportedException("This render client does not support project external sources."));
+    ValueTask<ProjectExternalSourceCatalog> SetProjectExternalSourcesAsync(SetProjectExternalSourcesRequest request, CancellationToken cancellationToken = default)
+        => ValueTask.FromException<ProjectExternalSourceCatalog>(new NotSupportedException("This render client does not support project external sources."));
     string ClientId { get; }
     ValueTask<GuiProjectSession> RegisterGuiProjectAsync(GuiProjectSession request, CancellationToken cancellationToken = default);
     ValueTask<EmptyResponse> UnregisterGuiProjectAsync(GuiProjectSession request, CancellationToken cancellationToken = default);
@@ -101,6 +109,8 @@ public sealed class DirectRenderTransport(IRenderService service) : IRenderTrans
 
 public sealed class RenderClient : IRenderClient
 {
+    public ValueTask<ProjectExternalSourceCatalog> ListProjectExternalSourcesAsync(ProjectExternalSourceCatalogRequest request, CancellationToken ct = default) => SendAsync<ProjectExternalSourceCatalogRequest, ProjectExternalSourceCatalog>(RenderOperation.ListProjectExternalSources, request, ct);
+    public ValueTask<ProjectExternalSourceCatalog> SetProjectExternalSourcesAsync(SetProjectExternalSourcesRequest request, CancellationToken ct = default) => SendAsync<SetProjectExternalSourcesRequest, ProjectExternalSourceCatalog>(RenderOperation.SetProjectExternalSources, request, ct);
     private readonly IRenderTransport _transport;
     private readonly ExternalVideoSourceCallbackService? _callbackService;
 
@@ -135,6 +145,8 @@ public sealed class RenderClient : IRenderClient
     public async ValueTask RegisterExternalVideoSourcesAsync(RegisterExternalVideoSourcesRequest request, CancellationToken ct = default) => _ = await SendAsync<RegisterExternalVideoSourcesRequest, EmptyResponse>(RenderOperation.RegisterExternalVideoSources, request, ct).ConfigureAwait(false);
     public async ValueTask UnregisterExternalVideoSourcesAsync(CancellationToken ct = default) => _ = await SendAsync<EmptyRequest, EmptyResponse>(RenderOperation.UnregisterExternalVideoSources, new(), ct).ConfigureAwait(false);
     public ValueTask<ExternalVideoSourceCatalog> ListExternalVideoSourcesAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, ExternalVideoSourceCatalog>(RenderOperation.ListExternalVideoSources, new(), ct);
+    public ValueTask<ExternalVideoSourceClientCatalog> ListExternalVideoSourceClientsAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, ExternalVideoSourceClientCatalog>(RenderOperation.ListExternalVideoSourceClients, new(), ct);
+    public ValueTask<EmptyResponse> ManageExternalVideoSourceClientAsync(ManageExternalVideoSourceClientRequest request, CancellationToken ct = default) => SendAsync<ManageExternalVideoSourceClientRequest, EmptyResponse>(RenderOperation.ManageExternalVideoSourceClient, request, ct);
     public string ClientId { get; }
 
     public ValueTask<RenderCapabilities> GetCapabilitiesAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, RenderCapabilities>(RenderOperation.GetCapabilities, new(), ct);

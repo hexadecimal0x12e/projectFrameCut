@@ -97,6 +97,7 @@ public sealed class PluginIsolationLaunchContext
     public required string PluginEncryptionKey { get; init; }
     public required string InstancePackageName { get; init; }
     public PluginIsolationTransportOptions Transport { get; init; } = new();
+    public string? ExternalSourceManifestHash { get; init; }
 }
 
 public interface IIsolationControlChannel : IRenderTransport

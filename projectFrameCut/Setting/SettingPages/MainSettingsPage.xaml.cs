@@ -1,4 +1,4 @@
-using Microsoft.Maui.Controls;
+﻿using Microsoft.Maui.Controls;
 using projectFrameCut.Setting.SettingPages;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -216,23 +216,9 @@ namespace projectFrameCut
                 }
                 IPicture.AllowPixelModeDowngrade = !IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
 
-                try
-                {
-                    var vfdCahceDir = GetSetting("codec_VideoFrameDiskCachePath", Path.Combine(MauiProgram.CachePath, "VideoFrameCache"));
-                    Directory.CreateDirectory(vfdCahceDir);
-                    VideoFrameDiskCache.CacheBaseDir = vfdCahceDir;
-                    VideoFrameDiskCache.EnableCompression = IsBoolSettingTrueOrDefault("codec_VideoFrameDiskCacheEnableCompress", true);
-                    VideoFrameDiskCache.MaximumCacheSizeBytes = GetSettingAs<long>("codec_VideoFrameDiskCacheMaxSizeMB", 0, 0) * 1024 * 1024;
-                    IVideoSource.EnableDiskCache = IsBoolSettingTrueOrDefault("codec_EnableDiskCache", true);
-                }
-                catch // iOS/Non-MAUI SDK fallback
-                {
-                    IVideoSource.EnableDiskCache = false;
-                }
-               
                 ClassicOverlayMixture.EnableApproximatePath = IsBoolSettingTrue("render_preferApproximateMixture");
                 IVectorContentClip.GlobalDefaultAntiAliasMode = GetSetting("render_preferredAntiAliasMode", "ssaa4x") switch { "ssaa8x" => AntiAliasMode.SSAA8x, "ssaa4x" => AntiAliasMode.SSAA4x, "ssaa2x" => AntiAliasMode.SSAA2x, _ => AntiAliasMode.None };
-                IVectorContentClip.GlobalDefaultRasterizer = IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true) ? new VectorToPictureHwAccel() : new CPUVectorPictureRasterizer();
+                IVectorContentClip.GlobalDefaultRasterizer = IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true) ? new VectorToPictureHwAccel() : new projectFrameCut.Render.RenderAPIBase.VectorContent.CpuVectorPictureRasterizer();
                 NormalTypesettingEngine.DebugDumpAdvance = Debugger.IsAttached && IsBoolSettingTrue("diag_TypesettingEngineDiagMode");
                 TextClip.DiagMode = IsBoolSettingTrue("diag_TypesettingEngineDiagMode");
                 DynamicPreview.DisableVectorPreviewPaths = IsBoolSettingTrueOrDefault("render_DisallowVectorClipToMAUIPathInPreview", true);

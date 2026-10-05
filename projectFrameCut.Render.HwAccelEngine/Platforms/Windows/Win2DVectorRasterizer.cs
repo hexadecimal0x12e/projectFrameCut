@@ -441,9 +441,9 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer.Windows
                             if (a > 0)
                             {
                                 // Un-premultiply to straight alpha.
-                                outR[i] = (ushort)Math.Min(65535, r * 65535 / a);
-                                outG[i] = (ushort)Math.Min(65535, g * 65535 / a);
-                                outB[i] = (ushort)Math.Min(65535, b * 65535 / a);
+                                outR[i] = (ushort)Math.Min(65535, r * 65535L / a);
+                                outG[i] = (ushort)Math.Min(65535, g * 65535L / a);
+                                outB[i] = (ushort)Math.Min(65535, b * 65535L / a);
                             }
                         }
                     }

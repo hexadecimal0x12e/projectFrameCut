@@ -16,6 +16,7 @@ public partial class ProjectAssetView : ContentView
 {
     public DraftPage workingDraft;
     private ProjectAssetViewModel _viewModel;
+    private bool _removingAsset;
 
     public ProjectAssetView(ref DraftPage page)
     {
@@ -169,11 +170,27 @@ public partial class ProjectAssetView : ContentView
 
     private async Task OnRemoveAsset(AssetItemViewModel assetVM)
     {
-        if (assetVM.IsLocal)
+        if (!assetVM.IsLocal || _removingAsset) return;
+        _removingAsset = true;
+        try
         {
-            workingDraft.Assets.Remove(assetVM.Id, out var _);
+            if (!await workingDraft.DisplayAlertAsync(Localized._Warn, Localized.DraftPage_AssetPanel_Remove_Confirm0(assetVM.Name), Localized._Confirm, Localized._Cancel)) return;
+            if (!await workingDraft.DisplayAlertAsync(Localized._Warn, Localized.DraftPage_AssetPanel_Remove_Confirm1(assetVM.Name), Localized._Confirm, Localized._Cancel)) return;
+            if (await workingDraft.DisplayPromptAsync(Localized._Warn, Localized.DraftPage_AssetPanel_Remove_Confirm2Input(assetVM.Name), Localized._Remove, Localized._Cancel, "no") != "yes") return;
+
+            workingDraft.Assets.Remove(assetVM.Id, out _);
             _viewModel.LocalAssets.Remove(assetVM);
-            _viewModel.FilterAssets(); // 刷新过滤列表
+            await _viewModel.FilterAssets();
+            LogDiagnostic($"[ProjectAssetView] Removed local asset '{assetVM.Name}' ({assetVM.Id})");
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Remove asset", workingDraft);
+            await workingDraft.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
+        finally
+        {
+            _removingAsset = false;
         }
     }
 

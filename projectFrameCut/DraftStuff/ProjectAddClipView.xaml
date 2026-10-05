@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.DraftStuff.ProjectAddClipView"
@@ -17,14 +17,127 @@
             <SolidColorBrush x:Key="AvaliableColorBrush">Green</SolidColorBrush>
             <SolidColorBrush x:Key="NotAvaliableColorBrush">Gray</SolidColorBrush>
 
-            <toolkit:BoolToObjectConverter x:Key="IsValidConverter" 
-                TrueObject="{StaticResource AvaliableColorBrush}" 
+            <toolkit:BoolToObjectConverter x:Key="IsValidConverter"
+                TrueObject="{StaticResource AvaliableColorBrush}"
                 FalseObject="{StaticResource NotAvaliableColorBrush}"/>
             <converters:StringNullOrWhitespaceObjectSelectionConventor x:Key="IsStringValidConverter"
                 OnNullOrWhitespaceOrEmpty="{StaticResource NotAvaliableColorBrush}"
                 OnNormal="{StaticResource AvaliableColorBrush}"/>
             <converters:IntToIndexConverter x:Key="IntToIndexConverter"/>
             <converters:EqualConverter x:Key="EqualConverter" ComparisonValue="Video"/>
+            <converters:EqualConverter x:Key="OnlyAddCardConverter" ComparisonValue="1"/>
+            <DataTemplate x:Key="AssetCardTemplate" x:DataType="viewmodels:AssetItemViewModel">
+                <Border StrokeThickness="1"
+                    Stroke="{Binding BackgroundBrush}"
+                    BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}"
+                    HeightRequest="160"
+                    WidthRequest="180"
+                    StrokeShape="RoundRectangle 8">
+                    <Grid RowDefinitions="*,Auto">
+                        <!-- 缩略图 -->
+                        <Image Grid.Row="0"
+                           Source="{Binding ThumbPath}"
+                           Aspect="AspectFit"
+                           Margin="4"
+                           ToolTipProperties.Text="{Binding Name}"
+                           IsVisible="{Binding HasThumbnail}"/>
+
+
+                        <!-- 添加按钮 -->
+                        <Grid Grid.Row="1"
+                          BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}"
+                          ColumnDefinitions="*,50"
+                          Padding="4">
+                            <Grid HorizontalOptions="Start" Padding="4" Grid.Column="0">
+                                <Label Text="{Binding Name}"
+                                   ToolTipProperties.Text="{Binding Name}"
+                                   Margin="2,-4,0,0"
+                                   LineBreakMode="TailTruncation"
+                                   FontSize="12"
+                                   MaxLines="1"
+                                   Grid.Column="0"
+                                   VerticalOptions="Start"/>
+                                <Label Text="{Binding DurationDisplay}"
+                                   ToolTipProperties.Text="{Binding DurationDisplay}"
+                                   LineBreakMode="TailTruncation"
+                                   FontSize="12"
+                                   MaxLines="1"
+                                   Grid.Column="1"
+                                   VerticalOptions="End"/>
+                            </Grid>
+                            <Button Text="➕"
+                                HorizontalOptions="End"
+                                FontSize="16"
+                                CornerRadius="4"
+                                Grid.Column="1"
+                                ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}"
+                                Command="{Binding AddAssetClipCommand}"/>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+            <DataTemplate x:Key="ExternalSourceCardTemplate" x:DataType="viewmodels:RpcVideoSourceItemViewModel">
+                <Border StrokeThickness="1"
+                        Stroke="CornflowerBlue"
+                        BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}"
+                        HeightRequest="160"
+                        WidthRequest="180"
+                        StrokeShape="RoundRectangle 8">
+                    <Grid RowDefinitions="*,Auto" Padding="8">
+                        <VerticalStackLayout Spacing="3">
+                            <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation" MaxLines="1"/>
+                            <Label Text="{Binding ClientName}" ToolTipProperties.Text="{Binding ClientName}" FontSize="11" Opacity="0.75" LineBreakMode="TailTruncation" MaxLines="1"/>
+                            <Label Text="{Binding Status}" ToolTipProperties.Text="{Binding Status}" FontSize="11" LineBreakMode="TailTruncation" MaxLines="1"/>
+                            <Label Text="{Binding SourceInfoDisplay}" FontSize="11"/>
+                            <Label Text="{Binding Capabilities}" FontSize="11"/>
+                        </VerticalStackLayout>
+                        <Grid Grid.Row="1" ColumnDefinitions="*,44">
+                            <Label Text="{Binding Duration}" FontSize="12" VerticalOptions="Center"/>
+                            <Button Grid.Column="1" Text="➕" FontSize="16" Padding="4" Command="{Binding AddCommand}" IsEnabled="{Binding CanAdd}"/>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+            <DataTemplate x:Key="AddSourceCardTemplate" x:DataType="viewmodels:AddSourceCardViewModel">
+                <Border StrokeThickness="1"
+                        Stroke="Gray"
+                        BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}"
+                        HeightRequest="160"
+                        WidthRequest="180"
+                        StrokeShape="RoundRectangle 8">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnAddAssetClicked"/>
+                        <DropGestureRecognizer AllowDrop="True"
+                                               DragOver="OnAddAssetDragOver"
+                                               DragLeave="OnAddAssetDragLeave"
+                                               Drop="OnAddAssetDrop"/>
+                    </Border.GestureRecognizers>
+                    <Grid RowDefinitions="*,Auto">
+                        <Label Text="➕"
+                               FontSize="28"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               InputTransparent="True"/>
+                        <Button Grid.Row="1"
+                                Text="{Binding Name}"
+                                FontSize="12"
+                                TextColor="{AppThemeBinding Light=#111827, Dark=#F3F4F6}"
+                                BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}"
+                                HeightRequest="44"
+                                Padding="4"
+                                BorderWidth="0"
+                                CornerRadius="0"
+                                ToolTipProperties.Text="{Binding Name}"
+                                SemanticProperties.Description="{Binding Name}"
+                                CommandParameter="{Binding SourceType}"
+                                Clicked="OnAddAssetClicked"/>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+            <converters:SourceCardTemplateSelector x:Key="SourceCardTemplateSelector"
+                                                  AssetTemplate="{StaticResource AssetCardTemplate}"
+                                                  ExternalSourceTemplate="{StaticResource ExternalSourceCardTemplate}"
+                                                  AddTemplate="{StaticResource AddSourceCardTemplate}"/>
         </ResourceDictionary>
     </ContentView.Resources>
 
@@ -80,6 +193,7 @@
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}" Tag="LocalAssets" x:Name="LocalAssetsTab" x:FieldModifier="public">
             <CollectionView x:Name="LocalAssetsCollectionView"
                             ItemsSource="{Binding FilteredLocalAssets}"
+                            ItemTemplate="{StaticResource SourceCardTemplateSelector}"
                             SelectionMode="None"
                             Margin="8"
                             SizeChanged="OnCollectionViewSizeChanged">
@@ -87,97 +201,20 @@
                         <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
                     </CollectionView.ItemsLayout>
 
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="viewmodels:AssetItemViewModel">
-                            <Border StrokeThickness="1" 
-                                Stroke="{Binding BackgroundBrush}"
-                                BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}" 
-                                HeightRequest="160" 
-                                WidthRequest="180"
-                                StrokeShape="RoundRectangle 8">
-                                <Grid RowDefinitions="*,Auto">
-                                    <!-- 缩略图 -->
-                                    <Image Grid.Row="0"
-                                       Source="{Binding ThumbPath}" 
-                                       Aspect="AspectFit" 
-                                       Margin="4"
-                                       ToolTipProperties.Text="{Binding Name}"
-                                       IsVisible="{Binding HasThumbnail}"/>
-
-
-                                    <!-- 添加按钮 -->
-                                    <Grid Grid.Row="2" 
-                                      BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}" 
-                                      ColumnDefinitions="*,50"
-                                      Padding="4">
-                                        <Grid HorizontalOptions="Start" Padding="4" Grid.Column="0">
-                                            <Label Text="{Binding Name}" 
-                                               ToolTipProperties.Text="{Binding Name}"
-                                               Margin="2,-4,0,0"
-                                               LineBreakMode="TailTruncation" 
-                                               FontSize="12" 
-                                               MaxLines="1"
-                                               Grid.Column="0"
-                                               VerticalOptions="Start"/>
-                                            <Label Text="{Binding DurationDisplay}" 
-                                               ToolTipProperties.Text="{Binding DurationDisplay}"
-                                               LineBreakMode="TailTruncation" 
-                                               FontSize="12" 
-                                               MaxLines="1"
-                                               Grid.Column="1"
-                                               VerticalOptions="End"/>
-                                        </Grid>
-                                        <Button Text="➕" 
-                                            HorizontalOptions="End"
-                                            FontSize="16"
-                                            CornerRadius="4"
-                                            Grid.Column="1"
-                                            ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}"
-                                            Command="{Binding AddAssetClipCommand}"/>
-                                    </Grid>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-
-                <CollectionView.EmptyView>
-                        <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
+                <CollectionView.Header>
+                        <Label Text="{l:Localized Key=AssetPage_SearchNoResult}"
+                           IsVisible="{Binding FilteredLocalAssets.Count, Converter={StaticResource OnlyAddCardConverter}}"
                            FontSize="14"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"
                            Margin="20"/>
-                </CollectionView.EmptyView>
-                <CollectionView.Footer>
-                    <Border StrokeThickness="1"
-                            Stroke="Gray"
-                            BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}"
-                            HeightRequest="160"
-                            WidthRequest="180"
-                            HorizontalOptions="Start"
-                            Margin="0,0,0,8"
-                            StrokeShape="RoundRectangle 8">
-                        <Grid RowDefinitions="*,Auto">
-                            <Button Text="➕"
-                                    FontSize="28"
-                                    BackgroundColor="Transparent"
-                                    HorizontalOptions="Center"
-                                    VerticalOptions="Center"
-                                    ToolTipProperties.Text="{l:Localized Key=AssetPage_AddAAsset}"
-                                    CommandParameter="LocalAssets"
-                                    Clicked="OnAddAssetClicked"/>
-                            <Label Grid.Row="1"
-                                   Text="{l:Localized Key=AssetPage_AddAAsset}"
-                                   HorizontalOptions="Center"
-                                   Margin="4,4,4,10"
-                                   FontSize="12"/>
-                        </Grid>
-                    </Border>
-                </CollectionView.Footer>
+                </CollectionView.Header>
             </CollectionView>
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_SharedAssets}" Tag="SharedAssets" x:Name="SharedAssetsTab" x:FieldModifier="public">
             <CollectionView x:Name="SharedAssetsCollectionView"
                             ItemsSource="{Binding FilteredSharedAssets}"
+                            ItemTemplate="{StaticResource SourceCardTemplateSelector}"
                             SelectionMode="None"
                             Margin="8"
                             SizeChanged="OnCollectionViewSizeChanged">
@@ -185,93 +222,14 @@
                         <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
                     </CollectionView.ItemsLayout>
 
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="viewmodels:AssetItemViewModel">
-                            <Border StrokeThickness="1" 
-                                Stroke="{Binding BackgroundBrush}"
-                                BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}" 
-                                HeightRequest="160" 
-                                WidthRequest="180"
-                                StrokeShape="RoundRectangle 8">
-                                <Grid RowDefinitions="*,Auto">
-                                    <!-- 缩略图 -->
-                                    <Image Grid.Row="0"
-                                       Source="{Binding ThumbPath}" 
-                                       Aspect="AspectFit" 
-                                       Margin="4"
-                                       ToolTipProperties.Text="{Binding Name}"
-                                       IsVisible="{Binding HasThumbnail}"/>
-
-
-                                    <!-- 添加按钮 -->
-                                    <Grid Grid.Row="2" 
-                                      BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}" 
-                                      ColumnDefinitions="*,50"
-                                      Padding="4">
-                                        <Grid HorizontalOptions="Start" Padding="4" Grid.Column="0">
-                                            <Label Text="{Binding Name}" 
-                                               ToolTipProperties.Text="{Binding Name}"
-                                               Margin="2,-4,0,0"
-                                               LineBreakMode="TailTruncation" 
-                                               FontSize="12" 
-                                               MaxLines="1"
-                                               Grid.Column="0"
-                                               VerticalOptions="Start"/>
-                                            <Label Text="{Binding DurationDisplay}" 
-                                               ToolTipProperties.Text="{Binding DurationDisplay}"
-                                               LineBreakMode="TailTruncation" 
-                                               FontSize="12" 
-                                               MaxLines="1"
-                                               Grid.Column="1"
-                                               VerticalOptions="End"/>
-                                        </Grid>
-                                        <Button Text="➕" 
-                                            HorizontalOptions="End"
-                                            FontSize="16"
-                                            CornerRadius="4"
-                                            Grid.Column="1"
-                                            ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}"
-                                            Command="{Binding AddAssetClipCommand}"/>
-
-                                    </Grid>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-
-                <CollectionView.EmptyView>
-                        <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
+                <CollectionView.Header>
+                        <Label Text="{l:Localized Key=AssetPage_SearchNoResult}"
+                           IsVisible="{Binding FilteredSharedAssets.Count, Converter={StaticResource OnlyAddCardConverter}}"
                            FontSize="14"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"
                            Margin="20"/>
-                </CollectionView.EmptyView>
-                <CollectionView.Footer>
-                    <Border StrokeThickness="1"
-                            Stroke="Gray"
-                            BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}"
-                            HeightRequest="160"
-                            WidthRequest="180"
-                            HorizontalOptions="Start"
-                            Margin="0,0,0,8"
-                            StrokeShape="RoundRectangle 8">
-                        <Grid RowDefinitions="*,Auto">
-                            <Button Text="➕"
-                                    FontSize="28"
-                                    BackgroundColor="Transparent"
-                                    HorizontalOptions="Center"
-                                    VerticalOptions="Center"
-                                    ToolTipProperties.Text="{l:Localized Key=AssetPage_AddAAsset}"
-                                    CommandParameter="SharedAssets"
-                                    Clicked="OnAddAssetClicked"/>
-                            <Label Grid.Row="1"
-                                   Text="{l:Localized Key=AssetPage_AddAAsset}"
-                                   HorizontalOptions="Center"
-                                   Margin="4,4,4,10"
-                                   FontSize="12"/>
-                        </Grid>
-                    </Border>
-                </CollectionView.Footer>
+                </CollectionView.Header>
             </CollectionView>
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_RpcSources}" Tag="RpcSources" x:Name="RpcSourcesTab" x:FieldModifier="public">
@@ -285,37 +243,17 @@
                         Command="{Binding RefreshRpcVideoSourcesCommand}"/>
                 <CollectionView Grid.Row="1"
                                 ItemsSource="{Binding FilteredRpcVideoSources}"
+                                ItemTemplate="{StaticResource SourceCardTemplateSelector}"
                                 SelectionMode="None"
                                 SizeChanged="OnCollectionViewSizeChanged">
                     <CollectionView.ItemsLayout>
                         <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
                     </CollectionView.ItemsLayout>
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="viewmodels:RpcVideoSourceItemViewModel">
-                            <Border StrokeThickness="1"
-                                    Stroke="CornflowerBlue"
-                                    BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#1a1a1a}"
-                                    HeightRequest="160"
-                                    WidthRequest="180"
-                                    StrokeShape="RoundRectangle 8">
-                                <Grid RowDefinitions="*,Auto" Padding="8">
-                                    <VerticalStackLayout Spacing="3">
-                                        <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation" MaxLines="1"/>
-                                        <Label Text="{Binding ClientName}" FontSize="11" Opacity="0.75" LineBreakMode="TailTruncation" MaxLines="1"/>
-                                        <Label Text="{Binding SourceInfoDisplay}" FontSize="11"/>
-                                        <Label Text="{Binding Capabilities}" FontSize="11"/>
-                                    </VerticalStackLayout>
-                                    <Grid Grid.Row="1" ColumnDefinitions="*,44">
-                                        <Label Text="{Binding Duration}" FontSize="12" VerticalOptions="Center"/>
-                                        <Button Grid.Column="1" Text="➕" FontSize="16" Padding="4" Command="{Binding AddCommand}"/>
-                                    </Grid>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                    <CollectionView.EmptyView>
-                        <Label Text="{l:Localized Key=DraftPage_AssetPanel_RpcSources_None}" HorizontalOptions="Center" VerticalOptions="Center" Margin="20"/>
-                    </CollectionView.EmptyView>
+                    <CollectionView.Header>
+                        <Label Text="{l:Localized Key=DraftPage_AssetPanel_RpcSources_None}"
+                               IsVisible="{Binding FilteredRpcVideoSources.Count, Converter={StaticResource OnlyAddCardConverter}}"
+                               HorizontalOptions="Center" VerticalOptions="Center" Margin="20"/>
+                    </CollectionView.Header>
                 </CollectionView>
             </Grid>
         </tv:TabbedViewItem>
@@ -513,239 +451,6 @@
 
 
             </VerticalStackLayout>
-        </tv:TabbedViewItem>
-        <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddTransform}" Tag="Transform" x:Name="TransformTab" x:FieldModifier="public">
-            <Grid RowDefinitions="Auto,Auto,*">
-                <Border Grid.Row="0"
-                         IsEnabled="{Binding IsGeneratingAITransition, Converter={toolkit:InvertedBoolConverter}}"
-                         BackgroundColor="{AppThemeBinding Light=#E8F4FD, Dark=#1A3A5C}"
-                         Padding="12,8"
-                         Margin="8,8,8,-4 "
-                         StrokeThickness="0"
-                         StrokeShape="RoundRectangle 6">
-                    <Grid>
-                        <Label Text="{Binding TransformAddHintText}"
-                                FontSize="12"
-                                TextColor="{AppThemeBinding Light=#1A5276, Dark=#85C1E9}"/>
-                        <Button IsVisible="{x:OnIdiom Phone=true, Default=false}"
-                                 IsEnabled="{Binding IsDraftSelectedAnyClip}"
-                                 Background="{Binding IsSideDetermined, Converter={StaticResource IsValidConverter}}"
-                                 Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_RenderPreview}"              
-                                 Command="{Binding GenerateTransformPreviewCommand}"
-                                 HorizontalOptions="{Binding IsDraftSelectedAnyClip, Converter={toolkit:BoolToObjectConverter FalseObject=End, TrueObject=Start}}"
-                                 VerticalOptions="Center"
-                                 Margin="8,0,0,0"
-                                 WidthRequest="120"
-                                 HeightRequest="34" />
-                    </Grid>
-                </Border>
-                <Border Grid.Row="1"
-                        BackgroundColor="{AppThemeBinding Light=#FFF8E1, Dark=#3E2723}"
-                        Padding="12,8"
-                        Margin="8,8,8,4"
-                        StrokeThickness="0"
-                        StrokeShape="RoundRectangle 6"
-                        IsVisible="{Binding CanGenerateAITransition}">
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_AITransform}"
-                               FontSize="16"
-                               FontAttributes="Bold"
-                               TextColor="{AppThemeBinding Light=#FF6F00, Dark=#FFB74D}"/>
-                        <Entry IsEnabled="True"
-                               Placeholder="{l:Localized Key=DraftPage_AddClipView_AIGC_InputPlaceholder}"
-                               Text="{Binding AITransitionPrompt, Mode=TwoWay}"
-                               BackgroundColor="{AppThemeBinding Light=White, Dark=#424242}"
-                               PlaceholderColor="{AppThemeBinding Light=#757575, Dark=#BDBDBD}"
-                               FontSize="14"/>
-                        <HorizontalStackLayout>
-                            <Label Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Acknowledge1}" FontSize="12" TextColor="#80ffffff" />
-                            <Label Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Acknowledge2}" FontSize="12" FontAttributes="Bold" TextColor="#ffffff"  />
-                        </HorizontalStackLayout>
-                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding IsGeneratingAITransition, Converter={toolkit:InvertedBoolConverter}}" >
-                            <HorizontalStackLayout Grid.Column="0" Spacing="8">
-                                <Label Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Duration}"
-                                       VerticalOptions="Center"
-                                       FontSize="12"/>
-                                <Picker SelectedIndex="{Binding AITransitionDuration, Converter={StaticResource IntToIndexConverter}}"
-                                        WidthRequest="80"
-                                        BackgroundColor="Gray">
-                                    <Picker.Items>
-                                        <x:String>1</x:String>
-                                        <x:String>2</x:String>
-                                        <x:String>3</x:String>
-                                        <x:String>5</x:String>
-                                    </Picker.Items>
-                                </Picker>
-                            </HorizontalStackLayout>
-
-                            <HorizontalStackLayout Grid.Column="1" Spacing="8">
-                                <ActivityIndicator IsVisible="{Binding IsGeneratingAITransition}"
-                                                 IsRunning="{Binding IsGeneratingAITransition}"
-                                                 WidthRequest="20"
-                                                 HeightRequest="20"/>
-                                <HorizontalStackLayout HorizontalOptions="End" IsEnabled="{Binding IsDraftSelectedAnyClip}">
-                                    <Button HorizontalOptions="End"
-                                            Text="{Binding IsGeneratingAIContent, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_AddClipView_AIGC_GeneratingLong}, FalseObject=➕}}"                                   
-                                            ToolTipProperties.Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_AddInSelectedDirection}"
-                                            FontSize="14"
-                                            Padding="4"
-                                            WidthRequest="40"
-                                            HeightRequest="36"
-                                            CornerRadius="4"
-                                            IsVisible="{Binding IsSideDetermined}"
-                                            Command="{Binding GenerateAITransitionCommand}"
-                                            CommandParameter="auto"/>
-
-                                    <Button HorizontalOptions="End"
-                                            Text="{Binding IsGeneratingAIContent, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_AddClipView_AIGC_GeneratingLong}, FalseObject=👈}}"                                                                        
-                                            ToolTipProperties.Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_AddInLeft}"
-                                            FontSize="14"
-                                            Padding="4"
-                                            WidthRequest="40"
-                                            HeightRequest="36"
-                                            CornerRadius="4"
-                                            IsVisible="{Binding IsSideDetermined, Converter={toolkit:InvertedBoolConverter}}"
-                                            IsEnabled="{Binding IsApplicableToLeft}"
-                                            Background="{Binding IsApplicableToLeft, Converter={StaticResource IsValidConverter}}"
-                                            Command="{Binding GenerateAITransitionCommand}"
-                                            CommandParameter="left"/>
-
-                                    <Button HorizontalOptions="End"
-                                            Text="{Binding IsGeneratingAIContent, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_AddClipView_AIGC_GeneratingLong}, FalseObject=👉}}"                                                                           
-                                            ToolTipProperties.Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_AddInRight}"
-                                            FontSize="14"
-                                            Padding="4"
-                                            WidthRequest="40"
-                                            HeightRequest="36"
-                                            CornerRadius="4"
-                                            Margin="8,0,0,0"
-                                            IsVisible="{Binding IsSideDetermined, Converter={toolkit:InvertedBoolConverter}}"
-                                            IsEnabled="{Binding IsApplicableToRight}"
-                                            Background="{Binding IsApplicableToRight, Converter={StaticResource IsValidConverter}}"
-                                            Command="{Binding GenerateAITransitionCommand}"
-                                            CommandParameter="right"/>
-                                </HorizontalStackLayout>
-                                <!-- <Button 
-                                        BackgroundColor="{Binding AITransitionPrompt, Converter={StaticResource IsStringValidConverter}}"
-                                        IsEnabled="{Binding IsGeneratingAITransition, Converter={toolkit:InvertedBoolConverter}}"
-                                        Command="{Binding GenerateAITransitionCommand}"
-                                        FontSize="12"
-                                        WidthRequest="100"
-                                        HeightRequest="32"/> -->
-                            </HorizontalStackLayout>
-                        </Grid>
-                    </VerticalStackLayout>
-                </Border>
-
-
-
-                <CollectionView x:Name="TransformCollectionView"
-                                Grid.Row="2"
-                                ItemsSource="{Binding FilteredAvailableTransforms}"
-                                SelectionMode="None"
-                                Margin="8"
-                                SizeChanged="OnCollectionViewSizeChanged">
-                    <CollectionView.ItemsLayout>
-                        <GridItemsLayout Orientation="Vertical" Span="3" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
-                    </CollectionView.ItemsLayout>
-
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="viewmodels:TransformItemViewModel">
-                            <Border StrokeThickness="1" 
-                                    Stroke="Gray"
-                                    BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2A2A2A}" 
-                                    HeightRequest="160" 
-                                    WidthRequest="180"
-                                    StrokeShape="RoundRectangle 8">
-                                <Border.GestureRecognizers>
-                                    <PointerGestureRecognizer PointerEnteredCommand="{Binding GenerateTransformPreviewCommand}" />
-                                    <TapGestureRecognizer Command="{Binding SelectTransformForPreviewCommand}" />
-                                </Border.GestureRecognizers>
-                                <Grid RowDefinitions="*,Auto,Auto">
-                                    <toolkit:MediaElement Grid.Row="0"
-                                           Source="{Binding PreviewVideoPath}"
-                                           Aspect="AspectFit" 
-                                           Margin="4"
-                                           ShouldAutoPlay="True"
-                                           ShouldLoopPlayback="True"
-                                           ShouldMute="True"
-                                           ShouldShowPlaybackControls="False"
-                                           IsVisible="{Binding IsPreviewReady}"/>
-                                    <ActivityIndicator Grid.Row="0"
-                                           IsRunning="{Binding IsGeneratingPreview}"
-                                           IsVisible="{Binding IsGeneratingPreview}"
-                                           HorizontalOptions="Center"
-                                           VerticalOptions="Center"/>
-
-                                    <Grid Grid.Row="2" 
-                                          BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}" 
-                                          Padding="4">
-                                        <Label Text="{Binding DisplayName}" 
-                                               ToolTipProperties.Text="{Binding DisplayName}"
-                                               Margin="8,0,0,0"
-                                               HorizontalOptions="Start"
-                                               LineBreakMode="TailTruncation" 
-                                               FontSize="12" 
-                                               MaxLines="1"
-                                               VerticalOptions="Center"/>
-                                        <HorizontalStackLayout HorizontalOptions="End" IsEnabled="{Binding IsDraftSelectedAnyClip}">
-                                            <Button HorizontalOptions="End"
-                                                    Text="➕"
-                                                    ToolTipProperties.Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_AddInSelectedDirection}"
-                                                    FontSize="14"
-                                                    Padding="4"
-                                                    WidthRequest="40"
-                                                    HeightRequest="36"
-                                                    CornerRadius="4"
-                                                    IsVisible="{Binding IsSideDetermined}"
-                                                    Command="{Binding AddTransformClipCommand}"/>
-
-
-                                            <Button HorizontalOptions="End"
-                                                    Text="👈"                                           
-                                                    ToolTipProperties.Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_AddInLeft}"
-                                                    FontSize="14"
-                                                    Padding="4"
-                                                    WidthRequest="40"
-                                                    HeightRequest="36"
-                                                    CornerRadius="4"
-                                                    IsVisible="{Binding IsSideDetermined, Converter={toolkit:InvertedBoolConverter}}"
-                                                    IsEnabled="{Binding IsApplicableToLeft}"
-                                                    Background="{Binding IsApplicableToLeft, Converter={StaticResource IsValidConverter}}"
-                                                    Command="{Binding AddTransformClipInLeftCommand}" />
-
-
-                                            <Button HorizontalOptions="End"
-                                                    Text="👉"
-                                                    ToolTipProperties.Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_AddInRight}"
-                                                    FontSize="14"
-                                                    Padding="4"
-                                                    WidthRequest="40"
-                                                    HeightRequest="36"
-                                                    CornerRadius="4"
-                                                    Margin="8,0,0,0"
-                                                    IsVisible="{Binding IsSideDetermined, Converter={toolkit:InvertedBoolConverter}}"
-                                                    IsEnabled="{Binding IsApplicableToRight}"
-                                                    Background="{Binding IsApplicableToRight, Converter={StaticResource IsValidConverter}}"
-                                                    Command="{Binding AddTransformClipInRightCommand}" />
-
-
-                                        </HorizontalStackLayout>
-                                    </Grid>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-
-                    <CollectionView.EmptyView>
-                        <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
-                               FontSize="14"
-                               HorizontalOptions="Center"
-                               VerticalOptions="Center"
-                               Margin="20"/>
-                    </CollectionView.EmptyView>
-                </CollectionView>
-            </Grid>
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_Graphics}" Tag="Graphics" x:Name="GraphicsTab" x:FieldModifier="public">
             <CollectionView ItemsSource="{Binding FilteredVectorComponents}"

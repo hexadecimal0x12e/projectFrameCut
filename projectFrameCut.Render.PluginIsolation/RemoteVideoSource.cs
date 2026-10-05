@@ -24,6 +24,7 @@ public class RemoteVideoSource : IVideoSource
 
     public string TypeName => _descriptor.TypeName;
     public int? ResultBitPerPixel => _descriptor.HasKnownResultBitsPerPixel ? _descriptor.ResultBitsPerPixel : null;
+    public bool AllowCachingResult => _descriptor.AllowCachingResult;
     public string[] PreferredExtension => _descriptor.PreferredExtensions.ToArray();
     public uint Index { get; set; }
     public long TotalFrames => _descriptor.TotalFrames;

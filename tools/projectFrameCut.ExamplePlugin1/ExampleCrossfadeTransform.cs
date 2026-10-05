@@ -14,6 +14,9 @@ public sealed class ExampleCrossfadeTransform : IContinuousTransform
     }
 
     public string FromPlugin => ExamplePluginConstants.PluginId;
+    public TransformDefinition Definition => TransformDefinition.Clip | TransformDefinition.SupportTwoInput;
+    public TransformSide Side { get; set; }
+
     public string TypeName => "ExampleCrossfade";
     public string Name { get; init; } = "Example crossfade";
     public Guid BindedLeftClip { get; set; }

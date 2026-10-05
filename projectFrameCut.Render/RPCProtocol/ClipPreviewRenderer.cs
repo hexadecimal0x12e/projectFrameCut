@@ -14,6 +14,8 @@ internal static class ClipPreviewRenderer
     public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode)
     {
         token.ThrowIfCancellationRequested();
+        if (TransformProcessing.HasActiveTransform(clip, allClips, frameIndex))
+            return TransformProcessing.RenderCanvas(clip, allClips, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, pixelMode);
         var sourceWidth = ResolveDimension(clip.TargetWidth, projectWidth, canvasWidth);
         var sourceHeight = ResolveDimension(clip.TargetHeight, projectHeight, canvasHeight);
         if (!ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
@@ -35,10 +37,6 @@ internal static class ClipPreviewRenderer
             if (ClipInitializationFailure.IsMarked(clip))
             {
                 frame = ClipInitializationFailure.CreateFallbackFrame(sourceWidth, sourceHeight, pixelMode, clip.ExtraData);
-            }
-            else if (clip is TransformContainer transformClip)
-            {
-                frame = ReadTransformSource(transformClip, allClips, sourceWidth, sourceHeight, frameIndex, pixelMode);
             }
             else
             {
@@ -90,23 +88,6 @@ internal static class ClipPreviewRenderer
             try { frame.Dispose(); } catch { }
             throw;
         }
-    }
-
-    private static IPicture? ReadTransformSource(TransformContainer transformClip, IReadOnlyList<IClip> allClips, int width, int height, uint frameIndex, IPicture.PicturePixelMode pixelMode)
-    {
-        var transform = transformClip.Transform;
-        if (transform is null)
-        {
-            transformClip.ReInit(pixelMode);
-            transform = transformClip.Transform;
-        }
-        if (transform is null) return null;
-
-        var left = allClips.FirstOrDefault(candidate => candidate.Id == transform.BindedLeftClip);
-        var right = allClips.FirstOrDefault(candidate => candidate.Id == transform.BindedRightClip);
-        return left is null || right is null
-            ? null
-            : TransformProcessing.ProcessTransform(left, right, transform, width, height, frameIndex, pixelMode);
     }
 
     private static IPicture RenderEffectsWithoutLayout(OneFrame source, int targetWidth, int targetHeight, uint frameIndex, CancellationToken token)

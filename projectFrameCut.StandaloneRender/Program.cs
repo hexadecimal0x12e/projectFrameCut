@@ -1,4 +1,4 @@
-﻿using FFmpeg.AutoGen;
+using FFmpeg.AutoGen;
 using ILGPU;
 using ILGPU.Runtime;
 using projectFrameCut.Drawing.Base;
@@ -45,6 +45,16 @@ namespace projectFrameCut.StandaloneRender
 
         public static async Task<int> Main(string[] args)
         {
+            if (args.FirstOrDefault() == "external_source_worker")
+            {
+                try { await projectFrameCut.Render.PluginIsolation.ProjectExternalSourceWorker.RunAsync(args.Skip(1).ToArray()); return 0; }
+                catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
+            }
+            projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.StartWorker = (root, asset, ct) =>
+                new projectFrameCut.Render.PluginIsolation.ProjectExternalSourceProcessPlatform([Environment.ProcessPath is { } executable && !Path.GetFileNameWithoutExtension(executable).Equals("dotnet", StringComparison.OrdinalIgnoreCase) ? executable : typeof(Program).Assembly.Location]).StartAsync(
+                    projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.CreateContext(asset,
+                        projectFrameCut.Render.PluginIsolation.ProjectExternalSourceDatabase.ResolveAssetDirectory(root, asset),
+                        Path.Combine(Path.GetTempPath(), "projectFrameCut-external-sources", Guid.NewGuid().ToString("N")), $"standalone-{Environment.ProcessId}"), ct);
             if (!args.Contains("--nolog"))
             {
                 Console.ForegroundColor = ConsoleColor.White;
@@ -121,6 +131,7 @@ namespace projectFrameCut.StandaloneRender
                         -output=<output file>
                         -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
                         [-target=<video|audio|all>]
+                        [--allowExternalSources=all|<ImportId,ImportId,...>]
                         [-assetDbFile=<path to database.json file>]
                         [-pluginRoot=<path to plugin root>]
                         [-maxParallelThreads=<number>]
@@ -137,7 +148,6 @@ namespace projectFrameCut.StandaloneRender
                         [-preferHwAccelDecoder=<true|false>]
                         [-ApproximateMixture=<true|false>]
                         [-PictureResizer=<cpu|hwaccel>]
-                        [-VideoFrameDiskCacheRoot=<path to video frame disk cache root>]
                         [-enableDiskCacheRouting=<true|false> or -forceUseDiskCache=<true|false>]
                         [-diskCacheThreshold=<0.1-0.95>] [-diskCacheMaxFrameCount=<number>] [-videoBuilderDiskCacheRoot=<path>]
                         [-chunkRender=<true|false>]
@@ -180,7 +190,6 @@ namespace projectFrameCut.StandaloneRender
                     Sub-mode 'decode' arguments:
                         -source=<video file path>                   (required)
                         [-maxFrames=<number>]                       (limit decoded frames)
-                        [-VideoFrameDiskCache=<true|false>]
                         [-preferHwAccelDecoder=<true|false>]
 
                     Mode 'reencode':
@@ -796,16 +805,6 @@ namespace projectFrameCut.StandaloneRender
             PictureLifecycleTracker.Enabled = trace && !Renderer.IsProfilerAttached;
             PictureLifecycleTracker.TrackCollection = trace && !Renderer.IsProfilerAttached;
 
-            if (switches.TryGetValue("VideoFrameDiskCacheRoot", out var vfdcRoot) && Directory.Exists(vfdcRoot))
-            {
-                IVideoSource.EnableDiskCache = true;
-                VideoFrameDiskCache.CacheBaseDir = vfdcRoot;
-            }
-            else
-            {
-                IVideoSource.EnableDiskCache = false;
-            }
-
             var diskCacheRoutingEnabled = bool.TryParse(switches.GetOrAdd("enableDiskCacheRouting", "false"), out var useDiskCache) && useDiskCache;
             if (diskCacheRoutingEnabled)
             {
@@ -818,7 +817,7 @@ namespace projectFrameCut.StandaloneRender
                 Log($"VideoBuilder disk cache routing: Enabled, threshold: {threshold:P0} of max pending ({maxPending}), max frames on disk: {(maxFrames > 0 ? maxFrames.ToString() : "unlimited")}, cache root: {cacheRoot}");
             }
 
-            Log($"Video decoding: Prefer HWAccel Decode: {YesNo(hwAccelDecode)} Encode: {YesNo(hwAccelEncode)}, Disk cache: {YesNo(IVideoSource.EnableDiskCache)} {(IVideoSource.EnableDiskCache ? $"(cache dir: {VideoFrameDiskCache.CacheBaseDir})" : "")}, Disk buffer: {YesNo(diskCacheRoutingEnabled)}");
+            Log($"Video decoding: Prefer HWAccel Decode: {YesNo(hwAccelDecode)} Encode: {YesNo(hwAccelEncode)}, Disk buffer: {YesNo(diskCacheRoutingEnabled)}");
 
             ClassicOverlayMixture.EnableApproximatePath = bool.TryParse(switches.GetOrAdd("ApproximateMixture", "false"), out var approximateMixture) && approximateMixture;
 
@@ -871,7 +870,10 @@ namespace projectFrameCut.StandaloneRender
                 Log("ERROR: assets.json not found in project directory.");
                 return 1;
             }
+            var sourceProjectRoot = Path.GetFullPath(workingPath);
             Environment.CurrentDirectory = workingPath;
+            await using var externalSources = await projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.OpenAsync(sourceProjectRoot,
+                projectFrameCut.Render.PluginIsolation.ProjectExternalSourceDatabase.ParseApprovals(sourceProjectRoot, switches.GetValueOrDefault("allowExternalSources")));
             #endregion
 
             CancellationTokenSource cts = new();
@@ -1108,7 +1110,7 @@ namespace projectFrameCut.StandaloneRender
                     timeline.Duration,
                     fps,
                     Path.GetExtension(resultPath),
-                    $"{width}x{height}|{fps}|{outputFormat}|{outputEncoder}|16bit={use16Bit}|bitrate={requestedBitRate}|serial={oneByOneRender}|layers={renderByLayer}|prepare={prepareInWorker}|reusePreview={reuseDynamicPreviewCache}|approx={ClassicOverlayMixture.EnableApproximatePath}|effect={EffectHelper.ForcePreferToType}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}",
+                    $"{width}x{height}|{fps}|{outputFormat}|{outputEncoder}|16bit={use16Bit}|bitrate={requestedBitRate}|serial={oneByOneRender}|layers={renderByLayer}|prepare={prepareInWorker}|reusePreview={reuseDynamicPreviewCache}|approx={ClassicOverlayMixture.EnableApproximatePath}|effect={EffectHelper.ForcePreferToType}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}|externalSources={projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken}",
                     maxParallelThreads,
                     chunkOptions);
                 await coordinator.InitializeAsync(cts.Token).ConfigureAwait(false);
@@ -1936,14 +1938,7 @@ namespace projectFrameCut.StandaloneRender
             }
 
             var maxFrames = int.TryParse(switches.TryGetValue("maxFrames", out var mf) ? mf : "0", out var parsedMf) && parsedMf > 0 ? parsedMf : 0;
-            var enableDiskCache = bool.TryParse(switches.GetOrAdd("VideoFrameDiskCache", "false"), out var edc) && edc;
-
-            IVideoSource.EnableDiskCache = enableDiskCache;
-
-            string YesNo(bool b) => b ? "Yes" : "No";
-
             Log($"Decode bench source: {sourcePath}");
-            Log($"Disk cache: {YesNo(enableDiskCache)}");
 
             // ── 创建解码器 ──────────────────────────────────────
             Log("Creating video source...");

@@ -49,5 +49,6 @@
 	  <EmbeddedResource Include="Resource\Error_SourceFail.png" LogicalName="projectFrameCut.Render.Resource.Error_SourceFail.png" />
 	  <EmbeddedResource Include="Resource\Error_BindingFail.png" LogicalName="projectFrameCut.Render.Resource.Error_BindingFail.png" />
 	  <EmbeddedResource Include="Resource\Error_SourceNotFound.png" LogicalName="projectFrameCut.Render.Resource.Error_SourceNotFound.png" />
+	  <EmbeddedResource Include="Resource\Error_ExternalSource.png" LogicalName="projectFrameCut.Render.Resource.Error_ExternalSource.png" />
 	</ItemGroup>
 </Project>

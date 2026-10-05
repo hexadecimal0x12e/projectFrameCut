@@ -189,6 +189,38 @@
         "DontTranslate": false
       },
       {
+        "Id": "Advanced_RpcBackend",
+        "Value": "RPC \u540E\u7AEF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "\u81EA\u5B9A\u4E49\u73AF\u5883\u53D8\u91CF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "\u81EA\u5B9A\u4E49\u989D\u5916\u53C2\u6570",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "\u914D\u7F6E\u683C\u5F0F\u65E0\u6548\u3002\u989D\u5916\u53C2\u6570\u5E94\u4E3A JSON \u5B57\u7B26\u4E32\u6570\u7EC4\uFF0C\u73AF\u5883\u53D8\u91CF\u5E94\u4E3A JSON \u5BF9\u8C61\uFF0C\u53D8\u91CF\u540D\u4E0D\u80FD\u4E3A\u7A7A\u6216\u5305\u542B\u7B49\u53F7\uFF0C\u540D\u79F0\u548C\u503C\u5747\u4E0D\u80FD\u5305\u542B\u7A7A\u5B57\u7B26\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Advanced_ShowWelcomePage",
         "Value": "\u663E\u793A\u6B22\u8FCE\u754C\u9762",
         "Mode": "ConstString",
@@ -1407,30 +1439,6 @@
       {
         "Id": "General_UserData_Subtitle",
         "Value": "\u914D\u7F6E\u4F60\u7684\u6570\u636E\u548C\u8D44\u6E90\u6587\u4EF6",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "\u542F\u7528\u78C1\u76D8\u89E3\u7801\u7F13\u5B58",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "\u78C1\u76D8\u7F13\u5B58\u901A\u8FC7\u628A\u89E3\u7801\u540E\u7684\u6570\u636E\u4FDD\u5B58\u5728\u78C1\u76D8\u4E0A\uFF0C\u6765\u7F13\u89E3\u89E3\u7801\u8FC7\u6162\u7684\u95EE\u9898\u3002\r\u78C1\u76D8\u7F13\u5B58\u53EF\u80FD\u5360\u7528\u76F8\u5F53\u5927\u7684\u7A7A\u95F4\uFF0C\u5E76\u4E14\u5BF9\u78C1\u76D8\u7684\u8BFB\u5199\u901F\u5EA6\u8981\u6C42\u8F83\u9AD8\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "\u7BA1\u7406\u78C1\u76D8\u7F13\u5B58",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3088,6 +3096,22 @@
       {
         "Id": "Security_Script_EnableScript",
         "Value": "\u542F\u7528 PowerShell \u811A\u672C\u5F15\u64CE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables_Desc",
+        "Value": "\u4F7F\u7528JSON\u8BCD\u5178\u6765\u8986\u76D6\u73AF\u5883\u53D8\u91CF\uFF0C\u6216\u8005\u7559\u7A7A\u6765\u7981\u7528\u6B64\u529F\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments_Desc",
+        "Value": "\u4F7F\u7528JSON\u5B57\u7B26\u4E32\u6570\u7EC4\u6765\u914D\u7F6E\u6B64\u529F\u80FD\uFF0C\u6216\u8005\u7559\u7A7A\u6765\u7981\u7528\u6B64\u529F\u80FD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5547,33 +5571,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "Enable disk decoding cache",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "Disk caching alleviates the issue of slow decoding by storing decoded data on the disk.\rIt may occupy a significant amount of space and requires high disk read/write speed.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "Manage Disk Cache",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_CoreAffinityOverride",
         "Value": "Manually configure Worker thread affinity",
         "Mode": "ConstString",
@@ -6442,6 +6439,38 @@
       {
         "Id": "Render_ReuseDynamicPreviewCache",
         "Value": "Reuse dynamic preview cache",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackend",
+        "Value": "Unset localization item:Advanced_RpcBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "Unset localization item:Advanced_RpcBackendExtraArguments()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "Unset localization item:Advanced_RpcBackendEnvironmentVariables()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "Unset localization item:Advanced_RpcBackendInvalidOptions()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8893,33 +8922,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "\u78C1\u789F\u5FEB\u53D6\u900F\u904E\u628A\u89E3\u78BC\u5F8C\u7684\u8CC7\u6599\u5132\u5B58\u5728\u78C1\u789F\u4E0A\uFF0C\u4F86\u7DE9\u89E3\u89E3\u78BC\u904E\u6162\u7684\u554F\u984C\u3002\r\u78C1\u789F\u5FEB\u53D6\u53EF\u80FD\u4F54\u7528\u76F8\u7576\u5927\u7684\u7A7A\u9593\uFF0C\u4E26\u4E14\u5C0D\u78C1\u789F\u7684\u8B80\u5BEB\u901F\u5EA6\u8981\u6C42\u8F03\u9AD8\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "\u7BA1\u7406\u78C1\u789F\u5FEB\u53D6",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "\u555F\u7528\u78C1\u789F\u89E3\u78BC\u5FEB\u53D6",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_CoreAffinityOverride_Desc",
         "Value": "\u4F7F\u7528(\u534A\u5F62)\u9017\u865F\u5206\u5272\uFF0C\u4F8B\u5982 0,1,2,3,4,5 \u7559\u7A7A\u5C07\u81EA\u52D5\u914D\u7F6E",
         "Mode": "ConstString",
@@ -9797,6 +9799,38 @@
       {
         "Id": "Render_ReuseDynamicPreviewCache",
         "Value": "\u91CD\u7528\u52D5\u614B\u9810\u89BD\u5FEB\u53D6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackend",
+        "Value": "Unset localization item:Advanced_RpcBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "Unset localization item:Advanced_RpcBackendExtraArguments()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "Unset localization item:Advanced_RpcBackendEnvironmentVariables()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "Unset localization item:Advanced_RpcBackendInvalidOptions()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12252,35 +12286,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "\u30C7\u30A3\u30B9\u30AF\u5FA9\u53F7\u30AD\u30E3\u30C3\u30B7\u30E5\u3092\u6709\u52B9\u306B\u3059\u308B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "\u30C7\u30A3\u30B9\u30AF\u30AD\u30E3\u30C3\u30B7\u30E5\u306F\u3001\u30C7\u30B3\u30FC\u30C9\u5F8C\u306E\u30C7\u30FC\u30BF\u3092\u30C7\u30A3\u30B9\u30AF\u306B\u4FDD\u5B58\u3059\u308B\u3053\u3068\u3067\u3001\u30C7\u30B3\u30FC\u30C9\u306E\u9045\u3055\u3092\u8EFD\u6E1B\u3057\u307E\u3059\u3002\r\u30C7\u30A3\u30B9\u30AF\u30AD\u30E3\u30C3\u30B7\u30E5\u306F\u5927\u304D\u306A\u5BB9\u91CF\u3092\u6D88\u8CBB\u3059\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u3001\u30C7\u30A3\u30B9\u30AF\u306E\u8AAD\u307F\u66F8\u304D\u901F\u5EA6\u304C\u9AD8\u3044\u3053\u3068\u304C\u6C42\u3081\u3089\u308C\u307E\u3059\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_CoreAffinityOverride",
         "Value": "\u4F5C\u696D\u30B9\u30EC\u30C3\u30C9\u306E\u89AA\u548C\u6027\u3092\u624B\u52D5\u8A2D\u5B9A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "\u30C7\u30A3\u30B9\u30AF\u30AD\u30E3\u30C3\u30B7\u30E5\u7BA1\u7406",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13156,6 +13163,38 @@
       {
         "Id": "Render_ReuseDynamicPreviewCache",
         "Value": "\u52D5\u7684\u30D7\u30EC\u30D3\u30E5\u30FC\u30AD\u30E3\u30C3\u30B7\u30E5\u3092\u518D\u5229\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackend",
+        "Value": "Unset localization item:Advanced_RpcBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "Unset localization item:Advanced_RpcBackendExtraArguments()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "Unset localization item:Advanced_RpcBackendEnvironmentVariables()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "Unset localization item:Advanced_RpcBackendInvalidOptions()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15605,24 +15644,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "\uB514\uC2A4\uD06C \uCE90\uC2DC\uB294 \uB514\uCF54\uB529\uB41C \uB370\uC774\uD130\uB97C \uB514\uC2A4\uD06C\uC5D0 \uC800\uC7A5\uD558\uC5EC \uB514\uCF54\uB529 \uC18D\uB3C4 \uC800\uD558 \uBB38\uC81C\uB97C \uC644\uD654\uD569\uB2C8\uB2E4.\r\uB514\uC2A4\uD06C \uCE90\uC2DC\uB294 \uC0C1\uB2F9\uD55C \uACF5\uAC04\uC744 \uCC28\uC9C0\uD560 \uC218 \uC788\uC73C\uBA70, \uB514\uC2A4\uD06C \uC77D\uAE30/\uC4F0\uAE30 \uC18D\uB3C4\uC5D0 \uB300\uD55C \uC694\uAD6C \uC0AC\uD56D\uC774 \uB192\uC2B5\uB2C8\uB2E4.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "\uB514\uC2A4\uD06C \uCE90\uC2DC \uAD00\uB9AC",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_CoreAffinityOverride_Desc",
         "Value": "(\uBC18\uAC01) \uC27C\uD45C\uB85C \uAD6C\uBD84\uD569\uB2C8\uB2E4. \uC608: 0,1,2,3,4,5 \uBE44\uC6CC\uB450\uBA74 \uC790\uB3D9\uC73C\uB85C \uC124\uC815\uB429\uB2C8\uB2E4.",
         "Mode": "ConstString",
@@ -15670,15 +15691,6 @@
       {
         "Id": "Render_PreferApproximateMixture",
         "Value": "\uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D \uACE0\uC18D \uD63C\uD569",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "\uB514\uC2A4\uD06C \uB514\uCF54\uB529 \uCE90\uC2DC \uD65C\uC131\uD654",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16508,6 +16520,38 @@
       {
         "Id": "Render_ReuseDynamicPreviewCache",
         "Value": "\uB3D9\uC801 \uBBF8\uB9AC\uBCF4\uAE30 \uCE90\uC2DC \uC7AC\uC0AC\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackend",
+        "Value": "Unset localization item:Advanced_RpcBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "Unset localization item:Advanced_RpcBackendExtraArguments()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "Unset localization item:Advanced_RpcBackendEnvironmentVariables()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "Unset localization item:Advanced_RpcBackendInvalidOptions()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18957,33 +19001,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "Activer le cache de d\u00E9codage disque",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "Le cache disque att\u00E9nue le probl\u00E8me de d\u00E9codage lent en stockant les donn\u00E9es d\u00E9cod\u00E9es sur le disque.\rLe cache disque peut occuper un espace consid\u00E9rable et exige une vitesse de lecture/\u00E9criture \u00E9lev\u00E9e.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "G\u00E9rer le cache disque",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_CoreAffinityOverride_Desc",
         "Value": "Utilisez des virgules pour s\u00E9parer, par exemple 0,1,2,3,4,5. Laissez vide pour une configuration automatique.",
         "Mode": "ConstString",
@@ -19861,6 +19878,38 @@
       {
         "Id": "Render_ReuseDynamicPreviewCache",
         "Value": "R\u00E9utiliser le cache des aper\u00E7us dynamiques",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackend",
+        "Value": "Unset localization item:Advanced_RpcBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "Unset localization item:Advanced_RpcBackendExtraArguments()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "Unset localization item:Advanced_RpcBackendEnvironmentVariables()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "Unset localization item:Advanced_RpcBackendInvalidOptions()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22305,35 +22354,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "\u064A\u062E\u0641\u0641 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0639\u0644\u0649 \u0627\u0644\u0642\u0631\u0635 \u0645\u0634\u0643\u0644\u0629 \u0628\u0637\u0621 \u0641\u0643 \u0627\u0644\u062A\u0634\u0641\u064A\u0631 \u0639\u0646 \u0637\u0631\u064A\u0642 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u064A \u062A\u0645 \u0641\u0643 \u062A\u0634\u0641\u064A\u0631\u0647\u0627 \u0639\u0644\u0649 \u0627\u0644\u0642\u0631\u0635.\r\u0642\u062F \u064A\u0633\u062A\u0647\u0644\u0643 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0639\u0644\u0649 \u0627\u0644\u0642\u0631\u0635 \u0645\u0633\u0627\u062D\u0629 \u0643\u0628\u064A\u0631\u0629\u060C \u0648\u064A\u062A\u0637\u0644\u0628 \u0633\u0631\u0639\u0629 \u0642\u0631\u0627\u0621\u0629 \u0648\u0643\u062A\u0627\u0628\u0629 \u0639\u0627\u0644\u064A\u0629 \u0644\u0644\u0642\u0631\u0635.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_DynamicPreviewTimeout",
         "Value": "\u0645\u0647\u0644\u0629 \u0639\u0631\u0636 \u0627\u0644\u0645\u0639\u0627\u064A\u0646\u0629 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0629 (\u0645\u0644\u0644\u064A \u062B\u0627\u0646\u064A\u0629)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "\u062A\u0645\u0643\u064A\u0646 \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0644\u0641\u0643 \u062A\u0634\u0641\u064A\u0631 \u0627\u0644\u0642\u0631\u0635",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "\u0625\u062F\u0627\u0631\u0629 \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0644\u0644\u0642\u0631\u0635",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -23217,6 +23239,38 @@
       {
         "Id": "Render_ReuseDynamicPreviewCache",
         "Value": "\u0625\u0639\u0627\u062F\u0629 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0644\u0644\u0645\u0639\u0627\u064A\u0646\u0629 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackend",
+        "Value": "Unset localization item:Advanced_RpcBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "Unset localization item:Advanced_RpcBackendExtraArguments()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "Unset localization item:Advanced_RpcBackendEnvironmentVariables()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "Unset localization item:Advanced_RpcBackendInvalidOptions()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -25666,33 +25720,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "Festplatten-Cache verringert das Problem der langsamen Dekodierung, indem es die decodierten Daten auf der Festplatte speichert.\rFestplatten-Cache kann betr\u00E4chtlichen Speicherplatz beanspruchen und erfordert eine hohe Lese- und Schreibgeschwindigkeit der Festplatte.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "Festplattencache verwalten",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "Festplatten-Decodierungs-Cache aktivieren",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_CoreAffinityOverride",
         "Value": "Manuelle Konfiguration der Worker-Thread-Affinit\u00E4t",
         "Mode": "ConstString",
@@ -26569,6 +26596,38 @@
       {
         "Id": "Render_ReuseDynamicPreviewCache",
         "Value": "Dynamischen Vorschaucache wiederverwenden",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackend",
+        "Value": "Unset localization item:Advanced_RpcBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "Unset localization item:Advanced_RpcBackendExtraArguments()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "Unset localization item:Advanced_RpcBackendEnvironmentVariables()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "Unset localization item:Advanced_RpcBackendInvalidOptions()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29020,33 +29079,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "El cach\u00E9 de disco alivia el problema de la decodificaci\u00F3n lenta al guardar los datos decodificados en el disco.\rEl cach\u00E9 de disco puede ocupar un espacio considerable y requiere una alta velocidad de lectura y escritura del disco.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "Habilitar cach\u00E9 de decodificaci\u00F3n de disco",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "Gestionar cach\u00E9 de disco",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_CoreAffinityOverride",
         "Value": "Configurar manualmente la afinidad de los hilos Worker",
         "Mode": "ConstString",
@@ -29924,6 +29956,38 @@
       {
         "Id": "Render_ReuseDynamicPreviewCache",
         "Value": "Reutilizar la cach\u00E9 de vista previa din\u00E1mica",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackend",
+        "Value": "Unset localization item:Advanced_RpcBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "Unset localization item:Advanced_RpcBackendExtraArguments()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "Unset localization item:Advanced_RpcBackendEnvironmentVariables()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "Unset localization item:Advanced_RpcBackendInvalidOptions()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -32374,24 +32438,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "Abilita la cache di decodifica del disco",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "Gestione cache disco",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_CoreAffinityOverride_Desc",
         "Value": "Usa virgole per separare, ad esempio 0,1,2,3,4,5. Lasciare vuoto per la configurazione automatica.",
         "Mode": "ConstString",
@@ -32421,15 +32467,6 @@
       {
         "Id": "Render_PreferApproximateMixture",
         "Value": "Blend rapido con accelerazione hardware",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "La cache su disco allevia il problema della decodifica lenta salvando i dati decodificati sul disco.\rLa cache su disco pu\u00F2 occupare uno spazio considerevole e richiede velocit\u00E0 di lettura/scrittura elevate.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -33278,6 +33315,38 @@
       {
         "Id": "Render_ReuseDynamicPreviewCache",
         "Value": "Riutilizza la cache delle anteprime dinamiche",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackend",
+        "Value": "Unset localization item:Advanced_RpcBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "Unset localization item:Advanced_RpcBackendExtraArguments()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "Unset localization item:Advanced_RpcBackendEnvironmentVariables()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "Unset localization item:Advanced_RpcBackendInvalidOptions()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -35728,33 +35797,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "W\u0142\u0105cz buforowanie dekodowania dysku",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "Pami\u0119\u0107 podr\u0119czna na dysku \u0142agodzi problem zbyt wolnego dekodowania poprzez przechowywanie zdekodowanych danych na dysku.\rPami\u0119\u0107 podr\u0119czna na dysku mo\u017Ce zajmowa\u0107 znaczn\u0105 przestrze\u0144 i wymaga wysokiej pr\u0119dko\u015Bci odczytu/zapisu dysku.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "Zarz\u0105dzaj pami\u0119ci\u0105 podr\u0119czn\u0105 dysku",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_CoreAffinityOverride",
         "Value": "R\u0119czna konfiguracja powinowactwa w\u0105tk\u00F3w Worker",
         "Mode": "ConstString",
@@ -36632,6 +36674,38 @@
       {
         "Id": "Render_ReuseDynamicPreviewCache",
         "Value": "U\u017Cyj ponownie pami\u0119ci podr\u0119cznej podgl\u0105du dynamicznego",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackend",
+        "Value": "Unset localization item:Advanced_RpcBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "Unset localization item:Advanced_RpcBackendExtraArguments()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "Unset localization item:Advanced_RpcBackendEnvironmentVariables()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "Unset localization item:Advanced_RpcBackendInvalidOptions()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39082,24 +39156,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "O cache em disco alivia o problema de decodifica\u00E7\u00E3o lenta, salvando os dados decodificados no disco.\rO cache em disco pode ocupar um espa\u00E7o consider\u00E1vel e exige alta velocidade de leitura e grava\u00E7\u00E3o do disco.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "Gerenciar cache de disco",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_CoreAffinityOverride",
         "Value": "Configurar manualmente a afinidade do thread Worker",
         "Mode": "ConstString",
@@ -39120,15 +39176,6 @@
       {
         "Id": "Render_EnableAutoThreadAffinity",
         "Value": "Permitir atribuir automaticamente o renderizador ao n\u00FAcleo de processador apropriado.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "Habilitar cache de decodifica\u00E7\u00E3o de disco",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39986,6 +40033,38 @@
       {
         "Id": "Render_ReuseDynamicPreviewCache",
         "Value": "Reutilizar cache de pr\u00E9via din\u00E2mica",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackend",
+        "Value": "Unset localization item:Advanced_RpcBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "Unset localization item:Advanced_RpcBackendExtraArguments()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "Unset localization item:Advanced_RpcBackendEnvironmentVariables()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "Unset localization item:Advanced_RpcBackendInvalidOptions()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -42440,33 +42519,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "\u0412\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u043A\u044D\u0448 \u0434\u0435\u043A\u043E\u0434\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F \u0434\u0438\u0441\u043A\u0430",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "\u0414\u0438\u0441\u043A\u043E\u0432\u044B\u0439 \u043A\u044D\u0448 \u0440\u0435\u0448\u0430\u0435\u0442 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0443 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0434\u0435\u043A\u043E\u0434\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F, \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u044F \u0434\u0435\u043A\u043E\u0434\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435 \u043D\u0430 \u0434\u0438\u0441\u043A\u0435. \u0414\u0438\u0441\u043A\u043E\u0432\u044B\u0439 \u043A\u044D\u0448 \u043C\u043E\u0436\u0435\u0442 \u0437\u0430\u043D\u0438\u043C\u0430\u0442\u044C \u0437\u043D\u0430\u0447\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u043F\u0440\u043E\u0441\u0442\u0440\u0430\u043D\u0441\u0442\u0432\u043E \u0438 \u043F\u0440\u0435\u0434\u044A\u044F\u0432\u043B\u044F\u0435\u0442 \u0432\u044B\u0441\u043E\u043A\u0438\u0435 \u0442\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u044F \u043A \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0447\u0442\u0435\u043D\u0438\u044F \u0438 \u0437\u0430\u043F\u0438\u0441\u0438 \u0434\u0438\u0441\u043A\u0430.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "\u0423\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0434\u0438\u0441\u043A\u043E\u0432\u044B\u043C \u043A\u044D\u0448\u0435\u043C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_CoreAffinityOverride_Desc",
         "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 \u0437\u0430\u043F\u044F\u0442\u0443\u044E (\u043F\u043E\u043B\u0443\u0448\u0438\u0440\u0438\u043D\u044B) \u0434\u043B\u044F \u0440\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u0438\u044F, \u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440 0,1,2,3,4,5. \u041E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u0443\u0441\u0442\u044B\u043C \u0434\u043B\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438.",
         "Mode": "ConstString",
@@ -43344,6 +43396,38 @@
       {
         "Id": "Render_ReuseDynamicPreviewCache",
         "Value": "\u041F\u043E\u0432\u0442\u043E\u0440\u043D\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u043A\u044D\u0448 \u0434\u0438\u043D\u0430\u043C\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u043F\u0440\u0435\u0434\u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackend",
+        "Value": "Unset localization item:Advanced_RpcBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "Unset localization item:Advanced_RpcBackendExtraArguments()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "Unset localization item:Advanced_RpcBackendEnvironmentVariables()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "Unset localization item:Advanced_RpcBackendInvalidOptions()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -45796,24 +45880,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "GeneralCodec_EnableDiskCache_Desc",
-        "Value": "Disk \u00F6nbelle\u011Fi, kod \u00E7\u00F6z\u00FClen verileri diske kaydederek kod \u00E7\u00F6zme yava\u015Fl\u0131\u011F\u0131 sorununu hafifletir.\rDisk \u00F6nbelle\u011Fi olduk\u00E7a fazla alan kaplayabilir ve disk okuma/yazma h\u0131z\u0131 i\u00E7in y\u00FCksek gereksinimler gerektirir.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_ManageDiskCache",
-        "Value": "Disk \u00F6nbelle\u011Fini y\u00F6net",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_CoreAffinityOverride",
         "Value": "Worker i\u015F par\u00E7ac\u0131\u011F\u0131 benze\u015Fimini elle yap\u0131land\u0131r",
         "Mode": "ConstString",
@@ -45870,15 +45936,6 @@
       {
         "Id": "Render_PrepareInWorkerThreads",
         "Value": "Paralel kod \u00E7\u00F6zmeye izin ver",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "GeneralCodec_EnableDiskCache",
-        "Value": "Disk kod \u00E7\u00F6zme \u00F6nbelle\u011Fini etkinle\u015Ftir",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -46700,6 +46757,38 @@
       {
         "Id": "Render_ReuseDynamicPreviewCache",
         "Value": "Dinamik \u00F6nizleme \u00F6nbelle\u011Fini yeniden kullan",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackend",
+        "Value": "Unset localization item:Advanced_RpcBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments",
+        "Value": "Unset localization item:Advanced_RpcBackendExtraArguments()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendEnvironmentVariables",
+        "Value": "Unset localization item:Advanced_RpcBackendEnvironmentVariables()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendInvalidOptions",
+        "Value": "Unset localization item:Advanced_RpcBackendInvalidOptions()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

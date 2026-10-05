@@ -1,4 +1,5 @@
 using ProtoBuf;
+using System.ComponentModel;
 
 namespace projectFrameCut.Render.Contracts;
 
@@ -12,6 +13,36 @@ public sealed class RegisterExternalVideoSourcesRequest
 public sealed class ExternalVideoSourceCatalog
 {
     [ProtoMember(1)] public List<ExternalVideoSourceDescriptor> Sources { get; set; } = [];
+}
+
+[ProtoContract]
+public sealed class ExternalVideoSourceClientCatalog
+{
+    [ProtoMember(1)] public List<ExternalVideoSourceClientStatus> Clients { get; set; } = [];
+}
+
+[ProtoContract]
+public sealed class ExternalVideoSourceClientStatus
+{
+    [ProtoMember(1)] public Guid ClientId { get; set; }
+    [ProtoMember(2)] public string ClientName { get; set; } = string.Empty;
+    [ProtoMember(3)] public bool Loaded { get; set; }
+    [ProtoMember(4)] public List<ExternalVideoSourceDescriptor> Sources { get; set; } = [];
+}
+
+[ProtoContract]
+public enum ExternalVideoSourceClientAction
+{
+    [ProtoEnum] Load = 0,
+    [ProtoEnum] Unload = 1,
+    [ProtoEnum] Remove = 2,
+}
+
+[ProtoContract]
+public sealed class ManageExternalVideoSourceClientRequest
+{
+    [ProtoMember(1)] public Guid ClientId { get; set; }
+    [ProtoMember(2)] public ExternalVideoSourceClientAction Action { get; set; }
 }
 
 [ProtoContract]
@@ -32,6 +63,8 @@ public sealed class ExternalVideoSourceDescriptor
     [ProtoMember(13)] public bool SupportsAlpha { get; set; }
     [ProtoMember(14)] public string ClientName { get; set; } = string.Empty;
     [ProtoMember(15)] public Dictionary<string, string> Metadata { get; set; } = [];
+    /// <summary>Whether repeated reads of the same frame produce identical content.</summary>
+    [ProtoMember(16), DefaultValue(true)] public bool AllowCachingResult { get; set; } = true;
 }
 
 [ProtoContract]

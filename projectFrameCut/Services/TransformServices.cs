@@ -53,6 +53,8 @@ namespace projectFrameCut.Services
         /// Returns display names for all available transforms, keyed by type name.
         /// Falls back to the type name itself when no localized display name is registered.
         /// </summary>
+        public static string GetTransformName(string typeName) => PluginManager.GetLocalizationItem("DisplayName_Transform_" + typeName, typeName);
+
         public static Dictionary<string, string> GetLocalizedTransformNames()
         {
             var transforms = GetAvailableTransforms();

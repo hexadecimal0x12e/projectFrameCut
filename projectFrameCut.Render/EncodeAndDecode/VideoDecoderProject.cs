@@ -25,6 +25,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public string TypeName => "DecoderContextPJFCProject";
 
         public int? ResultBitPerPixel { get; private set; } = null;
+        public bool AllowCachingResult => renderer is not null && renderer.Clips.All(Timeline.CanCacheClipSource);
 
         public string[] PreferredExtension => [".pjfc"];
 
@@ -42,7 +43,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public bool EnableLock { get; set; }
         public bool StrictMode { get; set; }
-        public bool EnableDiskCache { get; set; }
 
         public string ProjectRoot { get; private set; } = "";
 

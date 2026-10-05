@@ -165,7 +165,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private async Task RefreshPreviewFromCurrentProviderAsync()
+    internal async Task RefreshPreviewFromCurrentProviderAsync()
     {
         if (UseDynamicPreview)
         {
@@ -236,7 +236,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             FixedPreviewHost.Content = null;
             FixedTimelineHost.Content = null;
             FixedClipInfoHost.Content = null;
-            if (AddClipSubwindow is not null)
+            if (AddClipSubwindow is not null && (_fixedLayoutInitialized || !_workspaceWindowHost.WasLayoutRestored))
             {
                 _workspaceWindowHost?.OpenWindow("clips.add");
             }

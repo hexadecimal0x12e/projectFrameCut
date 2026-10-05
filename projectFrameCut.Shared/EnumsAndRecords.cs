@@ -99,6 +99,7 @@ namespace projectFrameCut.Shared
         Custom5,
     }
 
+    [Obsolete("Use TransformDefinition instead.")]
     public enum TransformType
     {
         /// <summary>
@@ -120,6 +121,29 @@ namespace projectFrameCut.Shared
         /// To do in future.
         /// </summary>
         AudioTransform
+    }
+
+    [Flags]
+    public enum TransformDefinition
+    {
+        /// <summary>
+        /// Indicates that the transform supports one input clip. This flag is used to specify that the transform can operate with a single input source.
+        /// </summary>
+        SupportOneInput = 1 << 0,
+        /// <summary>
+        /// Indicates that the transform supports two input clips. This flag is used to specify that the transform can operate with two input sources.
+        /// </summary>
+        SupportTwoInput = 1 << 1,
+
+        /// <summary>
+        /// Indicates that the transform is requires a clip(image) input.
+        /// </summary>
+        Clip = 1 << 10,
+        /// <summary>
+        /// Indicates that the transform is requires an audio input.
+        /// </summary>
+        Audio = 1 << 11,
+
     }
 
     public enum TextLanguage

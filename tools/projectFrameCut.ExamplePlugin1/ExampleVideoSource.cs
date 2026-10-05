@@ -13,6 +13,7 @@ public sealed class ExampleVideoSource : IVideoSource
     public string? SourcePath { get; }
     public string TypeName => "ExampleVideoSource";
     public int? ResultBitPerPixel => 8;
+    public bool AllowCachingResult => true;
     public string[] PreferredExtension => [".examplevideo"];
     public uint Index { get; set; }
     public long TotalFrames => 300;

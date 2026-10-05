@@ -2624,6 +2624,35 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipFallback_ExternalSourceUnavailable",
+        "Value": "\u5916\u90E8\u89C6\u9891\u6E90\u672A\u52A0\u8F7D\u6216\u6682\u65F6\u4E0D\u53EF\u7528\u3002\n\u8BF7\u5728\u9879\u76EE\u8BBE\u7F6E\u7684\u201C\u5916\u90E8\u6E90\u201D\u4E2D\u52A0\u8F7D\u6B64\u6E90\uFF0C\u6216\u68C0\u67E5\u5BA2\u6237\u7AEF\u8FDE\u63A5\u540E\u91CD\u8BD5\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_SourceInfo",
+        "Value": "\u5A92\u4F53\u4FE1\u606F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_VideoCodec_FrameCount",
+        "Value": "{count} \u5E27",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "long",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [

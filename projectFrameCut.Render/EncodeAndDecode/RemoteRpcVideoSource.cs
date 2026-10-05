@@ -17,14 +17,15 @@ public class RemoteRpcVideoSource : IVideoSource
 
     public RemoteRpcVideoSource(string source) : this(ParsePath(source)) { }
 
-    protected RemoteRpcVideoSource(ExternalVideoSourceReference source)
+    protected RemoteRpcVideoSource(ExternalVideoSourceReference source, bool useRpcCatalog = true)
     {
         _source = source;
-        _descriptor = ExternalVideoSourceRegistry.Find(source) ?? source.Descriptor;
+        _descriptor = (useRpcCatalog ? ExternalVideoSourceRegistry.Find(source) : null) ?? source.Descriptor;
     }
 
-    public string TypeName => DecoderTypeName;
+    public virtual string TypeName => DecoderTypeName;
     public int? ResultBitPerPixel => _descriptor?.HasKnownResultBitsPerPixel == true ? _descriptor.ResultBitsPerPixel : null;
+    public bool AllowCachingResult => _descriptor?.AllowCachingResult ?? false;
     public string[] PreferredExtension => _descriptor?.PreferredExtensions.ToArray() ?? [];
     public uint Index { get; set; }
     public long TotalFrames => _descriptor?.TotalFrames ?? -1;
@@ -45,6 +46,7 @@ public class RemoteRpcVideoSource : IVideoSource
     }.Encode()}";
 
     public static bool IsPath(string? path) => path?.StartsWith($"#{DecoderTypeName}:", StringComparison.Ordinal) == true;
+    public static bool IsExternalPath(string? path) => IsPath(path) || ProjectExternalVideoSource.IsPath(path);
 
     public static bool TryGetDescriptor(string path, out ExternalVideoSourceDescriptor descriptor)
     {
@@ -75,35 +77,35 @@ public class RemoteRpcVideoSource : IVideoSource
         if (_instanceId != Guid.Empty) return;
         try
         {
-            var created = ExternalVideoSourceRegistry.CreateAsync(_source, CancellationToken.None).AsTask().GetAwaiter().GetResult();
+            var created = CreateInstanceAsync(_source).AsTask().GetAwaiter().GetResult();
             if (created.InstanceId == Guid.Empty) throw new InvalidDataException("External RPC video source returned an empty instance ID.");
             _instanceId = created.InstanceId;
-            var initialized = ExternalVideoSourceRegistry.InitializeAsync(_source.ClientId, State(), CancellationToken.None).AsTask().GetAwaiter().GetResult();
+            var initialized = InitializeInstanceAsync(_source.ClientId, State()).AsTask().GetAwaiter().GetResult();
             if (initialized.InstanceId != _instanceId) throw new InvalidDataException("External RPC video source initialization returned a different instance ID.");
             _descriptor = initialized.Descriptor;
-            Log($"Initialized external RPC video source {_source.ClientId}/{_source.SourceId}.");
+            Log($"Initialized external RPC video source {_source.ClientId}/{_source.SourceId}, AllowCachingResult={AllowCachingResult}.");
         }
         catch
         {
             if (_instanceId != Guid.Empty)
-                try { ExternalVideoSourceRegistry.ReleaseAsync(_source.ClientId, State()).AsTask().GetAwaiter().GetResult(); } catch { }
+                try { ReleaseInstanceAsync(_source.ClientId, State()).AsTask().GetAwaiter().GetResult(); } catch { }
             _instanceId = Guid.Empty;
             throw;
         }
     }
 
-    public IVideoSource CreateNew(string newSource) => Open(newSource);
+    public virtual IVideoSource CreateNew(string newSource) => Open(newSource);
 
     public IVideoSource FromStream(Stream source, long length, bool leaveOpen = false) =>
         throw new NotSupportedException("External RPC video sources cannot be created from streams.");
 
-    public IPicture GetFrame(uint targetFrame) => Read(new()
+    public virtual IPicture GetFrame(uint targetFrame) => Read(new()
     {
         State = State(),
         TargetFrame = targetFrame,
     });
 
-    public IPicture GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight) => Read(new()
+    public virtual IPicture GetFrame(uint targetFrame, int sourceX, int sourceY, int sourceWidth, int sourceHeight, int targetWidth, int targetHeight) => Read(new()
     {
         State = State(),
         TargetFrame = targetFrame,
@@ -122,13 +124,13 @@ public class RemoteRpcVideoSource : IVideoSource
         Disposed = true;
         if (_source is not null && _instanceId != Guid.Empty)
         {
-            try { ExternalVideoSourceRegistry.ReleaseAsync(_source.ClientId, State()).AsTask().GetAwaiter().GetResult(); }
+            try { ReleaseInstanceAsync(_source.ClientId, State()).AsTask().GetAwaiter().GetResult(); }
             catch (Exception ex) { Log(ex, "Release external RPC video source", this); }
         }
         _instanceId = Guid.Empty;
     }
 
-    private IPicture Read(ExternalVideoSourceReadRequest request)
+    protected IPicture Read(ExternalVideoSourceReadRequest request)
     {
         var frame = ReadFrame(request);
         return frame.Brightness.Length > 0 ? ToHdr(frame) : ToPicture(frame);
@@ -141,7 +143,7 @@ public class RemoteRpcVideoSource : IVideoSource
         request.State = State();
         try
         {
-            var frame = ExternalVideoSourceRegistry.ReadAsync(_source!.ClientId, request, CancellationToken.None).AsTask().GetAwaiter().GetResult();
+            var frame = ReadInstanceAsync(_source!.ClientId, request).AsTask().GetAwaiter().GetResult();
             frame.Validate();
             Index = request.TargetFrame == uint.MaxValue ? request.TargetFrame : request.TargetFrame + 1;
             return frame;
@@ -151,7 +153,7 @@ public class RemoteRpcVideoSource : IVideoSource
             _instanceId = Guid.Empty;
             Initialize();
             request.State = State();
-            var frame = ExternalVideoSourceRegistry.ReadAsync(_source!.ClientId, request, CancellationToken.None).AsTask().GetAwaiter().GetResult();
+            var frame = ReadInstanceAsync(_source!.ClientId, request).AsTask().GetAwaiter().GetResult();
             frame.Validate();
             Index = request.TargetFrame == uint.MaxValue ? request.TargetFrame : request.TargetFrame + 1;
             return frame;
@@ -162,6 +164,11 @@ public class RemoteRpcVideoSource : IVideoSource
     {
         if (_instanceId == Guid.Empty) Initialize();
     }
+
+    protected virtual ValueTask<ExternalVideoSourceInstance> CreateInstanceAsync(ExternalVideoSourceReference source) => ExternalVideoSourceRegistry.CreateAsync(source, CancellationToken.None);
+    protected virtual ValueTask<ExternalVideoSourceInstance> InitializeInstanceAsync(Guid clientId, ExternalVideoSourceStateRequest state) => ExternalVideoSourceRegistry.InitializeAsync(clientId, state, CancellationToken.None);
+    protected virtual ValueTask<ExternalVideoFrame> ReadInstanceAsync(Guid clientId, ExternalVideoSourceReadRequest request) => ExternalVideoSourceRegistry.ReadAsync(clientId, request, CancellationToken.None);
+    protected virtual ValueTask ReleaseInstanceAsync(Guid clientId, ExternalVideoSourceStateRequest state) => ExternalVideoSourceRegistry.ReleaseAsync(clientId, state);
 
     protected ExternalVideoSourceStateRequest State() => new()
     {

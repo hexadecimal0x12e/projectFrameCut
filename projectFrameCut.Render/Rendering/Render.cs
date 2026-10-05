@@ -1,4 +1,4 @@
-using projectFrameCut.Drawing.Processing.Resizing;
+﻿using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
@@ -1596,7 +1596,8 @@ namespace projectFrameCut.Render.Rendering
             }
 
             // 1) 优先从 builder 的未写入缓存取（帧已合成但尚未写入视频文件）
-            if (builder?.TryGetCachedFrame(frameIndex, out var cachedFrame) == true && cachedFrame is not null)
+            if (builder?.TryGetCachedFrame(frameIndex, out var cachedFrame) == true && cachedFrame is not null
+                && Timeline.CanCacheFrame(Clips, frameIndex))
             {
                 Log($"[GetPictureForFrame] Got frame {frameIndex} from VideoBuilder cache.");
                 return cachedFrame.Clone();
@@ -1691,7 +1692,8 @@ namespace projectFrameCut.Render.Rendering
                 // 优先从 FrameCache 取已解码的源帧（不干扰原始缓存，clone 副本用于合成）
                 if (FrameCache.TryGetValue(clip.Id, out var perClipCache)
                     && perClipCache.TryGetValue(frameIndex, out var cachedFrame)
-                    && cachedFrame is not null)
+                    && cachedFrame is not null
+                    && Timeline.CanCacheClipFrame(Clips, clip))
                 {
                     frame = cachedFrame.Clone();
                     if (_dynamicPreviewFrames.TryGetValue(cachedFrame, out _))
@@ -1752,34 +1754,7 @@ namespace projectFrameCut.Render.Rendering
             int clipTargetWidth = ResolveClipOutputWidth(item, TargetWidth, ProjectRelativeWidth);
             int clipTargetHeight = ResolveClipOutputHeight(item, TargetHeight, ProjectRelativeHeight);
 
-            if (item.ClipType == ClipMode.TransformClip && item is TransformContainer c)
-            {
-                if (c.Transform == null) c.ReInit(_ppb);
-                if (c.Transform is not ITransform t)
-                {
-                    if (throwOnMissingTransformInput) throw new NullReferenceException($"Transform for clip {c.Id} is null");
-                    Log($"[Render] WARN: Transform for clip {c.Id} is null, skipping.");
-                    return null;
-                }
-
-                IClip? rightClip = null;
-                if (t.TransformType != TransformType.OneInputSingleFrameTransform
-                    && !IndexedClipList.TryGetValue(t.BindedRightClip, out rightClip)
-                    && throwOnMissingTransformInput)
-                {
-                    throw new NullReferenceException($"Transform {t.Name}({t.TypeName})'s right input for clip {c.Id} is null");
-                }
-
-                if (!IndexedClipList.TryGetValue(t.BindedLeftClip, out IClip? leftClip))
-                {
-                    if (throwOnMissingTransformInput) throw new NullReferenceException($"Transform {t.Name}({t.TypeName})'s left input for clip {c.Id} is null");
-                    Log($"[Render] WARN: Left input for transform clip {c.Id} not found, skipping.");
-                    return null;
-                }
-
-                frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, clipTargetWidth, clipTargetHeight, frameIndex, ppb);
-            }
-            else if (item is IImmutableContentClip immutableContent)
+            if (item is IImmutableContentClip immutableContent)
             {
                 string immutableCacheKey = $"__immutable_{item.Id}_{clipTargetWidth}_{clipTargetHeight}_{ppb}";
                 var cacheFrame = ImmutableContentCache.GetOrAdd(immutableCacheKey, _ =>
@@ -1838,6 +1813,9 @@ namespace projectFrameCut.Render.Rendering
             frame = null!;
             if (!ReuseDynamicPreviewCache || string.IsNullOrWhiteSpace(DynamicPreviewCacheProjectRoot))
                 return false;
+            if (EncodeAndDecode.RemoteRpcVideoSource.IsExternalPath(clip.FilePath)) return false;
+            if (TransformProcessing.HasActiveTransform(clip, Clips, frameIndex)) return false;
+            if (!Timeline.CanCacheClipFrame(Clips, clip)) return false;
 
             var directory = Path.Combine(DynamicPreviewCacheProjectRoot, "thumbs", "perClip", clip.Id.ToString(), "dynamic");
             if (!Directory.Exists(directory)) return false;
@@ -1956,6 +1934,16 @@ namespace projectFrameCut.Render.Rendering
 
             try
             {
+                if (TransformProcessing.TryRender(clip, Clips, targetFrame, TargetWidth, TargetHeight,
+                    layoutRelativeWidth, layoutRelativeHeight, _ppb, out var transition, SDRClipsBrightnessInHDRMode, AutoCenterImplicitClip))
+                {
+                    var mixer = clip.MixtureInstance ?? ClassicOverlayMixture.Default;
+                    var mixed = mixer.Mix(currentResult ?? BlankFrame, transition!, _ppb, 0, 0, TargetWidth, TargetHeight);
+                    if (!ReferenceEquals(mixed, transition)) transition!.Dispose();
+                    if (currentResult is not null && !ReferenceEquals(currentResult, mixed)) currentResult.Dispose();
+                    frame.Dispose();
+                    return mixed;
+                }
                 var reusedPreview = _dynamicPreviewFrames.TryGetValue(frame, out _);
                 ClipPositionTuple targetPos = new(
                     clip.TargetX,
@@ -2758,6 +2746,7 @@ namespace projectFrameCut.Render.Rendering
                 catch { }
                 ImmutableContentCache.Clear();
 
+                foreach (var clip in Clips) TransformProcessing.Release(clip.ExtraData);
                 foreach (var item in ClipNeedForFrame.Values.SelectMany(c => c))
                 {
                     try

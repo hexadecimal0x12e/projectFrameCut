@@ -92,7 +92,7 @@ public sealed class IntegratedApiServer : IAsyncDisposable
             _services = serviceCollection.BuildServiceProvider();
 
             if (_headlessService is not null && !_headlessService.IsInitialized && !string.IsNullOrWhiteSpace(options.ProjectRoot))
-                await _headlessService.InitializeAsync(options.ProjectRoot, cancellationToken).ConfigureAwait(false);
+                await _headlessService.InitializeAsync(options.ProjectRoot, cancellationToken, projectFrameCut.Render.PluginIsolation.ProjectExternalSourceDatabase.ParseApprovals(options.ProjectRoot, options.AllowExternalSources)).ConfigureAwait(false);
 
             bool ssl = string.Equals(options.ListenUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
             var settings = new WebserverSettings(options.ListenUri.Host, options.ListenUri.Port, ssl);

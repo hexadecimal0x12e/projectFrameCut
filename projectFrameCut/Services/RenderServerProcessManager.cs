@@ -185,6 +185,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             }
             startInfo.EnvironmentVariables["DOTNET_gcServer"] = "1";
             startInfo.EnvironmentVariables["DOTNET_GCHeapCount"] = Environment.ProcessorCount.ToString("x");
+            ApplyAdditionalBackendOptions(startInfo);
             try
             {
                 LogDiagnostic($"Starting worker {startInfo.FileName} with args: {JsonSerializer.Serialize(startInfo.ArgumentList)}");
@@ -397,6 +398,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 var startInfo = CliProcessLauncher.CreateStartInfo(executable, true);
                 startInfo.ArgumentList.Add("render");
                 Add("project", options.ProjectRoot);
+                Add("externalSourceApprovals", Convert.ToBase64String(RenderRpcSerializer.Serialize(new SetProjectExternalSourcesRequest { AllowedSources = options.AllowedExternalSources })));
                 Add("output", options.OutputPath);
                 Add("output_options", $"{options.Width},{options.Height},{options.FrameRate},{options.PixelFormat},{options.Encoder}");
                 Add("target", options.WriteToVoid ? "void" : "all");
@@ -427,6 +429,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 if (!string.IsNullOrWhiteSpace(options.PreviewPath)) Add("preview_path", options.PreviewPath);
                 startInfo.ArgumentList.Add("--consoleLog");
                 if (MyLoggerExtensions.LoggingDiagnosticInfo) startInfo.ArgumentList.Add("--logDiagnostic");
+                ApplyAdditionalBackendOptions(startInfo);
 
                 _process = Process.Start(startInfo) ?? throw new InvalidOperationException("Unable to start the CLI renderer.");
                 AttachProcessLogging(_process);
@@ -452,6 +455,32 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             }
         }
         throw new InvalidOperationException("Unable to start pjfc-cli in render mode.", firstError);
+    }
+
+    private static void ApplyAdditionalBackendOptions(ProcessStartInfo startInfo)
+    {
+        ApplyAdditionalBackendOption(startInfo, "render_RpcServerExtraArguments", SettingsManager.GetSetting("render_RpcServerExtraArguments"));
+        ApplyAdditionalBackendOption(startInfo, "render_RpcServerEnvironmentVariables", SettingsManager.GetSetting("render_RpcServerEnvironmentVariables"));
+    }
+
+    internal static void ApplyAdditionalBackendOption(ProcessStartInfo startInfo, string id, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        switch (id)
+        {
+            case "render_RpcServerExtraArguments":
+                var args = JsonSerializer.Deserialize<string[]>(value) ?? throw new JsonException("Expected a JSON string array.");
+                if (args.Any(a => a is null || a.Contains('\0')))
+                    throw new ArgumentException("Backend arguments must be strings without null characters.");
+                foreach (var arg in args) startInfo.ArgumentList.Add(arg);
+                break;
+            case "render_RpcServerEnvironmentVariables":
+                var env = JsonSerializer.Deserialize<Dictionary<string, string>>(value) ?? throw new JsonException("Expected a JSON object.");
+                if (env.Any(e => string.IsNullOrWhiteSpace(e.Key) || e.Key.Contains('=') || e.Key.Contains('\0') || e.Value is null || e.Value.Contains('\0')))
+                    throw new ArgumentException("Backend environment variables require valid names and string values without null characters.");
+                foreach (var e in env) startInfo.Environment[e.Key] = e.Value;
+                break;
+        }
     }
 
     private static void AttachProcessLogging(Process process)
@@ -704,6 +733,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
 
 internal sealed record CliRenderProcessOptions
 {
+    public List<ProjectExternalSourceApproval> AllowedExternalSources { get; init; } = [];
     public Guid JobId { get; init; } = Guid.NewGuid();
     public required string ProjectRoot { get; init; }
     public required string ProjectName { get; init; }

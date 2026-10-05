@@ -14,7 +14,7 @@ public sealed class ExternalVideoSourceContractTests
             SourceId = "camera/main",
             DecoderName = "CameraDecoder",
             Metadata = new() { ["device"] = "front" },
-            Descriptor = new() { Name = "Front camera", Width = 1920, Height = 1080, SupportsHdr = true },
+            Descriptor = new() { Name = "Front camera", Width = 1920, Height = 1080, SupportsHdr = true, AllowCachingResult = false },
         };
 
         var encoded = source.Encode();
@@ -26,7 +26,24 @@ public sealed class ExternalVideoSourceContractTests
         Assert.AreEqual("front", decoded.Metadata["device"]);
         Assert.AreEqual(1920, decoded.Descriptor.Width);
         Assert.IsTrue(decoded.Descriptor.SupportsHdr);
+        Assert.IsFalse(decoded.Descriptor.AllowCachingResult);
         Assert.IsFalse(encoded.Contains("token", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void CacheCapabilityRoundTripsForExternalAndIsolatedSources(bool allowCaching)
+    {
+        Assert.AreEqual(allowCaching, RenderRpcSerializer.Clone(new ExternalVideoSourceDescriptor { AllowCachingResult = allowCaching }).AllowCachingResult);
+        Assert.AreEqual(allowCaching, RenderRpcSerializer.Clone(new IsolationVideoSourceDescriptor { AllowCachingResult = allowCaching }).AllowCachingResult);
+    }
+
+    [TestMethod]
+    public void LegacyDescriptorsAllowCachingWhenFieldIsMissing()
+    {
+        Assert.IsTrue(RenderRpcSerializer.Deserialize<ExternalVideoSourceDescriptor>([]).AllowCachingResult);
+        Assert.IsTrue(RenderRpcSerializer.Deserialize<IsolationVideoSourceDescriptor>([]).AllowCachingResult);
     }
 
     [TestMethod]

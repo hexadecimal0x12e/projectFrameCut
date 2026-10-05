@@ -51,10 +51,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public string TypeName => "HttpDecoderContext";
 
         public int? ResultBitPerPixel => 8;
+        public bool AllowCachingResult => false;
 
         public bool EnableLock { get; set; } = false;
         public bool StrictMode { get; set; }
-        public bool EnableDiskCache { get; set; }
         private Lock locker = new();
 
         public HttpDecoderContext()

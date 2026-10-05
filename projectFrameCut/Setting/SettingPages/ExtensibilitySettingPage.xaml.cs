@@ -187,7 +187,7 @@ public partial class ExtensibilitySettingPage : ContentPage
         {
             ppb.AddSeparator()
                 .AddText(new TitleAndDescriptionLineLabel(client.AppName, $"{client.Author} ({client.ClientId})"))
-                .AddText($"{Localized.VideoCacheManagePage_LastAccessIn}{client.LastUsedAt?.ToLocalTime().ToString("g") ?? "-"}")
+                .AddText($"{Localized.Extensibility_RPC_ClientLastUsed}{client.LastUsedAt?.ToLocalTime().ToString("g") ?? "-"}")
                 .AddButton($"ExternalRpcRevoke,{client.ClientId}", SettingLocalizedResources.ExternalRpc_Revoke);
         }
         return ppb;

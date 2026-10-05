@@ -31,6 +31,7 @@ using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
@@ -128,6 +129,15 @@ namespace projectFrameCut.DraftStuff
                 Content = BuildGeneralTab(clip, handler),
                 Tag = "general"
             });
+            if (DraftPage.SupportsPictureTransform(clip))
+            {
+                tabbedView.TabItems.Add(new TabbedViewItem
+                {
+                    Header = Localized.Transform_Tab,
+                    LazyContentFactory = () => BuildTransformTab(clip),
+                    Tag = "transform"
+                });
+            }
             if (clip.ClipType is ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip)
             {
                 tabbedView.TabItems.Add(new TabbedViewItem
@@ -277,6 +287,13 @@ namespace projectFrameCut.DraftStuff
         {
             string currentColorHex = clip.ClipColor ?? GetDefaultColorHex(clip.ClipType);
             var targetVideoClip = page.GetLoadedClipInstance(clip.Id) as VideoClip;
+            ExternalVideoSourceDescriptor? externalSource = null;
+            if (RemoteRpcVideoSource.IsExternalPath(clip.SourcePath)
+                && (ProjectExternalVideoSource.TryGetDescriptor(clip.SourcePath!, out var source)
+                    || RemoteRpcVideoSource.TryGetDescriptor(clip.SourcePath!, out source)))
+                externalSource = source;
+            var mediaResources = PPLocalizedResources.General_VideoCodec_SourceInfo.StartsWith("Unset localization item:", StringComparison.Ordinal)
+                ? ISimpleLocalizerBase_PropertyPanel.GetMapping()["zh-CN"] : PPLocalizedResources;
             string ToArgbHex(Color color)
             {
                 var a = (int)Math.Round(color.Alpha * 255);
@@ -374,34 +391,17 @@ namespace projectFrameCut.DraftStuff
 
             string GetVideoSourceText()
             {
-                if (string.IsNullOrWhiteSpace(clip.SourcePath))
+                if (string.IsNullOrWhiteSpace(clip.SourcePath)) return Localized._Unknown;
+                if (externalSource is { } descriptor)
                 {
-                    return "Unknown";
-                }
-
-                if (RemoteRpcVideoSource.TryGetDescriptor(clip.SourcePath, out ExternalVideoSourceDescriptor descriptor))
-                {
-                    string clientName = string.IsNullOrWhiteSpace(descriptor.ClientName)
-                        ? descriptor.ClientId.ToString("D")
-                        : descriptor.ClientName;
-                    string resolution = descriptor.Width > 0 && descriptor.Height > 0
-                        ? $"{descriptor.Width}×{descriptor.Height}"
-                        : "Unknown resolution";
-                    string fps = descriptor.Fps > 0 ? $"{descriptor.Fps:0.###} fps" : "Unknown fps";
-                    string frames = descriptor.TotalFrames >= 0 ? $"{descriptor.TotalFrames} frames" : "Unknown length";
-                    string capabilities = string.Join(", ", new[]
-                    {
-                        descriptor.SupportsHdr ? "HDR" : null,
-                        descriptor.SupportsAlpha ? "Alpha" : null,
-                        descriptor.HasKnownResultBitsPerPixel ? $"{descriptor.ResultBitsPerPixel} bpp" : null
-                    }.Where(x => x is not null).Select(x => x!));
-                    string metadata = descriptor.Metadata is not { Count: > 0 }
-                        ? string.Empty
-                        : $"\nMetadata: {string.Join(", ", descriptor.Metadata.Select(x => $"{x.Key}={x.Value}"))}";
-
-                    return $"RPC client: {clientName}\nClient ID: {descriptor.ClientId:D}\nSource: {descriptor.Name} ({descriptor.SourceId})\nDecoder: {descriptor.DecoderName}\nFormat: {resolution}, {fps}, {frames}"
-                        + (string.IsNullOrEmpty(capabilities) ? string.Empty : $"\nCapabilities: {capabilities}")
-                        + metadata;
+                    var name = string.IsNullOrWhiteSpace(descriptor.Name) ? descriptor.SourceId : descriptor.Name;
+                    if (!string.IsNullOrWhiteSpace(descriptor.ClientName) && descriptor.ClientName != name)
+                        name += $"\n{descriptor.ClientName}";
+                    var info = new List<string>();
+                    if (descriptor.Width > 0 && descriptor.Height > 0) info.Add($"{descriptor.Width}\u00D7{descriptor.Height}");
+                    if (double.IsFinite(descriptor.Fps) && descriptor.Fps > 0) info.Add($"{descriptor.Fps:0.###} fps");
+                    if (descriptor.TotalFrames >= 0) info.Add(mediaResources.General_VideoCodec_FrameCount(descriptor.TotalFrames));
+                    return info.Count == 0 ? name : $"{name}\n{string.Join(" \u00B7 ", info)}";
                 }
 
                 if (clip.SourcePath.StartsWith("$"))
@@ -473,6 +473,28 @@ namespace projectFrameCut.DraftStuff
                 [PPLocalizedResources.General_VideoCodec_TargetMode_ffmpegDevices] = "FFmpegDeviceDecoderContext",
             };
 
+            string GetVideoTargetFormatText()
+            {
+                if (externalSource is null)
+                {
+                    var id = targetVideoClip?.DecoderName ?? (currentVideoDecoderId == "auto" ? null : currentVideoDecoderId);
+                    return id is null ? Localized._Unknown : allVideoDecoderOptionLabelToId.ReverseLookup(id, PPLocalizedResources.General_VideoCodec_TargetMode_Unknown(id));
+                }
+
+                var decoder = targetVideoClip?.Decoder;
+                string format;
+                if (decoder is IHDRVideoSource || decoder is null && externalSource.SupportsHdr)
+                    format = PPLocalizedResources.General_VideoCodec_TargetMode_hdr;
+                else
+                    format = (decoder?.ResultBitPerPixel ?? (externalSource.HasKnownResultBitsPerPixel ? externalSource.ResultBitsPerPixel : 0)) switch
+                    {
+                        8 => PPLocalizedResources.General_VideoCodec_TargetMode_8bpp,
+                        16 => PPLocalizedResources.General_VideoCodec_TargetMode_16bpp,
+                        _ => Localized._Unknown
+                    };
+                return externalSource.SupportsAlpha ? $"{format} \u00B7 Alpha" : format;
+            }
+
             if (!videoDecoderOptionLabelToId.Values.Contains(currentVideoDecoderId, StringComparer.Ordinal))
             {
                 videoDecoderOptionLabelToId[PPLocalizedResources.General_VideoCodec_TargetMode_Unknown(currentVideoDecoderId)] = currentVideoDecoderId;
@@ -497,7 +519,7 @@ namespace projectFrameCut.DraftStuff
                 };
                 failureContent.Add(new Label
                 {
-                    Text = "⚠",
+                    Text = "\u26A0",
                     TextColor = Colors.Magenta,
                     FontSize = 22,
                     FontAttributes = FontAttributes.Bold,
@@ -724,15 +746,15 @@ namespace projectFrameCut.DraftStuff
                              selectedVideoDecoderLabel)
                              .AppendWhen(targetVideoClip?.Decoder?.GetType() == typeof(HDRDecoderContext),
                                 cc1 => cc1.AddSlider("hdrBrightnessOffset", PPLocalizedResources.General_VideoCodec_HDRBrightnessOffset, -1, 1, targetVideoClip?.HDRBrightnessOffset ?? 0, eventCallMode: SliderUpdateEventCallMode.OnMouseUp)),
-                      cc => cc.AddCustomChild(PPLocalizedResources.General_VideoCodec_TargetMode, new Label { Text = allVideoDecoderOptionLabelToId.ReverseLookup(targetVideoClip?.DecoderName ?? "Unknown", PPLocalizedResources.General_VideoCodec_TargetMode_Unknown(targetVideoClip?.DecoderName ?? "Unknown")) }))
+                      cc => cc.AddCustomChild(PPLocalizedResources.General_VideoCodec_TargetMode, new Label { Text = GetVideoTargetFormatText() }))
                  .AppendWhen(
                     clip is not null && !string.IsNullOrWhiteSpace(clip.SourcePath),
-                        pp => pp.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label
+                        pp => pp.AddCustomChild(externalSource is null ? PPLocalizedResources.General_VideoCodec_Source : mediaResources.General_VideoCodec_SourceInfo, new Label
                         {
                             Text = GetVideoSourceText(),
                             LineBreakMode = LineBreakMode.WordWrap
                         }),
-                    pp => pp.AddCustomChild(PPLocalizedResources.General_VideoCodec_Source, new Label { Text = "Unknown" })
+                    pp => pp.AddCustomChild(externalSource is null ? PPLocalizedResources.General_VideoCodec_Source : mediaResources.General_VideoCodec_SourceInfo, new Label { Text = Localized._Unknown })
                 )
             .AppendWhen(clip.ClipType == ClipMode.MarkingClip,
                 c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip)))

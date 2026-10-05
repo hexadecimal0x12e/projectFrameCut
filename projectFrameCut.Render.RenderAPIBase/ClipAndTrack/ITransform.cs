@@ -24,6 +24,33 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         public TransformType TransformType { get; }
 
+        public virtual TransformDefinition Definition => TransformDefinition.Clip |
+            (this is IOneInputSingleFrameTransform ? TransformDefinition.SupportOneInput : 0) |
+            (this is ISingleFrameTransform or IContinuousTransform ? TransformDefinition.SupportTwoInput : 0);
+
+        public virtual TransformSide Side
+        {
+            get => TransformState.Values.GetOrCreateValue(this).Side;
+            set => TransformState.Values.GetOrCreateValue(this).Side = value;
+        }
+
+        public virtual Dictionary<string, object> Parameters
+        {
+            get => TransformState.Values.GetOrCreateValue(this).Parameters;
+            set => TransformState.Values.GetOrCreateValue(this).Parameters = value;
+        }
+
+        public virtual Dictionary<string, string> ParametersType => new();
+        public virtual List<string> ParametersNeeded => new();
+        public virtual System.Text.Json.JsonElement Serialize()
+        {
+            var node = System.Text.Json.JsonSerializer.SerializeToNode(this, GetType())!.AsObject();
+            node["FromPlugin"] = FromPlugin;
+            node["TypeName"] = TypeName;
+            node["Parameters"] = System.Text.Json.JsonSerializer.SerializeToNode(Parameters);
+            return System.Text.Json.JsonSerializer.SerializeToElement(node);
+        }
+
         /// <summary>
         /// The name of this clip. Mostly used for display purpose.
         /// </summary>
@@ -42,6 +69,14 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         public virtual void Init() { }
 
+    }
+
+    internal sealed class TransformState
+    {
+        internal static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, TransformState> Values = new();
+        public TransformState() { }
+        public TransformSide Side;
+        public Dictionary<string, object> Parameters = new();
     }
 
     public interface ISingleFrameTransform : ITransform

@@ -171,6 +171,8 @@ namespace projectFrameCut
                     return RunRender(args.Skip(1).ToArray());
                 case "plugin_worker":
                     return RunPluginWorker(args.Skip(1).ToArray());
+                case "external_source_worker":
+                    return RunPluginWorker(args.Skip(1).ToArray(), externalSource: true);
                 case "plugin_network_policy":
                     return RunPluginNetworkPolicy(args.Skip(1).ToArray());
                 case "user_data_root":
@@ -569,7 +571,7 @@ namespace projectFrameCut
                     cancellation.Cancel();
                 };
 #endif
-                return RunBackendAsync(listenUri, token, projectRoot, dataRoot, cancellation.Token).GetAwaiter().GetResult();
+                return RunBackendAsync(listenUri, token, projectRoot, dataRoot, cancellation.Token, GetOption(args, "allowExternalSources", required: false)).GetAwaiter().GetResult();
             }
             catch (OperationCanceledException)
             {
@@ -587,7 +589,7 @@ namespace projectFrameCut
             string token,
             string projectRoot,
             string dataRoot,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, string? allowExternalSources = null)
         {
             InitializeRenderRuntime(dataRoot);
             await using var server = new IntegratedApiServer();
@@ -600,6 +602,7 @@ namespace projectFrameCut
                     ListenUri = listenUri,
                     RpcToken = token,
                     ProjectRoot = projectRoot,
+                    AllowExternalSources = allowExternalSources,
                     GlobalAssetsDatabasePath = Path.Combine(dataRoot, "My Assets", ".database", "database.json"),
                     EnableMcp = false,
                     WarningSink = warning => Console.Error.WriteLine($"Warning: {warning}"),
@@ -756,7 +759,7 @@ namespace projectFrameCut
             }
         }
 
-        private static int RunPluginWorker(string[] args)
+        private static int RunPluginWorker(string[] args, bool externalSource = false)
         {
             try
             {
@@ -777,7 +780,10 @@ namespace projectFrameCut
                     }
                     StartLog($"plugin_worker_{pluginId}");
                 }
-                projectFrameCut.Render.PluginIsolation.PluginIsolationWorker.RunAsync(args).GetAwaiter().GetResult();
+                if (externalSource)
+                    projectFrameCut.Render.PluginIsolation.ProjectExternalSourceWorker.RunAsync(args).GetAwaiter().GetResult();
+                else
+                    projectFrameCut.Render.PluginIsolation.PluginIsolationWorker.RunAsync(args).GetAwaiter().GetResult();
                 return SuccessExitCode;
             }
             catch (Exception ex)
@@ -893,6 +899,10 @@ namespace projectFrameCut
                     throw new InvalidOperationException("Project plugins failed to load: " + string.Join("; ", projectPluginLoad.Failed.Select(x => $"{x.Key}: {x.Value}")));
             }
             var timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(projectRoot, "timeline.json")), jsonOptions) ?? new();
+            await using var externalSources = await ProjectExternalSourceRuntime.OpenAsync(projectRoot,
+                switches.TryGetValue("externalSourceApprovals", out var sourceApprovals)
+                    ? RenderRpcSerializer.Deserialize<SetProjectExternalSourcesRequest>(Convert.FromBase64String(sourceApprovals)).AllowedSources
+                    : projectFrameCut.Render.PluginIsolation.ProjectExternalSourceDatabase.ParseApprovals(projectRoot, switches.GetValueOrDefault("allowExternalSources")), cancellationToken);
 
             var assets = new ConcurrentDictionary<string, AssetItem>();
             if (switches.TryGetValue("assetDbFile", out var assetDb) && File.Exists(assetDb))
@@ -1062,7 +1072,7 @@ namespace projectFrameCut
                     duration,
                     fps,
                     Path.GetExtension(path),
-                    $"{width}x{height}|{fps}|{pixelFormat}|{output[4]}|bpp={bpp}|bitrate={requestedBitRate}|serial={serial}|layers={renderByLayers}|prepare={prepareInWorkers}|reusePreview={reuseDynamicPreviewCache}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}",
+                    $"{width}x{height}|{fps}|{pixelFormat}|{output[4]}|bpp={bpp}|bitrate={requestedBitRate}|serial={serial}|layers={renderByLayers}|prepare={prepareInWorkers}|reusePreview={reuseDynamicPreviewCache}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}|externalSources={projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken}",
                     maxThreads,
                     chunkOptions);
                 await coordinator.InitializeAsync(consoleCancellation.Token).ConfigureAwait(false);
@@ -1669,6 +1679,7 @@ namespace projectFrameCut
 
         internal static void InitializeRenderRuntime(string dataRoot, string ffmpegRoot = "")
         {
+            ProjectExternalSourceService.InitializeRuntime();
             PluginManager.ProjectPluginLoader = async (projectRoot, project, cancellationToken) =>
             {
                 var result = await ProjectPluginService.LoadProjectPluginsAsync(projectRoot, project, _ => Task.FromResult(false), cancellationToken);
@@ -1962,6 +1973,8 @@ Options:
   --token       Bearer token used by RPC clients. It must contain at least 32
                 non-whitespace characters.
   --projectRoot Project directory to load before the RPC server starts.
+  --allowExternalSources=all|<ImportId,ImportId,...>
+                Load the listed project external sources for this run. Default: none.
   --dataRoot    projectFrameCut's User Data directory. If not specified, default to the path defined in
                 <App Data>\OverrideUserDataPath.txt's path or %USERPROFILE%\Documents\projectFrameCut by default.
 
@@ -2173,6 +2186,7 @@ Usage:
                 [-chunkRender=true|false] [-chunkFrames=<number>|-chunkSeconds=<number>]
                 [-chunkParallelism=<number>] [-chunkResume=true|false]
                 [-chunkKeepFiles=true|false]
+                [--allowExternalSources=all|<ImportId,ImportId,...>]
 
 This command is usually used internally, not intended for direct use by end users. 
 It is provided for detached rendering of a project for the UI, and for integration with other tools.
@@ -2188,4 +2202,21 @@ For the usage of params, refer to the StandaloneRender's documentation.
 
         #endregion
     }
+
+    #region headless helper
+#if HEADLESS
+    public static class HeadlessProgramClass
+    {
+        public static int Main(string[] args)
+        {
+            if (args[0] == "gui")
+            {
+                Console.Error.WriteLine("ERROR: 'gui' command is not available in headless client.");
+                return 65535;
+            }
+            return CLIProgram.CLIMain(args);
+        }
+    }
+#endif
+    #endregion
 }

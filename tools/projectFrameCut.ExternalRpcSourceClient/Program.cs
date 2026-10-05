@@ -146,6 +146,7 @@ internal static class ExternalRpcSourceClient
             HasKnownResultBitsPerPixel = true,
             SupportsHdr = options.Hdr,
             SupportsAlpha = options.Alpha,
+            AllowCachingResult = true,
             Metadata = new() { ["generator"] = "projectFrameCut.ExternalRpcSourceClient" },
         };
 

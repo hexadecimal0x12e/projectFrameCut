@@ -89,8 +89,6 @@ public partial class GeneralSettingPage : ContentPage
             .AddPicker("codec_FFmpegProvider", SettingLocalizedResources.GeneralCodec_SelectProvider, FFmpegProviderDisplayNameMapping.Keys.ToArray(), FFmpegProviderDisplayNameMapping.FirstOrDefault(c => c.Value == GetSetting("PluginProvidedFFmpeg_PluginID", "disable"), new(SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable")).Key)
             .AddCheckbox("codec_PreferredHWAccelDecoding", SettingLocalizedResources.GeneralCodec_PreferredHWAccelDecoding, IsBoolSettingTrue("codec_PreferredHWAccelDecoding"))
             .AddCheckbox("codec_PreferredHWAccelEncoding", SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding, IsBoolSettingTrue("codec_PreferredHWAccelEncoding"))
-            .AddCheckbox("codec_EnableDiskCache", new InfoSingleLineLabel(SettingLocalizedResources.GeneralCodec_EnableDiskCache, SettingLocalizedResources.GeneralCodec_EnableDiskCache_Desc), IsBoolSettingTrue("codec_EnableDiskCache"))
-            .AddButton(SettingLocalizedResources.GeneralCodec_ManageDiskCache, async (s, e) => await Navigation.PushAsync(new VideoCacheManagePage()))
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.General_UserData, SettingLocalizedResources.General_UserData_Subtitle, 20, 12))
 #if WINDOWS
@@ -438,7 +436,6 @@ public partial class GeneralSettingPage : ContentPage
                     needReboot = true;
                     break;
 
-                case "codec_EnableDiskCache":
                 case "codec_defaultResizeProvider":
                     WriteSetting(args.Id, args.Value?.ToString() ?? "");
                     return;

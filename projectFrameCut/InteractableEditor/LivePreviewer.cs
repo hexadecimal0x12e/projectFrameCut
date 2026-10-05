@@ -64,10 +64,11 @@ namespace projectFrameCut.LivePreview
         public string ProjectRoot => string.IsNullOrWhiteSpace(TempPath) ? string.Empty : Directory.GetParent(Path.GetFullPath(TempPath))?.FullName ?? string.Empty;
         public string ProjectName { get; set; } = "Untitled Project";
         public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Automatic;
+        private bool HasExternalSources => Clips?.Any(x => RemoteRpcVideoSource.IsExternalPath(x.FilePath)) == true;
 
         public bool IsFrameRendered(uint frameIndex)
         {
-            if (Clips == null) return false;
+            if (Clips == null || HasExternalSources || !Timeline.CanCacheFrame(Clips, frameIndex)) return false;
             if (frameIndex >= TotalDuration) return false;
             var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash)
                 ? indexedHash
@@ -123,7 +124,7 @@ namespace projectFrameCut.LivePreview
                 ? indexedHash
                 : Timeline.GetFrameHash(Clips, frameIndex);
             var cachedPath = Path.Combine(ProjectRoot, "thumbs", $"projectFrameCut_Render_{StaticFrameCacheVersion}_{frameHash}_{targetWidth}x{targetHeight}_vfd8.vfd");
-            if (File.Exists(cachedPath)) return cachedPath;
+            if (!HasExternalSources && Timeline.CanCacheFrame(Clips, frameIndex) && File.Exists(cachedPath)) return cachedPath;
             var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineFrameAsync(new TimelineFrameRequest
             {
                 SessionId = RenderSessionId,
@@ -342,6 +343,7 @@ namespace projectFrameCut.LivePreview
             {
                 SessionId = RenderSessionId,
                 ProjectRoot = RenderProjectRoot ?? ProjectRoot,
+                AllowedExternalSources = ProjectExternalSourceService.GetApprovals(RenderProjectRoot ?? ProjectRoot),
                 ProjectJson = ProjectJson,
                 TimelineJson = JsonSerializer.Serialize(json),
                 ProxyRoot = RenderProxyRoot ?? ProxyRoot ?? string.Empty,
@@ -389,7 +391,9 @@ namespace projectFrameCut.LivePreview
                 clipHashes.TryGetValue(frameIndex, out clipHash);
             if (clipHash is null && Clips is { } clips && clips.FirstOrDefault(clip => clip.Id == clipId) is { } clip)
                 clipHash = Timeline.GetClipFrameHash(clips, clip, frameIndex);
-            if (clipHash is not null && vectorClipJson is null)
+            if (!HasExternalSources && clipHash is not null && vectorClipJson is null
+                && Clips is { } cacheClips && cacheClips.FirstOrDefault(c => c.Id == clipId) is { } cacheClip
+                && Timeline.CanCacheClipFrame(cacheClips, cacheClip))
             {
                 var cachedPath = Path.Combine(
                     ProjectRoot,

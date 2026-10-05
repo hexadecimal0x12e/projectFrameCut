@@ -1082,9 +1082,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         PreviewSubwindow.IsClosable = false;
         PropertiesSubwindow.IsClosable = false;
 
-        PropertiesSubwindow.HorizontalOptions = LayoutOptions.Fill;
-        PropertiesSubwindow.VerticalOptions = LayoutOptions.Fill;
-
         if (!Tracks.Any()) AddATrack(0);
         UpdatePlayheadHeight();
 
@@ -1117,6 +1114,12 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             StartPerClipThumbGeneration(clip);
         }
+        try
+        {
+            await ProjectExternalSourceService.SelectAsync(this, WorkingPath);
+            if (!AlreadyDisappeared) await RefreshPreviewFromCurrentProviderAsync();
+        }
+        catch (Exception ex) { Log(ex, "Select project external sources", this); }
     }
 
     private void RestoreInteractableEditorState()
@@ -1521,6 +1524,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         cancellationToken.ThrowIfCancellationRequested();
         _workspaceWindowHost.Compose(workspaceExperienceProviders);
         _hasAppliedDefaultMainMultiWindowLayout = _workspaceWindowHost.WasLayoutRestored;
+        MainMultiWindowView.SizeChanged += MainMultiWindowView_SizeChanged;
 
         PreviewSubwindow = _workspaceWindowHost.GetWindow("preview.main");
         TimelineSubwindow = _workspaceWindowHost.GetWindow("timeline.main");
@@ -1602,6 +1606,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             element.maxFrameCount = sourceElement.maxFrameCount;
             element.isInfiniteLength = sourceElement.isInfiniteLength;
             element.ExtraData = new Dictionary<string, object>(sourceElement.ExtraData);
+            TransformBinding.CopySingleInputs(element.ExtraData, element.Id);
             element.ExtraData.Remove(SoundTrackMetadata.ProbeSourceKey);
             element.ExtraData.Remove(SoundTrackMetadata.ProbeHasStreamKey);
 
@@ -1777,6 +1782,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     public void RegisterClip(ClipElementUI element, bool resolveOverlap)
     {
         var cid = element.Id;
+        element.Clip.Loaded += (_, _) => RefreshTransformShadows();
+        element.Clip.SizeChanged += (_, _) => RefreshTransformShadows();
         var clipInteractionTarget = GetClipInteractionTarget(element);
 
         var legacyPanGestures = element.Clip.GestureRecognizers
@@ -2245,7 +2252,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             int trackIdx = clip.origTrack ?? Tracks.Keys.Max();
             uint framesOffset = (uint)Math.Round(leftWidth * FramePerPixel * tracksZoomOffest);
 
-            _ = CreateAndAddClip(
+            var rightClip = CreateAndAddClip(
                 startX: playheadXInContent,
                 width: rightWidth,
                 trackIndex: trackIdx,
@@ -2259,6 +2266,9 @@ public partial class DraftPage : ContentPage, IDraftPage
                 // relative start for right clip = original in-point + frames consumed by left clip
                 relativeStart: (uint)(clip.relativeStartFrame + framesOffset),
                 sourceElement: clip);
+            clip.lengthInFrame = PixelToFrame(leftWidth);
+            clip.origLength = leftWidth;
+            TransferSplitTransforms(clip, rightClip);
 
             UpdateAdjacencyForTrack();
             SetStatusText(Localized._Done);
@@ -2463,7 +2473,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             Clips.TryRemove(clip.Id, out _);
             try
             {
-                RemoveTransformsReferencingClip(clip.Id.ToString());
+                RemoveClipTransformBindings(clip.Id.ToString());
             }
             catch { }
         }
@@ -3816,7 +3826,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             try
             {
-                RemoveTransformsReferencingClip(target.Id.ToString());
+                RemoveClipTransformBindings(target.Id.ToString());
             }
             catch { }
         }
@@ -4028,6 +4038,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             pasted.StartingX = dto.StartingX;
             pasted.StartingY = dto.StartingY;
             pasted.ExtraData = dto.MetaData?.ToDictionary(kv => kv.Key, kv => kv.Value) ?? new Dictionary<string, object>();
+            TransformBinding.CopySingleInputs(pasted.ExtraData, pasted.Id);
             pasted.Effects = dto.Effects?.ToDictionary(
                 e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,
                 e => PluginManager.CreateEffect(e, ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight));
@@ -4051,6 +4062,17 @@ public partial class DraftPage : ContentPage, IDraftPage
                     pastedName,
                     $"Pasted to track {targetTrack}, x={Math.Round(desiredStartPx, 2)}")
             });
+        }
+
+        var copiedIds = orderedItems.Select((item, i) => (item.Dto.Id, NewId: pastedClips[i].Id)).ToDictionary(p => p.Id, p => p.NewId);
+        for (int i = 0; i < orderedItems.Count; i++)
+        {
+            var binding = TransformBinding.Read(orderedItems[i].Dto.MetaData, TransformSide.Right);
+            if (binding?.InputMode != TransformInputMode.TwoInput || !copiedIds.TryGetValue(binding.RightClipId, out var target)) continue;
+            binding.Id = Guid.NewGuid();
+            binding.LeftClipId = pastedClips[i].Id;
+            binding.RightClipId = target;
+            TransformBinding.Write(pastedClips[i].ExtraData, TransformSide.Right, binding);
         }
 
         _ = UpdateAdjacencyForTrack();
@@ -4650,250 +4672,6 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     #endregion
 
-    #region transform
-    private void AddTransformClip(
-        ClipElementUI prev, ClipElementUI next,
-        Func<Guid, Guid, ITransform> factory,
-        double startX, double width, int TrackId,
-        Action<ClipElementUI>? ElementSetter = null)
-    {
-        Guid prevGuid = prev?.Id ?? Guid.Empty;
-        Guid nextGuid = next?.Id ?? Guid.Empty;
-
-        var transform = factory(prevGuid, nextGuid);
-        transform.BindedLeftClip = prevGuid;
-        transform.BindedRightClip = nextGuid;
-        transform.Duration = PixelToFrame(width);
-        try
-        {
-            transform?.Init();
-        }
-        catch { }
-
-        var elem = CreateAndAddClip(
-            startX: startX + 3,
-            width: width - 3,
-            trackIndex: TrackId,
-            labelText: transform?.Name ?? $"Transform:{transform?.TypeName}",
-            background: new SolidColorBrush(Color.FromArgb("#AA33BBFF")),
-            resolveOverlap: true);
-
-        elem.ClipType = ClipMode.TransformClip;
-        elem.FromPlugin = InternalPluginBase.InternalPluginBaseID;
-        elem.TypeName = transform.TypeName;
-        elem.ExtraData["transformPrevId"] = prev?.Id.ToString() ?? string.Empty;
-        elem.ExtraData["transformNextId"] = next?.Id.ToString() ?? string.Empty;
-        elem.ExtraData["transformTypeName"] = transform.TypeName;
-        // Persist the transform instance so it can be re-created when the project is loaded.
-        try
-        {
-            // Serialize using runtime type to preserve concrete properties (e.g. ExternalSourceTransform.SourcePath).
-            elem.ExtraData["TransformElement"] = System.Text.Json.JsonSerializer.SerializeToElement(transform, transform.GetType());
-        }
-        catch { }
-        elem.LeftHandle.IsVisible = false;
-        elem.RightHandle.IsVisible = false;
-        elem.LeftHandle.GestureRecognizers.Clear();
-        elem.RightHandle.GestureRecognizers.Clear();
-
-        // Adjust neighboring clips to make room for the transform visual.
-        try
-        {
-            // Position the transform clip at the requested X
-            elem.Clip.TranslationX = startX;
-            elem.origX = startX;
-
-            double half = width / 2.0;
-
-            if (prev is not null)
-            {
-                double prevWidth = prev.Clip.WidthRequest > 0 ? prev.Clip.WidthRequest : prev.origLength;
-                double newPrevWidth = Math.Max(MinClipWidth, prevWidth - half);
-                prev.Clip.WidthRequest = newPrevWidth;
-                prev.origLength = newPrevWidth;
-                prev.lengthInFrame = PixelToFrame(newPrevWidth);
-                // keep prev.Clip.TranslationX unchanged (shrinking from right)
-                string prevName = GetClipNameForChangeReason(prev, prev.Id.ToString());
-                OnClipChanged?.Invoke(prev.Id, new ClipUpdateEventArgs
-                {
-                    SourceId = prev.Id,
-                    SourceName = prevName,
-                    Reason = ClipUpdateReason.ClipResized,
-                    DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
-                        ClipUpdateReason.ClipResized,
-                        prevName,
-                        $"Adjusted for transform insertion, new width={Math.Round(newPrevWidth, 2)}")
-                });
-            }
-
-            if (next is not null)
-            {
-                double nextWidth = next.Clip.WidthRequest > 0 ? next.Clip.WidthRequest : next.origLength;
-                double newNextWidth = Math.Max(MinClipWidth, nextWidth - half);
-                // move next clip to the right by half, and shrink from left
-                next.Clip.TranslationX = next.Clip.TranslationX + half;
-                next.origX = next.origX + half;
-                next.Clip.WidthRequest = newNextWidth;
-                next.origLength = newNextWidth;
-                next.lengthInFrame = PixelToFrame(newNextWidth);
-                string nextName = GetClipNameForChangeReason(next, next.Id.ToString());
-                OnClipChanged?.Invoke(next.Id, new ClipUpdateEventArgs
-                {
-                    SourceId = next.Id,
-                    SourceName = nextName,
-                    Reason = ClipUpdateReason.ClipResized,
-                    DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
-                        ClipUpdateReason.ClipResized,
-                        nextName,
-                        $"Adjusted for transform insertion, shifted by {Math.Round(half, 2)} px, new width={Math.Round(newNextWidth, 2)}")
-                });
-            }
-            ElementSetter?.Invoke(elem);
-
-            _ = UpdateAdjacencyForTrack();
-            UpdateTimelineWidth();
-        }
-        catch (Exception ex)
-        {
-            Log(ex, $"adjust neighbors for transform {elem.Id}", this);
-        }
-
-        LogDiagnostic($"Transform '{transform.TypeName}' clip added between '{prev?.Id.ToString() ?? "none"}' and '{next?.Id.ToString() ?? "none"}'.");
-    }
-
-    public bool AddTransformBetweenSelected(string typeKey, ClipElementUI? center, bool left, bool right)
-         => center is not null
-            && TransformServices.GetAvailableTransforms().TryGetValue(typeKey, out var factory)
-            && AddTransformBetweenSelected(factory, center, left, right);
-
-    public bool AddTransformBetweenSelected(Func<Guid, Guid, ITransform> transformFactory, ClipElementUI center, bool left, bool right, Action<ClipElementUI>? ElementSetter = null)
-    {
-        ArgumentNullException.ThrowIfNull(center, nameof(center));
-        if (left && right) throw new InvalidOperationException("Cannot add a transform in both direction.");
-        if (!left && !right) throw new InvalidOperationException("Cannot add a transform in neither direction.");
-
-        var (leftNeighbor, rightNeighbor) = FindNeighbors(center);
-        if ((left && leftNeighbor is null) || (right && rightNeighbor is null)) return false;
-
-        const double TransformVisualWidth = 40.0;
-
-        double selectedLeft = center.Clip.TranslationX;
-        double selectedWidth = center.Clip.WidthRequest > 0 ? center.Clip.WidthRequest : center.origLength;
-        double selectedRight = selectedLeft + selectedWidth;
-
-        _transformMenuActivatedCenterClip = null;
-        _transformMenuActivatedHandle = "none";
-
-        if (left)
-        {
-            double posX = selectedLeft - TransformVisualWidth / 2.0;
-            AddTransformClip(leftNeighbor, center, transformFactory, posX, TransformVisualWidth, center.origTrack ?? 0, ElementSetter);
-            SetStatusText(Localized.DraftPage_TransformAdded(leftNeighbor?.DisplayName ?? "left", center?.DisplayName ?? "right"));
-            _ = UpdateAdjacencyForTrack(center.origTrack ?? 0);
-            return true;
-        }
-        else if (right)
-        {
-            double posX = selectedRight - TransformVisualWidth / 2.0;
-            AddTransformClip(center, rightNeighbor, transformFactory, posX, TransformVisualWidth, center.origTrack ?? 0, ElementSetter);
-            SetStatusText(Localized.DraftPage_TransformAdded(center?.DisplayName ?? "left", rightNeighbor?.DisplayName ?? "right"));
-            _ = UpdateAdjacencyForTrack(center.origTrack ?? 0);
-            return true;
-        }
-
-        return false;
-    }
-
-    public ClipElementUI? _transformMenuActivatedCenterClip = null;
-    public string _transformMenuActivatedHandle = "none";
-
-    private void HandleTransformAdd(ClipElementUI center, bool left, bool right)
-    {
-        var (leftNeighbor, rightNeighbor) = FindNeighbors(center);
-        if (left && leftNeighbor is null)
-        {
-            SetStatusText(Localized.DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft);
-        }
-        else if (right && rightNeighbor is null)
-        {
-            SetStatusText(Localized.DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight);
-        }
-        else
-        {
-
-            _transformMenuActivatedCenterClip = center;
-            _transformMenuActivatedHandle = left ? "left" : (right ? "right" : "none");
-            AddClip_Clicked(this, EventArgs.Empty);
-            AddClipView.MainTabView.SelectByTag("Transform");
-        }
-
-    }
-
-    public void AddTransformToNeighbors(string type)
-    {
-        if ((_transformMenuActivatedCenterClip ?? _selected) is null)
-        {
-            SetStatusText(Localized.DraftPage_PropertyPanel_SelectToContinue);
-            return;
-        }
-        AddTransformBetweenSelected(type, _transformMenuActivatedCenterClip ?? _selected, _transformMenuActivatedHandle == "left", _transformMenuActivatedHandle == "right");
-    }
-
-    private void RemoveTransformsReferencingClip(string clipId)
-    {
-        if (string.IsNullOrWhiteSpace(clipId)) return;
-
-        var transformKeys = Clips.Where(kv => kv.Value != null && kv.Value.ClipType == ClipMode.TransformClip)
-            .Where(kv =>
-            {
-                try
-                {
-                    var ed = kv.Value.ExtraData;
-                    if (ed == null) return false;
-                    if (ed.TryGetValue("transformPrevId", out var p) && p?.ToString() == clipId) return true;
-                    if (ed.TryGetValue("transformNextId", out var n) && n?.ToString() == clipId) return true;
-                }
-                catch { }
-                return false;
-            })
-            .Select(kv => kv.Key)
-            .ToList();
-
-        foreach (var key in transformKeys)
-        {
-            if (Clips.TryRemove(key, out var removed))
-            {
-                try
-                {
-                    if (removed?.Clip != null)
-                    {
-                        if (_activeClipPreviews.Remove(key, out var oldPreview))
-                            oldPreview.Dispose();
-
-                        // remove visual from overlay if present
-                        try { OverlayLayer?.Children.Remove(removed.Clip); } catch { }
-                        // also remove from its track container
-                        if (removed.origTrack is int tr && Tracks.TryGetValue(tr, out var tlayout))
-                        {
-                            try { tlayout.Children.Remove(removed.Clip); } catch { }
-                        }
-                        else
-                        {
-                            foreach (var t in Tracks.Values.ToList())
-                                try { t.Children.Remove(removed.Clip); } catch { }
-                        }
-                    }
-                }
-                catch { }
-                LogDiagnostic($"transform clip {key} removed because it referenced {clipId}.");
-                SetStatusText(Localized.DraftPage_Removed);
-            }
-        }
-    }
-
-
-    #endregion
-
     #region resize clip
     private void FinalizeLeftHandleResize(Border border, ClipElementUI clip, bool triggeredByCancel)
     {
@@ -5291,7 +5069,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region asset
-    internal async Task AddAsset(string path, bool showAssetPanel = true)
+    internal async Task AddAsset(string path, bool showAssetPanel = false)
     {
         SetStateBusy(Localized.DraftPage_PrepareAsset);
         try
@@ -5329,6 +5107,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 var component = VectorClipServices.Import(path);
                 component.Name = Path.GetFileNameWithoutExtension(path);
                 _workspace.GetModule<AssetModule>().Add(VectorClipServices.AddAsset(this, component));
+                await AddClipView.RefreshAssetsAsync();
                 if (showAssetPanel) await ShowAssetPanelAsync();
                 SetStateOK(Localized.DraftPage_AssetAdded(component.Name));
                 return;
@@ -5344,6 +5123,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             Log($"Added asset '{item.Path}'s info: {item.Duration} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.Duration * item.SecondPerFrame} s");
             Assets.AddOrUpdate(cid, item, (_, _) => item);
             _workspace.GetModule<AssetModule>().Add(item);
+            await AddClipView.RefreshAssetsAsync();
             if (showAssetPanel)
             {
                 Dispatcher.Dispatch(async () =>
@@ -6558,6 +6338,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     SetStateFail("Failed to update clip border.");
                 }
             }
+            RefreshTransformShadows();
         });
 
     }
@@ -6885,7 +6666,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
             {
                 Content = popupContentView,
-                CanBeDismissedByTappingOutsideOfPopup = true,
+                CanBeDismissedByTappingOutsideOfPopup = IsPopupClosableByTapBackground,
                 VerticalOptions = LayoutOptions.End
             };
 
@@ -6994,7 +6775,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
             {
                 Content = popupContentView,
-                CanBeDismissedByTappingOutsideOfPopup = true,
+                CanBeDismissedByTappingOutsideOfPopup = IsPopupClosableByTapBackground,
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Center
             };
@@ -7892,31 +7673,17 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (clip.origTrack is null) return (null, null);
         int track = clip.origTrack.Value;
 
-        double selectedLeft = clip.Clip.TranslationX;
-        double selectedWidth = clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength;
-        double selectedRight = selectedLeft + selectedWidth;
-
-        const double tolerance = 8.0; // pixels
-
+        uint start = PixelToFrame(Math.Max(0, clip.Clip.TranslationX));
+        ulong end = (ulong)start + PixelToFrame(Math.Max(0, clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength));
         ClipElementUI? leftNeighbor = null;
         ClipElementUI? rightNeighbor = null;
-
-        foreach (var kv in Clips)
+        foreach (var c in Clips.Values.OrderBy(c => c.Id))
         {
-            var c = kv.Value;
-            if (c.Id == clip.Id || c.origTrack != track) continue;
-            if (!ShouldParticipateInTimelineLayout(c)) continue;
-
-            double cWidth = c.Clip.WidthRequest > 0 ? c.Clip.WidthRequest : c.origLength;
-            double cRight = c.Clip.TranslationX + cWidth;
-
-            // c ends where selected begins → left neighbor
-            if (Math.Abs(cRight - selectedLeft) < tolerance)
-                leftNeighbor = c;
-
-            // c starts where selected ends → right neighbor
-            if (Math.Abs(c.Clip.TranslationX - selectedRight) < tolerance)
-                rightNeighbor = c;
+            if (c.Id == clip.Id || c.origTrack != track || c.SubLayerIndex != clip.SubLayerIndex || !ShouldParticipateInTimelineLayout(c)) continue;
+            uint cStart = PixelToFrame(Math.Max(0, c.Clip.TranslationX));
+            ulong cEnd = (ulong)cStart + PixelToFrame(Math.Max(0, c.Clip.WidthRequest > 0 ? c.Clip.WidthRequest : c.origLength));
+            if (cEnd == start) leftNeighbor ??= c;
+            if (cStart == end) rightNeighbor ??= c;
         }
 
         return (leftNeighbor, rightNeighbor);
@@ -8154,6 +7921,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, Clip(), false);
                     dto.Id = Guid.NewGuid();
                     dto.BindedSoundTrack = string.Empty;
+                    if (dto.MetaData is not null) TransformBinding.CopySingleInputs(dto.MetaData, dto.Id);
                     dto.MetaData?.Remove(SoundTrackMetadata.ProbeSourceKey);
                     dto.MetaData?.Remove(SoundTrackMetadata.ProbeHasStreamKey);
                     dto.Name = S("Name") ?? $"Copy of {dto.Name}";
@@ -8721,7 +8489,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async void SettingsClick(object sender, EventArgs e)
     {
-        await ShowAPopup(new DraftSettingPage(this).Content, mode: "dialog");
+        await ShowAPopup(new DraftSettingPage(this).Content, mode: "dialog", disableScrollWrapping: true);
     }
 
     private async Task OnPreviewResolutionChangedAsync(string picked)
@@ -8894,7 +8662,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         var h = this.Window?.Height ?? 0;
         WindowSize = new Size(w, h);
 
-        OverlayLayer.InputTransparent = true;
+        OverlayLayer.InputTransparent = popupShowingDirection == "none";
         RightContentBorder.Content = CreatePropertiesPlaceholder(Localized.DraftPage_PropertyPanel_SelectToContinue);
         CurrentPlayheadLabel.Text = $"00:00.00 / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss\\.ff}";
 
@@ -8911,19 +8679,19 @@ public partial class DraftPage : ContentPage, IDraftPage
         // navigation begins. True when leaving for the export page (same project);
         // false when the project is actually being closed (back to HomePage/exit).
         bool leavingProject = !_navigatingToRenderPage;
-        if (isPlaying || _previewAudioGeneration != 0) await PauseLivePreview();
-        if (leavingProject && !ExitNoSave)
-            SaveProjectThumbnailBeforeExit();
-        AlreadyDisappeared = true;
-        CancelVectorHandleDrags();
         try
         {
-            _workspaceWindowHost.SaveLayout();
+            _workspaceWindowHost.SaveLayout(freeze: true);
         }
         catch (Exception ex)
         {
             Log(ex, "Save window layout", this);
         }
+        if (isPlaying || _previewAudioGeneration != 0) await PauseLivePreview();
+        if (leavingProject && !ExitNoSave)
+            SaveProjectThumbnailBeforeExit();
+        AlreadyDisappeared = true;
+        CancelVectorHandleDrags();
         StopRenderBackendWatchdog();
         StopRemoteProjectMonitor();
         CancelPendingClipPlacement();
@@ -8978,6 +8746,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             this.Window.SizeChanged -= Window_SizeChanged;
         }
         OverlayLayer.SizeChanged -= OverlayLayer_SizeChanged;
+        MainMultiWindowView.SizeChanged -= MainMultiWindowView_SizeChanged;
         MyLoggerExtensions.OnExceptionLog -= MyLoggerExtensions_OnExceptionLog;
 
         foreach (var item in PluginManager.LoadedPlugins)
@@ -9041,6 +8810,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             if (leavingProject)
             {
+                await ProjectExternalSourceService.CloseAsync(WorkingPath);
                 await ProjectPluginService.UnloadProjectPluginsAsync();
 #if WINDOWS
                 try { Platforms.Windows.WindowsPluginIsolationPlatform.ClearCurrentProjectLink(WorkingPath); }
@@ -9110,6 +8880,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         ReAdjustPopupForWindowSize();
     }
 
+    private void MainMultiWindowView_SizeChanged(object? sender, EventArgs e)
+    {
+        if (!AlreadyDisappeared) ApplyDefaultMainMultiWindowLayout();
+    }
+
     private bool ignoreRunningTasks = false;
 
     protected override bool OnBackButtonPressed()
@@ -9124,25 +8899,6 @@ public partial class DraftPage : ContentPage, IDraftPage
             });
             return false;
         }
-        try
-        {
-            foreach (var item in MainMultiWindowView.Windows)
-            {
-                try
-                {
-                    item.Close(true);
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, $"close subwindow {item?.Title}", this);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "close subwindows", this);
-        }
-
         if (Window is not null) Window?.SizeChanged -= Window_SizeChanged;
         Navigation.PopToRootAsync();
         return true;

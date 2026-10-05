@@ -14,6 +14,9 @@ namespace projectFrameCut.Render.Transform
     {
         public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
 
+        public TransformDefinition Definition => TransformDefinition.Clip | TransformDefinition.SupportTwoInput;
+        public TransformSide Side { get; set; }
+
         public string TypeName => "Crossfade";
 
         public string Name { get; init; } = "Crossfade";
@@ -23,7 +26,7 @@ namespace projectFrameCut.Render.Transform
         public Guid NextClipId { get; init; }
 
 
-        public Dictionary<string, object> Parameters { get; set; }
+        public Dictionary<string, object> Parameters { get; set; } = new();
 
         public List<string> ParametersNeeded => new();
 
@@ -40,100 +43,58 @@ namespace projectFrameCut.Render.Transform
         /// </summary>
         public IPicture GetFrame(IPicture prevPic, IPicture nextPic, double progress, int targetWidth, int targetHeight)
         {
-            IPicture? result = null;
-
+            float p = (float)Math.Clamp(progress, 0, 1);
+            if (prevPic.Width != nextPic.Width || prevPic.Height != nextPic.Height)
+                throw new ArgumentException("Crossfade input sizes must match.");
             if (prevPic.BitPerPixel == 16 || nextPic.BitPerPixel == 16)
             {
-                if (prevPic.ToBitPerPixel(16) is IPicture<ushort> p16 && nextPic.ToBitPerPixel(16) is IPicture<ushort> n16)
+                var left = (IPicture<ushort>)prevPic.ToBitPerPixel(16);
+                var right = (IPicture<ushort>)nextPic.ToBitPerPixel(16);
+                var lh = left as IHDRPicture<ushort>;
+                var rh = right as IHDRPicture<ushort>;
+                float peak = Math.Max(lh?.MaximumBrightness ?? 203, rh?.MaximumBrightness ?? 203);
+                Picture16bpp output = lh is not null || rh is not null
+                    ? new HDRPicture16bpp(left.Width, left.Height) { MaximumBrightness = peak }
+                    : new Picture16bpp(left.Width, left.Height);
+                output.a = new float[output.Pixels];
+                output.HasAlphaChannel = true;
+                for (int i = 0; i < output.Pixels; i++)
                 {
-                    int w = p16.Width;
-                    int h = p16.Height;
-                    var outPic = new Picture16bpp(w, h)
+                    float a = (left.a?[i] ?? 1) * (1 - p);
+                    float b = (right.a?[i] ?? 1) * p;
+                    float alpha = a + b;
+                    output.a[i] = alpha;
+                    output.r[i] = alpha > 0 ? (ushort)Math.Clamp(Math.Round((left.r[i] * a + right.r[i] * b) / alpha), 0, ushort.MaxValue) : (ushort)0;
+                    output.g[i] = alpha > 0 ? (ushort)Math.Clamp(Math.Round((left.g[i] * a + right.g[i] * b) / alpha), 0, ushort.MaxValue) : (ushort)0;
+                    output.b[i] = alpha > 0 ? (ushort)Math.Clamp(Math.Round((left.b[i] * a + right.b[i] * b) / alpha), 0, ushort.MaxValue) : (ushort)0;
+                    if (output is IHDRPicture<ushort> hdr)
                     {
-                        ProcessStack = new List<PictureProcessStack>
-                        {
-                                new PictureProcessStack { OperationDisplayName = "Crossfade", Operator = this.GetType(), ProcessingFuncStackTrace = new(true), Properties = new Dictionary<string, object> { { "Progress", progress } }  }
-                        }
-                    };
-                    float wPrev = (float)(1.0 - progress);
-                    float wNext = (float)progress;
-                    int total = outPic.Pixels;
-                    for (int i = 0; i < total; i++)
-                    {
-                        outPic.r[i] = (ushort)Math.Clamp((int)Math.Round(p16.r[i] * wPrev + n16.r[i] * wNext), 0, ushort.MaxValue);
-                        outPic.g[i] = (ushort)Math.Clamp((int)Math.Round(p16.g[i] * wPrev + n16.g[i] * wNext), 0, ushort.MaxValue);
-                        outPic.b[i] = (ushort)Math.Clamp((int)Math.Round(p16.b[i] * wPrev + n16.b[i] * wNext), 0, ushort.MaxValue);
+                        float l = lh is not null && i < lh.Brightness.Length ? lh.Brightness[i] * lh.MaximumBrightness : 203;
+                        float r = rh is not null && i < rh.Brightness.Length ? rh.Brightness[i] * rh.MaximumBrightness : 203;
+                        hdr.Brightness[i] = alpha > 0 ? Math.Clamp((l * a + r * b) / (alpha * peak), 0, 1) : 0;
                     }
-
-                    // handle alpha channel if any of inputs has it
-                    if (p16.HasAlphaChannel || n16.HasAlphaChannel)
-                    {
-                        outPic.a = new float[total];
-                        for (int i = 0; i < total; i++)
-                        {
-                            float a1 = p16.a is null ? 1f : p16.a[i];
-                            float a2 = n16.a is null ? 1f : n16.a[i];
-                            outPic.a[i] = Math.Clamp(a1 * wPrev + a2 * wNext, 0f, 1f);
-                        }
-                        outPic.HasAlphaChannel = true;
-                    }
-
-                    result = outPic;
                 }
-                else
-                {
-                    throw new NotSupportedException("Invalid pixel format.");
-                }
+                if (!ReferenceEquals(left, prevPic)) left.Dispose();
+                if (!ReferenceEquals(right, nextPic)) right.Dispose();
+                return output;
             }
             else
             {
-                if (prevPic.ToBitPerPixel(8) is IPicture<byte> p && nextPic.ToBitPerPixel(8) is IPicture<byte> n)
+                var left = (IPicture<byte>)prevPic;
+                var right = (IPicture<byte>)nextPic;
+                var output = new Picture8bpp(left.Width, left.Height) { a = new float[left.Pixels], HasAlphaChannel = true };
+                for (int i = 0; i < output.Pixels; i++)
                 {
-                    int w = p.Width;
-                    int h = p.Height;
-                    var outPic = new Picture8bpp(w, h)
-                    {
-                        ProcessStack = new List<PictureProcessStack>
-                        {
-                                new PictureProcessStack { OperationDisplayName = "Crossfade", Operator = this.GetType(), ProcessingFuncStackTrace = new(true), Properties = new Dictionary<string, object> { { "Progress", progress } }  }
-                        }
-                    };
-                    float wPrev = (float)(1.0 - progress);
-                    float wNext = (float)progress;
-                    int total = outPic.Pixels;
-                    for (int i = 0; i < total; i++)
-                    {
-                        outPic.r[i] = (byte)Math.Clamp((int)Math.Round(p.r[i] * wPrev + n.r[i] * wNext), 0, byte.MaxValue);
-                        outPic.g[i] = (byte)Math.Clamp((int)Math.Round(p.g[i] * wPrev + n.g[i] * wNext), 0, byte.MaxValue);
-                        outPic.b[i] = (byte)Math.Clamp((int)Math.Round(p.b[i] * wPrev + n.b[i] * wNext), 0, byte.MaxValue);
-                    }
-
-                    // handle alpha channel if any of inputs has it
-                    if (p.HasAlphaChannel || n.HasAlphaChannel)
-                    {
-                        outPic.a = new float[total];
-                        for (int i = 0; i < total; i++)
-                        {
-                            float a1 = p.a is null ? 1f : p.a[i];
-                            float a2 = n.a is null ? 1f : n.a[i];
-                            outPic.a[i] = Math.Clamp(a1 * wPrev + a2 * wNext, 0f, 1f);
-                        }
-                        outPic.HasAlphaChannel = true;
-                    }
-
-                    result = outPic;
+                    float a = (left.a?[i] ?? 1) * (1 - p);
+                    float b = (right.a?[i] ?? 1) * p;
+                    float alpha = a + b;
+                    output.a[i] = alpha;
+                    output.r[i] = alpha > 0 ? (byte)Math.Clamp(Math.Round((left.r[i] * a + right.r[i] * b) / alpha), 0, byte.MaxValue) : (byte)0;
+                    output.g[i] = alpha > 0 ? (byte)Math.Clamp(Math.Round((left.g[i] * a + right.g[i] * b) / alpha), 0, byte.MaxValue) : (byte)0;
+                    output.b[i] = alpha > 0 ? (byte)Math.Clamp(Math.Round((left.b[i] * a + right.b[i] * b) / alpha), 0, byte.MaxValue) : (byte)0;
                 }
-                else
-                {
-                    throw new NotSupportedException("Invalid pixel format.");
-                }
+                return output;
             }
-
-
-
-
-            if (result == null) throw new InvalidOperationException("Failed to produce frame from CrossfadeTransform");
-            return result;
         }
     }
 }

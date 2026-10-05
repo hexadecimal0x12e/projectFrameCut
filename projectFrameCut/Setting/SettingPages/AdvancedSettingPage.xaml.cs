@@ -151,7 +151,7 @@ public partial class AdvancedSettingPage : ContentPage
         .AddCheckbox("diag_TraceIPictureObject", SettingLocalizedResources.Advanced_TraceIPictureObject, SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject"))
         .AddCheckbox("render_DisallowPictureModeDowngrade", SettingLocalizedResources.Render_DisallowPictureModeDowngrade, IsBoolSettingTrue("render_DisallowPictureModeDowngrade"), null)
         .AddSeparator()
-        
+
         .AddText(Localized.MainSettingsPage_Tab_Render, fontSize: 20)
         .AddCheckbox("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
         .AddCheckbox("render_DumpDiagData", SettingLocalizedResources.Render_DumpDiagData, IsBoolSettingTrue("render_DumpDiagData"), null)
@@ -166,8 +166,14 @@ public partial class AdvancedSettingPage : ContentPage
         .AddText("UI", fontSize: 20)
         .AddCheckbox("ui_ForceUseShell", SettingLocalizedResources.Advanced_UseMAUIShell, SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
         .AddCheckbox("ui_ShowWelcomePage", SettingLocalizedResources.Advanced_ShowWelcomePage, SettingsManager.IsBoolSettingTrue("ui_ShowWelcomePage"))
+        .AddSeparator()
+
+        .AddText(SettingLocalizedResources.Advanced_RpcBackend, fontSize: 20)
         .AddCheckbox("render_RpcServerShowConsole", SettingLocalizedResources.Render_RpcServerShowConsole, SettingsManager.IsBoolSettingTrue("render_RpcServerShowConsole"), null)
         .AddCheckbox("plugin_IsolationShowConsole", SettingLocalizedResources.Plugin_IsolationShowConsole, SettingsManager.IsBoolSettingTrue("plugin_IsolationShowConsole"), null)
+        .AppendWhen(OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() || OperatingSystem.IsLinux(), c => c
+            .AddEntry("render_RpcServerExtraArguments", SettingLocalizedResources.Advanced_RpcBackendExtraArguments, GetSetting("render_RpcServerExtraArguments"), SettingLocalizedResources.Advanced_RpcBackendEnvironmentVariables_Desc)
+            .AddEntry("render_RpcServerEnvironmentVariables", SettingLocalizedResources.Advanced_RpcBackendEnvironmentVariables, GetSetting("render_RpcServerEnvironmentVariables"), SettingLocalizedResources.Advanced_RpcBackendEnvironmentVariables_Desc))
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.GeneralCodec_Title, fontSize: 20)
@@ -386,6 +392,23 @@ public partial class AdvancedSettingPage : ContentPage
                     {
                         WriteSetting("render_SaveCheckpoint", "false");
                     }
+                    break;
+                case "render_RpcServerExtraArguments":
+                case "render_RpcServerEnvironmentVariables":
+                    try
+                    {
+                        RenderServerProcessManager.ApplyAdditionalBackendOption(new System.Diagnostics.ProcessStartInfo(), e.Id, e.Value?.ToString() ?? "");
+                    }
+                    catch (Exception ex) when (ex is JsonException or ArgumentException)
+                    {
+                        Log(ex, $"Validate backend setting '{e.Id}'", this);
+                        await DisplayAlertAsync(Localized._Error, SettingLocalizedResources.Advanced_RpcBackendInvalidOptions, Localized._OK);
+                        ppb.Properties[e.Id] = GetSetting(e.Id);
+                        if (ppb.Components[e.Id] is Entry entry) entry.Text = GetSetting(e.Id);
+                        return;
+                    }
+                    WriteSetting(e.Id, e.Value?.ToString() ?? "");
+                    await MainSettingsPage.RebootApp(this);
                     break;
                 default:
                     SettingsManager.WriteSetting(e.Id, e.Value?.ToString());

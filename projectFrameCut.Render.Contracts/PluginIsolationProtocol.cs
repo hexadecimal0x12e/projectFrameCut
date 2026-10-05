@@ -301,6 +301,13 @@ public sealed class IsolationTransformState
     [ProtoMember(6)] public string LeftClipId { get; set; } = string.Empty;
     [ProtoMember(7)] public string RightClipId { get; set; } = string.Empty;
     [ProtoMember(8)] public uint Duration { get; set; }
+    [ProtoMember(9)] public int Definition { get; set; }
+    [ProtoMember(10)] public int Side { get; set; }
+    [ProtoMember(11)] public Dictionary<string, IsolationValue> Parameters { get; set; } = new();
+    [ProtoMember(12)] public Dictionary<string, string> ParametersType { get; set; } = new();
+    [ProtoMember(13)] public List<string> ParametersNeeded { get; set; } = [];
+    [ProtoMember(14)] public string SerializedTransform { get; set; } = string.Empty;
+
 }
 
 [ProtoContract]
@@ -604,6 +611,7 @@ public sealed class IsolationVideoSourceDescriptor
     [ProtoMember(8)] public int Width { get; set; }
     [ProtoMember(9)] public int Height { get; set; }
     [ProtoMember(10)] public bool SupportsHdr { get; set; }
+    [ProtoMember(11), System.ComponentModel.DefaultValue(true)] public bool AllowCachingResult { get; set; } = true;
 }
 
 [ProtoContract]

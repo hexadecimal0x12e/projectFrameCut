@@ -120,6 +120,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// </summary>
         public int? ResultBitPerPixel { get; }
         /// <summary>
+        /// Whether repeated reads of the same frame produce identical content and may be cached.
+        /// Live or otherwise changing sources must return false.
+        /// </summary>
+        public virtual bool AllowCachingResult => true;
+        /// <summary>
         /// The preferred file extensions for this video source.
         /// </summary>
         /// <remarks>
@@ -165,11 +170,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// Note this is not available for all type of IVideoSource.
         /// </remarks>
         public bool StrictMode { get; set; }
-
-        /// <summary>
-        /// Enable or disable disk-based frame caching. When enabled, decoded frames are written to disk for faster re-access across sessions.
-        /// </summary>
-        public static bool EnableDiskCache { get; set; }
 
     }
 

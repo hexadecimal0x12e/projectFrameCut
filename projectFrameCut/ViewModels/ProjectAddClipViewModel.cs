@@ -1,3 +1,5 @@
+﻿using ITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using CommunityToolkit.Maui.Core;
 using Microsoft.Maui.Storage;
 using projectFrameCut.AIAssistance;
@@ -48,7 +50,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public readonly DraftPage _draftPage;
 
-    public bool TransformMenuActivatedViaHandleClick = false;
 
     private void EnsurePlacementTrackExists(bool useSubTrack)
     {
@@ -269,6 +270,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     private AssetItem? _pendingGeneratedAsset;
     private string _pendingTransitionDirection = "";
+    private Guid _pendingTransitionClipId;
+    private Guid _pendingTransitionNeighborId;
+    private uint _pendingTransitionFrames;
 
     public string PreviewResultPath
     {
@@ -397,67 +401,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         get => _draftPage.SelectedClip != null;
     }
 
-    public bool IsSideDetermined
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    }
-
-    public bool IsApplicableToLeft
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    }
-    public bool IsApplicableToRight
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    }
-
-    public string TransformAddHint
-    {
-        get
-        {
-            var neighbors = _draftPage.FindNeighbors(_draftPage.SelectedClip);
-
-            if (IsSideDetermined)
-            {
-                return Localized.DraftPage_AddClipView_AddTransform_AddToTargetClipTipSideDetermined_WithNameHint(neighbors.left?.DisplayName ?? "Left", neighbors.right?.DisplayName ?? "Right");
-            }
-            else
-            {
-                return Localized.DraftPage_AddClipView_AddTransform_AddToTargetClipTip_WithNameHint(neighbors.left?.DisplayName ?? "Left", _draftPage?.SelectedClip?.DisplayName ?? "Center", neighbors.right?.DisplayName ?? "Right");
-
-            }
-        }
-    }
-
-    public string TransformAddHintText =>
-        IsDraftSelectedAnyClip
-            ? TransformAddHint
-            : Localized.DraftPage_AddClipView_AddTransform_NoTargetClip;
-
     // 文本样式支持
     public TextStyleItemViewModel? SelectedTextStyle
     {
@@ -531,19 +474,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     } = 5f;
 
-    public TransformItemViewModel? SelectedTransformForPreview
-    {
-        get;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    }
-
     public event PropertyChangedEventHandler? PropertyChanged;
 
     protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
@@ -559,16 +489,14 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ObservableCollection<AssetItemViewModel> ReuseableAssets { get; } = new();
     public ObservableCollection<RpcVideoSourceItemViewModel> RpcVideoSources { get; } = new();
     public ObservableCollection<TemplateItemViewModel> AvailableTemplates { get; } = new();
-    public ObservableCollection<TransformItemViewModel> AvailableTransforms { get; } = new();
     public ObservableCollection<TextStyleItemViewModel> AvailableTextStyles { get; } = new();
     public ObservableCollection<TextStyleProviderItemViewModel> AvailableTextStyleProviders { get; } = new();
 
-    public ObservableCollection<AssetItemViewModel> FilteredLocalAssets { get; } = new();
-    public ObservableCollection<AssetItemViewModel> FilteredSharedAssets { get; } = new();
+    public ObservableCollection<object> FilteredLocalAssets { get; } = new();
+    public ObservableCollection<object> FilteredSharedAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> FilteredReuseableAssets { get; } = new();
-    public ObservableCollection<RpcVideoSourceItemViewModel> FilteredRpcVideoSources { get; } = new();
+    public ObservableCollection<object> FilteredRpcVideoSources { get; } = new();
     public ObservableCollection<TemplateItemViewModel> FilteredAvailableTemplates { get; } = new();
-    public ObservableCollection<TransformItemViewModel> FilteredAvailableTransforms { get; } = new();
     public ObservableCollection<TextStyleItemViewModel> FilteredAvailableTextStyles { get; } = new();
     public ObservableCollection<TextStyleProviderItemViewModel> FilteredAvailableTextStyleProviders { get; } = new();
     #endregion
@@ -584,11 +512,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ICommand AddTemplateCommand { get; set; } = null!;
     public ICommand AddReuseableAssetClipCommand { get; set; } = null!;
     public ICommand RefreshRpcVideoSourcesCommand { get; set; } = null!;
-    public ICommand AddTransformClipCommand { get; set; } = null!;
-    public ICommand AddTransformClipInLeftCommand { get; set; } = null!;
-    public ICommand AddTransformClipInRightCommand { get; set; } = null!;
-    public ICommand GenerateTransformPreviewCommand { get; set; } = null!;
-    public ICommand SelectTransformForPreviewCommand { get; set; } = null!;
     public ICommand GenerateAIContentCommand { get; set; } = null!;
 
     // AI ????????
@@ -615,11 +538,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         AddAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddAssetClip(asset));
         RefreshRpcVideoSourcesCommand = new Command(async () => await LoadRpcVideoSources());
         AddTemplateCommand = new Command<TemplateItemViewModel>(async (template) => await AddTemplate(template));
-        AddTransformClipCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, false));
-        AddTransformClipInLeftCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, true, false));
-        AddTransformClipInRightCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, true));
-        GenerateTransformPreviewCommand = new Command<TransformItemViewModel?>(async (t) => await GenerateTransformPreviewAsync(t ?? SelectedTransformForPreview));
-        SelectTransformForPreviewCommand = new Command<TransformItemViewModel?>(t => SelectedTransformForPreview = t);
 
         DrawingContentUndoCommand = new Command(DrawingUndo);
         DrawingContentRedoCommand = new Command(DrawingRedo);
@@ -649,19 +567,10 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         await LoadAssets();
         await LoadRpcVideoSources();
         LoadTemplates();
-        LoadTransforms();
         InitializeTextStyles();
         await FilterAssets();
-        var neighbors = _draftPage.FindNeighbors(_draftPage.SelectedClip);
-        IsApplicableToLeft = neighbors.left != null;
-        IsApplicableToRight = neighbors.right != null;
         OnPropertyChanged(nameof(IsDraftSelectedAnyClip));
-        OnPropertyChanged(nameof(IsApplicableToLeft));
-        OnPropertyChanged(nameof(IsApplicableToRight));
         OnPropertyChanged(nameof(CanGenerateAITransition));
-        OnPropertyChanged(nameof(TransformAddHint));
-        OnPropertyChanged(nameof(TransformAddHintText));
-        LoadTransforms();
     }
 
     public void LoadTemplates()
@@ -790,6 +699,19 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public async Task LoadRpcVideoSources()
     {
         RpcVideoSources.Clear();
+        try
+        {
+            var catalog = await projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.ListAsync(_draftPage.WorkingPath);
+            foreach (var asset in projectFrameCut.Render.PluginIsolation.ProjectExternalSourceDatabase.Read(_draftPage.WorkingPath).Assets)
+            {
+                var status = catalog.Sources.FirstOrDefault(x => x.ImportId == asset.ImportId);
+                if (asset.Sources.Count == 0)
+                    RpcVideoSources.Add(new(this, new() { Name = asset.Manifest.Name }, asset, status));
+                else
+                    foreach (var source in status?.Sources ?? asset.Sources) RpcVideoSources.Add(new(this, source, asset, status));
+            }
+        }
+        catch (Exception ex) { Log(ex, "Load project external video sources", this); }
         if (RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
         {
             try
@@ -838,11 +760,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public async Task AddRpcVideoSource(RpcVideoSourceItemViewModel? item)
     {
-        if (item is null) return;
+        if (item is null || !item.CanAdd) return;
         try
         {
             var source = item.Source;
-            var path = RemoteRpcVideoSource.CreatePath(source);
+            var path = item.ProjectAsset is null ? RemoteRpcVideoSource.CreatePath(source)
+                : ProjectExternalVideoSource.CreatePath(item.ProjectAsset.ImportId, source);
             var asset = new AssetItem
             {
                 AssetId = $"rpc:{source.ClientId:N}:{source.SourceId}",
@@ -1851,63 +1774,18 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     #region transform    
 
-    public void LoadTransforms()
-    {
-        AvailableTransforms.Clear();
-        var localizedNames = TransformServices.GetLocalizedTransformNames();
-        IsSideDetermined = _draftPage._transformMenuActivatedHandle == "left" || _draftPage._transformMenuActivatedHandle == "right";
-        var applicableToLeft = _draftPage?.SelectedClip != null && _draftPage.FindNeighbors(_draftPage.SelectedClip).left is not null;
-        var applicableToRight = _draftPage?.SelectedClip != null && _draftPage.FindNeighbors(_draftPage.SelectedClip).right is not null;
-        foreach (var kvp in localizedNames)
-        {
-            AvailableTransforms.Add(new TransformItemViewModel(this)
-            {
-                TypeKey = kvp.Key,
-                DisplayName = kvp.Value,
-                IsSideDetermined = IsSideDetermined,
-                IsApplicableToLeft = applicableToLeft,
-                IsApplicableToRight = applicableToRight,
-                IsDraftSelectedAnyClip = IsDraftSelectedAnyClip
-            });
-        }
-
-        // ????
-        FilteredAvailableTransforms.Clear();
-        var searchLower = SearchText?.ToLower() ?? "";
-        foreach (var t in AvailableTransforms)
-        {
-            if (string.IsNullOrWhiteSpace(searchLower) ||
-                t.DisplayName.ToLower().Contains(searchLower) ||
-                t.TypeKey.ToLower().Contains(searchLower))
-            {
-                FilteredAvailableTransforms.Add(t);
-            }
-        }
-    }
-
-    public async Task AddTransformClip(TransformItemViewModel? transform, bool left, bool right)
-    {
-        if (transform is null) return;
-        if (transform.IsSideDetermined) _draftPage.AddTransformToNeighbors(transform.TypeKey);
-        else
-        {
-            _draftPage.AddTransformBetweenSelected(transform.TypeKey, _draftPage.SelectedClip, left, right);
-        }
-        ClipAdded?.Invoke(this, EventArgs.Empty);
-    }
-
-    public async Task GenerateTransformPreviewAsync(TransformItemViewModel? transform)
+    public async Task GenerateTransformPreviewAsync(TransformItemViewModel? transform, TransformInputMode inputMode = TransformInputMode.TwoInput, TransformSide side = TransformSide.Right, ITransform? configured = null)
     {
         if (transform is null || transform.IsGeneratingPreview) return;
         transform.IsGeneratingPreview = true;
         try
         {
             var factories = TransformServices.GetAvailableTransforms();
-            if (!factories.TryGetValue(transform.TypeKey, out var factory)) return;
+            if (!factories.TryGetValue(transform.TypeKey, out var factory) && configured is null) return;
 
             var previewDir = Path.Combine(MauiProgram.CachePath, "TransformPreviews");
             Directory.CreateDirectory(previewDir);
-            var videoPath = Path.Combine(previewDir, $"{transform.TypeKey}.mp4");
+            var videoPath = Path.Combine(previewDir, $"{Guid.NewGuid():N}.mp4");
 
             if (File.Exists(videoPath)) File.Delete(videoPath);
 
@@ -1929,6 +1807,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 {
                     Id = prevId,
                     Name = "_preview_prev",
+                    UseFixedOutputSize = false,
                     StartFrame = 0,
                     Duration = (uint)frameCount,
                     FrameTime = 1f / fps,
@@ -1941,6 +1820,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 {
                     Id = nextId,
                     Name = "_preview_next",
+                    UseFixedOutputSize = false,
                     StartFrame = (uint)frameCount,
                     Duration = (uint)frameCount,
                     FrameTime = 1f / fps,
@@ -1950,7 +1830,10 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     B = 0x2A00,
                 };
 
-                var t = factory(prevId, nextId);
+                var t = configured is null ? factory!(prevId, nextId) : PluginManager.CreateTransform(configured.Serialize());
+                if (configured is not null) t.Parameters = new(configured.Parameters);
+                t.Side = side;
+                t.Duration = frameCount;
                 try
                 {
                     t.Init();
@@ -1969,7 +1852,14 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     for (uint i = 0; i < frameCount; i++)
                     {
                         double progress = (double)i / Math.Max(1, frameCount - 1);
-                        using var frame = TransformProcessing.ProcessTransform(prevClip, nextClip, t, previewW, previewH, i, 8);
+                        using var leftFrame = ((IClip)prevClip).GetFrame(0, previewW, previewH, 8);
+                        using var rightFrame = inputMode == TransformInputMode.TwoInput ? ((IClip)nextClip).GetFrame(nextClip.StartFrame, previewW, previewH, 8) : null;
+                        leftFrame.CanBeDisposed = true;
+                        if (rightFrame is not null) rightFrame.CanBeDisposed = true;
+                        var result = TransformProcessing.ProcessFrames(leftFrame, rightFrame, t, inputMode, progress, previewW, previewH);
+                        using var frame = ReferenceEquals(result, leftFrame) || ReferenceEquals(result, rightFrame) ? result.Clone() : result;
+                        if (frame.Width != previewW || frame.Height != previewH)
+                            throw new InvalidOperationException($"Transform preview {t.TypeName} returned {frame.Width}x{frame.Height}; expected {previewW}x{previewH}.");
                         writer.Append(frame);
                     }
 
@@ -2008,10 +1898,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public async Task FilterAssets()
     {
         await MainThread.InvokeOnMainThreadAsync(FilterVectorComponents);
-        FilteredLocalAssets.Clear();
-        FilteredSharedAssets.Clear();
         FilteredReuseableAssets.Clear();
-        FilteredRpcVideoSources.Clear();
         FilteredAvailableTemplates.Clear();
 
         List<AssetItemViewModel> localFiltered = new();
@@ -2064,6 +1951,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
             rpcFiltered.AddRange(RpcVideoSources.Where(x => x.Name.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
                 || x.ClientName.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
+                || x.Status.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
                 || x.DecoderName.Contains(searchLower, StringComparison.OrdinalIgnoreCase)));
 
             foreach (var template in AvailableTemplates)
@@ -2089,6 +1977,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             localFiltered = localFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
             sharedFiltered = sharedFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
             reuseableFiltered = reuseableFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
+            rpcFiltered = rpcFiltered.OrderByDescending(x => x.ProjectAsset?.CreatedAt ?? DateTime.MinValue).ToList();
         }
         else if (OrderOption == 1)
         {
@@ -2100,19 +1989,22 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             templateFiltered = (await templateFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
         }
 
-        foreach (var asset in localFiltered)
+        await MainThread.InvokeOnMainThreadAsync(() =>
         {
-            FilteredLocalAssets.Add(asset);
-        }
-        foreach (var asset in sharedFiltered)
-        {
-            FilteredSharedAssets.Add(asset);
-        }
+            FilteredLocalAssets.Clear();
+            FilteredSharedAssets.Clear();
+            FilteredRpcVideoSources.Clear();
+            foreach (var asset in localFiltered) FilteredLocalAssets.Add(asset);
+            foreach (var asset in sharedFiltered) FilteredSharedAssets.Add(asset);
+            foreach (var source in rpcFiltered) FilteredRpcVideoSources.Add(source);
+            FilteredLocalAssets.Add(new AddSourceCardViewModel("LocalAssets", Localized.AssetPage_AddAAsset));
+            FilteredSharedAssets.Add(new AddSourceCardViewModel("SharedAssets", Localized.AssetPage_AddAAsset));
+            FilteredRpcVideoSources.Add(new AddSourceCardViewModel("RpcSources", Localized.ProjectExternalSource_Add));
+        });
         foreach (var asset in reuseableFiltered)
         {
             FilteredReuseableAssets.Add(asset);
         }
-        foreach (var source in rpcFiltered) FilteredRpcVideoSources.Add(source);
 
         foreach (var template in templateFiltered)
         {
@@ -2120,19 +2012,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
 
         // ????
-        FilteredAvailableTransforms.Clear();
-        var transformSearch = SearchText?.ToLower() ?? "";
-        foreach (var t in AvailableTransforms)
-        {
-            if (string.IsNullOrWhiteSpace(transformSearch) ||
-                t.DisplayName.ToLower().Contains(transformSearch) ||
-                t.TypeKey.ToLower().Contains(transformSearch))
-            {
-                FilteredAvailableTransforms.Add(t);
-            }
-        }
-
-        // ??????
         FilteredAvailableTextStyles.Clear();
         var styleSearch = SearchText?.ToLower() ?? "";
         foreach (var s in AvailableTextStyles)
@@ -2787,6 +2666,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 3 => 5,  // 5?
                 _ => 2   // ??2?
             };
+            _pendingTransitionClipId = selectedClip.Id;
+            _pendingTransitionNeighborId = (left ? leftClip : rightClip)?.Id ?? Guid.Empty;
+            _pendingTransitionFrames = Math.Max(1u, (uint)Math.Round((double)durationInSeconds * _draftPage.ProjectInfo.TargetFrameRate));
             IPicture? firstFrame = null!, lastFrame = null!;
 
             if (left && !right)
@@ -2820,6 +2702,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
+            using var firstInput = firstFrame;
+            using var lastInput = lastFrame;
             var options = new VideoGenerationOptions
             {
                 Width = 1280,
@@ -2881,7 +2765,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             PreviewResultPath = asset.Path;
             PreviewContentType = "Video";
             ShowPreviewDialog();
-            LoadTransforms();
         }
         catch (Exception ex)
         {
@@ -2897,62 +2780,29 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    public async Task<IPicture?> GetClipLastFrame(ClipElementUI clipElement)
+    public Task<IPicture?> GetClipLastFrame(ClipElementUI clip) => Task.FromResult(ReadClipBoundary(clip, true));
+    public Task<IPicture?> GetClipFirstFrame(ClipElementUI clip) => Task.FromResult(ReadClipBoundary(clip, false));
+
+    private IPicture? ReadClipBoundary(ClipElementUI element, bool last)
     {
         try
         {
-            // ? ClipElementUI ??? IClip ??????
-            var clipData = ConvertClipElementToIClip(clipElement);
-            if (clipData == null) return null;
-
-            // ?????????
-            var lastFrameIndex = clipData.Duration > 0 ? clipData.Duration - 1 : 0;
-            var frame = clipData.GetFrameRelativeToStartPointOfSource(lastFrameIndex, 1280, 720, 8);
-
-            return frame;
+            var clip = _draftPage.GetOrCreateClipInstance(element);
+            if (clip is null || clip.GetEffectiveDuration() == 0) return null;
+            uint frame = last ? (uint)Math.Min(uint.MaxValue, (ulong)clip.StartFrame + clip.GetEffectiveDuration() - 1) : clip.StartFrame;
+            return Timeline.MixtureLayers(Timeline.GetFramesInOneFrame([clip], frame, 1280, 720, 8,
+                _draftPage.ProjectInfo.RelativeWidth, _draftPage.ProjectInfo.RelativeHeight, applyTransforms: false),
+                frame, 1280, 720, autoCenterImplicitClip: true, projectRelativeWidth: _draftPage.ProjectInfo.RelativeWidth,
+                projectRelativeHeight: _draftPage.ProjectInfo.RelativeHeight);
         }
         catch (Exception ex)
         {
-            Logger.Log(ex, "Get clip last frame", this);
+            Log(ex, $"Read {(last ? "last" : "first")} frame of {element.Id} for AI transition", this);
             return null;
         }
     }
 
-    public async Task<IPicture?> GetClipFirstFrame(ClipElementUI clipElement)
-    {
-        try
-        {
-            var clipData = ConvertClipElementToIClip(clipElement);
-            if (clipData == null) return null;
-
-            var frame = clipData.GetFrameRelativeToStartPointOfSource(0, 1280, 720, 8);
-
-            return frame;
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Get clip first frame", this);
-            return null;
-        }
-    }
-
-    public Render.RenderAPIBase.ClipAndTrack.IClip? ConvertClipElementToIClip(ClipElementUI clipElement)
-    {
-        try
-        {
-            // ???? Clip ???
-            var draftData = DraftImportAndExportHelper.ExportFromDraftPage(_draftPage, true, false);
-            var clips = DraftImportAndExportHelper.JSONToIClips(draftData, true, 8);
-
-            // ?? ID ????? IClip
-            return clips.FirstOrDefault(c => c.Id == clipElement.Id);
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Convert ClipElementUI to IClip", this);
-            return null;
-        }
-    }
+    public IClip? ConvertClipElementToIClip(ClipElementUI clip) => _draftPage.GetOrCreateClipInstance(clip);
 
     public static async Task<AssetItem?> DownloadRemoteResourcesToLocal(DraftPage workingPage, string videoUrl, string extension, string prompt)
     {
@@ -3090,25 +2940,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     private void AddAITransitionToTimeline(string sourcePath)
     {
-        var directionStr = _pendingTransitionDirection;
-        bool left = directionStr == "left";
-        bool right = directionStr == "right";
-        if (!left && !right && !string.IsNullOrWhiteSpace(_draftPage._transformMenuActivatedHandle))
-        {
-            left = _draftPage._transformMenuActivatedHandle == "left";
-            right = _draftPage._transformMenuActivatedHandle == "right";
-        }
-
-        var selectedClip = _draftPage?.SelectedClip;
-        if (selectedClip == null) return;
-
-        _draftPage!.AddTransformBetweenSelected((a, b) => new ExternalSourceTransform
-        {
-            Name = "AITransform",
-            BindedLeftClip = a,
-            BindedRightClip = b,
-            SourcePath = sourcePath
-        }, selectedClip, left, right, (c) => c.ExtraData["IsAI"] = true);
+        if (!_draftPage.Clips.TryGetValue(_pendingTransitionClipId, out var selectedClip))
+            throw new InvalidOperationException(Localized.Transform_Disconnected);
+        var side = _pendingTransitionDirection == "left" ? TransformSide.Left : TransformSide.Right;
+        var neighbor = side == TransformSide.Left ? _draftPage.FindNeighbors(selectedClip).left : _draftPage.FindNeighbors(selectedClip).right;
+        if (neighbor?.Id != _pendingTransitionNeighborId || !_draftPage.SetClipTransform(selectedClip, side,
+            TransformInputMode.TwoInput, new ExternalSourceTransform { Name = "AITransform", SourcePath = sourcePath }, _pendingTransitionFrames, isAI: true))
+            throw new InvalidOperationException(Localized.Transform_Disconnected);
     }
 
     private async Task RegenerateAIContent()
@@ -3279,15 +3117,25 @@ public class AssetItemViewModel
 
 public sealed class RpcVideoSourceItemViewModel
 {
-    public RpcVideoSourceItemViewModel(ProjectAddClipViewModel parent, ExternalVideoSourceDescriptor source)
+    public RpcVideoSourceItemViewModel(ProjectAddClipViewModel parent, ExternalVideoSourceDescriptor source,
+        ProjectExternalSourceAsset? projectAsset = null, ProjectExternalSourceStatus? status = null)
     {
         Source = source;
+        ProjectAsset = projectAsset;
+        LoadStatus = status;
         AddCommand = new Command(async () => await parent.AddRpcVideoSource(this));
     }
 
     public ExternalVideoSourceDescriptor Source { get; }
+    public ProjectExternalSourceAsset? ProjectAsset { get; }
+    private ProjectExternalSourceStatus? LoadStatus { get; }
+    public bool CanAdd => !string.IsNullOrWhiteSpace(Source.SourceId);
+    public string Status => ProjectAsset is null ? string.Empty : !string.IsNullOrWhiteSpace(LoadStatus?.Error)
+        ? $"{Localized.ProjectExternalSource_Failed}: {LoadStatus.Error}"
+        : LoadStatus?.Loaded == true ? Localized.ProjectExternalSource_Loaded : Localized.ProjectExternalSource_NotLoaded;
     public string Name => Source.Name;
-    public string ClientName => string.IsNullOrWhiteSpace(Source.ClientName) ? Source.ClientId.ToString("D") : Source.ClientName;
+    public string ClientName => ProjectAsset is null ? (string.IsNullOrWhiteSpace(Source.ClientName) ? Source.ClientId.ToString("D") : Source.ClientName)
+        : $"{ProjectAsset.Manifest.Name} · {ProjectAsset.Manifest.Author} · {ProjectAsset.Manifest.Version}";
     public string DecoderName => Source.DecoderName;
     public string Resolution => Source.Width > 0 && Source.Height > 0 ? $"{Source.Width}×{Source.Height}" : "?";
     public string FrameRate => Source.Fps > 0 ? $"{Source.Fps:0.###} FPS" : "? FPS";
@@ -3326,10 +3174,6 @@ public class TransformItemViewModel : INotifyPropertyChanged
 
     public string TypeKey { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
-    public bool IsApplicableToLeft { get; set; } = false;
-    public bool IsApplicableToRight { get; set; } = false;
-    public bool IsSideDetermined { get; set; } = false;
-    public bool IsDraftSelectedAnyClip { get; set; } = false;
 
     public string? _previewVideoPath;
     /// <summary>Path to the locally-cached preview MP4 for this transform.</summary>
@@ -3365,16 +3209,8 @@ public class TransformItemViewModel : INotifyPropertyChanged
         }
     }
 
-    public Command AddTransformClipCommand { get; set; }
-    public Command AddTransformClipInLeftCommand { get; set; }
-    public Command AddTransformClipInRightCommand { get; set; }
 
-    public TransformItemViewModel(ProjectAddClipViewModel parent)
-    {
-        AddTransformClipCommand = new Command(async () => await parent.AddTransformClip(this, false, false));
-        AddTransformClipInLeftCommand = new Command(async () => await parent.AddTransformClip(this, true, false));
-        AddTransformClipInRightCommand = new Command(async () => await parent.AddTransformClip(this, false, true));
-    }
+    public TransformItemViewModel() { }
 }
 
 public class TextStyleItemViewModel

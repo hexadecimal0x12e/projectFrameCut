@@ -28,7 +28,9 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         /// </summary>
         /// <param name="e"></param>
         /// <returns></returns>
-        public static async Task<List<string>> GetFilePathsFromDrop(DropEventArgs e)
+        public static Task<List<string>> GetFilePathsFromDrop(DropEventArgs e) => GetFilePathsFromDrop(e, false);
+
+        public static async Task<List<string>> GetFilePathsFromDrop(DropEventArgs e, bool includeDirectories)
         {
             List<string> filePaths = new();
 #if WINDOWS
@@ -42,6 +44,10 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
                         if (item is StorageFile file)
                         {
                             filePaths.Add(file.Path);
+                        }
+                        else if (includeDirectories && item is StorageFolder folder)
+                        {
+                            filePaths.Add(folder.Path);
                         }
                     }
                 }

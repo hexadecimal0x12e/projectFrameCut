@@ -5,6 +5,7 @@ using projectFrameCut.Drawing.Processing.Composing;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.ClipsAndTracks.Text;
+using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Shared;
 using System.Collections.Concurrent;
@@ -49,6 +50,7 @@ public static class ClipInitializationFailure
         StageIconResourceMap["SourceReading"] = "projectFrameCut.Render.Resource.Error_SourceFail.png";
         StageIconResourceMap["SourceNotFound"] = "projectFrameCut.Render.Resource.Error_SourceNotFound.png";
         StageIconResourceMap["SourceNotMatch"] = "projectFrameCut.Render.Resource.Error_SourceNotFound.png";
+        StageIconResourceMap["ExternalSourceUnavailable"] = "projectFrameCut.Render.Resource.Error_ExternalSource.png";
         StageIconResourceMap["ResolveBinding"] = "projectFrameCut.Render.Resource.Error_BindingFail.png";
         StageIconResourceMap["ResolveEffect"] = "projectFrameCut.Render.Resource.Error.png";
     }
@@ -65,6 +67,9 @@ public static class ClipInitializationFailure
     {
         ArgumentNullException.ThrowIfNull(clip);
         clip.ExtraData ??= new Dictionary<string, object>();
+        if (clip is VideoClip video && RemoteRpcVideoSource.IsExternalPath(video.FilePath)
+            && stage is "SourceReading" or "SourceNotFound" or "SourceNotMatch")
+            stage = "ExternalSourceUnavailable";
         Mark(clip.ExtraData, stage, exception);
         clip.EffectsInstances = [];
         clip.SpeedVarianceProviderInstance = null;
@@ -115,6 +120,13 @@ public static class ClipInitializationFailure
     {
         if (!IsMarked(extraData)) return string.Empty;
         var stage = ReadString(extraData, StageKey, "Initialization");
+        if (stage == "ExternalSourceUnavailable")
+        {
+            var text = LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources?.ClipFallback_ExternalSourceUnavailable;
+            return string.IsNullOrEmpty(text) || text.StartsWith("Unset localization item:", StringComparison.Ordinal)
+                ? ISimpleLocalizerBase_PropertyPanel.GetMapping()["zh-CN"].ClipFallback_ExternalSourceUnavailable
+                : text;
+        }
         var message = ReadString(extraData, MessageKey, "Unknown error");
         var localizedHeader = "A error happens while reading source.";
         if(LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources is ISimpleLocalizerBase_PropertyPanel pp)
@@ -265,7 +277,7 @@ public static class ClipInitializationFailure
             var entry = new TextEntry
             {
                 Text = description,
-                FontName = "HarmonyOS Sans SC Medium",
+                FontName = "HarmonyOS Sans SC",
                 FontStyle = "Regular",
                 FontSize = fontSize,
                 X = targetWidth * 0.5f,        // 水平居中
@@ -289,7 +301,10 @@ public static class ClipInitializationFailure
             var ctx = TextLayoutContext.FromCanvas(targetWidth, targetHeight);
             var vectorCanvas = TextLayoutPipeline.LayoutForRender([entry], ctx, targetWidth, targetHeight);
             if (vectorCanvas.Elements.Count == 0)
-                return null;   // 字体不可用：静默跳过文本层
+            {
+                Log($"Clip initialization fallback text layout is empty (font: {entry.FontName}, canvas: {targetWidth}x{targetHeight}).", "warning");
+                return null;
+            }
 
             textLayer = IVectorContentClip.GlobalDefaultRasterizer.Convert(
                 vectorCanvas, targetWidth, targetHeight, transparentBackground: true,
@@ -297,8 +312,9 @@ public static class ClipInitializationFailure
 
             return ComposeOverlay(basePicture, textLayer, 0, 0, targetWidth, targetHeight, targetPPB);
         }
-        catch
+        catch (Exception ex)
         {
+            Log(ex, "render clip initialization fallback text");
             return null;
         }
         finally

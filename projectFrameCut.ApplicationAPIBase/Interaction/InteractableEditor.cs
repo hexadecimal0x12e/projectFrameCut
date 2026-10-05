@@ -157,13 +157,14 @@ public sealed class PreparedPreview
     private readonly Func<View>? _viewFactory;
     private View? _materializedView;
 
-    public PreparedPreview(Guid clipId, Func<View>? viewFactory, string? errorMessage, IClip? source, bool isCanvasPreview = false, Func<double, double, bool>? isTransparentAt = null)
+    public PreparedPreview(Guid clipId, Func<View>? viewFactory, string? errorMessage, IClip? source, bool isCanvasPreview = false, Func<double, double, bool>? isTransparentAt = null, bool isPositionedClipPreview = false)
     {
         ClipId = clipId;
         _viewFactory = viewFactory;
         ErrorMessage = errorMessage;
         Source = source;
         IsCanvasPreview = isCanvasPreview;
+        IsPositionedClipPreview = isPositionedClipPreview;
         IsTransparentAt = isTransparentAt;
     }
 
@@ -179,6 +180,7 @@ public sealed class PreparedPreview
     public IClip? Source { get; }
     /// <summary>Gets whether this preview paints the complete project canvas.</summary>
     public bool IsCanvasPreview { get; }
+    public bool IsPositionedClipPreview { get; }
     /// <summary>Gets whether a normalized preview coordinate is fully transparent.</summary>
     public Func<double, double, bool>? IsTransparentAt { get; }
 }

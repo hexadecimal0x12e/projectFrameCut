@@ -4,6 +4,7 @@
 		<TargetFrameworks>net11.0-android;net11.0_linux</TargetFrameworks>
 		<TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net11.0-ios</TargetFrameworks>
 		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net11.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks Condition="'$(BuildingInsideVisualStudio)' != 'true'">$(TargetFrameworks);net11.0</TargetFrameworks>
 
 		<!-- Note for MacCatalyst:
 			The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
@@ -83,7 +84,7 @@
 		<ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
 		<StartupObject>projectFrameCut.WinUI.Program</StartupObject>
 		<DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN;DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION;MAUISDK</DefineConstants>
-	  <SelectedPackageManifest>Platforms\Windows\Package.$(PackageFlavor).appxmanifest</SelectedPackageManifest>
+		<SelectedPackageManifest>Platforms\Windows\Package.$(PackageFlavor).appxmanifest</SelectedPackageManifest>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
@@ -210,7 +211,7 @@
 	</ItemGroup>
 
 	<PropertyGroup Condition="'$(PackageFlavor)' == ''">
-	  <SelectedPackageManifest>Platforms\Windows\Package.appxmanifest</SelectedPackageManifest>
+		<SelectedPackageManifest>Platforms\Windows\Package.appxmanifest</SelectedPackageManifest>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(PackageFlavor)' == 'MSStore' and '$(TargetFramework)' == 'net11.0-windows10.0.19041.0'">
@@ -265,6 +266,14 @@
 		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4" Version="$(MAUIGTK4Version)" />
 		<PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4.Essentials" Version="$(MAUIGTK4Version)" />
 	</ItemGroup>
+
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net11.0'">
+		<DefineConstants>$(DefineConstants);HEADLESS</DefineConstants>
+		<StartupObject>projectFrameCut.HeadlessProgramClass</StartupObject>
+		<Description>projectFrameCut Headless client</Description>
+		<AssemblyTitle>projectFrameCut Headless client</AssemblyTitle>
+		<AssemblyDescription>projectFrameCut Headless client</AssemblyDescription>
+	</PropertyGroup>
 
 	<Target Name="RestorePlatformCompileItems" BeforeTargets="CoreCompile">
 		<ItemGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
@@ -392,9 +401,6 @@
 		</None>
 		<None Update="LandingPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
-		</None>
-		<None Update="Platforms\Windows\Package.MSStore.appxmanifest">
-		  <SubType>Designer</SubType>
 		</None>
 		<None Update="RenderPage.xaml">
 			<Generator>MSBuild:Compile</Generator>

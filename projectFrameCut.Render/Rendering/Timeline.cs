@@ -36,7 +36,8 @@ namespace projectFrameCut.Render.Rendering
             int targetHeight,
             IPicture.PicturePixelMode? targetPPB = null,
             int projectRelativeWidth = 0,
-            int projectRelativeHeight = 0)
+            int projectRelativeHeight = 0,
+            bool applyTransforms = true)
         {
             var ppb = targetPPB ?? 8;
             List<OneFrame> result = new List<OneFrame>();
@@ -69,29 +70,10 @@ namespace projectFrameCut.Render.Rendering
                         {
                             frame = ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData);
                         }
-                        else if (clip is TransformContainer c)
+                        else if (applyTransforms && TransformProcessing.TryRender(clip, video, targetFrame, targetWidth, targetHeight,
+                            projectRelativeWidth, projectRelativeHeight, ppb, out var transitionFrame))
                         {
-                            if (c.Transform == null) c.ReInit(ppb);
-                            var t = c.Transform;
-                            if (t == null)
-                            {
-                                Log($"[Timeline] WARN: Transform for clip {c.Id} is null; skipping transform for frame {targetFrame}");
-                                frame = null;
-                            }
-                            else
-                            {
-                                var leftClip = video.FirstOrDefault(cc => cc.Id == t.BindedLeftClip);
-                                var rightClip = video.FirstOrDefault(cc => cc.Id == t.BindedRightClip);
-                                if (leftClip == null || rightClip == null)
-                                {
-                                    Log($"[Timeline] WARN: Transform inputs not found for transform {c.Id}. Skipping frame {targetFrame}");
-                                    frame = null;
-                                }
-                                else
-                                {
-                                    frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, clipTargetWidth, clipTargetHeight, targetFrame, ppb);
-                                }
-                            }
+                            frame = transitionFrame!;
                         }
                         else if (clip.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(clip, clipTargetWidth, clipTargetHeight))
                         {
@@ -118,7 +100,7 @@ namespace projectFrameCut.Render.Rendering
 
                     if (frame is not null)
                     {
-                        if (isAI) frame = EffectProcessing.ProcessAIWatermark(frame, null);
+                        if (isAI && !TransformProcessing.IsCanvasFrame(frame)) frame = EffectProcessing.ProcessAIWatermark(frame, null);
                         try
                         {
                             result.Add(new OneFrame(targetFrame, clip, frame));
@@ -155,7 +137,7 @@ namespace projectFrameCut.Render.Rendering
 
             try
             {
-                var f = JsonSerializer.Serialize(result, FrameHashSerializerOptions);
+                var f = JsonSerializer.Serialize(result.Select(frame => GetClipFrameHash(video, frame.ParentClip, targetFrame)).ToArray(), FrameHashSerializerOptions);
                 if (f == "[]") return "nullframe";
                 return SHA256.HashData(Encoding.UTF8.GetBytes(f)).Aggregate("0x", ((b, c) => b + c.ToString("x2")));
 
@@ -168,6 +150,33 @@ namespace projectFrameCut.Render.Rendering
 
         }
 
+        public static bool CanCacheFrame(IClip[] video, uint targetFrame)
+            => video.Where(clip => IsFrameInClipRange(clip, targetFrame)
+                    || clip.ExtendToWholeDraft && clip.LayerIndex > Renderer.SubTrackOffset)
+                .All(clip => CanCacheClipFrame(video, clip));
+
+        public static bool CanCacheClipFrame(IClip[] video, IClip clip)
+            => CanCacheClipSource(clip)
+                && CollectHashDependencies(video, clip, new HashSet<Guid> { clip.Id }).All(CanCacheClipSource);
+
+        public static bool CanCacheClipSource(IClip clip)
+        {
+            if (clip is not VideoClip videoClip) return true;
+            try
+            {
+                if (!videoClip.HasCurrentDecoder || videoClip.Decoder is not { Disposed: false } decoder
+                    || ClipInitializationFailure.IsMarked(clip)) return false;
+                // External providers may refine their catalog descriptor during initialization.
+                if (decoder is EncodeAndDecode.RemoteRpcVideoSource) decoder.Initialize();
+                return decoder.AllowCachingResult;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Read cache capability for clip {clip.Name} ({clip.Id})", "Timeline");
+                return false;
+            }
+        }
+
         /// <summary>
         /// Returns the cache identity of one clip at one timeline frame. Unlike the
         /// project hash this deliberately excludes unrelated clips, while including
@@ -177,7 +186,7 @@ namespace projectFrameCut.Render.Rendering
         {
             try
             {
-                var visited = new HashSet<Guid>();
+                var visited = new HashSet<Guid> { clip.Id };
                 var dependencies = CollectHashDependencies(video, clip, visited)
                     .Select(item => CreateHashFrame(targetFrame, item))
                     .ToArray();
@@ -199,13 +208,12 @@ namespace projectFrameCut.Render.Rendering
         private static IReadOnlyList<IClip> CollectHashDependencies(IClip[] video, IClip clip, HashSet<Guid> visited)
         {
             var result = new List<IClip>();
-            Guid[] dependencyIds;
-            lock (FrameHashLocks.GetOrAdd(clip.Id, static _ => new object()))
-            {
-                if (clip is not TransformContainer transform || transform.Transform is null)
-                    return result;
-                dependencyIds = [transform.Transform.BindedLeftClip, transform.Transform.BindedRightClip];
-            }
+            var infos = video.Select(TransformClipInfo.FromClip).ToArray();
+            var dependencyIds = Enum.GetValues<TransformSide>()
+                .Select(side => ClipTransforms.Find(infos, clip.Id, side))
+                .Where(found => found is not null)
+                .SelectMany(found => new[] { found!.Value.Owner.Id, found.Value.Binding.LeftClipId, found.Value.Binding.RightClipId })
+                .Where(id => id != Guid.Empty && id != clip.Id).Distinct().ToArray();
 
             if (dependencyIds.Length == 0)
                 return result;
@@ -265,6 +273,13 @@ namespace projectFrameCut.Render.Rendering
                     // The ResizeEffect and PlaceEffect will handle sizing and positioning.
                     ArgumentNullException.ThrowIfNull(srcFrame, nameof(srcFrame));
                     ArgumentNullException.ThrowIfNull(srcFrame.ParentClip, nameof(srcFrame.ParentClip));
+                    if (TransformProcessing.IsCanvasFrame(srcFrame.Clip))
+                    {
+                        result = (srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default).Mix(
+                            result ?? (transparentBackground ? Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0) : FallBackImageGetter(targetWidth, targetHeight)),
+                            srcFrame.Clip, targetPPB, 0, 0, targetWidth, targetHeight);
+                        continue;
+                    }
                     IPicture effected = srcFrame.Clip;
                     var effectsList = srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
                     // TargetX/Y live in project-relative space. Width/height, however, must already

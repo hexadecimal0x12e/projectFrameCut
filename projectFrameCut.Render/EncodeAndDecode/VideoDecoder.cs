@@ -71,8 +71,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private bool _packetPending = false;
         private bool _needsTimestampCalibration = false;
 
-        private readonly VideoFrameDiskCache _diskCache;
-
         public bool Disposed { get; private set; }
         public bool Initialized { get; private set; } = false;
 
@@ -105,7 +103,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         {
             _path = path;
             Initialize();
-            if (!string.IsNullOrWhiteSpace(path) && IVideoSource.EnableDiskCache) _diskCache = new VideoFrameDiskCache(_path);
         }
 
         public DecoderContext16Bit(Stream source, long length, bool leaveOpen = false)
@@ -301,15 +298,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 EnsureDecoderReady(targetFrame);
 
-                // Try disk cache before decoding
-                if (region is null && IVideoSource.EnableDiskCache && _diskCache.TryLoad16bpp(targetFrame, out var diskFrame))
-                {
-                    Index++;
-                    return diskFrame;
-                }
-
-                bool cacheIntermediateFrames = !VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps);
-                if (!cacheIntermediateFrames)
+                if (VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps))
                 {
                     Log($"[{TypeName}] Seeking '{_path}' from next frame {_currentFrameNumber} to {targetFrame}.", "debug");
                     SmartSeekTo(targetFrame);
@@ -376,7 +365,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                     || decodedFrameNumber > targetFrame)
                                 {
                                     Log($"[{TypeName}] Seek timestamp calibration failed for '{_path}' at target {targetFrame}; restarting from the beginning.", "warning");
-                                    cacheIntermediateFrames = false;
                                     SmartSeekTo(0);
                                     decodedFrameNumber = 0;
                                     restartFromBeginning = true;
@@ -392,8 +380,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                 break;
                             }
 
-                            if (cacheIntermediateFrames)
-                                CacheDecodedFrame((uint)decodedFrameNumber);
                             decodedFrameNumber++;
                             continue;
                         }
@@ -470,7 +456,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     Log($"[VideoDecoder] sws_scale only processed {scaledRows}/{_height} rows for '{_path}' frame {targetFrame}.", "warning");
 
                 var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _path, targetFrame, scaledRows);
-                CacheFinalFrame(targetFrame, picture);
                 return picture;
             }
             finally
@@ -541,33 +526,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
             flushSent = false;
             _needsTimestampCalibration = targetFrame > 0 && !fellBackToStart;
         }
-
-        private void CacheDecodedFrame(uint frameNumber)
-        {
-            if (!IVideoSource.EnableDiskCache)
-                return;
-
-            ffmpeg.sws_scale(
-                _sws,
-                _frm->data,
-                _frm->linesize,
-                0,
-                _height,
-                _rgb->data,
-                _rgb->linesize);
-
-            var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _path, frameNumber, _height);
-            CacheFinalFrame(frameNumber, picture);
-        }
-
-        private void CacheFinalFrame(uint frameNumber, Picture16bpp picture)
-        {
-            if (!IVideoSource.EnableDiskCache)
-                return;
-
-            _diskCache.Save16bppFrameAsync(frameNumber, picture);
-        }
-
 
         [DebuggerNonUserCode()]
         private static Picture16bpp PixelsToPicture(byte* data, int stride, int width, int height, string filePath = "", uint frameIdx = 0, int maxRows = int.MaxValue)
@@ -648,8 +606,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 {
                     locker.Exit();
                 }
-
-                _diskCache?.Dispose();
             }
             else
             {
@@ -700,8 +656,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private bool _packetPending = false;
         private bool _needsTimestampCalibration = false;
 
-        private readonly VideoFrameDiskCache _diskCache;
-
         public bool Disposed { get; private set; }
         public bool Initialized { get; private set; } = false;
 
@@ -735,7 +689,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         {
             _path = path;
             Initialize();
-            if (!string.IsNullOrWhiteSpace(path) && IVideoSource.EnableDiskCache) _diskCache = new VideoFrameDiskCache(_path);
         }
 
         public HDRDecoderContext(Stream source, long length, bool leaveOpen = false)
@@ -940,15 +893,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 EnsureDecoderReady(targetFrame);
 
-                // Try disk cache before decoding
-                if (region is null && IVideoSource.EnableDiskCache && _diskCache.TryLoadHDR(targetFrame, out var diskHDRFrame))
-                {
-                    Index++;
-                    return diskHDRFrame;
-                }
-
-                bool cacheIntermediateFrames = !VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps);
-                if (!cacheIntermediateFrames)
+                if (VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps))
                 {
                     Log($"[{TypeName}] Seeking '{_path}' from next frame {_currentFrameNumber} to {targetFrame}.", "debug");
                     SmartSeekTo(targetFrame);
@@ -1015,7 +960,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                     || decodedFrameNumber > targetFrame)
                                 {
                                     Log($"[{TypeName}] Seek timestamp calibration failed for '{_path}' at target {targetFrame}; restarting from the beginning.", "warning");
-                                    cacheIntermediateFrames = false;
                                     SmartSeekTo(0);
                                     decodedFrameNumber = 0;
                                     restartFromBeginning = true;
@@ -1031,8 +975,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                 break;
                             }
 
-                            if (cacheIntermediateFrames)
-                                CacheDecodedFrame((uint)decodedFrameNumber, hasAlpha);
                             decodedFrameNumber++;
                             continue;
                         }
@@ -1110,7 +1052,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     Log($"[VideoDecoder] sws_scale only processed {scaledRows}/{_height} rows for HDR '{_path}' frame {targetFrame}.", "warning");
 
                 var picture = PixelsToHDRPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, transferCharacteristic, maximumBrightness, scaledRows);
-                CacheFinalFrame(targetFrame, picture);
                 return picture;
             }
             finally
@@ -1181,36 +1122,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
             flushSent = false;
             _needsTimestampCalibration = targetFrame > 0 && !fellBackToStart;
         }
-
-        private void CacheDecodedFrame(uint frameNumber, bool hasAlpha)
-        {
-            if (!IVideoSource.EnableDiskCache)
-                return;
-
-            float maximumBrightness = ResolveFrameMaximumBrightness(_frm);
-            AVColorTransferCharacteristic transferCharacteristic = _frm->color_trc;
-
-            ffmpeg.sws_scale(
-                _sws,
-                _frm->data,
-                _frm->linesize,
-                0,
-                _height,
-                _rgb->data,
-                _rgb->linesize);
-
-            var picture = PixelsToHDRPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, frameNumber, transferCharacteristic, maximumBrightness, _height);
-            CacheFinalFrame(frameNumber, picture);
-        }
-
-        private void CacheFinalFrame(uint frameNumber, HDRPicture16bpp picture)
-        {
-            if (!IVideoSource.EnableDiskCache)
-                return;
-
-            _diskCache.SaveHDRFrameAsync(frameNumber, picture);
-        }
-
 
         private static float ResolveFrameMaximumBrightness(AVFrame* frame)
         {
@@ -1428,8 +1339,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 {
                     locker.Exit();
                 }
-
-                _diskCache?.Dispose();
             }
             else
             {
@@ -1536,8 +1445,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private bool _packetPending = false;
         private bool _needsTimestampCalibration = false;
 
-        private readonly VideoFrameDiskCache _diskCache;
-
         public bool Disposed { get; private set; }
         public bool Initialized { get; private set; } = false;
 
@@ -1571,7 +1478,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         {
             _path = path;
             Initialize();
-            if (!string.IsNullOrWhiteSpace(path) && IVideoSource.EnableDiskCache) _diskCache = new VideoFrameDiskCache(_path);
         }
 
         public DecoderContext8Bit(Stream source, long length, bool leaveOpen = false)
@@ -1781,15 +1687,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 EnsureDecoderReady(targetFrame);
 
-                // Try disk cache before decoding
-                if (region is null && IVideoSource.EnableDiskCache && _diskCache.TryLoad8bpp(targetFrame, out var diskFrame))
-                {
-                    Index++;
-                    return diskFrame;
-                }
-
-                bool cacheIntermediateFrames = !VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps);
-                if (!cacheIntermediateFrames)
+                if (VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps))
                 {
                     Log($"[{TypeName}] Seeking '{_path}' from next frame {_currentFrameNumber} to {targetFrame}.", "debug");
                     SmartSeekTo(targetFrame);
@@ -1856,7 +1754,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                     || decodedFrameNumber > targetFrame)
                                 {
                                     Log($"[{TypeName}] Seek timestamp calibration failed for '{_path}' at target {targetFrame}; restarting from the beginning.", "warning");
-                                    cacheIntermediateFrames = false;
                                     SmartSeekTo(0);
                                     decodedFrameNumber = 0;
                                     restartFromBeginning = true;
@@ -1872,9 +1769,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                 break;
                             }
 
-                            // Cache intermediate frames during forward decode
-                            if (cacheIntermediateFrames)
-                                CacheDecodedFrame((uint)decodedFrameNumber);
                             decodedFrameNumber++;
                             continue;
                         }
@@ -1950,7 +1844,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     Log($"[VideoDecoder] sws_scale only processed {scaledRows}/{_height} rows for '{_path}' frame {targetFrame}.", "warning");
 
                 var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _path, targetFrame, scaledRows);
-                CacheFinalFrame(targetFrame, picture);
                 return picture;
             }
             finally
@@ -2023,33 +1916,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _eof = false;
             flushSent = false;
             _needsTimestampCalibration = targetFrame > 0 && !fellBackToStart;
-        }
-
-        private void CacheDecodedFrame(uint frameNumber)
-        {
-            if (!IVideoSource.EnableDiskCache)
-                return;
-
-            // Convert and cache this intermediate frame
-            ffmpeg.sws_scale(
-                _sws,
-                _frm->data,
-                _frm->linesize,
-                0,
-                _height,
-                _rgb->data,
-                _rgb->linesize);
-
-            var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _path, frameNumber, _height);
-            CacheFinalFrame(frameNumber, picture);
-        }
-
-        private void CacheFinalFrame(uint frameNumber, Picture8bpp picture)
-        {
-            if (!IVideoSource.EnableDiskCache)
-                return;
-
-            _diskCache.Save8bppFrameAsync(frameNumber, picture);
         }
 
         //[DebuggerNonUserCode()]
@@ -2130,8 +1996,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 {
                     locker.Exit();
                 }
-
-                _diskCache?.Dispose();
             }
             else
             {

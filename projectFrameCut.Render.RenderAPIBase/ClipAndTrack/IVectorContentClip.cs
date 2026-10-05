@@ -11,7 +11,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
     {
         public static AntiAliasMode GlobalDefaultAntiAliasMode { get; set; } = AntiAliasMode.SSAA4x;
 
-        public static IVectorPictureRasterizer GlobalDefaultRasterizer { get; set; } = new CPUVectorPictureRasterizer();
+        public static IVectorPictureRasterizer GlobalDefaultRasterizer { get; set; } = new VectorContent.CpuVectorPictureRasterizer();
 
         public AntiAliasMode? ClipAntiAliasMode { get; set; } 
 

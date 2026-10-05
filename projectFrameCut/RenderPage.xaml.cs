@@ -516,6 +516,8 @@ public partial class RenderPage : ContentPage
         }
         try { ProjectPluginService.UnloadProjectPluginsAsync().GetAwaiter().GetResult(); }
         catch (Exception ex) { Log(ex, "Unload project plugins", this); }
+        try { ProjectExternalSourceService.CloseAsync(_workingPath).GetAwaiter().GetResult(); }
+        catch (Exception ex) { Log(ex, "Unload project external sources", this); }
     }
 
     protected override bool OnBackButtonPressed()
@@ -533,9 +535,36 @@ public partial class RenderPage : ContentPage
             await DisplayAlertAsync(Localized._Info, Localized.RenderPage_NoDraft, Localized._OK);
             return;
         }
+        try { await ProjectExternalSourceService.SelectAsync(this, _workingPath); }
+        catch (Exception ex) { Log(ex, "Select project external sources", this); }
+        if (_cts.IsCancellationRequested) return;
         if (RenderRpcBootstrap.SupportsCliRenderProcess)
             await RestoreRenderJobAsync();
     }
+
+    internal Task ShowAPopup(View content)
+    {
+        Popup.Content = content;
+        PopupOverlay.IsVisible = true;
+        PopupOverlay_SizeChanged(this, EventArgs.Empty);
+        return Task.CompletedTask;
+    }
+
+    internal Task HidePopup()
+    {
+        PopupOverlay.IsVisible = false;
+        Popup.Content = null;
+        return Task.CompletedTask;
+    }
+
+    private void PopupOverlay_SizeChanged(object? sender, EventArgs e)
+    {
+        var width = PopupOverlay.Width > 0 ? PopupOverlay.Width : Width;
+        var height = PopupOverlay.Height > 0 ? PopupOverlay.Height : Height;
+        if (width > 0) Popup.WidthRequest = Math.Min(640, Math.Max(0, width - 40));
+        if (height > 0) Popup.HeightRequest = Math.Min(600, Math.Max(0, height - 40));
+    }
+
     #region rendering
     [DebuggerNonUserCode]
     void _WriteToLogBox(string s, string l)
@@ -762,6 +791,7 @@ public partial class RenderPage : ContentPage
         var jobId = RenderRpcBootstrap.StartCliRender(new CliRenderProcessOptions
         {
             ProjectRoot = _workingPath,
+            AllowedExternalSources = ProjectExternalSourceService.GetApprovals(_workingPath),
             ProjectName = _project.ProjectName ?? Path.GetFileName(_workingPath),
             OutputPath = resultPath,
             AssetDatabasePath = Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"),
@@ -1411,7 +1441,7 @@ public partial class RenderPage : ContentPage
                             EnableDiskCacheRouting = SettingsManager.IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", true),
                             DiskCacheMaxFrameCount = SettingsManager.GetSettingAs("render_MaxDiskBufferCount", 500, 500),
                             DiskCacheThreshold = SettingsManager.GetSettingAs("render_DiskBufferThreshold", 0.7, 0.7),
-                            DiskCacheDirectory = Path.Combine(VideoFrameDiskCache.CacheBaseDir ?? Path.Combine(MauiProgram.CachePath, "VideoFrameCache"), "RenderingCache")
+                            DiskCacheDirectory = Path.Combine(MauiProgram.CachePath, "RenderingCache")
                         };
                         break;
                     case "null":
@@ -2087,6 +2117,7 @@ public partial class RenderPage : ContentPage
         {
             SessionId = _renderRpcSessionId,
             ProjectRoot = _workingPath,
+            AllowedExternalSources = ProjectExternalSourceService.GetApprovals(_workingPath),
             ProjectJson = JsonSerializer.Serialize(_project, DraftPage.DraftJSONOption),
             TimelineJson = JsonSerializer.Serialize(_draft, DraftPage.DraftJSONOption),
             ProjectWidth = Math.Max(1, _project.RelativeWidth),
@@ -2331,6 +2362,8 @@ public partial class RenderPage : ContentPage
         };
 
         var maxThreads = Math.Max(1, (int)Math.Round(MaxParallelThreadsCount.Value));
+        var allowedSources = ProjectExternalSourceService.GetApprovals(_workingPath);
+        if (allowedSources.Count > 0) args.Add("--allowExternalSources=" + string.Join(',', allowedSources.Select(x => x.ImportId)));
         args.Add($"-maxParallelThreads={maxThreads}");
         args.Add($"-preferHwAccelEncoder={useHardwareAcceleration}");
         args.Add($"-reuseDynamicPreviewCache={SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false)}");

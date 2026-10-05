@@ -56,8 +56,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public int? ResultBitPerPixel => 8;
 
-        private readonly VideoFrameDiskCache _diskCache;
-
         public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
 
@@ -73,7 +71,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         {
             _path = path;
             Initialize();
-            if (!string.IsNullOrWhiteSpace(path) && IVideoSource.EnableDiskCache) _diskCache = new VideoFrameDiskCache(_path);
         }
 
         public DecoderContextHW(Stream source, long length, bool leaveOpen = false)
@@ -299,15 +296,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 EnsureDecoderReady(targetFrame);
 
-                // Try disk cache before decoding
-                if (region is null && IVideoSource.EnableDiskCache && _diskCache.TryLoad8bpp(targetFrame, out var diskFrame))
-                {
-                    Index++;
-                    return diskFrame;
-                }
-
-                bool cacheIntermediateFrames = !VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps);
-                if (!cacheIntermediateFrames)
+                if (VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps))
                 {
                     Log($"[{TypeName}] Seeking '{_path}' from next frame {_currentFrameNumber} to {targetFrame}.", "debug");
                     SmartSeekTo(targetFrame);
@@ -374,7 +363,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                     || decodedFrameNumber > targetFrame)
                                 {
                                     Log($"[{TypeName}] Seek timestamp calibration failed for '{_path}' at target {targetFrame}; restarting from the beginning.", "warning");
-                                    cacheIntermediateFrames = false;
                                     SmartSeekTo(0);
                                     decodedFrameNumber = 0;
                                     restartFromBeginning = true;
@@ -390,8 +378,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                 break;
                             }
 
-                            if (cacheIntermediateFrames)
-                                CacheDecodedFrame((uint)decodedFrameNumber);
                             decodedFrameNumber++;
                             continue;
                         }
@@ -435,8 +421,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 Index++;
                 var picture = ConvertCurrentDecodedFrame(targetFrame, region);
-                if (region is null)
-                    CacheFinalFrame(targetFrame, picture);
                 return picture;
             }
             finally
@@ -508,15 +492,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _needsTimestampCalibration = targetFrame > 0 && !fellBackToStart;
         }
 
-        private void CacheDecodedFrame(uint frameNumber)
-        {
-            if (!IVideoSource.EnableDiskCache)
-                return;
-
-            var picture = ConvertCurrentDecodedFrame(frameNumber, null);
-            CacheFinalFrame(frameNumber, picture);
-        }
-
         private Picture8bpp ConvertCurrentDecodedFrame(uint frameNumber, VideoFrameRegion? region)
         {
             AVFrame* srcFrame = _frm;
@@ -575,14 +550,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 Log($"[DecoderContextHW] sws_scale only processed {scaledRows}/{_height} rows for '{_path}' frame {frameNumber}.", "warning");
 
             return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _path, frameNumber, scaledRows);
-        }
-
-        private void CacheFinalFrame(uint frameNumber, Picture8bpp picture)
-        {
-            if (!IVideoSource.EnableDiskCache)
-                return;
-
-            _diskCache.Save8bppFrameAsync(frameNumber, picture);
         }
 
         private bool IsHWFormat(AVPixelFormat fmt)
@@ -659,8 +626,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 locker.Exit();
             }
-
-            _diskCache?.Dispose();
 
             if (_rgbBuffer != null) { ffmpeg.av_free(_rgbBuffer); _rgbBuffer = null; }
             if (_rgb != null) { AVFrame* tmp = _rgb; _rgb = null; ffmpeg.av_frame_free(&tmp); }

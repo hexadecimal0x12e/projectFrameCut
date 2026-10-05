@@ -36,6 +36,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private readonly ConcurrentDictionary<string, object> _previewCacheGates = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _persistGate = new();
     private readonly SemaphoreSlim _projectLifecycleGate = new(1, 1);
+    private readonly ConcurrentDictionary<string, ProjectExternalSourceHost> _externalSources = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+    private ProjectExternalSourceHost GetSourceHost(string root) => _externalSources.GetOrAdd(Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)), _ => new());
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -54,6 +56,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             return request.Operation switch
             {
                 RenderOperation.GetCapabilities => Success(request, GetCapabilities()),
+                RenderOperation.ListProjectExternalSources => Success(request, await ListProjectExternalSourcesAsync(Read<ProjectExternalSourceCatalogRequest>(request), cancellationToken).ConfigureAwait(false)),
+                RenderOperation.SetProjectExternalSources => Success(request, await SetProjectExternalSourcesAsync(Read<SetProjectExternalSourcesRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.OpenProject => Success(request, await OpenProjectAsync(Read<OpenProjectRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.CloseProject => Success(request, await CloseProjectAsync(Read<SessionRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.GetProjectSnapshot => Success(request, GetProjectSnapshot(Read<SessionRequest>(request))),
@@ -101,6 +105,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         BackendVersion = typeof(Renderer).Assembly.GetName().Version?.ToString() ?? "unknown",
         Operations = Enum.GetValues<RenderOperation>()
             .Where(operation => operation != RenderOperation.Unknown && (int)operation < 100
+                && operation is not (RenderOperation.ListExternalVideoSourceClients or RenderOperation.ManageExternalVideoSourceClient)
                 && ((int)operation < 18 || (int)operation > 40)
                 && (_previewAudioSinkFactory is not null || operation is not (RenderOperation.ControlPreviewAudio or RenderOperation.GetPreviewAudioClock)))
             .Select(static operation => operation.ToString())
@@ -111,9 +116,30 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             : ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "thumbs-cache", "vfd-preview", "render-jobs", "persistent-render-jobs", "artifact-files", "preview-audio-device-clock"],
     };
 
+    private async Task<ProjectExternalSourceCatalog> SetProjectExternalSourcesAsync(SetProjectExternalSourcesRequest request, CancellationToken cancellationToken)
+    {
+        await _projectLifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            return await GetSourceHost(request.ProjectRoot).SetAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+        finally { _projectLifecycleGate.Release(); }
+    }
+
+    private Task<ProjectExternalSourceCatalog> ListProjectExternalSourcesAsync(ProjectExternalSourceCatalogRequest request, CancellationToken cancellationToken)
+        => GetSourceHost(request.ProjectRoot).ListAsync(request.ProjectRoot, cancellationToken);
+
+    private async Task ReleaseUnusedSourcesAsync(string root)
+    {
+        if (!_sessions.Values.Any(x => string.Equals(x.ProjectRoot, root, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            && _externalSources.TryRemove(root, out var sources))
+            await sources.CloseAsync().ConfigureAwait(false);
+    }
+
     private async ValueTask<PreviewAudioClock> ControlPreviewAudioAsync(PreviewAudioCommandRequest request, CancellationToken cancellationToken)
     {
         var session = GetSession(request.SessionId);
+        using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
         if (_previewAudioSinkFactory is null)
             throw new PlatformNotSupportedException("This render host has no preview audio sink.");
         var audio = session.GetPreviewAudio(_previewAudioSinkFactory);
@@ -132,6 +158,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private PreviewAudioClock GetPreviewAudioClock(PreviewAudioClockRequest request)
     {
         var session = GetSession(request.SessionId);
+        using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
         return session.TryGetPreviewAudio(out var audio)
             ? ToContract(audio.GetState(request.Generation))
             : new PreviewAudioClock { Generation = request.Generation, SampleRate = PreviewAudioSession.SampleRate, Channels = PreviewAudioSession.Channels };
@@ -161,7 +188,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.ProjectRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.TimelineJson);
-        var root = Path.GetFullPath(request.ProjectRoot);
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(request.ProjectRoot));
         if (!Directory.Exists(root)) throw new DirectoryNotFoundException($"Project root '{root}' does not exist.");
         MaintainPreviewCache(root);
         if (PluginManager.ProjectPluginIds.Count > 0 &&
@@ -189,6 +216,10 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         var sessionId = request.SessionId == Guid.Empty ? Guid.NewGuid() : request.SessionId;
         var draft = JsonSerializer.Deserialize<DraftStructureJSON>(request.TimelineJson, _jsonOptions)
             ?? throw new ArgumentException("Timeline JSON is invalid.");
+        var externalSources = GetSourceHost(root);
+        try { await externalSources.SetAsync(new() { ProjectRoot = root, AllowedSources = request.AllowedExternalSources }, cancellationToken).ConfigureAwait(false); }
+        catch { await ReleaseUnusedSourcesAsync(root).ConfigureAwait(false); throw; }
+        using var sourceScope = ProjectExternalSourceRuntime.Use(externalSources);
         var assets = request.Assets
             .Where(static item => !string.IsNullOrWhiteSpace(item.AssetId))
             .GroupBy(static item => item.AssetId, StringComparer.Ordinal)
@@ -206,6 +237,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         }
         catch
         {
+            await ReleaseUnusedSourcesAsync(root).ConfigureAwait(false);
             if (loadedProjectPluginsForOpen && _sessions.IsEmpty && PluginManager.ProjectPluginUnloader is not null)
                 await PluginManager.ProjectPluginUnloader().ConfigureAwait(false);
             throw;
@@ -224,6 +256,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         {
             foreach (var clip in clips) { try { clip.Dispose(); } catch { } }
             foreach (var track in soundTracks) { try { track.Dispose(); } catch { } }
+            await ReleaseUnusedSourcesAsync(root).ConfigureAwait(false);
             if (loadedProjectPluginsForOpen && _sessions.IsEmpty && PluginManager.ProjectPluginUnloader is not null)
                 await PluginManager.ProjectPluginUnloader().ConfigureAwait(false);
             throw;
@@ -248,6 +281,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             snapshotHash,
             hashIndex,
             cacheNamespace);
+        backendSession.ExternalSources = externalSources;
 
         if (_sessions.TryGetValue(sessionId, out var previous))
         {
@@ -282,6 +316,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         if (_sessions.TryRemove(request.SessionId, out var session))
         {
             await session.DisposeAsync().ConfigureAwait(false);
+            await ReleaseUnusedSourcesAsync(session.ProjectRoot).ConfigureAwait(false);
         }
         if (_sessions.IsEmpty && PluginManager.ProjectPluginIds.Count > 0 && PluginManager.ProjectPluginUnloader is not null)
             await PluginManager.ProjectPluginUnloader().ConfigureAwait(false);
@@ -291,12 +326,14 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private ProjectSnapshot GetProjectSnapshot(SessionRequest request)
     {
         var session = GetSession(request.SessionId);
+        using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
         return new ProjectSnapshot { Session = session.ToContract(), ProjectJson = session.ProjectJson, TimelineJson = session.TimelineJson };
     }
 
     private TimelineSnapshot GetTimeline(SessionRequest request)
     {
         var session = GetSession(request.SessionId);
+        using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
         return new TimelineSnapshot
         {
             SessionId = session.Id,
@@ -318,10 +355,17 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private async ValueTask<AssetMetadata> GetAssetMetadataAsync(AssetMetadataRequest request, CancellationToken cancellationToken)
     {
         var session = GetSession(request.SessionId);
+        using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
         var path = ResolveAssetPath(session, request);
         return await Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (ProjectExternalVideoSource.TryGetDescriptor(path, out var descriptor))
+                return new AssetMetadata
+                {
+                    AssetId = request.AssetId, MediaType = "video/x-project-external-source", ContentHash = ComputeTextHash(path + session.ExternalSources.CacheToken),
+                    Width = descriptor.Width, Height = descriptor.Height, FrameRate = descriptor.Fps, FrameCount = descriptor.TotalFrames,
+                };
             var info = new FileInfo(path);
             var result = new AssetMetadata
             {
@@ -385,6 +429,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private async ValueTask<RenderArtifact> RenderTimelineFrameAsync(TimelineFrameRequest request, CancellationToken cancellationToken)
     {
         var session = GetSession(request.SessionId);
+        using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
         var width = Math.Max(1, request.Width);
         var height = Math.Max(1, request.Height);
         await session.RenderGate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -395,9 +440,13 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             var wantsScRgb = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb;
             var formatSuffix = wantsScRgb ? "vfd16" : "vfd8";
             var cacheKey = $"{TimelineFrameCacheVersion}_{namespacePrefix}{frameHash}_{width}x{height}_{formatSuffix}";
-            var relativePath = $"thumbs/projectFrameCut_Render_{cacheKey}.vfd";
+            var allowCaching = Timeline.CanCacheFrame(GetVisualClips(session.Clips), request.FrameIndex);
+            if (!allowCaching)
+                LogDiagnostic($"[RenderRPC] Bypassing timeline preview cache at frame {request.FrameIndex}.");
+            var relativePath = allowCaching ? $"thumbs/projectFrameCut_Render_{cacheKey}.vfd"
+                : $"thumbs/.materialized/{session.Id:N}/frame_{Guid.NewGuid():N}.vfd";
             var finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
-            var cacheHit = File.Exists(finalPath);
+            var cacheHit = allowCaching && File.Exists(finalPath);
             if (!cacheHit)
             {
                 var temporaryPath = _artifacts.CreateTemporaryPath(finalPath);
@@ -432,7 +481,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 PreviewPixelFormat.VfdPicture,
                 0,
                 "vfd-native");
-            TrackPreviewCacheAccess(session.ProjectRoot, relativePath, null, request.FrameIndex, $"{width}x{height}:{formatSuffix}");
+            if (allowCaching)
+                TrackPreviewCacheAccess(session.ProjectRoot, relativePath, null, request.FrameIndex, $"{width}x{height}:{formatSuffix}");
             return artifact;
         }
         finally
@@ -444,6 +494,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private async ValueTask<RenderArtifact> RenderClipPreviewAsync(ClipPreviewRequest request, CancellationToken cancellationToken)
     {
         var session = GetSession(request.SessionId);
+        using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
         var savedClip = session.Clips.FirstOrDefault(candidate => candidate.Id == request.ClipId)
             ?? throw new KeyNotFoundException($"Clip '{request.ClipId}' was not found in render session '{request.SessionId}'.");
         using var snapshot = string.IsNullOrEmpty(request.VectorClipJson) ? null : CreateVectorPreviewSnapshot(request, savedClip, session);
@@ -464,14 +515,24 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             // important for transform clips whose output depends on bound clips
             // outside the requested clip itself.
             var clips = snapshot is null ? session.Clips : session.Clips.Select(c => c.Id == clip.Id ? clip : c).ToArray();
+            if (TransformProcessing.HasActiveTransform(clip, GetVisualClips(clips), request.FrameIndex))
+            {
+                previewWidth = canvasWidth;
+                previewHeight = canvasHeight;
+            }
             var clipHash = snapshot is null ? session.GetClipFrameHash(clip.Id, request.FrameIndex)
                 : Timeline.GetClipFrameHash(clips, clip, request.FrameIndex);
             var namespacePrefix = string.IsNullOrEmpty(session.CacheNamespace) ? string.Empty : $"{session.CacheNamespace}_";
             var wantsScRgb = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb;
             var formatSuffix = wantsScRgb ? "vfd16" : "vfd8";
-            var relativePath = $"thumbs/perClip/{clip.Id}/dynamic/dynamic_{ClipPreviewCacheVersion}_{namespacePrefix}{clipHash}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}_{formatSuffix}.vfd";
+            var allowCaching = Timeline.CanCacheClipFrame(clips, clip);
+            if (!allowCaching)
+                LogDiagnostic($"[RenderRPC] Bypassing clip preview cache for {clip.Id} at frame {request.FrameIndex}.");
+            var relativePath = allowCaching
+                ? $"thumbs/perClip/{clip.Id}/dynamic/dynamic_{ClipPreviewCacheVersion}_{namespacePrefix}{clipHash}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}_{formatSuffix}.vfd"
+                : $"thumbs/.materialized/{session.Id:N}/clip_{clip.Id:N}_{Guid.NewGuid():N}.vfd";
             var finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
-            var cacheHit = File.Exists(finalPath);
+            var cacheHit = allowCaching && File.Exists(finalPath);
             if (!cacheHit)
             {
                 var temporaryPath = _artifacts.CreateTemporaryPath(finalPath);
@@ -514,7 +575,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 PreviewPixelFormat.VfdPicture,
                 0,
                 "vfd-native");
-            TrackPreviewCacheAccess(session.ProjectRoot, relativePath, clip.Id, request.FrameIndex, $"project:{projectWidth}x{projectHeight};canvas:{canvasWidth}x{canvasHeight};output:{previewWidth}x{previewHeight};format:{formatSuffix}");
+            if (allowCaching)
+                TrackPreviewCacheAccess(session.ProjectRoot, relativePath, clip.Id, request.FrameIndex, $"project:{projectWidth}x{projectHeight};canvas:{canvasWidth}x{canvasHeight};output:{previewWidth}x{previewHeight};format:{formatSuffix}");
             return artifact;
         }
         finally
@@ -570,14 +632,18 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private async ValueTask<RenderArtifact> RenderTimelineSegmentAsync(TimelineSegmentRequest request, CancellationToken cancellationToken)
     {
         var session = GetSession(request.SessionId);
+        using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
         var keySource = $"{TimelineSegmentCacheVersion}|{session.CacheNamespace}|{session.SnapshotHash}|{request.StartFrame}|{request.Length}|{request.Width}|{request.Height}|{request.FrameRate}|{request.IncludeAudio}";
-        var relativePath = $"thumbs/projectFrameCut_Render_segment_{ComputeTextHash(keySource)}.mp4";
+        var relativePath = GetVisualClips(session.Clips).All(Timeline.CanCacheClipSource)
+            ? $"thumbs/projectFrameCut_Render_segment_{ComputeTextHash(keySource)}.mp4"
+            : $"thumbs/.materialized/{session.Id:N}/segment_{Guid.NewGuid():N}.mp4";
         return await RenderSegmentInternalAsync(session, request, relativePath, isPreview: true, cancellationToken).ConfigureAwait(false);
     }
 
     private async ValueTask<RenderArtifact> RenderAudioSegmentAsync(AudioSegmentRequest request, CancellationToken cancellationToken)
     {
         var session = GetSession(request.SessionId);
+        using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
         if (!HasAudio(session)) throw new InvalidOperationException("The project does not contain audio sources.");
         var sampleRate = Math.Max(8000, request.SampleRate);
         var channels = Math.Clamp(request.Channels, 1, 8);
@@ -629,6 +695,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private RenderJob StartRenderProject(RenderProjectRequest request)
     {
         var session = GetSession(request.SessionId);
+        using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
         var jobId = Guid.NewGuid();
         var entry = new JobEntry(new RenderJob
         {
@@ -653,6 +720,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         try
         {
             var session = GetSession(request.SessionId);
+            using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
             entry.Update(job => job.State = RenderJobState.Running);
             ReportProgress(entry);
             var safeName = SanitizeFileName(request.OutputFileName, "render.mp4");
@@ -815,7 +883,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         var jobs = _jobs.Values.Select(static entry => entry.Snapshot());
         if (!string.IsNullOrWhiteSpace(request.ProjectRoot))
         {
-            var root = Path.GetFullPath(request.ProjectRoot);
+            var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(request.ProjectRoot));
             jobs = jobs.Where(job => string.Equals(Path.GetFullPath(job.ProjectRoot), root,
                 OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
         }
@@ -879,6 +947,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     public (byte[] Content, string Path) ReadArtifact(ArtifactRequest request)
     {
         var session = GetSession(request.SessionId);
+        using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
         if (!_artifacts.TryGetPath(request.SessionId, request.ArtifactId, out var path))
             throw new FileNotFoundException($"Artifact '{request.ArtifactId}' was not found for this session.");
         var content = File.ReadAllBytes(path);
@@ -1032,7 +1101,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
 
     private string ResolveAssetPath(BackendSession session, AssetMetadataRequest request)
     {
-        if (!string.IsNullOrWhiteSpace(request.AssetId) && session.Assets.TryGetValue(request.AssetId, out var assetPath)) return Path.GetFullPath(assetPath);
+        if (!string.IsNullOrWhiteSpace(request.AssetId) && session.Assets.TryGetValue(request.AssetId, out var assetPath))
+            return ProjectExternalVideoSource.IsPath(assetPath) ? assetPath : Path.GetFullPath(assetPath);
         if (!string.IsNullOrWhiteSpace(request.ProjectRelativePath)) return _artifacts.ResolveProjectPath(session.ProjectRoot, request.ProjectRelativePath);
         throw new ArgumentException("Either AssetId or ProjectRelativePath is required.");
     }
@@ -1275,6 +1345,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         foreach (var job in _jobs.Values) job.Cancellation.Cancel();
         foreach (var session in _sessions.Values) await session.DisposeAsync().ConfigureAwait(false);
         _sessions.Clear();
+        foreach (var sources in _externalSources.Values) await sources.CloseAsync().ConfigureAwait(false);
+        _externalSources.Clear();
         if (PluginManager.ProjectPluginIds.Count > 0 && PluginManager.ProjectPluginUnloader is not null)
             await PluginManager.ProjectPluginUnloader().ConfigureAwait(false);
         PersistJobs();
@@ -1316,7 +1388,9 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         public IReadOnlyDictionary<string, string> Assets { get; } = assets;
         public string SnapshotHash { get; } = snapshotHash;
         public FrameHashIndex HashIndex { get; } = hashIndex;
-        public string CacheNamespace { get; } = cacheNamespace;
+        public ProjectExternalSourceHost ExternalSources { get; set; } = null!;
+        public string CacheNamespace => string.IsNullOrEmpty(ExternalSources.CacheToken) && string.IsNullOrEmpty(ExternalVideoSourceRegistry.CacheToken)
+            ? cacheNamespace : ComputeTextHash(cacheNamespace + ExternalSources.CacheToken + ExternalVideoSourceRegistry.CacheToken);
         public SemaphoreSlim RenderGate { get; } = new(1, 1);
         private readonly object _previewAudioGate = new();
         private PreviewAudioSession? _previewAudio;
@@ -1363,9 +1437,12 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         public async ValueTask DisposeAsync()
         {
             if (_previewAudio is not null) await _previewAudio.DisposeAsync().ConfigureAwait(false);
-            foreach (var clip in Clips) { try { clip.Dispose(); } catch { } }
+            foreach (var clip in Clips) { try { TransformProcessing.Release(clip.ExtraData); clip.Dispose(); } catch { } }
             foreach (var track in SoundTracks) { try { track.Dispose(); } catch { } }
             RenderGate.Dispose();
+            var materializedRoot = Path.Combine(ProjectRoot, "thumbs", ".materialized", Id.ToString("N"));
+            try { if (Directory.Exists(materializedRoot)) Directory.Delete(materializedRoot, true); }
+            catch (Exception ex) { Log(ex, $"Delete temporary previews from {materializedRoot}"); }
         }
     }
 

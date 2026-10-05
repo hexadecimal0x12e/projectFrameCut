@@ -32,7 +32,23 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
 
     internal static string SessionDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "plugin-isolation");
     internal static string ProjectPluginDirectory => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "project-plugins");
+    internal static string ExternalSourceDirectory => Path.Combine(ApplicationData.Current.LocalFolder.Path, "project-external-sources");
     internal static SecurityIdentifier AppContainerSid => GetAppContainerSid(PackageFamilyName);
+    internal static void PrepareExternalSourceAccess(string root)
+    {
+        if (!Path.GetFullPath(root).StartsWith(Path.GetFullPath(ExternalSourceDirectory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("External source runtime must be below the current package source directory.");
+        var directory = new DirectoryInfo(root);
+        using var current = WindowsIdentity.GetCurrent();
+        var security = new DirectorySecurity();
+        security.SetAccessRuleProtection(true, false);
+        foreach (var sid in new[] { current.User ?? throw new InvalidOperationException("No user SID."), new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null) })
+            security.AddAccessRule(new FileSystemAccessRule(sid, FileSystemRights.FullControl,
+                InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
+        security.AddAccessRule(new FileSystemAccessRule(AppContainerSid, FileSystemRights.ReadAndExecute,
+            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
+        directory.SetAccessControl(security);
+    }
     internal static SecurityIdentifier GetAppContainerSid(string packageFamilyName) => DeriveAppContainerSid(packageFamilyName);
     internal static NamedPipeServerStream CreateRpcPipe(string name, bool isolated) =>
         isolated ? CreatePipe(name, AppContainerSid) : new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
@@ -143,7 +159,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
             Log($"Created isolation pipe '\\\\.\\pipe\\{pipeName}' for AppContainer SID '{appContainerSid.Value}'.");
             List<string> args = 
                 [
-                    "plugin_worker",
+                    context.ExternalSourceManifestHash is null ? "plugin_worker" : "external_source_worker",
                     $"--pipe={pipeName}",
                     $"--token={context.AuthenticationToken}",
                     $"--sessionRoot={sessionRoot}",
@@ -154,16 +170,18 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
                     "--forceRouteToCLI",
                     "--appContainer",
                 ];
+            if (context.ExternalSourceManifestHash is not null) args.Add($"--externalSourceHash={context.ExternalSourceManifestHash}");
             if (MyLoggerExtensions.LoggingDiagnosticInfo)
             {
                 args.Add("--logDiagnostic");
             }
-            if (SettingsManager.IsBoolSettingTrue("plugin_IsolationShowConsole"))
+            var showConsole = SettingsManager.Settings is not null && SettingsManager.IsBoolSettingTrue("plugin_IsolationShowConsole");
+            if (showConsole)
             {
                 args.Add("--consoleLog");
             }
             var arguments = string.Join(" ", args.Select(Quote));
-            var workerEntryPoint = SettingsManager.IsBoolSettingTrue("plugin_IsolationShowConsole")  ? "InSandboxWorkerConsole" : "InSandboxWorkerNoConsole";
+            var workerEntryPoint = showConsole ? "InSandboxWorkerConsole" : "InSandboxWorkerNoConsole";
             var processId = ActivateRuntime($"{familyName}!{workerEntryPoint}", arguments);
             process = Process.GetProcessById(processId);
             Log($"Activated InSandboxWorker {processId} for plugin '{context.PluginId}'.");
@@ -174,7 +192,10 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
                 || clientProcessId != processId)
                 throw new UnauthorizedAccessException("The process connected to the plugin isolation pipe does not match the activated runtime.");
 
-            await projectFrameCut.Services.PluginIsolationHostHandshake.AuthorizeRuntimeAsync(pendingPipe, context, timeout.Token).ConfigureAwait(false);
+            if (context.ExternalSourceManifestHash is not null)
+                await ProjectExternalSourceWorker.AuthorizeAsync(pendingPipe, context, timeout.Token).ConfigureAwait(false);
+            else
+                await projectFrameCut.Services.PluginIsolationHostHandshake.AuthorizeRuntimeAsync(pendingPipe, context, timeout.Token).ConfigureAwait(false);
             channel = new StreamIsolationControlChannel(pendingPipe, IsolationControlMode.NamedPipe);
             var request = new RenderRequestEnvelope
             {

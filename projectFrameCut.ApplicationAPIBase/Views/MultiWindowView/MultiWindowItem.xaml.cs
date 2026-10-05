@@ -271,6 +271,22 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// </summary>
         internal Rect? PreSnapBounds { get; set; }
 
+        internal bool IsMaximized => _isMaximized;
+
+        internal Rect GetRestoreBounds()
+        {
+            if (_isInWindowMode) return new Rect(_preWindowX, _preWindowY, _preWindowWidth, _preWindowHeight);
+            if (_isMaximized) return new Rect(_preMaxX, _preMaxY, _preMaxWidth, _preMaxHeight);
+            return new Rect(TranslationX, TranslationY, WidthRequest > 0 ? WidthRequest : Width,
+                IsMinimized ? _preMinHeight : (HeightRequest > 0 ? HeightRequest : Height));
+        }
+
+        internal void SetLayoutHeight(double height)
+        {
+            if (IsMinimized) _preMinHeight = ConstrainWindowHeight(height);
+            HeightRequest = IsMinimized ? MinimizedWindowHeight : ConstrainWindowHeight(height);
+        }
+
         private double _preMinHeight;
 
         // Template Parts
@@ -1359,8 +1375,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 // Snapshot
                 _preMaxX = this.TranslationX;
                 _preMaxY = this.TranslationY;
-                _preMaxWidth = this.Width;
-                _preMaxHeight = this.Height;
+                _preMaxWidth = this.WidthRequest > 0 ? this.WidthRequest : this.Width;
+                _preMaxHeight = this.HeightRequest > 0 ? this.HeightRequest : this.Height;
                 _preCol = Grid.GetColumn(this);
                 _preRow = Grid.GetRow(this);
                 _preColSpan = Grid.GetColumnSpan(this);

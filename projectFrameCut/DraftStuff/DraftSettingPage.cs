@@ -6,8 +6,11 @@ using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
 using projectFrameCut.Render;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.PluginIsolation;
+using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -74,6 +77,12 @@ public class DraftSettingPage
             });
             tabView.TabItems.Add(new TabbedViewItem
             {
+                Header = Localized.DraftSettingPage_Tab_ExternalSources,
+                Tag = "externalSources",
+                LazyAsyncContentFactory = BuildExternalSourcesTabAsync
+            });
+            tabView.TabItems.Add(new TabbedViewItem
+            {
                 Header = Localized.MainSettingsPage_Tab_Misc,
                 Content = BuildAdvancedTab()
             });
@@ -110,6 +119,12 @@ public class DraftSettingPage
         //    Header = Localized.DraftSettingPage_Tab_Compatibility,
         //    Content = BuildCompatibilityTab()
         //});
+        tabView.TabItems.Add(new TabbedViewItem
+        {
+            Header = Localized.DraftSettingPage_Tab_ExternalSources,
+            Tag = "externalSources",
+            LazyAsyncContentFactory = BuildExternalSourcesTabAsync
+        });
         tabView.TabItems.Add(new TabbedViewItem
         {
             Header = Localized.MainSettingsPage_Tab_Misc,
@@ -159,6 +174,147 @@ public class DraftSettingPage
             }
         };
 
+    }
+
+    #endregion
+
+    #region external sources
+
+    private async Task<View> BuildExternalSourcesTabAsync()
+    {
+        var rows = new VerticalStackLayout { Spacing = 12, Padding = 10 };
+        var refresh = new Button { Text = Localized.DraftSettingPage_ExternalSources_Refresh };
+        var panel = new Grid { RowSpacing = 8, RowDefinitions = [new RowDefinition { Height = GridLength.Auto }, new RowDefinition { Height = GridLength.Star }] };
+        panel.Add(refresh, 0, 0);
+        panel.Add(new ScrollView { Content = rows }, 0, 1);
+        var refreshing = false;
+
+        async Task RefreshAsync()
+        {
+            if (refreshing) return;
+            refreshing = true;
+            refresh.IsEnabled = false;
+            rows.Clear();
+            try
+            {
+                if (IsStandaloneJsonMode) rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_OpenProject });
+                rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Assembly, FontSize = 18, FontAttributes = FontAttributes.Bold });
+                try
+                {
+                    var sources = await ProjectExternalSourceRuntime.ListAsync(ResolveJsonProjectRoot());
+                    if (!IsStandaloneJsonMode && RenderRpcBootstrap.TryGetClient(out var backend) && backend is not null)
+                    {
+                        var remote = await backend.ListProjectExternalSourcesAsync(new() { ProjectRoot = parent.WorkingPath });
+                        foreach (var source in sources.Sources)
+                        {
+                            var state = remote.Sources.FirstOrDefault(x => x.ImportId == source.ImportId);
+                            if (state is null) continue;
+                            source.Loaded &= state.Loaded;
+                            if (!string.IsNullOrWhiteSpace(state.Error)) source.Error = state.Error;
+                        }
+                    }
+                    if (sources.Sources.Count == 0) rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Empty });
+                    foreach (var source in sources.Sources.OrderBy(x => x.Name))
+                    {
+                        AddCard(source.Name, $"{source.Author} · {source.Version}\n{source.ManifestId}\n{source.Description}", source.Sources,
+                            source.Loaded, source.Error, !IsStandaloneJsonMode, IsStandaloneJsonMode || !parent.IsReadonly,
+                            () => ProjectExternalSourceService.SetLoadedAsync(parent.WorkingPath, source.ImportId, true),
+                            () => ProjectExternalSourceService.SetLoadedAsync(parent.WorkingPath, source.ImportId, false),
+                            () => IsStandaloneJsonMode ? ProjectExternalSourceDatabase.RemoveAsync(ResolveJsonProjectRoot(), source.ImportId)
+                                : ProjectExternalSourceService.RemoveAsync(parent, source.ImportId),
+                            Localized.DraftSettingPage_ExternalSources_RemoveAssembly);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(ex, "List project external sources", this);
+                    rows.Add(new Label { Text = ex.Message });
+                }
+
+                rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Rpc, FontSize = 18, FontAttributes = FontAttributes.Bold });
+                if (!IsStandaloneJsonMode && RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
+                {
+                    try
+                    {
+                        var clients = await client.ListExternalVideoSourceClientsAsync();
+                        if (clients.Clients.Count == 0) rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Empty });
+                        foreach (var rpc in clients.Clients.OrderBy(x => x.ClientName))
+                            AddCard(rpc.ClientName, rpc.ClientId.ToString(), rpc.Sources, rpc.Loaded, string.Empty, true, true,
+                                () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Load),
+                                () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Unload),
+                                () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Remove),
+                                Localized.DraftSettingPage_ExternalSources_RemoveRpc);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(ex, "List RPC external source clients", this);
+                        rows.Add(new Label { Text = ex.Message });
+                    }
+                }
+                else rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Empty });
+            }
+            finally
+            {
+                refresh.IsEnabled = true;
+                refreshing = false;
+            }
+        }
+
+        async Task RunAsync(Func<Task> action)
+        {
+            if (!panel.IsEnabled) return;
+            panel.IsEnabled = false;
+            try
+            {
+                await action();
+                if (!IsStandaloneJsonMode)
+                {
+                    await parent.AddClipView.RefreshExternalSourcesAsync();
+                    await parent.RefreshPreviewFromCurrentProviderAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, "Manage external source", this);
+                await ShowInfoAsync(ex.Message);
+            }
+            finally
+            {
+                await RefreshAsync();
+                panel.IsEnabled = true;
+            }
+        }
+
+        void AddCard(string name, string description, List<ExternalVideoSourceDescriptor> sources, bool loaded, string error,
+            bool canLoad, bool canRemove, Func<Task> load, Func<Task> unload, Func<Task> remove, string removePrompt)
+        {
+            var info = new VerticalStackLayout { Spacing = 6 };
+            info.Add(new Label { Text = name, FontSize = 16, FontAttributes = FontAttributes.Bold });
+            info.Add(new Label { Text = description, FontSize = 12 });
+            info.Add(new Label { Text = string.IsNullOrWhiteSpace(error)
+                ? loaded ? Localized.ProjectExternalSource_Loaded : Localized.ProjectExternalSource_NotLoaded
+                : $"{Localized.ProjectExternalSource_Failed}: {error}" });
+            if (sources.Count > 0) info.Add(new Label { Text = string.Join("\n", sources.Select(x => x.Name)), FontSize = 12 });
+            var buttons = new HorizontalStackLayout { Spacing = 8 };
+            var loadButton = new Button { Text = Localized.DraftSettingPage_ExternalSources_Load, IsEnabled = canLoad && (!loaded || !string.IsNullOrWhiteSpace(error)) };
+            var unloadButton = new Button { Text = Localized.DraftSettingPage_ExternalSources_Unload, IsEnabled = canLoad && (loaded || !string.IsNullOrWhiteSpace(error)) };
+            var removeButton = new Button { Text = Localized._Remove, IsEnabled = canRemove };
+            loadButton.Clicked += async (_, _) => await RunAsync(load);
+            unloadButton.Clicked += async (_, _) => await RunAsync(unload);
+            removeButton.Clicked += async (_, _) =>
+            {
+                if (await ConfirmAsync(Localized._Warn, removePrompt)) await RunAsync(remove);
+            };
+            buttons.Add(loadButton);
+            buttons.Add(unloadButton);
+            buttons.Add(removeButton);
+            info.Add(buttons);
+            rows.Add(new Border { Padding = 12, StrokeShape = new RoundRectangle { CornerRadius = 8 }, Content = info });
+        }
+
+        refresh.Clicked += async (_, _) => await RefreshAsync();
+        await RefreshAsync();
+        return panel;
     }
 
     #endregion

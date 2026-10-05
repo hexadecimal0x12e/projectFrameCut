@@ -268,14 +268,21 @@ public sealed class NamedPipeRenderServer(
                     (clientId, clientName) => CreatePipeAsync(ct, decision.GuiSessionId, clientId, clientName), RevokePipe, ct).ConfigureAwait(false);
                 return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(new EmptyResponse()) };
             }
+            if (request.Operation == RenderOperation.ListExternalVideoSourceClients)
+                return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(ExternalVideoSourceRegistry.ListClients()) };
+            if (request.Operation == RenderOperation.ManageExternalVideoSourceClient)
+            {
+                await ExternalVideoSourceRegistry.ManageAsync(RenderRpcSerializer.Deserialize<ManageExternalVideoSourceClientRequest>(request.Payload), ct).ConfigureAwait(false);
+                return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(new EmptyResponse()) };
+            }
             if (request.Operation is RenderOperation.RegisterExternalVideoSources or RenderOperation.UnregisterExternalVideoSources or RenderOperation.ListExternalVideoSources)
             {
                 if (request.Operation == RenderOperation.ListExternalVideoSources)
                     return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(ExternalVideoSourceRegistry.List()) };
                 if (!Guid.TryParse(request.ClientId, out var clientId)) throw new UnauthorizedAccessException("External video source client ID is invalid.");
                 if (request.Operation == RenderOperation.RegisterExternalVideoSources)
-                    ExternalVideoSourceRegistry.Register(clientId, RenderRpcSerializer.Deserialize<RegisterExternalVideoSourcesRequest>(request.Payload));
-                else ExternalVideoSourceRegistry.Unregister(clientId);
+                    await ExternalVideoSourceRegistry.RegisterAsync(clientId, RenderRpcSerializer.Deserialize<RegisterExternalVideoSourcesRequest>(request.Payload), ct).ConfigureAwait(false);
+                else await ExternalVideoSourceRegistry.UnregisterAsync(clientId, ct).ConfigureAwait(false);
                 return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(new EmptyResponse()) };
             }
             if (request.Operation != RenderOperation.CreateAdditionalPipe)
@@ -286,6 +293,8 @@ public sealed class NamedPipeRenderServer(
                     var capabilities = RenderRpcSerializer.Deserialize<RenderCapabilities>(response.Payload);
                     capabilities.Operations.Add(nameof(RenderOperation.CreateAdditionalPipe));
                     capabilities.Operations.Add(nameof(RenderOperation.RegisterGuiProject));
+                    capabilities.Operations.Add(nameof(RenderOperation.ListExternalVideoSourceClients));
+                    capabilities.Operations.Add(nameof(RenderOperation.ManageExternalVideoSourceClient));
                     if (_requests is not null)
                     {
                         capabilities.Operations.Add(nameof(RenderOperation.GetExternalRpcRequest));

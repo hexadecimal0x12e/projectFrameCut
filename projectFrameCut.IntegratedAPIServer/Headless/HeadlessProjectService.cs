@@ -50,14 +50,14 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
     /// <summary>Whether a startup project has already been loaded into this service.</summary>
     public bool IsInitialized => _defaultSessionId != Guid.Empty;
 
-    public async ValueTask InitializeAsync(string projectRoot, CancellationToken cancellationToken = default)
+    public async ValueTask InitializeAsync(string projectRoot, CancellationToken cancellationToken = default, IReadOnlyList<ProjectExternalSourceApproval>? allowedExternalSources = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectRoot);
         if (_defaultSessionId != Guid.Empty)
             throw new InvalidOperationException("The headless project service has already been initialized.");
 
         HeadlessProjectSnapshot snapshot = await OpenAsync(
-            new OpenHeadlessProjectRequest { ProjectRoot = projectRoot },
+            new OpenHeadlessProjectRequest { ProjectRoot = projectRoot, AllowedExternalSources = allowedExternalSources?.ToList() ?? [] },
             cancellationToken).ConfigureAwait(false);
         _defaultSessionId = snapshot.SessionId;
     }
@@ -122,6 +122,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
             return request.Operation switch
             {
                 RenderOperation.GetCapabilities => Success(request, await GetCapabilitiesAsync(request, cancellationToken).ConfigureAwait(false)),
+                RenderOperation.SetProjectExternalSources => await SetProjectExternalSourcesAsync(request, cancellationToken).ConfigureAwait(false),
                 RenderOperation.OpenProject => Success(request, await OpenRenderProjectAsync(Read<OpenProjectRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.OpenHeadlessProject => Success(request, await OpenAsync(Read<OpenHeadlessProjectRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.CloseProject => Success(request, await CloseAsync(Read<SessionRequest>(request).SessionId, request, cancellationToken).ConfigureAwait(false)),
@@ -252,7 +253,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
         if (!Directory.Exists(root)) throw new DirectoryNotFoundException($"Project root '{root}' does not exist.");
 
         var sessionId = request.SessionId == Guid.Empty ? Guid.NewGuid() : request.SessionId;
-        var session = new HeadlessSession(sessionId, TimelineProjectWorkspace.Load(root));
+        var session = new HeadlessSession(sessionId, TimelineProjectWorkspace.Load(root)) { AllowedExternalSources = request.AllowedExternalSources.Select(x => RenderRpcSerializer.Clone(x)).ToList() };
         await session.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!_sessions.TryAdd(sessionId, session))
         {
@@ -444,6 +445,22 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
         session.Revision++;
     }
 
+    private async ValueTask<RenderResponseEnvelope> SetProjectExternalSourcesAsync(RenderRequestEnvelope request, CancellationToken cancellationToken)
+    {
+        var selection = Read<SetProjectExternalSourcesRequest>(request);
+        var response = await _renderService.DispatchAsync(request, cancellationToken).ConfigureAwait(false);
+        if (response.Error is null)
+        {
+            foreach (var session in _sessions.Values.Where(x => string.Equals(x.Workspace.ProjectRoot, Path.GetFullPath(selection.ProjectRoot), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)))
+            {
+                await session.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                try { session.AllowedExternalSources = selection.AllowedSources.Select(x => RenderRpcSerializer.Clone(x)).ToList(); }
+                finally { session.Gate.Release(); }
+            }
+        }
+        return response;
+    }
+
     private async ValueTask RefreshRenderSessionAsync(HeadlessSession session, CancellationToken cancellationToken)
     {
         string projectJson = Serialize(session.Workspace.ProjectInfo);
@@ -459,6 +476,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
             Payload = RenderRpcSerializer.Serialize(new OpenProjectRequest
             {
                 SessionId = session.Id,
+                AllowedExternalSources = session.AllowedExternalSources,
                 ProjectRoot = session.Workspace.ProjectRoot,
                 ProjectJson = projectJson,
                 TimelineJson = timelineJson,
@@ -685,6 +703,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
 
     private sealed class HeadlessSession(Guid id, TimelineProjectWorkspace workspace) : IDisposable
     {
+        public List<ProjectExternalSourceApproval> AllowedExternalSources { get; set; } = [];
         public Guid Id { get; } = id;
         public TimelineProjectWorkspace Workspace { get; private set; } = workspace;
         public TimelineProjectEditor Editor { get; private set; } = new(workspace);

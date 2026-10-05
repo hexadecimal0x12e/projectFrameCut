@@ -48,10 +48,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public string[] PreferredExtension => [];
         public string TypeName => "FFmpegDeviceDecoderContext";
         public int? ResultBitPerPixel => 8;
+        public bool AllowCachingResult => false;
 
         public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
-        public bool EnableDiskCache { get; set; }
 
         private readonly Lock _locker = new();
 

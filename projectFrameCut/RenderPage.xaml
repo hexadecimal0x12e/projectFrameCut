@@ -165,5 +165,15 @@
             <Editor Grid.Row="4" x:Name="LoggingBox" Margin="0,16,0,0" IsReadOnly="True"></Editor>
             <VerticalStackLayout Opacity="50" Grid.Row="5" x:Name="ComputeView" Background="#01000000" />
         </Grid>
+        <Grid x:Name="PopupOverlay" Grid.RowSpan="2" ZIndex="1001"
+              BackgroundColor="#55000000" IsVisible="False" SizeChanged="PopupOverlay_SizeChanged">
+            <Border x:Name="Popup" Padding="12" HorizontalOptions="Center" VerticalOptions="Center"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource PopupBackgroundColorLight}, Dark={StaticResource PopupBackgroundColorDark}}"
+                    Stroke="{AppThemeBinding Light={StaticResource PopupBorderColorLight}, Dark={StaticResource PopupBorderColorDark}}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8"/>
+                </Border.StrokeShape>
+            </Border>
+        </Grid>
     </Grid>
 </ContentPage>

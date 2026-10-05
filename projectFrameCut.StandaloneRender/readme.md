@@ -216,10 +216,6 @@ bench 模式会使用 `BenchmarkSourceGenerator` 自动生成一个包含多种�
 - **`-PictureResizer=<cpu|hwaccel>`**
   选择要使用的硬件加速图片缩放器。默认：`hwaccel`
 
-- **`-VideoFrameDiskCacheRoot=<path to video frame disk cache root>`**
-  指定磁盘缓存的根目录。默认位于projectFrameCut缓存目录下的`VideoFrameDiskCache`文件夹中。
-  不定义此参数代表禁用磁盘缓存。
-
 - **`-VideoFrameMemoryCache=<true|false>`**
   是否启用内存缓存。默认：`false`
 

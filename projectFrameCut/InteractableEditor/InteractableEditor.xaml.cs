@@ -487,6 +487,7 @@ namespace projectFrameCut.InteractableEditor
             public AbsoluteLayout Root { get; }
             public Border ClipVisual { get; }
             public ContentView PreviewHost { get; }
+            public bool IsPositionedPreview { get; set; }
             public BoxView HandleTL { get; }
             public BoxView HandleTR { get; }
             public BoxView HandleBL { get; }
@@ -577,7 +578,16 @@ namespace projectFrameCut.InteractableEditor
                         ? (clipStroke ?? Colors.Yellow)
                         : Colors.Transparent;
                 }
-                UpdatePreviewHostLayout(displayW, displayH, logicalW, logicalH);
+                if (IsPositionedPreview)
+                {
+                    var rect = _owner.GetRenderRect();
+                    PreviewHost.WidthRequest = _owner._videoWidth;
+                    PreviewHost.HeightRequest = _owner._videoHeight;
+                    PreviewHost.Scale = rect.Width / _owner._videoWidth;
+                    AbsoluteLayout.SetLayoutBounds(PreviewHost, new Rect(rect.X - displayX, rect.Y - displayY, _owner._videoWidth, _owner._videoHeight));
+                    UpdatePreviewHostVisibility();
+                }
+                else UpdatePreviewHostLayout(displayW, displayH, logicalW, logicalH);
                 UpdateRootInputTransparency();
 
                 double handleSize = HandleSize;
@@ -2991,6 +3001,7 @@ namespace projectFrameCut.InteractableEditor
             }
 
             var knownStates = new HashSet<Guid>();
+            var layoutChanged = new HashSet<Guid>();
             var hasVisiblePreview = false;
 
             foreach (var prepared in preparedPreviews)
@@ -3013,6 +3024,8 @@ namespace projectFrameCut.InteractableEditor
                 }
 
                 var state = GetOrCreateClipState(prepared.ClipId);
+                if (state.IsPositionedPreview != prepared.IsPositionedClipPreview) layoutChanged.Add(prepared.ClipId);
+                state.IsPositionedPreview = prepared.IsPositionedClipPreview;
                 var suppressPreviewForResize = ShouldSuppressPreviewForResize(prepared.ClipId);
 
                 knownStates.Add(prepared.ClipId);
@@ -3071,6 +3084,7 @@ namespace projectFrameCut.InteractableEditor
             {
                 state.RefreshPreviewVisibility();
             }
+            if (layoutChanged.Count > 0) UpdateVisuals(clipFilter: layoutChanged, reorderClips: false);
             return hasVisiblePreview;
         }
 

@@ -116,7 +116,7 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
 
             state.Generation = _generation;
             state.Source = preview.Source;
-            state.IsCanvasPreview = preview.IsCanvasPreview;
+            state.IsCanvasPreview = preview.IsCanvasPreview || preview.IsPositionedClipPreview;
             if (preview.Source is not null)
             {
                 var z = (long)preview.Source.LayerIndex * 10000L + Math.Min(9999u, preview.Source.SubLayerIndex);

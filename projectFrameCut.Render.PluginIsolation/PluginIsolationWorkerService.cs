@@ -791,6 +791,8 @@ internal sealed class PluginIsolationWorkerService(
         transform.BindedLeftClip = Guid.Parse(state.LeftClipId);
         transform.BindedRightClip = Guid.Parse(state.RightClipId);
         transform.Duration = state.Duration;
+        transform.Side = (TransformSide)state.Side;
+        transform.Parameters = state.Parameters.ToDictionary(x => x.Key, x => IsolationValueConverter.ToObject(x.Value)!);
     }
 
     private static IsolationTransformState DescribeTransform(long id, ITransform transform) => new()
@@ -803,6 +805,12 @@ internal sealed class PluginIsolationWorkerService(
         LeftClipId = transform.BindedLeftClip.ToString(),
         RightClipId = transform.BindedRightClip.ToString(),
         Duration = transform.Duration,
+        Definition = (int)transform.Definition,
+        Side = (int)transform.Side,
+        Parameters = transform.Parameters.ToDictionary(x => x.Key, x => IsolationValueConverter.FromObject(x.Value)),
+        ParametersType = transform.ParametersType,
+        ParametersNeeded = transform.ParametersNeeded,
+        SerializedTransform = transform.Serialize().GetRawText(),
     };
 
     private RenderResponseEnvelope CreateClip(RenderRequestEnvelope envelope)
@@ -1269,6 +1277,7 @@ internal sealed class PluginIsolationWorkerService(
         PreferredExtensions = source.PreferredExtension.ToList(),
         ResultBitsPerPixel = source.ResultBitPerPixel ?? 0,
         HasKnownResultBitsPerPixel = source.ResultBitPerPixel.HasValue,
+        AllowCachingResult = source.AllowCachingResult,
         TotalFrames = source.TotalFrames,
         Fps = source.Fps,
         Width = source.Width,

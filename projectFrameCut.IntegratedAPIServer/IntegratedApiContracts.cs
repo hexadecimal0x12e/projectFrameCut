@@ -51,6 +51,7 @@ public interface IIntegratedApiBackend
 
 public sealed class IntegratedApiServerOptions
 {
+    public string? AllowExternalSources { get; set; }
     public required Uri ListenUri { get; init; }
 
     public string? RpcToken { get; init; }

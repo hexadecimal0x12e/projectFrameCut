@@ -408,6 +408,11 @@ public sealed class DynamicPreview : IDisposable
     {
         CancelClipWarmup(clipId);
         if (!PreviewWarmupEnabled || _previewer is null || _clips?.FirstOrDefault(c => c.Id == clipId) is not { } clip) return;
+        if (!Timeline.CanCacheClipFrame(_clips, clip))
+        {
+            LogDiagnostic($"[DynamicPreview] Skipped warmup for changing source in clip {clipId}.");
+            return;
+        }
 
         var cts = new CancellationTokenSource();
         _clipWarmups[clipId] = cts;
@@ -677,6 +682,7 @@ public sealed class DynamicPreview : IDisposable
         try
         {
             ImageSource source;
+            bool canvasPreview = TransformProcessing.HasActiveTransform(request.Clip, _clips ?? [request.Clip], frameIndex);
             if (_previewer is not null)
             {
                 var displayFrame = _previewer.RenderClipFrameForDisplay(request.Clip.Id, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson);
@@ -689,7 +695,7 @@ public sealed class DynamicPreview : IDisposable
                         HorizontalOptions = LayoutOptions.Fill,
                         VerticalOptions = LayoutOptions.Fill,
                         AutomationId = $"hdr-clip={request.Clip.ClipType},id={request.Clip.Id}",
-                    }, null, request.Clip, isTransparentAt: CreateVfdTransparencyHitTest(displayFrame.VfdPath));
+                    }, null, request.Clip, isPositionedClipPreview: canvasPreview, isTransparentAt: CreateVfdTransparencyHitTest(displayFrame.VfdPath));
                 }
 #endif
                 source = PreviewFrameMaterializer.CreateImageSource(displayFrame.VfdPath);
@@ -701,7 +707,7 @@ public sealed class DynamicPreview : IDisposable
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.Fill,
                     AutomationId = $"clip={request.Clip.ClipType},id={request.Clip.Id}",
-                }, null, request.Clip, isTransparentAt: CreateVfdTransparencyHitTest(displayFrame.VfdPath));
+                }, null, request.Clip, isPositionedClipPreview: canvasPreview, isTransparentAt: CreateVfdTransparencyHitTest(displayFrame.VfdPath));
             }
             else
             {
@@ -727,7 +733,7 @@ public sealed class DynamicPreview : IDisposable
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.Fill,
                     AutomationId = $"clip={request.Clip.ClipType},id={request.Clip.Id}",
-                }, null, request.Clip, isTransparentAt: isTransparentAt);
+                }, null, request.Clip, isPositionedClipPreview: canvasPreview, isTransparentAt: isTransparentAt);
             }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -754,6 +760,9 @@ public sealed class DynamicPreview : IDisposable
     {
         token.ThrowIfCancellationRequested();
 
+        if (TransformProcessing.HasActiveTransform(clip, _clips ?? [clip], frameIndex))
+            return TransformProcessing.RenderCanvas(clip, _clips ?? [clip], frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, IPicture.PicturePixelMode.BytePicture);
+
         var sourceWidth = ResolveClipPreviewDimension(clip.TargetWidth, projectWidth, canvasWidth);
         var sourceHeight = ResolveClipPreviewDimension(clip.TargetHeight, projectHeight, canvasHeight);
         var pixelMode = IPicture.PicturePixelMode.BytePicture;
@@ -779,10 +788,6 @@ public sealed class DynamicPreview : IDisposable
             if (ClipInitializationFailure.IsMarked(clip))
             {
                 frame = ClipInitializationFailure.CreateFallbackFrame(sourceWidth, sourceHeight, pixelMode, clip.ExtraData);
-            }
-            else if (clip is TransformContainer transformClip)
-            {
-                frame = ReadTransformPreviewSource(transformClip, sourceWidth, sourceHeight, frameIndex, pixelMode);
             }
             else
             {
@@ -917,32 +922,7 @@ public sealed class DynamicPreview : IDisposable
             },
         };
 
-    private IPicture? ReadTransformPreviewSource(TransformContainer transformClip, int width, int height, uint frameIndex, IPicture.PicturePixelMode pixelMode)
-    {
-        var transform = transformClip.Transform;
-        if (transform is null)
-        {
-            transformClip.ReInit(pixelMode);
-            transform = transformClip.Transform;
-        }
 
-        if (transform is null)
-        {
-            return null;
-        }
-
-        var clips = _clips ?? [];
-        var left = clips.FirstOrDefault(candidate => candidate.Id == transform.BindedLeftClip);
-        var right = clips.FirstOrDefault(candidate => candidate.Id == transform.BindedRightClip);
-        if (left is null || right is null)
-        {
-            return null;
-        }
-
-        return TransformProcessing.ProcessTransform(left, right, transform, width, height, frameIndex, pixelMode);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private static IPicture RenderClipEffectsWithoutLayout(OneFrame source, int targetWidth, int targetHeight, uint frameIndex, CancellationToken token)
     {
         var effected = source.Clip;
@@ -1150,32 +1130,6 @@ public sealed class DynamicPreview : IDisposable
     }
 
 #if false // Legacy View/provider-based preview pipeline retained temporarily for source history.
-    private static void BindTransformRuntimeSources(TransformContainer transformClip, IReadOnlyDictionary<Guid, IClip> clipIndex)
-    {
-        if (transformClip.ExtraData is null || transformClip.Transform is not RenderITransform transform)
-        {
-            return;
-        }
-
-        if (clipIndex.TryGetValue(transform.BindedLeftClip, out var leftClip))
-        {
-            transformClip.ExtraData[TransformClipDynamicPreviewRuntimeKeys.LeftClip] = leftClip;
-        }
-        else
-        {
-            transformClip.ExtraData.Remove(TransformClipDynamicPreviewRuntimeKeys.LeftClip);
-        }
-
-        if (clipIndex.TryGetValue(transform.BindedRightClip, out var rightClip))
-        {
-            transformClip.ExtraData[TransformClipDynamicPreviewRuntimeKeys.RightClip] = rightClip;
-        }
-        else
-        {
-            transformClip.ExtraData.Remove(TransformClipDynamicPreviewRuntimeKeys.RightClip);
-        }
-    }
-
     private PreviewSourceData? GenerateClipPreviewSource(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, CancellationToken token)
     {
         var clip = request.Clip;
@@ -2101,6 +2055,7 @@ public sealed class DynamicPreview : IDisposable
         {
             try
             {
+                TransformProcessing.Release(clip.ExtraData);
                 clip.Dispose();
             }
             catch
@@ -2333,6 +2288,8 @@ public sealed class DynamicPreview : IDisposable
         {
             return clip.Id.GetHashCode();
         }
+        if (projectFrameCut.Render.EncodeAndDecode.ProjectExternalVideoSource.IsPath(sourcePath))
+            return StringComparer.Ordinal.GetHashCode(sourcePath + projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken);
 
         try
         {

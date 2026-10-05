@@ -333,6 +333,7 @@ namespace projectFrameCut.Render.Plugin
 
         public static IVideoSource CreateVideoSource(string filePath, IPicture.PicturePixelMode? PreferredTargetPPB = null)
         {
+            if (ProjectExternalVideoSource.IsPath(filePath)) return ProjectExternalVideoSource.Open(filePath);
             if (RemoteRpcVideoSource.IsPath(filePath)) return RemoteRpcVideoSource.Open(filePath);
             if (filePath.StartsWith("#"))
             {

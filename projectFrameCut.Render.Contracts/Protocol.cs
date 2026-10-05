@@ -57,6 +57,10 @@ public enum RenderOperation
     [ProtoEnum] ExternalVideoSourceInitialize = 26,
     [ProtoEnum] ExternalVideoSourceReadFrame = 27,
     [ProtoEnum] ExternalVideoSourceRelease = 28,
+    [ProtoEnum] ListProjectExternalSources = 43,
+    [ProtoEnum] SetProjectExternalSources = 44,
+    [ProtoEnum] ListExternalVideoSourceClients = 45,
+    [ProtoEnum] ManageExternalVideoSourceClient = 46,
     [ProtoEnum] RegisterGuiProject = 30,
     [ProtoEnum] UnregisterGuiProject = 31,
     [ProtoEnum] GetGuiProjectWork = 32,
@@ -143,6 +147,8 @@ public enum RenderOperation
     [ProtoEnum] IsolationAIReleaseOperation = 2056,
     [ProtoEnum] IsolationCreateEffectImplementation = 2057,
     [ProtoEnum] IsolationProcessVectorComponentEffect = 2058,
+    [ProtoEnum] IsolationAuthorizeProjectExternalSource = 2059,
+    [ProtoEnum] IsolationListProjectExternalSources = 2060,
 }
 
 [ProtoContract]
@@ -307,6 +313,7 @@ public sealed class OpenProjectRequest
     [ProtoMember(8)] public int ProjectHeight { get; set; }
     [ProtoMember(9)] public int FrameRate { get; set; }
     [ProtoMember(10)] public string CacheNamespace { get; set; } = string.Empty;
+    [ProtoMember(11)] public List<ProjectExternalSourceApproval> AllowedExternalSources { get; set; } = [];
 }
 
 [ProtoContract]
@@ -624,6 +631,7 @@ public sealed class OpenHeadlessProjectRequest
 {
     [ProtoMember(1)] public string ProjectRoot { get; set; } = string.Empty;
     [ProtoMember(2)] public Guid SessionId { get; set; }
+    [ProtoMember(3)] public List<ProjectExternalSourceApproval> AllowedExternalSources { get; set; } = [];
 }
 
 [ProtoContract]
