@@ -224,7 +224,7 @@ namespace projectFrameCut
                 DynamicPreview.DisableVectorPreviewPaths = IsBoolSettingTrueOrDefault("render_DisallowVectorClipToMAUIPathInPreview", true);
                 DynamicPreview.DisableEffectDynamicPreview = IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview");
 
-                DynamicPreview.DefaultOutputMode = ParsePreviewOutputMode(GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Automatic)));
+                DynamicPreview.DefaultOutputMode = ParsePreviewOutputMode(GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Required)));
                 LivePreviewer.DefaultOutputMode = DynamicPreview.DefaultOutputMode;
 
                 // ===== 安全设置同步 =====
@@ -248,9 +248,9 @@ namespace projectFrameCut
         }
 
         static NativePreviewOutputMode ParsePreviewOutputMode(string value)
-            => Enum.TryParse<NativePreviewOutputMode>(value, ignoreCase: true, out var mode)
-                ? mode
-                : NativePreviewOutputMode.Automatic;
+            => Enum.TryParse<NativePreviewOutputMode>(value, ignoreCase: true, out var mode) && mode == NativePreviewOutputMode.Disabled
+                ? NativePreviewOutputMode.Disabled
+                : NativePreviewOutputMode.Required;
 
     }
         int count = 0;

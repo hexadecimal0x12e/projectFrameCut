@@ -1,70 +1,48 @@
-using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
-using projectFrameCut.Render.RenderAPIBase.Plugins;
-using System;
-using System.Collections.Generic;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.Rendering;
+using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.Shared;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using ITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
 
-namespace projectFrameCut.Services
+namespace projectFrameCut.Services;
+
+public static class TransformServices
 {
-    /// <summary>
-    /// Helper service for discovering ITransform factories from all loaded plugins.
-    /// </summary>
-    public static class TransformServices
+    public static Dictionary<string, Func<IEffectProvider>> GetAvailableTransforms(bool audio = false) =>
+        EffectServices.GetAvailableEffectProviders().Where(p =>
+        {
+            var provider = p.Value();
+            return provider.TypeOfEffect == EffectType.Transform && provider.Target.HasFlag(audio ? EffectTarget.Audio : EffectTarget.Video);
+        }).ToDictionary();
+
+    public static string GetTransformName(string typeName)
     {
-        /// <summary>
-        /// Collects all available transform factories from all loaded plugins.
-        /// </summary>
-        /// <returns>
-        /// Dictionary where key = transform type name (e.g. "Crossfade") and
-        /// value = factory that takes (prevClipId, nextClipId) and returns an <see cref="ITransform"/>.
-        /// </returns>
-        public static Dictionary<string, Func<Guid, Guid, ITransform>> GetAvailableTransforms()
+        var name = EffectProviderDisplayDefaults.ResolveLocalized("DisplayName_Transform_" + typeName,
+            PluginManager.GetLocalizationItem("DisplayName_Transform_" + typeName, typeName), PluginManager.CurrentLocale);
+        return name.StartsWith("Unset localization item:", StringComparison.Ordinal) ? typeName : name;
+    }
+
+    public static TransformRenderOrder DefaultRenderOrder =>
+        Enum.TryParse<TransformRenderOrder>(SettingsManager.GetSetting("Edit_DefaultTransformRenderOrder", nameof(TransformRenderOrder.AfterEffects)), out var order)
+            && Enum.IsDefined(order) ? order : TransformRenderOrder.AfterEffects;
+
+    public static ITransform Create(IEffectProvider provider)
+    {
+        var effects = provider.Build();
+        try
         {
-            var result = new Dictionary<string, Func<Guid, Guid, ITransform>>();
-            if (!PluginManager.Inited) return result;
-
-            foreach (var plugin in PluginManager.LoadedPlugins.Values)
-            {
-                if (plugin is IPluginBase pluginBase)
-                {
-                    try
-                    {
-                        var provider = pluginBase.TransformProvider;
-                        if (provider is null) continue;
-
-                        foreach (var kvp in provider)
-                        {
-                            if (!result.ContainsKey(kvp.Key))
-                                result.Add(kvp.Key, kvp.Value);
-                        }
-                    }
-                    catch (NotImplementedException)
-                    {
-                        // Plugin does not support transforms – skip silently.
-                    }
-                }
-            }
-
-            return result;
+            if (effects.Length != 1 || effects[0] is not ITransform transform)
+                throw new InvalidOperationException($"Provider {provider.TypeName} must build one transform effect.");
+            transform.Initialize();
+            return transform;
         }
-
-        /// <summary>
-        /// Returns display names for all available transforms, keyed by type name.
-        /// Falls back to the type name itself when no localized display name is registered.
-        /// </summary>
-        public static string GetTransformName(string typeName) => PluginManager.GetLocalizationItem("DisplayName_Transform_" + typeName, typeName);
-
-        public static Dictionary<string, string> GetLocalizedTransformNames()
+        catch
         {
-            var transforms = GetAvailableTransforms();
-            var result = new Dictionary<string, string>();
-            foreach (var kvp in transforms)
-            {
-                var dispName = PluginManager.GetLocalizationItem("DisplayName_Transform_" + kvp.Key, kvp.Key);
-                result[kvp.Key] = dispName;
-            }
-            return result;
+            foreach (var effect in effects) (effect as IDisposable)?.Dispose();
+            throw;
         }
     }
 }

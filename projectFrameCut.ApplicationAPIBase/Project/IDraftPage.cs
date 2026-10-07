@@ -91,15 +91,15 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         void AddATrack(int trackId);
 
         /// <summary>
-        /// Creates and inserts a transform clip between the selected clip and a neighbor.
+        /// Attaches a transform provider to the selected clip edge.
         /// </summary>
-        /// <param name="transformFactory">Factory function that creates the transform instance.</param>
+        /// <param name="transformFactory">Factory function that creates the transform provider.</param>
         /// <param name="center">The center clip around which the transform is placed.</param>
         /// <param name="left">Whether the transform connects to the left neighbor.</param>
         /// <param name="right">Whether the transform connects to the right neighbor.</param>
-        /// <param name="elementSetter">Optional action to configure the newly created clip element.</param>
+        /// <param name="elementSetter">Optional action to configure the owning clip element.</param>
         /// <returns>True if the transform was successfully added; otherwise false.</returns>
-        bool AddTransformBetweenSelected(Func<Guid, Guid, Render.RenderAPIBase.ClipAndTrack.ITransform> transformFactory, IClipElementUI center, bool left, bool right, Action<IClipElementUI>? elementSetter = null);
+        bool AddTransformBetweenSelected(Func<Render.RenderAPIBase.EffectAndMixture.IEffectProvider> transformFactory, IClipElementUI center, bool left, bool right, Action<IClipElementUI>? elementSetter = null);
 
         /// <summary>
         /// Applies the state from the specified snapshot slot to the current draft.

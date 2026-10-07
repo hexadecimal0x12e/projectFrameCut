@@ -205,8 +205,24 @@
         "DontTranslate": false
       },
       {
+        "Id": "Advanced_RpcBackendEnvironmentVariables_Desc",
+        "Value": "\u4F7F\u7528JSON\u8BCD\u5178\u6765\u8986\u76D6\u73AF\u5883\u53D8\u91CF\uFF0C\u6216\u8005\u7559\u7A7A\u6765\u7981\u7528\u6B64\u529F\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Advanced_RpcBackendExtraArguments",
         "Value": "\u81EA\u5B9A\u4E49\u989D\u5916\u53C2\u6570",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Advanced_RpcBackendExtraArguments_Desc",
+        "Value": "\u4F7F\u7528JSON\u5B57\u7B26\u4E32\u6570\u7EC4\u6765\u914D\u7F6E\u6B64\u529F\u80FD\uFF0C\u6216\u8005\u7559\u7A7A\u6765\u7981\u7528\u6B64\u529F\u80FD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -941,16 +957,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "\u81EA\u52A8\uFF08\u63A8\u8350\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_NativePreviewOutputMode_Disabled",
-        "Value": "\u6807\u51C6\uFF08\u517C\u5BB9\u6027\u6700\u4F73\uFF09",
+        "Value": "PNG\uFF08\u517C\u5BB9\u6027\u6A21\u5F0F\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3102,16 +3110,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "Advanced_RpcBackendEnvironmentVariables_Desc",
-        "Value": "\u4F7F\u7528JSON\u8BCD\u5178\u6765\u8986\u76D6\u73AF\u5883\u53D8\u91CF\uFF0C\u6216\u8005\u7559\u7A7A\u6765\u7981\u7528\u6B64\u529F\u80FD",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Advanced_RpcBackendExtraArguments_Desc",
-        "Value": "\u4F7F\u7528JSON\u5B57\u7B26\u4E32\u6570\u7EC4\u6765\u914D\u7F6E\u6B64\u529F\u80FD\uFF0C\u6216\u8005\u7559\u7A7A\u6765\u7981\u7528\u6B64\u529F\u80FD",
+        "Id": "Edit_DefaultTransformRenderOrder",
+        "Value": "\u65B0\u5EFA\u8F6C\u573A\u7684\u9ED8\u8BA4\u6E32\u67D3\u987A\u5E8F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6257,15 +6257,6 @@
       {
         "Id": "Edit_NativePreviewOutputMode",
         "Value": "Preview Output Mode",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "Automatic (Recommended)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9617,15 +9608,6 @@
       {
         "Id": "Edit_NativePreviewOutputMode_Disabled",
         "Value": "\u6A19\u6E96\uFF08\u76F8\u5BB9\u6027\u6700\u4F73\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "\u81EA\u52D5\uFF08\u63A8\u85A6\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13006,15 +12988,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "\u81EA\u52D5\uFF08\u63A8\u5968\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_NativePreviewOutputMode_Disabled",
         "Value": "\u6A19\u6E96\uFF08\u4E92\u63DB\u6027\u6700\u512A\u5148\uFF09",
         "Mode": "ConstString",
@@ -16354,15 +16327,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "\uC790\uB3D9(\uAD8C\uC7A5)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_NativePreviewOutputMode_Required",
         "Value": "\uB124\uC774\uD2F0\uBE0C(\uB192\uC740 \uC0C9 \uBC94\uC704 \uBC0F HDR \uC9C0\uC6D0)",
         "Mode": "ConstString",
@@ -19687,15 +19651,6 @@
       {
         "Id": "Edit_NativePreviewOutputMode",
         "Value": "Mode de sortie d\u0027aper\u00E7u",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "Automatique (recommand\u00E9)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -23092,15 +23047,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "\u062A\u0644\u0642\u0627\u0626\u064A (\u0645\u0648\u0635\u0649 \u0628\u0647)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "GeneralCodec_PreferredHWAccelDecoding",
         "Value": "\u0641\u0643 \u0627\u0644\u062A\u0631\u0645\u064A\u0632 \u0628\u062A\u0633\u0631\u064A\u0639 \u0627\u0644\u0623\u062C\u0647\u0632\u0629",
         "Mode": "ConstString",
@@ -26414,15 +26360,6 @@
       {
         "Id": "Edit_NativePreviewOutputMode",
         "Value": "Vorschau-Ausgabemodus",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "Automatisch (empfohlen)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29765,15 +29702,6 @@
       {
         "Id": "Edit_EnableQuickCommandShortcuts",
         "Value": "Habilitar atajos de comandos r\u00E1pidos (Ctrl \u002B teclas num\u00E9ricas)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "Autom\u00E1tico (recomendado)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -33140,15 +33068,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "Automatico (consigliato)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_NativePreviewOutputMode_Required",
         "Value": "Nativo (supporta un\u0027ampia gamma cromatica e HDR)",
         "Mode": "ConstString",
@@ -36499,15 +36418,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "Automatyczny (zalecany)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_NativePreviewOutputMode_Required",
         "Value": "Natywny (obs\u0142uga szerokiego zakresu kolor\u00F3w i HDR)",
         "Mode": "ConstString",
@@ -39842,15 +39752,6 @@
       {
         "Id": "Edit_EnableQuickCommandShortcuts",
         "Value": "Ativar atalhos de comando r\u00E1pido (Ctrl \u002B teclas num\u00E9ricas)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "Autom\u00E1tico (recomendado)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -43221,15 +43122,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "\u0410\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 (\u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
         "Id": "Edit_NativePreviewOutputMode_Disabled",
         "Value": "\u0421\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u044B\u0439 (\u043C\u0430\u043A\u0441\u0438\u043C\u0430\u043B\u044C\u043D\u0430\u044F \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u0438\u043C\u043E\u0441\u0442\u044C)",
         "Mode": "ConstString",
@@ -46575,15 +46467,6 @@
       {
         "Id": "Edit_NativePreviewOutputMode",
         "Value": "\u00D6nizleme \u00C7\u0131kt\u0131 Modu",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "DontTranslate": false
-      },
-      {
-        "Id": "Edit_NativePreviewOutputMode_Automatic",
-        "Value": "Otomatik (\u00D6nerilen)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

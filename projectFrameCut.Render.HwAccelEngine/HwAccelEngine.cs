@@ -144,7 +144,6 @@ namespace projectFrameCut.Render.HwAccelEngine
         public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>> { };
         public IMessagingService MessagingQueue { get; set; }
 
-        public Dictionary<string, Func<Guid, Guid, RenderAPIBase.ClipAndTrack.ITransform>> TransformProvider => new Dictionary<string, Func<Guid, Guid, RenderAPIBase.ClipAndTrack.ITransform>> { };
 
         public IClip ClipCreator(JsonElement element)
         {

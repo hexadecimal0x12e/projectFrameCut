@@ -50,7 +50,7 @@ public sealed class ProjectExternalSourceProcessPlatform(IReadOnlyList<string> e
             channel = new StreamIsolationControlChannel(pipe, IsolationControlMode.NamedPipe);
             var response = await channel.SendAsync(new() { Operation = RenderOperation.IsolationNegotiate, Payload = RenderRpcSerializer.Serialize(new IsolationNegotiateRequest
             { AuthenticationToken = context.AuthenticationToken, HostProcessId = Environment.ProcessId, PreferredPayloadKind = context.Transport.PayloadMode ?? IsolationPayloadKind.SharedMemory }) }, timeout.Token).ConfigureAwait(false);
-            if (response.Error is not null) response.Error.ThrowAsException();
+            response?.Error?.ThrowAsException();
             var capabilities = RenderRpcSerializer.Deserialize<IsolationChannelCapabilities>(response.Payload);
             if (capabilities.ProtocolVersion != PluginIsolationProtocol.CurrentVersion) throw new InvalidDataException("External source isolation protocol mismatch.");
             var session = new PluginIsolationSession(context.PluginId, channel, new SessionPayloadExchange(context.SessionRoot), new SessionResourceBroker(context.SessionRoot), capabilities, context.Transport, TerminateAsync);

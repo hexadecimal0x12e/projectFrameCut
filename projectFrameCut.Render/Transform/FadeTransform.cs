@@ -1,28 +1,37 @@
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.Transform;
 
-public sealed class FadeTransform : IOneInputSingleFrameTransform
+public class FadeTransform : TransformEffectBase
 {
-    public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
-    public string TypeName => "Fade";
-    public string Name { get; init; } = "Fade";
-    public TransformDefinition Definition => TransformDefinition.Clip | TransformDefinition.SupportOneInput;
-    public TransformSide Side { get; set; }
-    public Guid BindedLeftClip { get; set; }
-    public Guid BindedRightClip { get; set; }
-    public uint Duration { get; set; }
+    public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+    public override string TypeName => "Fade";
+    public override TransformDefinition Definition => TransformDefinition.Clip | TransformDefinition.SupportOneInput;
+    public override IEffect WithParameters(Dictionary<string, object> parameters) => new FadeTransform { Parameters = parameters };
 
-    public IPicture GetFrame(IPicture input, double progress, int targetWidth, int targetHeight)
-    {
-        float opacity = (float)Math.Clamp(Side == TransformSide.Left ? progress : 1 - progress, 0, 1);
-        return EffectRuntimeDefaults.Execute("TransformFade", "FadeOpacity", EffectImplementType.IPicture,
-            new() { ["Opacity"] = opacity }, effect =>
-            {
-                effect.Parameters["Opacity"] = opacity;
-                return ((INormalEffect)effect).Render(input, targetWidth, targetHeight);
-            });
-    }
+    public override IPicture Render(IPicture left, IPicture? right, float progress, TransformSide side, int targetWidth, int targetHeight) =>
+        RenderOpacity(left, Math.Clamp(side == TransformSide.Left ? progress : 1 - progress, 0, 1), targetWidth, targetHeight);
+
+    protected virtual IPicture RenderOpacity(IPicture input, float opacity, int width, int height) =>
+        new FadeOpacityEffect_IPicture { Opacity = opacity }.Render(input, width, height);
+}
+
+public class FadeTransformProvider : TransformEffectProviderBase
+{
+    public override string TypeName => "Fade";
+    protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => [];
+}
+
+public abstract class TransformEffectProviderBase : EffectProviderBase
+{
+    public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+    public override EffectType TypeOfEffect => EffectType.Transform;
+    public override EffectTarget Target => EffectTarget.Video | EffectTarget.Transform | EffectTarget.IsNotVisibleInNewEffectSelector;
+    protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() => new Dictionary<string, EffectArgumentFieldDescriptor>();
+    protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.IPicture, EffectImplementType.HwAcceleration];
 }

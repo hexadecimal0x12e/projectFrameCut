@@ -218,6 +218,10 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             catch (Exception ex)
             {
                 Log(ex, $"Start RPC worker '{execPath}'", this);
+#if WINDOWS && DEBUG
+                if (ex is TimeoutException)
+                    CaptureThreadStacksBeforeRestart();
+#endif
                 try { _client?.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
                 try { _process?.Kill(entireProcessTree: true); } catch { }
                 _process?.Dispose();
@@ -662,6 +666,32 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         _independentWorker = false;
         _jobId = null;
     }
+
+#if WINDOWS && DEBUG
+    internal void CaptureThreadStacksBeforeRestart()
+    {
+        var process = _process;
+        if (process is null) return;
+
+        try
+        {
+            if (process.HasExited)
+            {
+                Log($"RPC process {process.Id} has already exited; thread stacks are unavailable.", "warning");
+                return;
+            }
+
+            Log($"Capturing RPC timeout thread stacks before restart. PID={process.Id}.", "warning");
+            var stacks = ProcessThreadStackCapture.Capture(process, "RPC timeout");
+            string path = ProcessThreadStackCapture.SaveToLogDirectory(process.Id, "rpc-timeout", stacks.AllStacks);
+            Log($"All RPC thread stacks for this timeout saved to {path}", "warning");
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "capture RPC thread stacks before restart", this);
+        }
+    }
+#endif
 
     /// <summary>
     /// Immediately terminates an external backend process or Android RPC

@@ -88,6 +88,9 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
 
     public async Task<bool> ApplyPreparedPreviewsAsync(IReadOnlyList<PreparedPreview> previews)
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var dispatchMark = new UserMarkRange("Preview.DispatchApply", $"previews={previews.Count}, host=lightweight");
+#endif
         if (Dispatcher.IsDispatchRequired)
         {
             return await Dispatcher.DispatchAsync(() => ApplyPreviews(previews));
@@ -100,6 +103,9 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
 
     private bool ApplyPreviews(IReadOnlyList<PreparedPreview> previews)
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var applyMark = new UserMarkRange("Preview.Apply", $"previews={previews.Count}, host=lightweight");
+#endif
         _generation++;
         var hasPreview = false;
 

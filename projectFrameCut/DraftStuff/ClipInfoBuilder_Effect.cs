@@ -142,13 +142,13 @@ namespace projectFrameCut.DraftStuff
             if (clip.EffectProviders != null)
             {
                 var filteredProviders = clip.EffectProviders
-                     .Where(c =>
+                     .Where(c => c.Value.TypeOfEffect != EffectType.Transform && (
                          showAllEffect
                          || (!c.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)
                               && EffectBindingHelper.AreTargetsCompatible(c.Value.Target, clip.GetEffectTarget()))
                          || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider)
                          || (c.Value.Target == EffectTarget.Mixture && haveManyMixtureProvider)
-                         || (c.Value.Target == EffectTarget.SourceReplacement && haveManySourceReplacementEffect))
+                         || (c.Value.Target == EffectTarget.SourceReplacement && haveManySourceReplacementEffect)))
                      .ToList();
 
                 // Sort providers by their single stored picture input. Fan-out is allowed.
@@ -257,7 +257,7 @@ namespace projectFrameCut.DraftStuff
                         ppb.AddSeparator();
 
                         //they can't be reordered
-                        if (bundleInstance.TypeOfEffect is EffectType.SpeedVarianceProvider or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.NonIPictureOutputValueProvider) goto remove_btn;
+                        if (bundleInstance.TypeOfEffect is EffectType.Transform or EffectType.SpeedVarianceProvider or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.NonIPictureOutputValueProvider) goto remove_btn;
 
 
                         var resolvedInAnchorId = bundleInstance.GetMainInputSource();
@@ -1162,6 +1162,8 @@ namespace projectFrameCut.DraftStuff
             const EffectTarget targetKinds = EffectTarget.Video | EffectTarget.Audio | EffectTarget.Text
                 | EffectTarget.VectorComponent | EffectTarget.SpeedVariance | EffectTarget.Mixture
                 | EffectTarget.ColorAdjustment | EffectTarget.SourceReplacement | EffectTarget.ValueProvider;
+            if (provider.TypeOfEffect == EffectType.Transform)
+                return false;
             if (target != EffectTarget.NotSpecified && (provider.Target & target & targetKinds) == 0)
                 return false;
             if (target != EffectTarget.NotSpecified && target.HasFlag(EffectTarget.Text)
@@ -1265,6 +1267,15 @@ namespace projectFrameCut.DraftStuff
 
             if (cards.Count == 0) return EmptyPanel();
 
+            return BuildProviderPickerPanel(cards, page,
+                typeName => ppb.Properties["NewProviderType"] = typeName, AddProvider);
+        }
+
+        private static View BuildProviderPickerPanel(
+            List<EffectProviderCardItem> cards, Page page, Action<string>? onSelected, Action<string> onAdd,
+            string? selectionText = null, string? addText = null, string? emptyText = null,
+            Func<EffectProviderCardItem, CancellationToken, Task<MediaSource?>>? loadPreview = null)
+        {
             const double cardWidth = 210;
             const double cardHeight = 160;
             const double cardMargin = 6;
@@ -1359,7 +1370,7 @@ namespace projectFrameCut.DraftStuff
             BindableLayout.SetItemsSource(flex, cards);
             BindableLayout.SetEmptyView(flex, new Label
             {
-                Text = PPLocalizedResources.Add_Effect_None,
+                Text = emptyText ?? PPLocalizedResources.Add_Effect_None,
                 FontSize = 18,
             });
             BindableLayout.SetItemTemplate(flex, new DataTemplate(() =>
@@ -1376,7 +1387,7 @@ namespace projectFrameCut.DraftStuff
                 // ─── Video preview (hidden by default) ───
                 var mediaPlayer = new MediaElement
                 {
-                    Aspect = Aspect.AspectFill,
+                    Aspect = loadPreview is null ? Aspect.AspectFill : Aspect.AspectFit,
                     ShouldAutoPlay = true,
                     ShouldLoopPlayback = true,
                     ShouldMute = true,
@@ -1470,16 +1481,81 @@ namespace projectFrameCut.DraftStuff
                     Background = new SolidColorBrush(Colors.Transparent),
                     Content = cardContent
                 };
+                bool hovered = false, loaded = false;
+                CancellationTokenSource? previewCts = null;
+                var loading = new ActivityIndicator
+                {
+                    IsVisible = false,
+                    HorizontalOptions = LayoutOptions.Center,
+                    VerticalOptions = LayoutOptions.Center
+                };
+                async Task ShowPreview()
+                {
+                    if (loadPreview is null || !loaded || border.BindingContext is not EffectProviderCardItem item) return;
+                    previewCts?.Cancel();
+                    var cts = new CancellationTokenSource();
+                    previewCts = cts;
+                    loading.IsRunning = loading.IsVisible = true;
+                    try
+                    {
+                        var source = await loadPreview(item, cts.Token);
+                        if (cts.IsCancellationRequested || !loaded || !hovered ||
+                            !ReferenceEquals(border.BindingContext, item) || source is null) return;
+                        mediaPlayer.Source = source;
+                        mediaPlayer.IsVisible = true;
+                        image.IsVisible = false;
+                        mediaPlayer.Play();
+                    }
+                    catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"Load provider preview {item.ProviderTypeName}", typeof(ClipInfoBuilder));
+                    }
+                    finally
+                    {
+                        if (ReferenceEquals(previewCts, cts))
+                        {
+                            previewCts = null;
+                            loading.IsRunning = loading.IsVisible = false;
+                        }
+                        cts.Dispose();
+                    }
+                }
+                if (loadPreview is not null)
+                {
+                    previewGrid.Children.Add(loading);
+                    border.Loaded += (_, _) => loaded = true;
+                    border.BindingContextChanged += async (_, _) =>
+                    {
+                        previewCts?.Cancel();
+                        loading.IsRunning = loading.IsVisible = false;
+                        mediaPlayer.Source = null;
+                        mediaPlayer.IsVisible = false;
+                        image.IsVisible = true;
+                        if (loaded && hovered) await ShowPreview();
+                    };
+                    border.Unloaded += (_, _) =>
+                    {
+                        loaded = false;
+                        hovered = false;
+                        previewCts?.Cancel();
+                        loading.IsRunning = loading.IsVisible = false;
+                        mediaPlayer.Stop();
+                        mediaPlayer.Source = null;
+                    };
+                }
 
                 // ─── Hover handling ───
-                void OnHover(bool isHovered)
+                async void OnHover(bool isHovered)
                 {
+                    hovered = isHovered;
                     if (border.BindingContext is EffectProviderCardItem item)
                     {
                         if (isHovered)
                         {
                             hoverOverlay.IsVisible = true;
-                            if (item.VideoThumbnail is not null)
+                            if (loadPreview is not null) await ShowPreview();
+                            else if (item.VideoThumbnail is not null)
                             {
                                 mediaPlayer.Source = item.VideoThumbnail;
                                 mediaPlayer.IsVisible = true;
@@ -1490,6 +1566,8 @@ namespace projectFrameCut.DraftStuff
                         else
                         {
                             hoverOverlay.IsVisible = false;
+                            previewCts?.Cancel();
+                            loading.IsRunning = loading.IsVisible = false;
                             mediaPlayer.Pause();
                             mediaPlayer.Source = null;
                             mediaPlayer.IsVisible = false;
@@ -1525,24 +1603,24 @@ namespace projectFrameCut.DraftStuff
                     {
                         if (border.BindingContext is EffectProviderCardItem item)
                         {
-                            ppb.Properties["NewProviderType"] = item.ProviderTypeName;
+                            onSelected?.Invoke(item.ProviderTypeName);
                             SelectCard(border);
                         }
                     },
                     OnClicked: () =>
                     {
                         if (border.BindingContext is EffectProviderCardItem item)
-                            AddProvider(item.ProviderTypeName);
+                            onAdd(item.ProviderTypeName);
                     },
                     OnContextMenuClick: async () =>
                     {
                         if (border.BindingContext is not EffectProviderCardItem item) return;
-                        var verbs = new[] { PPLocalizedResources.Add_Effect, Localized.AssetPage_ShowPreview };
+                        var verbs = new[] { addText ?? PPLocalizedResources.Add_Effect, Localized.AssetPage_ShowPreview };
                         int action = Array.IndexOf(verbs, await page.DisplayActionSheetAsync(item.Title, Localized._Cancel, null, verbs));
                         switch (action)
                         {
                             case 0:
-                                AddProvider(item.ProviderTypeName);
+                                onAdd(item.ProviderTypeName);
                                 break;
                             case 1:
                                 await page.DisplayAlertAsync(Localized._Info, item.Description, Localized._OK);
@@ -1561,7 +1639,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     new Label
                     {
-                        Text = PPLocalizedResources.Add_Effect_Select,
+                        Text = selectionText ?? PPLocalizedResources.Add_Effect_Select,
                         Opacity = 0.7,
                         FontSize = 13
                     },

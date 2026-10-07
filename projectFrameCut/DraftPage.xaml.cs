@@ -130,6 +130,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     ConcurrentDictionary<string, double> HandleStartWidth = new();
 
     ClipElementUI? _selected = null;
+    internal string SelectedTimingTab { get; set; } = "timing";
     readonly HashSet<Guid> _selectedClipIds = [];
     readonly ConcurrentDictionary<Guid, Brush?> _selectedOrigColorByClipId = new();
     private long _selectionUiVersion;
@@ -1605,7 +1606,9 @@ public partial class DraftPage : ContentPage, IDraftPage
             element.maxFrameCount = sourceElement.maxFrameCount;
             element.isInfiniteLength = sourceElement.isInfiniteLength;
             element.ExtraData = new Dictionary<string, object>(sourceElement.ExtraData);
-            TransformBinding.CopySingleInputs(element.ExtraData, element.Id);
+            element.EffectProviders = EffectBindingHelper.MigrateToEffectProviders(TransformProcessing.CopySingleInputs(
+                sourceElement.EffectProviders?.Values.Select(EffectBindingHelper.SerializeProvider).ToArray()), null);
+            ClipInfoBuilder.RebuildAllEffects(element);
             element.ExtraData.Remove(SoundTrackMetadata.ProbeSourceKey);
             element.ExtraData.Remove(SoundTrackMetadata.ProbeHasStreamKey);
 
@@ -1781,8 +1784,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     public void RegisterClip(ClipElementUI element, bool resolveOverlap)
     {
         var cid = element.Id;
-        element.Clip.Loaded += (_, _) => RefreshTransformShadows();
-        element.Clip.SizeChanged += (_, _) => RefreshTransformShadows();
         var clipInteractionTarget = GetClipInteractionTarget(element);
 
         var legacyPanGestures = element.Clip.GestureRecognizers
@@ -1972,6 +1973,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         track.ShouldDisplayInUI = false;
         track.Clip.IsVisible = false;
         track.sourceSecondPerFrame = video.sourceSecondPerFrame;
+        track.SubLayerIndex = video.SubLayerIndex;
         track.lengthInFrame = video.lengthInFrame;
         track.origLength = video.Clip.WidthRequest > 0 ? video.Clip.WidthRequest : video.origLength;
         track.ExtraData[SoundTrackMetadata.SourceClipIdKey] = video.Id.ToString("D");
@@ -2038,10 +2040,10 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (track.origTrack is int oldTrack && Tracks.TryGetValue(oldTrack, out var oldLayout)) oldLayout.Children.Remove(track.Clip);
             targetLayout.Children.Add(track.Clip);
             track.origTrack = targetTrack;
-            track.SubLayerIndex = targetTrack;
         }
 
         track.SourcePath = video.SourcePath;
+        track.SubLayerIndex = video.SubLayerIndex;
         track.origX = video.Clip.TranslationX;
         track.Clip.TranslationX = video.Clip.TranslationX;
         track.origLength = video.Clip.WidthRequest > 0 ? video.Clip.WidthRequest : video.origLength;
@@ -2186,34 +2188,52 @@ public partial class DraftPage : ContentPage, IDraftPage
                     MainThread.BeginInvokeOnMainThread(() =>
                     {
                         if (Clips.TryGetValue(clipId, out var currentClip))
-                            ApplyClipPreview(currentClip);
+                            ApplyClipPreview(currentClip, force: true);
                     });
                 }
             }
         }, cts.Token);
     }
 
-    private void ApplyClipPreview(ClipElementUI element)
+    private void ApplyClipPreview(ClipElementUI element, bool force = false)
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var previewMark = new UserMarkRange("Timeline.ClipPreview", $"clip={element.Id}");
+#endif
         try
         {
-            // Dispose any previous preview for this clip before creating a new one
             if (_activeClipPreviews.TryGetValue(element.Id, out var oldGen))
             {
+                if (!force && oldGen.Refresh(element))
+                {
+                    element.ApplyInitializationFailureIndicator();
+                    InvalidateClipPreviewViewport();
+                    return;
+                }
                 oldGen.Dispose();
                 _activeClipPreviews.Remove(element.Id);
             }
 
-            var previewGen = new OnClipUIPreview(this, element);
-            _activeClipPreviews[element.Id] = previewGen;
-            var previewView = previewGen.Update();
-            element.UpdateContent(previewView);
+            if (element.ClipType is ClipMode.VideoClip or ClipMode.PhotoClip)
+            {
+                var previewGen = new OnClipUIPreview(this, element);
+                _activeClipPreviews[element.Id] = previewGen;
+                element.UpdateContent(previewGen.Update());
+            }
+            else
+            {
+                element.UpdateContent(null);
+            }
             element.ApplyInitializationFailureIndicator();
+            InvalidateClipPreviewViewport();
 
         }
         catch (Exception ex)
         {
             Log(ex, $"Apply clip preview for {element.Id}", this);
+            if (_activeClipPreviews.Remove(element.Id, out var failed)) failed.Dispose();
+            element.UpdateContent(null);
+            InvalidateClipPreviewViewport();
         }
     }
 
@@ -3022,6 +3042,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task RefreshSelectionUiAsync()
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var selectionMark = new UserMarkRange("Properties.RefreshSelection", $"selected={_selectedClipIds.Count}");
+#endif
         var version = Interlocked.Increment(ref _selectionUiVersion);
 
         if (_selectedClipIds.Count == 0)
@@ -3341,23 +3364,25 @@ public partial class DraftPage : ContentPage, IDraftPage
     private int GetTrackIdFromY(double absoluteY, bool isSubTrack)
     {
         VerticalStackLayout layout = isSubTrack ? SubTrackContentLayout : TrackContentLayout;
-        Point layoutAbs = GetAbsolutePosition(layout, OverlayLayer);
-        double relativeY = absoluteY - layoutAbs.Y;
-        double trackTotalHeight = 62.0;
-
-        int visualIndex = (int)Math.Floor(relativeY / trackTotalHeight);
-
-        if (visualIndex < 0) visualIndex = 0;
-
-        if (visualIndex < layout.Children.Count)
+        double relativeY = absoluteY - GetAbsolutePosition(layout, null!).Y;
+        foreach (var child in layout.Children)
         {
-            if (layout.Children[visualIndex] is Border b && b.BindingContext is int id)
+            if (child is Border b && b.BindingContext is int id
+                && relativeY < b.Y + b.Height + b.Margin.Bottom)
             {
                 return id;
             }
         }
 
         return -1;
+    }
+
+    private int GetClipDropTrack(Border border, int origTrack, double? translationY = null)
+    {
+        double centerY = GetAbsolutePosition(border, null!).Y
+            + (translationY ?? border.TranslationY) - border.TranslationY
+            + (border.Height > 0 ? border.Height : border.HeightRequest) / 2;
+        return GetTrackIdFromY(centerY, origTrack >= SubTrackOffset);
     }
 
     private void ClipPaned(object? sender, PanUpdatedEventArgs e)
@@ -3451,9 +3476,12 @@ public partial class DraftPage : ContentPage, IDraftPage
             yToBe = clip.layoutY + e.TotalY;
         }
 
-        double actualYToBe = yToBe + UpperContent.Height;
-
         bool ghostExists = _ghostByClipId.ContainsKey(cid);
+        if (!ghostExists && GetClipDropTrack(border, origTrack, yToBe) != origTrack)
+        {
+            InitMoveBetweenTracks(clip, cid, border);
+            ghostExists = true;
+        }
 
         // If no ghost (still within same track), apply snapping and overlap resolution live
         if (!ghostExists)
@@ -3467,13 +3495,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         else
         {
             border.TranslationX = xToBe;
-        }
-        if (!ghostExists && Math.Abs(actualYToBe - clip.defaultY) > 50.0)
-        {
-            InitMoveBetweenTracks(clip, cid, border);
-        }
-        else if (ghostExists)
-        {
             border.TranslationY = yToBe;
             UpdateGhostAndShadow(border, cid, xToBe, origTrack);
         }
@@ -3482,12 +3503,12 @@ public partial class DraftPage : ContentPage, IDraftPage
     private void UpdateGhostAndShadow(Border border, Guid cid, double xToBe, int origTrack)
     {
         ClipElementUI ghostClip = Clips[_ghostByClipId[cid]];
-        Point clipAbsolutePosition = GetAbsolutePosition(border, OverlayLayer);
-        ghostClip.Clip.TranslationX = clipAbsolutePosition.X;
-        ghostClip.Clip.TranslationY = clipAbsolutePosition.Y;
+        Point clipAbsolutePosition = GetAbsolutePosition(border, null!);
+        Point overlayAbsolutePosition = GetAbsolutePosition(OverlayLayer, null!);
+        ghostClip.Clip.TranslationX = clipAbsolutePosition.X - overlayAbsolutePosition.X - ghostClip.Clip.X;
+        ghostClip.Clip.TranslationY = clipAbsolutePosition.Y - overlayAbsolutePosition.Y - ghostClip.Clip.Y;
 
-        bool isSub = origTrack >= SubTrackOffset;
-        int newTrack = GetTrackIdFromY(clipAbsolutePosition.Y, isSub);
+        int newTrack = GetClipDropTrack(border, origTrack);
 
         ClipElementUI shadow = Clips[_shadowByClipId[cid]];
         // Apply snapping and overlap resolution for shadow placement
@@ -3505,17 +3526,16 @@ public partial class DraftPage : ContentPage, IDraftPage
             shadow.Clip.TranslationX = snapped;
         }
 
-        if (origTrack == newTrack)
-        {
-            return;
-        }
         if (ShowShadow) UpdateShadowTrack(shadow, newTrack);
     }
 
     private void UpdateShadowTrack(ClipElementUI shadow, int newTrack)
     {
+        if (shadow.origTrack == newTrack && shadow.Clip.Parent is not null) return;
         try
         {
+            if (shadow.origTrack != newTrack)
+                LogDiagnostic($"Drag shadow {shadow.Id} moved from track {shadow.origTrack} to {newTrack}.");
             if (shadow.origTrack.HasValue && Tracks.TryGetValue(shadow.origTrack.Value, out var oldTrackLayout))
             {
                 oldTrackLayout.Children.Remove(shadow.Clip);
@@ -3587,7 +3607,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (_ghostByClipId.TryRemove(cid, out var ghostId) && Clips.TryRemove(ghostId, out var ghostClip))
         {
             bool isSub = clip.origTrack >= SubTrackOffset;
-            int newTrack = GetTrackIdFromY(ghostClip.Clip.TranslationY + ghostClip.Clip.Y, isSub);
+            int newTrack = GetClipDropTrack(border, clip.origTrack ?? 0);
+            LogDiagnostic($"Dropping clip {cid} from track {clip.origTrack} to {newTrack} at y={border.TranslationY}.");
             OverlayLayer.Children.Remove(ghostClip.Clip);
 
             if (clip.origTrack is int oldTrack && Tracks.TryGetValue(oldTrack, out var oldTrackLayout))
@@ -3765,7 +3786,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             Id = shadowId,
             IsShadow = true,
             Clip = shadowBorder,
-            origTrack = 0
+            origTrack = null
         };
         _shadowByClipId[cid] = shadowId;
         Clips[shadowId] = shadowElement;
@@ -3844,6 +3865,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             });
         }
 
+        InvalidateClipPreviewViewport();
         SetStatusText(Localized.DraftPage_Removed);
         _ = RefreshSelectionUiAsync();
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
@@ -4037,12 +4059,12 @@ public partial class DraftPage : ContentPage, IDraftPage
             pasted.StartingX = dto.StartingX;
             pasted.StartingY = dto.StartingY;
             pasted.ExtraData = dto.MetaData?.ToDictionary(kv => kv.Key, kv => kv.Value) ?? new Dictionary<string, object>();
-            TransformBinding.CopySingleInputs(pasted.ExtraData, pasted.Id);
             pasted.Effects = dto.Effects?.ToDictionary(
                 e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,
                 e => PluginManager.CreateEffect(e, ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight));
 
-            pasted.EffectProviders = EffectBindingHelper.MigrateToEffectProviders(dto.EffectProviders, dto.EffectBundles);
+            pasted.EffectProviders = EffectBindingHelper.MigrateToEffectProviders(TransformProcessing.CopySingleInputs(dto.EffectProviders), dto.EffectBundles);
+            ClipInfoBuilder.RebuildAllEffects(pasted);
 
             pasted.ApplySpeedRatio();
             pasted.ApplyClipColor();
@@ -4061,17 +4083,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                     pastedName,
                     $"Pasted to track {targetTrack}, x={Math.Round(desiredStartPx, 2)}")
             });
-        }
-
-        var copiedIds = orderedItems.Select((item, i) => (item.Dto.Id, NewId: pastedClips[i].Id)).ToDictionary(p => p.Id, p => p.NewId);
-        for (int i = 0; i < orderedItems.Count; i++)
-        {
-            var binding = TransformBinding.Read(orderedItems[i].Dto.MetaData, TransformSide.Right);
-            if (binding?.InputMode != TransformInputMode.TwoInput || !copiedIds.TryGetValue(binding.RightClipId, out var target)) continue;
-            binding.Id = Guid.NewGuid();
-            binding.LeftClipId = pastedClips[i].Id;
-            binding.RightClipId = target;
-            TransformBinding.Write(pastedClips[i].ExtraData, TransformSide.Right, binding);
         }
 
         _ = UpdateAdjacencyForTrack();
@@ -4823,6 +4834,9 @@ public partial class DraftPage : ContentPage, IDraftPage
     #region properties
     private async Task<TabbedView> BuildPropertyPanel(ClipElementUI clip)
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var panelMark = new UserMarkRange("Properties.BuildPanel", $"clip={clip.Id}");
+#endif
         if (clip is null)
         {
             Log("A null clip is provided.", "error");
@@ -4902,6 +4916,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         if (_selected is null) return;
         var clip = _selected;
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var propertyMark = new UserMarkRange("Properties.Change", $"clip={clip.Id}, property={e.Id}");
+#endif
         if (ShouldWarmClipPreview(e.Id)) DynamicPreviewProvider.CancelClipWarmup(clip.Id);
 
         if (e.Id == "__EFFECT_BINDING_CHANGED__")
@@ -4935,7 +4952,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (e.Id == "__REFRESH_PANEL__")
         {
             Clips[clip.Id] = clip;
-            await ReRenderUI();
+            await ReRenderUI(clip);
             RefreshPropertyPanel(clip);
             // 节点编辑器（DraftEffectBindingView）的 EffectBundlesChanged 经 __REFRESH_PANEL__ 路由到这里。
             // 绑定/连线在渲染层只有通过 provider 重建才生效（见 EffectHelper.GetClipEffectsInstances），
@@ -5007,7 +5024,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         MarkHistoryPanelDirty();
 
 
-        await ReRenderUI();
+        await ReRenderUI(clip);
 
         if (e.Id == "TextEntries" && UseDynamicPreview)
         {
@@ -5078,14 +5095,20 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 var existing = Assets.Values.First((v) => v.Name == Path.GetFileNameWithoutExtension(path));
 
-                string opt = await DisplayActionSheetAsync(
+                string? opt = await DisplayActionSheetAsync(
                     Localized.DraftPage_DuplicatedAsset(Path.GetFileNameWithoutExtension(path), existing.Name),
-                    null,
+                    Localized._Cancel,
                     null,
                     [Localized.DraftPage_DuplicatedAsset_Relpace, Localized.DraftPage_DuplicatedAsset_Skip, Localized.DraftPage_DuplicatedAsset_Together]
                 );
 
-                if (opt == Localized.DraftPage_DuplicatedAsset_Relpace)
+                if (string.IsNullOrEmpty(opt) || opt == Localized._Cancel)
+                {
+                    Log($"Cancelled adding duplicated asset from {path}");
+                    SetStateOK();
+                    return;
+                }
+                else if (opt == Localized.DraftPage_DuplicatedAsset_Relpace)
                 {
                     Assets.TryRemove(existing.AssetId, out _);
                     Log($"Replaced existing asset {existing.Name} with new one from {path}");
@@ -5965,19 +5988,23 @@ public partial class DraftPage : ContentPage, IDraftPage
         SetStatusText($"Unbound {restoredCount} clips");
     }
 
-    private async Task ReRenderUI()
+    private async Task ReRenderUI(ClipElementUI? changedClip = null)
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var refreshMark = new UserMarkRange("Timeline.RefreshUI", $"clips={Clips.Count}");
+#endif
         SetStateBusy(Localized._Processing);
         try
         {
-            var snapshot = Clips.ToList();
+            var snapshot = changedClip is null ? Clips.Values.ToArray() : new[] { changedClip };
 
             await Dispatcher.DispatchAsync(() =>
             {
-                foreach (var kv in snapshot)
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+                using var viewsMark = new UserMarkRange("Timeline.UpdateClipViews", $"clips={snapshot.Length}");
+#endif
+                foreach (var clip in snapshot)
                 {
-                    var key = kv.Key;
-                    var clip = kv.Value;
                     if (clip.IsGhost || clip.IsShadow) continue;
                     if (clip == null) continue;
 
@@ -6131,9 +6158,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                                 clip.Clip.WidthRequest = extendedWidth;
                                 clip.LeftHandle.IsVisible = false;
                                 clip.RightHandle.IsVisible = false;
-                                clip.Clip.StrokeShape = new Rectangle
-                                {
-                                };
+                                if (clip.Clip.StrokeShape is not Rectangle)
+                                    clip.Clip.StrokeShape = new Rectangle();
 
                                 // ExtendToWholeDraft 的 clip 不允许拖动或拉伸，移除所有 Pan 手势
                                 RemovePanGestures(clip.Clip);
@@ -6146,10 +6172,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                                 var clipInteractionTarget = GetClipInteractionTarget(clip);
                                 clip.LeftHandle.IsVisible = true;
                                 clip.RightHandle.IsVisible = true;
-                                clip.Clip.StrokeShape = new RoundRectangle
-                                {
-                                    CornerRadius = new Microsoft.Maui.CornerRadius(20)
-                                };
                                 // Remove legacy pan gesture from Border hit area, then keep pan on interaction target only.
                                 RemovePanGestures(clip.Clip);
                                 // 关闭 ExtendToWholeDraft 后恢复可拖动/拉伸的 Pan 手势
@@ -6183,7 +6205,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         // Update cached length in frames to match actual visual width
                         try
                         {
-                            var w = (!double.IsNaN(border.Width) && border.Width > 0) ? border.Width : border.WidthRequest;
+                            var w = border.WidthRequest > 0 ? border.WidthRequest : border.Width;
                             clip.lengthInFrame = PixelToFrame(w);
                         }
                         catch { /* non-critical */ }
@@ -6210,7 +6232,11 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 OnPropertyChanged(item);
             }
-            await UpdateAdjacencyForTrack();
+            if (changedClip?.origTrack is int track)
+                await UpdateAdjacencyForTrack(track);
+            else
+                await UpdateAdjacencyForTrack();
+            LogDiagnostic($"Refreshed timeline UI for {snapshot.Length} clips.");
         }
         finally
         {
@@ -6248,88 +6274,100 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    public Task UpdateAdjacencyForTrack() => UpdateAdjacencyForTrack(default);
+    public Task UpdateAdjacencyForTrack() => UpdateAdjacencyForTrack(CancellationToken.None);
 
     private async Task UpdateAdjacencyForTrack(CancellationToken cancellationToken)
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var adjacencyMark = new UserMarkRange("Timeline.UpdateAdjacency", $"tracks={Tracks.Count}");
+#endif
         foreach (var item in Tracks.Keys)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await UpdateAdjacencyForTrack(item, cancellationToken);
+            await UpdateAdjacencyForTrack(item, cancellationToken, refreshShadows: false);
         }
+        await Dispatcher.DispatchAsync(RefreshTransformShadows);
     }
 
-    private async Task UpdateAdjacencyForTrack(int trackIndex, CancellationToken cancellationToken = default)
+    private async Task UpdateAdjacencyForTrack(int trackIndex, CancellationToken cancellationToken = default, bool refreshShadows = true)
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var trackMark = new UserMarkRange("Timeline.UpdateTrackAdjacency", $"track={trackIndex}");
+#endif
         SetStateBusy(Localized._Processing);
         if (!Tracks.TryGetValue(trackIndex, out var track)) return;
         var byorder = track.Children.OfType<Border>()
             .Select(b => b.BindingContext)
             .OfType<ClipElementUI>()
             .Where(ShouldParticipateInTimelineLayout)
+            .OrderBy(c => c.Id)
             .ToList();
 
         const double defaultRadius = 20.0;
-
-        // Use a local radius array to avoid races between concurrent UpdateAdjacencyForTrack calls
         var localRadius = new RoundRectangleRadiusType[byorder.Count];
+        var starts = new Dictionary<(int, ulong), List<int>>();
+        var ends = new Dictionary<(int, ulong), List<int>>();
 
         for (int i = 0; i < byorder.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             localRadius[i] = new RoundRectangleRadiusType { tl = defaultRadius, tr = defaultRadius, br = defaultRadius, bl = defaultRadius };
+            var c = byorder[i];
+            ulong start = PixelToFrame(Math.Max(0, c.Clip.TranslationX));
+            ulong end = start + PixelToFrame(Math.Max(0, c.Clip.WidthRequest > 0 ? c.Clip.WidthRequest : c.origLength));
+            if (!starts.TryGetValue((c.SubLayerIndex, start), out var atStart))
+                starts[(c.SubLayerIndex, start)] = atStart = [];
+            if (!ends.TryGetValue((c.SubLayerIndex, end), out var atEnd))
+                ends[(c.SubLayerIndex, end)] = atEnd = [];
+            atStart.Add(i);
+            atEnd.Add(i);
             if (cancellationToken.CanBeCanceled && i % 16 == 15) await Task.Delay(1, cancellationToken);
         }
 
-        foreach (var item in byorder)
+        static int Neighbor(Dictionary<(int, ulong), List<int>> boundaries, (int, ulong) key, int self)
         {
-            try { item.Clip.StrokeShape = new RoundRectangle { CornerRadius = new Microsoft.Maui.CornerRadius(defaultRadius) }; } catch { }
+            if (!boundaries.TryGetValue(key, out var indices)) return -1;
+            return indices[0] != self ? indices[0] : indices.Count > 1 ? indices[1] : -1;
         }
 
         for (int i = 0; i < byorder.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var self = byorder[i];
-
-            var (leftNeighbor, rightNeighbor) = FindNeighbors(self);
-
-            if (leftNeighbor is not null)
+            ulong start = PixelToFrame(Math.Max(0, self.Clip.TranslationX));
+            ulong end = start + PixelToFrame(Math.Max(0, self.Clip.WidthRequest > 0 ? self.Clip.WidthRequest : self.origLength));
+            int li = Neighbor(ends, (self.SubLayerIndex, start), i);
+            int ri = Neighbor(starts, (self.SubLayerIndex, end), i);
+            if (li >= 0)
             {
-                int li = byorder.FindIndex(t => t == leftNeighbor);
-                if (li >= 0)
-                {
-                    localRadius[i].tl = 0;
-                    localRadius[i].br = 0;
-                    localRadius[li].tr = 0;
-                    localRadius[li].bl = 0;
-                }
+                localRadius[i].tl = 0;
+                localRadius[i].br = 0;
+                localRadius[li].tr = 0;
+                localRadius[li].bl = 0;
             }
-
-            if (rightNeighbor is not null)
+            if (ri >= 0)
             {
-                int ri = byorder.FindIndex(t => t == rightNeighbor);
-                if (ri >= 0)
-                {
-                    localRadius[i].tr = 0;
-                    localRadius[i].bl = 0;
-                    localRadius[ri].tl = 0;
-                    localRadius[ri].br = 0;
-                }
+                localRadius[i].tr = 0;
+                localRadius[i].bl = 0;
+                localRadius[ri].tl = 0;
+                localRadius[ri].br = 0;
             }
             if (cancellationToken.CanBeCanceled && i % 16 == 15) await Task.Delay(1, cancellationToken);
         }
 
         await Dispatcher.DispatchAsync(() =>
         {
-            foreach (var item in byorder)
+            for (int i = 0; i < byorder.Count; i++)
             {
-                var r = localRadius[byorder.IndexOf(item)];
+                var r = localRadius[i];
                 try
                 {
-                    item.Clip.StrokeShape = new RoundRectangle
+                    var radius = new Microsoft.Maui.CornerRadius(r.tl, r.tr, r.br, r.bl);
+                    if (byorder[i].Clip.StrokeShape is RoundRectangle shape)
                     {
-                        CornerRadius = new Microsoft.Maui.CornerRadius(r.tl, r.tr, r.br, r.bl)
-                    };
+                        if (!shape.CornerRadius.Equals(radius)) shape.CornerRadius = radius;
+                    }
+                    else byorder[i].Clip.StrokeShape = new RoundRectangle { CornerRadius = radius };
                 }
                 catch (Exception e)
                 {
@@ -6337,7 +6375,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                     SetStateFail("Failed to update clip border.");
                 }
             }
-            RefreshTransformShadows();
+            if (refreshShadows) RefreshTransformShadows();
+            InvalidateClipPreviewViewport();
         });
 
     }
@@ -7676,13 +7715,14 @@ public partial class DraftPage : ContentPage, IDraftPage
         ulong end = (ulong)start + PixelToFrame(Math.Max(0, clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength));
         ClipElementUI? leftNeighbor = null;
         ClipElementUI? rightNeighbor = null;
-        foreach (var c in Clips.Values.OrderBy(c => c.Id))
+        if (!Tracks.TryGetValue(track, out var layout)) return (null, null);
+        foreach (var c in layout.Children.OfType<Border>().Select(b => b.BindingContext).OfType<ClipElementUI>())
         {
             if (c.Id == clip.Id || c.origTrack != track || c.SubLayerIndex != clip.SubLayerIndex || !ShouldParticipateInTimelineLayout(c)) continue;
             uint cStart = PixelToFrame(Math.Max(0, c.Clip.TranslationX));
             ulong cEnd = (ulong)cStart + PixelToFrame(Math.Max(0, c.Clip.WidthRequest > 0 ? c.Clip.WidthRequest : c.origLength));
-            if (cEnd == start) leftNeighbor ??= c;
-            if (cStart == end) rightNeighbor ??= c;
+            if (cEnd == start && (leftNeighbor is null || c.Id.CompareTo(leftNeighbor.Id) < 0)) leftNeighbor = c;
+            if (cStart == end && (rightNeighbor is null || c.Id.CompareTo(rightNeighbor.Id) < 0)) rightNeighbor = c;
         }
 
         return (leftNeighbor, rightNeighbor);
@@ -7920,7 +7960,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, Clip(), false);
                     dto.Id = Guid.NewGuid();
                     dto.BindedSoundTrack = string.Empty;
-                    if (dto.MetaData is not null) TransformBinding.CopySingleInputs(dto.MetaData, dto.Id);
+                    dto.EffectProviders = TransformProcessing.CopySingleInputs(dto.EffectProviders);
                     dto.MetaData?.Remove(SoundTrackMetadata.ProbeSourceKey);
                     dto.MetaData?.Remove(SoundTrackMetadata.ProbeHasStreamKey);
                     dto.Name = S("Name") ?? $"Copy of {dto.Name}";
@@ -8581,6 +8621,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         if (Math.Abs(newZoom - oldZoom) < 0.0001) return -1;
 
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var zoomMark = new UserMarkRange("Timeline.Zoom", $"zoom={oldZoom}->{newZoom}, clips={Clips.Count}");
+#endif
         tracksZoomOffest = newZoom;
         double ratio = oldZoom / newZoom;
 
@@ -8605,7 +8648,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         PlayheadLine.TranslationX = currentPlayheadX + TrackHeadLayout.Width;
 
         UpdateTimelineWidth();
-        return -1; //allow to put this method in <var> switch { <case> } expression 
+        RefreshTransformShadows();
+        return -1; //allow to put this method in <var> switch { <case> } expression
     }
 
     private Size GetScreenSizeInDp()
@@ -8699,6 +8743,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             try { cts.Cancel(); } catch { }
         }
         _perClipThumbCts.Clear();
+        ClearClipPreviews();
         await HidePopup();
 
         try
@@ -9152,7 +9197,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     void IDraftPage.AddAClip(IClipElementUI c) => AddAClip(RequireConcreteClip(c, nameof(c)));
 
-    bool IDraftPage.AddTransformBetweenSelected(Func<Guid, Guid, ITransform> transformFactory, IClipElementUI center, bool left, bool right, Action<IClipElementUI>? elementSetter)
+    bool IDraftPage.AddTransformBetweenSelected(Func<IEffectProvider> transformFactory, IClipElementUI center, bool left, bool right, Action<IClipElementUI>? elementSetter)
     {
         Action<ClipElementUI>? concreteSetter = null;
         if (elementSetter is not null)

@@ -2,6 +2,7 @@ using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
@@ -40,6 +41,7 @@ namespace projectFrameCut.Render.Compose
             if (chunkSampleCount <= 0) throw new ArgumentOutOfRangeException(nameof(chunkSampleCount));
 
             var (contexts, totalSamples) = BuildAudioContexts(videoFramerate, samplerate);
+            var transforms = BuildTransforms(contexts, videoFramerate, samplerate);
 
             Writer.SamplePerSecond = samplerate;
             Writer.ChannelCount = channels;
@@ -64,8 +66,18 @@ namespace projectFrameCut.Render.Compose
 
                 foreach (var context in contexts)
                 {
-                    MixContextIntoChunk(context, chunkStart, chunkLength, samplerate, channels, mixed, globalBindableCache);
+                    int start = Math.Max(chunkStart, context.TimelineStartSample);
+                    int end = Math.Min(chunkStart + chunkLength, context.TimelineEndSample);
+                    foreach (var transform in transforms.Where(t => t.Left == context || t.Right == context).OrderBy(t => t.StartSample))
+                    {
+                        if (transform.EndSample <= start || transform.StartSample >= end) continue;
+                        MixContextIntoChunk(context, chunkStart, start, Math.Min(end, transform.StartSample), samplerate, channels, mixed, globalBindableCache);
+                        start = Math.Min(end, transform.EndSample);
+                    }
+                    MixContextIntoChunk(context, chunkStart, start, end, samplerate, channels, mixed, globalBindableCache);
                 }
+                foreach (var transform in transforms)
+                    MixTransformIntoChunk(transform, chunkStart, chunkLength, videoFramerate, samplerate, channels, mixed, globalBindableCache);
 
                 Writer.Append(new FloatAudioSamples
                 {
@@ -147,29 +159,27 @@ namespace projectFrameCut.Render.Compose
                         .OrderBy(e => e.Index)
                         .ToArray();
 
-                    int trackEndSample = trackStartSample + trackDurationSamples;
+                    int trackEndSample = FrameToSample((ulong)track.StartFrame + (uint)durationFrames, videoFramerate, outputSampleRate);
                     int overlapStartSample = Math.Max(trackStartSample, renderStartSample);
                     int overlapEndSample = Math.Min(trackEndSample, renderEndSample);
-                    if (overlapEndSample <= overlapStartSample)
-                    {
-                        continue;
-                    }
-
-                    int localSampleOffset = overlapStartSample - trackStartSample;
                     contexts.Add(new SoundTrackContext
                     {
                         SoundTrack = track,
+                        ClipInfo = new TransformClipInfo(Guid.TryParse(track.Id, out var id) ? id :
+                            SoundTrackMetadata.ReadSourceClipId(track.ExtraData) ?? Guid.Empty,
+                            track.StartFrame, (uint)durationFrames, track.LayerIndex, track.SubLayerIndex, track.EffectProviders ?? []),
                         SourceSampleRate = sourceSampleRate,
-                        TimelineStartSample = overlapStartSample - renderStartSample,
-                        TimelineEndSample = overlapEndSample - renderStartSample,
+                        FrameRate = videoFramerate,
+                        TimelineStartSample = trackStartSample - renderStartSample,
+                        TimelineEndSample = trackEndSample - renderStartSample,
                         SourceStartSample = sourceStartSample,
-                        LocalSampleOffset = localSampleOffset,
                         Volume = track.Volume,
                         Ratio = ratio,
                         Effects = effects
                     });
 
-                    totalSamples = Math.Max(totalSamples, overlapEndSample - renderStartSample);
+                    if (overlapEndSample > overlapStartSample)
+                        totalSamples = Math.Max(totalSamples, overlapEndSample - renderStartSample);
                 }
             }
 
@@ -180,15 +190,15 @@ namespace projectFrameCut.Render.Compose
         private static void MixContextIntoChunk(
             SoundTrackContext context,
             int chunkStart,
-            int chunkLength,
+            int start,
+            int end,
             int outputSampleRate,
             int outputChannels,
             float[][] mixed,
             ConcurrentDictionary<string, object> globalBindableCache)
         {
-            int chunkEnd = chunkStart + chunkLength;
-            int overlapStart = Math.Max(chunkStart, context.TimelineStartSample);
-            int overlapEnd = Math.Min(chunkEnd, context.TimelineEndSample);
+            int overlapStart = Math.Max(start, context.TimelineStartSample);
+            int overlapEnd = Math.Min(end, context.TimelineEndSample);
             if (overlapEnd <= overlapStart)
             {
                 return;
@@ -197,10 +207,8 @@ namespace projectFrameCut.Render.Compose
             int clipLocalOffset = overlapStart - context.TimelineStartSample;
             int localChunkOffset = overlapStart - chunkStart;
             int overlapLength = overlapEnd - overlapStart;
-            int clipLocalOffsetToSource = context.LocalSampleOffset + clipLocalOffset;
-
-            FloatAudioSamples clipWindow = ReadClipWindowToFloat(context, clipLocalOffsetToSource, overlapLength, outputSampleRate, outputChannels);
-            clipWindow = ApplyAudioEffects(context, clipWindow, (uint)clipLocalOffsetToSource, globalBindableCache);
+            FloatAudioSamples clipWindow = ReadClipWindowToFloat(context, clipLocalOffset, overlapLength, outputSampleRate, outputChannels);
+            clipWindow = ApplyAudioEffects(context, clipWindow, clipLocalOffset, globalBindableCache);
 
             for (int c = 0; c < outputChannels; c++)
             {
@@ -211,6 +219,87 @@ namespace projectFrameCut.Render.Compose
                 {
                     float value = dst[localChunkOffset + i] + src[i] * context.Volume;
                     dst[localChunkOffset + i] = SoftClip(value);
+                }
+            }
+        }
+
+        private List<AudioTransformContext> BuildTransforms(List<SoundTrackContext> contexts, int fps, int sampleRate)
+        {
+            var index = new TransformProcessing.Index(contexts.Where(c => c.ClipInfo.Id != Guid.Empty).Select(c => c.ClipInfo).ToArray());
+            var result = new List<AudioTransformContext>();
+            int renderStart = FrameToSample(StartFrame, fps, sampleRate);
+            foreach (var context in contexts.Where(c => c.ClipInfo.Id != Guid.Empty))
+            {
+                foreach (var side in Enum.GetValues<TransformSide>())
+                {
+                    var resolved = index.Resolve(context.ClipInfo.Id, side);
+                    if (resolved is not { Duration: > 0 } || resolved.Owner.Id != context.ClipInfo.Id) continue;
+                    var transform = context.Effects.OfType<ITransform>().SingleOrDefault(e =>
+                        e.BindedEffectProvidingSystemID == resolved.Provider.Id.ToString())
+                        ?? throw new InvalidOperationException($"Missing audio transform instance for provider {resolved.Provider.Id}.");
+                    var mode = TransformProcessing.ReadEnum<TransformInputMode>(resolved.Provider.MetaData, TransformProcessing.ModeKey);
+                    var required = TransformDefinition.Audio | (mode == TransformInputMode.OneInput ? TransformDefinition.SupportOneInput : TransformDefinition.SupportTwoInput);
+                    if (!transform.Definition.HasFlag(required))
+                        throw new NotSupportedException($"Transform {transform.TypeName} does not support {mode} audio.");
+                    result.Add(new AudioTransformContext
+                    {
+                        Left = context,
+                        Right = resolved.Right is { } right ? contexts.Single(c => c.ClipInfo.Id == right.Id) : null,
+                        Transform = transform,
+                        StartSample = FrameToSample(resolved.Start, fps, sampleRate) - renderStart,
+                        EndSample = FrameToSample(resolved.Start + resolved.Duration, fps, sampleRate) - renderStart,
+                        Side = TransformProcessing.ReadEnum<TransformSide>(resolved.Provider.MetaData, TransformProcessing.SideKey),
+                        BeforeEffects = TransformProcessing.ReadEnum<TransformRenderOrder>(resolved.Provider.MetaData, TransformProcessing.OrderKey) == TransformRenderOrder.BeforeEffects
+                    });
+                }
+            }
+            if (result.Count > 0) Log($"[AudioComposer] Resolved {result.Count} audio transforms across {contexts.Count} soundtracks.");
+            return result;
+        }
+
+        private void MixTransformIntoChunk(AudioTransformContext context, int chunkStart, int chunkLength, int fps,
+            int sampleRate, int channels, float[][] mixed, ConcurrentDictionary<string, object> cache)
+        {
+            int start = Math.Max(chunkStart, context.StartSample);
+            int end = Math.Min(chunkStart + chunkLength, context.EndSample);
+            while (start < end)
+            {
+                var active = context.Right is { } right && start >= right.TimelineStartSample ? right : context.Left;
+                int length = context.BeforeEffects && context.Right is { } next && start < next.TimelineStartSample
+                    ? Math.Min(end, next.TimelineStartSample) - start : end - start;
+                try
+                {
+                    uint frame = StartFrame + (uint)Math.Max(0, Math.Floor(start * (double)fps / sampleRate));
+                    using var frameContext = ValueProviderFrameContext.PushFrame(frame,
+                        Math.Clamp((start - context.Left.TimelineStartSample) / (float)Math.Max(1, context.Left.TimelineEndSample - context.Left.TimelineStartSample), 0, 1));
+                    var left = ReadInput(context.Left);
+                    var rightInput = context.Right is { } r ? ReadInput(r) : null;
+                    var output = ToFloatSamples(TransformProcessing.ProcessSamples(left, rightInput, context.Transform,
+                        context.Right is null ? TransformInputMode.OneInput : TransformInputMode.TwoInput,
+                        start - context.StartSample, context.EndSample - context.StartSample, context.Side));
+                    if (context.BeforeEffects)
+                        output = ApplyAudioEffects(active, output, start - active.TimelineStartSample, cache);
+                    if (output.SampleCount != length || output.channelCount != channels || output.SamplePerSecond != sampleRate)
+                        throw new InvalidOperationException("Audio transform changed the output sample count, rate or channels.");
+                    for (int c = 0; c < channels; c++)
+                        for (int i = 0; i < length; i++)
+                            mixed[c][start - chunkStart + i] = SoftClip(mixed[c][start - chunkStart + i] + output.Channels[c][i]);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Audio transform {context.Transform.TypeName}/{context.Transform.BindedEffectProvidingSystemID}, samples {start}..{start + length}", this);
+                    throw;
+                }
+                start += length;
+
+                FloatAudioSamples ReadInput(SoundTrackContext track)
+                {
+                    int offset = start - track.TimelineStartSample;
+                    var input = ReadClipWindowToFloat(track, offset, length, sampleRate, channels);
+                    if (!context.BeforeEffects) input = ApplyAudioEffects(track, input, offset, cache);
+                    for (int c = 0; c < channels; c++)
+                        for (int i = 0; i < length; i++) input.Channels[c][i] *= track.Volume;
+                    return input;
                 }
             }
         }
@@ -231,6 +320,7 @@ namespace projectFrameCut.Render.Compose
             double sourceStartFrac = sourceOffset - sourceIntStart;
 
             int sourceReadStart = Math.Max(0, context.SourceStartSample + sourceIntStart);
+            sourceStartFrac += context.SourceStartSample + sourceIntStart - sourceReadStart;
             int sourceReadCount = Math.Max(2, (int)Math.Ceiling(sourceStartFrac + (outputCount - 1) * sourceStep) + 2);
 
             IAudioSamples raw = context.SoundTrack.GetAudioSamplesRelatedToStartPointOfSource((uint)sourceReadStart, sourceReadCount);
@@ -247,7 +337,7 @@ namespace projectFrameCut.Render.Compose
                 for (int i = 0; i < outputCount; i++)
                 {
                     double pos = sourceStartFrac + i * sourceStep;
-                    int idx = (int)pos;
+                    int idx = (int)Math.Floor(pos);
                     double frac = pos - idx;
 
                     float a = idx >= 0 && idx < src.Length ? src[idx] : 0f;
@@ -267,7 +357,7 @@ namespace projectFrameCut.Render.Compose
         private static FloatAudioSamples ApplyAudioEffects(
             SoundTrackContext context,
             FloatAudioSamples input,
-            uint clipLocalSampleIndex,
+            int clipLocalSampleIndex,
             ConcurrentDictionary<string, object> globalBindableCache)
         {
             if (context.Effects.Length == 0)
@@ -276,6 +366,9 @@ namespace projectFrameCut.Render.Compose
             }
 
             IAudioSamples current = input;
+            using var frameContext = ValueProviderFrameContext.PushFrame(
+                (uint)Math.Clamp(context.ClipInfo.Start + Math.Floor(clipLocalSampleIndex * (double)context.FrameRate / input.SamplePerSecond), 0, uint.MaxValue),
+                Math.Clamp(clipLocalSampleIndex / (float)Math.Max(1, context.TimelineEndSample - context.TimelineStartSample), 0, 1));
             Dictionary<string, object> localBindableCache = new();
 
             foreach (var effect in context.Effects)
@@ -293,7 +386,7 @@ namespace projectFrameCut.Render.Compose
 
                 if (effect is IAudioContinuousEffect continuous)
                 {
-                    if (!RangeOverlaps((int)clipLocalSampleIndex, input.SampleCount, continuous.StartPoint, continuous.EndPoint))
+                    if (!RangeOverlaps(clipLocalSampleIndex, input.SampleCount, continuous.StartPoint, continuous.EndPoint))
                     {
                         continue;
                     }
@@ -440,14 +533,26 @@ namespace projectFrameCut.Render.Compose
         private sealed class SoundTrackContext
         {
             public required ISoundTrack SoundTrack { get; init; }
+            public TransformClipInfo ClipInfo { get; init; }
             public int SourceSampleRate { get; init; }
+            public int FrameRate { get; init; }
             public int TimelineStartSample { get; init; }
             public int TimelineEndSample { get; init; }
             public int SourceStartSample { get; init; }
-            public int LocalSampleOffset { get; init; }
             public float Volume { get; init; }
             public float Ratio { get; init; }
             public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
+        }
+
+        private sealed class AudioTransformContext
+        {
+            public required SoundTrackContext Left { get; init; }
+            public SoundTrackContext? Right { get; init; }
+            public required ITransform Transform { get; init; }
+            public int StartSample { get; init; }
+            public int EndSample { get; init; }
+            public TransformSide Side { get; init; }
+            public bool BeforeEffects { get; init; }
         }
 
     }

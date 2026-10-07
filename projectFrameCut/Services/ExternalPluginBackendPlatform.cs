@@ -64,7 +64,7 @@ internal sealed class ExternalPluginBackendPlatform(ExternalPluginBackendLaunchO
                     PreferredPayloadKind = context.Transport.PayloadMode ?? IsolationPayloadKind.SharedMemory,
                 }),
             }, timeout.Token).ConfigureAwait(false);
-            if (response.Error is not null) response.Error.ThrowAsException();
+            response?.Error?.ThrowAsException();
             var capabilities = RenderRpcSerializer.Deserialize<IsolationChannelCapabilities>(response.Payload);
             if (capabilities.ProtocolVersion != PluginIsolationProtocol.CurrentVersion)
                 throw new InvalidDataException("External plugin backend protocol version mismatch.");

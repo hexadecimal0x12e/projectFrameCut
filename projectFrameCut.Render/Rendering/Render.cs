@@ -1931,7 +1931,7 @@ namespace projectFrameCut.Render.Rendering
             try
             {
                 if (TransformProcessing.TryRender(clip, Clips, targetFrame, TargetWidth, TargetHeight,
-                    layoutRelativeWidth, layoutRelativeHeight, _ppb, out var transition, SDRClipsBrightnessInHDRMode, AutoCenterImplicitClip))
+                    layoutRelativeWidth, layoutRelativeHeight, _ppb, out var transition, SDRClipsBrightnessInHDRMode, AutoCenterImplicitClip, initializeClips: false, preparedSource: frame))
                 {
                     var mixer = clip.MixtureInstance ?? ClassicOverlayMixture.Default;
                     var mixed = mixer.Mix(currentResult ?? BlankFrame, transition!, _ppb, 0, 0, TargetWidth, TargetHeight);
@@ -1947,6 +1947,7 @@ namespace projectFrameCut.Render.Rendering
                     clip.TargetWidth > 0 ? ScaleDimensionToTarget(clip.TargetWidth, layoutRelativeWidth, TargetWidth) : TargetWidth,
                     clip.TargetHeight > 0 ? ScaleDimensionToTarget(clip.TargetHeight, layoutRelativeHeight, TargetHeight) : TargetHeight,
                     false);
+                bool preserveAspect = true;
 
                 if (EffectCache.TryGetValue(clip.Id, out var effects) && effects is not null)
                 {
@@ -1973,7 +1974,7 @@ namespace projectFrameCut.Render.Rendering
                             {
                                 case EffectType.NormalEffect:
                                     if (item is not INormalEffect e) goto notdefined;
-                                    frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
+                                    frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight, preserveAspect);
                                     frame = e.Render(frame, TargetWidth, TargetHeight);
                                     continue;
                                 case EffectType.ContinuousEffect:
@@ -1982,12 +1983,13 @@ namespace projectFrameCut.Render.Rendering
                                     int scopedEnd = c.IsScoped ? c.EndPoint : (int)(clip.StartFrame + clip.GetEffectiveDuration());
                                     if (scopedEnd <= scopedStart || targetFrame < scopedStart || targetFrame >= scopedEnd) continue;
                                     float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
-                                    frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
+                                    frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight, preserveAspect);
                                     frame = c.Render(frame, continuousProgress, TargetWidth, TargetHeight);
                                     continue;
                                 case EffectType.ContinuousClipPositionProvider:
                                     if (item is not IContinuousClipPositionProvider cp) goto notdefined;
-                                    var pos = cp.GetPosition(clip, targetFrame, TargetWidth, TargetHeight);
+                                    var pos = cp.GetPosition(clip, targetFrame, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight);
+                                    preserveAspect &= cp.PreserveAspectRatio;
                                     if (pos.IsDelta)
                                     {
                                         targetPos = new ClipPositionTuple(
@@ -2024,6 +2026,7 @@ namespace projectFrameCut.Render.Rendering
                                     throw new InvalidOperationException($"Effect {item.Name} ({item.Id}) of clip {clip.Id} is a NonIPictureOutputValueProvider and should have been handled in the EffectBindingHelper.RebuildAllEffects. This indicates a logic error.");
 
                                 case EffectType.MixtureProvider:
+                                case EffectType.Transform:
                                 case EffectType.SpeedVarianceProvider:
                                 case EffectType.VectorComponentEffect:
                                 case EffectType.TextEffect:
@@ -2057,7 +2060,7 @@ namespace projectFrameCut.Render.Rendering
                     notdefined:
                         if (item is INormalEffect n)
                         {
-                            frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
+                            frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight, preserveAspect);
                             frame = n.Render(frame, TargetWidth, TargetHeight);
                         }
                         else if (item is IContinuousEffect c)
@@ -2066,7 +2069,7 @@ namespace projectFrameCut.Render.Rendering
                             int scopedEnd = c.IsScoped ? c.EndPoint : (int)(clip.StartFrame + clip.GetEffectiveDuration());
                             if (scopedEnd <= scopedStart || targetFrame < scopedStart || targetFrame >= scopedEnd) continue;
                             float continuousProgress = Math.Clamp((float)(targetFrame - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
-                            frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight);
+                            frame = ResizeForEffectIfNeeded(frame, item, targetPos.TargetWidth, targetPos.TargetHeight, preserveAspect);
                             frame = c.Render(frame, continuousProgress, TargetWidth, TargetHeight);
                         }
                         else if (item is IClipPositionProvider p)
@@ -2083,7 +2086,8 @@ namespace projectFrameCut.Render.Rendering
                         }
                         else if (item is IContinuousClipPositionProvider cp)
                         {
-                            (var x, var y, var w, var h, bool delta) = cp.GetPosition(clip, targetFrame, TargetWidth, TargetHeight);
+                            (var x, var y, var w, var h, bool delta) = cp.GetPosition(clip, targetFrame, TargetWidth, TargetHeight, layoutRelativeWidth, layoutRelativeHeight);
+                            preserveAspect &= cp.PreserveAspectRatio;
                             if (delta)
                             {
                                 targetPos = new ClipPositionTuple(targetPos.TargetX + x, targetPos.TargetY + y, targetPos.TargetWidth + w, targetPos.TargetHeight + h, false);
@@ -2116,7 +2120,7 @@ namespace projectFrameCut.Render.Rendering
                 if (frame.Width != targetPos.TargetWidth || frame.Height != targetPos.TargetHeight)
                 {
                     var old = frame;
-                    frame = frame.Resize(targetPos.TargetWidth, targetPos.TargetHeight, true);
+                    frame = frame.Resize(targetPos.TargetWidth, targetPos.TargetHeight, preserveAspect);
                     if (!ReferenceEquals(old, frame))
                     {
                         try { old.Dispose(); } catch { }
@@ -2279,7 +2283,7 @@ namespace projectFrameCut.Render.Rendering
             FrameRenderElapsed[frameIndex] = sw.Elapsed;
         }
 
-        private IPicture ResizeForEffectIfNeeded(IPicture frame, IEffect effect, int targetWidth, int targetHeight)
+        private IPicture ResizeForEffectIfNeeded(IPicture frame, IEffect effect, int targetWidth, int targetHeight, bool preserveAspect)
         {
             if (!ProcessEffectFromCanvas || !effect.CanProcessFromCanvas
                 || targetWidth <= 0 || targetHeight <= 0
@@ -2288,7 +2292,7 @@ namespace projectFrameCut.Render.Rendering
                 return frame;
             }
 
-            var resized = frame.Resize(targetWidth, targetHeight, true);
+            var resized = frame.Resize(targetWidth, targetHeight, preserveAspect);
             if (!ReferenceEquals(frame, resized))
             {
                 try { frame.Dispose(); } catch { }
@@ -2744,7 +2748,6 @@ namespace projectFrameCut.Render.Rendering
 
                 foreach (var clip in Clips)
                 {
-                    TransformProcessing.Release(clip.ExtraData);
                     EffectHelper.ReleaseClipEffects(clip);
                 }
                 foreach (var item in ClipNeedForFrame.Values.SelectMany(c => c))

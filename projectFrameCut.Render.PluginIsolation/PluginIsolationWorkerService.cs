@@ -76,6 +76,7 @@ internal sealed class PluginIsolationWorkerService(
                     RenderOperation.IsolationReleaseObject => ReleaseObject(request),
                     RenderOperation.IsolationProcessNormalEffect => await ProcessNormalAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationProcessContinuousEffect => await ProcessContinuousAsync(request, cancellationToken).ConfigureAwait(false),
+                    RenderOperation.IsolationProcessTransformEffect => await ProcessTransformEffectAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationProcessMixture => await ProcessMixtureAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationSupportsSourceReplacement => SupportsSourceReplacement(request),
                     RenderOperation.IsolationProcessSourceReplacement => await ProcessSourceReplacementAsync(request, cancellationToken).ConfigureAwait(false),
@@ -97,9 +98,6 @@ internal sealed class PluginIsolationWorkerService(
                     RenderOperation.IsolationAppendVideoWriterFrame => await AppendVideoWriterFrameAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationFinishVideoWriter => FinishVideoWriter(request),
                     RenderOperation.IsolationVideoWriterSupportsCodec => VideoWriterSupportsCodec(request),
-                    RenderOperation.IsolationCreateTransform => CreateTransform(request),
-                    RenderOperation.IsolationInitializeTransform => InitializeTransform(request),
-                    RenderOperation.IsolationProcessTransform => await ProcessTransformAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationCreateEffectImplementation => CreateEffectImplementation(request),
                     RenderOperation.IsolationCreateClip => CreateClip(request),
                     RenderOperation.IsolationReadClipFrame => await ReadClipFrameAsync(request, cancellationToken).ConfigureAwait(false),
@@ -272,7 +270,6 @@ internal sealed class PluginIsolationWorkerService(
             Configuration = new(_plugin.Configuration),
             ConfigurationDisplayStrings = _plugin.ConfigurationDisplayString.ToDictionary(x => x.Key, x => new IsolationStringMap { Values = new(x.Value) }),
             SoundTracks = _plugin.SoundTrackProvider.Keys.ToList(),
-            Transforms = _plugin.TransformProvider.Keys.ToList(),
             AudioSources = _plugin.AudioSourceProvider.Select(x => new IsolationAudioSourceCatalogItem
             {
                 TypeName = x.Key,
@@ -413,8 +410,19 @@ internal sealed class PluginIsolationWorkerService(
             SampleCount = request.SampleCount,
         };
         var input = await AudioPayloadCodec.ReadAsync(inputDescriptor, _payloads, cancellationToken).ConfigureAwait(false);
-        var output = Require<IEffect>(request.ObjectId) switch
+        var right = request.RightAudio is null ? null : await AudioPayloadCodec.ReadAsync(new IsolationAudioSamplesResponse
         {
+            Samples = request.RightAudio, ChannelCount = request.ChannelCount,
+            SamplePerSecond = request.SamplePerSecond, SampleCount = request.SampleCount
+        }, _payloads, cancellationToken).ConfigureAwait(false);
+        var effectInstance = Require<IEffect>(request.ObjectId);
+        if (effectInstance is ITransform) ApplyEffectState(effectInstance, request.State);
+        using var context = ValueProviderFrameContext.PushFrame(request.Value, request.ClipProgress);
+        foreach (var item in request.DynamicValues) ValueProviderFrameContext.Set(item.Key, IsolationValueConverter.ToObject(item.Value));
+        var output = effectInstance switch
+        {
+            ITransform effect when effect.Definition.HasFlag(TransformDefinition.Audio) => effect.Render(input, right,
+                request.SampleOffset, request.DurationSamples, (TransformSide)request.TransformSide),
             IAudioNormalEffect effect => effect.Process(input),
             IAudioContinuousEffect effect => effect.Process(input, request.Progress),
             _ => throw new NotSupportedException("The remote effect is not an audio effect."),
@@ -537,6 +545,17 @@ internal sealed class PluginIsolationWorkerService(
         ApplyEffectState(effect, request.State);
         using var source = await PicturePayloadCodec.ReadAsync(request.Source, _payloads, cancellationToken).ConfigureAwait(false);
         return await WithFrameContextAsync(envelope, request, () => effect.Render(source, request.Progress, request.TargetWidth, request.TargetHeight), cancellationToken).ConfigureAwait(false);
+    }
+
+    private async ValueTask<RenderResponseEnvelope> ProcessTransformEffectAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
+    {
+        var request = Read<IsolationEffectFrameRequest>(envelope);
+        var effect = Require<ITransform>(request.ObjectId);
+        ApplyEffectState(effect, request.State);
+        using var source = await PicturePayloadCodec.ReadAsync(request.Source, _payloads, cancellationToken).ConfigureAwait(false);
+        using var second = request.SecondSource is null ? null : await PicturePayloadCodec.ReadAsync(request.SecondSource, _payloads, cancellationToken).ConfigureAwait(false);
+        return await WithFrameContextAsync(envelope, request, () => effect.Render(source, second, request.Progress,
+            (TransformSide)request.TransformSide, request.TargetWidth, request.TargetHeight), cancellationToken).ConfigureAwait(false);
     }
 
     private async ValueTask<RenderResponseEnvelope> ProcessMixtureAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
@@ -740,79 +759,6 @@ internal sealed class PluginIsolationWorkerService(
         TargetPixelMode = writer.TargetPPB.HasValue ? (int)writer.TargetPPB.Value : 0,
     };
 
-    private RenderResponseEnvelope CreateTransform(RenderRequestEnvelope envelope)
-    {
-        var request = Read<IsolationCreateTransformRequest>(envelope);
-        ITransform transform;
-        if (!string.IsNullOrWhiteSpace(request.Json))
-        {
-            using var json = System.Text.Json.JsonDocument.Parse(request.Json);
-            transform = RequirePlugin().TransformCreator(json.RootElement.Clone());
-        }
-        else
-        {
-            if (!RequirePlugin().TransformProvider.TryGetValue(request.TypeName, out var factory))
-                throw new KeyNotFoundException($"Transform '{request.TypeName}' was not found.");
-            transform = factory(Guid.Parse(request.LeftClipId), Guid.Parse(request.RightClipId));
-        }
-        return Success(envelope, DescribeTransform(AddObject(transform), transform));
-    }
-
-    private RenderResponseEnvelope InitializeTransform(RenderRequestEnvelope envelope)
-    {
-        var state = Read<IsolationTransformState>(envelope);
-        var transform = Require<ITransform>(state.ObjectId);
-        ApplyTransformState(transform, state);
-        transform.Init();
-        return Success(envelope, DescribeTransform(state.ObjectId, transform));
-    }
-
-    private async ValueTask<RenderResponseEnvelope> ProcessTransformAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
-    {
-        var request = Read<IsolationTransformFrameRequest>(envelope);
-        var transform = Require<ITransform>(request.State.ObjectId);
-        ApplyTransformState(transform, request.State);
-        using var input = await PicturePayloadCodec.ReadAsync(request.Input, _payloads, cancellationToken).ConfigureAwait(false);
-        using var second = request.SecondInput is null ? null : await PicturePayloadCodec.ReadAsync(request.SecondInput, _payloads, cancellationToken).ConfigureAwait(false);
-        using var output = second is null
-            ? (transform as IOneInputSingleFrameTransform ?? throw new NotSupportedException("The transform does not accept one input."))
-                .GetFrame(input, request.Progress, request.TargetWidth, request.TargetHeight)
-            : request.HasProgress
-                ? (transform as IContinuousTransform ?? throw new NotSupportedException("The transform does not accept continuous progress."))
-                    .GetFrame(input, second, request.Progress, request.TargetWidth, request.TargetHeight)
-                : (transform as ISingleFrameTransform ?? throw new NotSupportedException("The transform does not accept two single-frame inputs."))
-                    .GetFrame(input, second, request.TargetWidth, request.TargetHeight);
-        var lease = await PicturePayloadCodec.WriteAsync(output, _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
-        return Success(envelope, new IsolationPictureResponse { Picture = lease.Reference });
-    }
-
-    private static void ApplyTransformState(ITransform transform, IsolationTransformState state)
-    {
-        transform.BindedLeftClip = Guid.Parse(state.LeftClipId);
-        transform.BindedRightClip = Guid.Parse(state.RightClipId);
-        transform.Duration = state.Duration;
-        transform.Side = (TransformSide)state.Side;
-        transform.Parameters = state.Parameters.ToDictionary(x => x.Key, x => IsolationValueConverter.ToObject(x.Value)!);
-    }
-
-    private static IsolationTransformState DescribeTransform(long id, ITransform transform) => new()
-    {
-        ObjectId = id,
-        FromPlugin = transform.FromPlugin,
-        TypeName = transform.TypeName,
-        TransformType = (int)transform.TransformType,
-        Name = transform.Name,
-        LeftClipId = transform.BindedLeftClip.ToString(),
-        RightClipId = transform.BindedRightClip.ToString(),
-        Duration = transform.Duration,
-        Definition = (int)transform.Definition,
-        Side = (int)transform.Side,
-        Parameters = transform.Parameters.ToDictionary(x => x.Key, x => IsolationValueConverter.FromObject(x.Value)),
-        ParametersType = transform.ParametersType,
-        ParametersNeeded = transform.ParametersNeeded,
-        SerializedTransform = transform.Serialize().GetRawText(),
-    };
-
     private RenderResponseEnvelope CreateClip(RenderRequestEnvelope envelope)
     {
         var request = Read<IsolationCreateSerializedObjectRequest>(envelope);
@@ -915,6 +861,7 @@ internal sealed class PluginIsolationWorkerService(
         Id = track.Id,
         Name = track.Name,
         LayerIndex = track.LayerIndex,
+        SubLayerIndex = track.SubLayerIndex,
         StartFrame = track.StartFrame,
         RelativeStartFrame = track.RelativeStartFrame,
         Duration = track.Duration,
@@ -924,6 +871,7 @@ internal sealed class PluginIsolationWorkerService(
         Volume = track.Volume,
         SamplePerSecond = track.SamplePerSecond,
         EffectsJson = System.Text.Json.JsonSerializer.Serialize(track.Effects),
+        EffectProvidersJson = System.Text.Json.JsonSerializer.Serialize(track.EffectProviders),
         ExtraDataJson = System.Text.Json.JsonSerializer.Serialize(track.ExtraData),
     };
 
@@ -1148,25 +1096,25 @@ internal sealed class PluginIsolationWorkerService(
 
     private async ValueTask<RenderResponseEnvelope> WithFrameContextAsync(RenderRequestEnvelope envelope, IsolationEffectFrameRequest request, Func<IPicture> render, CancellationToken cancellationToken)
     {
-        ValueProviderFrameContext.BeginFrame(request.TargetFrame, request.Progress);
-        List<IPicture> pictures = [];
+        var pictures = new Dictionary<string, IPicture>();
         try
         {
-            foreach (var item in request.DynamicValues) ValueProviderFrameContext.Set(item.Key, IsolationValueConverter.ToObject(item.Value));
             foreach (var item in request.DynamicPictures)
+                pictures[item.Key] = await PicturePayloadCodec.ReadAsync(item.Value, _payloads, cancellationToken).ConfigureAwait(false);
+            IPicture rendered;
+            using (ValueProviderFrameContext.PushFrame(request.TargetFrame, request.ClipProgress))
             {
-                var picture = await PicturePayloadCodec.ReadAsync(item.Value, _payloads, cancellationToken).ConfigureAwait(false);
-                pictures.Add(picture);
-                ValueProviderFrameContext.Set(item.Key, picture);
+                foreach (var item in request.DynamicValues) ValueProviderFrameContext.Set(item.Key, IsolationValueConverter.ToObject(item.Value));
+                foreach (var item in pictures) ValueProviderFrameContext.Set(item.Key, item.Value);
+                rendered = render();
             }
-            using var output = render();
+            using var output = rendered;
             var lease = await PicturePayloadCodec.WriteAsync(output, _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
             return Success(envelope, new IsolationPictureResponse { Picture = lease.Reference });
         }
         finally
         {
-            foreach (var picture in pictures) picture.Dispose();
-            ValueProviderFrameContext.EndFrame();
+            foreach (var picture in pictures.Values) picture.Dispose();
         }
     }
 
@@ -1250,6 +1198,7 @@ internal sealed class PluginIsolationWorkerService(
         DynamicProviderIds = provider?.Fields.Where(x => x.IsDynamic && !string.IsNullOrWhiteSpace(x.BoundProviderId)).Select(x => x.BoundProviderId).Distinct().ToList() ?? [],
         IsColorAdjust = effect is IColorAdjustEffect,
         ValueField = effect is IValueProviderEffect field ? DescribeField(field) : null,
+        TransformDefinition = effect is ITransform transform ? (int)transform.Definition : 0,
     };
 
     private static void ApplyEffectState(IEffect effect, IsolationEffectMutableState state)
@@ -1331,7 +1280,7 @@ internal sealed class PluginIsolationWorkerService(
         catch (ReflectionTypeLoadException ex) { return ex.Types.OfType<Type>(); }
     }
 
-    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect;
+    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect or EffectType.Transform;
     private static bool IsSupportedExternalEffect(EffectType type) => type is EffectType.NormalEffect
         or EffectType.ContinuousEffect
         or EffectType.AudioNormalEffect
@@ -1343,7 +1292,7 @@ internal sealed class PluginIsolationWorkerService(
         or EffectType.VectorComponentEffect
         or EffectType.TextEffect
         or EffectType.ContinuousTextEffect
-        or EffectType.SourceReplacement
+        or EffectType.SourceReplacement or EffectType.Transform
         or EffectType.NonIPictureOutputValueProvider;
     private static bool IsBuiltInVectorSegment(Type type) => type == typeof(VectorSegment)
         || type == typeof(StraightLineVectorSegment)

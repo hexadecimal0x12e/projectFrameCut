@@ -122,9 +122,6 @@ public enum RenderOperation
     [ProtoEnum] IsolationAppendVideoWriterFrame = 2029,
     [ProtoEnum] IsolationFinishVideoWriter = 2030,
     [ProtoEnum] IsolationVideoWriterSupportsCodec = 2031,
-    [ProtoEnum] IsolationCreateTransform = 2032,
-    [ProtoEnum] IsolationInitializeTransform = 2033,
-    [ProtoEnum] IsolationProcessTransform = 2034,
     [ProtoEnum] IsolationCreateClip = 2037,
     [ProtoEnum] IsolationReadClipFrame = 2038,
     [ProtoEnum] IsolationReinitializeClip = 2039,
@@ -149,6 +146,7 @@ public enum RenderOperation
     [ProtoEnum] IsolationProcessVectorComponentEffect = 2058,
     [ProtoEnum] IsolationAuthorizeProjectExternalSource = 2059,
     [ProtoEnum] IsolationListProjectExternalSources = 2060,
+    [ProtoEnum] IsolationProcessTransformEffect = 2061,
 }
 
 [ProtoContract]
@@ -256,6 +254,7 @@ public sealed class RenderRequestEnvelope
     [ProtoMember(3)] public string ClientId { get; set; } = string.Empty;
     [ProtoMember(4)] public RenderOperation Operation { get; set; }
     [ProtoMember(5)] public byte[] Payload { get; set; } = [];
+    [ProtoMember(6)] public Guid CancelRequestId { get; set; }
 }
 
 [ProtoContract]
@@ -328,6 +327,7 @@ public sealed class RenderSession
     [ProtoMember(7)] public int ClipCount { get; set; }
     [ProtoMember(8)] public string SnapshotHash { get; set; } = string.Empty;
     [ProtoMember(9)] public FrameHashIndex HashIndex { get; set; } = new();
+    [ProtoMember(10)] public List<Guid> CacheableClipIds { get; set; } = [];
 }
 
 [ProtoContract]

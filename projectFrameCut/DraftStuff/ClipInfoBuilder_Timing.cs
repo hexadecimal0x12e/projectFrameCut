@@ -1,38 +1,19 @@
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
-using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
 using ContentView = Microsoft.Maui.Controls.ContentView;
-using CornerRadius = Microsoft.Maui.CornerRadius;
-using DataTemplate = Microsoft.Maui.Controls.DataTemplate;
-using Environment = System.Environment;
 using GridLength = Microsoft.Maui.GridLength;
-using GridUnitType = Microsoft.Maui.GridUnitType;
 using Switch = Microsoft.Maui.Controls.Switch;
-using TextAlignment = Microsoft.Maui.TextAlignment;
 using Thickness = Microsoft.Maui.Thickness;
-
-#if WINDOWS
-using Microsoft.UI.Xaml;
-
-#endif
-
-#if IOS
-using projectFrameCut.Platforms.iOS;
-
-#endif
 
 namespace projectFrameCut.DraftStuff
 {
@@ -41,6 +22,40 @@ namespace projectFrameCut.DraftStuff
         #region timing
 
         private View BuildTimingTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            var tabs = new CompactTabView();
+            Action refreshTiming = () => { };
+            Action refreshSpeed = () => { };
+            tabs.TabItems.Add(new TabbedViewItem
+            {
+                Header = PPLocalizedResources.Tabs_Timing,
+                Tag = "timing",
+                LazyContentFactory = () => BuildTimingOptions(clip, handler, out refreshTiming)
+            });
+            if (!clip.isInfiniteLength && clip.ClipType != ClipMode.MarkingClip)
+            {
+                tabs.TabItems.Add(new TabbedViewItem
+                {
+                    Header = PPLocalizedResources.Tabs_SpeedRatio,
+                    Tag = "speedAndRatio",
+                    LazyContentFactory = () => BuildSpeedAndRatioTab(clip, handler, out refreshSpeed)
+                });
+            }
+            tabs.OnTabSwitched += (_, item) =>
+            {
+                page.SelectedTimingTab = item.Tag;
+                if (item.Tag == "timing") refreshTiming();
+                else refreshSpeed();
+            };
+            tabs.SelectByTag(page.SelectedTimingTab);
+            return tabs;
+        }
+
+        private uint ReadTimingLength(ClipElementUI clip) => clip.origLength > 0
+            ? (uint)Math.Clamp(Math.Round(clip.origLength / page.FrameToPixel(1)), 1d, uint.MaxValue)
+            : Math.Max(1u, clip.lengthInFrame);
+
+        private View BuildTimingOptions(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler, out Action refresh)
         {
             static bool ReadExtendToWholeDraft(ClipElementUI c)
             {
@@ -57,6 +72,9 @@ namespace projectFrameCut.DraftStuff
             }
 
             float fps = page.ProjectInfo.TargetFrameRate;
+            bool finite = !clip.isInfiniteLength && clip.maxFrameCount > 0;
+            bool extendToWhole = ReadExtendToWholeDraft(clip);
+            bool updating = false;
             var stack = new VerticalStackLayout { Spacing = 8, Padding = new Thickness(8) };
 
             string srcInfo = clip.isInfiniteLength
@@ -70,14 +88,26 @@ namespace projectFrameCut.DraftStuff
                 Margin = new Thickness(0, 0, 0, 8)
             });
 
-            if (!clip.isInfiniteLength && clip.maxFrameCount > 0)
+            var fields = new VerticalStackLayout { Spacing = 8, IsEnabled = !extendToWhole };
+            var startEntry = new Entry { Keyboard = Keyboard.Numeric, HorizontalOptions = LayoutOptions.Fill };
+            var sourceEntry = new Entry { Keyboard = Keyboard.Numeric, HorizontalOptions = LayoutOptions.Fill };
+            var lengthEntry = new Entry { Keyboard = Keyboard.Numeric, HorizontalOptions = LayoutOptions.Fill };
+            fields.Children.Add(new Label { Text = PPLocalizedResources.Timing_StartFrame, FontSize = 13 });
+            fields.Children.Add(startEntry);
+            if (!clip.isInfiniteLength)
             {
-                // ── 有限长度：使用范围滑块 ──────────────────────────────────────
-                uint safeStart = Math.Min(clip.relativeStartFrame, clip.maxFrameCount > 0 ? clip.maxFrameCount - 1 : 0);
-                uint safeLen = clip.lengthInFrame > 0
-                    ? Math.Min(clip.lengthInFrame, clip.maxFrameCount - safeStart)
-                    : Math.Max(1u, clip.maxFrameCount - safeStart);
+                fields.Children.Add(new Label { Text = PPLocalizedResources.Timing_SourceStartFrame, FontSize = 13 });
+                fields.Children.Add(sourceEntry);
+            }
+            fields.Children.Add(new Label { Text = PPLocalizedResources.Timing_InfLength_Input, FontSize = 13 });
+            fields.Children.Add(lengthEntry);
 
+            var infoLabel = new Label { FontSize = 12, TextColor = Colors.Gray };
+            var errorLabel = new Label { FontSize = 12, TextColor = Colors.Orange, IsVisible = false };
+            var applyBtn = new Button { Text = Localized._Apply, HorizontalOptions = LayoutOptions.End };
+            ClipRangeSlider? rangeSlider = null;
+            if (finite)
+            {
                 string? thumbPath = null;
                 if (!string.IsNullOrEmpty(clip.SourcePath))
                 {
@@ -91,221 +121,182 @@ namespace projectFrameCut.DraftStuff
                     }
                 }
 
-                var rangeSlider = new ClipRangeSlider
+                rangeSlider = new ClipRangeSlider
                 {
                     Maximum = clip.maxFrameCount,
-                    LowerValue = safeStart,
-                    UpperValue = safeStart + safeLen,
                     ThumbnailPath = thumbPath,
                     Margin = new Thickness(10, 20, 10, 20)
                 };
-
-                var infoLabel = new Label
-                {
-                    Text = PPLocalizedResources.Timing_LengthInfo_Start(safeStart, safeLen, fps),
-                    TextColor = Colors.White,
-                    FontSize = 12,
-                    HorizontalOptions = LayoutOptions.Center
-                };
-
                 rangeSlider.ValuesChanged += (s, e) =>
                 {
                     uint newStart = (uint)Math.Round(rangeSlider.LowerValue);
                     uint newEnd = (uint)Math.Round(rangeSlider.UpperValue);
-                    uint newLen = newEnd - newStart;
-                    if (newLen < 1) newLen = 1;
-                    infoLabel.Text = PPLocalizedResources.Timing_LengthInfo_Start(safeStart, safeLen, fps);
+                    updating = true;
+                    sourceEntry.Text = newStart.ToString();
+                    lengthEntry.Text = Math.Max(1u, newEnd - newStart).ToString();
+                    updating = false;
+                    UpdatePreview();
                 };
-
                 rangeSlider.DragCompleted += (s, e) =>
                 {
                     uint newStart = (uint)Math.Round(rangeSlider.LowerValue);
                     uint newEnd = (uint)Math.Round(rangeSlider.UpperValue);
-                    uint newLen = newEnd - newStart;
-                    if (newLen < 1) newLen = 1;
-
-                    clip.relativeStartFrame = newStart;
-                    clip.lengthInFrame = newLen;
-
-                    double newPx = page.FrameToPixel(newLen);
-                    clip.Clip.WidthRequest = newPx;
-                    clip.origLength = newPx;
-
-                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("relativeStartFrame", newStart, newStart));
-                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("lengthInFrame", newLen, newLen));
+                    ApplyFrames(s, ReadStartFrame(), newStart, Math.Max(1u, newEnd - newStart));
                 };
-
-                stack.Children.Add(rangeSlider);
-                stack.Children.Add(infoLabel);
+                fields.Children.Add(rangeSlider);
             }
-            else
+
+            fields.Children.Add(new HorizontalStackLayout
             {
-                var extendToWhole = ReadExtendToWholeDraft(clip);
-
-                // ── 无限长度：使用文本框手动输入 ────────────────────────────
-                if (!extendToWhole)
+                HorizontalOptions = LayoutOptions.End,
+                Spacing = 8,
+                Children =
                 {
-                    uint initFrames = clip.lengthInFrame > 0
-                    ? clip.lengthInFrame
-                    : page.PixelToFrame(clip.origLength > 0 ? clip.origLength : 300d);
-
-
-                    stack.Children.Add(new Label
-                    {
-                        Text = PPLocalizedResources.Timing_InfLength_Input,
-                        FontSize = 13,
-                        TextColor = Colors.White,
-                        Margin = new Thickness(0, 12, 0, 0)
-                    });
-
-                    var lengthEntry = new Entry
-                    {
-                        Text = initFrames.ToString(),
-                        Keyboard = Keyboard.Numeric,
-                        HorizontalOptions = LayoutOptions.Fill,
-                        Placeholder = "42"
-                    };
-
-                    var add1sButton = new Button
-                    {
-                        Text = "+1s",
-                        Command = new Command(() =>
-                        {
-                            this.page.Dispatcher.Dispatch(() => lengthEntry.Text = ((double.TryParse(lengthEntry.Text, out var v) ? v : 0) + (1 / page.SecondsPerFrame)).ToString());
-                        })
-                    };
-                    var minus1sButton = new Button
-                    {
-                        Text = "-1s",
-                        Command = new Command(() =>
-                        {
-                            this.page.Dispatcher.Dispatch(() => lengthEntry.Text = ((double.TryParse(lengthEntry.Text, out var v) ? v : 0) - (1 / page.SecondsPerFrame)).ToString());
-                        })
-                    };
-
-                    var smallAddLine = new HorizontalStackLayout
-                    {
-                        Children =
-                        {
-                            minus1sButton,
-                            add1sButton,
-                        },
-                        HorizontalOptions = LayoutOptions.End,
-                        Spacing = 8
-                    };
-
-                    // 实时秒数提示
-                    var secHintLabel = new Label
-                    {
-                        Text = fps > 0 ? $"≈ {initFrames / fps:F2}s" : string.Empty,
-                        FontSize = 11,
-                        TextColor = Color.FromArgb("#AAAAAA"),
-                        HorizontalOptions = LayoutOptions.Start
-                    };
-                    lengthEntry.TextChanged += (s, e) =>
-                    {
-                        secHintLabel.Text = uint.TryParse(lengthEntry.Text, out var previewFrames) && fps > 0
-                            ? $"≈ {previewFrames / fps:F2}s"
-                            : string.Empty;
-                    };
-
-                    var applyBtn = new Button
-                    {
-                        Text = Localized._Apply,
-                        HorizontalOptions = LayoutOptions.End,
-                        Margin = new Thickness(0, 6, 0, 0)
-                    };
-                    applyBtn.Clicked += (s, e) =>
-                    {
-                        if (uint.TryParse(lengthEntry.Text, out var newLen) && newLen > 0)
-                        {
-                            clip.lengthInFrame = newLen;
-                            double newPx = page.FrameToPixel(newLen);
-                            clip.Clip.WidthRequest = newPx;
-                            clip.origLength = newPx;
-                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("lengthInFrame", newLen, newLen));
-                        }
-                    };
-
-                    stack.Children.Add(lengthEntry);
-                    stack.Children.Add(new Grid { Children = { secHintLabel, smallAddLine } });
-                    stack.Children.Add(applyBtn);
+                    new Button { Text = "-1s", Command = new Command(() => ChangeLength(-Math.Max(1L, (long)Math.Round(fps)))) },
+                    new Button { Text = "+1s", Command = new Command(() => ChangeLength(Math.Max(1L, (long)Math.Round(fps)))) }
                 }
-                if ((clip.origTrack ?? -1) >= DraftPage.SubTrackOffset)
+            });
+            fields.Children.Add(infoLabel);
+            fields.Children.Add(errorLabel);
+            fields.Children.Add(applyBtn);
+            stack.Children.Add(fields);
+
+            uint ReadStartFrame() => (uint)Math.Clamp(Math.Round(Math.Max(0, clip.Clip.TranslationX)
+                / (page.FrameToPixel(1) * clip.SecondPerFrameRatio)), 0, uint.MaxValue - 1d);
+
+            bool TryReadFrames(out uint start, out uint sourceStart, out uint length)
+            {
+                sourceStart = clip.relativeStartFrame;
+                length = 0;
+                return uint.TryParse(startEntry.Text, out start)
+                    && (clip.isInfiniteLength || uint.TryParse(sourceEntry.Text, out sourceStart))
+                    && uint.TryParse(lengthEntry.Text, out length) && length > 0
+                    && (ulong)start + length <= uint.MaxValue
+                    && (ulong)sourceStart + length <= uint.MaxValue
+                    && (!finite || (ulong)sourceStart + length <= clip.maxFrameCount);
+            }
+
+            void UpdatePreview()
+            {
+                if (updating) return;
+                bool valid = TryReadFrames(out _, out var sourceStart, out var length);
+                applyBtn.IsEnabled = valid;
+                errorLabel.IsVisible = !valid;
+                errorLabel.Text = valid ? string.Empty : PPLocalizedResources.Timing_InvalidFrames;
+                infoLabel.Text = valid && fps > 0 ? PPLocalizedResources.Timing_LengthInfo_Start(sourceStart, length, fps) : string.Empty;
+                if (valid && rangeSlider is not null)
                 {
-                    bool hasOtherClipsInTrack = page.Clips.Values.Any(c =>
-                        c is not null
-                        && c.Id != clip.Id
-                        && c.ShouldDisplayInUI
-                        && !c.IsGhost
-                        && !c.IsShadow
-                        && c.origTrack == clip.origTrack);
-
-                    stack.Children.Add(new BoxView
-                    {
-                        HeightRequest = 1,
-                        Color = Colors.White.WithAlpha(0.08f),
-                        Margin = new Thickness(0, 8, 0, 2)
-                    });
-
-                    var extendSwitch = new Switch
-                    {
-                        IsToggled = extendToWhole,
-                        HorizontalOptions = LayoutOptions.End,
-                        VerticalOptions = LayoutOptions.Center,
-                        IsEnabled = !hasOtherClipsInTrack
-                    };
-
-                    extendSwitch.Toggled += (s, e) =>
-                    {
-                        clip.ExtraData ??= new Dictionary<string, object>();
-                        clip.ExtraData["ExtendToWholeDraft"] = e.Value;
-                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("ExtendToWholeDraft", e.Value, extendToWhole));
-                        extendToWhole = e.Value;
-                    };
-
-                    var row = new Grid
-                    {
-                        ColumnDefinitions =
-                    {
-                        new ColumnDefinition(GridLength.Star),
-                        new ColumnDefinition(GridLength.Auto)
-                    },
-                        ColumnSpacing = 8,
-                        Margin = new Thickness(0, 4, 0, 0)
-                    };
-
-                    row.Add(new Label
-                    {
-                        Text = PPLocalizedResources.Timing_InfLength_ExtendToWholeDraft,
-                        FontSize = 13,
-                        TextColor = Colors.White,
-                        VerticalOptions = LayoutOptions.Center,
-                    }, 0, 0);
-                    row.Add(extendSwitch, 1, 0);
-
-                    stack.Children.Add(row);
-
-                    stack.Children.Add(new Label
-                    {
-                        Text = hasOtherClipsInTrack
-                            ? PPLocalizedResources.Timing_InfLength_ExtendToWholeDraft_NotAvailable
-                            : PPLocalizedResources.Timing_InfLength_ExtendToWholeDraft_Available,
-                        FontSize = 11,
-                        TextColor = hasOtherClipsInTrack ? Colors.Orange : Color.FromArgb("#AAAAAA")
-                    });
+                    rangeSlider.LowerValue = sourceStart;
+                    rangeSlider.UpperValue = (double)sourceStart + length;
                 }
             }
 
+            void SyncFields()
+            {
+                uint sourceStart = finite ? Math.Min(clip.relativeStartFrame, clip.maxFrameCount - 1) : clip.relativeStartFrame;
+                updating = true;
+                startEntry.Text = ReadStartFrame().ToString();
+                sourceEntry.Text = sourceStart.ToString();
+                lengthEntry.Text = (finite ? Math.Min(ReadTimingLength(clip), clip.maxFrameCount - sourceStart) : ReadTimingLength(clip)).ToString();
+                fields.IsEnabled = !ReadExtendToWholeDraft(clip);
+                updating = false;
+                UpdatePreview();
+            }
 
+            void ApplyFrames(object? sender, uint start, uint sourceStart, uint length)
+            {
+                if ((ulong)start + length > uint.MaxValue || (ulong)sourceStart + length > uint.MaxValue) return;
+                var old = (ReadStartFrame(), clip.relativeStartFrame, ReadTimingLength(clip));
+                if (old == (start, sourceStart, length)) return;
+                clip.relativeStartFrame = sourceStart;
+                clip.lengthInFrame = length;
+                clip.origLength = page.FrameToPixel(length);
+                clip.ApplySpeedRatio();
+                if (old.Item1 != start)
+                {
+                    clip.Clip.TranslationX = page.FrameToPixel(start) * clip.SecondPerFrameRatio;
+                    clip.origX = clip.layoutX = clip.Clip.TranslationX;
+                }
+                SyncFields();
+                Log($"Updated clip {clip.Id} timing: {old} -> {(start, sourceStart, length)}.");
+                handler?.Invoke(sender, new PropertyPanelPropertyChangedEventArgs("timing", (start, sourceStart, length), old));
+            }
 
+            void ChangeLength(long delta)
+            {
+                if (!uint.TryParse(lengthEntry.Text, out var length)) return;
+                uint max = uint.MaxValue;
+                if (finite)
+                {
+                    if (!uint.TryParse(sourceEntry.Text, out var sourceStart) || sourceStart >= clip.maxFrameCount) return;
+                    max = clip.maxFrameCount - sourceStart;
+                }
+                lengthEntry.Text = Math.Clamp((long)length + delta, 1, max).ToString();
+            }
+
+            void ApplyEntries(object? sender, EventArgs e)
+            {
+                if (TryReadFrames(out var start, out var sourceStart, out var length)) ApplyFrames(sender, start, sourceStart, length);
+            }
+            startEntry.TextChanged += (_, _) => UpdatePreview();
+            sourceEntry.TextChanged += (_, _) => UpdatePreview();
+            lengthEntry.TextChanged += (_, _) => UpdatePreview();
+            applyBtn.Clicked += ApplyEntries;
+            startEntry.Completed += ApplyEntries;
+            sourceEntry.Completed += ApplyEntries;
+            lengthEntry.Completed += ApplyEntries;
+
+            if (!finite && (clip.origTrack ?? -1) >= DraftPage.SubTrackOffset)
+            {
+                bool hasOtherClipsInTrack = page.Clips.Values.Any(c => c is not null && c.Id != clip.Id
+                    && c.ShouldDisplayInUI && !c.IsGhost && !c.IsShadow && c.origTrack == clip.origTrack);
+                var extendSwitch = new Switch
+                {
+                    IsToggled = extendToWhole,
+                    HorizontalOptions = LayoutOptions.End,
+                    VerticalOptions = LayoutOptions.Center,
+                    IsEnabled = !hasOtherClipsInTrack
+                };
+                extendSwitch.Toggled += (s, e) =>
+                {
+                    clip.ExtraData ??= new Dictionary<string, object>();
+                    clip.ExtraData["ExtendToWholeDraft"] = e.Value;
+                    fields.IsEnabled = !e.Value;
+                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("ExtendToWholeDraft", e.Value, extendToWhole));
+                    extendToWhole = e.Value;
+                };
+                var row = new Grid
+                {
+                    ColumnDefinitions = { new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto) },
+                    ColumnSpacing = 8,
+                    Margin = new Thickness(0, 8, 0, 0)
+                };
+                row.Add(new Label
+                {
+                    Text = PPLocalizedResources.Timing_InfLength_ExtendToWholeDraft,
+                    FontSize = 13,
+                    VerticalOptions = LayoutOptions.Center
+                }, 0, 0);
+                row.Add(extendSwitch, 1, 0);
+                stack.Children.Add(row);
+                stack.Children.Add(new Label
+                {
+                    Text = hasOtherClipsInTrack ? PPLocalizedResources.Timing_InfLength_ExtendToWholeDraft_NotAvailable
+                        : PPLocalizedResources.Timing_InfLength_ExtendToWholeDraft_Available,
+                    FontSize = 11,
+                    TextColor = hasOtherClipsInTrack ? Colors.Orange : Colors.Gray
+                });
+            }
+
+            refresh = SyncFields;
+            SyncFields();
             return new ScrollView { Content = stack };
         }
         #endregion
 
         #region speed and ratio
 
-        private View BuildSpeedAndRatioTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        private View BuildSpeedAndRatioTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler, out Action refresh)
         {
             static bool IsSpeedVarianceProvider(IEffectProvider bundle) => bundle.TypeOfEffect == EffectType.SpeedVarianceProvider && bundle.Target == EffectTarget.SpeedVariance;
 
@@ -332,6 +323,15 @@ namespace projectFrameCut.DraftStuff
                 ?.ToList() ?? [];
 
             var ppb = new PropertyPanelBuilder();
+            float fps = page.ProjectInfo.TargetFrameRate;
+            var durationHintLabel = new Label { FontSize = 12, TextColor = Colors.Gray };
+            void UpdateDurationHint()
+            {
+                uint length = ReadTimingLength(clip);
+                uint effectiveLength = clip.Effects?.Values.OfType<ISpeedVarianceProvider>().FirstOrDefault()?.GetEffectiveLength(length) ?? length;
+                durationHintLabel.Text = fps > 0 ? PPLocalizedResources.SpeedAndRatio_Duration(length / (double)fps, effectiveLength / (double)fps) : string.Empty;
+            }
+            refresh = UpdateDurationHint;
 
             if (speedProviders.Count > 1)
             {
@@ -378,8 +378,8 @@ namespace projectFrameCut.DraftStuff
                     return;
                 });
                 ppb.AddSeparator();
-                var effLength = (clip.Effects.First(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider).Value as ISpeedVarianceProvider)?.GetEffectiveLength(clip.lengthInFrame) ?? clip.lengthInFrame;
-                ppb.AddCustomChildWithID("durationHintLabel", new Label { Text = clip.lengthInFrame != 0 ? PPLocalizedResources.SpeedAndRatio_Duration((double)clip.lengthInFrame, (double)effLength) : "", FontSize = 12, TextColor = Colors.Gray });
+                UpdateDurationHint();
+                ppb.AddCustomChild(durationHintLabel);
             }
             else
             {
@@ -409,11 +409,7 @@ namespace projectFrameCut.DraftStuff
                         }
                         RebuildAllEffects(clip);
                         clip.ApplySpeedRatio();
-                        if (ppb.Components.TryGetValue("durationHintLabel", out var la) && la is Label l)
-                        {
-                            var effLength = (clip.Effects.First(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider).Value as ISpeedVarianceProvider)?.GetEffectiveLength(clip.lengthInFrame) ?? clip.lengthInFrame;
-                            l.Text = clip.lengthInFrame != 0 ? PPLocalizedResources.SpeedAndRatio_Duration((double)clip.lengthInFrame, (double)effLength) : "";
-                        }
+                        UpdateDurationHint();
                         handler?.Invoke(s, e);
                     }
                     return;

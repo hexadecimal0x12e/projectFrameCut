@@ -8,24 +8,37 @@ using Path = System.IO.Path;
 using Image = Microsoft.Maui.Controls.Image;
 using projectFrameCut.Asset;
 using System.Linq;
-using projectFrameCut.Drawing.Base.Picture;
-using projectFrameCut.Drawing.Base;
+using System.Buffers.Binary;
 
 namespace projectFrameCut.InteractableEditor
 {
     /// <summary>
-    /// Generates per-clip timeline previews with viewport-aware rendering.
-    /// Only creates frame/tile views for the portion of the clip that is currently
-    /// visible within the timeline's horizontal ScrollView, and updates dynamically
-    /// as the user scrolls. This avoids the extreme layout cost of instantiating
-    /// hundreds of Image+Border elements for long clips all at once.
-    ///
-    /// Callers must call <see cref="NotifyScrollChanged"/> when the timeline scrolls
-    /// so the preview can update which frames are visible. The owning <see cref="DraftPage"/>
-    /// does this from its <c>TimelineScrollView_Scrolled</c> handler.
+    /// Reuses thumbnail controls in the viewport and releases them when the clip leaves it.
     /// </summary>
     public sealed class OnClipUIPreview(DraftPage page, ClipElementUI clip) : IDisposable
     {
+        private readonly ClipMode _clipType = clip.ClipType;
+        private readonly string? _sourcePath = clip.SourcePath;
+        private string? _photoSourcePath;
+
+        public bool Refresh(ClipElementUI current)
+        {
+            if (_disposed || !ReferenceEquals(clip, current) || _clipType != clip.ClipType
+                || _sourcePath != clip.SourcePath || _previewRoot is null || _previewRoot.Parent != clip.Clip.Content)
+                return false;
+            if (_clipType == ClipMode.PhotoClip && _photoSourcePath != ResolvePhotoPath()) return false;
+            double height = clip.Clip.HeightRequest > 0 ? clip.Clip.HeightRequest
+                : clip.Clip.Height > 0 ? clip.Clip.Height : DraftPage.ClipHeight;
+            if (_clipType == ClipMode.VideoClip && Math.Abs(_videoPreviewHeight - height) > 0.1
+                || _clipType == ClipMode.PhotoClip && Math.Abs(_photoThumbHeight - Math.Max(28, clip.Clip.HeightRequest - 14)) > 0.1) return false;
+            foreach (var label in _previewRoot.Children.OfType<Label>())
+                label.Text = clip.DisplayName ?? clip.Id.ToString();
+            _lastFirst = -1;
+            _lastLast = -1;
+            page.ScheduleClipPreviewViewportUpdate();
+            return true;
+        }
+
         public View? Update()
         {
             return clip.ClipType switch
@@ -66,9 +79,7 @@ namespace projectFrameCut.InteractableEditor
         private Grid? _previewRoot;
 
         /// <summary>
-        /// Called by <see cref="DraftPage"/> from <c>TimelineScrollView_Scrolled</c>
-        /// so the preview can refresh its visible frame/tile range without needing
-        /// direct access to the private ScrollView.
+        /// Updates the visible frame/tile range supplied by the page's viewport index.
         /// </summary>
         /// <returns>False if the preview container has been detached from the visual tree;
         /// the caller should treat this as a signal to clean up.</returns>
@@ -156,7 +167,7 @@ namespace projectFrameCut.InteractableEditor
                 return null;
             var availableFrames = frames.Keys.Order().ToList();
 
-            (var origWidth, var origHeight) = new Picture8bpp(frames.Values.First()).GetDimensions();
+            var (origWidth, origHeight) = ReadImageDimensions(frames.Values.First());
 
             var rawClipHeight = clip.Clip.HeightRequest > 0
                 ? clip.Clip.HeightRequest
@@ -202,9 +213,33 @@ namespace projectFrameCut.InteractableEditor
             _previewRoot.Loaded += PreviewRoot_Loaded;
             UpdateVideoLayoutMetrics();
 
-            var (initScrollX, initVpW) = page.GetTimelineScrollState();
-            UpdateVideoVisibleFrames(initScrollX, initVpW);
             return _previewRoot;
+        }
+
+        private static (int Width, int Height) ReadImageDimensions(string path)
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            Span<byte> header = stackalloc byte[24];
+            int count = stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false);
+            int width;
+            int height;
+            if (count >= 24 && header[0] == 137 && header[1..8].SequenceEqual("PNG\r\n\u001a\n"u8)
+                && header[12..16].SequenceEqual("IHDR"u8))
+            {
+                width = BinaryPrimitives.ReadInt32BigEndian(header[16..20]);
+                height = BinaryPrimitives.ReadInt32BigEndian(header[20..24]);
+            }
+            else if (count >= 18 && header[..4].SequenceEqual("VFCD"u8))
+            {
+                if (header[4] > 2 && (header[4] != 255 || header[5] != 2))
+                    throw new InvalidDataException($"Unsupported timeline VFD version: {path}");
+                int offset = header[4] == 255 && header[5] == 2 ? 10 : 5;
+                width = BinaryPrimitives.ReadInt32LittleEndian(header.Slice(offset, 4));
+                height = BinaryPrimitives.ReadInt32LittleEndian(header.Slice(offset + 4, 4));
+            }
+            else throw new InvalidDataException($"Unsupported timeline picture header: {path}");
+            if (width <= 0 || height <= 0) throw new InvalidDataException($"Invalid timeline picture dimensions: {path}");
+            return (width, height);
         }
 
         private static Dictionary<int, string> GetNumericFrameFiles(string directory)
@@ -236,9 +271,7 @@ namespace projectFrameCut.InteractableEditor
             double contentEnd = contentStart + contentWidth;
             if (contentEnd <= viewportLeft || contentStart >= viewportRight)
             {
-                SetVideoFramePoolVisibleCount(0);
-                _lastFirst = -1;
-                _lastLast = -1;
+                Suspend();
                 return;
             }
 
@@ -338,6 +371,13 @@ namespace projectFrameCut.InteractableEditor
             if (_videoFrameContainer is null)
                 return;
 
+            while (_videoFramePool.Count > requiredCount)
+            {
+                ((Image)_videoFramePool[^1].Content!).Source = null;
+                _videoFrameContainer.Children.Remove(_videoFramePool[^1]);
+                _videoFramePool.RemoveAt(_videoFramePool.Count - 1);
+                _videoPoolFrames.RemoveAt(_videoPoolFrames.Count - 1);
+            }
             while (_videoFramePool.Count < requiredCount)
             {
                 var border = new Border
@@ -368,7 +408,7 @@ namespace projectFrameCut.InteractableEditor
         //  Photo preview
         // ════════════════════════════════════════════════════════════════════
 
-        private View? BuildPhotoPreview()
+        private string? ResolvePhotoPath()
         {
             var sourcePath = clip.SourcePath;
             if (string.IsNullOrWhiteSpace(sourcePath))
@@ -383,11 +423,17 @@ namespace projectFrameCut.InteractableEditor
                     return null;
             }
 
-            if (!File.Exists(sourcePath))
-                return null;
+            return sourcePath;
+        }
+
+        private View? BuildPhotoPreview()
+        {
+            var sourcePath = ResolvePhotoPath();
+            if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath)) return null;
+            _photoSourcePath = sourcePath;
 
             var thumbHeight = Math.Max(28, clip.Clip.HeightRequest - 14);
-            var (origWidth, origHeight) = new Picture8bpp(sourcePath).GetDimensions();
+            var (origWidth, origHeight) = ReadImageDimensions(sourcePath);
             var scaleFactor = thumbHeight / (double)origHeight;
             var imageWidth = Math.Max(1, (int)Math.Round(origWidth * scaleFactor));
 
@@ -427,8 +473,6 @@ namespace projectFrameCut.InteractableEditor
             _previewRoot.Loaded += PreviewRoot_Loaded;
             UpdatePhotoLayoutMetrics();
 
-            var (initScrollX, initVpW) = page.GetTimelineScrollState();
-            UpdatePhotoVisibleTiles(initScrollX, initVpW);
             return _previewRoot;
         }
 
@@ -446,9 +490,7 @@ namespace projectFrameCut.InteractableEditor
             double contentEnd = contentStart + contentWidth;
             if (contentEnd <= viewportLeft || contentStart >= viewportRight)
             {
-                SetPhotoTilePoolVisibleCount(0);
-                _lastFirst = -1;
-                _lastLast = -1;
+                Suspend();
                 return;
             }
 
@@ -504,19 +546,7 @@ namespace projectFrameCut.InteractableEditor
             if (_disposed)
                 return;
 
-            _lastFirst = -1;
-            _lastLast = -1;
-            var (scrollX, viewportWidth) = page.GetTimelineScrollState();
-            if (clip.ClipType is ClipMode.VideoClip)
-            {
-                UpdateVideoLayoutMetrics();
-                UpdateVideoVisibleFrames(scrollX, viewportWidth);
-            }
-            else
-            {
-                UpdatePhotoLayoutMetrics();
-                UpdatePhotoVisibleTiles(scrollX, viewportWidth);
-            }
+            page.ScheduleClipPreviewViewportUpdate();
         }
 
         private void EnsurePhotoTilePoolSize(int requiredCount)
@@ -524,6 +554,12 @@ namespace projectFrameCut.InteractableEditor
             if (_photoTileContainer is null || _photoImageSource is null)
                 return;
 
+            while (_photoTilePool.Count > requiredCount)
+            {
+                _photoTilePool[^1].Source = null;
+                _photoTileContainer.Children.Remove(_photoTilePool[^1]);
+                _photoTilePool.RemoveAt(_photoTilePool.Count - 1);
+            }
             while (_photoTilePool.Count < requiredCount)
             {
                 var image = new Image
@@ -549,9 +585,27 @@ namespace projectFrameCut.InteractableEditor
         //  Cleanup
         // ════════════════════════════════════════════════════════════════════
 
+        public void Suspend()
+        {
+            if (_videoFramePool.Count == 0 && _photoTilePool.Count == 0) return;
+            foreach (var border in _videoFramePool)
+                ((Image)border.Content!).Source = null;
+            foreach (var image in _photoTilePool)
+                image.Source = null;
+            _videoFrameContainer?.Children.Clear();
+            _photoTileContainer?.Children.Clear();
+            _videoFramePool.Clear();
+            _videoPoolFrames.Clear();
+            _videoFrameSources.Clear();
+            _photoTilePool.Clear();
+            _lastFirst = -1;
+            _lastLast = -1;
+        }
+
         public void Dispose()
         {
             if (_disposed) return;
+            Suspend();
             _disposed = true;
             if (_previewRoot is not null)
                 _previewRoot.Loaded -= PreviewRoot_Loaded;

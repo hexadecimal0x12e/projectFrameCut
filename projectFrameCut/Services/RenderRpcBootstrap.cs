@@ -121,6 +121,14 @@ internal static class RenderRpcBootstrap
         }
     }
 
+#if WINDOWS && DEBUG
+    internal static void CaptureThreadStacksBeforeRestart()
+    {
+        lock (Gate)
+            _manager?.CaptureThreadStacksBeforeRestart();
+    }
+#endif
+
     public static bool TryGetClient(out IRenderClient? client)
     {
         lock (Gate)

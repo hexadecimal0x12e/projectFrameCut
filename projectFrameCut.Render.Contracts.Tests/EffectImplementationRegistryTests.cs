@@ -3,6 +3,7 @@ using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 
 namespace projectFrameCut.Render.Contracts.Tests;
 
@@ -32,6 +33,20 @@ public sealed class EffectImplementationRegistryTests
     }
 
     private static readonly EffectImplementationKey key = new("Test", EffectImplementType.IPicture);
+
+    [TestMethod]
+    public void TransformsUseTheEffectRegistryAndRejectMissingHardware()
+    {
+        var registry = new EffectImplementationRegistry();
+        registry.Register("cpu", new InternalPluginBase().EffectImplementationProvider);
+        foreach (var name in new[] { "Fade", "Crossfade" })
+        {
+            var effect = registry.Create(name, EffectImplementType.IPicture, EffectImplementType.IPicture, []);
+            Assert.IsInstanceOfType<ITransform>(effect);
+            Assert.IsFalse(effect.IsReorderable);
+            Assert.ThrowsExactly<NotSupportedException>(() => registry.Create(name, EffectImplementType.HwAcceleration, EffectImplementType.IPicture, []));
+        }
+    }
 
     [TestMethod]
     [DataRow("Accurate")]

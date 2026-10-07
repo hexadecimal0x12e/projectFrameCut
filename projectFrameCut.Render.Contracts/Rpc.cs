@@ -192,7 +192,9 @@ public sealed class RenderClient : IRenderClient
         bool unauthenticatedHttpResponse = response.RequestId == Guid.Empty && response.Error?.Code == RenderErrorCode.Unauthorized;
         if (response.RequestId != requestId && !unauthenticatedHttpResponse)
             throw new RenderRpcException(new RemoteError { Code = RenderErrorCode.BackendFailure, Message = "Render RPC response request ID mismatch." });
-        if (response.Error is not null) response.Error.ThrowAsException();
+        if (response.Error?.Code == RenderErrorCode.Canceled)
+            throw new OperationCanceledException(response.Error.Message, cancellationToken);
+        response?.Error?.ThrowAsException();
         return RenderRpcSerializer.Deserialize<TResponse>(response.Payload);
     }
 

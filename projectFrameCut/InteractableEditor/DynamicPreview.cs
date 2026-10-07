@@ -60,7 +60,7 @@ public sealed class DynamicPreview : IDisposable
     private static readonly ConcurrentDictionary<FallbackFrameCacheKey, CachedFallbackFrame> s_fallbackFrameCache = new();
     private static readonly ConcurrentDictionary<string, long> s_fallbackDiskFrameAccess = new(StringComparer.Ordinal);
     public static string DiskCacheRoot { get; set { if (Directory.Exists(value)) field = value; } } = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
-    public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Automatic;
+    public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Required;
 
 
     private IClip[]? _clips;
@@ -146,6 +146,9 @@ public sealed class DynamicPreview : IDisposable
     /// </summary>
     public async Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token, bool applyClipTargetLayout = true)
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var frameMark = new UserMarkRange("Preview.PrepareFrame", $"frame={frameIndex}, size={targetWidth}x{targetHeight}");
+#endif
         var prepareVersion = Interlocked.Increment(ref _prepareVersion);
         try
         {
@@ -328,6 +331,7 @@ public sealed class DynamicPreview : IDisposable
         IClip[]? batchToDispose = null;
         lock (_clipsGate)
         {
+            if (ReferenceEquals(_clips, clips)) return;
             var oldClips = _clips;
             _clips = clips;
             if (oldClips is not null)
@@ -410,7 +414,7 @@ public sealed class DynamicPreview : IDisposable
     {
         CancelClipWarmup(clipId);
         if (!PreviewWarmupEnabled || _previewer is null || _clips?.FirstOrDefault(c => c.Id == clipId) is not { } clip) return;
-        if (!Timeline.CanCacheClipFrame(_clips, clip))
+        if (!_previewer.CanCacheClipFrame(clipId))
         {
             LogDiagnostic($"[DynamicPreview] Skipped warmup for changing source in clip {clipId}.");
             return;
@@ -447,7 +451,7 @@ public sealed class DynamicPreview : IDisposable
                 }
                 LogDiagnostic($"[DynamicPreview] Warmed {rendered} frames for clip {clipId} around {playhead}.");
             }
-            catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
+            catch (OperationCanceledException) { }
             catch (Exception ex) { Log(ex, $"Warm dynamic preview for clip {clipId}", this); }
             finally
             {
@@ -461,6 +465,10 @@ public sealed class DynamicPreview : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public async Task<IReadOnlyList<PreparedPreview>?> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, bool applyClipTargetLayout, bool checkVersion, long prepareVersion, CancellationToken token)
     {
+        CancelClipWarmups();
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var prepareMark = new UserMarkRange("Preview.PrepareRequests", $"frame={frameIndex}, requests={requests.Count}, size={canvasWidth}x{canvasHeight}");
+#endif
         using var effectScope = effectRuntime.Enter();
         if (requests.Count == 0)
         {
@@ -485,6 +493,7 @@ public sealed class DynamicPreview : IDisposable
         }
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
+        token.ThrowIfCancellationRequested();
 
         if (checkVersion && prepareVersion != Interlocked.Read(ref _prepareVersion))
         {
@@ -740,7 +749,7 @@ public sealed class DynamicPreview : IDisposable
                 }, null, request.Clip, isPositionedClipPreview: canvasPreview, isTransparentAt: isTransparentAt);
             }
         }
-        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
             return new PreparedPreview(request.Clip.Id, null, null, request.Clip);
         }
@@ -748,7 +757,7 @@ public sealed class DynamicPreview : IDisposable
         {
             Log(ex, $"Render dynamic preview for clip {request.Clip.Name} ({request.Clip.Id})", this);
             Func<View>? errorFactory = DefaultOutputMode == NativePreviewOutputMode.Required
-                ? () => CreateSwapChainErrorView(ex.Message)
+                ? () => CreatePreviewErrorView(ex.Message)
                 : null;
             return new PreparedPreview(request.Clip.Id, errorFactory, ex.Message, request.Clip);
         }
@@ -910,7 +919,7 @@ public sealed class DynamicPreview : IDisposable
         };
     }
 
-    private static View CreateSwapChainErrorView(string message)
+    private static View CreatePreviewErrorView(string message)
         => new Border
         {
             BackgroundColor = Colors.Black,
@@ -919,7 +928,7 @@ public sealed class DynamicPreview : IDisposable
             Padding = 12,
             Content = new Label
             {
-                Text = $"HDR SwapChain preview failed: {message}",
+                Text = $"Preview failed: {message}",
                 TextColor = Colors.White,
                 HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Center,
                 VerticalTextAlignment = Microsoft.Maui.TextAlignment.Center,
@@ -2059,7 +2068,6 @@ public sealed class DynamicPreview : IDisposable
         {
             try
             {
-                TransformProcessing.Release(clip.ExtraData);
                 EffectHelper.ReleaseClipEffects(clip);
                 clip.Dispose();
             }

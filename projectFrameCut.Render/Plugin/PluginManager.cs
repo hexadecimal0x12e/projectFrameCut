@@ -224,22 +224,6 @@ namespace projectFrameCut.Render.Plugin
             }
         }
 
-        public static ITransform CreateTransform(JsonElement source)
-        {
-            var plug = source.GetProperty("FromPlugin").GetString();
-            var type = source.GetProperty("TypeName").GetString();
-            if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(plug))
-            {
-                throw new ArgumentException("Invalid transform data.");
-            }
-
-            if (PluginManager.LoadedPlugins.TryGetValue(plug, out var plugin))
-            {
-                return plugin.TransformCreator(source);
-            }
-            throw new ArgumentException($"Plugin not found: {type}");
-        }
-
         public static ISoundTrack CreateSoundTrack(JsonElement source)
         {
             var type = source.GetProperty("FromPlugin").GetString();
@@ -277,6 +261,14 @@ namespace projectFrameCut.Render.Plugin
 
         public static IEffect CreateEffect(EffectAndMixtureJSONStructure stru, EffectImplementType type = EffectImplementType.NotSpecified)
         {
+            if (stru.FromPlugin == InternalPluginBase.InternalPluginBaseID && stru.TypeName == "Rotation"
+                && stru.Name == "__Internal_Rotation__" && (stru.Parameters is null || !stru.Parameters.ContainsKey("Angle")))
+            {
+                stru.Parameters ??= new();
+                stru.Parameters["Angle"] = 0f;
+                stru.Parameters.TryAdd("ExpandCanvas", false);
+                Log("Restored missing parameters of a legacy internal rotation effect.", "warn");
+            }
             IEffect effect = null!;
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {

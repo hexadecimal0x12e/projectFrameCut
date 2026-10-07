@@ -404,6 +404,11 @@ namespace projectFrameCut.DraftStuff
                                 RelativeWidth = page.ProjectInfo.RelativeWidth,
                                 RelativeHeight = page.ProjectInfo.RelativeHeight,
                                 ExpandCanvas = existingRotation?.ExpandCanvas ?? false,
+                                Parameters = new()
+                                {
+                                    ["Angle"] = (float)deg,
+                                    ["ExpandCanvas"] = existingRotation?.ExpandCanvas ?? false
+                                },
                                 Id = string.IsNullOrWhiteSpace(existingRotation?.Id) ? InternalRotationID : existingRotation.Id
                             };
                         }
@@ -777,6 +782,12 @@ namespace projectFrameCut.DraftStuff
 
                 handler?.Invoke(s, e);
             };
+            if (clip.ClipType == ClipMode.VideoClip)
+            {
+                ppb.AddSeparator();
+                ppb.AddText(new Label { Text = Localized.Transform_Tab });
+                ppb.AddCustomChild(BuildTransformTab(track));
+            }
             return ppb.BuildWithScrollView();
         }
 

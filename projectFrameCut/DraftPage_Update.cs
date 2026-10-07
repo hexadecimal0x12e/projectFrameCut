@@ -182,7 +182,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 if (now - _renderBackendDisconnectedSinceUtc < RenderBackendReconnectTimeout) continue;
 
                 _renderBackendDisconnectedSinceUtc = now;
-                await RestartRenderBackendAsync(showErrorDialog: false).ConfigureAwait(false);
+                await RestartRenderBackendAsync(showErrorDialog: false, captureThreadStacks: true).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -195,7 +195,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private async Task RestartRenderBackendAsync(bool showErrorDialog)
+    private async Task RestartRenderBackendAsync(bool showErrorDialog, bool captureThreadStacks = false)
     {
         if (IsRemoteProject)
         {
@@ -208,6 +208,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         try
         {
             if (AlreadyDisappeared) return;
+#if WINDOWS && DEBUG
+            if (captureThreadStacks)
+                await Task.Run(RenderRpcBootstrap.CaptureThreadStacksBeforeRestart).ConfigureAwait(false);
+#endif
             if (isPlaying || _previewAudioGeneration != 0) await PauseLivePreview();
 
             await Dispatcher.DispatchAsync(() =>
@@ -261,9 +265,15 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task DraftChangedAsync(object? sender, ClipUpdateEventArgs e)
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var changeMark = new UserMarkRange("Draft.ApplyChanges", $"reason={e.Reason}, clip={e.SourceId}");
+#endif
         CancelGeneratedSoundTrackSync();
         if (AlreadyDisappeared) return;
         if (isPlaying || _previewAudioGeneration != 0) await PauseLivePreview();
+        if (AlreadyDisappeared) return;
+        CancelDynamicPreview();
+        DynamicPreviewProvider.CancelClipWarmups();
 
         if (string.IsNullOrEmpty(WorkingPath))
         {
@@ -294,26 +304,40 @@ public partial class DraftPage : ContentPage, IDraftPage
         try
         {
             bool usePreparedRenderProject = Interlocked.Exchange(ref _renderProjectPrepared, 0) == 1;
-            await Dispatcher.DispatchAsync(async () =>
+            await Dispatcher.DispatchAsync(() =>
             {
+                if (AlreadyDisappeared) return;
                 d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
-                if (!usePreparedRenderProject) await previewer.UpdateDraft(d);
             });
+            if (AlreadyDisappeared) return;
+            if (!usePreparedRenderProject) await previewer.UpdateDraft(d);
+            if (AlreadyDisappeared) return;
             ProjectDuration = Math.Max(d.Duration, d.AudioDuration);
             TryMoveToInitialPreviewFrame(d);
-            await ClipEditor.UpdateClips(Clips);
-            ClipEditor.SetCurrentFrame((uint)Math.Max(0, _currentFrame));
-            FastPreviewEditor.SetCurrentFrame((uint)Math.Max(0, _currentFrame));
-            DynamicPreviewProvider.SetClips(previewer.Clips);
+            {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+                using var editorMark = new UserMarkRange("Preview.UpdateEditors", $"clips={Clips.Count}");
+#endif
+                await ClipEditor.UpdateClips(Clips);
+                ClipEditor.SetCurrentFrame((uint)Math.Max(0, _currentFrame));
+                FastPreviewEditor.SetCurrentFrame((uint)Math.Max(0, _currentFrame));
+                DynamicPreviewProvider.SetClips(previewer.Clips);
+            }
             await RefreshPreviewFromCurrentProviderAsync();
+            if (AlreadyDisappeared) return;
             if (e.Reason == ClipUpdateReason.PropertyChanged && e.SourceId is Guid clipId && ShouldWarmClipPreview(e.DetailInfo))
                 StartClipPreviewWarmup(clipId);
             SetStatusText(Localized.DraftPage_ChangesApplied);
             SetStateOK();
         }
+        catch (OperationCanceledException ex)
+        {
+            Log(ex, "Draft update cancelled during render RPC shutdown", this);
+        }
         catch (Exception ex)
         {
             Log(ex, "apply change", this);
+            if (AlreadyDisappeared) return;
             SetStateFail(Localized._ExceptionTemplate(ex));
 #if DEBUG
             if (await DisplayAlertAsync(Localized._Error, Localized.DraftPage_ApplyChangesFail(ex), "Throw", Localized._OK)) throw;
@@ -327,8 +351,15 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task OnClipEditorUpdate()
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var editorMark = new UserMarkRange("Draft.EditorUpdate");
+#endif
         if (AlreadyDisappeared) return;
 
+        if (isPlaying || _previewAudioGeneration != 0) await PauseLivePreview();
+        if (AlreadyDisappeared) return;
+        CancelDynamicPreview();
+        DynamicPreviewProvider.CancelClipWarmups();
         var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
         await previewer.UpdateDraft(d);
         DynamicPreviewProvider.SetClips(previewer.Clips);
@@ -502,42 +533,16 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         UpdatePlayheadPosition(e.ScrollX);
 
-        // Notify all active clip previews so they update their visible frame range
         NotifyClipPreviewsScrollChanged(e.ScrollX);
     }
 
     private void NotifyClipPreviewsScrollChanged(double scrollX)
     {
-        double viewportWidth = TimelineScrollView.Width;
-        List<Guid>? toRemove = null;
-        foreach (var kvp in _activeClipPreviews)
-        {
-            if (!kvp.Value.NotifyScrollChanged(scrollX, viewportWidth))
-            {
-                toRemove ??= new();
-                toRemove.Add(kvp.Key);
-            }
-        }
-        if (toRemove is not null)
-        {
-            foreach (var id in toRemove)
-            {
-                if (_activeClipPreviews.TryGetValue(id, out var detached))
-                {
-                    detached.Dispose();
-                    _activeClipPreviews.Remove(id);
-                }
-            }
-        }
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var scrollMark = new UserMarkRange("Timeline.ScrollPreviews", $"scrollX={scrollX}, previews={_activeClipPreviews.Count}");
+#endif
+        ScheduleClipPreviewViewportUpdate();
     }
-
-    /// <summary>
-    /// Returns the current horizontal scroll position and viewport width of the
-    /// main timeline ScrollView. Used by <see cref="OnClipUIPreview"/> to perform
-    /// viewport-culled frame rendering without direct access to the private field.
-    /// </summary>
-    internal (double scrollX, double viewportWidth) GetTimelineScrollState()
-        => (TimelineScrollView.ScrollX, TimelineScrollView.Width);
 
     private async Task MovePlayhead(int deltaFrames)
     {
@@ -629,6 +634,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         // 更新所有ext endToWholeDraft的clips，使其能延伸到整个项目
         UpdateAllExtendToWholeDraftClips();
+        InvalidateClipPreviewViewport();
     }
 
     [DebuggerNonUserCode()] //too annoying in step-through debugging
@@ -659,6 +665,9 @@ public partial class DraftPage : ContentPage, IDraftPage
     #region save, undo and redo
     public async Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null, bool throwOnFailure = false)
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var saveMark = new UserMarkRange("Draft.Save", $"noSlot={noSlot}");
+#endif
         if (string.IsNullOrEmpty(WorkingPath))
         {
             if (throwOnFailure) throw new InvalidOperationException("Project working path is empty.");

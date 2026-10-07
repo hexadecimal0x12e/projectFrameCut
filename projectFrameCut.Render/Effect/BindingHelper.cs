@@ -42,7 +42,7 @@ namespace projectFrameCut.Render.Effect
             clip.EffectBundles = null;
         }
 
-        private static EffectProviderJSONStructure SerializeProvider(IEffectProvider provider)
+        public static EffectProviderJSONStructure SerializeProvider(IEffectProvider provider)
             => new()
             {
                 Id = provider.Id,
@@ -329,6 +329,7 @@ namespace projectFrameCut.Render.Effect
             {
                 if (effectProviders != null)
                 {
+                    Rendering.TransformProcessing.ValidateProviders(effectProviders);
                     MaterializeFields(effectProviders.Values);
                     var activePictureProviders = GetActivePictureProviderIds(effectProviders);
                     var inlinedProviderIds = InlineValueProvidersIntoConsumers(effectProviders);
@@ -361,7 +362,8 @@ namespace projectFrameCut.Render.Effect
                             JsonElement { ValueKind: JsonValueKind.String } value when Enum.TryParse(value.GetString(), ignoreCase: true, out EffectImplementType parsed) => parsed,
                             _ => null,
                         };
-                        var imp = EffectHelper.GetPicturePreference(provider.TypeName)
+                        var imp = (provider.TypeOfEffect == EffectType.Transform ? persistedImplementType : null)
+                            ?? EffectHelper.GetPicturePreference(provider.TypeName)
                             ?? persistedImplementType
                             ?? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{provider.FromPlugin}.{provider.TypeName}", EffectImplementType.NotSpecified);
                         provider.MetaData[EffectProviderBase.ImplementTypeParameterKey] = imp;
@@ -378,12 +380,27 @@ namespace projectFrameCut.Render.Effect
                                 provider.MetaData.Remove(EffectProviderBase.ImplementTypeParameterKey);
                         }
 
+                        if (provider.TypeOfEffect == EffectType.Transform)
+                        {
+                            var mode = Rendering.TransformProcessing.ReadEnum<RenderAPIBase.ClipAndTrack.TransformInputMode>(provider.MetaData,
+                                Rendering.TransformProcessing.ModeKey);
+                            var required = (provider.Target.HasFlag(EffectTarget.Audio) ? TransformDefinition.Audio : TransformDefinition.Clip) | (mode == RenderAPIBase.ClipAndTrack.TransformInputMode.OneInput
+                                ? TransformDefinition.SupportOneInput : TransformDefinition.SupportTwoInput);
+                            if (effects.Length != 1 || effects[0] is not RenderAPIBase.ClipAndTrack.ITransform transform || !transform.Definition.HasFlag(required))
+                            {
+                                foreach (var effect in effects) (effect as IDisposable)?.Dispose();
+                                throw new InvalidOperationException($"Provider {provider.Id} must build one transform supporting {mode}.");
+                            }
+                        }
+
                         for (int i = 0; i < effects.Length; i++)
                         {
                             var effect = effects[i];
                             int subIdx = i;
                             effect.Name = $"EffectProvider {bundleData.TypeName}({bundleData.Id}){Environment.NewLine} - Subeffect #{subIdx}";
                             var detached = bundleData.Target.HasFlag(EffectTarget.ValueProvider)
+                                || bundleData.TypeOfEffect == EffectType.Transform
+                                || bundleData.TypeOfEffect is EffectType.AudioNormalEffect or EffectType.AudioContinuousEffect
                                 || bundleData.Target.HasFlag(EffectTarget.Mixture)
                                 || bundleData.Target.HasFlag(EffectTarget.SpeedVariance);
                             effect.Enabled = detached
@@ -695,6 +712,9 @@ namespace projectFrameCut.Render.Effect
                 if (pictureInputs.Count != 0 && !provider.HasMainPictureInput())
                     diagnostics.Add(new(provider.Id, "UnsupportedPictureInputs", $"Provider {provider.Id} must use '__Input__' as its only picture input."));
 
+                if (provider.TypeOfEffect == EffectType.Transform && (provider.IsFinalOutputSource() || pictureInputs.Count > 0))
+                    diagnostics.Add(new(provider.Id, "TransformPictureBinding", $"Transform {provider.Id} cannot join the picture chain."));
+
                 var input = provider.GetMainInputSource();
                 if (input == IEffectProvider.NoConnectionGUID.ToString() || input == IEffectProvider.InputAnchorGUID.ToString())
                     continue;
@@ -705,7 +725,7 @@ namespace projectFrameCut.Render.Effect
                 }
                 if (sourceId == provider.Id)
                     diagnostics.Add(new(provider.Id, "SelfPictureBinding", $"Provider {provider.Id} uses itself as picture input."));
-                if (source.Target.HasFlag(EffectTarget.ValueProvider))
+                if (source.Target.HasFlag(EffectTarget.ValueProvider) || source.TypeOfEffect == EffectType.Transform)
                     diagnostics.Add(new(provider.Id, "InvalidPictureSource", $"Value provider {sourceId} cannot be used as a picture input."));
             }
 
@@ -900,6 +920,7 @@ namespace projectFrameCut.Render.Effect
         {
             if (providerId.HasValue
                 && (!providers.TryGetValue(providerId.Value, out var selected)
+                    || selected.TypeOfEffect == EffectType.Transform
                     || !selected.OutField.FieldType.HasFlag(EffectArgumentFieldType.IPicture)))
             {
                 throw new ArgumentException($"Provider '{providerId}' cannot be used as the final picture output.", nameof(providerId));

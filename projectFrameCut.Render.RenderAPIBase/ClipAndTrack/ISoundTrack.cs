@@ -39,6 +39,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Indicate which layer this track is in. Higher index means upper layer.
         /// </summary>
         public uint LayerIndex { get; init; }
+        public virtual uint SubLayerIndex => LayerIndex;
 
         /// <summary>
         /// Where this track starts in the whole draft, in frames.
@@ -88,6 +89,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Used in serialization and deserialization.
         /// </summary>
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public virtual EffectProviderJSONStructure[]? EffectProviders => null;
 
         [JsonIgnore]
         /// <summary>

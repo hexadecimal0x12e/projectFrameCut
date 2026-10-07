@@ -22,12 +22,15 @@ internal sealed class RemoteSoundTrack : ISoundTrack
         Id = state.Id;
         Name = state.Name;
         LayerIndex = state.LayerIndex;
+        SubLayerIndex = state.SubLayerIndex;
         StartFrame = state.StartFrame;
         RelativeStartFrame = state.RelativeStartFrame;
         Duration = state.Duration;
         NeedFilePath = state.NeedFilePath;
         SamplePerSecond = state.SamplePerSecond;
         Effects = JsonSerializer.Deserialize<EffectAndMixtureJSONStructure[]?>(state.EffectsJson);
+        EffectProviders = string.IsNullOrWhiteSpace(state.EffectProvidersJson) ? null :
+            JsonSerializer.Deserialize<EffectProviderJSONStructure[]?>(state.EffectProvidersJson);
         ExtraData = JsonSerializer.Deserialize<Dictionary<string, object>>(state.ExtraDataJson) ?? [];
         Apply(state);
     }
@@ -38,6 +41,7 @@ internal sealed class RemoteSoundTrack : ISoundTrack
     public string Id { get; init; }
     public string Name { get; init; }
     public uint LayerIndex { get; init; }
+    public uint SubLayerIndex { get; init; }
     public uint StartFrame { get; init; }
     public uint RelativeStartFrame { get; init; }
     public uint Duration { get; init; }
@@ -47,6 +51,7 @@ internal sealed class RemoteSoundTrack : ISoundTrack
     public float Volume { get; set; }
     public int SamplePerSecond { get; }
     public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+    public EffectProviderJSONStructure[]? EffectProviders { get; init; }
     public IEffect[]? EffectsInstances { get; set; }
     public Dictionary<string, object> ExtraData { get; set; }
 
@@ -65,6 +70,9 @@ internal sealed class RemoteSoundTrack : ISoundTrack
     {
         if (_disposed) return;
         _disposed = true;
+        foreach (var effect in (EffectsInstances ?? []).OfType<IDisposable>().Distinct(ReferenceEqualityComparer.Instance))
+            ((IDisposable)effect).Dispose();
+        EffectsInstances = null;
         try { Invoke<IsolationReleaseObjectRequest, EmptyResponse>(RenderOperation.IsolationReleaseObject, new() { ObjectId = _objectId }); } catch { }
     }
 
@@ -77,6 +85,7 @@ internal sealed class RemoteSoundTrack : ISoundTrack
         Id = Id,
         Name = Name,
         LayerIndex = LayerIndex,
+        SubLayerIndex = SubLayerIndex,
         StartFrame = StartFrame,
         RelativeStartFrame = RelativeStartFrame,
         Duration = Duration,

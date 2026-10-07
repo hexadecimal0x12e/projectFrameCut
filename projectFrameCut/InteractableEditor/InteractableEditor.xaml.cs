@@ -4,7 +4,9 @@ using projectFrameCut.Asset;
 using projectFrameCut.Controls;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.LivePreview;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -345,7 +347,34 @@ namespace projectFrameCut.InteractableEditor
 
         public void SetStaticPreviewVisible(bool isVisible)
         {
-            PreviewOverlayImage.IsVisible = isVisible;
+            StaticPreviewHost.IsVisible = isVisible;
+        }
+
+        public void SetStaticPreviewFrame(PreviewFrameSource frame, ImageSource? source)
+        {
+#if WINDOWS
+            if (frame.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb)
+            {
+                if (StaticNativePreviewHost.Content is HdrPreviewView view)
+                    view.Frame = frame;
+                else
+                    StaticNativePreviewHost.Content = new HdrPreviewView
+                    {
+                        Frame = frame,
+                        HorizontalOptions = LayoutOptions.Fill,
+                        VerticalOptions = LayoutOptions.Fill,
+                        InputTransparent = true,
+                    };
+                StaticNativePreviewHost.IsVisible = true;
+                PreviewOverlayImage.IsVisible = false;
+                PreviewOverlayImage.Source = null;
+                return;
+            }
+#endif
+            StaticNativePreviewHost.Content = null;
+            StaticNativePreviewHost.IsVisible = false;
+            PreviewOverlayImage.Source = source;
+            PreviewOverlayImage.IsVisible = true;
         }
 
 #endregion
@@ -2694,6 +2723,9 @@ namespace projectFrameCut.InteractableEditor
 
         private void UpdateVisuals(bool ignorePositionProvider = false, IReadOnlySet<Guid>? clipFilter = null, bool reorderClips = true)
         {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var visualsMark = new UserMarkRange("Editor.UpdateVisuals", $"frame={_currentFrame}, filtered={clipFilter?.Count.ToString() ?? "all"}");
+#endif
             if (_videoWidth <= 0 || _videoHeight <= 0 || _canvasWidth <= 0 || _canvasHeight <= 0)
                 return;
 
@@ -2918,6 +2950,9 @@ namespace projectFrameCut.InteractableEditor
         /// <param name="preparedPreviews">The prepared previews</param>
         public async Task<bool> ApplyPreparedPreviewsAsync(IReadOnlyList<PreparedPreview> preparedPreviews)
         {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var dispatchMark = new UserMarkRange("Preview.DispatchApply", $"previews={preparedPreviews.Count}, host=editor");
+#endif
             if (Dispatcher.IsDispatchRequired)
             {
                 return await Dispatcher.DispatchAsync(() => ApplyPreparedPreviews(preparedPreviews));
@@ -2936,6 +2971,9 @@ namespace projectFrameCut.InteractableEditor
         [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         public bool ApplyPreparedPreviews(IReadOnlyList<PreparedPreview> preparedPreviews)
         {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var applyMark = new UserMarkRange("Preview.Apply", $"previews={preparedPreviews.Count}, host=editor");
+#endif
             var canvasPreview = preparedPreviews.FirstOrDefault(static preview => preview.IsCanvasPreview);
             if (canvasPreview is not null)
             {
@@ -2961,7 +2999,7 @@ namespace projectFrameCut.InteractableEditor
                 }
                 SetRealtimePreviewContent(canvasView);
                 LivePreviewerHost.IsVisible = canvasView is not null;
-                PreviewOverlayImage.IsVisible = false;
+                SetStaticPreviewVisible(false);
                 return canvasView is not null;
             }
 
@@ -4745,7 +4783,7 @@ namespace projectFrameCut.InteractableEditor
         {
             UpdateCanvasSize(Width, Height, true);
 
-            if (StaticPreviewOverlayImage.IsVisible)
+            if (StaticPreviewHost.IsVisible)
             {
                 await (_updateCallback?.Invoke() ?? Task.CompletedTask);
             }

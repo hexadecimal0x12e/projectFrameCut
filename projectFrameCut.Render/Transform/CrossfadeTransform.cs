@@ -1,100 +1,95 @@
-﻿using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
-using System;
 
-namespace projectFrameCut.Render.Transform
+namespace projectFrameCut.Render.Transform;
+
+public class CrossfadeTransform : TransformEffectBase
 {
-    /// <summary>
-    /// A very simple crossfade transform that linearly blends the last frame of the previous clip
-    /// and the first frame of the next clip according to progress (0..1).
-    /// This is a minimal implementation for basic transition preview/testing.
-    /// </summary>
-    public class CrossfadeTransform : IContinuousTransform
+    public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+    public override string TypeName => "Crossfade";
+    public override TransformDefinition Definition => TransformDefinition.Clip | TransformDefinition.SupportTwoInput;
+    public override IEffect WithParameters(Dictionary<string, object> parameters) => new CrossfadeTransform { Parameters = parameters };
+
+    public override IPicture Render(IPicture left, IPicture? right, float progress, TransformSide side, int targetWidth, int targetHeight)
     {
-        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
-
-        public TransformDefinition Definition => TransformDefinition.Clip | TransformDefinition.SupportTwoInput;
-        public TransformSide Side { get; set; }
-
-        public string TypeName => "Crossfade";
-
-        public string Name { get; init; } = "Crossfade";
-
-        public Guid PreviousClipId { get; init; }
-
-        public Guid NextClipId { get; init; }
-
-
-        public Dictionary<string, object> Parameters { get; set; } = new();
-
-        public List<string> ParametersNeeded => new();
-
-        public Dictionary<string, string> ParametersType => new();
-
-        public Guid BindedLeftClip { get; set; }
-        public Guid BindedRightClip { get; set; }
-        public uint Duration { get; set; }
-
-        public void Init() { }
-
-        /// <summary>
-        /// progress: 0.0 => fully previous, 1.0 => fully next
-        /// </summary>
-        public IPicture GetFrame(IPicture prevPic, IPicture nextPic, double progress, int targetWidth, int targetHeight)
+        ArgumentNullException.ThrowIfNull(right);
+        if (left.Width != right.Width || left.Height != right.Height)
+            throw new ArgumentException("Crossfade input sizes must match.");
+        int bits = left.BitPerPixel == 16 || right.BitPerPixel == 16 ? 16 : 8;
+        var l = left.BitPerPixel == bits ? left : left.ToBitPerPixel(bits);
+        var r = right.BitPerPixel == bits ? right : right.ToBitPerPixel(bits);
+        try
         {
-            float p = (float)Math.Clamp(progress, 0, 1);
-            if (prevPic.Width != nextPic.Width || prevPic.Height != nextPic.Height)
-                throw new ArgumentException("Crossfade input sizes must match.");
-            if (prevPic.BitPerPixel == 16 || nextPic.BitPerPixel == 16)
-            {
-                var left = (IPicture<ushort>)prevPic.ToBitPerPixel(16);
-                var right = (IPicture<ushort>)nextPic.ToBitPerPixel(16);
-                var lh = left as IHDRPicture<ushort>;
-                var rh = right as IHDRPicture<ushort>;
-                float peak = Math.Max(lh?.MaximumBrightness ?? 203, rh?.MaximumBrightness ?? 203);
-                Picture16bpp output = lh is not null || rh is not null
-                    ? new HDRPicture16bpp(left.Width, left.Height) { MaximumBrightness = peak }
-                    : new Picture16bpp(left.Width, left.Height);
-                output.a = new float[output.Pixels];
-                output.HasAlphaChannel = true;
-                for (int i = 0; i < output.Pixels; i++)
+            float p = Math.Clamp(progress, 0, 1);
+            var lc = Channels(l);
+            var rc = Channels(r);
+            float[] red = Blend(lc.R, rc.R, lc.A, rc.A, p);
+            float[] green = Blend(lc.G, rc.G, lc.A, rc.A, p);
+            float[] blue = Blend(lc.B, rc.B, lc.A, rc.A, p);
+            var alpha = new float[l.Pixels];
+            for (int i = 0; i < alpha.Length; i++) alpha[i] = lc.A[i] * (1 - p) + rc.A[i] * p;
+            if (bits == 8)
+                return new Picture8bpp(l.Width, l.Height)
                 {
-                    float a = (left.a?[i] ?? 1) * (1 - p);
-                    float b = (right.a?[i] ?? 1) * p;
-                    float alpha = a + b;
-                    output.a[i] = alpha;
-                    output.r[i] = alpha > 0 ? (ushort)Math.Clamp(Math.Round((left.r[i] * a + right.r[i] * b) / alpha), 0, ushort.MaxValue) : (ushort)0;
-                    output.g[i] = alpha > 0 ? (ushort)Math.Clamp(Math.Round((left.g[i] * a + right.g[i] * b) / alpha), 0, ushort.MaxValue) : (ushort)0;
-                    output.b[i] = alpha > 0 ? (ushort)Math.Clamp(Math.Round((left.b[i] * a + right.b[i] * b) / alpha), 0, ushort.MaxValue) : (ushort)0;
-                    if (output is IHDRPicture<ushort> hdr)
-                    {
-                        float l = lh is not null && i < lh.Brightness.Length ? lh.Brightness[i] * lh.MaximumBrightness : 203;
-                        float r = rh is not null && i < rh.Brightness.Length ? rh.Brightness[i] * rh.MaximumBrightness : 203;
-                        hdr.Brightness[i] = alpha > 0 ? Math.Clamp((l * a + r * b) / (alpha * peak), 0, 1) : 0;
-                    }
-                }
-                if (!ReferenceEquals(left, prevPic)) left.Dispose();
-                if (!ReferenceEquals(right, nextPic)) right.Dispose();
-                return output;
-            }
-            else
-            {
-                var left = (IPicture<byte>)prevPic;
-                var right = (IPicture<byte>)nextPic;
-                var output = new Picture8bpp(left.Width, left.Height) { a = new float[left.Pixels], HasAlphaChannel = true };
-                for (int i = 0; i < output.Pixels; i++)
-                {
-                    float a = (left.a?[i] ?? 1) * (1 - p);
-                    float b = (right.a?[i] ?? 1) * p;
-                    float alpha = a + b;
-                    output.a[i] = alpha;
-                    output.r[i] = alpha > 0 ? (byte)Math.Clamp(Math.Round((left.r[i] * a + right.r[i] * b) / alpha), 0, byte.MaxValue) : (byte)0;
-                    output.g[i] = alpha > 0 ? (byte)Math.Clamp(Math.Round((left.g[i] * a + right.g[i] * b) / alpha), 0, byte.MaxValue) : (byte)0;
-                    output.b[i] = alpha > 0 ? (byte)Math.Clamp(Math.Round((left.b[i] * a + right.b[i] * b) / alpha), 0, byte.MaxValue) : (byte)0;
-                }
-                return output;
-            }
+                    r = red.Select(x => (byte)Math.Clamp(Math.Round(x), 0, byte.MaxValue)).ToArray(),
+                    g = green.Select(x => (byte)Math.Clamp(Math.Round(x), 0, byte.MaxValue)).ToArray(),
+                    b = blue.Select(x => (byte)Math.Clamp(Math.Round(x), 0, byte.MaxValue)).ToArray(),
+                    a = alpha, HasAlphaChannel = true
+                };
+            var lh = l as IHDRPicture<ushort>;
+            var rh = r as IHDRPicture<ushort>;
+            float peak = Math.Max(lh?.MaximumBrightness ?? 203, rh?.MaximumBrightness ?? 203);
+            Picture16bpp output = lh is not null || rh is not null
+                ? new HDRPicture16bpp(l.Width, l.Height) { MaximumBrightness = peak }
+                : new Picture16bpp(l.Width, l.Height);
+            output.r = red.Select(x => (ushort)Math.Clamp(Math.Round(x), 0, ushort.MaxValue)).ToArray();
+            output.g = green.Select(x => (ushort)Math.Clamp(Math.Round(x), 0, ushort.MaxValue)).ToArray();
+            output.b = blue.Select(x => (ushort)Math.Clamp(Math.Round(x), 0, ushort.MaxValue)).ToArray();
+            output.a = alpha;
+            output.HasAlphaChannel = true;
+            if (output is IHDRPicture<ushort> hdr)
+                hdr.Brightness = Blend(Brightness(lh, l.Pixels, peak), Brightness(rh, r.Pixels, peak), lc.A, rc.A, p);
+            return output;
+        }
+        finally
+        {
+            if (!ReferenceEquals(l, left)) l.Dispose();
+            if (!ReferenceEquals(r, right)) r.Dispose();
         }
     }
+
+    protected virtual float[] Blend(float[] left, float[] right, float[] leftAlpha, float[] rightAlpha, float progress)
+    {
+        var output = new float[left.Length];
+        for (int i = 0; i < output.Length; i++)
+        {
+            float a = leftAlpha[i] * (1 - progress), b = rightAlpha[i] * progress;
+            output[i] = a + b > 0 ? (left[i] * a + right[i] * b) / (a + b) : 0;
+        }
+        return output;
+    }
+
+    private static float[] Brightness(IHDRPicture<ushort>? source, int count, float peak) =>
+        Enumerable.Range(0, count).Select(i => source is not null && i < source.Brightness.Length
+            ? Math.Clamp(source.Brightness[i] * source.MaximumBrightness / peak, 0, 1) : 203 / peak).ToArray();
+
+    private static (float[] R, float[] G, float[] B, float[] A) Channels(IPicture source)
+    {
+        if (source is IPicture<ushort> p16)
+            return (p16.r.Take(source.Pixels).Select(x => (float)x).ToArray(), p16.g.Take(source.Pixels).Select(x => (float)x).ToArray(),
+                p16.b.Take(source.Pixels).Select(x => (float)x).ToArray(), p16.HasAlphaChannel && p16.a is not null ? p16.a.Take(source.Pixels).ToArray() : Enumerable.Repeat(1f, source.Pixels).ToArray());
+        var p8 = (IPicture<byte>)source;
+        return (p8.r.Take(source.Pixels).Select(x => (float)x).ToArray(), p8.g.Take(source.Pixels).Select(x => (float)x).ToArray(),
+            p8.b.Take(source.Pixels).Select(x => (float)x).ToArray(), p8.HasAlphaChannel && p8.a is not null ? p8.a.Take(source.Pixels).ToArray() : Enumerable.Repeat(1f, source.Pixels).ToArray());
+    }
+}
+
+public sealed class CrossfadeTransformProvider : TransformEffectProviderBase
+{
+    public override string TypeName => "Crossfade";
+    protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => [];
 }

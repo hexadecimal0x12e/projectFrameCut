@@ -674,6 +674,7 @@ public partial class DraftEffectBindingView : ContentView
 
         var outputPort = new BoxView { Color = PortTypeHelper.GetTypeColor(node.OutputPort?.FieldType ?? EffectArgumentFieldType.Unknown), WidthRequest = PortSize, HeightRequest = PortSize, VerticalOptions = LayoutOptions.Center };
         if (node.OutputPort is { } op) ToolTipProperties.SetText(outputPort, op.DisplayName);
+        else outputPort.IsVisible = false;
 
         // Handle visibility for System Nodes
         if (node.Kind == NodeKind.Input) inputPortView.IsVisible = false; // Hide Input on Input Node
@@ -2002,7 +2003,7 @@ public partial class DraftEffectBindingView : ContentView
                 };
             }
 
-            OutputPort = new NodePort { Kind = PortKind.AnchorOutput, Key = Provider.OutField.Id, FieldType = Provider.OutField.FieldType, DisplayName = HumanizePortName(Provider.OutField.Id), Index = 0 };
+            OutputPort = Provider.TypeOfEffect == EffectType.Transform ? null : new NodePort { Kind = PortKind.AnchorOutput, Key = Provider.OutField.Id, FieldType = Provider.OutField.FieldType, DisplayName = HumanizePortName(Provider.OutField.Id), Index = 0 };
 
             ParamPorts = Provider.Fields
                 .Where(kv => !kv.Value.FieldType.HasFlag(EffectArgumentFieldType.IPicture)

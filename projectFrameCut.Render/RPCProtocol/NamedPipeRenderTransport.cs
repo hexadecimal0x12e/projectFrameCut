@@ -85,6 +85,7 @@ public sealed class NamedPipeRenderServer(
                         ? host.Connect(handshake.ClientId, callbacks.InvokeAsync)
                         : null;
                     var requests = new List<Task>();
+                    var requestCancellations = new ConcurrentDictionary<Guid, CancellationTokenSource>();
                     try
                     {
                         while (pipe.IsConnected && !connectionCancellation.IsCancellationRequested)
@@ -93,12 +94,38 @@ public sealed class NamedPipeRenderServer(
                             if (bytes is null) break;
                             var request = RenderRpcSerializer.Deserialize<RenderRequestEnvelope>(bytes);
                             request.ClientId = handshake.ClientId;
+                            if (request.CancelRequestId != Guid.Empty)
+                            {
+                                if (requestCancellations.TryGetValue(request.CancelRequestId, out var pending))
+                                {
+                                    try { pending.Cancel(); } catch (ObjectDisposedException) { }
+                                    catch (Exception ex) { Log(ex, $"Cancel render request {request.CancelRequestId}"); }
+                                }
+                                continue;
+                            }
                             if (request.Operation == RenderOperation.CompleteExternalVideoSourceCallback)
                             {
                                 callbacks.Complete(RenderRpcSerializer.Deserialize<RenderResponseEnvelope>(request.Payload));
                                 continue;
                             }
-                            requests.Add(DispatchAndWriteAsync(service, pipe, writeGate, request, connectionCancellation.Token));
+                            var requestCts = CancellationTokenSource.CreateLinkedTokenSource(connectionCancellation.Token);
+                            if (!requestCancellations.TryAdd(request.RequestId, requestCts))
+                            {
+                                requestCts.Dispose();
+                                throw new RenderPipeException("Duplicate render request ID.");
+                            }
+                            requests.Add(Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    await DispatchAndWriteAsync(service, pipe, writeGate, request, requestCts.Token).ConfigureAwait(false);
+                                }
+                                finally
+                                {
+                                    requestCancellations.TryRemove(request.RequestId, out _);
+                                    requestCts.Dispose();
+                                }
+                            }));
                             requests.RemoveAll(static task => task.IsCompleted);
                         }
                     }

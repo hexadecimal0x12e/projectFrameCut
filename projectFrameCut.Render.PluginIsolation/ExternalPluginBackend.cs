@@ -52,7 +52,7 @@ public static class ExternalPluginBackend
             var responseData = await IsolationFrame.ReadAsync(pipe, connectTimeout.Token).ConfigureAwait(false)
                 ?? throw new EndOfStreamException("The host closed the pipe during external backend authorization.");
             var response = RenderRpcSerializer.Deserialize<RenderResponseEnvelope>(responseData);
-            if (response.Error is not null) response.Error.ThrowAsException();
+            response?.Error?.ThrowAsException();
             if (response.RequestId != authorizationRequest.RequestId || response.ProtocolVersion != RenderProtocol.CurrentVersion)
                 throw new InvalidDataException("The host returned an invalid external backend authorization envelope.");
             var authorization = RenderRpcSerializer.Deserialize<IsolationExternalBackendAuthorizationResponse>(response.Payload);

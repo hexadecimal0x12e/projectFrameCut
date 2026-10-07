@@ -10377,6 +10377,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Transform_AfterEffects",
+        "Value": "\u5148\u6548\u679C\u3001\u540E\u8F6C\u573A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Transform_BeforeEffects",
+        "Value": "\u5148\u8F6C\u573A\u3001\u540E\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Transform_RenderOrder",
+        "Value": "\u6E32\u67D3\u987A\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Transform_Implementation",
+        "Value": "\u5B9E\u73B0\u65B9\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Transform_Enabled",
+        "Value": "\u542F\u7528\u8F6C\u573A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Transform_PreRender",
+        "Value": "\u9884\u5148\u6E32\u67D3\u8F6C\u573A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [

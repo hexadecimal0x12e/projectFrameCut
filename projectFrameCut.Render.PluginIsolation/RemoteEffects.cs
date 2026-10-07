@@ -18,6 +18,7 @@ internal static class RemoteEffectFactory
             (int)EffectType.NormalEffect when descriptor.IsColorAdjust => new RemoteColorAdjustEffect(session, descriptor),
             (int)EffectType.NormalEffect => new RemoteNormalEffect(session, descriptor),
             (int)EffectType.ContinuousEffect => new RemoteContinuousEffect(session, descriptor),
+            (int)EffectType.Transform => new RemoteTransformEffect(session, descriptor),
             (int)EffectType.MixtureProvider => new RemoteMixture(session, descriptor),
             (int)EffectType.SourceReplacement => new RemoteSourceReplacementEffect(session, descriptor),
             (int)EffectType.AudioNormalEffect => new RemoteAudioNormalEffect(session, descriptor),
@@ -34,6 +35,30 @@ internal static class RemoteEffectFactory
         if (effect is RemoteEffectBase remote && dynamicGetters is not null)
             remote.SetDynamicGetters(dynamicGetters);
         return effect;
+    }
+}
+
+internal sealed class RemoteTransformEffect(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) : RemoteEffectBase(session, descriptor), ITransform
+{
+    public TransformDefinition Definition => (TransformDefinition)descriptor.TransformDefinition;
+
+    public IPicture Render(IPicture left, IPicture? right, float progress, TransformSide side, int targetWidth, int targetHeight)
+    {
+        var request = IsolationEffectFrameRequestFactory.Create(left, targetWidth, targetHeight, right);
+        request.Progress = progress;
+        request.TransformSide = (int)side;
+        return Process(RenderOperation.IsolationProcessTransformEffect, request, left);
+    }
+
+    public IAudioSamples Render(IAudioSamples left, IAudioSamples? right, long sampleOffset, long durationSamples, TransformSide side)
+    {
+        var values = new Dictionary<string, IsolationValue>();
+        foreach (var id in DynamicProviderIds)
+        {
+            var value = GetDynamicValue(id);
+            if (value is not null) values[id] = IsolationValueConverter.FromObject(value);
+        }
+        return RemoteEffectInvoke.ProcessAudio(Session, ObjectId, left, 0, right, sampleOffset, durationSamples, side, CreateState(), values);
     }
 }
 
@@ -148,16 +173,29 @@ internal sealed class RemoteValueProviderEffect : RemoteEffectBase, IValueProvid
 
 internal static class RemoteEffectInvoke
 {
-    public static IAudioSamples ProcessAudio(IPluginIsolationSession session, long objectId, IAudioSamples input, float progress)
+    public static IAudioSamples ProcessAudio(IPluginIsolationSession session, long objectId, IAudioSamples input, float progress,
+        IAudioSamples? right = null, long sampleOffset = 0, long durationSamples = 0, TransformSide side = TransformSide.Left,
+        IsolationEffectMutableState? state = null, Dictionary<string, IsolationValue>? dynamicValues = null)
     {
         var data = AudioPayloadCodec.Encode(input);
         var lease = session.Payloads.PublishAsync(data, session.PreferredPayloadKind).AsTask().GetAwaiter().GetResult();
+        IsolationPayloadLease? rightLease = null;
         try
         {
+            if (right is not null)
+                rightLease = session.Payloads.PublishAsync(AudioPayloadCodec.Encode(right), session.PreferredPayloadKind).AsTask().GetAwaiter().GetResult();
             var response = session.InvokeAsync<IsolationEffectInvokeRequest, IsolationAudioSamplesResponse>(RenderOperation.IsolationProcessAudioEffect, new()
             {
                 ObjectId = objectId,
                 Audio = lease.Reference,
+                RightAudio = rightLease?.Reference,
+                SampleOffset = sampleOffset,
+                DurationSamples = durationSamples,
+                TransformSide = (int)side,
+                State = state ?? new(),
+                DynamicValues = dynamicValues ?? [],
+                Value = (uint)Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) ?? 0f),
+                ClipProgress = Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInProgressProviderId) ?? 0f),
                 Progress = progress,
                 ChannelCount = input.channelCount,
                 SamplePerSecond = input.SamplePerSecond,
@@ -166,7 +204,11 @@ internal static class RemoteEffectInvoke
             try { return AudioPayloadCodec.ReadAsync(response, session.Payloads, default).AsTask().GetAwaiter().GetResult(); }
             finally { session.Payloads.ReleaseAsync(response.Samples).AsTask().GetAwaiter().GetResult(); }
         }
-        finally { lease.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+        finally
+        {
+            if (rightLease is not null) rightLease.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            lease.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
     }
 
     public static TextEntry[] ProcessText(IPluginIsolationSession session, long objectId, TextEntry[] input, float progress)
@@ -438,7 +480,12 @@ internal static class IsolationEffectFrameRequestFactory
 
     public static IsolationEffectFrameRequest Create(IPicture source, int targetWidth, int targetHeight, IPicture? second = null)
     {
-        var request = new IsolationEffectFrameRequest { TargetWidth = targetWidth, TargetHeight = targetHeight };
+        var request = new IsolationEffectFrameRequest
+        {
+            TargetWidth = targetWidth, TargetHeight = targetHeight,
+            TargetFrame = (uint)Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) ?? 0f),
+            ClipProgress = Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInProgressProviderId) ?? 0f)
+        };
         Pictures.Add(request, new(source, second));
         return request;
     }

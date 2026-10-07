@@ -14,6 +14,9 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private readonly ConcurrentDictionary<Guid, TaskCompletionSource<RenderResponseEnvelope>> _pending = new();
     private readonly CancellationTokenSource _lifetime = new();
+    private readonly object _lifecycleGate = new();
+    private readonly TaskCompletionSource _operationsCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _activeOperations;
     private NamedPipeClientStream? _pipe;
     private Task? _readerTask;
     private Exception? _connectionError;
@@ -49,49 +52,83 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
 
     public async ValueTask<RenderResponseEnvelope> SendAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
     {
-        await EnsureConnectedAsync(cancellationToken).ConfigureAwait(false);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var completion = new TaskCompletionSource<RenderResponseEnvelope>(TaskCreationOptions.RunContinuationsAsynchronously);
-        if (!_pending.TryAdd(request.RequestId, completion))
-            throw new RenderPipeException($"Duplicate render request ID '{request.RequestId}'.");
-
+        ObjectDisposedException.ThrowIf(!TryBeginOperation(), this);
         try
         {
-            var payload = RenderRpcSerializer.Serialize(request);
-            await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token);
+            await EnsureConnectedAsync(cts.Token).ConfigureAwait(false);
+            cts.Token.ThrowIfCancellationRequested();
+
+            var completion = new TaskCompletionSource<RenderResponseEnvelope>(TaskCreationOptions.RunContinuationsAsynchronously);
+            if (!_pending.TryAdd(request.RequestId, completion))
+                throw new RenderPipeException($"Duplicate render request ID '{request.RequestId}'.");
+
             try
             {
-                // Cancellation is safe while waiting for the write gate, but not after a framed
-                // message has started. Interrupting between the length prefix and payload leaves
-                // the shared byte stream misaligned for every subsequent request.
-                cancellationToken.ThrowIfCancellationRequested();
-                var pipe = _pipe ?? throw new RenderPipeException("Render server pipe is not connected.");
-                await RenderPipeFrame.WriteAsync(pipe, payload, CancellationToken.None).ConfigureAwait(false);
+                var payload = RenderRpcSerializer.Serialize(request);
+                await _writeGate.WaitAsync(cts.Token).ConfigureAwait(false);
+                try
+                {
+                    // Once a framed write starts, caller cancellation must not split the frame.
+                    cts.Token.ThrowIfCancellationRequested();
+                    var pipe = _pipe ?? throw new RenderPipeException("Render server pipe is not connected.");
+                    await RenderPipeFrame.WriteAsync(pipe, payload, CancellationToken.None).ConfigureAwait(false);
+                }
+                finally
+                {
+                    _writeGate.Release();
+                }
+
+                using var cancelRegistration = cancellationToken.Register(() => { _ = SendCancellationAsync(request.RequestId); });
+                return await completion.Task.WaitAsync(cts.Token).ConfigureAwait(false);
             }
             finally
             {
-                _writeGate.Release();
+                _pending.TryRemove(request.RequestId, out _);
             }
-
-            return await completion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch
+        catch (Exception) when (Volatile.Read(ref _disposed) != 0)
         {
-            _pending.TryRemove(request.RequestId, out _);
-            throw;
+            throw new OperationCanceledException("Render transport is closing.", _lifetime.Token);
         }
+        finally
+        {
+            EndOperation();
+        }
+    }
+
+    private async Task SendCancellationAsync(Guid requestId)
+    {
+        if (!TryBeginOperation()) return;
+        try
+        {
+            await _writeGate.WaitAsync(_lifetime.Token).ConfigureAwait(false);
+            try
+            {
+                if (_pipe?.IsConnected == true)
+                    await RenderPipeFrame.WriteAsync(_pipe, RenderRpcSerializer.Serialize(new RenderRequestEnvelope
+                    {
+                        ClientId = _clientId,
+                        CancelRequestId = requestId,
+                    }), CancellationToken.None).ConfigureAwait(false);
+            }
+            finally { _writeGate.Release(); }
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or IOException or ObjectDisposedException) { }
+        finally { EndOperation(); }
     }
 
     private async Task EnsureConnectedAsync(CancellationToken cancellationToken)
     {
-        if (_pipe?.IsConnected == true) return;
-        if (_connectionError is not null) throw new RenderPipeException("Render server connection failed.", _connectionError);
         ObjectDisposedException.ThrowIf(_disposed != 0, this);
+        if (_connectionError is not null) throw new RenderPipeException("Render server connection failed.", _connectionError);
+        if (_pipe?.IsConnected == true) return;
 
         await _connectGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_connectionError is not null) throw new RenderPipeException("Render server connection failed.", _connectionError);
             if (_pipe?.IsConnected == true) return;
             var pipe = new NamedPipeClientStream(".", _pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
             try
@@ -114,8 +151,12 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
                 if (response.ProtocolVersion != RenderProtocol.PipeProtocolVersion)
                     throw new RenderPipeException($"Render pipe protocol mismatch: server={response.ProtocolVersion}, client={RenderProtocol.PipeProtocolVersion}.");
 
-                _pipe = pipe;
-                _readerTask = Task.Run(() => ReadResponsesAsync(pipe));
+                lock (_lifecycleGate)
+                {
+                    ObjectDisposedException.ThrowIf(_disposed != 0, this);
+                    _pipe = pipe;
+                    _readerTask = Task.Run(() => ReadResponsesAsync(pipe));
+                }
             }
             catch
             {
@@ -165,40 +206,85 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
 
     private async Task HandleCallbackAsync(NamedPipeClientStream pipe, RenderRequestEnvelope request)
     {
-        RenderResponseEnvelope response;
+        if (!TryBeginOperation()) return;
         try
         {
-            response = CallbackService is null
-                ? new() { RequestId = request.RequestId, Error = new() { Code = RenderErrorCode.Unsupported, Message = "This client does not provide RPC video sources." } }
-                : await CallbackService.DispatchAsync(request, _lifetime.Token).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            response = new() { RequestId = request.RequestId, Error = new(ex) };
-        }
+            _lifetime.Token.ThrowIfCancellationRequested();
+            RenderResponseEnvelope response;
+            try
+            {
+                response = CallbackService is null
+                    ? new() { RequestId = request.RequestId, Error = new() { Code = RenderErrorCode.Unsupported, Message = "This client does not provide RPC video sources." } }
+                    : await CallbackService.DispatchAsync(request, _lifetime.Token).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                response = new() { RequestId = request.RequestId, Error = new(ex) };
+            }
 
-        var completion = new RenderRequestEnvelope
+            var completion = new RenderRequestEnvelope
+            {
+                RequestId = Guid.NewGuid(),
+                ClientId = _clientId,
+                Operation = RenderOperation.CompleteExternalVideoSourceCallback,
+                Payload = RenderRpcSerializer.Serialize(response),
+            };
+            await _writeGate.WaitAsync(_lifetime.Token).ConfigureAwait(false);
+            try
+            {
+                _lifetime.Token.ThrowIfCancellationRequested();
+                await RenderPipeFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(completion), CancellationToken.None).ConfigureAwait(false);
+            }
+            finally { _writeGate.Release(); }
+        }
+        catch (Exception) when (Volatile.Read(ref _disposed) != 0) { }
+        finally
         {
-            RequestId = Guid.NewGuid(),
-            ClientId = _clientId,
-            Operation = RenderOperation.CompleteExternalVideoSourceCallback,
-            Payload = RenderRpcSerializer.Serialize(response),
-        };
-        await _writeGate.WaitAsync().ConfigureAwait(false);
-        try { await RenderPipeFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(completion), CancellationToken.None).ConfigureAwait(false); }
-        finally { _writeGate.Release(); }
+            EndOperation();
+        }
+    }
+
+    private bool TryBeginOperation()
+    {
+        lock (_lifecycleGate)
+        {
+            if (_disposed != 0) return false;
+            _activeOperations++;
+            return true;
+        }
+    }
+
+    private void EndOperation()
+    {
+        lock (_lifecycleGate)
+        {
+            if (--_activeOperations == 0 && _disposed != 0) _operationsCompleted.TrySetResult();
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        lock (_lifecycleGate)
+        {
+            if (_disposed != 0) return;
+            _disposed = 1;
+            if (_activeOperations == 0) _operationsCompleted.TrySetResult();
+        }
         _lifetime.Cancel();
         try { _pipe?.Dispose(); } catch { }
         if (_readerTask is not null)
         {
             try { await _readerTask.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false); } catch { }
         }
-        try { await Task.WhenAll(_callbacks.Values).WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false); } catch { }
+        try { await DisposeSynchronizationAsync().WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false); }
+        catch (TimeoutException) { }
+    }
+
+    private async Task DisposeSynchronizationAsync()
+    {
+        // Timed-out shutdown still waits for every gate owner before releasing synchronization resources.
+        await _operationsCompleted.Task.ConfigureAwait(false);
+        try { await Task.WhenAll(_callbacks.Values).ConfigureAwait(false); } catch { }
         _connectGate.Dispose();
         _writeGate.Dispose();
         _lifetime.Dispose();

@@ -118,14 +118,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
 
         /// <summary>
-        /// Create an IClip instance from the given file path and JSON data.
-        /// </summary>
-        /// <remarks>
-        /// The argument for value is Id of the previous clip, and the second argument is Id of the next clip
-        /// </remarks>
-        public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider { get; }
-
-        /// <summary>
         /// Create an IVideoSource instance from the given file path.
         /// </summary>
         /// <remarks>
@@ -211,17 +203,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <returns>the soundtrack</returns>
         /// <exception cref="NotImplementedException">indicates that this plugin does not provide any clip.</exception>
         public virtual ISoundTrack SoundTrackCreator(JsonElement element)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Obtains an instance of ITransform from the given JSON element. Let this method throw an <see cref="NotImplementedException"/> to indicate that this plugin does not provide any transform.
-        /// </summary>
-        /// <param name="element">the source element</param>
-        /// <returns>the transform</returns>
-        /// <exception cref="NotImplementedException">indicates that this plugin does not provide any transform.</exception>
-        public virtual ITransform TransformCreator(JsonElement element)
         {
             throw new NotImplementedException();
         }
@@ -547,16 +528,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             {
                 providedContent.AppendLine("SoundTrack:");
                 foreach (var item in pluginBase.SoundTrackProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-            }
-
-            // ----- Transforms -----
-            if (pluginBase.TransformProvider.Any())
-            {
-                providedContent.AppendLine("Transform:");
-                foreach (var item in pluginBase.TransformProvider)
                 {
                     providedContent.AppendLine($"- {item.Key}");
                 }

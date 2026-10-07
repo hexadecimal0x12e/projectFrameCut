@@ -209,7 +209,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
                 }),
             };
             var response = await channel.SendAsync(request, timeout.Token).ConfigureAwait(false);
-            if (response.Error is not null) response.Error.ThrowAsException();
+            response?.Error?.ThrowAsException();
             var capabilities = RenderRpcSerializer.Deserialize<IsolationChannelCapabilities>(response.Payload);
             if (capabilities.ProtocolVersion != PluginIsolationProtocol.CurrentVersion)
                 throw new InvalidDataException("Plugin isolation protocol version mismatch.");

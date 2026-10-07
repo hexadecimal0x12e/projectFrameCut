@@ -114,7 +114,7 @@ public sealed class PluginIsolationSession : IPluginIsolationSession
                 Operation = RenderOperation.IsolationShutdown,
                 Payload = RenderRpcSerializer.Serialize(new EmptyRequest()),
             }, timeout.Token).ConfigureAwait(false);
-            if (response.Error is not null) response.Error.ThrowAsException();
+            response?.Error?.ThrowAsException();
         }
         catch { }
         await Control.DisposeAsync().ConfigureAwait(false);

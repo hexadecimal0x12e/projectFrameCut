@@ -5,6 +5,7 @@ using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -14,6 +15,7 @@ using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -61,14 +63,15 @@ namespace projectFrameCut.LivePreview
         private IReadOnlyDictionary<Guid, IReadOnlyDictionary<uint, string>> ClipHashLookup { get; set; }
             = new Dictionary<Guid, IReadOnlyDictionary<uint, string>>();
         private readonly SemaphoreSlim _updateDraftGate = new(1, 1);
+        private HashSet<Guid> _cacheableClipIds = [];
         public string ProjectRoot => string.IsNullOrWhiteSpace(TempPath) ? string.Empty : Directory.GetParent(Path.GetFullPath(TempPath))?.FullName ?? string.Empty;
         public string ProjectName { get; set; } = "Untitled Project";
-        public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Automatic;
+        public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Required;
         private bool HasExternalSources => Clips?.Any(x => RemoteRpcVideoSource.IsExternalPath(x.FilePath)) == true;
 
         public bool IsFrameRendered(uint frameIndex)
         {
-            if (Clips == null || HasExternalSources || !Timeline.CanCacheFrame(Clips, frameIndex)) return false;
+            if (Clips == null || HasExternalSources || !CanCacheFrame(frameIndex)) return false;
             if (frameIndex >= TotalDuration) return false;
             var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash)
                 ? indexedHash
@@ -84,7 +87,7 @@ namespace projectFrameCut.LivePreview
             {
                 return MaterializePng(RenderFrameVfdCore(frameIndex, targetWidth, targetHeight, token));
             }
-            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            catch (OperationCanceledException)
             {
                 throw;
             }
@@ -106,7 +109,7 @@ namespace projectFrameCut.LivePreview
             {
                 return MaterializePng(RenderFrameVfdCore(frameIndex, targetWidth, targetHeight, token));
             }
-            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            catch (OperationCanceledException)
             {
                 throw;
             }
@@ -119,12 +122,15 @@ namespace projectFrameCut.LivePreview
 
         private string RenderFrameVfdCore(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token)
         {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var renderMark = new UserMarkRange("Preview.RenderTimelineFrame", $"frame={frameIndex}, size={targetWidth}x{targetHeight}");
+#endif
             ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
             var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash)
                 ? indexedHash
                 : Timeline.GetFrameHash(Clips, frameIndex);
             var cachedPath = Path.Combine(ProjectRoot, "thumbs", $"projectFrameCut_Render_{StaticFrameCacheVersion}_{frameHash}_{targetWidth}x{targetHeight}_vfd8.vfd");
-            if (!HasExternalSources && Timeline.CanCacheFrame(Clips, frameIndex) && File.Exists(cachedPath)) return cachedPath;
+            if (!HasExternalSources && CanCacheFrame(frameIndex) && File.Exists(cachedPath)) return cachedPath;
             var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineFrameAsync(new TimelineFrameRequest
             {
                 SessionId = RenderSessionId,
@@ -149,12 +155,15 @@ namespace projectFrameCut.LivePreview
 
         public byte[] RenderFramePngBytes(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token = default)
         {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var pngMark = new UserMarkRange("Preview.MaterializePng", $"frame={frameIndex}, size={targetWidth}x{targetHeight}");
+#endif
             (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
             try
             {
                 return PreviewFrameMaterializer.ToPngBytes(RenderFrameVfdCore(frameIndex, targetWidth, targetHeight, token));
             }
-            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            catch (OperationCanceledException)
             {
                 throw;
             }
@@ -169,8 +178,6 @@ namespace projectFrameCut.LivePreview
         public PreviewFrameSource RenderFrameForDisplay(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token)
         {
             (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
-            if (!OperatingSystem.IsWindows() && DefaultOutputMode == NativePreviewOutputMode.Required)
-                throw new PlatformNotSupportedException("Required SwapChain preview is only available on Windows.");
             if (DefaultOutputMode == NativePreviewOutputMode.Disabled || !OperatingSystem.IsWindows())
             {
                 var path = RenderFrameVfdCore(frameIndex, targetWidth, targetHeight, token);
@@ -191,10 +198,11 @@ namespace projectFrameCut.LivePreview
                     throw new NotSupportedException("The render backend did not return a VFD preview artifact.");
 
                 var path = ResolveArtifactPath(artifact, token);
-                return new PreviewFrameSource(path, artifact.Width, artifact.Height, PreviewPixelFormat.Rgba16FloatScRgb, DefaultOutputMode == NativePreviewOutputMode.Required);
+                return new PreviewFrameSource(path, artifact.Width, artifact.Height, PreviewPixelFormat.Rgba16FloatScRgb, false);
             }
-            catch when (DefaultOutputMode == NativePreviewOutputMode.Automatic && !token.IsCancellationRequested)
+            catch (Exception ex) when (ex is not OperationCanceledException && !token.IsCancellationRequested)
             {
+                Log(ex, $"Render native preview frame #{frameIndex}; using standard preview", this);
                 var path = RenderFrameVfdCore(frameIndex, targetWidth, targetHeight, token);
                 return new PreviewFrameSource(path, targetWidth, targetHeight, PreviewPixelFormat.EncodedImage, false);
             }
@@ -202,14 +210,30 @@ namespace projectFrameCut.LivePreview
 
         public async Task UpdateDraft(DraftStructureJSON json)
         {
-            await _updateDraftGate.WaitAsync().ConfigureAwait(false);
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var updateMark = new UserMarkRange("Preview.Reconfigure");
+            using (new UserMarkRange("Preview.WaitUpdateLock"))
+#endif
+                await _updateDraftGate.WaitAsync().ConfigureAwait(false);
             try
             {
-                var clips = json.Clips;
-                clips ??= [];
+                await Task.Run(() => UpdateDraftCoreAsync(json)).ConfigureAwait(false);
+            }
+            finally
+            {
+                _updateDraftGate.Release();
+            }
+        }
 
-                var clipsList = new List<IClip>();
-                var reinitTasks = new List<Task>();
+        private async Task UpdateDraftCoreAsync(DraftStructureJSON json)
+        {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var configureMark = new UserMarkRange("Preview.Reconfigure.Work", $"clips={json.Clips?.Length ?? 0}, soundtracks={json.SoundTracks?.Length ?? 0}");
+#endif
+            var sw = Stopwatch.StartNew();
+            var clips = json.Clips ?? [];
+            var clipsList = new List<IClip>();
+            var reinitTasks = new List<Task>();
 
             foreach (var clip in clips)
             {
@@ -225,6 +249,9 @@ namespace projectFrameCut.LivePreview
 
                 reinitTasks.Add(Task.Run(() =>
                 {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+                    using var clipMark = new UserMarkRange("Preview.InitializeClip", $"clip={clip.Id}, type={clip.ClipType}");
+#endif
                     IClip clipInstance = null!;
                     try
                     {
@@ -293,36 +320,36 @@ namespace projectFrameCut.LivePreview
                     }
                     try
                     {
-                        if (RpcClient is null && clipInstance.ClipType != ClipMode.AudioClip)
-                        {
-                            clipInstance.ReInit(8);
-                            if (!ClipInitializationFailure.HasDeferredFailures(clipInstance.ExtraData))
-                                ClipInitializationFailure.Clear(clipInstance);
-                        }
+                        EffectHelper.ResolveClipEffects(clipInstance);
                     }
                     catch (Exception ex)
                     {
-                        ClipInitializationFailure.Mark(clipInstance, "Source or ResolveEffect", ex);
-                        Log(ex, $"Initialize live-preview clip {clipInstance.Name} ({clipInstance.Id}); using checkerboard fallback", this);
+                        ClipInitializationFailure.Mark(clipInstance, "ResolveEffect", ex);
+                        Log(ex, $"Resolve preview metadata effects for {clipInstance.Name}", this);
                     }
-                    finally
+                    lock (clipsList)
                     {
-                        // Remote media normally cannot be opened on the UI device. The clip is still
-                        // required for ContainsFrame/layout calculations; its bitmap comes from RPC.
-                        lock (clipsList)
-                        {
-                            clipsList.Add(clipInstance);
-                        }
+                        clipsList.Add(clipInstance);
                     }
                 }));
             }
 
-            await Task.WhenAll(reinitTasks);
+            await Task.WhenAll(reinitTasks).ConfigureAwait(false);
 
             Clips = clipsList.ToArray();
-            var soundTracks = DraftImportAndExportHelper.JSONToISoundTracks(json).ToList();
-            SoundTrackMetadata.AddMissingLegacyTracks(Clips, soundTracks, message => Log($"[LiveRender] {message}", "warn"));
-            SoundTracks = soundTracks.ToArray();
+            {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+                using var audioMark = new UserMarkRange("Preview.InitializeSoundTracks", $"soundtracks={json.SoundTracks?.Length ?? 0}");
+#endif
+                var soundTracks = DraftImportAndExportHelper.JSONToISoundTracks(json, InitAtLoad: false).ToList();
+                SoundTrackMetadata.AddMissingLegacyTracks(Clips, soundTracks, message => Log($"[LiveRender] {message}", "warn"), initialize: false);
+                foreach (var track in SoundTracks ?? [])
+                {
+                    try { track.Dispose(); }
+                    catch (Exception ex) { Log(ex, $"Dispose preview soundtrack metadata {track.Id}", this); }
+                }
+                SoundTracks = soundTracks.ToArray();
+            }
             ulong max = 0;
             foreach (var clip in Clips)
             {
@@ -339,6 +366,9 @@ namespace projectFrameCut.LivePreview
 
             TotalDuration = (uint)max;
 
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var backendMark = new UserMarkRange("Preview.SyncBackendProject");
+#endif
             var request = new OpenProjectRequest
             {
                 SessionId = RenderSessionId,
@@ -362,6 +392,7 @@ namespace projectFrameCut.LivePreview
             // project gets a dedicated backend bound to it.
             if (RpcClient is null) RenderRpcBootstrap.Initialize(request.ProjectRoot, projectName: ProjectName);
             var session = await (RpcClient ?? RenderRpcBootstrap.Client).OpenProjectAsync(request).ConfigureAwait(false);
+            _cacheableClipIds = session.CacheableClipIds.ToHashSet();
             HashIndex = session.HashIndex ?? new();
             FrameHashLookup = HashIndex.FrameHashes
                 .GroupBy(entry => entry.FrameIndex)
@@ -373,12 +404,7 @@ namespace projectFrameCut.LivePreview
                     .ToDictionary(group => group.Key, group => group.Last().Hash));
             TotalDuration = session.Duration;
 
-                Log($"[LiveRender] Updated clips, total {Clips.Length} clips.");
-            }
-            finally
-            {
-                _updateDraftGate.Release();
-            }
+            Log($"[LiveRender] Updated {Clips.Length} clips and {SoundTracks.Length} soundtracks in {sw.ElapsedMilliseconds}ms.");
         }
 
         public string RenderClipFrame(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token)
@@ -386,6 +412,9 @@ namespace projectFrameCut.LivePreview
 
         private string RenderClipFrameVfd(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
         {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var frameMark = new UserMarkRange("Preview.RenderClipVfd", $"clip={clipId}, frame={frameIndex}, size={canvasWidth}x{canvasHeight}");
+#endif
             string? clipHash = null;
             if (ClipHashLookup.TryGetValue(clipId, out var clipHashes))
                 clipHashes.TryGetValue(frameIndex, out clipHash);
@@ -393,7 +422,7 @@ namespace projectFrameCut.LivePreview
                 clipHash = Timeline.GetClipFrameHash(clips, clip, frameIndex);
             if (!HasExternalSources && clipHash is not null && vectorClipJson is null
                 && Clips is { } cacheClips && cacheClips.FirstOrDefault(c => c.Id == clipId) is { } cacheClip
-                && Timeline.CanCacheClipFrame(cacheClips, cacheClip))
+                && CanCacheClipFrame(cacheClip.Id))
             {
                 var cachedPath = Path.Combine(
                     ProjectRoot,
@@ -423,8 +452,9 @@ namespace projectFrameCut.LivePreview
 
         public PreviewFrameSource RenderClipFrameForDisplay(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
         {
-            if (!OperatingSystem.IsWindows() && DefaultOutputMode == NativePreviewOutputMode.Required)
-                throw new PlatformNotSupportedException("Required SwapChain preview is only available on Windows.");
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var displayMark = new UserMarkRange("Preview.RenderClipDisplay", $"clip={clipId}, frame={frameIndex}, size={canvasWidth}x{canvasHeight}");
+#endif
             if (DefaultOutputMode == NativePreviewOutputMode.Disabled || !OperatingSystem.IsWindows())
             {
                 var path = RenderClipFrameVfd(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson);
@@ -449,10 +479,11 @@ namespace projectFrameCut.LivePreview
                     throw new NotSupportedException("The render backend did not return a VFD clip-preview artifact.");
 
                 var path = ResolveArtifactPath(artifact, token);
-                return new PreviewFrameSource(path, artifact.Width, artifact.Height, PreviewPixelFormat.Rgba16FloatScRgb, DefaultOutputMode == NativePreviewOutputMode.Required);
+                return new PreviewFrameSource(path, artifact.Width, artifact.Height, PreviewPixelFormat.Rgba16FloatScRgb, false);
             }
-            catch when (DefaultOutputMode == NativePreviewOutputMode.Automatic && !token.IsCancellationRequested)
+            catch (Exception ex) when (ex is not OperationCanceledException && !token.IsCancellationRequested)
             {
+                Log(ex, $"Render native preview for clip {clipId} at frame #{frameIndex}; using standard preview", this);
                 var path = RenderClipFrameVfd(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson);
                 return new PreviewFrameSource(path, canvasWidth, canvasHeight, PreviewPixelFormat.EncodedImage, false);
             }
@@ -463,24 +494,14 @@ namespace projectFrameCut.LivePreview
             return SoundTracks?.Any(track => SoundTrackMetadata.ReadBool(track.ExtraData, SoundTrackMetadata.EnabledKey, true)) ?? false;
         }
 
-        public async Task ResetAudioPlaybackSources()
-        {
-            // Remote source paths belong to the render server and cannot be reopened by the UI
-            // process. The remote OpenProject call already initialized these sources; playback
-            // below consumes the WAV/MP4 artifacts downloaded from that server.
-            if (RpcClient is not null)
-            {
-                return;
-            }
+        public bool CanCacheClipFrame(Guid clipId)
+            => _cacheableClipIds.Contains(clipId);
 
-            if (SoundTracks is not null)
-            {
-                foreach (var track in SoundTracks.Where(track => SoundTrackMetadata.ReadBool(track.ExtraData, SoundTrackMetadata.EnabledKey, true)))
-                {
-                    await Task.Run(() => SoundTrackMetadata.ReInit(track));
-                }
-            }
-        }
+        private bool CanCacheFrame(uint frameIndex)
+            => Clips is { } clips && clips.Where(clip => clip.ContainsFrame(frameIndex)
+                || clip.ExtendToWholeDraft && clip.LayerIndex > Renderer.SubTrackOffset).All(clip => CanCacheClipFrame(clip.Id));
+
+        public Task ResetAudioPlaybackSources() => Task.CompletedTask;
 
         public async Task<string?> RenderSomeAudio(int startIndex, int length, int targetFramerate, CancellationToken token, int sampleRate = 96000, int channels = 2)
         {
@@ -530,7 +551,7 @@ namespace projectFrameCut.LivePreview
                     Command = PreviewAudioCommand.Stop,
                 }, token).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+            catch (OperationCanceledException) { }
         }
 
         public async Task<string> RenderSomeFrames(int startIndex, int length, int targetWidth, int targetFramerate, int targetHeight, CancellationToken token, bool includeAudio = true)
@@ -581,7 +602,7 @@ namespace projectFrameCut.LivePreview
         private string GetMaterializedPreviewRoot()
             => Path.Combine(
                 string.IsNullOrWhiteSpace(ProjectRoot) ? MauiProgram.CachePath : Path.Combine(ProjectRoot, "thumbs"),
-                ".materialized",
+                "unCacheablePerClip",
                 RenderSessionId.ToString("N"));
 
         public void CleanupMaterializedPreviews()

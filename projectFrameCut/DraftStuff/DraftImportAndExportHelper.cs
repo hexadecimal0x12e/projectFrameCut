@@ -123,6 +123,9 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
 
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var exportMark = new UserMarkRange("Draft.Export", $"clips={page.Clips.Count}, rebuildEffects={rebuildEffects}");
+#endif
             page.SyncGeneratedSoundTracks();
 
             var clips = new List<ClipDraftDTO>();
@@ -166,6 +169,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                                     TypeName = string.IsNullOrEmpty(elem.TypeName) ? "NormalTrack" : elem.TypeName,
                                     TrackType = TrackMode.NormalTrack,
                                     LayerIndex = (uint)trackKey,
+                                    SubLayerIndex = (uint)Math.Max(0, elem.SubLayerIndex),
                                     StartFrame = startFrame,
                                     RelativeStartFrame = elem.relativeStartFrame,
                                     Duration = durationFrames,
@@ -173,6 +177,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                                     FilePath = elem.SourcePath,
                                     ShouldDisplayInUI = elem.ShouldDisplayInUI,
                                     Effects = SerializeEffects(elem),
+                                    EffectProviders = elem.EffectProviders?.Values.Select(EffectBindingHelper.SerializeProvider).ToArray(),
                                     MetaData = elem.ExtraData
                                 };
                                 soundtracks.Add(dto);
@@ -317,7 +322,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                     StartingX = elem.StartingX,
                     StartingY = elem.StartingY,
                     MetaData = normalizedMeta,
-                    Effects = null
+                    Effects = SerializeEffects(elem),
+                    EffectProviders = elem.EffectProviders?.Values.Select(EffectBindingHelper.SerializeProvider).ToArray()
                 };
             }
 
@@ -393,22 +399,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 MetaData = normalizedMeta2,
                 Effects = SerializeEffects(elem),
                 EffectBundles = null,
-                EffectProviders = elem.EffectProviders?.Values
-                    .Select(p => new EffectProviderJSONStructure
-                    {
-                        Id = p.Id,
-                        FromPlugin = p.FromPlugin,
-                        TypeName = p.TypeName,
-                        Name = p.Name,
-                        Enabled = p.Enabled,
-                        AnchorsBindingState = p.AnchorsBindingState,
-                        StaticFields = p.Fields?
-                            .Where(kv => kv.Value is StaticEffectArgumentField)
-                            .ToDictionary(
-                                kv => kv.Key,
-                                kv => EffectParamConvert.Normalize(((StaticEffectArgumentField)kv.Value).Value) ?? new object()),
-                        MetaData = p.MetaData is { Count: > 0 } ? p.MetaData : null,
-                    }).ToArray()
+                EffectProviders = elem.EffectProviders?.Values.Select(EffectBindingHelper.SerializeProvider).ToArray()
             };
         }
 
@@ -417,6 +408,12 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             return elem.Effects?.Select(kv =>
             {
                 var effect = kv.Value;
+                if (kv.Key == "__Internal_Rotation__" && effect is RotationEffect_IPicture rotation)
+                {
+                    rotation.Parameters ??= new();
+                    rotation.Parameters.TryAdd("Angle", rotation.Angle);
+                    rotation.Parameters.TryAdd("ExpandCanvas", rotation.ExpandCanvas);
+                }
                 return new EffectAndMixtureJSONStructure
                 {
                     Name = kv.Key,
@@ -455,7 +452,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 startPx = double.IsFinite(elem.layoutX) && elem.layoutX > 0d ? elem.layoutX : 0d;
             }
 
-            startFrame = ConvertExportFrame(page.PixelToFrame(startPx) / ratio, 0u);
+            startFrame = ConvertExportFrame(startPx / page.FrameToPixel(1) / ratio, 0u);
 
             double widthPx = border.WidthRequest;
             if (!double.IsFinite(widthPx) || widthPx <= 0d)
@@ -472,7 +469,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 : 1u;
             durationFrames = !double.IsFinite(widthPx) || widthPx <= 0d
                 ? fallbackDuration
-                : ConvertExportFrame(page.PixelToFrame(widthPx) / ratio, fallbackDuration);
+                : ConvertExportFrame(widthPx / page.FrameToPixel(1) / ratio, fallbackDuration);
 
             if (durationFrames == 0 || (ulong)startFrame + durationFrames > uint.MaxValue)
             {
@@ -612,6 +609,9 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
         public static ISoundTrack[] JSONToISoundTracks(DraftStructureJSON json, bool InitAtLoad = true)
         {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var audioMark = new UserMarkRange("Draft.LoadSoundTracks", $"soundtracks={json.SoundTracks?.Length ?? 0}, initialize={InitAtLoad}");
+#endif
             var tracks = json.SoundTracks;
             if (tracks is null || tracks.Length == 0)
             {
@@ -997,6 +997,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 element.origLength = widthPx;
                 element.origX = startPx;
                 element.relativeStartFrame = dto.RelativeStartFrame;
+                element.SubLayerIndex = (int)dto.SubLayerIndex;
                 element.maxFrameCount = dto.Duration;
                 element.isInfiniteLength = false;
                 element.SourcePath = dto.FilePath ?? (dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
@@ -1009,7 +1010,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 element.ApplySpeedRatio();
                 element.TypeName = dto.TypeName;
                 element.FromPlugin = dto.FromPlugin;
-                InitializeEffects(element, new ClipDraftDTO { Effects = dto.Effects }, proj.RelativeWidth, proj.RelativeHeight);
+                InitializeEffects(element, new ClipDraftDTO { Effects = dto.Effects, EffectProviders = dto.EffectProviders }, proj.RelativeWidth, proj.RelativeHeight);
 
                 clipsDict.AddOrUpdate(element.Id, element, (_, _) => element);
             }

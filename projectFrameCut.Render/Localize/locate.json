@@ -7,6 +7,7 @@
   "NameOfBaseInterface": "ISimpleLocalizerBase_PropertyPanel",
   "EnableBaseGenerate": true,
   "EnablePseudoLocalization": true,
+  "EnableDynamicGenerate": false,
   "PseudoLocalizationCondition": "DEBUG",
   "PseudoLocalizationLocaleId": "qps-ploc",
   "Values": {
@@ -2651,6 +2652,78 @@
             "Value": "count"
           }
         ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Jelly",
+        "Value": "\u679C\u51BB\u5F39\u6027",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Description_Effect_Jelly",
+        "Value": "\u56F4\u7ED5\u5185\u5BB9\u4E2D\u5FC3\u5FEB\u901F\u62C9\u957F\u3001\u538B\u6241\uFF0C\u518D\u9010\u6E10\u56DE\u5F39\u590D\u539F\uFF0C\u5F62\u6210\u5FAA\u73AF\u7684\u679C\u51BB\u5F39\u6027\u52A8\u753B\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Jelly_PeriodFrames",
+        "Value": "\u5468\u671F\uFF08\u5E27\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Jelly_Strength",
+        "Value": "\u53D8\u5F62\u5F3A\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Timing_StartFrame",
+        "Value": "\u7247\u6BB5\u8D77\u59CB\u5E27",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Timing_SourceStartFrame",
+        "Value": "\u7D20\u6750\u8D77\u59CB\u5E27",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Timing_InvalidFrames",
+        "Value": "\u8BF7\u8F93\u5165\u6709\u6548\u7684\u975E\u8D1F\u6574\u6570\u5E27\u6570\uFF0C\u65F6\u957F\u81F3\u5C11\u4E3A 1 \u5E27\uFF0C\u88C1\u526A\u8303\u56F4\u4E0D\u80FD\u8D85\u51FA\u7D20\u6750\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Transform_AudioFade",
+        "Value": "\u97F3\u9891\u6DE1\u5165\u6DE1\u51FA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Transform_AudioCrossfade",
+        "Value": "\u97F3\u9891\u4EA4\u53C9\u6DE1\u5316",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       }

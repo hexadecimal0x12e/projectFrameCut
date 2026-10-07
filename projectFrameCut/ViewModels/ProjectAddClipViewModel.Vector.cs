@@ -14,6 +14,11 @@ public partial class ProjectAddClipViewModel
 
     public void LoadVectorComponents()
     {
+        if (!MainThread.IsMainThread)
+        {
+            MainThread.BeginInvokeOnMainThread(LoadVectorComponents);
+            return;
+        }
         vectorComponents.Clear();
         foreach (var factory in VectorComponentHandlerServices.GetAvailableHandlers().Values)
         {

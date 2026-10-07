@@ -8,7 +8,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect;
 public partial class CropEffect_HwAccel
 {
     private int acceleratorIndex;
-    private readonly struct CropParameters(int sourceWidth, int sourceHeight, int x, int y, int width, int height, float angle)
+    public readonly struct CropParameters(int sourceWidth, int sourceHeight, int x, int y, int width, int height, float angle)
     {
         public readonly int SourceWidth = sourceWidth, SourceHeight = sourceHeight, X = x, Y = y, Width = width, Height = height;
         public readonly float Cos = MathF.Cos(angle * MathF.PI / 180f), Sin = MathF.Sin(angle * MathF.PI / 180f);

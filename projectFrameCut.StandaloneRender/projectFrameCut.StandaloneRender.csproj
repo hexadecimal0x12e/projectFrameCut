@@ -23,7 +23,7 @@
   </ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.UserMarks" Version="18.7.37220.1" />
+		<PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.UserMarks" Version="*" />
 	</ItemGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">

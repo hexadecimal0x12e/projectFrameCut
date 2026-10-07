@@ -106,7 +106,7 @@ internal static class ClipPreviewRenderer
             foreach (var effect in source.Effects.OrderBy(effect => effect.Index))
             {
                 token.ThrowIfCancellationRequested();
-                if (effect is IClipPositionProvider or IContinuousClipPositionProvider || IsLegacyLayoutEffect(effect)) continue;
+                if (effect is ITransform or IClipPositionProvider or IContinuousClipPositionProvider || IsLegacyLayoutEffect(effect)) continue;
                 if (effect is IValueProviderEffect valueProvider)
                     throw new InvalidOperationException($"Effect {valueProvider.Name} of clip {source.ParentClip.Id} should have been inlined by the binding pipeline.");
 

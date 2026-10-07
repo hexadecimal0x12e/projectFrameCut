@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -58,6 +58,7 @@ namespace projectFrameCut.Shared
         SourceReplacement = 12,
         NonIPictureOutputValueProvider = 13,
         VectorComponentEffect = 14,
+        Transform = 15,
         NotSpecified = -1,
     }
 
@@ -74,6 +75,7 @@ namespace projectFrameCut.Shared
         SourceReplacement = 128,
         ValueProvider = 256,
         VectorComponent = 512,
+        Transform = 1024,
 
         IsKeyFramed = 1 << 16,
         IsNotVisibleInEffectEditor = 1 << 17,
@@ -97,30 +99,6 @@ namespace projectFrameCut.Shared
         Custom3,
         Custom4,
         Custom5,
-    }
-
-    [Obsolete("Use TransformDefinition instead.")]
-    public enum TransformType
-    {
-        /// <summary>
-        /// Represents a transform with two input, 
-        /// and get only the last frame of left and first frame of right one.
-        /// </summary>
-        SingleFrameTransform,
-        /// <summary>
-        /// Represents a transform with only one input, 
-        /// which usually is the last frame of binded clip.
-        /// </summary>
-        OneInputSingleFrameTransform,
-        /// <summary>
-        /// Represents a transform with two input, 
-        /// Continuously get the frame from two sources and render it by the progress.
-        /// </summary>
-        ContinuousTransform,
-        /// <summary>
-        /// To do in future.
-        /// </summary>
-        AudioTransform
     }
 
     [Flags]

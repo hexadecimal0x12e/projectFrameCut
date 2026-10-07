@@ -9,7 +9,7 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect;
 public partial class ResizeEffect_HwAccel
 {
     private int acceleratorIndex;
-    private readonly struct ResizeParameters(int sourceWidth, int sourceHeight, int width, int height)
+    public readonly struct ResizeParameters(int sourceWidth, int sourceHeight, int width, int height)
     {
         public readonly int SourceWidth = sourceWidth, SourceHeight = sourceHeight, Width = width, Height = height;
         public readonly float RatioX = (float)sourceWidth / width, RatioY = (float)sourceHeight / height;

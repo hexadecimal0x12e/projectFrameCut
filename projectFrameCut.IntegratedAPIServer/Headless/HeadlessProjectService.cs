@@ -203,7 +203,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
         CancellationToken cancellationToken)
     {
         RenderResponseEnvelope response = await _renderService.DispatchAsync(request, cancellationToken).ConfigureAwait(false);
-        if (response.Error is not null) response.Error.ThrowAsException();
+        response?.Error?.ThrowAsException();
         RenderCapabilities capabilities = RenderRpcSerializer.Deserialize<RenderCapabilities>(response.Payload);
         foreach (string feature in new[] { "http-protobuf", "headless-project", "optimistic-concurrency", "project-editing" })
         {
@@ -242,7 +242,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
             Payload = RenderRpcSerializer.Serialize(request),
         };
         RenderResponseEnvelope response = await _renderService.DispatchAsync(innerRequest, cancellationToken).ConfigureAwait(false);
-        if (response.Error is not null) response.Error.ThrowAsException();
+        response?.Error?.ThrowAsException();
         return RenderRpcSerializer.Deserialize<RenderSession>(response.Payload);
     }
 
@@ -308,7 +308,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
         }
 
         RenderResponseEnvelope response = await _renderService.DispatchAsync(originalRequest, cancellationToken).ConfigureAwait(false);
-        if (response.Error is not null) response.Error.ThrowAsException();
+        response?.Error?.ThrowAsException();
         return RenderRpcSerializer.Deserialize<EmptyResponse>(response.Payload);
     }
 
@@ -489,7 +489,7 @@ public sealed class HeadlessProjectService : IRenderService, IAsyncDisposable
             }),
         }, cancellationToken).ConfigureAwait(false);
 
-        if (response.Error is not null) response.Error.ThrowAsException();
+        response?.Error?.ThrowAsException();
         session.RenderSession = RenderRpcSerializer.Deserialize<RenderSession>(response.Payload);
         session.SnapshotHash = ComputeSnapshotHash(projectJson, timelineJson, Serialize(session.Workspace.Assets));
     }

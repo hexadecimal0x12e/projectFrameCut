@@ -13,6 +13,8 @@ using projectFrameCut.Shared;
 using projectFrameCut.Services;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.LivePreview;
+using projectFrameCut.InteractableEditor;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 
 public partial class EditSettingPage : ContentPage
 {
@@ -28,7 +30,6 @@ public partial class EditSettingPage : ContentPage
     public readonly Dictionary<string, string> PreviewOutputModeStringMapping = new Dictionary<string, string>
     {
         { SettingLocalizedResources.Edit_NativePreviewOutputMode_Disabled, nameof(NativePreviewOutputMode.Disabled) },
-        { SettingLocalizedResources.Edit_NativePreviewOutputMode_Automatic, nameof(NativePreviewOutputMode.Automatic) },
         { SettingLocalizedResources.Edit_NativePreviewOutputMode_Required, nameof(NativePreviewOutputMode.Required) },
     };
     public readonly Dictionary<string, string> OrderOptionStringMapping = new Dictionary<string, string>
@@ -39,6 +40,11 @@ public partial class EditSettingPage : ContentPage
     };
 
     Dictionary<string, TextClipEntry> TextTemplates = new();
+    public readonly Dictionary<string, string> TransformOrderStringMapping = new()
+    {
+        [Localized.Transform_AfterEffects] = nameof(TransformRenderOrder.AfterEffects),
+        [Localized.Transform_BeforeEffects] = nameof(TransformRenderOrder.BeforeEffects)
+    };
 
     static string[] resolutions = ["1280x720", "1920x1080", "2560x1440", "3840x2160"];
     static bool LoadTextPreview = false;
@@ -57,10 +63,12 @@ public partial class EditSettingPage : ContentPage
             .AppendWhen(IsBoolSettingTrueOrDefault("Edit_EnableMultiWindow", true), c => c.AddCheckbox("Edit_RememberWindowLayout", SettingLocalizedResources.Edit_RememberWindowLayout, IsBoolSettingTrueOrDefault("Edit_RememberWindowLayout", true)))
             .AddCheckbox("Edit_EnableQuickCommandShortcuts", SettingLocalizedResources.Edit_EnableQuickCommandShortcuts, IsBoolSettingTrue("Edit_EnableQuickCommandShortcuts"))
             .AddEntry("Edit_DefaultInfLengthClipLength", SettingLocalizedResources.Edit_DefaultInfLengthClipLength, GetSettingAs("Edit_DefaultInfLengthClipLength", 300, 300).ToString(), "300")
+            .AddPicker("Edit_DefaultTransformRenderOrder", SettingLocalizedResources.Edit_DefaultTransformRenderOrder,
+                TransformOrderStringMapping.Keys.ToArray(), TransformOrderStringMapping.First(p => p.Value == TransformServices.DefaultRenderOrder.ToString()).Key)
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_PreviewOption, SettingLocalizedResources.Edit_PreviewOption_Subtitle))
             .AddCheckbox("Edit_UseDynamicPreview", SettingLocalizedResources.Edit_UseDynamicPreview, IsBoolSettingTrue("Edit_UseDynamicPreview"))
-            .AddPicker("Edit_PreviewOutputMode", SettingLocalizedResources.Edit_NativePreviewOutputMode, PreviewOutputModeStringMapping.Keys.ToArray(), PreviewOutputModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Automatic)), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_NativePreviewOutputMode_Automatic, "")).Key, null)
+            .AddPicker("Edit_PreviewOutputMode", SettingLocalizedResources.Edit_NativePreviewOutputMode, PreviewOutputModeStringMapping.Keys.ToArray(), PreviewOutputModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Required)), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_NativePreviewOutputMode_Required, nameof(NativePreviewOutputMode.Required))).Key, null)
             .AddCheckbox("Edit_PreviewWarmupEnabled", SettingLocalizedResources.Edit_PreviewWarmupEnabled, IsBoolSettingTrueOrDefault("Edit_PreviewWarmupEnabled", true))
             .AppendWhen(IsBoolSettingTrueOrDefault("Edit_PreviewWarmupEnabled", true),
                 c => c.AddEntry("Edit_PreviewWarmupSeconds", SettingLocalizedResources.Edit_PreviewWarmupSeconds, GetSetting("Edit_PreviewWarmupSeconds", "5"), "5"))
@@ -109,6 +117,11 @@ public partial class EditSettingPage : ContentPage
         {
             switch (args.Id)
             {
+                case "Edit_DefaultTransformRenderOrder":
+                    var order = TransformOrderStringMapping.GetValueOrDefault(args.Value?.ToString() ?? "", nameof(TransformRenderOrder.AfterEffects));
+                    WriteSetting(args.Id, order);
+                    LogDiagnostic($"Default transform render order changed to {order}.");
+                    return;
                 case "Edit_ProxyOption":
                     {
                         var mode = ProxyStringMapping.FirstOrDefault(k => k.Key == args.Value as string,
@@ -120,8 +133,12 @@ public partial class EditSettingPage : ContentPage
                 case "Edit_PreviewOutputMode":
                     {
                         var mode = PreviewOutputModeStringMapping.FirstOrDefault(k => k.Key == args.Value as string,
-                            new KeyValuePair<string, string>(nameof(NativePreviewOutputMode.Automatic), nameof(NativePreviewOutputMode.Automatic))).Value;
+                            new KeyValuePair<string, string>(nameof(NativePreviewOutputMode.Required), nameof(NativePreviewOutputMode.Required))).Value;
                         WriteSetting(args.Id, mode);
+                        LivePreviewer.DefaultOutputMode = DynamicPreview.DefaultOutputMode = mode == nameof(NativePreviewOutputMode.Disabled)
+                            ? NativePreviewOutputMode.Disabled
+                            : NativePreviewOutputMode.Required;
+                        LogDiagnostic($"Preview output mode changed to {mode}.");
                         return;
                     }
                 case "Edit_PreviewWarmupSeconds":

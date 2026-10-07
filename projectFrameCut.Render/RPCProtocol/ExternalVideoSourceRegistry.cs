@@ -301,7 +301,7 @@ internal static class ExternalVideoSourceRegistry
             {
                 var response = await callback(request, timeout.Token).ConfigureAwait(false);
                 if (response.RequestId != request.RequestId) throw new RenderPipeException("External video source callback response ID mismatch.");
-                if (response.Error is not null) response.Error.ThrowAsException();
+                response?.Error?.ThrowAsException();
                 return RenderRpcSerializer.Deserialize<TResponse>(response.Payload);
             }
             catch (Exception ex)

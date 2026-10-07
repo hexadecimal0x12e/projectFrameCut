@@ -47,7 +47,7 @@ public sealed class RemoteEffectProvider : IEffectProvider
     public IEffect[] Build()
     {
         var requested = DefaultImplementType;
-        if (MetaData.Remove(EffectProviderBase.ImplementTypeParameterKey, out var raw))
+        if (MetaData.TryGetValue(EffectProviderBase.ImplementTypeParameterKey, out var raw))
         {
             if (raw is EffectImplementType value) requested = value;
             else if (Enum.TryParse(raw?.ToString(), true, out EffectImplementType parsed)) requested = parsed;

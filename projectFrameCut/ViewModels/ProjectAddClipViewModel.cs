@@ -31,6 +31,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows.Input;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
 
 
@@ -44,11 +45,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         _draftPage = draftPage;
         RegisterCommands();
 
-        _ = Task.Run(async () => await Refresh());
-        _draftPage.SelectedClipChanged += async (s, e) => await Refresh();
+        _ = Task.Run(RefreshSafelyAsync);
+        _draftPage.SelectedClipChanged += async (s, e) => await RefreshSafelyAsync();
     }
 
     public readonly DraftPage _draftPage;
+    private int _filterVersion;
+    private int _rpcLoadVersion;
 
 
     private void EnsurePlacementTrackExists(bool useSubTrack)
@@ -273,6 +276,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     private Guid _pendingTransitionClipId;
     private Guid _pendingTransitionNeighborId;
     private uint _pendingTransitionFrames;
+    private TransformRenderOrder _pendingTransitionOrder;
 
     public string PreviewResultPath
     {
@@ -561,8 +565,19 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public event EventHandler? ClipAdded;
 
+    private async Task RefreshSafelyAsync()
+    {
+        try { await Refresh(); }
+        catch (Exception ex) { Log(ex, "Refresh clip source panel", this); }
+    }
+
     public async Task Refresh()
     {
+        if (!MainThread.IsMainThread)
+        {
+            await MainThread.InvokeOnMainThreadAsync(Refresh);
+            return;
+        }
         RegisterCommands();
         await LoadAssets();
         await LoadRpcVideoSources();
@@ -575,6 +590,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public void LoadTemplates()
     {
+        if (!MainThread.IsMainThread)
+        {
+            MainThread.BeginInvokeOnMainThread(LoadTemplates);
+            return;
+        }
+        _filterVersion++;
         AvailableTemplates.Clear();
 
         foreach (var kv in TemplateStore.Templates)
@@ -613,9 +634,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private bool ShouldShowTemplateByScope(TemplateItemViewModel template)
+    private static bool ShouldShowTemplateByScope(TemplateItemViewModel template, bool showAllTemplates)
     {
-        if (ShowAllTemplates)
+        if (showAllTemplates)
             return true;
 
         return string.Equals(template.Scope, TemplateScope.Any.ToString(), StringComparison.OrdinalIgnoreCase)
@@ -624,6 +645,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public async Task LoadAssets()
     {
+        if (!MainThread.IsMainThread)
+        {
+            await MainThread.InvokeOnMainThreadAsync(LoadAssets);
+            return;
+        }
+        _filterVersion++;
         LocalAssets.Clear();
         SharedAssets.Clear();
         ReuseableAssets.Clear();
@@ -698,7 +725,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public async Task LoadRpcVideoSources()
     {
-        RpcVideoSources.Clear();
+        if (!MainThread.IsMainThread)
+        {
+            await MainThread.InvokeOnMainThreadAsync(LoadRpcVideoSources);
+            return;
+        }
+        int version = ++_rpcLoadVersion;
+        List<RpcVideoSourceItemViewModel> sources = new();
         try
         {
             var catalog = await projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.ListAsync(_draftPage.WorkingPath);
@@ -706,9 +739,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 var status = catalog.Sources.FirstOrDefault(x => x.ImportId == asset.ImportId);
                 if (asset.Sources.Count == 0)
-                    RpcVideoSources.Add(new(this, new() { Name = asset.Manifest.Name }, asset, status));
+                    sources.Add(new(this, new() { Name = asset.Manifest.Name }, asset, status));
                 else
-                    foreach (var source in status?.Sources ?? asset.Sources) RpcVideoSources.Add(new(this, source, asset, status));
+                    foreach (var source in status?.Sources ?? asset.Sources) sources.Add(new(this, source, asset, status));
             }
         }
         catch (Exception ex) { Log(ex, "Load project external video sources", this); }
@@ -717,14 +750,22 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             try
             {
                 foreach (var source in (await client.ListExternalVideoSourcesAsync()).Sources.OrderBy(x => x.ClientName).ThenBy(x => x.Name))
-                    RpcVideoSources.Add(new(this, source));
+                    sources.Add(new(this, source));
             }
             catch (Exception ex)
             {
                 Log(ex, "Load external RPC video sources", this);
             }
         }
-        await FilterAssets();
+        bool updated = await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            if (version != _rpcLoadVersion) return false;
+            _filterVersion++;
+            RpcVideoSources.Clear();
+            foreach (var source in sources) RpcVideoSources.Add(source);
+            return true;
+        });
+        if (updated) await FilterAssets();
     }
 
     #endregion
@@ -1639,7 +1680,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public void InitializeTextStyles(string? previewText = null)
     {
-
+        if (!MainThread.IsMainThread)
+        {
+            MainThread.BeginInvokeOnMainThread(() => InitializeTextStyles(previewText));
+            return;
+        }
+        _filterVersion++;
         AvailableTextStyles.Clear();
         try
         {
@@ -1730,6 +1776,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public void InitializeTextStyleProviders(string? previewText = null)
     {
+        if (!MainThread.IsMainThread)
+        {
+            MainThread.BeginInvokeOnMainThread(() => InitializeTextStyleProviders(previewText));
+            return;
+        }
+        _filterVersion++;
         AvailableTextStyleProviders.Clear();
         try
         {
@@ -1774,7 +1826,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     #region transform    
 
-    public async Task GenerateTransformPreviewAsync(TransformItemViewModel? transform, TransformInputMode inputMode = TransformInputMode.TwoInput, TransformSide side = TransformSide.Right, ITransform? configured = null)
+    public async Task GenerateTransformPreviewAsync(TransformItemViewModel? transform, TransformInputMode inputMode = TransformInputMode.TwoInput, TransformSide side = TransformSide.Right, IEffectProvider? configured = null)
     {
         if (transform is null || transform.IsGeneratingPreview) return;
         transform.IsGeneratingPreview = true;
@@ -1799,8 +1851,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 else if (VideoWriter.DetectCodec("mpeg4")) codec = "mpeg4";
                 else return; // No encoder available
 
-                // Create two solid-color stub clips so ITransform.Previous / Next are never null.
-                // Previous: dark blue (left/outgoing clip), Next: dark red (right/incoming clip).
                 var prevId = Guid.NewGuid();
                 var nextId = Guid.NewGuid();
                 var prevClip = new SolidColorClip
@@ -1830,14 +1880,10 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     B = 0x2A00,
                 };
 
-                var t = configured is null ? factory!(prevId, nextId) : PluginManager.CreateTransform(configured.Serialize());
-                if (configured is not null) t.Parameters = new(configured.Parameters);
-                t.Side = side;
-                t.Duration = frameCount;
+                projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform? t = null;
                 try
                 {
-                    t.Init();
-
+                    t = TransformServices.Create(configured ?? factory!());
                     using var writer = new VideoWriter
                     {
                         Width = previewW,
@@ -1851,12 +1897,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
                     for (uint i = 0; i < frameCount; i++)
                     {
-                        double progress = (double)i / Math.Max(1, frameCount - 1);
+                        float progress = (float)i / Math.Max(1, frameCount - 1);
+                        using var context = ValueProviderFrameContext.PushFrame(i, progress);
                         using var leftFrame = ((IClip)prevClip).GetFrame(0, previewW, previewH, 8);
                         using var rightFrame = inputMode == TransformInputMode.TwoInput ? ((IClip)nextClip).GetFrame(nextClip.StartFrame, previewW, previewH, 8) : null;
                         leftFrame.CanBeDisposed = true;
                         if (rightFrame is not null) rightFrame.CanBeDisposed = true;
-                        var result = TransformProcessing.ProcessFrames(leftFrame, rightFrame, t, inputMode, progress, previewW, previewH);
+                        var result = TransformProcessing.ProcessFrames(leftFrame, rightFrame, t, inputMode, progress, side, previewW, previewH);
                         using var frame = ReferenceEquals(result, leftFrame) || ReferenceEquals(result, rightFrame) ? result.Clone() : result;
                         if (frame.Width != previewW || frame.Height != previewH)
                             throw new InvalidOperationException($"Transform preview {t.TypeName} returned {frame.Width}x{frame.Height}; expected {previewW}x{previewH}.");
@@ -1897,9 +1944,18 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public async Task FilterAssets()
     {
-        await MainThread.InvokeOnMainThreadAsync(FilterVectorComponents);
-        FilteredReuseableAssets.Clear();
-        FilteredAvailableTemplates.Clear();
+        var state = await MainThread.InvokeOnMainThreadAsync(() => (
+            Version: ++_filterVersion,
+            Search: SearchText ?? "",
+            Order: OrderOption,
+            ShowAll: ShowAllTemplates,
+            Local: LocalAssets.ToArray(),
+            Shared: SharedAssets.ToArray(),
+            Reuseable: ReuseableAssets.ToArray(),
+            Rpc: RpcVideoSources.ToArray(),
+            Templates: AvailableTemplates.ToArray(),
+            Styles: AvailableTextStyles.ToArray(),
+            Providers: AvailableTextStyleProviders.ToArray()));
 
         List<AssetItemViewModel> localFiltered = new();
         List<AssetItemViewModel> sharedFiltered = new();
@@ -1907,56 +1963,56 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         List<RpcVideoSourceItemViewModel> rpcFiltered = new();
         List<TemplateItemViewModel> templateFiltered = new();
 
-        if (string.IsNullOrWhiteSpace(SearchText))
+        if (string.IsNullOrWhiteSpace(state.Search))
         {
             // ????????????????
-            localFiltered.AddRange(LocalAssets);
-            sharedFiltered.AddRange(SharedAssets);
-            reuseableFiltered.AddRange(ReuseableAssets);
-            rpcFiltered.AddRange(RpcVideoSources);
-            templateFiltered.AddRange(AvailableTemplates.Where(ShouldShowTemplateByScope));
+            localFiltered.AddRange(state.Local);
+            sharedFiltered.AddRange(state.Shared);
+            reuseableFiltered.AddRange(state.Reuseable);
+            rpcFiltered.AddRange(state.Rpc);
+            templateFiltered.AddRange(state.Templates.Where(x => ShouldShowTemplateByScope(x, state.ShowAll)));
         }
         else
         {
-            var inputPron = (await TextServices.GetHowToPronuce(SearchText, default)).ToLower();
-            var inputPronInLocate = ((await TextServices.GetHowToPronuce(SearchText, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
+            var inputPron = (await TextServices.GetHowToPronuce(state.Search, default)).ToLower();
+            var inputPronInLocate = ((await TextServices.GetHowToPronuce(state.Search, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
             // ????
-            var searchLower = SearchText.ToLower();
-            foreach (var asset in LocalAssets)
+            var searchLower = state.Search.ToLower();
+            foreach (var asset in state.Local)
             {
                 var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
                 var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
-                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(state.Search) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(state.Search) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
                     localFiltered.Add(asset);
                 }
             }
-            foreach (var asset in SharedAssets)
+            foreach (var asset in state.Shared)
             {
                 var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
                 var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
-                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(state.Search) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(state.Search) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
                     sharedFiltered.Add(asset);
                 }
             }
-            foreach (var asset in ReuseableAssets)
+            foreach (var asset in state.Reuseable)
             {
                 var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
                 var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
-                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(state.Search) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(state.Search) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
                     reuseableFiltered.Add(asset);
                 }
             }
-            rpcFiltered.AddRange(RpcVideoSources.Where(x => x.Name.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
+            rpcFiltered.AddRange(state.Rpc.Where(x => x.Name.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
                 || x.ClientName.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
                 || x.Status.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
                 || x.DecoderName.Contains(searchLower, StringComparison.OrdinalIgnoreCase)));
 
-            foreach (var template in AvailableTemplates)
+            foreach (var template in state.Templates)
             {
-                if (!ShouldShowTemplateByScope(template))
+                if (!ShouldShowTemplateByScope(template, state.ShowAll))
                 {
                     continue;
                 }
@@ -1971,7 +2027,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
 
         // ????
-        if (OrderOption == 0)
+        if (state.Order == 0)
         {
             // By add date - ???????????
             localFiltered = localFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
@@ -1979,7 +2035,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             reuseableFiltered = reuseableFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
             rpcFiltered = rpcFiltered.OrderByDescending(x => x.ProjectAsset?.CreatedAt ?? DateTime.MinValue).ToList();
         }
-        else if (OrderOption == 1)
+        else if (state.Order == 1)
         {
             // By name - ??????
             localFiltered = (await localFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
@@ -1991,50 +2047,41 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
         await MainThread.InvokeOnMainThreadAsync(() =>
         {
+            if (state.Version != _filterVersion || state.Search != (SearchText ?? "")
+                || state.Order != OrderOption || state.ShowAll != ShowAllTemplates) return;
+            FilterVectorComponents();
             FilteredLocalAssets.Clear();
             FilteredSharedAssets.Clear();
             FilteredRpcVideoSources.Clear();
+            FilteredReuseableAssets.Clear();
+            FilteredAvailableTemplates.Clear();
+            FilteredAvailableTextStyles.Clear();
+            FilteredAvailableTextStyleProviders.Clear();
             foreach (var asset in localFiltered) FilteredLocalAssets.Add(asset);
             foreach (var asset in sharedFiltered) FilteredSharedAssets.Add(asset);
             foreach (var source in rpcFiltered) FilteredRpcVideoSources.Add(source);
             FilteredLocalAssets.Add(new AddSourceCardViewModel("LocalAssets", Localized.AssetPage_AddAAsset));
             FilteredSharedAssets.Add(new AddSourceCardViewModel("SharedAssets", Localized.AssetPage_AddAAsset));
             FilteredRpcVideoSources.Add(new AddSourceCardViewModel("RpcSources", Localized.ProjectExternalSource_Add));
+            foreach (var asset in reuseableFiltered) FilteredReuseableAssets.Add(asset);
+            foreach (var template in templateFiltered) FilteredAvailableTemplates.Add(template);
+
+            var searchLower = state.Search.ToLower();
+            foreach (var s in state.Styles)
+            {
+                if (string.IsNullOrWhiteSpace(searchLower) ||
+                    s.Name.ToLower().Contains(searchLower) ||
+                    s.SampleText.ToLower().Contains(searchLower))
+                    FilteredAvailableTextStyles.Add(s);
+            }
+            foreach (var p in state.Providers)
+            {
+                if (string.IsNullOrWhiteSpace(searchLower) ||
+                    p.Name.ToLower().Contains(searchLower) ||
+                    p.BasicText.ToLower().Contains(searchLower))
+                    FilteredAvailableTextStyleProviders.Add(p);
+            }
         });
-        foreach (var asset in reuseableFiltered)
-        {
-            FilteredReuseableAssets.Add(asset);
-        }
-
-        foreach (var template in templateFiltered)
-        {
-            FilteredAvailableTemplates.Add(template);
-        }
-
-        // ????
-        FilteredAvailableTextStyles.Clear();
-        var styleSearch = SearchText?.ToLower() ?? "";
-        foreach (var s in AvailableTextStyles)
-        {
-            if (string.IsNullOrWhiteSpace(styleSearch) ||
-                s.Name.ToLower().Contains(styleSearch) ||
-                s.SampleText.ToLower().Contains(styleSearch))
-            {
-                FilteredAvailableTextStyles.Add(s);
-            }
-        }
-
-        FilteredAvailableTextStyleProviders.Clear();
-        var providerSearch = SearchText?.ToLower() ?? "";
-        foreach (var p in AvailableTextStyleProviders)
-        {
-            if (string.IsNullOrWhiteSpace(providerSearch) ||
-                p.Name.ToLower().Contains(providerSearch) ||
-                p.BasicText.ToLower().Contains(providerSearch))
-            {
-                FilteredAvailableTextStyleProviders.Add(p);
-            }
-        }
     }
 
 
@@ -2607,7 +2654,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     #region AI Transition Generation
 
-    public async Task GenerateAITransition(object direction)
+    public async Task GenerateAITransition(object direction, TransformRenderOrder? renderOrder = null)
     {
         if (direction is not string directionStr) directionStr = "";
 
@@ -2669,6 +2716,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             _pendingTransitionClipId = selectedClip.Id;
             _pendingTransitionNeighborId = (left ? leftClip : rightClip)?.Id ?? Guid.Empty;
             _pendingTransitionFrames = Math.Max(1u, (uint)Math.Round((double)durationInSeconds * _draftPage.ProjectInfo.TargetFrameRate));
+            _pendingTransitionOrder = renderOrder ?? TransformServices.DefaultRenderOrder;
             IPicture? firstFrame = null!, lastFrame = null!;
 
             if (left && !right)
@@ -2944,8 +2992,10 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             throw new InvalidOperationException(Localized.Transform_Disconnected);
         var side = _pendingTransitionDirection == "left" ? TransformSide.Left : TransformSide.Right;
         var neighbor = side == TransformSide.Left ? _draftPage.FindNeighbors(selectedClip).left : _draftPage.FindNeighbors(selectedClip).right;
+        var provider = new ExternalSourceTransformProvider { Name = "AITransform" };
+        provider.Fields = new() { ["SourcePath"] = new StaticEffectArgumentField(sourcePath, EffectArgumentFieldType.String) { Id = "SourcePath" } };
         if (neighbor?.Id != _pendingTransitionNeighborId || !_draftPage.SetClipTransform(selectedClip, side,
-            TransformInputMode.TwoInput, new ExternalSourceTransform { Name = "AITransform", SourcePath = sourcePath }, _pendingTransitionFrames, isAI: true))
+            TransformInputMode.TwoInput, provider, _pendingTransitionFrames, isAI: true, order: _pendingTransitionOrder))
             throw new InvalidOperationException(Localized.Transform_Disconnected);
     }
 
@@ -2960,7 +3010,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
         if (wasTransition)
         {
-            await GenerateAITransition(savedDirection);
+            await GenerateAITransition(savedDirection, _pendingTransitionOrder);
         }
         else
         {

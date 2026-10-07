@@ -167,6 +167,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     internal async Task RefreshPreviewFromCurrentProviderAsync()
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var refreshMark = new UserMarkRange("Preview.RefreshProvider", $"frame={_currentFrame}, dynamic={UseDynamicPreview}");
+#endif
         if (UseDynamicPreview)
         {
             await RefreshDynamicPreviewOverlay();
@@ -178,6 +181,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task<bool> RefreshDynamicPreviewOverlay()
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var overlayMark = new UserMarkRange("Preview.RefreshDynamicOverlay", $"frame={_currentFrame}");
+#endif
         // 取消任何正在进行的预览准备操作。重建令牌的过程串行化，避免并发 Dispose 触发
         // ObjectDisposedException（这是预览高概率卡在黑屏的根因之一）。
         var token = ResetDynamicPreviewToken();
@@ -342,6 +348,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task RenderOneFrame(uint duration, int? width = null, int? height = null)
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var frameMark = new UserMarkRange("Preview.StaticFrame", $"frame={duration}");
+#endif
         // Supersede any in-flight render BEFORE waiting on the lock so the current holder aborts and
         // releases it promptly, and surface feedback immediately so the status bar always shows that a
         // render was requested — even while we are still queued behind another render.
@@ -358,7 +367,10 @@ public partial class DraftPage : ContentPage, IDraftPage
         SetStateBusy();
         SetStatusText(Localized.DraftPage_RenderOneFrame((int)duration, TimeSpan.FromSeconds(duration * SecondsPerFrame)));
 
-        await renderingLock.WaitAsync();
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using (new UserMarkRange("Preview.WaitRenderLock"))
+#endif
+            await renderingLock.WaitAsync();
         try
         {
             // A newer render request arrived while we waited for the lock; drop this one quietly.
@@ -448,6 +460,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task RenderStaticPreviewProgressivelyAsync(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token)
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var progressiveMark = new UserMarkRange("Preview.StaticProgressive", $"frame={frameIndex}, size={targetWidth}x{targetHeight}");
+#endif
         var sizes = BuildProgressiveStaticPreviewSizes(targetWidth, targetHeight);
         using var displayLock = new SemaphoreSlim(1, 1);
         using var renderThrottle = new SemaphoreSlim(MaxConcurrentStaticPreviewRenders, MaxConcurrentStaticPreviewRenders);
@@ -456,18 +471,24 @@ public partial class DraftPage : ContentPage, IDraftPage
         async Task RenderTierAsync(int tier, bool isFinalTier)
         {
             var (width, height) = sizes[tier];
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+            using var tierMark = new UserMarkRange("Preview.StaticTier", $"frame={frameIndex}, tier={tier}, size={width}x{height}");
+#endif
             try
             {
                 await renderThrottle.WaitAsync(token);
-                byte[] content;
+                (PreviewFrameSource Frame, ImageSource? Source) content;
                 try
                 {
                     content = await Task.Run(() =>
                     {
                         token.ThrowIfCancellationRequested();
-                        var rendered = previewer.RenderFramePngBytes(frameIndex, width, height, token);
+                        var rendered = previewer.RenderFrameForDisplay(frameIndex, width, height, token);
+                        var source = rendered.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb
+                            ? null
+                            : PreviewFrameMaterializer.CreateImageSource(rendered.VfdPath);
                         token.ThrowIfCancellationRequested();
-                        return rendered;
+                        return (rendered, source);
                     }, token);
                 }
                 finally
@@ -487,8 +508,12 @@ public partial class DraftPage : ContentPage, IDraftPage
 
                     token.ThrowIfCancellationRequested();
                     await Dispatcher.DispatchAsync(() =>
-                        ClipEditor.StaticPreviewOverlayImage.Source = ImageSource.FromStream(
-                            () => new MemoryStream(content, writable: false)));
+                    {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+                        using var imageMark = new UserMarkRange("Preview.ApplyStaticImage", $"frame={frameIndex}, size={width}x{height}");
+#endif
+                        ClipEditor.SetStaticPreviewFrame(content.Frame, content.Source);
+                    });
                     token.ThrowIfCancellationRequested();
                     displayedTier = tier;
                     await Dispatcher.DispatchAsync(() => ClipEditor.SetStaticPreviewVisible(true));
@@ -1026,6 +1051,9 @@ public partial class DraftPage : ContentPage, IDraftPage
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private async Task RenderSomeFramesDynamicSynced(int startPoint, CancellationToken ct)
     {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+        using var playbackMark = new UserMarkRange("Preview.DynamicPlayback", $"startFrame={startPoint}");
+#endif
         uint lastRenderedFrame = 0, targetFrame = (uint)startPoint;
         bool renderedAnyFrame = false;
         var totalDisplay = TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame).ToString("mm\\:ss");
@@ -1153,6 +1181,9 @@ public partial class DraftPage : ContentPage, IDraftPage
                 var queuedAt = Stopwatch.GetTimestamp();
                 pendingUiUpdate = Dispatcher.DispatchAsync([MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)] async () =>
                 {
+#if DIAGHUB_ENABLE_TRACE_SYSTEM
+                    using var uiMark = new UserMarkRange("Preview.PlaybackUIUpdate", $"frame={frameForThisUpdate}");
+#endif
                     var dispatchStartedAt = Stopwatch.GetTimestamp();
                     try
                     {

@@ -129,15 +129,6 @@ namespace projectFrameCut.DraftStuff
                 Content = BuildGeneralTab(clip, handler),
                 Tag = "general"
             });
-            if (DraftPage.SupportsPictureTransform(clip))
-            {
-                tabbedView.TabItems.Add(new TabbedViewItem
-                {
-                    Header = Localized.Transform_Tab,
-                    LazyContentFactory = () => BuildTransformTab(clip),
-                    Tag = "transform"
-                });
-            }
             if (clip.ClipType is ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip)
             {
                 tabbedView.TabItems.Add(new TabbedViewItem
@@ -165,7 +156,8 @@ namespace projectFrameCut.DraftStuff
                     Tag = "text"
                 });
             }
-            if (clip.isInfiniteLength || (clip.LeftHandle?.IsVisible == true && clip.RightHandle?.IsVisible == true))
+            if (clip.isInfiniteLength || (clip.LeftHandle?.IsVisible == true && clip.RightHandle?.IsVisible == true)
+                || clip.ClipType != ClipMode.MarkingClip)
             {
                 tabbedView.TabItems.Add(new TabbedViewItem
                 {
@@ -198,6 +190,12 @@ namespace projectFrameCut.DraftStuff
                     LazyAsyncContentFactory = () => BuildEffectTab(clip, handler),
                     Tag = "effect"
                 });
+                tabbedView.TabItems.Add(new TabbedViewItem
+                {
+                    Header = Localized.Transform_Tab,
+                    LazyContentFactory = () => BuildTransformTab(clip),
+                    Tag = "transform"
+                });
                 if (clip.ClipType != ClipMode.AudioClip)
                 {
                     tabbedView.TabItems.Add(new TabbedViewItem
@@ -211,15 +209,6 @@ namespace projectFrameCut.DraftStuff
                         Header = PPLocalizedResources.Tabs_ColorAdjust,
                         LazyContentFactory = () => BuildColorAdjustmentTab(clip, handler),
                         Tag = "colorAdjust"
-                    });
-                }
-                if (!clip.isInfiniteLength)
-                {
-                    tabbedView.TabItems.Add(new TabbedViewItem
-                    {
-                        Header = PPLocalizedResources.Tabs_SpeedRatio,
-                        LazyContentFactory = () => BuildSpeedAndRatioTab(clip, handler),
-                        Tag = "speedAndRatio"
                     });
                 }
                 if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"))
@@ -896,7 +885,9 @@ namespace projectFrameCut.DraftStuff
                             Index = int.MinValue + 100,
                             RelativeWidth = page.ProjectInfo.RelativeWidth,
                             RelativeHeight = page.ProjectInfo.RelativeHeight,
-                            ExpandCanvas = false
+                            ExpandCanvas = false,
+                            Parameters = new() { ["Angle"] = (float)deg, ["ExpandCanvas"] = false },
+                            Id = InternalRotationID
                         };
                         clip.Effects[InternalRotationID] = newR;
                     }

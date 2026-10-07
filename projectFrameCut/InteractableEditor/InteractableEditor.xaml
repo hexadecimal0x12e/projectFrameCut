@@ -22,13 +22,20 @@
               AnchorY="0"
               BackgroundColor="Transparent"
               InputTransparent="False">
-            <Image x:Name="PreviewOverlayImage"
-                   x:FieldModifier="public"
-                   Aspect="AspectFit"
-                   InputTransparent="True"
-                   IsVisible="True"
-                   HorizontalOptions="Fill"
-                   VerticalOptions="Fill" />
+            <Grid x:Name="StaticPreviewHost" InputTransparent="True">
+                <Image x:Name="PreviewOverlayImage"
+                       x:FieldModifier="public"
+                       Aspect="AspectFit"
+                       InputTransparent="True"
+                       IsVisible="True"
+                       HorizontalOptions="Fill"
+                       VerticalOptions="Fill" />
+                <ContentView x:Name="StaticNativePreviewHost"
+                             IsVisible="False"
+                             HorizontalOptions="Fill"
+                             VerticalOptions="Fill"
+                             InputTransparent="True" />
+            </Grid>
 
             <ContentView x:Name="LivePreviewerHost"
                          x:FieldModifier="public"

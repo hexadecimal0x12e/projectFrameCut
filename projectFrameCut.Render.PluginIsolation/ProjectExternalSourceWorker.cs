@@ -49,7 +49,7 @@ public static class ProjectExternalSourceWorker
         await IsolationFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(request), timeout.Token).ConfigureAwait(false);
         var response = RenderRpcSerializer.Deserialize<RenderResponseEnvelope>(await IsolationFrame.ReadAsync(pipe, timeout.Token).ConfigureAwait(false)
             ?? throw new EndOfStreamException("Host disconnected during external source authorization."));
-        if (response.Error is not null) response.Error.ThrowAsException();
+        response?.Error?.ThrowAsException();
         var accepted = RenderRpcSerializer.Deserialize<ProjectExternalSourceAuthorization>(response.Payload);
         if (response.RequestId != request.RequestId || response.ProtocolVersion != RenderProtocol.CurrentVersion
             || accepted.SourceId != options.PluginId || accepted.ManifestSha256 != hash

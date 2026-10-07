@@ -76,6 +76,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 Id = string.IsNullOrWhiteSpace(clip.BindedSoundTrack) ? $"legacy-audio-{clip.Id:N}" : clip.BindedSoundTrack,
                 Name = $"{clip.Name}'s Audio",
                 LayerIndex = clip.LayerIndex,
+                SubLayerIndex = clip.SubLayerIndex,
                 StartFrame = clip.StartFrame,
                 RelativeStartFrame = clip.RelativeStartFrame,
                 Duration = clip.Duration,
@@ -83,21 +84,35 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 Volume = ReadVolume(data),
                 FilePath = clip.FilePath,
                 Effects = clip.Effects,
-                EffectsInstances = clip.EffectsInstances,
+                EffectProviders = clip.ClipType == ClipMode.AudioClip ? clip.EffectProviders : null,
                 ExtraData = data
             };
         }
 
         public static void ReInit(ISoundTrack track)
         {
+            ReleaseEffects(track);
             track.ReInit();
-            track.EffectsInstances = EffectHelper.GetEffectsInstancesAndSpeedVariance(track.Effects).Effects;
+            track.EffectsInstances = EffectHelper.GetClipEffectsInstances(new SoundTrackToClipWrapper
+            {
+                Effects = track.Effects,
+                EffectProviders = track.EffectProviders
+            }, syncClipState: false);
         }
 
-        public static void AddMissingLegacyTracks(IEnumerable<IClip> clips, ICollection<ISoundTrack> tracks, Action<string>? log = null)
+        public static void ReleaseEffects(ISoundTrack track)
+        {
+            foreach (var effect in (track.EffectsInstances ?? []).OfType<IDisposable>().Distinct(ReferenceEqualityComparer.Instance))
+                ((IDisposable)effect).Dispose();
+            track.EffectsInstances = null;
+        }
+
+        public static void AddMissingLegacyTracks(IEnumerable<IClip> clips, ICollection<ISoundTrack> tracks, Action<string>? log = null,
+            bool initialize = true, CancellationToken cancellationToken = default)
         {
             foreach (var clip in clips.Where(c => c.ClipType is ClipMode.AudioClip or ClipMode.VideoClip))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (ReadBool(clip.ExtraData, DetachedKey)) continue;
                 if (clip.ExtraData?.ContainsKey(ProbeHasStreamKey) == true
                     && !ReadBool(clip.ExtraData, ProbeHasStreamKey)) continue;
@@ -108,10 +123,19 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 var track = CreateLegacyTrack(clip);
                 try
                 {
-                    ReInit(track);
-                    if (track.SamplePerSecond <= 0) throw new InvalidOperationException("The media has no readable audio stream.");
+                    if (initialize)
+                    {
+                        ReInit(track);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (track.SamplePerSecond <= 0) throw new InvalidOperationException("The media has no readable audio stream.");
+                    }
                     tracks.Add(track);
                     log?.Invoke($"Migrated legacy clip audio {clip.Id} to soundtrack {track.Id}.");
+                }
+                catch (OperationCanceledException)
+                {
+                    track.Dispose();
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -133,12 +157,15 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string Id { get; init; }
         public string Name { get; init; }
         public uint LayerIndex { get; init; }
+        public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
         public float Ratio { get; set; } = 1f;
         public float Volume { get; set; } = 1f;
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; init; }
+        [JsonIgnore]
         public IEffect[]? EffectsInstances { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
 
@@ -166,6 +193,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             {
                 if (disposing)
                 {
+                    SoundTrackMetadata.ReleaseEffects(this);
                     AudioSource?.Dispose();
                 }
 
@@ -246,11 +274,14 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     Id = BindedSoundTrack ?? Guid.NewGuid().ToString(),
                     Name = Name,
                     LayerIndex = LayerIndex,
+                    SubLayerIndex = SubLayerIndex,
                     StartFrame = StartFrame,
                     RelativeStartFrame = RelativeStartFrame,
                     Duration = Duration,
                     Ratio = SecondPerFrameRatio,
                     Volume = 1.0f,
+                    Effects = Effects,
+                    EffectProviders = EffectProviders,
                     AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null
                 },
                 _ => throw new NotSupportedException($"Unsupported track type {TrackType}."),

@@ -385,12 +385,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string Name { get; set; } = string.Empty;
         public string? FilePath { get; set; }
         public uint LayerIndex { get; set; }
+        public uint SubLayerIndex { get; set; }
         public uint StartFrame { get; set; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
         public float SecondPerFrameRatio { get; set; }
         public bool ShouldDisplayInUI { get; set; } = true;
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
+        public EffectProviderJSONStructure[]? EffectProviders { get; set; }
 
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }

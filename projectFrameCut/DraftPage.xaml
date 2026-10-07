@@ -470,7 +470,7 @@
                                    HeightRequest="12"
                                    BackgroundColor="LightGray" />
 
-            <ScrollView Grid.Row="2" x:Name="TracksAndClipsLayout" Orientation="Vertical">
+            <ScrollView Grid.Row="2" x:Name="TracksAndClipsLayout" Orientation="Vertical" Scrolled="TracksAndClipsLayout_Scrolled" SizeChanged="ClipPreviewViewport_SizeChanged">
                 <VerticalStackLayout>
                     <Grid x:Name="MainTrackContentGrid">
                         <Grid.ColumnDefinitions>
@@ -482,8 +482,8 @@
 
                         </VerticalStackLayout>
 
-                        <ScrollView x:Name="TimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" HorizontalOptions="Fill" VerticalScrollBarVisibility="Never" HorizontalScrollBarVisibility="Never">
-                            <VerticalStackLayout x:Name="TrackContentLayout" Padding="2" HorizontalOptions="Fill" />
+                        <ScrollView x:Name="TimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" SizeChanged="ClipPreviewViewport_SizeChanged" HorizontalOptions="Fill" VerticalScrollBarVisibility="Never" HorizontalScrollBarVisibility="Never">
+                            <VerticalStackLayout x:Name="TrackContentLayout" Padding="2" HorizontalOptions="Fill" SizeChanged="ClipPreviewViewport_SizeChanged" />
                         </ScrollView>
                     </Grid>
 
@@ -497,8 +497,8 @@
 
                         </VerticalStackLayout>
 
-                        <ScrollView x:Name="SubTimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" HorizontalOptions="Fill">
-                            <VerticalStackLayout x:Name="SubTrackContentLayout" Padding="2" HorizontalOptions="Fill" />
+                        <ScrollView x:Name="SubTimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" SizeChanged="ClipPreviewViewport_SizeChanged" HorizontalOptions="Fill">
+                            <VerticalStackLayout x:Name="SubTrackContentLayout" Padding="2" HorizontalOptions="Fill" SizeChanged="ClipPreviewViewport_SizeChanged" />
                         </ScrollView>
                     </Grid>
                     <Grid ColumnDefinitions="1*,8*">

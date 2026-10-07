@@ -60,9 +60,15 @@ public class InternalPluginBase : IPluginBase
 
     public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider => new Dictionary<string, Func<IEffectProvider>>
     {
+        { "Fade", () => new FadeTransformProvider() },
+        { "Crossfade", () => new CrossfadeTransformProvider() },
+        { "AudioFade", () => new AudioFadeTransformProvider() },
+        { "AudioCrossfade", () => new AudioCrossfadeTransformProvider() },
+        { "ExternalSourceTransform", () => new ExternalSourceTransformProvider() },
         { "ZoomIn", () => new ZoomInEffectProvider() },
         { "RemoveColor", () => new RemoveColorEffectProvider() },
         { "Jitter", () => new JitterEffectProvider() },
+        { "Jelly", () => new JellyEffectProvider() },
         { "Blur", () => new BlurEffectProvider() },
         { "Crop", () => new CropEffectProvider() },
         { "Place", () => new PlaceEffectProvider() },
@@ -98,6 +104,11 @@ public class InternalPluginBase : IPluginBase
     public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider =>
         new Dictionary<EffectImplementationKey, Func<IEffect>>
         {
+            [new("Fade", EffectImplementType.IPicture)] = () => new FadeTransform(),
+            [new("Crossfade", EffectImplementType.IPicture)] = () => new CrossfadeTransform(),
+            [new("AudioFade", EffectImplementType.NotSpecified)] = () => new AudioFadeTransform(),
+            [new("AudioCrossfade", EffectImplementType.NotSpecified)] = () => new AudioCrossfadeTransform(),
+            [new("ExternalSourceTransform", EffectImplementType.IPicture)] = () => new ExternalSourceTransform(),
             [new("Place", EffectImplementType.IPicture)] = () => new PlaceEffect_IPicture(),
             [new("RemoveColor", EffectImplementType.IPicture)] = () => new RemoveColorEffect_IPicture(),
             [new("ClassicOverlayMixture", EffectImplementType.IPicture)] = () => new ClassicOverlayMixture(),
@@ -122,6 +133,7 @@ public class InternalPluginBase : IPluginBase
             [new("ZoomIn", EffectImplementType.IPicture)] = () => new ZoomInContinuousEffect(),
             [new("TextFadeIn", EffectImplementType.IPicture)] = () => new TextFadeInContinuousEffect(),
             [new("Jitter", EffectImplementType.NotSpecified)] = () => new JitterEffect(),
+            [new("Jelly", EffectImplementType.NotSpecified)] = () => new JellyEffect(),
             [new("ProgressPlacer", EffectImplementType.NotSpecified)] = () => new ProgressPlacer(),
             [new("ClassicSpeedVarianceProvider", EffectImplementType.NotSpecified)] = () => new ClassicSpeedVarianceProvider(),
             [new("IntConstant", EffectImplementType.NotSpecified)] = () => new IntConstantValueProviderEffect(),
@@ -202,15 +214,6 @@ public class InternalPluginBase : IPluginBase
             { "BlackHoleWriter", (AlwaysTrue, new((_) => new BlackholeVideoWriter())) }
         }.ComputeCondition();
 
-    public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider => new Dictionary<string, Func<Guid, Guid, ITransform>>
-    {
-        { "Fade", (clipId, _) => new FadeTransform { BindedLeftClip = clipId } },
-        {
-            "Crossfade",
-            (prevId, nextId) => new CrossfadeTransform { PreviousClipId = prevId, NextClipId = nextId }
-        }
-    };
-
     IClip IPluginBase.ClipCreator(JsonElement element)
     {
         ClipMode type = (ClipMode)element.GetProperty("ClipType").GetInt32();
@@ -267,18 +270,6 @@ public class InternalPluginBase : IPluginBase
         {
             TrackMode.NormalTrack => element.Deserialize<NormalSoundTrack>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported sound track type {type}."),
-        };
-    }
-
-    ITransform IPluginBase.TransformCreator(JsonElement element)
-    {
-        var typeName = element.GetProperty("TypeName").GetString();
-        return typeName switch
-        {
-            "Fade" => element.Deserialize<FadeTransform>() ?? throw new NullReferenceException("Failed to deserialize FadeTransform."),
-            "Crossfade" => element.Deserialize<CrossfadeTransform>() ?? throw new NullReferenceException("Failed to deserialize CrossfadeTransform."),
-            "ExternalSourceTransform" => element.Deserialize<ExternalSourceTransform>() ?? throw new NullReferenceException("Failed to deserialize ExternalSourceTransform."),
-            _ => throw new NotSupportedException($"Unknown or unsupported transform type '{typeName}'.")
         };
     }
 

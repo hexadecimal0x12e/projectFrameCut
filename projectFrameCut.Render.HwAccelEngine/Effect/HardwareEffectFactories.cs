@@ -16,6 +16,8 @@ public static class HardwareEffectFactories
         [new("Sharpen", EffectImplementType.HwAcceleration)] = () => new SharpenEffect_HwAccel(),
         [new("Vignette", EffectImplementType.HwAcceleration)] = () => new VignetteEffect_HwAccel(),
         [new("FadeOpacity", EffectImplementType.HwAcceleration)] = () => new FadeOpacityEffect_HwAccel(),
+        [new("Fade", EffectImplementType.HwAcceleration)] = () => new FadeTransform_HwAccel(),
+        [new("Crossfade", EffectImplementType.HwAcceleration)] = () => new CrossfadeTransform_HwAccel(),
         [new("ColorAdjustment", EffectImplementType.HwAcceleration)] = () => new ColorAdjustmentEffect_HwAccel(),
         [new("Rotation", EffectImplementType.HwAcceleration)] = () => new RotationEffect_HwAccel(),
         [new("Place", EffectImplementType.HwAcceleration)] = () => new PlaceEffect_HwAccel(),

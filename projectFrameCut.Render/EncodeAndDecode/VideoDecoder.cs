@@ -300,7 +300,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 if (VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps))
                 {
-                    Log($"[{TypeName}] Seeking '{_path}' from next frame {_currentFrameNumber} to {targetFrame}.", "debug");
+                    
                     SmartSeekTo(targetFrame);
                 }
 
@@ -895,7 +895,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 if (VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps))
                 {
-                    Log($"[{TypeName}] Seeking '{_path}' from next frame {_currentFrameNumber} to {targetFrame}.", "debug");
+                    
                     SmartSeekTo(targetFrame);
                 }
 
@@ -1689,7 +1689,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 if (VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps))
                 {
-                    Log($"[{TypeName}] Seeking '{_path}' from next frame {_currentFrameNumber} to {targetFrame}.", "debug");
+                    
                     SmartSeekTo(targetFrame);
                 }
 

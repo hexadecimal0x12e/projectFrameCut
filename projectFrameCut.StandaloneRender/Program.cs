@@ -2044,7 +2044,6 @@ namespace projectFrameCut.StandaloneRender
             Log($"  Resolution         : {source.Width}x{source.Height}", "stat");
             Log($"  Source FPS         : {source.Fps:F2}", "stat");
             Log($"  Decoder            : {source.TypeName}", "stat");
-            Log($"  Disk cache         : {YesNo(enableDiskCache)}", "stat");
             Log($"  Frames decoded     : {decodedCount}/{decodeTotal}", "stat");
             Log($"  Total time         : {totalTime.TotalSeconds:F3}s", "stat");
             Log($"  Decode FPS         : {decodeFps:F2}", "stat");

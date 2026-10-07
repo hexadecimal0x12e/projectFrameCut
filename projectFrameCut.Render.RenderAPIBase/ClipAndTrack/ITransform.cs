@@ -1,127 +1,40 @@
-﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json.Serialization;
+using projectFrameCut.Shared;
 
-namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
+namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+
+public enum TransformSide { Left, Right }
+public enum TransformInputMode { OneInput, TwoInput }
+public enum TransformRenderOrder { AfterEffects, BeforeEffects }
+
+public interface ITransform : IEffect
 {
-    public interface ITransform : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject
-    {
-        /// <summary>
-        /// Gets the ID of the plugin that provided this value.
-        /// </summary>
-        public new string FromPlugin { get; }
+    EffectType IEffect.TypeOfEffect => EffectType.Transform;
+    bool IEffect.IsReorderable => false;
+    TransformDefinition Definition { get; }
+    IPicture Render(IPicture left, IPicture? right, float progress, TransformSide side, int targetWidth, int targetHeight);
+    /// <summary>Processes a sample window at an offset from the start of the complete transition.</summary>
+    IAudioSamples Render(IAudioSamples left, IAudioSamples? right, long sampleOffset, long durationSamples, TransformSide side) =>
+        throw new NotSupportedException($"Transform {TypeName} does not support audio.");
+}
 
-        /// <summary>
-        /// The type of this transform.
-        /// </summary>
-        public new string TypeName { get; }
-
-        /// <summary>
-        /// Get which kind of ITransform is.
-        /// </summary>
-        public TransformType TransformType { get; }
-
-        public virtual TransformDefinition Definition => TransformDefinition.Clip |
-            (this is IOneInputSingleFrameTransform ? TransformDefinition.SupportOneInput : 0) |
-            (this is ISingleFrameTransform or IContinuousTransform ? TransformDefinition.SupportTwoInput : 0);
-
-        public virtual TransformSide Side
-        {
-            get => TransformState.Values.GetOrCreateValue(this).Side;
-            set => TransformState.Values.GetOrCreateValue(this).Side = value;
-        }
-
-        public virtual Dictionary<string, object> Parameters
-        {
-            get => TransformState.Values.GetOrCreateValue(this).Parameters;
-            set => TransformState.Values.GetOrCreateValue(this).Parameters = value;
-        }
-
-        public virtual Dictionary<string, string> ParametersType => new();
-        public virtual List<string> ParametersNeeded => new();
-        public virtual System.Text.Json.JsonElement Serialize()
-        {
-            var node = System.Text.Json.JsonSerializer.SerializeToNode(this, GetType())!.AsObject();
-            node["FromPlugin"] = FromPlugin;
-            node["TypeName"] = TypeName;
-            node["Parameters"] = System.Text.Json.JsonSerializer.SerializeToNode(Parameters);
-            return System.Text.Json.JsonSerializer.SerializeToElement(node);
-        }
-
-        /// <summary>
-        /// The name of this clip. Mostly used for display purpose.
-        /// </summary>
-        public string Name { get; init; }
-
-        public Guid BindedLeftClip { get; set; }
-        public Guid BindedRightClip { get; set; }
-
-        /// <summary>
-        /// The duration of this transform. 
-        /// </summary>
-        public uint Duration { get; set; }
-
-        /// <summary>
-        /// Override this method to do some init jobs before use.
-        /// </summary>
-        public virtual void Init() { }
-
-    }
-
-    internal sealed class TransformState
-    {
-        internal static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, TransformState> Values = new();
-        public TransformState() { }
-        public TransformSide Side;
-        public Dictionary<string, object> Parameters = new();
-    }
-
-    public interface ISingleFrameTransform : ITransform
-    {
-        TransformType ITransform.TransformType => TransformType.SingleFrameTransform;
-
-        /// <summary>
-        /// Get the transform's frame at the specified progress. 
-        /// </summary>
-        /// <remarks>
-        /// It's similar to an effect render operation, but with two inputs.
-        /// </remarks>
-        /// <param name="progress">The progress of this render request. 0 for start and 1 for end.</param>
-        public IPicture GetFrame(IPicture left, IPicture right, int targetWidth, int targetHeight);
-
-    }
-    public interface IOneInputSingleFrameTransform : ITransform
-    {
-        TransformType ITransform.TransformType => TransformType.SingleFrameTransform;
-
-        /// <summary>
-        /// Get the transform's frame at the specified progress. 
-        /// </summary>
-        /// <remarks>
-        /// It's similar to a continuous effect render operation.
-        /// </remarks>
-        /// <param name="progress">The progress of this render request. 0 for start and 1 for end.</param>
-        public IPicture GetFrame(IPicture input, double progress, int targetWidth, int targetHeight);
-
-    }
-    public interface IContinuousTransform : ITransform
-    {
-        TransformType ITransform.TransformType => TransformType.ContinuousTransform;
-
-        /// <summary>
-        /// Get the transform's frame at the specified progress. 
-        /// </summary>
-        /// <remarks>
-        /// It's similar to a continuous effect render operation.
-        /// </remarks>
-        /// <param name="progress">The progress of this render request. 0 for start and 1 for end.</param>
-        public IPicture GetFrame(IPicture left, IPicture right, double progress, int targetWidth, int targetHeight);
-
-    }
-
-
-
+public abstract class TransformEffectBase : ITransform
+{
+    public abstract string FromPlugin { get; }
+    public abstract string TypeName { get; }
+    public abstract TransformDefinition Definition { get; }
+    public virtual EffectImplementType ImplementType => EffectImplementType.IPicture;
+    public string Name { get; set; } = "Transform";
+    public string Id { get; set; } = string.Empty;
+    public bool Enabled { get; set; } = true;
+    public int Index { get; set; }
+    public int RelativeWidth { get; set; }
+    public int RelativeHeight { get; set; }
+    public string? BindedEffectProvidingSystemID { get; set; }
+    public Dictionary<string, object> Parameters { get; set; } = new();
+    public abstract IEffect WithParameters(Dictionary<string, object> parameters);
+    public abstract IPicture Render(IPicture left, IPicture? right, float progress, TransformSide side, int targetWidth, int targetHeight);
+    public virtual IAudioSamples Render(IAudioSamples left, IAudioSamples? right, long sampleOffset, long durationSamples, TransformSide side) =>
+        throw new NotSupportedException($"Transform {TypeName} does not support audio.");
 }

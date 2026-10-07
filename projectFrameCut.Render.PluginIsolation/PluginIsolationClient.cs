@@ -83,17 +83,6 @@ public sealed class PluginIsolationClient : IAsyncDisposable
         }));
     }
 
-    public Dictionary<string, Func<Guid, Guid, ITransform>> CreateTransforms()
-    {
-        var plugin = _plugin ?? throw new InvalidOperationException("The remote plugin has not been loaded.");
-        return plugin.Transforms.ToDictionary(x => x, x => (Func<Guid, Guid, ITransform>)((left, right) =>
-        {
-            var state = Invoke<IsolationCreateTransformRequest, IsolationTransformState>(RenderOperation.IsolationCreateTransform,
-                new() { TypeName = x, LeftClipId = left.ToString(), RightClipId = right.ToString() });
-            return new RemoteTransform(_session, state);
-        }));
-    }
-
     public Dictionary<string, Func<string, string, ISoundTrack>> CreateSoundTracks()
     {
         var plugin = _plugin ?? throw new InvalidOperationException("The remote plugin has not been loaded.");
@@ -124,13 +113,6 @@ public sealed class PluginIsolationClient : IAsyncDisposable
         var descriptor = Invoke<IsolationVectorComponentRequest, IsolationVectorComponentDescriptor>(RenderOperation.IsolationCreateVectorComponent,
             new() { Json = element.GetRawText() });
         return new RemoteVectorComponent(_session, descriptor);
-    }
-
-    public ITransform RestoreTransform(JsonElement element)
-    {
-        var state = Invoke<IsolationCreateTransformRequest, IsolationTransformState>(RenderOperation.IsolationCreateTransform,
-            new() { Json = element.GetRawText() });
-        return new RemoteTransform(_session, state);
     }
 
     public IReadOnlyCollection<string> ProjectTools => _plugin?.ProjectTools ?? [];
