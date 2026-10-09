@@ -36,6 +36,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
             int renderWidth = width * scaleFactor;
             int renderHeight = height * scaleFactor;
 
+#if WINDOWS || HEADLESS
 #if WINDOWS
             // Preferred path: Win2D (Direct2D) offscreen rendering. Direct2D has
             // high-quality per-primitive antialiasing, so we render at the target
@@ -59,6 +60,7 @@ namespace projectFrameCut.Render.HwAccelEngine.VectorRasterizer
                 }
             }
 
+#endif
             // Fallback path: ILGPU compute rasterization (with SSAA supersampling).
             // Build flat GPU primitives from the vector picture
             var build = PrimitiveBuilder.Build(VectorPictureRasterization.ScaleStrokes(canvas, scaleFactor), renderWidth, renderHeight);

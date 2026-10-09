@@ -121,6 +121,8 @@ public partial class ClipPlaceConfiguratorView : ContentView
 
     public event Action<ClipPositionTuple>? ConfigurationChanged;
 
+    public float Rotation { get; set; }
+
     public bool Enabled
     {
         get => (bool)GetValue(EnabledProperty);
@@ -219,6 +221,7 @@ public partial class ClipPlaceConfiguratorView : ContentView
 
     public void LoadFromPosition(ClipPositionTuple position)
     {
+        Rotation = position.Rotation;
         TargetX = position.TargetX;
         TargetY = position.TargetY;
         TargetWidth = Math.Max(1, position.TargetWidth);
@@ -233,11 +236,11 @@ public partial class ClipPlaceConfiguratorView : ContentView
             return;
         }
 
-        LoadFromPosition(new ClipPositionTuple(clip.TargetX, clip.TargetY, clip.TargetWidth, clip.TargetHeight, false));
+        LoadFromPosition(new ClipPositionTuple(clip.TargetX, clip.TargetY, clip.TargetWidth, clip.TargetHeight, false, clip.Rotation));
     }
 
     public ClipPositionTuple BuildPositionTuple()
-        => new(TargetX, TargetY, TargetWidth, TargetHeight, false);
+        => new(TargetX, TargetY, TargetWidth, TargetHeight, false, Rotation);
 
     private static void OnAnyBindablePropertyChanged(BindableObject bindable, object oldValue, object newValue)
     {

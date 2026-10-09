@@ -60,17 +60,13 @@ namespace projectFrameCut.DraftStuff
                 int valX = 0, valY = 0;
                 int valW = page.ProjectInfo.RelativeWidth;
                 int valH = page.ProjectInfo.RelativeHeight;
-                double rotationDeg = 0;
+                if (clip.Effects.ContainsKey(InternalRotationID)) RebuildAllEffects(clip);
+                double rotationDeg = VideoClipRotation.Normalize(clip.Rotation);
                 bool allowFreeScaleResize = IsAllowFreeScaleResizeEnabled(clip);
                 valX = clip.TargetX;
                 valY = clip.TargetY;
                 if (clip.TargetWidth > 0) valW = clip.TargetWidth;
                 if (clip.TargetHeight > 0) valH = clip.TargetHeight;
-
-                if (clip.Effects.TryGetValue(InternalRotationID, out var rotEff) && rotEff is RotationEffect_IPicture rot)
-                {
-                    rotationDeg = rot.Angle;
-                }
 
                 IEffectProvider BuildDefaultCropProvider()
                 {
@@ -387,30 +383,10 @@ namespace projectFrameCut.DraftStuff
 
                     if (e.Id == "rotationDeg")
                     {
-                        if (e.Value is double deg)
+                        if (e.Value is double angle)
                         {
-                            RotationEffect_IPicture? existingRotation = null;
-                            if (clip.Effects.TryGetValue(InternalRotationID, out var existingRot) && existingRot is RotationEffect_IPicture oldRot)
-                            {
-                                existingRotation = oldRot;
-                            }
-
-                            clip.Effects[InternalRotationID] = new RotationEffect_IPicture
-                            {
-                                Angle = (float)deg,
-                                Enabled = existingRotation?.Enabled ?? true,
-                                Name = existingRotation?.Name ?? InternalRotationID,
-                                Index = existingRotation?.Index ?? (int.MinValue + 100),
-                                RelativeWidth = page.ProjectInfo.RelativeWidth,
-                                RelativeHeight = page.ProjectInfo.RelativeHeight,
-                                ExpandCanvas = existingRotation?.ExpandCanvas ?? false,
-                                Parameters = new()
-                                {
-                                    ["Angle"] = (float)deg,
-                                    ["ExpandCanvas"] = existingRotation?.ExpandCanvas ?? false
-                                },
-                                Id = string.IsNullOrWhiteSpace(existingRotation?.Id) ? InternalRotationID : existingRotation.Id
-                            };
+                            clip.Rotation = VideoClipRotation.Normalize((float)angle);
+                            LogDiagnostic($"Clip {clip.Id} rotation changed to {clip.Rotation} degrees.");
                         }
 
                         handler?.Invoke(s, e);

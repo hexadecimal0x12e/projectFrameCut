@@ -7662,6 +7662,48 @@ public interface ISimpleLocalizerBase
     public string Transform_PreRender { get; }
     
     /// <summary>
+    /// Get the localized string for Effect_NativePipeline (like '
+    /// 原生内容效果
+    ///')
+    /// </summary>
+    public string Effect_NativePipeline { get; }
+
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline (like '
+    /// 画面效果
+    ///')
+    /// </summary>
+    public string Effect_PicturePipeline { get; }
+
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect (like '
+    /// 矢量画面效果
+    ///')
+    /// </summary>
+    public string Effect_VectorPictureEffect { get; }
+
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput (like '
+    /// 原生内容
+    ///')
+    /// </summary>
+    public string Effect_NativeInput { get; }
+
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput (like '
+    /// 处理后的矢量内容
+    ///')
+    /// </summary>
+    public string Effect_NativeOutput { get; }
+
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline (like '
+    /// 无法连接不同管线或不兼容的原生内容类型。
+    ///')
+    /// </summary>
+    public string Effect_IncompatiblePipeline { get; }
+
+    /// <summary>
     /// Get the current Locale's ID (like 'zh-CN')
     /// </summary>
     public string _LocaleId_ { get; }
@@ -8739,6 +8781,12 @@ public interface ISimpleLocalizerBase
         "Transform_Implementation", 
         "Transform_Enabled", 
         "Transform_PreRender", 
+        "Effect_NativePipeline",
+        "Effect_PicturePipeline",
+        "Effect_VectorPictureEffect",
+        "Effect_NativeInput",
+        "Effect_NativeOutput",
+        "Effect_IncompatiblePipeline",
     };
     
     /// <summary>
@@ -9627,6 +9675,12 @@ public interface ISimpleLocalizerBase
             "Transform_Implementation" => Transform_Implementation,
             "Transform_Enabled" => Transform_Enabled,
             "Transform_PreRender" => Transform_PreRender,
+            "Effect_NativePipeline" => Effect_NativePipeline,
+            "Effect_PicturePipeline" => Effect_PicturePipeline,
+            "Effect_VectorPictureEffect" => Effect_VectorPictureEffect,
+            "Effect_NativeInput" => Effect_NativeInput,
+            "Effect_NativeOutput" => Effect_NativeOutput,
+            "Effect_IncompatiblePipeline" => Effect_IncompatiblePipeline,
             _ => fallbackValue ?? $"Can't find the localized string for id '{id}'"
         };
     }
@@ -18390,6 +18444,54 @@ $""""
     /// </summary>
     public static string Transform_PreRender => $"预先渲染转场";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in zh-CN (like '
+    /// 原生内容效果
+    /// ')
+    /// </summary>
+    public static string Effect_NativePipeline => $"原生内容效果";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in zh-CN (like '
+    /// 画面效果
+    /// ')
+    /// </summary>
+    public static string Effect_PicturePipeline => $"画面效果";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in zh-CN (like '
+    /// 矢量画面效果
+    /// ')
+    /// </summary>
+    public static string Effect_VectorPictureEffect => $"矢量画面效果";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in zh-CN (like '
+    /// 原生内容
+    /// ')
+    /// </summary>
+    public static string Effect_NativeInput => $"原生内容";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in zh-CN (like '
+    /// 处理后的矢量内容
+    /// ')
+    /// </summary>
+    public static string Effect_NativeOutput => $"处理后的矢量内容";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in zh-CN (like '
+    /// 无法连接不同管线或不兼容的原生内容类型。
+    /// ')
+    /// </summary>
+    public static string Effect_IncompatiblePipeline => $"无法连接不同管线或不兼容的原生内容类型。";
+
     /// <summary>
     /// Get the current locale's Id (like 'z')
     /// </summary>
@@ -26753,6 +26855,72 @@ Author: {author}{Environment.NewLine}Usage: {usage}{Environment.NewLine}{Environ
     /// </summary>
     public static string Transform_PreRender => $"Unset localization item:Transform_PreRender()";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in en-US (like '
+    /// Unset localization item:Effect_NativePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativePipeline => $"Unset localization item:Effect_NativePipeline()";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in en-US (like '
+    /// Unset localization item:Effect_PicturePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_PicturePipeline => $"Unset localization item:Effect_PicturePipeline()";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in en-US (like '
+    /// Unset localization item:Effect_VectorPictureEffect()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_VectorPictureEffect => $"Unset localization item:Effect_VectorPictureEffect()";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in en-US (like '
+    /// Unset localization item:Effect_NativeInput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeInput => $"Unset localization item:Effect_NativeInput()";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in en-US (like '
+    /// Unset localization item:Effect_NativeOutput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeOutput => $"Unset localization item:Effect_NativeOutput()";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in en-US (like '
+    /// Unset localization item:Effect_IncompatiblePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_IncompatiblePipeline => $"Unset localization item:Effect_IncompatiblePipeline()";
+
     string ISimpleLocalizerBase.DraftPage_AssetPanel_Remove_Confirm0(string name) => DraftPage_AssetPanel_Remove_Confirm0(name);
     /// <summary>
     /// Get the localized string for DraftPage_AssetPanel_Remove_Confirm0 in en-US (like '
@@ -35509,6 +35677,72 @@ $""""
     /// </summary>
     public static string Transform_PreRender => $"Unset localization item:Transform_PreRender()";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in zh-TW (like '
+    /// Unset localization item:Effect_NativePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativePipeline => $"Unset localization item:Effect_NativePipeline()";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in zh-TW (like '
+    /// Unset localization item:Effect_PicturePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_PicturePipeline => $"Unset localization item:Effect_PicturePipeline()";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in zh-TW (like '
+    /// Unset localization item:Effect_VectorPictureEffect()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_VectorPictureEffect => $"Unset localization item:Effect_VectorPictureEffect()";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in zh-TW (like '
+    /// Unset localization item:Effect_NativeInput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeInput => $"Unset localization item:Effect_NativeInput()";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in zh-TW (like '
+    /// Unset localization item:Effect_NativeOutput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeOutput => $"Unset localization item:Effect_NativeOutput()";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in zh-TW (like '
+    /// Unset localization item:Effect_IncompatiblePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_IncompatiblePipeline => $"Unset localization item:Effect_IncompatiblePipeline()";
+
     string ISimpleLocalizerBase.DraftPage_AssetPanel_Remove_Confirm0(string name) => DraftPage_AssetPanel_Remove_Confirm0(name);
     /// <summary>
     /// Get the localized string for DraftPage_AssetPanel_Remove_Confirm0 in zh-TW (like '
@@ -44521,6 +44755,72 @@ $""""
     /// </summary>
     public static string Transform_PreRender => $"Unset localization item:Transform_PreRender()";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in ja-JP (like '
+    /// Unset localization item:Effect_NativePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativePipeline => $"Unset localization item:Effect_NativePipeline()";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in ja-JP (like '
+    /// Unset localization item:Effect_PicturePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_PicturePipeline => $"Unset localization item:Effect_PicturePipeline()";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in ja-JP (like '
+    /// Unset localization item:Effect_VectorPictureEffect()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_VectorPictureEffect => $"Unset localization item:Effect_VectorPictureEffect()";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in ja-JP (like '
+    /// Unset localization item:Effect_NativeInput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeInput => $"Unset localization item:Effect_NativeInput()";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in ja-JP (like '
+    /// Unset localization item:Effect_NativeOutput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeOutput => $"Unset localization item:Effect_NativeOutput()";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in ja-JP (like '
+    /// Unset localization item:Effect_IncompatiblePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_IncompatiblePipeline => $"Unset localization item:Effect_IncompatiblePipeline()";
+
     string ISimpleLocalizerBase.DraftPage_AssetPanel_Remove_Confirm0(string name) => DraftPage_AssetPanel_Remove_Confirm0(name);
     /// <summary>
     /// Get the localized string for DraftPage_AssetPanel_Remove_Confirm0 in ja-JP (like '
@@ -53508,6 +53808,72 @@ $""""
     /// </summary>
     public static string Transform_PreRender => $"Unset localization item:Transform_PreRender()";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in ko-KR (like '
+    /// Unset localization item:Effect_NativePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativePipeline => $"Unset localization item:Effect_NativePipeline()";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in ko-KR (like '
+    /// Unset localization item:Effect_PicturePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_PicturePipeline => $"Unset localization item:Effect_PicturePipeline()";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in ko-KR (like '
+    /// Unset localization item:Effect_VectorPictureEffect()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_VectorPictureEffect => $"Unset localization item:Effect_VectorPictureEffect()";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in ko-KR (like '
+    /// Unset localization item:Effect_NativeInput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeInput => $"Unset localization item:Effect_NativeInput()";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in ko-KR (like '
+    /// Unset localization item:Effect_NativeOutput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeOutput => $"Unset localization item:Effect_NativeOutput()";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in ko-KR (like '
+    /// Unset localization item:Effect_IncompatiblePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_IncompatiblePipeline => $"Unset localization item:Effect_IncompatiblePipeline()";
+
     string ISimpleLocalizerBase.DraftPage_AssetPanel_Remove_Confirm0(string name) => DraftPage_AssetPanel_Remove_Confirm0(name);
     /// <summary>
     /// Get the localized string for DraftPage_AssetPanel_Remove_Confirm0 in ko-KR (like '
@@ -62433,6 +62799,72 @@ $""""
     /// </summary>
     public static string Transform_PreRender => $"Unset localization item:Transform_PreRender()";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in fr-FR (like '
+    /// Unset localization item:Effect_NativePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativePipeline => $"Unset localization item:Effect_NativePipeline()";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in fr-FR (like '
+    /// Unset localization item:Effect_PicturePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_PicturePipeline => $"Unset localization item:Effect_PicturePipeline()";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in fr-FR (like '
+    /// Unset localization item:Effect_VectorPictureEffect()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_VectorPictureEffect => $"Unset localization item:Effect_VectorPictureEffect()";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in fr-FR (like '
+    /// Unset localization item:Effect_NativeInput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeInput => $"Unset localization item:Effect_NativeInput()";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in fr-FR (like '
+    /// Unset localization item:Effect_NativeOutput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeOutput => $"Unset localization item:Effect_NativeOutput()";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in fr-FR (like '
+    /// Unset localization item:Effect_IncompatiblePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_IncompatiblePipeline => $"Unset localization item:Effect_IncompatiblePipeline()";
+
     string ISimpleLocalizerBase.DraftPage_AssetPanel_Remove_Confirm0(string name) => DraftPage_AssetPanel_Remove_Confirm0(name);
     /// <summary>
     /// Get the localized string for DraftPage_AssetPanel_Remove_Confirm0 in fr-FR (like '
@@ -71324,6 +71756,72 @@ $""""
     /// </summary>
     public static string Transform_PreRender => $"Unset localization item:Transform_PreRender()";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in ar-SA (like '
+    /// Unset localization item:Effect_NativePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativePipeline => $"Unset localization item:Effect_NativePipeline()";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in ar-SA (like '
+    /// Unset localization item:Effect_PicturePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_PicturePipeline => $"Unset localization item:Effect_PicturePipeline()";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in ar-SA (like '
+    /// Unset localization item:Effect_VectorPictureEffect()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_VectorPictureEffect => $"Unset localization item:Effect_VectorPictureEffect()";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in ar-SA (like '
+    /// Unset localization item:Effect_NativeInput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeInput => $"Unset localization item:Effect_NativeInput()";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in ar-SA (like '
+    /// Unset localization item:Effect_NativeOutput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeOutput => $"Unset localization item:Effect_NativeOutput()";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in ar-SA (like '
+    /// Unset localization item:Effect_IncompatiblePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_IncompatiblePipeline => $"Unset localization item:Effect_IncompatiblePipeline()";
+
     string ISimpleLocalizerBase.DraftPage_AssetPanel_Remove_Confirm0(string name) => DraftPage_AssetPanel_Remove_Confirm0(name);
     /// <summary>
     /// Get the localized string for DraftPage_AssetPanel_Remove_Confirm0 in ar-SA (like '
@@ -80118,6 +80616,72 @@ Dieses Projekt enthält eine ältere Datenstruktur und muss zunächst aktualisie
     /// </summary>
     public static string Transform_PreRender => $"Unset localization item:Transform_PreRender()";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in de-DE (like '
+    /// Unset localization item:Effect_NativePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativePipeline => $"Unset localization item:Effect_NativePipeline()";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in de-DE (like '
+    /// Unset localization item:Effect_PicturePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_PicturePipeline => $"Unset localization item:Effect_PicturePipeline()";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in de-DE (like '
+    /// Unset localization item:Effect_VectorPictureEffect()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_VectorPictureEffect => $"Unset localization item:Effect_VectorPictureEffect()";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in de-DE (like '
+    /// Unset localization item:Effect_NativeInput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeInput => $"Unset localization item:Effect_NativeInput()";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in de-DE (like '
+    /// Unset localization item:Effect_NativeOutput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeOutput => $"Unset localization item:Effect_NativeOutput()";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in de-DE (like '
+    /// Unset localization item:Effect_IncompatiblePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_IncompatiblePipeline => $"Unset localization item:Effect_IncompatiblePipeline()";
+
     string ISimpleLocalizerBase.DraftPage_AssetPanel_Remove_Confirm0(string name) => DraftPage_AssetPanel_Remove_Confirm0(name);
     /// <summary>
     /// Get the localized string for DraftPage_AssetPanel_Remove_Confirm0 in de-DE (like '
@@ -88893,6 +89457,72 @@ Este proyecto contiene una estructura de datos antigua que debe actualizarse ant
     /// </summary>
     public static string Transform_PreRender => $"Unset localization item:Transform_PreRender()";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in es-ES (like '
+    /// Unset localization item:Effect_NativePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativePipeline => $"Unset localization item:Effect_NativePipeline()";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in es-ES (like '
+    /// Unset localization item:Effect_PicturePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_PicturePipeline => $"Unset localization item:Effect_PicturePipeline()";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in es-ES (like '
+    /// Unset localization item:Effect_VectorPictureEffect()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_VectorPictureEffect => $"Unset localization item:Effect_VectorPictureEffect()";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in es-ES (like '
+    /// Unset localization item:Effect_NativeInput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeInput => $"Unset localization item:Effect_NativeInput()";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in es-ES (like '
+    /// Unset localization item:Effect_NativeOutput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeOutput => $"Unset localization item:Effect_NativeOutput()";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in es-ES (like '
+    /// Unset localization item:Effect_IncompatiblePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_IncompatiblePipeline => $"Unset localization item:Effect_IncompatiblePipeline()";
+
     string ISimpleLocalizerBase.DraftPage_AssetPanel_Remove_Confirm0(string name) => DraftPage_AssetPanel_Remove_Confirm0(name);
     /// <summary>
     /// Get the localized string for DraftPage_AssetPanel_Remove_Confirm0 in es-ES (like '
@@ -97779,6 +98409,72 @@ Questo progetto contiene una struttura dati obsoleta e necessita di un aggiornam
     /// </summary>
     public static string Transform_PreRender => $"Unset localization item:Transform_PreRender()";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in it-IT (like '
+    /// Unset localization item:Effect_NativePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativePipeline => $"Unset localization item:Effect_NativePipeline()";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in it-IT (like '
+    /// Unset localization item:Effect_PicturePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_PicturePipeline => $"Unset localization item:Effect_PicturePipeline()";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in it-IT (like '
+    /// Unset localization item:Effect_VectorPictureEffect()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_VectorPictureEffect => $"Unset localization item:Effect_VectorPictureEffect()";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in it-IT (like '
+    /// Unset localization item:Effect_NativeInput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeInput => $"Unset localization item:Effect_NativeInput()";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in it-IT (like '
+    /// Unset localization item:Effect_NativeOutput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeOutput => $"Unset localization item:Effect_NativeOutput()";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in it-IT (like '
+    /// Unset localization item:Effect_IncompatiblePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_IncompatiblePipeline => $"Unset localization item:Effect_IncompatiblePipeline()";
+
     string ISimpleLocalizerBase.DraftPage_AssetPanel_Remove_Confirm0(string name) => DraftPage_AssetPanel_Remove_Confirm0(name);
     /// <summary>
     /// Get the localized string for DraftPage_AssetPanel_Remove_Confirm0 in it-IT (like '
@@ -106579,6 +107275,72 @@ Ten projekt zawiera starszą strukturę danych, dlatego {AppBrand} nie może go 
     /// </summary>
     public static string Transform_PreRender => $"Unset localization item:Transform_PreRender()";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in pl-PL (like '
+    /// Unset localization item:Effect_NativePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativePipeline => $"Unset localization item:Effect_NativePipeline()";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in pl-PL (like '
+    /// Unset localization item:Effect_PicturePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_PicturePipeline => $"Unset localization item:Effect_PicturePipeline()";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in pl-PL (like '
+    /// Unset localization item:Effect_VectorPictureEffect()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_VectorPictureEffect => $"Unset localization item:Effect_VectorPictureEffect()";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in pl-PL (like '
+    /// Unset localization item:Effect_NativeInput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeInput => $"Unset localization item:Effect_NativeInput()";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in pl-PL (like '
+    /// Unset localization item:Effect_NativeOutput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeOutput => $"Unset localization item:Effect_NativeOutput()";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in pl-PL (like '
+    /// Unset localization item:Effect_IncompatiblePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_IncompatiblePipeline => $"Unset localization item:Effect_IncompatiblePipeline()";
+
     string ISimpleLocalizerBase.DraftPage_AssetPanel_Remove_Confirm0(string name) => DraftPage_AssetPanel_Remove_Confirm0(name);
     /// <summary>
     /// Get the localized string for DraftPage_AssetPanel_Remove_Confirm0 in pl-PL (like '
@@ -115465,6 +116227,72 @@ Autor: {author}{Environment.NewLine}Finalidade: {usage}{Environment.NewLine}{Env
     /// </summary>
     public static string Transform_PreRender => $"Unset localization item:Transform_PreRender()";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in pt-BR (like '
+    /// Unset localization item:Effect_NativePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativePipeline => $"Unset localization item:Effect_NativePipeline()";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in pt-BR (like '
+    /// Unset localization item:Effect_PicturePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_PicturePipeline => $"Unset localization item:Effect_PicturePipeline()";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in pt-BR (like '
+    /// Unset localization item:Effect_VectorPictureEffect()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_VectorPictureEffect => $"Unset localization item:Effect_VectorPictureEffect()";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in pt-BR (like '
+    /// Unset localization item:Effect_NativeInput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeInput => $"Unset localization item:Effect_NativeInput()";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in pt-BR (like '
+    /// Unset localization item:Effect_NativeOutput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeOutput => $"Unset localization item:Effect_NativeOutput()";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in pt-BR (like '
+    /// Unset localization item:Effect_IncompatiblePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_IncompatiblePipeline => $"Unset localization item:Effect_IncompatiblePipeline()";
+
     string ISimpleLocalizerBase.DraftPage_AssetPanel_Remove_Confirm0(string name) => DraftPage_AssetPanel_Remove_Confirm0(name);
     /// <summary>
     /// Get the localized string for DraftPage_AssetPanel_Remove_Confirm0 in pt-BR (like '
@@ -124229,6 +125057,72 @@ $""""
     /// </summary>
     public static string Transform_PreRender => $"Unset localization item:Transform_PreRender()";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in ru-RU (like '
+    /// Unset localization item:Effect_NativePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativePipeline => $"Unset localization item:Effect_NativePipeline()";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in ru-RU (like '
+    /// Unset localization item:Effect_PicturePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_PicturePipeline => $"Unset localization item:Effect_PicturePipeline()";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in ru-RU (like '
+    /// Unset localization item:Effect_VectorPictureEffect()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_VectorPictureEffect => $"Unset localization item:Effect_VectorPictureEffect()";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in ru-RU (like '
+    /// Unset localization item:Effect_NativeInput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeInput => $"Unset localization item:Effect_NativeInput()";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in ru-RU (like '
+    /// Unset localization item:Effect_NativeOutput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeOutput => $"Unset localization item:Effect_NativeOutput()";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in ru-RU (like '
+    /// Unset localization item:Effect_IncompatiblePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_IncompatiblePipeline => $"Unset localization item:Effect_IncompatiblePipeline()";
+
     string ISimpleLocalizerBase.DraftPage_AssetPanel_Remove_Confirm0(string name) => DraftPage_AssetPanel_Remove_Confirm0(name);
     /// <summary>
     /// Get the localized string for DraftPage_AssetPanel_Remove_Confirm0 in ru-RU (like '
@@ -133089,6 +133983,72 @@ Yazar: {author}{Environment.NewLine}Kullanım amacı: {usage}{Environment.NewLin
     /// </summary>
     public static string Transform_PreRender => $"Unset localization item:Transform_PreRender()";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in tr-TR (like '
+    /// Unset localization item:Effect_NativePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativePipeline => $"Unset localization item:Effect_NativePipeline()";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in tr-TR (like '
+    /// Unset localization item:Effect_PicturePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_PicturePipeline => $"Unset localization item:Effect_PicturePipeline()";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in tr-TR (like '
+    /// Unset localization item:Effect_VectorPictureEffect()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_VectorPictureEffect => $"Unset localization item:Effect_VectorPictureEffect()";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in tr-TR (like '
+    /// Unset localization item:Effect_NativeInput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeInput => $"Unset localization item:Effect_NativeInput()";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in tr-TR (like '
+    /// Unset localization item:Effect_NativeOutput()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_NativeOutput => $"Unset localization item:Effect_NativeOutput()";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in tr-TR (like '
+    /// Unset localization item:Effect_IncompatiblePipeline()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    public static string Effect_IncompatiblePipeline => $"Unset localization item:Effect_IncompatiblePipeline()";
+
     string ISimpleLocalizerBase.DraftPage_AssetPanel_Remove_Confirm0(string name) => DraftPage_AssetPanel_Remove_Confirm0(name);
     /// <summary>
     /// Get the localized string for DraftPage_AssetPanel_Remove_Confirm0 in tr-TR (like '
@@ -142275,6 +143235,54 @@ public class __ISimpleLocalizerBase_qps_ploc__ : ISimpleLocalizerBase
     /// </summary>
     public static string Transform_PreRender => "Localized item:Transform_PreRender";
     
+    string ISimpleLocalizerBase.Effect_NativePipeline => Effect_NativePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_NativePipeline in qps-ploc (like '
+    /// 原生内容效果
+    /// ')
+    /// </summary>
+    public static string Effect_NativePipeline => "Localized item:Effect_NativePipeline";
+
+    string ISimpleLocalizerBase.Effect_PicturePipeline => Effect_PicturePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_PicturePipeline in qps-ploc (like '
+    /// 画面效果
+    /// ')
+    /// </summary>
+    public static string Effect_PicturePipeline => "Localized item:Effect_PicturePipeline";
+
+    string ISimpleLocalizerBase.Effect_VectorPictureEffect => Effect_VectorPictureEffect;
+    /// <summary>
+    /// Get the localized string for Effect_VectorPictureEffect in qps-ploc (like '
+    /// 矢量画面效果
+    /// ')
+    /// </summary>
+    public static string Effect_VectorPictureEffect => "Localized item:Effect_VectorPictureEffect";
+
+    string ISimpleLocalizerBase.Effect_NativeInput => Effect_NativeInput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeInput in qps-ploc (like '
+    /// 原生内容
+    /// ')
+    /// </summary>
+    public static string Effect_NativeInput => "Localized item:Effect_NativeInput";
+
+    string ISimpleLocalizerBase.Effect_NativeOutput => Effect_NativeOutput;
+    /// <summary>
+    /// Get the localized string for Effect_NativeOutput in qps-ploc (like '
+    /// 处理后的矢量内容
+    /// ')
+    /// </summary>
+    public static string Effect_NativeOutput => "Localized item:Effect_NativeOutput";
+
+    string ISimpleLocalizerBase.Effect_IncompatiblePipeline => Effect_IncompatiblePipeline;
+    /// <summary>
+    /// Get the localized string for Effect_IncompatiblePipeline in qps-ploc (like '
+    /// 无法连接不同管线或不兼容的原生内容类型。
+    /// ')
+    /// </summary>
+    public static string Effect_IncompatiblePipeline => "Localized item:Effect_IncompatiblePipeline";
+
     /// <summary>
     /// Get the current localized Id (like 'qps-ploc')
     /// </summary>

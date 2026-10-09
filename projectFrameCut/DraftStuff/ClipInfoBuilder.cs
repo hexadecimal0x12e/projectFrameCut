@@ -118,12 +118,53 @@ namespace projectFrameCut.DraftStuff
         }
 
 
-        public async Task<TabbedView> Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        public const string TabOrderSettingKey = "Edit_ClipInfoTabOrder";
+
+        public static (string Tag, string Header)[] GetTabOrderOptions()
+        {
+            var r = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var loc)
+                ? loc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+            return
+            [
+                ("general", Localized.MainSettingsPage_Tab_General),
+                ("vector", Localized.VectorContentEditorView_Properties),
+                ("audio", r.General_Audio),
+                ("text", r.TextOption_TabTitle),
+                ("timing", r.Tabs_Timing),
+                ("sizeAndPosition", r.Tabs_SizeAndPosition),
+                ("keyframe", Localized.InteractableEditor_KeyFrame),
+                ("effect", r.Tabs_Effect),
+                ("transform", Localized.Transform_Tab),
+                ("mixture", r.Tabs_Mixture),
+                ("colorAdjust", r.Tabs_ColorAdjust),
+                ("effectClassic", r.Tabs_Effect_Classic),
+                ("textClassic", r.TextOption_TabTitle_Classic),
+                ("add", Localized.DraftPage_CenterMenuBar_AddClip)
+            ];
+        }
+
+        public static string[] GetTabOrder()
+        {
+            var defaults = GetTabOrderOptions().Select(t => t.Tag).ToArray();
+            return SettingsManager.GetSetting(TabOrderSettingKey)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(t => defaults.Contains(t))
+                .Concat(defaults)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        public Task<TabbedView> Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+            => BuildClipTabs(clip, handler, null);
+
+        private async Task<TabbedView> BuildClipTabs(ClipElementUI clip,
+            EventHandler<PropertyPanelPropertyChangedEventArgs> handler, ProjectAddClipView? addClipView)
         {
             tabbedView = new();
             tabbedView.Background = page.Background;
+            var tabs = new List<TabbedViewItem>();
             if (clip.ClipType == ClipMode.VideoClip) page.EnsureGeneratedSoundTrack(clip);
-            tabbedView.TabItems.Add(new TabbedViewItem
+            tabs.Add(new TabbedViewItem
             {
                 Header = Localized.MainSettingsPage_Tab_General,
                 Content = BuildGeneralTab(clip, handler),
@@ -131,7 +172,7 @@ namespace projectFrameCut.DraftStuff
             });
             if (clip.ClipType is ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip)
             {
-                tabbedView.TabItems.Add(new TabbedViewItem
+                tabs.Add(new TabbedViewItem
                 {
                     Header = Localized.VectorContentEditorView_Properties,
                     LazyContentFactory = () => BuildVectorComponentTab(clip, handler),
@@ -140,7 +181,7 @@ namespace projectFrameCut.DraftStuff
             }
             if (clip.ClipType == ClipMode.AudioClip || (clip.ClipType == ClipMode.VideoClip && page.GetBoundSoundTrack(clip) is not null))
             {
-                tabbedView.TabItems.Add(new TabbedViewItem
+                tabs.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.General_Audio,
                     LazyContentFactory = () => BuildAudioTab(clip, handler),
@@ -149,7 +190,7 @@ namespace projectFrameCut.DraftStuff
             }
             if (clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
             {
-                tabbedView.TabItems.Add(new TabbedViewItem
+                tabs.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.TextOption_TabTitle,
                     LazyAsyncContentFactory = () => BuildTextOptionTab(clip, handler),
@@ -159,7 +200,7 @@ namespace projectFrameCut.DraftStuff
             if (clip.isInfiniteLength || (clip.LeftHandle?.IsVisible == true && clip.RightHandle?.IsVisible == true)
                 || clip.ClipType != ClipMode.MarkingClip)
             {
-                tabbedView.TabItems.Add(new TabbedViewItem
+                tabs.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_Timing,
                     LazyContentFactory = () => BuildTimingTab(clip, handler),
@@ -168,7 +209,7 @@ namespace projectFrameCut.DraftStuff
             }
             if (clip.ClipType is ClipMode.VideoClip or ClipMode.PhotoClip or ClipMode.VectorComponentClip)
             {
-                tabbedView.TabItems.Add(new TabbedViewItem
+                tabs.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_SizeAndPosition,
                     LazyContentFactory = () => BuildSizeAndPositionTab(clip, handler),
@@ -178,19 +219,19 @@ namespace projectFrameCut.DraftStuff
             }
             if (clip.ClipType != ClipMode.MarkingClip)
             {
-                tabbedView.TabItems.Add(new TabbedViewItem
+                tabs.Add(new TabbedViewItem
                 {
                     Header = Localized.InteractableEditor_KeyFrame,
                     LazyContentFactory = () => BuildKeyFrameTab(clip, handler),
                     Tag = "keyframe"
                 });
-                tabbedView.TabItems.Add(new TabbedViewItem
+                tabs.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_Effect,
                     LazyAsyncContentFactory = () => BuildEffectTab(clip, handler),
                     Tag = "effect"
                 });
-                tabbedView.TabItems.Add(new TabbedViewItem
+                tabs.Add(new TabbedViewItem
                 {
                     Header = Localized.Transform_Tab,
                     LazyContentFactory = () => BuildTransformTab(clip),
@@ -198,13 +239,13 @@ namespace projectFrameCut.DraftStuff
                 });
                 if (clip.ClipType != ClipMode.AudioClip)
                 {
-                    tabbedView.TabItems.Add(new TabbedViewItem
+                    tabs.Add(new TabbedViewItem
                     {
                         Header = PPLocalizedResources.Tabs_Mixture,
                         LazyContentFactory = () => BuildMixtureTab(clip, handler),
                         Tag = "mixture"
                     });
-                    tabbedView.TabItems.Add(new TabbedViewItem
+                    tabs.Add(new TabbedViewItem
                     {
                         Header = PPLocalizedResources.Tabs_ColorAdjust,
                         LazyContentFactory = () => BuildColorAdjustmentTab(clip, handler),
@@ -213,7 +254,7 @@ namespace projectFrameCut.DraftStuff
                 }
                 if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"))
                 {
-                    tabbedView.TabItems.Add(new TabbedViewItem
+                    tabs.Add(new TabbedViewItem
                     {
                         Header = PPLocalizedResources.Tabs_Effect_Classic,
                         LazyContentFactory = () => BuildClassicEffectTab(clip, handler),
@@ -221,7 +262,7 @@ namespace projectFrameCut.DraftStuff
                     });
                     if (clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
                     {
-                        tabbedView.TabItems.Add(new TabbedViewItem
+                        tabs.Add(new TabbedViewItem
                         {
                             Header = PPLocalizedResources.TextOption_TabTitle_Classic,
                             LazyContentFactory = () => BuildTextOptionClassicTab(clip, handler),
@@ -230,6 +271,22 @@ namespace projectFrameCut.DraftStuff
                     }
                 }
             }
+
+            if (addClipView is not null)
+            {
+                tabs.Add(new TabbedViewItem
+                {
+                    Header = Localized.DraftPage_CenterMenuBar_AddClip,
+                    Content = addClipView,
+                    Tag = "add"
+                });
+            }
+            var order = GetTabOrder();
+            tabbedView.TabItems = new(tabs.OrderBy(t =>
+            {
+                var i = Array.IndexOf(order, t.Tag);
+                return i < 0 ? int.MaxValue : i;
+            }));
 
             tabbedView.HeaderRightContent = new Button
             {
@@ -256,7 +313,8 @@ namespace projectFrameCut.DraftStuff
             EventHandler<PropertyPanelPropertyChangedEventArgs> handler,
             ProjectAddClipView addClipView)
         {
-            var result = clip is null ? new TabbedView { Background = page.Background } : await Build(clip, handler);
+            if (clip is not null) return await BuildClipTabs(clip, handler, addClipView);
+            var result = new TabbedView { Background = page.Background };
             result.TabItems.Add(new TabbedViewItem
             {
                 Header = Localized.DraftPage_CenterMenuBar_AddClip,

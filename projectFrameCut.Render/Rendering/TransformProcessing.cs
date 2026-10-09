@@ -174,16 +174,19 @@ public static class TransformProcessing
     }
 
     public static IPicture RenderCanvas(IClip clip, IReadOnlyList<IClip> clips, uint frame, int width, int height,
-        int projectWidth, int projectHeight, IPicture.PicturePixelMode pixelMode)
+        int projectWidth, int projectHeight, IPicture.PicturePixelMode pixelMode, ClipArgumentFrameCache? argumentFrames = null)
     {
-        if (TryRender(clip, clips, frame, width, height, projectWidth, projectHeight, pixelMode, out var result)) return result!;
-        return RenderInput(clip, frame, width, height, projectWidth, projectHeight, pixelMode);
+        var arguments = argumentFrames ?? new ClipArgumentFrameCache();
+        if (TryRender(clip, clips, frame, width, height, projectWidth, projectHeight, pixelMode, out var result, argumentFrames: arguments)) return result!;
+        return RenderInput(clip, frame, width, height, projectWidth, projectHeight, pixelMode, argumentFrames: arguments);
     }
 
     public static bool TryRender(IClip clip, IReadOnlyList<IClip> clips, uint frameIndex, int width, int height,
         int projectWidth, int projectHeight, IPicture.PicturePixelMode pixelMode, out IPicture? result,
-        int sdrBrightness = 203, bool autoCenterImplicitClip = true, bool initializeClips = true, IPicture? preparedSource = null)
+        int sdrBrightness = 203, bool autoCenterImplicitClip = true, bool initializeClips = true, IPicture? preparedSource = null,
+        ClipArgumentFrameCache? argumentFrames = null)
     {
+        argumentFrames ??= new();
         result = null;
         var index = new Index(clips.Select(TransformClipInfo.FromClip).ToArray());
         foreach (var side in Enum.GetValues<TransformSide>())
@@ -195,6 +198,11 @@ public static class TransformProcessing
             {
                 var owner = clips.First(c => c.Id == resolved.Owner.Id);
                 var neighbor = resolved.Right is { } r ? clips.First(c => c.Id == r.Id) : null;
+                clip = InitializeInput(clip, frameIndex, pixelMode, initializeClips && preparedSource is null, argumentFrames);
+                owner = owner.Id == clip.Id ? clip : InitializeInput(owner, ClampFrame(owner, frameIndex), pixelMode, initializeClips, argumentFrames);
+                if (neighbor is not null)
+                    neighbor = neighbor.Id == clip.Id ? clip : InitializeInput(neighbor, ClampFrame(neighbor, frameIndex), pixelMode, initializeClips, argumentFrames);
+                initializeClips = false;
                 bool before = ReadEnum<TransformRenderOrder>(resolved.Provider.MetaData, OrderKey) == TransformRenderOrder.BeforeEffects;
                 int inputWidth = before ? OutputDimension(clip.TargetWidth, projectWidth, width) : width;
                 int inputHeight = before ? OutputDimension(clip.TargetHeight, projectHeight, height) : height;
@@ -208,10 +216,10 @@ public static class TransformProcessing
                 }
                 using var left = before
                     ? owner.Id == clip.Id ? CopyPicture(current!) : RenderRawInput(owner, frameIndex, inputWidth, inputHeight, pixelMode, sdrBrightness, initializeClips, null)
-                    : RenderInput(owner, frameIndex, width, height, projectWidth, projectHeight, pixelMode, sdrBrightness, autoCenterImplicitClip, initializeClips, owner.Id == clip.Id ? preparedSource : null);
+                    : RenderInput(owner, frameIndex, width, height, projectWidth, projectHeight, pixelMode, sdrBrightness, autoCenterImplicitClip, initializeClips, owner.Id == clip.Id ? preparedSource : null, argumentFrames);
                 using var right = neighbor is null ? null : before
                     ? neighbor.Id == clip.Id ? CopyPicture(current!) : RenderRawInput(neighbor, frameIndex, inputWidth, inputHeight, pixelMode, sdrBrightness, initializeClips, null)
-                    : RenderInput(neighbor, frameIndex, width, height, projectWidth, projectHeight, pixelMode, sdrBrightness, autoCenterImplicitClip, initializeClips, neighbor.Id == clip.Id ? preparedSource : null);
+                    : RenderInput(neighbor, frameIndex, width, height, projectWidth, projectHeight, pixelMode, sdrBrightness, autoCenterImplicitClip, initializeClips, neighbor.Id == clip.Id ? preparedSource : null, argumentFrames);
                 var transform = owner.EffectsInstances?.OfType<ITransform>().SingleOrDefault(e => e.Enabled &&
                     e.BindedEffectProvidingSystemID == resolved.Provider.Id.ToString())
                     ?? throw new InvalidOperationException($"Missing effect instance for transform {resolved.Provider.Id}.");
@@ -261,6 +269,14 @@ public static class TransformProcessing
         dimension <= 0 ? Math.Max(1, output) : relative <= 0 ? dimension :
             Math.Max(1, (int)Math.Round((double)dimension * output / relative));
 
+    private static IClip InitializeInput(IClip clip, uint frame, IPicture.PicturePixelMode pixelMode, bool initialize, ClipArgumentFrameCache frames)
+    {
+        return frames.Get(clip, frame, c =>
+        {
+            if (initialize) c.ReInit(pixelMode);
+        });
+    }
+
     private static IPicture RenderRawInput(IClip clip, uint frame, int width, int height,
         IPicture.PicturePixelMode pixelMode, int sdrBrightness, bool initializeClips, IPicture? preparedSource, bool align = true)
     {
@@ -270,18 +286,13 @@ public static class TransformProcessing
             clip.ReInit(pixelMode);
             EffectHelper.ResolveClipEffects(clip);
         }
+        clip = ClipArgumentBinding.InitializeFrame(clip, clamped);
         using var context = ValueProviderFrameContext.PushFrame(clamped,
             Math.Clamp(((float)clamped - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1));
         uint actual = clip.GetRelativeFrameIndex(clamped) ?? 0;
-        var source = preparedSource is null ? clip.GetFrameRelativeToStartPointOfSource(actual, width, height, pixelMode) : CopyPicture(preparedSource);
+        var source = preparedSource is null ? VideoClipRotation.ReadFrame(clip, actual, width, height, pixelMode) : CopyPicture(preparedSource);
         try
         {
-            if (preparedSource is null && clip.AlternativeSource is ISourceReplacementEffect replacement && replacement.SupportsSourceReplacement(clip, width, height))
-            {
-                var replaced = replacement.Compute(clip, source, width, height, actual, pixelMode);
-                if (!ReferenceEquals(source, replaced)) source.Dispose();
-                source = replaced;
-            }
             if (preparedSource is null && clip.ExtraData.TryGetValue("IsAI", out var ai) && bool.TryParse(ai?.ToString(), out var isAI) && isAI)
             {
                 var marked = EffectProcessing.ProcessAIWatermark(source, clamped);
@@ -313,14 +324,17 @@ public static class TransformProcessing
         clip.ExtraData.TryGetValue("HDRBrightness", out var value) && int.TryParse(value.ToString(), out var brightness) ? brightness : fallback;
 
     private static IPicture RenderInput(IClip clip, uint frame, int width, int height, int projectWidth, int projectHeight,
-        IPicture.PicturePixelMode pixelMode, int sdrBrightness = 203, bool autoCenterImplicitClip = true, bool initializeClips = true, IPicture? preparedSource = null)
+        IPicture.PicturePixelMode pixelMode, int sdrBrightness = 203, bool autoCenterImplicitClip = true, bool initializeClips = true, IPicture? preparedSource = null,
+        ClipArgumentFrameCache? argumentFrames = null)
     {
         uint clamped = ClampFrame(clip, frame);
         using var context = ValueProviderFrameContext.PushFrame(clamped,
             Math.Clamp(((float)clamped - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1));
+        argumentFrames ??= new();
+        clip = InitializeInput(clip, clamped, pixelMode, initializeClips && preparedSource is null, argumentFrames);
         var frames = preparedSource is not null ? new[] { new OneFrame(clamped, clip, CopyPicture(preparedSource), resolveEffects: false) }
             : Timeline.GetFramesInOneFrame([clip], clamped, width, height, pixelMode,
-                projectWidth, projectHeight, applyTransforms: false, initializeClips: initializeClips).ToArray();
+                projectWidth, projectHeight, applyTransforms: false, initializeClips: false, argumentFrames: argumentFrames).ToArray();
         try
         {
             if (pixelMode == IPicture.PicturePixelMode.UShortPicture)

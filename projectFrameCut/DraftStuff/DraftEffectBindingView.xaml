@@ -5,6 +5,9 @@
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
              x:Class="projectFrameCut.DraftStuff.DraftEffectBindingView">
+    <ContentView.Resources>
+        <x:String x:Key="ClipArgumentsNodeTitle">Clip 参数</x:String>
+    </ContentView.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition x:Name="TopRow" Height="*"/>
@@ -20,6 +23,8 @@
                 <PanGestureRecognizer PanUpdated="OnCanvasPanUpdated" />
                 <PinchGestureRecognizer PinchUpdated="OnCanvasPinchUpdated" />
             </Grid.GestureRecognizers>
+
+            <Picker x:Name="PipelinePicker" HorizontalOptions="Start" VerticalOptions="Start" Margin="10" ZIndex="10" />
 
             <!-- Connections Layer -->
             <GraphicsView x:Name="ConnectionsLayer" 

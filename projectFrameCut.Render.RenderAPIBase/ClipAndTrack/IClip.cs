@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -84,6 +84,8 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// The target Y-axis position of this clip in left-top corner. Related to <see cref="Project.ProjectJSONStructure.RelativeHeight"/>.
         /// </summary>
         public int TargetY { get; set; }
+        /// <summary>Clockwise rotation in degrees, applied by the compositor around the target rectangle's center.</summary>
+        public float Rotation { get; set; }
         /// <summary>
         /// The starting X-axis position of this clip in the source. Related to <see cref="Project.ProjectJSONStructure.RelativeWidth"/>.
         /// </summary>
@@ -157,6 +159,15 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         [JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
 
+        [JsonIgnore]
+        public virtual IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> ArgumentFields => ClipArgumentHandler.DefaultFields;
+
+        /// <summary>Creates a frame-local copy that borrows this clip's resources; do not dispose it separately.</summary>
+        public virtual IClip CopyForFrame() => ClipArgumentHandler.Copy(this);
+
+        /// <summary>Applies evaluated arguments to the clip used for the rest of this frame.</summary>
+        public virtual IClip HandleArguments(IReadOnlyDictionary<string, object> arguments) => ClipArgumentHandler.Handle(this, arguments);
+
         /// <summary>
         /// Get the path of the source file for this clip. May be null when <see cref="NeedFilePath"/> is false.
         /// </summary>
@@ -199,7 +210,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         [DebuggerNonUserCode()]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
-            => GetFrameRelativeToStartPointOfSource(GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight, targetPPB);
+            => VectorPictureEffectProcessing.ReadFrame(this, GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight, targetPPB);
 
         /// <summary>
         /// Gets the effective timeline duration for this clip after applying speed ratio/profile.
@@ -210,7 +221,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <summary>
         /// Get a <see cref="ClipPositionTuple"/> of this clip.
         /// </summary>
-        public ClipPositionTuple PositionTuple => new(TargetX, TargetY, TargetWidth, TargetHeight, false);
+        public ClipPositionTuple PositionTuple => new(TargetX, TargetY, TargetWidth, TargetHeight, false, Rotation);
 
         /// <summary>
         /// Returns true if the given draft-global frame is inside this clip's visible range.

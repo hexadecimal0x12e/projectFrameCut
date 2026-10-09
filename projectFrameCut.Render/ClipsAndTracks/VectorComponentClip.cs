@@ -136,7 +136,7 @@ public class VectorComponentClip : VectorCanvasClip
         {
             picture = new VectorPicture { Elements = RotateViewport(picture.Elements, viewport[2], viewport[3], rotation) };
         }
-        return picture;
+        return frameOverride is null ? VectorPictureEffectProcessing.Process(this, picture, frameIndex, Progress(frameIndex)) : picture;
     }
 
     public static List<VectorCanvasElement> RotateViewport(IEnumerable<VectorCanvasElement> elements, float width, float height, float rotation)

@@ -1,4 +1,7 @@
-﻿using projectFrameCut.ApplicationAPIBase.Plugins;
+﻿#if !HEADLESS
+using projectFrameCut.ApplicationAPIBase.Plugins;
+#endif
+
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Setting.SettingManager;
@@ -85,6 +88,7 @@ namespace projectFrameCut.Services
             return [.. verification.AssemblyBytes];
         }
 
+#if !HEADLESS
         public static async Task AddAPlugin(string pluginPath, Page currentPage)
         {
             void CleanupTempPluginDirectory(string tempDir)
@@ -202,6 +206,8 @@ namespace projectFrameCut.Services
             }
         }
 
+#endif
+
         public static async Task<Tuple<IPluginBase?, string?>> CreateFromID(string pluginID)
         {
             var result = await CreateFromIDCoreAsync(pluginID);
@@ -236,6 +242,10 @@ namespace projectFrameCut.Services
                     pluginRoot,
                     requirePublisherTrust: true);
 
+#if HEADLESS
+                if (verification.Metadata.IsAppLevelPlugin == true)
+                    return (null, "Application-level plugins are not supported by the headless client.");
+#endif
                 if (verification.Metadata.BackendKind == PluginBackendKind.External)
                 {
                     Dictionary<string, string> configuration = [];
@@ -284,6 +294,7 @@ namespace projectFrameCut.Services
                     return (null, "The plugin assembly id does not match the signed package metadata.");
                 }
 
+#if !HEADLESS
                 if (verification.Metadata.IsAppLevelPlugin is bool isAppLevelPlugin &&
                     isAppLevelPlugin != (plugin is IApplicationPluginBase))
                 {
@@ -295,6 +306,8 @@ namespace projectFrameCut.Services
                 {
                     return (null, "The plugin application API version is not compatible with this application version.");
                 }
+
+#endif
 
                 var optionFilePath = Path.Combine(pluginRoot, "option.json");
                 if (File.Exists(optionFilePath))
@@ -376,8 +389,7 @@ namespace projectFrameCut.Services
         {
             try
             {
-                var types = asb.GetModules()?.SelectMany(m => m.GetTypes());
-                var ldr = types?.FirstOrDefault(a => a.Name == "PluginLoader", null);
+                var ldr = asb.GetTypes().FirstOrDefault(t => t.Name == "PluginLoader");
                 if (ldr is null)
                 {
                     throw new EntryPointNotFoundException($"No suitable PluginLoader class found. Do you forget to add it?");
@@ -395,7 +407,7 @@ namespace projectFrameCut.Services
                         }
                         catch { }
                         var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
-                        throw new FeatureNotSupportedException(failReason);
+                        throw new NotSupportedException(failReason);
                     }
                 }
                 else
@@ -409,7 +421,7 @@ namespace projectFrameCut.Services
                     }
                     catch { }
                     var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
-                    throw new FeatureNotSupportedException(failReason);
+                    throw new NotSupportedException(failReason);
                 }
 
 
@@ -428,7 +440,7 @@ namespace projectFrameCut.Services
                         }
                         catch { }
                         var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
-                        throw new FeatureNotSupportedException(failReason);
+                        throw new NotSupportedException(failReason);
                     }
 
                     return plugin;
@@ -531,7 +543,9 @@ namespace projectFrameCut.Services
                     var fail = result.FailReason;
                     if (p is not null)
                     {
+#if !HEADLESS
                         if (p is IApplicationPluginBase b) b.OnApplicationPluginLoaded();
+#endif
                         plugins.Add(p);
                     }
                     else
@@ -631,12 +645,21 @@ namespace projectFrameCut.Services
         }
 
         public static PluginIsolationMode GetDefaultIsolationMode() =>
+#if HEADLESS
+            PluginIsolationMode.ProcessIsolation;
+#else
             OperatingSystem.IsWindows() ? PluginIsolationMode.Containerized : PluginIsolationMode.None;
+#endif
 
         public static PluginIsolationMode NormalizeIsolationMode(PluginIsolationMode mode)
         {
             if (!Enum.IsDefined(mode)) return GetDefaultIsolationMode();
+#if HEADLESS
+            if (mode == PluginIsolationMode.Containerized)
+                throw new PlatformNotSupportedException("AppContainer plugin isolation is unavailable in the headless client.");
+#else
             if (mode == PluginIsolationMode.Containerized && !OperatingSystem.IsWindows()) return PluginIsolationMode.None;
+#endif
             if (mode == PluginIsolationMode.ProcessIsolation && !DesktopPluginIsolationPlatform.IsSupported) return PluginIsolationMode.None;
             return mode;
         }
@@ -660,12 +683,17 @@ namespace projectFrameCut.Services
 
             var json = File.ReadAllText(path);
             var items = JsonSerializer.Deserialize<List<PluginItem>>(json) ?? [];
+#if !HEADLESS
             MigrateLegacyIsolationModes(json, path, items);
+#endif
             return items;
         }
 
         private static Dictionary<string, PluginIsolationMode> ReadIsolationModes()
         {
+#if HEADLESS
+            return [];
+#else
             lock (IsolationOptionsLock)
             {
                 try
@@ -689,10 +717,14 @@ namespace projectFrameCut.Services
                     return [];
                 }
             }
+#endif
         }
 
         private static void WriteIsolationModes(Dictionary<string, PluginIsolationMode> modes)
         {
+#if HEADLESS
+            throw new PlatformNotSupportedException("The headless client cannot persist encrypted plugin isolation settings.");
+#else
             lock (IsolationOptionsLock)
             {
                 var keyText = TaskHelper.SyncWait(
@@ -714,6 +746,7 @@ namespace projectFrameCut.Services
                 File.WriteAllBytes(tempPath, encrypted);
                 File.Move(tempPath, path, true);
             }
+#endif
         }
 
         private static void MigrateLegacyIsolationModes(string json, string pluginItemsPath, List<PluginItem> items)

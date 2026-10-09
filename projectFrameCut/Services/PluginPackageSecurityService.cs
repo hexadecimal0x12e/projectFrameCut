@@ -219,6 +219,9 @@ internal static class PluginPackageSecurityService
 
     public static async Task TrustPublisherAsync(PluginTrustReport report, string rootCertificateFingerprint = "")
     {
+#if HEADLESS
+        throw new PlatformNotSupportedException("Publisher trust cannot be changed by the headless client.");
+#else
         if (report.Level is PluginTrustLevel.Invalid or PluginTrustLevel.Revoked)
         {
             throw new InvalidOperationException("An invalid or revoked publisher cannot be trusted.");
@@ -235,16 +238,24 @@ internal static class PluginPackageSecurityService
         // Compatibility marker for the existing non-UTF8 settings page. The value is a
         // publisher fingerprint, never a PEM key. Removing it revokes this plugin binding.
         await SecureStorage.Default.SetAsync($"plugin_pem_{report.PluginId}", report.PublisherId);
+#endif
     }
 
     public static Task ForgetPublisherAsync(string publisherId)
     {
+#if HEADLESS
+        throw new PlatformNotSupportedException("Publisher trust cannot be changed by the headless client.");
+#else
         SecureStorage.Default.Remove(GetPublisherTrustStorageKey(publisherId));
         return Task.CompletedTask;
+#endif
     }
 
     public static async Task<bool> IsPublisherTrustedAsync(string publisherId, string pluginId)
     {
+#if HEADLESS
+        return false;
+#else
         if (string.IsNullOrWhiteSpace(publisherId))
         {
             return false;
@@ -271,10 +282,14 @@ internal static class PluginPackageSecurityService
         {
             return false;
         }
+#endif
     }
 
     public static async Task RegisterDevelopmentRootCertificateAsync(byte[] certificateDer, string? label = null)
     {
+#if HEADLESS
+        throw new PlatformNotSupportedException("Development trust roots cannot be changed by the headless client.");
+#else
 #if DEBUG
         ArgumentNullException.ThrowIfNull(certificateDer);
         using var certificate = X509CertificateLoader.LoadCertificate(certificateDer);
@@ -297,10 +312,14 @@ internal static class PluginPackageSecurityService
         await Task.CompletedTask;
         throw new PlatformNotSupportedException("Custom plugin root certificates are only supported in Debug builds.");
 #endif
+#endif
     }
 
     public static async Task RemoveDevelopmentRootCertificateAsync(string fingerprint)
     {
+#if HEADLESS
+        throw new PlatformNotSupportedException("Development trust roots cannot be changed by the headless client.");
+#else
 #if DEBUG
         var roots = await ReadDevelopmentRootsAsync();
         roots.RemoveAll(root => string.Equals(root.Fingerprint, fingerprint, StringComparison.OrdinalIgnoreCase));
@@ -308,6 +327,7 @@ internal static class PluginPackageSecurityService
 #else
         await Task.CompletedTask;
         throw new PlatformNotSupportedException("Custom plugin root certificates are only supported in Debug builds.");
+#endif
 #endif
     }
 
@@ -546,6 +566,9 @@ internal static class PluginPackageSecurityService
 
     private static async Task<List<DevelopmentPluginRootRecord>> ReadDevelopmentRootsAsync()
     {
+#if HEADLESS
+        return [];
+#else
         var value = await SecureStorage.Default.GetAsync(DevelopmentRootsStorageKey);
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -560,6 +583,7 @@ internal static class PluginPackageSecurityService
         {
             return [];
         }
+#endif
     }
 
     private static string GetPublisherTrustStorageKey(string publisherId)

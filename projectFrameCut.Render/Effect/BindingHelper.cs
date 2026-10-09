@@ -51,7 +51,7 @@ namespace projectFrameCut.Render.Effect
                 Name = provider.Name,
                 Enabled = provider.Enabled,
                 AnchorsBindingState = new(provider.AnchorsBindingState ?? []),
-                StaticFields = provider.Fields
+                StaticFields = provider is ClipArgumentProvider clipArguments ? new(clipArguments.StaticValues) : provider.Fields
                     .Where(item => item.Value is StaticEffectArgumentField or DynamicEffectParamField)
                     .ToDictionary(item => item.Key, item => EffectParamConvert.Normalize(GetFieldValue(item.Value)) ?? new object()),
                 MetaData = provider.MetaData is { Count: > 0 } ? new(provider.MetaData) : null,
@@ -93,6 +93,21 @@ namespace projectFrameCut.Render.Effect
             {
                 foreach (var p in effectProviders)
                 {
+                    if (p.TypeName == ClipArgumentProvider.ProviderTypeName)
+                    {
+                        var arguments = new ClipArgumentProvider
+                        {
+                            Id = p.Id,
+                            Enabled = p.Enabled,
+                            Name = p.Name,
+                            AnchorsBindingState = p.AnchorsBindingState ?? new(),
+                            MetaData = p.MetaData ?? new(),
+                        };
+                        arguments.RestoreStaticValues(p.StaticFields);
+                        if (!result.TryAdd(p.Id, arguments))
+                            foundProblems.Add(new(p.Id, "DuplicateProviderId", $"Multiple effect providers use id {p.Id}."));
+                        continue;
+                    }
                     if (!factories.TryGetValue(p.TypeName, out var factory))
                     {
                         foundProblems.Add(new(p.Id, "UnknownProviderType",
@@ -232,7 +247,7 @@ namespace projectFrameCut.Render.Effect
             var inlinedIds = new HashSet<Guid>();
             if (providers.Count == 0) return inlinedIds;
 
-            foreach (var consumer in providers.Values)
+            foreach (var consumer in SortEffectProviders(providers))
             {
                 if (consumer.Fields is null) continue;
                 Dictionary<string, IEffectArgumentField>? fields;
@@ -262,7 +277,7 @@ namespace projectFrameCut.Render.Effect
                         continue;
                     }
 
-                    if (!providers.TryGetValue(sourceId, out var source) || !source.Target.HasFlag(EffectTarget.ValueProvider)) continue;
+                    if (!providers.TryGetValue(sourceId, out var source) || !source.Enabled || !source.Target.HasFlag(EffectTarget.ValueProvider)) continue;
 
                     IValueProviderEffect? injected = null;
                     try
@@ -336,6 +351,7 @@ namespace projectFrameCut.Render.Effect
                     var sortedProviders = SortEffectProviders(effectProviders);
                     foreach (var bundleData in sortedProviders.Where(b => b.Enabled))
                     {
+                        if (bundleData is ClipArgumentProvider) continue;
                         if (bundleData is not IEffectProvider provider)
                         {
                             throw new InvalidOperationException($"{bundleData.TypeName} is not IEffectProvider");
@@ -380,6 +396,11 @@ namespace projectFrameCut.Render.Effect
                                 provider.MetaData.Remove(EffectProviderBase.ImplementTypeParameterKey);
                         }
 
+                        if (effects.Any(e => e.TypeOfEffect.GetPipeline() != provider.TypeOfEffect.GetPipeline()))
+                        {
+                            foreach (var effect in effects.OfType<IDisposable>()) effect.Dispose();
+                            throw new InvalidOperationException($"Provider {provider.Id} built effects for another content pipeline.");
+                        }
                         if (provider.TypeOfEffect == EffectType.Transform)
                         {
                             var mode = Rendering.TransformProcessing.ReadEnum<RenderAPIBase.ClipAndTrack.TransformInputMode>(provider.MetaData,
@@ -624,6 +645,7 @@ namespace projectFrameCut.Render.Effect
             }
 
             var duplicatedFieldBindings = providers.Values
+                .Where(provider => provider is not ClipArgumentProvider)
                 .SelectMany(provider => provider.EnumerateFieldBindings()
                     .Select(binding => (Provider: provider, binding.Key, binding.Value)))
                 .GroupBy(item => (item.Key, item.Value))
@@ -690,7 +712,53 @@ namespace projectFrameCut.Render.Effect
                 }
             }
 
+            SplitLegacyPipelines(providers);
             return diagnostics;
+        }
+
+        public const string PipelineVersionKey = "__EffectPipelineVersion__";
+
+        private static void SplitLegacyPipelines(IDictionary<Guid, IEffectProvider> providers)
+        {
+            if (providers.Count == 0 || providers.Values.All(p => p.MetaData.ContainsKey(PipelineVersionKey))) return;
+            var inputs = providers.ToDictionary(p => p.Key, p => p.Value.GetMainInputSource());
+            var outputs = providers.Values.Where(p => p.IsFinalOutputSource()).ToArray();
+            var active = new List<IEffectProvider>();
+            if (outputs.Length == 1)
+            {
+                var current = outputs[0];
+                var seen = new HashSet<Guid>();
+                while (seen.Add(current.Id))
+                {
+                    active.Add(current);
+                    if (!Guid.TryParse(inputs[current.Id], out var id) || !providers.TryGetValue(id, out var next)) break;
+                    current = next;
+                }
+            }
+            bool changed = false;
+            foreach (var provider in providers.Values.Where(p => p.HasMainPictureInput()))
+            {
+                var input = inputs[provider.Id];
+                var seen = new HashSet<Guid> { provider.Id };
+                while (Guid.TryParse(input, out var id) && providers.TryGetValue(id, out var source)
+                    && source.TypeOfEffect.GetPipeline() != provider.TypeOfEffect.GetPipeline())
+                {
+                    if (!seen.Add(id)) break;
+                    input = inputs[id];
+                }
+                if (input != inputs[provider.Id])
+                {
+                    provider.SetMainInputSource(input);
+                    changed = true;
+                }
+            }
+            if (changed && outputs.Length == 1)
+            {
+                foreach (var group in active.GroupBy(p => p.TypeOfEffect.GetPipeline()))
+                    group.First().SetFinalOutputSource(true);
+                Logger.Log($"Split legacy effect graph into native and picture pipelines ({providers.Count} providers).");
+            }
+            foreach (var provider in providers.Values) provider.MetaData[PipelineVersionKey] = 1;
         }
 
         /// <summary>Validates stored bindings without mutating them.</summary>
@@ -699,9 +767,12 @@ namespace projectFrameCut.Render.Effect
             var diagnostics = new List<BindingDiagnostic>();
             if (providers is null) return diagnostics;
 
+            if (providers.Values.OfType<ClipArgumentProvider>().Count() > 1)
+                diagnostics.Add(new(null, "MultipleClipArguments", "A clip can only have one argument provider."));
+
             var finalProviders = providers.Values.Where(p => p.IsFinalOutputSource()).ToList();
-            if (finalProviders.Count > 1)
-                diagnostics.Add(new(null, "MultipleFinalOutputs", $"Multiple providers are connected to final output: {string.Join(", ", finalProviders.Select(p => p.Id))}."));
+            foreach (var group in finalProviders.GroupBy(p => p.TypeOfEffect.GetPipeline()).Where(g => g.Count() > 1))
+                diagnostics.Add(new(null, "MultipleFinalOutputs", $"Multiple providers are connected to {group.Key} output: {string.Join(", ", group.Select(p => p.Id))}."));
 
             foreach (var provider in providers.Values)
             {
@@ -714,6 +785,11 @@ namespace projectFrameCut.Render.Effect
 
                 if (provider.TypeOfEffect == EffectType.Transform && (provider.IsFinalOutputSource() || pictureInputs.Count > 0))
                     diagnostics.Add(new(provider.Id, "TransformPictureBinding", $"Transform {provider.Id} cannot join the picture chain."));
+                if (provider is ClipArgumentProvider && (provider.IsFinalOutputSource() || pictureInputs.Count > 0))
+                    diagnostics.Add(new(provider.Id, "ClipArgumentPictureBinding", $"Clip argument provider {provider.Id} cannot join the picture chain."));
+                if (provider is ClipArgumentProvider arguments)
+                    foreach (var key in arguments.StaticValues.Keys.Except(arguments.Fields.Keys))
+                        diagnostics.Add(new(provider.Id, "UnknownClipArgument", $"Clip argument '{key}' is unavailable on this clip."));
 
                 var input = provider.GetMainInputSource();
                 if (input == IEffectProvider.NoConnectionGUID.ToString() || input == IEffectProvider.InputAnchorGUID.ToString())
@@ -723,6 +799,8 @@ namespace projectFrameCut.Render.Effect
                     diagnostics.Add(new(provider.Id, "DanglingPictureInput", $"Provider {provider.Id} references missing picture source '{input}'."));
                     continue;
                 }
+                if (!source.CanConnectContent(provider))
+                    diagnostics.Add(new(provider.Id, "IncompatibleContentInput", $"Provider {sourceId} cannot feed the {provider.TypeOfEffect} input of {provider.Id}."));
                 if (sourceId == provider.Id)
                     diagnostics.Add(new(provider.Id, "SelfPictureBinding", $"Provider {provider.Id} uses itself as picture input."));
                 if (source.Target.HasFlag(EffectTarget.ValueProvider) || source.TypeOfEffect == EffectType.Transform)
@@ -766,9 +844,9 @@ namespace projectFrameCut.Render.Effect
                 }
             }
 
-            if (finalProviders.Count == 1)
+            foreach (var finalProvider in finalProviders)
             {
-                var current = finalProviders[0];
+                var current = finalProvider;
                 var seen = new HashSet<Guid>();
                 while (seen.Add(current.Id))
                 {
@@ -776,7 +854,7 @@ namespace projectFrameCut.Render.Effect
                     if (source == IEffectProvider.InputAnchorGUID.ToString()) break;
                     if (!Guid.TryParse(source, out var sourceId) || !providers.TryGetValue(sourceId, out var next))
                     {
-                        diagnostics.Add(new(finalProviders[0].Id, "BrokenActivePath", $"Final provider {finalProviders[0].Id} does not have a complete path to the source picture."));
+                        diagnostics.Add(new(finalProvider.Id, "BrokenActivePath", $"Final provider {finalProvider.Id} does not have a complete path to the source picture."));
                         break;
                     }
                     current = next;
@@ -793,18 +871,18 @@ namespace projectFrameCut.Render.Effect
             if (errors.Count != 0)
                 throw new InvalidOperationException("Invalid effect binding graph: " + string.Join(" ", errors.Select(e => e.Message)));
 
-            var finalProvider = providers.Values.SingleOrDefault(p => p.IsFinalOutputSource());
-            if (finalProvider is null) return [];
-
             var result = new HashSet<Guid>();
-            var current = finalProvider;
-            while (result.Add(current.Id))
+            foreach (var finalProvider in providers.Values.Where(p => p.IsFinalOutputSource()))
             {
-                var source = current.GetMainInputSource();
-                if (source == IEffectProvider.InputAnchorGUID.ToString()) return result;
-                current = providers[Guid.Parse(source)];
+                var current = finalProvider;
+                while (result.Add(current.Id))
+                {
+                    var source = current.GetMainInputSource();
+                    if (source == IEffectProvider.InputAnchorGUID.ToString()) break;
+                    current = providers[Guid.Parse(source)];
+                }
             }
-            throw new InvalidOperationException($"Picture binding graph contains a cycle ending at provider {current.Id}.");
+            return result;
         }
 
         /// <summary>
@@ -822,12 +900,27 @@ namespace projectFrameCut.Render.Effect
                 newProvider.SetFinalOutputSource(false);
                 return;
             }
+            newProvider.MetaData[PipelineVersionKey] = 1;
+            var pipeline = newProvider.TypeOfEffect.GetPipeline();
             var lastProvider = effectProviders.Values
                 .FirstOrDefault(b => b.IsFinalOutputSource()
-                                   && AreTargetsCompatible(b.Target, effectTarget)
+                                   && b.TypeOfEffect.GetPipeline() == pipeline
                                    && b.Id != newProvider.Id);
 
-            foreach (var provider in effectProviders.Values) provider.SetFinalOutputSource(false);
+            if (lastProvider is not null && !lastProvider.CanConnectContent(newProvider))
+            {
+                // Specialized native effects must precede the evaluated VectorPicture effects.
+                var roots = effectProviders.Values.Where(p => p.Id != newProvider.Id
+                    && p.TypeOfEffect.GetPipeline() == pipeline
+                    && p.GetMainInputSource() == IEffectProvider.InputAnchorGUID.ToString()).ToArray();
+                if (roots.Length == 0 || roots.Any(root => !newProvider.CanConnectContent(root)))
+                    throw new ArgumentException("Incompatible native content effect.");
+                newProvider.SetMainInputSource(IEffectProvider.InputAnchorGUID);
+                foreach (var root in roots) root.SetMainInputSource(newProvider.Id);
+                newProvider.SetFinalOutputSource(false);
+                return;
+            }
+            foreach (var provider in effectProviders.Values.Where(p => p.TypeOfEffect.GetPipeline() == pipeline)) provider.SetFinalOutputSource(false);
             if (lastProvider != null)
             {
                 newProvider.SetMainInputSource(lastProvider.Id);
@@ -849,10 +942,13 @@ namespace projectFrameCut.Render.Effect
 
             var roots = effectProviders.Values
                 .Where(provider => provider.Id != newProvider.Id
+                    && provider.TypeOfEffect.GetPipeline() == newProvider.TypeOfEffect.GetPipeline()
                     && provider.GetMainInputSource() == IEffectProvider.InputAnchorGUID.ToString())
                 .ToList();
             var hasFinalOutput = effectProviders.Values
-                .Any(provider => provider.Id != newProvider.Id && provider.IsFinalOutputSource());
+                .Any(provider => provider.Id != newProvider.Id && provider.TypeOfEffect.GetPipeline() == newProvider.TypeOfEffect.GetPipeline() && provider.IsFinalOutputSource());
+            if (roots.Any(root => !newProvider.CanConnectContent(root))) throw new ArgumentException("Incompatible content effect.");
+            newProvider.MetaData[PipelineVersionKey] = 1;
             newProvider.SetMainInputSource(IEffectProvider.InputAnchorGUID);
             newProvider.SetFinalOutputSource(!hasFinalOutput);
             foreach (var root in roots) root.SetMainInputSource(newProvider.Id);
@@ -875,6 +971,11 @@ namespace projectFrameCut.Render.Effect
         {
             foreach (var provider in providers)
             {
+                if (provider is ClipArgumentProvider clipArguments)
+                {
+                    clipArguments.ClearRuntimeFields();
+                    continue;
+                }
                 var fields = provider.Fields ?? [];
                 foreach (var fieldKey in fields.Keys.ToList())
                 {
@@ -917,6 +1018,9 @@ namespace projectFrameCut.Render.Effect
         }
 
         public static void SetFinalOutput(IDictionary<Guid, IEffectProvider> providers, Guid? providerId)
+            => SetFinalOutput(providers, providerId, EffectPipeline.Picture);
+
+        public static void SetFinalOutput(IDictionary<Guid, IEffectProvider> providers, Guid? providerId, EffectPipeline pipeline)
         {
             if (providerId.HasValue
                 && (!providers.TryGetValue(providerId.Value, out var selected)
@@ -926,7 +1030,8 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException($"Provider '{providerId}' cannot be used as the final picture output.", nameof(providerId));
             }
 
-            foreach (var provider in providers.Values)
+            if (providerId.HasValue) pipeline = providers[providerId.Value].TypeOfEffect.GetPipeline();
+            foreach (var provider in providers.Values.Where(p => p.TypeOfEffect.GetPipeline() == pipeline))
                 provider.SetFinalOutputSource(providerId.HasValue && provider.Id == providerId.Value);
         }
 
@@ -1028,6 +1133,9 @@ namespace projectFrameCut.Render.Effect
         {
             sb.AppendLine($"    {InputNodeId}[\"输入 (源画面)\"];");
             sb.AppendLine($"    {OutputNodeId}[\"输出 (最终画面)\"];");
+            sb.AppendLine("    NATIVE_INPUT[\"输入 (原生内容)\"];");
+            sb.AppendLine("    NATIVE_OUTPUT[\"输出 (矢量内容)\"];");
+            sb.AppendLine($"    NATIVE_OUTPUT -->|\"光栅化\"| {InputNodeId};");
         }
 
         /// <summary>
@@ -1040,10 +1148,12 @@ namespace projectFrameCut.Render.Effect
             var anchorLines = new List<string>();
             foreach (var p in effectProviders.Values)
             {
+                var inputNode = p.TypeOfEffect.GetPipeline() == EffectPipeline.NativeContent ? "NATIVE_INPUT" : InputNodeId;
+                var outputNode = p.TypeOfEffect.GetPipeline() == EffectPipeline.NativeContent ? "NATIVE_OUTPUT" : OutputNodeId;
                 var input = p.GetMainInputSource();
                 if (input == IEffectProvider.InputAnchorGUID.ToString())
                 {
-                    anchorLines.Add($"    {InputNodeId} -->|\"{Escape(EffectProviderAnchorExtensions.InputKey)}\"| {nodeByProvider[p.Id]};");
+                    anchorLines.Add($"    {inputNode} -->|\"{Escape(EffectProviderAnchorExtensions.InputKey)}\"| {nodeByProvider[p.Id]};");
                 }
                 else if (Guid.TryParse(input, out var sourceId) && effectProviders.ContainsKey(sourceId))
                 {
@@ -1052,12 +1162,17 @@ namespace projectFrameCut.Render.Effect
 
                 if (p.IsFinalOutputSource())
                 {
-                    anchorLines.Add($"    {nodeByProvider[p.Id]} -->|\"{Escape(EffectProviderAnchorExtensions.OutputKey)}\"| {OutputNodeId};");
+                    anchorLines.Add($"    {nodeByProvider[p.Id]} -->|\"{Escape(EffectProviderAnchorExtensions.OutputKey)}\"| {outputNode};");
                 }
             }
 
-            if (!effectProviders.Values.Any(p => p.IsFinalOutputSource()))
-                anchorLines.Add($"    {InputNodeId} -->|\"Picture\"| {OutputNodeId};");
+            foreach (var pipeline in Enum.GetValues<EffectPipeline>())
+            {
+                if (effectProviders.Values.Any(p => p.TypeOfEffect.GetPipeline() == pipeline && p.IsFinalOutputSource())) continue;
+                var inputNode = pipeline == EffectPipeline.NativeContent ? "NATIVE_INPUT" : InputNodeId;
+                var outputNode = pipeline == EffectPipeline.NativeContent ? "NATIVE_OUTPUT" : OutputNodeId;
+                anchorLines.Add($"    {inputNode} --> {outputNode};");
+            }
 
             foreach (var line in anchorLines.Distinct())
                 sb.AppendLine(line);

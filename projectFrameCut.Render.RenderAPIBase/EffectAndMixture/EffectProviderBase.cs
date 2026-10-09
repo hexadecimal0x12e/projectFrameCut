@@ -201,13 +201,13 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         protected virtual IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() 
             => new Dictionary<string, EffectArgumentFieldDescriptor>
             {
-                { PrimaryInputAnchorKey, Field(PrimaryInputAnchorKey, EffectArgumentFieldType.IPicture, "", remarks: "The primary input for the effect to process. This is a mandatory input.") }
+                { PrimaryInputAnchorKey, Field(PrimaryInputAnchorKey, TypeOfEffect == EffectType.VectorPictureEffect ? EffectArgumentFieldType.VectorPicture : EffectArgumentFieldType.IPicture, "", remarks: "The primary input for the effect to process. This is a mandatory input.") }
             };
 
         /// <summary>
         /// Define the output field (anchor) of the effect. Defaults to an IPicture output.
         /// </summary>
-        protected virtual EffectArgumentFieldDescriptor DefineOutField() => Field(OutputAnchorKey, EffectArgumentFieldType.IPicture, "", remarks: "The output of the effect. This is a mandatory output.");
+        protected virtual EffectArgumentFieldDescriptor DefineOutField() => Field(OutputAnchorKey, TypeOfEffect == EffectType.VectorPictureEffect ? EffectArgumentFieldType.VectorPicture : EffectArgumentFieldType.IPicture, "", remarks: "The output of the effect. This is a mandatory output.");
 
         /// <summary>
         /// A compact helper for subclasses to declare a settable argument field.

@@ -361,7 +361,9 @@ public static class ProjectPluginService
         var packagePath = ResolvePackagePath(projectRoot, reference);
         if (File.Exists(packagePath)) File.Delete(packagePath);
         project.ProjectPlugins.Remove(reference);
+#if !HEADLESS
         SecureStorage.Default.Remove(TrustKey(project.ProjectUniqueId, pluginId));
+#endif
         Logger.Log($"Removed project plugin '{pluginId}' from project '{project.ProjectUniqueId}'.");
         return Task.CompletedTask;
     }
@@ -378,6 +380,9 @@ public static class ProjectPluginService
 
     private static async Task<(byte[] Certificate, byte[] PrivateKey)> GetOrCreateIdentityAsync(CancellationToken cancellationToken)
     {
+#if HEADLESS
+        throw new PlatformNotSupportedException("Project plugin signing requires the GUI secure storage.");
+#else
         await IdentityGate.WaitAsync(cancellationToken);
         try
         {
@@ -404,16 +409,25 @@ public static class ProjectPluginService
         {
             IdentityGate.Release();
         }
+#endif
     }
 
     private static string TrustKey(Guid projectId, string pluginId) =>
         $"project_plugin_trust_v1_{projectId:N}_{PluginTrustValidator.ComputeSha256Hex(Encoding.UTF8.GetBytes(pluginId))}";
 
     private static async Task<bool> IsTrustedAsync(Guid projectId, string pluginId, string publisherFingerprint) =>
+#if HEADLESS
+        false;
+#else
         string.Equals(await SecureStorage.Default.GetAsync(TrustKey(projectId, pluginId)), publisherFingerprint, StringComparison.OrdinalIgnoreCase);
+#endif
 
     private static Task TrustAsync(Guid projectId, string pluginId, string publisherFingerprint) =>
+#if HEADLESS
+        throw new PlatformNotSupportedException("Project plugin trust cannot be changed by the headless client.");
+#else
         SecureStorage.Default.SetAsync(TrustKey(projectId, pluginId), publisherFingerprint);
+#endif
 
     private static void ValidateReference(string projectRoot, ProjectPluginReference reference)
     {

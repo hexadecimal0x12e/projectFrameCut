@@ -59,6 +59,7 @@ namespace projectFrameCut.Shared
         NonIPictureOutputValueProvider = 13,
         VectorComponentEffect = 14,
         Transform = 15,
+        VectorPictureEffect = 16,
         NotSpecified = -1,
     }
 
@@ -76,11 +77,18 @@ namespace projectFrameCut.Shared
         ValueProvider = 256,
         VectorComponent = 512,
         Transform = 1024,
+        VectorPicture = 2048,
 
         IsKeyFramed = 1 << 16,
         IsNotVisibleInEffectEditor = 1 << 17,
         IsNotVisibleInNewEffectSelector = 1 << 18,
         InternalUse = 1 << 19,
+    }
+
+    public enum EffectPipeline
+    {
+        Picture,
+        NativeContent,
     }
 
     /// <summary>
@@ -259,6 +267,7 @@ namespace projectFrameCut.Shared
     /// <param name="TargetWidth">The width of the clip.</param>
     /// <param name="TargetHeight">The height of the clip.</param>
     /// <param name="IsDelta">Indicates whether the position is a delta relative to the previous position.</param>
-    public record struct ClipPositionTuple(int TargetX, int TargetY, int TargetWidth, int TargetHeight, bool IsDelta);
+    /// <param name="Rotation">Clockwise rotation in degrees around the target rectangle's center.</param>
+    public record struct ClipPositionTuple(int TargetX, int TargetY, int TargetWidth, int TargetHeight, bool IsDelta, float Rotation = 0);
 
 }

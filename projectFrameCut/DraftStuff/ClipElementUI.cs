@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Controls.Shapes;
+using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Project;
 using projectFrameCut.Converters;
@@ -80,6 +80,7 @@ namespace projectFrameCut.DraftStuff
         public int TargetHeight { get; set; } = 0;
         public int TargetX { get; set; } = 0;
         public int TargetY { get; set; } = 0;
+        public float Rotation { get; set; }
         public int StartingX { get; set; } = 0;
         public int StartingY { get; set; } = 0;
         public int SubLayerIndex { get; set; } = 0;
@@ -282,22 +283,26 @@ namespace projectFrameCut.DraftStuff
             return false;
         }
 
+        public bool SupportsNativeEffects => ClipType is ClipMode.TextClip or ClipMode.SubtitleClip or ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip
+            || ClipType == ClipMode.PhotoClip && (TypeName == nameof(VectorPhotoClip) || string.Equals(Path.GetExtension(SourcePath), ".svg", StringComparison.OrdinalIgnoreCase));
+
+        public EffectTarget GetEffectSelectionTarget(EffectPipeline pipeline) => pipeline == EffectPipeline.Picture
+            ? EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ValueProvider
+                | (ClipType is ClipMode.TextClip or ClipMode.SubtitleClip ? EffectTarget.Text : 0)
+            : (ClipType is ClipMode.TextClip or ClipMode.SubtitleClip ? EffectTarget.Text
+                : ClipType is ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip ? EffectTarget.VectorComponent : 0)
+                | EffectTarget.VectorPicture | EffectTarget.ValueProvider;
+
         public EffectTarget GetEffectTarget() => ClipType switch
         {
             ClipMode.Special or ClipMode.MarkingClip => EffectTarget.NotSpecified,
             ClipMode.AudioClip => EffectTarget.Audio,
-            ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text,
-            ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => EffectTarget.Video | EffectTarget.VectorComponent,
-            _ => EffectTarget.Video
+            ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text | EffectTarget.Video | EffectTarget.VectorPicture,
+            ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => EffectTarget.Video | EffectTarget.VectorComponent | EffectTarget.VectorPicture,
+            _ => EffectTarget.Video | (SupportsNativeEffects ? EffectTarget.VectorPicture : 0)
         };
 
-        public EffectTarget GetEffectSelectionTarget() => ClipType switch
-        {
-            ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => EffectTarget.VectorComponent,
-            ClipMode.TextClip or ClipMode.SubtitleClip => EffectTarget.Text | EffectTarget.Video,
-            ClipMode.Special or ClipMode.MarkingClip => 0,
-            _ => GetEffectTarget()
-        };
+        public EffectTarget GetEffectSelectionTarget() => GetEffectTarget();
 
         public void UpdateContent(View? content)
         {

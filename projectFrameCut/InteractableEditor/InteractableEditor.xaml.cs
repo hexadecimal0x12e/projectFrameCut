@@ -7,6 +7,7 @@ using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.LivePreview;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -19,6 +20,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Maui.Controls.Shapes;
 
 namespace projectFrameCut.InteractableEditor
 {
@@ -191,7 +193,19 @@ namespace projectFrameCut.InteractableEditor
         public bool EnableSnapping { get; set { if (field == value) return; field = value; OnPropertyChanged(); } } = true;
         public bool LockLayout { get; set { if (field == value) return; field = value; OnPropertyChanged(); } } = false;
         public bool EnableKeyframeRecording { get; set { if (field == value) return; field = value; OnPropertyChanged(); } } = false;
-        public bool AllowClipOutOfBounds { get; set { if (field == value) return; field = value; LogDiagnostic($"AllowClipOutOfBounds now is {field}"); OnPropertyChanged(); OnPropertyChanged(nameof(DisallowClipOutOfBounds)); } } = false;
+        public bool AllowClipOutOfBounds
+        {
+            get;
+            set
+            {
+                if (field == value) return;
+                field = value;
+                LogDiagnostic($"AllowClipOutOfBounds now is {field}");
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(DisallowClipOutOfBounds));
+                UpdateVisuals();
+            }
+        } = false;
         public bool DisallowClipOutOfBounds
         {
             get => !AllowClipOutOfBounds;
@@ -597,6 +611,15 @@ namespace projectFrameCut.InteractableEditor
                 Root.IsVisible = true;
                 AbsoluteLayout.SetLayoutBounds(Root, new Rect(displayX, displayY, displayW, displayH));
                 AbsoluteLayout.SetLayoutBounds(ClipVisual, new Rect(0, 0, displayW, displayH));
+                float rotation = clip is null ? 0 : _owner.GetClipRotation(clip);
+                if (clip is null && _owner._previewSourceClips.TryGetValue(ClipId, out var source))
+                    rotation = source switch
+                    {
+                        ClipElementUI uiClip => _owner.GetClipRotation(uiClip),
+                        IClip sourceClip => VideoClipRotation.GetAngle(sourceClip, _owner._currentFrame, (int)_owner._videoWidth, (int)_owner._videoHeight),
+                        _ => 0
+                    };
+                ClipVisual.Rotation = rotation;
                 ClipVisual.IsVisible = _owner.ShowAllBorders || showClipVisual;
                 if (ClipVisual.IsVisible)
                 {
@@ -616,14 +639,24 @@ namespace projectFrameCut.InteractableEditor
                     AbsoluteLayout.SetLayoutBounds(PreviewHost, new Rect(rect.X - displayX, rect.Y - displayY, _owner._videoWidth, _owner._videoHeight));
                     UpdatePreviewHostVisibility();
                 }
-                else UpdatePreviewHostLayout(displayW, displayH, logicalW, logicalH);
+                else UpdatePreviewHostLayout(displayW, displayH, logicalW, logicalH, rotation);
                 UpdateRootInputTransparency();
 
                 double handleSize = HandleSize;
-                AbsoluteLayout.SetLayoutBounds(HandleTL, new Rect(-handleSize / 2, -handleSize / 2, handleSize, handleSize));
-                AbsoluteLayout.SetLayoutBounds(HandleTR, new Rect(displayW - handleSize / 2, -handleSize / 2, handleSize, handleSize));
-                AbsoluteLayout.SetLayoutBounds(HandleBL, new Rect(-handleSize / 2, displayH - handleSize / 2, handleSize, handleSize));
-                AbsoluteLayout.SetLayoutBounds(HandleBR, new Rect(displayW - handleSize / 2, displayH - handleSize / 2, handleSize, handleSize));
+                double radians = rotation * Math.PI / 180d;
+                PlaceHandle(HandleTL, 0, 0);
+                PlaceHandle(HandleTR, displayW, 0);
+                PlaceHandle(HandleBL, 0, displayH);
+                PlaceHandle(HandleBR, displayW, displayH);
+
+                void PlaceHandle(View view, double x, double y)
+                {
+                    double dx = x - displayW / 2, dy = y - displayH / 2;
+                    AbsoluteLayout.SetLayoutBounds(view, new Rect(
+                        displayW / 2 + dx * Math.Cos(radians) - dy * Math.Sin(radians) - handleSize / 2,
+                        displayH / 2 + dx * Math.Sin(radians) + dy * Math.Cos(radians) - handleSize / 2,
+                        handleSize, handleSize));
+                }
 
                 bool resizeHandleVisible = showHandles
                     && clip is not null
@@ -1002,7 +1035,7 @@ namespace projectFrameCut.InteractableEditor
                 UpdatePreviewHostVisibility();
             }
 
-            private void UpdatePreviewHostLayout(double displayW, double displayH, double logicalW, double logicalH)
+            private void UpdatePreviewHostLayout(double displayW, double displayH, double logicalW, double logicalH, float rotation)
             {
                 if (logicalW <= 0 || logicalH <= 0 || displayW <= 0 || displayH <= 0)
                 {
@@ -1012,10 +1045,11 @@ namespace projectFrameCut.InteractableEditor
                     return;
                 }
 
-                PreviewHost.WidthRequest = logicalW;
-                PreviewHost.HeightRequest = logicalH;
+                var bounds = VideoClipRotation.GetBounds(rotation, 0, 0, logicalW, logicalH);
+                PreviewHost.WidthRequest = bounds.Width;
+                PreviewHost.HeightRequest = bounds.Height;
                 PreviewHost.Scale = Math.Clamp(displayW / logicalW, 0.0001d, 1000d);
-                AbsoluteLayout.SetLayoutBounds(PreviewHost, new Rect(0, 0, logicalW, logicalH));
+                AbsoluteLayout.SetLayoutBounds(PreviewHost, new Rect(bounds.X * PreviewHost.Scale, bounds.Y * PreviewHost.Scale, bounds.Width, bounds.Height));
                 UpdatePreviewHostVisibility();
             }
 
@@ -2004,6 +2038,7 @@ namespace projectFrameCut.InteractableEditor
 
         private ClipOverlayState? ResolveClipAtPoint(Point tapPoint)
         {
+            if (!AllowClipOutOfBounds && !GetRenderRect().Contains(tapPoint)) return null;
             var hostOffsetX = ClipStatesHost.X;
             var hostOffsetY = ClipStatesHost.Y;
 
@@ -2024,6 +2059,13 @@ namespace projectFrameCut.InteractableEditor
 
                 var left = hostOffsetX + bounds.X;
                 var top = hostOffsetY + bounds.Y;
+                if (!state.IsPositionedPreview && state.PreviewHost.IsVisible)
+                {
+                    var previewBounds = AbsoluteLayout.GetLayoutBounds(state.PreviewHost);
+                    left += previewBounds.X;
+                    top += previewBounds.Y;
+                    bounds = new Rect(bounds.X, bounds.Y, previewBounds.Width * state.PreviewHost.Scale, previewBounds.Height * state.PreviewHost.Scale);
+                }
                 var right = left + bounds.Width;
                 var bottom = top + bounds.Height;
 
@@ -2108,7 +2150,7 @@ namespace projectFrameCut.InteractableEditor
                 (int)Math.Round(y, MidpointRounding.AwayFromZero),
                 Math.Max(1, (int)Math.Round(w, MidpointRounding.AwayFromZero)),
                 Math.Max(1, (int)Math.Round(h, MidpointRounding.AwayFromZero)),
-                false);
+                false, GetClipRotation(_currentClip));
 
             callback(_currentClip.Id.ToString(), _currentFrame, keyframePosition, handle);
         }
@@ -2740,6 +2782,15 @@ namespace projectFrameCut.InteractableEditor
                 Rect renderRect = GetRenderRect();
                 double scale = renderRect.Width / _videoWidth;
 
+                if (AllowClipOutOfBounds)
+                    ClipStatesHost.Clip = null;
+                else if (ClipStatesHost.Clip is RectangleGeometry clip)
+                {
+                    if (clip.Rect != renderRect) clip.Rect = renderRect;
+                }
+                else
+                    ClipStatesHost.Clip = new RectangleGeometry { Rect = renderRect };
+
                 UpdateRenderRectOverlay(renderRect);
                 UpdateReferenceLines(renderRect, scale);
                 UpdateBottomControlsVisibility(renderRect);
@@ -2782,13 +2833,20 @@ namespace projectFrameCut.InteractableEditor
                         continue;
                     }
 
-                    // Clamp to keep UI stable.
-                    w = Math.Clamp(w, MinSize, _videoWidth);
-                    h = Math.Clamp(h, MinSize, _videoHeight);
-                    if (!AllowClipOutOfBounds)
+                    if (GetClipArgumentPreview(clipId) is null)
                     {
-                        x = Math.Clamp(x, 0, _videoWidth - w);
-                        y = Math.Clamp(y, 0, _videoHeight - h);
+                        w = Math.Clamp(w, MinSize, _videoWidth);
+                        h = Math.Clamp(h, MinSize, _videoHeight);
+                        if (!AllowClipOutOfBounds)
+                        {
+                            x = Math.Clamp(x, 0, _videoWidth - w);
+                            y = Math.Clamp(y, 0, _videoHeight - h);
+                        }
+                    }
+                    else
+                    {
+                        w = Math.Max(1, w);
+                        h = Math.Max(1, h);
                     }
 
                     double displayX = renderRect.X + x * scale;
@@ -3058,6 +3116,10 @@ namespace projectFrameCut.InteractableEditor
 
                 if (prepared.Source is not null)
                 {
+                    if (_previewSourceClips.GetValueOrDefault(prepared.ClipId) is not IClip previous
+                        || previous.TargetX != prepared.Source.TargetX || previous.TargetY != prepared.Source.TargetY
+                        || previous.TargetWidth != prepared.Source.TargetWidth || previous.TargetHeight != prepared.Source.TargetHeight)
+                        layoutChanged.Add(prepared.ClipId);
                     _previewSourceClips[prepared.ClipId] = prepared.Source;
                 }
 
@@ -3115,14 +3177,15 @@ namespace projectFrameCut.InteractableEditor
                 }
             }
 
-            // Applying a new frame must not invalidate every overlay layout. Layout
-            // is updated by the geometry/selection paths; the streaming path only
-            // refreshes visibility after changing the buffered image.
             foreach (var state in _clipStates.Values)
             {
                 state.RefreshPreviewVisibility();
             }
-            if (layoutChanged.Count > 0) UpdateVisuals(clipFilter: layoutChanged, reorderClips: false);
+            if (layoutChanged.Count > 0)
+            {
+                LogDiagnostic($"[Preview] Updating layout for {layoutChanged.Count} clips at frame {_currentFrame}.");
+                UpdateVisuals(clipFilter: layoutChanged, reorderClips: false);
+            }
             return hasVisiblePreview;
         }
 
@@ -3138,6 +3201,9 @@ namespace projectFrameCut.InteractableEditor
             clipType = ClipMode.AudioClip;
             isCurrentClip = _currentClip is not null && _currentClip.Id == clipId;
 
+            if (GetClipArgumentPreview(clipId) is { } frameClip)
+                return TryResolveSourceClipRect(frameClip, ignorePosotionProvider, ref x, ref y, ref w, ref h, out clipType);
+
             if (isCurrentClip)
             {
                 clipType = _currentClip!.ClipType;
@@ -3151,6 +3217,12 @@ namespace projectFrameCut.InteractableEditor
             }
 
             return TryResolveSourceClipRect(sourceClip, ignorePosotionProvider, ref x, ref y, ref w, ref h, out clipType);
+        }
+
+        private IClip? GetClipArgumentPreview(Guid clipId)
+        {
+            if (_currentClip?.Id == clipId && IsInteractiveManipulationInProgress) return null;
+            return _previewSourceClips.GetValueOrDefault(clipId) is IClip clip && ClipArgumentBinding.IsFrameCopy(clip) ? clip : null;
         }
 
         private bool TryResolveSourceClipRect(object sourceClip, bool ignorePositionProvider, ref double x, ref double y, ref double w, ref double h, out ClipMode clipType)
@@ -3230,7 +3302,8 @@ namespace projectFrameCut.InteractableEditor
                     h = iclip.TargetHeight;
                 }
 
-                if (clipType == ClipMode.TextClip && TryResolveTextClipViewRect(iclip.ExtraData, out var textRect))
+                if (clipType == ClipMode.TextClip && !ClipArgumentBinding.IsFrameCopy(iclip)
+                    && TryResolveTextClipViewRect(iclip.ExtraData, out var textRect))
                 {
                     x += textRect.X;
                     y += textRect.Y;
@@ -3306,20 +3379,23 @@ namespace projectFrameCut.InteractableEditor
                 double w;
                 double h;
 
-                x = clip.TargetX;
-                y = clip.TargetY;
-                w = clip.TargetWidth > 0 ? clip.TargetWidth : _videoWidth;
-                h = clip.TargetHeight > 0 ? clip.TargetHeight : _videoHeight;
+                var argumentClip = GetClipArgumentPreview(clip.Id);
+                x = argumentClip?.TargetX ?? clip.TargetX;
+                y = argumentClip?.TargetY ?? clip.TargetY;
+                int targetWidth = argumentClip?.TargetWidth ?? clip.TargetWidth;
+                int targetHeight = argumentClip?.TargetHeight ?? clip.TargetHeight;
+                w = targetWidth > 0 ? targetWidth : _videoWidth;
+                h = targetHeight > 0 ? targetHeight : _videoHeight;
 
                 // 当 TargetWidth 和 TargetHeight 均未设置时，根据资产原始比例计算适配尺寸
-                if (clip.TargetWidth <= 0 && clip.TargetHeight <= 0)
+                if (argumentClip is null && clip.TargetWidth <= 0 && clip.TargetHeight <= 0)
                 {
                     ComputeFittedRectFromAsset(null, clip, _videoWidth, _videoHeight, ref w, ref h);
                     if (w <= 0) w = _videoWidth;
                     if (h <= 0) h = _videoHeight;
                 }
 
-                if (clip.ClipType == ClipMode.TextClip && TryResolveTextClipViewRect(clip.ExtraData, out var textRect))
+                if (argumentClip is null && clip.ClipType == ClipMode.TextClip && TryResolveTextClipViewRect(clip.ExtraData, out var textRect))
                 {
                     x += textRect.X;
                     y += textRect.Y;
@@ -3328,11 +3404,11 @@ namespace projectFrameCut.InteractableEditor
                 }
 
                 // 安全获取 clip 实例用于位置提供器；回调未配置时跳过。
-                var clipInstance = GetClipInstance(clip);
-                if (clip.Effects?.Count > 0 && !ignorePositionProvider && clipInstance is not null)
+                var clipInstance = argumentClip ?? GetClipInstance(clip);
+                if (!ignorePositionProvider && clipInstance is not null)
                 {
                     ApplyPositionProvidersToRect(
-                        clip.Effects.Values,
+                        argumentClip is not null ? argumentClip.EffectsInstances : clip.Effects?.Values,
                         clipSource: clipInstance,
                         _currentFrame,
                         (int)Math.Round(_videoWidth),
@@ -3340,19 +3416,26 @@ namespace projectFrameCut.InteractableEditor
                         ref x, ref y, ref w, ref h);
                 }
 
-                // Clamp to keep UI stable.
-                w = Math.Clamp(w, MinSize, _videoWidth);
-                h = Math.Clamp(h, MinSize, _videoHeight);
-                if (!AllowClipOutOfBounds)
+                if (argumentClip is null)
                 {
-                    x = Math.Clamp(x, 0, _videoWidth - w);
-                    y = Math.Clamp(y, 0, _videoHeight - h);
+                    w = Math.Clamp(w, MinSize, _videoWidth);
+                    h = Math.Clamp(h, MinSize, _videoHeight);
+                    if (!AllowClipOutOfBounds)
+                    {
+                        x = Math.Clamp(x, 0, _videoWidth - w);
+                        y = Math.Clamp(y, 0, _videoHeight - h);
+                    }
+                }
+                else
+                {
+                    w = Math.Max(1, w);
+                    h = Math.Max(1, h);
                 }
 
                 bool isCurrentClip = _currentClip is not null
                     && _currentClip.Id == clip.Id;
 
-                if (_genericElements.TryGetValue(clip.Id, out var genericElement))
+                if (argumentClip is null && _genericElements.TryGetValue(clip.Id, out var genericElement))
                 {
                     var nextRect = new InteractiveRect(x, y, w, h);
                     var previousRect = _genericLastRects.GetValueOrDefault(clip.Id, nextRect);
@@ -3739,6 +3822,10 @@ namespace projectFrameCut.InteractableEditor
                     double dx = e.TotalX / scale;
                     double dy = e.TotalY / scale;
 
+                    float rotation = _currentClip is null ? 0 : GetClipRotation(_currentClip);
+                    double radians = rotation * Math.PI / 180d;
+                    (dx, dy) = (dx * Math.Cos(radians) + dy * Math.Sin(radians), -dx * Math.Sin(radians) + dy * Math.Cos(radians));
+
                     if (_currentClip is not null)
                     {
                         // For TextClip with partial axis constraints (FixedWidth /
@@ -3783,6 +3870,20 @@ namespace projectFrameCut.InteractableEditor
                     if (!allowFreeScale)
                     {
                         ApplyAspectLockedResize(handle, ref newX, ref newY, ref newW, ref newH);
+                    }
+
+                    if (rotation != 0)
+                    {
+                        double cx = newX - _startX + (newW - _startW) / 2;
+                        double cy = newY - _startY + (newH - _startH) / 2;
+                        newX = _startX + _startW / 2 + cx * Math.Cos(radians) - cy * Math.Sin(radians) - newW / 2;
+                        newY = _startY + _startH / 2 + cx * Math.Sin(radians) + cy * Math.Cos(radians) - newH / 2;
+                        _panPreviewRect = new Rect(newX, newY, newW, newH);
+                        _activeState.UpdateLayout(renderRect.X + newX * scale / ZoomScale, renderRect.Y + newY * scale / ZoomScale,
+                            newW * scale / ZoomScale, newH * scale / ZoomScale, newW, newH, true, true,
+                            $"{Math.Round(newW)} x {Math.Round(newH)}", true, GetClipOverlayStroke(_currentClip));
+                        _lastPanUpdateTicks = _panTimer.ElapsedTicks;
+                        break;
                     }
 
                     double snapThresholdVideo = _currentClip?.CanSnapWhileResizing != false
@@ -4485,6 +4586,14 @@ namespace projectFrameCut.InteractableEditor
         #endregion
 
         #region helpers
+
+        private float GetClipRotation(ClipElementUI clip)
+        {
+            if (GetClipArgumentPreview(clip.Id) is { } frameClip)
+                return VideoClipRotation.GetAngle(frameClip, _currentFrame, (int)_videoWidth, (int)_videoHeight);
+            return VideoClipRotation.GetAngle(clip.Rotation, GetClipInstance(clip), clip.Effects?.Values,
+                _currentFrame, (int)_videoWidth, (int)_videoHeight);
+        }
 
         private static void ApplyPositionProvidersToRect(IEnumerable<IEffect>? effects, IClip? clipSource, uint frameIndex, int targetWidth, int targetHeight, ref double x, ref double y, ref double w, ref double h)
         {

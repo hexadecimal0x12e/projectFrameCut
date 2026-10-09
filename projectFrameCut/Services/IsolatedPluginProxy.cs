@@ -1,3 +1,4 @@
+#if !HEADLESS
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Project;
@@ -5,6 +6,8 @@ using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.VectorComponentHandler;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationPluginBase.Effect;
+#endif
+
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.PluginIsolation;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -99,7 +102,7 @@ internal class IsolatedPluginProxy : IPluginBase, IAIProviderPlugin
         finally { Inner.OnClosing(); }
     }
 
-    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect or EffectType.Transform;
+    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect or EffectType.VectorPictureEffect or EffectType.Transform;
 
     private IVideoSource CreateVideoSource(string path, string? decoder)
     {
@@ -210,6 +213,7 @@ internal sealed class ExternalPluginProxy : IPluginBase, IAIProviderPlugin
     }
 }
 
+#if !HEADLESS
 internal sealed class IsolatedApplicationPluginProxy : IsolatedPluginProxy, IApplicationPluginBase
 {
     private readonly IApplicationPluginBase _app;
@@ -451,3 +455,5 @@ internal sealed class RemoteProjectPluginProxy : IApplicationPluginBase, IRemote
     public bool OnLoaded(out string failedReason) { failedReason = string.Empty; return true; }
     public void OnClosing() => _client.DisposeAsync().AsTask().GetAwaiter().GetResult();
 }
+
+#endif

@@ -277,6 +277,8 @@
 	</ItemGroup>
 
 	<PropertyGroup Condition="'$(TargetFramework)' == 'net11.0'">
+		<UseMaui>false</UseMaui>
+		<SingleProject>false</SingleProject>
 		<DefineConstants>$(DefineConstants);HEADLESS</DefineConstants>
 		<StartupObject>projectFrameCut.HeadlessProgramClass</StartupObject>
 		<Description>projectFrameCut Headless client</Description>
@@ -284,7 +286,34 @@
 		<AssemblyDescription>projectFrameCut Headless client</AssemblyDescription>
 	</PropertyGroup>
 
+	<ItemGroup Condition="'$(TargetFramework)' == 'net11.0'">
+		<Compile Remove="**\*.xaml.cs;MauiProgram.cs;DraftPage*.cs;ProjectPluginPage.cs" />
+		<Compile Remove="AIAssistance\**\*.cs;ApplicationPluginBase\**\*.cs;Controls\**\*.cs;Converters\**\*.cs;InteractableEditor\**\*.cs;ViewModels\**\*.cs;Platforms\**\*.cs;Setting\SettingPages\**\*.cs" />
+		<Compile Remove="DraftStuff\**\*.cs" />
+		<Compile Include="DraftStuff\DraftImportAndExportHelper.cs" />
+		<Compile Remove="Localize\MAUILocalizedHelper.cs;Template\TemplateVariableItem.cs" />
+		<Compile Remove="Services\EffectServices.cs;Services\TextServices.cs;Services\TextStyleServices.cs;Services\UIServices.cs;Services\UIThreadWatchdogService*.cs;Services\ScreenReaderService.cs;Services\IntegratedApiBackend.cs;Services\TimelineMcpLiveService.cs;Services\RemoteProjectSession.cs;Services\VectorComponentHandlerServices.cs;Services\VectorClipServices*.cs;Services\TransformServices.cs;Services\WebBrowsingService.cs;Services\FileSystemService.cs" />
+		<MauiXaml Remove="**\*.xaml" />
+		<MauiIcon Remove="@(MauiIcon)" />
+		<MauiSplashScreen Remove="@(MauiSplashScreen)" />
+		<MauiImage Remove="@(MauiImage)" />
+		<MauiFont Remove="@(MauiFont)" />
+		<MauiAsset Remove="@(MauiAsset)" />
+		<PackageReference Remove="Microsoft.Maui.Controls;Microsoft.Maui.Controls.Xaml;CommunityToolkit.Maui;CommunityToolkit.Maui.MediaElement" />
+		<ProjectReference Remove="..\projectFrameCut.ApplicationAPIBase\projectFrameCut.ApplicationAPIBase.csproj;..\projectFrameCut.Render.HwAccelEngine\projectFrameCut.Render.HwAccelEngine.csproj" />
+		<PackageReference Include="ILGPU" Version="1.5.3" />
+		<PackageReference Include="ILGPU.Algorithms" Version="1.5.3" />
+		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\Platforms\Windows\**\*.cs" Exclude="..\projectFrameCut.Render.HwAccelEngine\Platforms\Windows\Win2DVectorRasterizer.cs" Link="Platforms\Headless\HwAccel\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\Effect\**\*.cs" Link="Platforms\Headless\HwAccel\Effect\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\AcceleratorsManager.cs" Link="Platforms\Headless\HwAccel\AcceleratorsManager.cs" />
+		<Compile Include="..\projectFrameCut.Render.HwAccelEngine\VectorRasterizer\**\*.cs" Link="Platforms\Headless\HwAccel\VectorRasterizer\%(RecursiveDir)%(Filename)%(Extension)" />
+	</ItemGroup>
+
 	<Target Name="RestorePlatformCompileItems" BeforeTargets="CoreCompile">
+		<ItemGroup Condition="'$(TargetFramework)' == 'net11.0'">
+			<Compile Include="Platforms\Headless\**\*.cs" />
+			<Compile Include="Platforms\Windows\WasapiPreviewAudioSink.cs" Link="Platforms\Headless\WasapiPreviewAudioSink.cs" />
+		</ItemGroup>
 		<ItemGroup Condition="'$(TargetFramework)' == 'net11.0_linux'">
 			<Compile Include="Platforms\Linux\**\*.cs" />
 		</ItemGroup>

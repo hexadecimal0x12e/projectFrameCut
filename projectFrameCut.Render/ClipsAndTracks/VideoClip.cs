@@ -12,7 +12,7 @@ using projectFrameCut.Render.RPCProtocol;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
-    public class VideoClip : IClip
+    public class VideoClip : IRotatableClip
     {
         private const int MaxDecoderPoolSize = 128;
 
@@ -60,6 +60,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
@@ -79,6 +80,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
+            => GetUnrotatedFrame(targetFrame, targetWidth, targetHeight, targetPPB);
+
+        public IPicture GetUnrotatedFrame(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
         {
             var now = Environment.TickCount64;
             if (_decoderPool is not null && RemoteRpcVideoSource.IsExternalPath(FilePath)
@@ -559,7 +563,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
     /// Unlike <see cref="VideoClip"/>, this clip does not require a file on disk —
     /// frames are generated on-the-fly by the <see cref="VirtualSource"/>.
     /// </summary>
-    public class VirtualSourceVideoClip : IClip
+    public class VirtualSourceVideoClip : IRotatableClip
     {
         public required Guid Id { get; init; }
         public required string Name { get; init; }
@@ -596,6 +600,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
@@ -638,6 +643,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
             int targetWidth,
             int targetHeight,
             IPicture.PicturePixelMode targetPPB)
+            => GetUnrotatedFrame(targetFrame, targetWidth, targetHeight, targetPPB);
+
+        public IPicture GetUnrotatedFrame(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
         {
             if (VirtualSource is null)
             {

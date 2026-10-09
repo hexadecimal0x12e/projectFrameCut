@@ -28,6 +28,7 @@ public class DraftSettingPage
     private const string SaveSlotDirectoryName = "saveSlots";
     private const string WriteCoverAsFirstFrameProperty = "WriteCoverAsFirstFrame";
     private readonly string? standaloneProjectPath;
+    private Task<View>? statisticsTabTask;
 
     private bool IsStandaloneJsonMode => !string.IsNullOrWhiteSpace(standaloneProjectPath);
 
@@ -73,7 +74,7 @@ public class DraftSettingPage
             {
                 Header = Localized.DraftSettingPage_Tab_Statistics,
                 Tag = "statistics",
-                Content = BuildStatisticsTab()
+                LazyAsyncContentFactory = BuildStatisticsTabAsync
             });
             tabView.TabItems.Add(new TabbedViewItem
             {
@@ -106,7 +107,7 @@ public class DraftSettingPage
         {
             Header = Localized.DraftSettingPage_Tab_Statistics,
             Tag = "statistics",
-            Content = BuildStatisticsTab()
+            LazyAsyncContentFactory = BuildStatisticsTabAsync
         });
         tabView.TabItems.Add(new TabbedViewItem
         {
@@ -657,19 +658,27 @@ public class DraftSettingPage
 
     #region history
 
-    private View BuildStatisticsTab()
+    private Task<View> BuildStatisticsTabAsync() => statisticsTabTask ??= LoadStatisticsTabAsync();
+
+    private async Task<View> LoadStatisticsTabAsync()
     {
         string projectPath = IsStandaloneJsonMode ? standaloneProjectPath! : parent.WorkingPath;
         Guid currentSnapshotId = IsStandaloneJsonMode ? Guid.Empty : parent.CurrentSnapshotID;
         double frameRate = IsStandaloneJsonMode ? 30 : parent.ProjectInfo.TargetFrameRate;
 
-        if (IsStandaloneJsonMode && TryLoadStandaloneProjectInfo(out var info, out _))
+        if (IsStandaloneJsonMode)
         {
-            currentSnapshotId = info.LastSnapshotID;
-            frameRate = info.TargetFrameRate;
+            var info = await Task.Run(() => TryLoadStandaloneProjectInfo(out var projectInfo, out _) ? projectInfo : null);
+            if (info is not null)
+            {
+                currentSnapshotId = info.LastSnapshotID;
+                frameRate = info.TargetFrameRate;
+            }
         }
 
-        return new DraftStatisticsView(projectPath, currentSnapshotId, frameRate);
+        var view = new DraftStatisticsView(projectPath, currentSnapshotId, frameRate);
+        await view.LoadAsync();
+        return view;
     }
 
     public View BuildClassicHistoryTab()

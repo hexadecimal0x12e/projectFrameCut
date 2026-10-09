@@ -1,4 +1,7 @@
+#if !HEADLESS
 using projectFrameCut.ApplicationAPIBase.Effect;
+#endif
+
 using projectFrameCut.Asset;
 using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.DraftStuff;
@@ -23,6 +26,12 @@ namespace projectFrameCut.DraftStuff
 {
     internal static class DraftImportAndExportHelper
     {
+        public static JsonSerializerOptions DraftJSONOption { get; } = new()
+        {
+            WriteIndented = true,
+            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals,
+        };
+
         private const string ProjectDirectoryDesktopIni =
 """
 [.ShellClassInfo]
@@ -61,10 +70,13 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             }
         }
 
+#if !HEADLESS
         private static void InitializeEffects(ClipElementUI element, ClipDraftDTO dto, int relativeWidth, int relativeHeight)
         {
             try
             {
+                VideoClipRotation.Migrate(dto);
+                element.Rotation = dto.Rotation;
                 element.Effects = dto.Effects?.ToDictionary(
                     effect => string.IsNullOrWhiteSpace(effect.Name) ? $"Effect-{Guid.NewGuid()}" : effect.Name,
                     effect => PluginManager.CreateEffect(effect, relativeWidth, relativeHeight))
@@ -319,6 +331,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                     TargetHeight = elem.TargetHeight,
                     TargetX = elem.TargetX,
                     TargetY = elem.TargetY,
+                    Rotation = elem.Rotation,
                     StartingX = elem.StartingX,
                     StartingY = elem.StartingY,
                     MetaData = normalizedMeta,
@@ -394,6 +407,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 TargetHeight = exportTargetHeight,
                 TargetX = elem.TargetX,
                 TargetY = elem.TargetY,
+                Rotation = elem.Rotation,
                 StartingX = elem.StartingX,
                 StartingY = elem.StartingY,
                 MetaData = normalizedMeta2,
@@ -492,6 +506,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
             return (uint)Math.Round(value);
         }
+
+#endif
 
         private static Dictionary<string, object> NormalizeClipMetaData(Dictionary<string, object>? source, uint targetFrameRate)
         {
@@ -860,6 +876,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             }
         }
 
+#if !HEADLESS
         public static (ConcurrentDictionary<Guid, ClipElementUI>, int) ImportFromJSON(DraftStructureJSON draft, ProjectJSONStructure proj)
         {
             if (draft == null) throw new ArgumentNullException(nameof(draft));
@@ -1018,6 +1035,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             return (clipsDict, trackCount);
         }
 
+#endif
+
         public static void FixSmallOverlaps(DraftStructureJSON draft, uint thresholdFrames = 3)
         {
             ArgumentNullException.ThrowIfNull(draft, nameof(draft));
@@ -1097,6 +1116,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             draft.Clips = dtos.ToArray();
         }
 
+#if !HEADLESS
         private static string? ExtractLabelText(Microsoft.Maui.Controls.Border border)
         {
             try
@@ -1187,5 +1207,6 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
             return element;
         }
+#endif
     }
 }

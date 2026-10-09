@@ -1,14 +1,20 @@
 using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.Controls;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
+using Microsoft.Maui.Controls.Shapes;
 
 namespace projectFrameCut.InteractableEditor;
 
 public partial class LightweightInteractableEditor : ContentView, IInteractableEditor
 {
+    public static readonly BindableProperty AllowClipOutOfBoundsProperty = BindableProperty.Create(
+        nameof(AllowClipOutOfBounds), typeof(bool), typeof(LightweightInteractableEditor), false,
+        propertyChanged: static (bindable, _, _) => ((LightweightInteractableEditor)bindable).LayoutPreviews());
+
     public static readonly BindableProperty UseCheckerboardBackgroundProperty = BindableProperty.Create(
         nameof(UseCheckerboardBackground),
         typeof(bool),
@@ -44,6 +50,12 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
     {
         get => (bool)GetValue(UseCheckerboardBackgroundProperty);
         set => SetValue(UseCheckerboardBackgroundProperty, value);
+    }
+
+    public bool AllowClipOutOfBounds
+    {
+        get => (bool)GetValue(AllowClipOutOfBoundsProperty);
+        set => SetValue(AllowClipOutOfBoundsProperty, value);
     }
 
     public void SetInteractiveElements(IReadOnlyCollection<IInteractableElement> elements)
@@ -151,7 +163,16 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
     {
         if (_canvasWidth > 0 && _canvasHeight > 0 && _videoWidth > 0 && _videoHeight > 0)
         {
-            AbsoluteLayout.SetLayoutBounds(CanvasBackground, GetRenderRect());
+            var rect = GetRenderRect();
+            AbsoluteLayout.SetLayoutBounds(CanvasBackground, rect);
+            if (AllowClipOutOfBounds)
+                PreviewCanvas.Clip = null;
+            else if (PreviewCanvas.Clip is RectangleGeometry clip)
+            {
+                if (clip.Rect != rect) clip.Rect = rect;
+            }
+            else
+                PreviewCanvas.Clip = new RectangleGeometry { Rect = rect };
         }
 
         foreach (var state in _states.Values)
@@ -182,7 +203,9 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
             y = state.Source.TargetY;
             if (state.Source.TargetWidth > 0) w = state.Source.TargetWidth;
             if (state.Source.TargetHeight > 0) h = state.Source.TargetHeight;
-            ApplyPositionProviders(state.Source, ref x, ref y, ref w, ref h);
+            float rotation = state.Source.Rotation;
+            ApplyPositionProviders(state.Source, ref x, ref y, ref w, ref h, ref rotation);
+            (x, y, w, h) = VideoClipRotation.GetBounds(rotation, x, y, w, h);
         }
         else if (_elements.TryGetValue(state.Id, out var element))
         {
@@ -191,6 +214,8 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
             y = rect.Y;
             w = rect.Width;
             h = rect.Height;
+            if (element is ClipElementUIInteractableAdapter adapter)
+                (x, y, w, h) = VideoClipRotation.GetBounds(adapter.Source.Rotation, x, y, w, h);
         }
 
         var scale = renderRect.Width / _videoWidth;
@@ -201,11 +226,11 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
             Math.Max(0, h * scale)));
     }
 
-    private void ApplyPositionProviders(IClip clip, ref double x, ref double y, ref double w, ref double h)
+    private void ApplyPositionProviders(IClip clip, ref double x, ref double y, ref double w, ref double h, ref float rotation)
     {
         if (clip.EffectsInstances is null) return;
 
-        foreach (var effect in clip.EffectsInstances.OrderBy(e => e.Index))
+        foreach (var effect in clip.EffectsInstances.Where(e => e.Enabled).OrderBy(e => e.Index))
         {
             ClipPositionTuple position;
             if (effect is IContinuousClipPositionProvider continuous)
@@ -227,6 +252,7 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
                 y += position.TargetY;
                 w += position.TargetWidth;
                 h += position.TargetHeight;
+                rotation += position.Rotation;
             }
             else
             {
@@ -234,6 +260,7 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
                 y = position.TargetY;
                 if (position.TargetWidth > 0) w = position.TargetWidth;
                 if (position.TargetHeight > 0) h = position.TargetHeight;
+                rotation = position.Rotation;
             }
         }
     }

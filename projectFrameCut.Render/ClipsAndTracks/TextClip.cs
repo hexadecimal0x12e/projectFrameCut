@@ -13,6 +13,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
 {
     public class TextClip : IVectorContentClip
     {
+        [JsonIgnore]
+        public bool ProcessesVectorPictureEffects => true;
+
         public static bool DiagMode = false;
 
         public required Guid Id { get; init; }
@@ -92,9 +95,15 @@ namespace projectFrameCut.Render.ClipsAndTracks
         /// </summary>
         public VectorPicture GetVectorPictureRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight)
         {
-            var entriesToRender = ResolveTextEntriesForRender(frameIndex);
+            using var context = ValueProviderFrameContext.PushFrame(frameIndex,
+                Duration <= 1 ? 0 : Math.Clamp(frameIndex / (float)(Duration - 1), 0, 1));
+            return LayoutEntries(ResolveTextEntriesForRender(frameIndex), frameIndex, targetWidth, targetHeight);
+        }
+
+        private VectorPicture LayoutEntries(IReadOnlyList<TextEntry> entriesToRender, uint frameIndex, int targetWidth, int targetHeight)
+        {
             if (entriesToRender.Count == 0)
-                return new VectorPicture();
+                return VectorPictureEffectProcessing.Process(this, new VectorPicture(), frameIndex);
 
             // The layout canvas is the clip's own bounding box. This way the
             // pixel values stored in each TextEntry (FontSize, X, Y, WrappingWidth, ...)
@@ -108,7 +117,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
             if (canvasH <= 0) canvasH = 1f;
 
             var ctx = TextLayoutContext.FromCanvas(canvasW, canvasH);
-            return TextLayoutPipeline.LayoutForRender(entriesToRender, ctx, targetWidth, targetHeight);
+            return VectorPictureEffectProcessing.Process(this,
+                TextLayoutPipeline.LayoutForRender(entriesToRender, ctx, targetWidth, targetHeight), frameIndex);
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
@@ -129,20 +139,22 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 }
             }
 
+            using var context = ValueProviderFrameContext.PushFrame(frameIndex,
+                Duration <= 1 ? 0 : Math.Clamp(frameIndex / (float)(Duration - 1), 0, 1));
             var rawEntries = ResolveTextEntriesForRender(frameIndex);
             long cacheKey = BuildFrameCacheKey(targetWidth, targetHeight, targetPPB, rawEntries);
+            bool cacheable = !(EffectsInstances ?? []).Any(e => e.Enabled && e is IVectorPictureEffect);
 
-            if (TryGetFrameFromCache(cacheKey, out var cachedFrame))
+            if (cacheable && TryGetFrameFromCache(cacheKey, out var cachedFrame))
             {
                 if (cachedFrame.BitPerPixel != targetPPB)
                     return cachedFrame.ToBitPerPixel(targetPPB);
                 return cachedFrame;
             }
 
-            var vectorCanvas = GetVectorPictureRelativeToStartPointOfSource(frameIndex, targetWidth, targetHeight);
+            var vectorCanvas = LayoutEntries(rawEntries, frameIndex, targetWidth, targetHeight);
 
             var sourcePicture = IVectorContentClip.GlobalDefaultRasterizer.Convert(vectorCanvas, targetWidth, targetHeight, transparentBackground: true, aaMode: ClipAntiAliasMode ?? IVectorContentClip.GlobalDefaultAntiAliasMode);
-            sourcePicture.CanBeDisposed = false;
             sourcePicture.ProcessStack = new List<PictureProcessStack>
             {
                 new PictureProcessStack
@@ -160,8 +172,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
             var resultPicture = sourcePicture.BitPerPixel != targetPPB
                 ? sourcePicture.ToBitPerPixel(targetPPB)
                 : sourcePicture;
+            if (!ReferenceEquals(sourcePicture, resultPicture)) sourcePicture.Dispose();
             resultPicture.CanBeDisposed = false;
-            CacheRenderedFrame(cacheKey, resultPicture);
+            if (cacheable) CacheRenderedFrame(cacheKey, resultPicture);
+            else resultPicture.CanBeDisposed = true;
             return resultPicture;
         }
 
@@ -190,6 +204,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
         public int StartingX { get => 0; set { if (value != 0) Log("Cannot modify StartingX for a TextClip.", "warn"); } }
         public int StartingY { get => 0; set { if (value != 0) Log("Cannot modify StartingY for a TextClip.", "warn"); } }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }
@@ -211,6 +226,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             hash.Add(targetHeight);
             hash.Add(targetPPB.Value);
             hash.Add(FontPath);
+            hash.Add(ClipAntiAliasMode ?? IVectorContentClip.GlobalDefaultAntiAliasMode);
             hash.Add(TargetWidth);
             hash.Add(TargetHeight);
             foreach (var e in entries)
@@ -298,7 +314,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         private IReadOnlyList<TextEntry> ResolveTextEntriesForRender(uint targetFrame)
         {
             var raw = GetRawEntries();
-            foreach (var item in EffectsInstances?.Where(c => c is ITextEffect or IContinuousTextEffect) ?? [])
+            foreach (var item in (EffectsInstances ?? []).Where(e => e.Enabled && (e is ITextEffect or IContinuousTextEffect)).OrderBy(e => e.Index))
             {
                 if (item is ITextEffect textEffect)
                 {
@@ -311,7 +327,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
                         if (targetFrame < cte.StartPoint || targetFrame > cte.EndPoint)
                             continue;
                     }
-                    raw = cte.Process(raw.ToArray(), targetFrame / ((IClip)this).GetEffectiveDuration());
+                    raw = cte.Process(raw.ToArray(), cte.IsScoped
+                        ? (float)EffectHelper.GetContinuesEffectProgress(targetFrame, cte.StartPoint, cte.EndPoint)
+                        : Duration <= 1 ? 0 : Math.Clamp(targetFrame / (float)(Duration - 1), 0, 1));
                 }
             }
             return raw;

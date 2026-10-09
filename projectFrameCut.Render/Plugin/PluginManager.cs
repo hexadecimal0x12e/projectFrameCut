@@ -208,8 +208,11 @@ namespace projectFrameCut.Render.Plugin
 
             if (PluginManager.LoadedPlugins.TryGetValue(type, out var plugin))
             {
+                var dto = source.Deserialize<ClipDraftDTO>();
+                if (dto is not null && VideoClipRotation.Migrate(dto)) source = JsonSerializer.SerializeToElement(dto);
                 var clip = plugin.ClipCreator(source);
-                clip.ExtraData = source.Deserialize<ClipDraftDTO>()?.MetaData ?? new();
+                clip.ExtraData = dto?.MetaData ?? new();
+                clip.Rotation = VideoClipRotation.Normalize(dto?.Rotation ?? 0);
                 if (clip is IVectorContentClip vectorClip)
                 {
                     vectorClip.ClipAntiAliasMode = source.TryGetProperty("VectorAntiAliasMode", out var aaModeProp) && aaModeProp.ValueKind == JsonValueKind.String

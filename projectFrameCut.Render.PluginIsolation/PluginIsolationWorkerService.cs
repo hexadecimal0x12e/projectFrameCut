@@ -110,6 +110,7 @@ internal sealed class PluginIsolationWorkerService(
                     RenderOperation.IsolationProcessAudioEffect => await ProcessAudioEffectAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationProcessTextEffect => ProcessTextEffect(request),
                     RenderOperation.IsolationProcessVectorComponentEffect => ProcessVectorComponentEffect(request),
+                    RenderOperation.IsolationProcessVectorPictureEffect => ProcessVectorPictureEffect(request),
                     RenderOperation.IsolationMapSpeedFrame => MapSpeed(request, false),
                     RenderOperation.IsolationMapSpeedLength => MapSpeed(request, true),
                     RenderOperation.IsolationGetClipPosition => GetClipPosition(request),
@@ -461,6 +462,18 @@ internal sealed class PluginIsolationWorkerService(
         return Success(envelope, DescribeVectorComponent(output, AddObject(output)));
     }
 
+    private RenderResponseEnvelope ProcessVectorPictureEffect(RenderRequestEnvelope envelope)
+    {
+        var request = Read<IsolationEffectInvokeRequest>(envelope);
+        var effect = Require<IVectorPictureEffect>(request.ObjectId);
+        ApplyEffectState(effect, request.State);
+        using var context = ValueProviderFrameContext.PushFrame(request.Value, request.ClipProgress);
+        foreach (var item in request.DynamicValues) ValueProviderFrameContext.Set(item.Key, IsolationValueConverter.ToObject(item.Value));
+        var output = effect.Process(VectorPictureCodec.Decode(request.VectorElements), request.Progress)
+            ?? throw new InvalidDataException("The vector effect returned no picture.");
+        return Success(envelope, new IsolationVectorElementList { Elements = VectorPictureCodec.Encode(output) });
+    }
+
     private RenderResponseEnvelope ProcessTextEffect(RenderRequestEnvelope envelope)
     {
         var request = Read<IsolationEffectInvokeRequest>(envelope);
@@ -498,6 +511,7 @@ internal sealed class PluginIsolationWorkerService(
             TargetWidth = position.TargetWidth,
             TargetHeight = position.TargetHeight,
             IsDelta = position.IsDelta,
+            Rotation = position.Rotation,
         });
     }
 
@@ -846,6 +860,7 @@ internal sealed class PluginIsolationWorkerService(
         clip.TargetHeight = state.TargetHeight;
         clip.TargetX = state.TargetX;
         clip.TargetY = state.TargetY;
+        clip.Rotation = state.Rotation;
         clip.StartingX = state.StartingX;
         clip.StartingY = state.StartingY;
         clip.ExtendToWholeDraft = state.ExtendToWholeDraft;
@@ -1280,7 +1295,7 @@ internal sealed class PluginIsolationWorkerService(
         catch (ReflectionTypeLoadException ex) { return ex.Types.OfType<Type>(); }
     }
 
-    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect or EffectType.Transform;
+    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect or EffectType.VectorPictureEffect or EffectType.Transform;
     private static bool IsSupportedExternalEffect(EffectType type) => type is EffectType.NormalEffect
         or EffectType.ContinuousEffect
         or EffectType.AudioNormalEffect
@@ -1290,6 +1305,7 @@ internal sealed class PluginIsolationWorkerService(
         or EffectType.ContinuousClipPositionProvider
         or EffectType.MixtureProvider
         or EffectType.VectorComponentEffect
+        or EffectType.VectorPictureEffect
         or EffectType.TextEffect
         or EffectType.ContinuousTextEffect
         or EffectType.SourceReplacement or EffectType.Transform

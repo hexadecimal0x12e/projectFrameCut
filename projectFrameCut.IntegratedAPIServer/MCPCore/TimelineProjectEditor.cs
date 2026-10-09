@@ -209,6 +209,9 @@ public sealed class TimelineProjectEditor(TimelineProjectWorkspace workspace)
                 case "targety":
                     clip.TargetY = Convert.ToInt32(normalizedValue);
                     break;
+                case "rotation":
+                    clip.Rotation = Convert.ToSingle(normalizedValue);
+                    break;
                 case "fromplugin":
                     clip.FromPlugin = normalizedValue?.ToString() ?? string.Empty;
                     break;

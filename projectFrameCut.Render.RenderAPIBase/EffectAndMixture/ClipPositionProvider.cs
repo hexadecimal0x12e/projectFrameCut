@@ -5,7 +5,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     public interface IClipPositionProvider : IEffect
     {
         /// <summary>
-        /// Get the position of the clip on the target canvas. The position is represented by a tuple of (X, Y, Width, Height).
+        /// Get the position of the clip on the target canvas as (X, Y, Width, Height, Rotation).
         /// </summary>
         /// <param name="source">the source IClip.</param>
         /// <param name="targetWidth">Output canvas' width.</param>
@@ -23,7 +23,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     public interface IContinuousClipPositionProvider : IEffect
     {
         /// <summary>
-        /// Get the position of the clip on the target canvas for a specific frame. The position is represented by a tuple of (X, Y, Width, Height).
+        /// Get the position of the clip on the target canvas for a specific frame as (X, Y, Width, Height, Rotation).
         /// </summary>
         /// <param name="source">the source IClip.</param>
         /// <param name="index">the index of the frame to be rendered.</param>

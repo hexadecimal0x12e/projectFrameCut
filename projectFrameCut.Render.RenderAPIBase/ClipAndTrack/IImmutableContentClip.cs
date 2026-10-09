@@ -19,14 +19,31 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
     }
     public interface IImmutableVectorContentClip : IVectorContentClip, IImmutableContentClip
     {
+        bool IVectorContentClip.ProcessesVectorPictureEffects => true;
+
+        IPicture IClip.GetFrameRelativeToStartPointOfSource(uint frameIndex, int width, int height, IPicture.PicturePixelMode ppb)
+            => Rasterize(frameIndex, width, height, ppb);
+
+        IPicture IClip.GetFrame(uint frame, int width, int height, IPicture.PicturePixelMode ppb)
+            => Rasterize(((IClip)this).GetRelativeFrameIndex(frame) ?? 0, width, height, ppb);
+
+        private IPicture Rasterize(uint frame, int width, int height, IPicture.PicturePixelMode ppb)
+        {
+            var raster = GlobalDefaultRasterizer.Convert(GetVectorPictureRelativeToStartPointOfSource(frame, width, height),
+                width, height, true, ClipAntiAliasMode ?? GlobalDefaultAntiAliasMode);
+            if (raster.BitPerPixel == ppb) return raster;
+            try { return raster.ToBitPerPixel(ppb); }
+            finally { raster.Dispose(); }
+        }
+
         public VectorPicture GetVectorPicture(int requiredWidth, int requiredHeight);
 
         VectorPicture IVectorContentClip.GetVectorPictureRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight)
-            => GetVectorPicture(requiredWidth, requiredHeight);
+            => EffectAndMixture.VectorPictureEffectProcessing.Process(this, GetVectorPicture(requiredWidth, requiredHeight), frameIndex);
 
         IPicture IImmutableContentClip.GetContent(int width, int height, IPicture.PicturePixelMode targetPPB)
         {
-            return GlobalDefaultRasterizer.Convert(GetVectorPicture(width, height), width, height, true, GlobalDefaultAntiAliasMode).ToBitPerPixel(targetPPB);
+            return Rasterize(0, width, height, targetPPB);
         }
     }
 }

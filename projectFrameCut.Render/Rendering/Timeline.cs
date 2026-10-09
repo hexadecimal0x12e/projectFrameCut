@@ -37,25 +37,30 @@ namespace projectFrameCut.Render.Rendering
             int projectRelativeWidth = 0,
             int projectRelativeHeight = 0,
             bool applyTransforms = true,
-            bool initializeClips = true)
+            bool initializeClips = true,
+            ClipArgumentFrameCache? argumentFrames = null)
         {
+            argumentFrames ??= new();
             var ppb = targetPPB ?? 8;
             List<OneFrame> result = new List<OneFrame>();
-            foreach (var clip in video)
+            foreach (var original in video)
             {
-                if (initializeClips && !ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
+                var clip = argumentFrames.Get(original, targetFrame, c =>
                 {
-                    try
+                    if (initializeClips && !ClipInitializationFailure.HasDeferredFailures(c.ExtraData))
                     {
-                        clip.ReInit(ppb);
-                        ClipInitializationFailure.Clear(clip);
+                        try
+                        {
+                            c.ReInit(ppb);
+                            ClipInitializationFailure.Clear(c);
+                        }
+                        catch (Exception ex)
+                        {
+                            ClipInitializationFailure.Mark(c, "ResolveBinding", ex);
+                            Log(ex, $"Initialize clip {c.Name} ({c.Id}); using fallback", "Timeline");
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        ClipInitializationFailure.Mark(clip, "ResolveBinding", ex);
-                        Log(ex, $"Initialize clip {clip.Name} ({clip.Id}); using fallback", "Timeline");
-                    }
-                }
+                });
                 if (IsFrameInClipRange(clip, targetFrame))
                 {
                     var endPoint = clip.StartFrame + clip.GetEffectiveDuration();
@@ -71,17 +76,13 @@ namespace projectFrameCut.Render.Rendering
                             frame = ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData);
                         }
                         else if (applyTransforms && TransformProcessing.TryRender(clip, video, targetFrame, targetWidth, targetHeight,
-                            projectRelativeWidth, projectRelativeHeight, ppb, out var transitionFrame, initializeClips: initializeClips))
+                            projectRelativeWidth, projectRelativeHeight, ppb, out var transitionFrame, initializeClips: initializeClips, argumentFrames: argumentFrames))
                         {
                             frame = transitionFrame!;
                         }
-                        else if (clip.AlternativeSource is ISourceReplacementEffect sre && sre.SupportsSourceReplacement(clip, clipTargetWidth, clipTargetHeight))
-                        {
-                            frame = sre.Compute(clip, clip.GetFrameRelativeToStartPointOfSource(actualFrame, clipTargetWidth, clipTargetHeight, ppb), clipTargetWidth, clipTargetHeight, actualFrame, ppb);
-                        }
                         else
                         {
-                            frame = clip.GetFrameRelativeToStartPointOfSource(actualFrame, clipTargetWidth, clipTargetHeight, ppb);
+                            frame = VideoClipRotation.ReadFrame(clip, actualFrame, clipTargetWidth, clipTargetHeight, ppb);
                         }
                     }
                     catch (Exception ex)
@@ -103,13 +104,13 @@ namespace projectFrameCut.Render.Rendering
                         if (isAI && !TransformProcessing.IsCanvasFrame(frame)) frame = EffectProcessing.ProcessAIWatermark(frame, null);
                         try
                         {
-                            result.Add(new OneFrame(targetFrame, clip, frame, initializeClips));
+                            result.Add(new OneFrame(targetFrame, clip, frame, resolveEffects: false));
                         }
                         catch (Exception ex)
                         {
                             ClipInitializationFailure.Mark(clip, "ResolveEffect", ex);
                             Log(ex, $"Build effects for clip {clip.Name} ({clip.Id}); using checkerboard fallback", "Timeline");
-                            result.Add(new OneFrame(targetFrame, clip, ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData), initializeClips));
+                            result.Add(new OneFrame(targetFrame, clip, ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData), resolveEffects: false));
                         }
                     }
                 }
@@ -237,6 +238,7 @@ namespace projectFrameCut.Render.Rendering
         {
             FrameNumber = targetFrame,
             ParentClip = clip,
+            Rotation = VideoClipRotation.GetAngle(clip),
             ForcedImplementType = EffectHelper.ForcePreferToType,
             DefaultImplementTypes = EffectHelper.DefaultImplementsType.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToArray(),
         };
@@ -244,6 +246,7 @@ namespace projectFrameCut.Render.Rendering
         private sealed class ClipFrameHashState
         {
             public uint FrameNumber { get; init; }
+            public float Rotation { get; init; }
             public required IClip ParentClip { get; init; }
             public EffectImplementType? ForcedImplementType { get; init; }
             public KeyValuePair<string, EffectImplementType>[] DefaultImplementTypes { get; init; } = [];
@@ -267,7 +270,9 @@ namespace projectFrameCut.Render.Rendering
             int projectRelativeWidth = 0,
             int projectRelativeHeight = 0,
             bool transparentBackground = false,
-            bool disposeIntermediateFrames = false)
+            bool disposeIntermediateFrames = false,
+            bool clipLocalOutput = false,
+            CancellationToken cancellationToken = default)
         {
             var temporaryFrames = new HashSet<IPicture>(ReferenceEqualityComparer.Instance);
             IPicture? output = null;
@@ -286,6 +291,7 @@ namespace projectFrameCut.Render.Rendering
                 Dictionary<string, bool> producedValueTable = new();
                 foreach (var srcFrame in frames)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     // Don't resize the frame before applying effects!
                     // The ResizeEffect and PlaceEffect will handle sizing and positioning.
                     ArgumentNullException.ThrowIfNull(srcFrame, nameof(srcFrame));
@@ -313,7 +319,7 @@ namespace projectFrameCut.Render.Rendering
                         srcFrame.ParentClip.TargetHeight > 0
                             ? ScaleDimensionToTarget(srcFrame.ParentClip.TargetHeight, layoutRelativeHeight, targetHeight)
                             : targetHeight,
-                        false);
+                        false, srcFrame.ParentClip.Rotation);
                     bool preserveAspect = true;
                     // Begin the per-frame value-provider context for this clip: pre-fills the built-in
                     // frame/progress sources and clears provider values.
@@ -324,6 +330,8 @@ namespace projectFrameCut.Render.Rendering
                     using var frameContext = ValueProviderFrameContext.PushFrame(frameIndex, clipProgress);
                     foreach (var effect in effectsList)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (clipLocalOutput && effect.Name is ("__Internal_Place__" or "__Internal_Resize__")) continue;
                         if (effect is IValueProviderEffect vp)
                         {
                             throw new InvalidOperationException($"Effect {vp.Name} ({srcFrame.ParentClip.Id}) of clip {srcFrame.ParentClip.Id} is a IValueProviderEffect and should have been handled in the EffectBindingHelper.RebuildAllEffects. This indicates a logic error.");
@@ -348,31 +356,31 @@ namespace projectFrameCut.Render.Rendering
                         }
                         else if (effect is IClipPositionProvider p)
                         {
-                            (var x, var y, var w, var h, bool delta) = p.GetPosition(srcFrame.ParentClip, targetWidth, targetHeight);
+                            (var x, var y, var w, var h, bool delta, float rotation) = p.GetPosition(srcFrame.ParentClip, targetWidth, targetHeight);
                             if (delta)
                             {
-                                clipPos = new ClipPositionTuple(clipPos.TargetX + x, clipPos.TargetY + y, clipPos.TargetWidth + w, clipPos.TargetHeight + h, false);
+                                clipPos = new ClipPositionTuple(clipPos.TargetX + x, clipPos.TargetY + y, clipPos.TargetWidth + w, clipPos.TargetHeight + h, false, clipPos.Rotation + rotation);
                             }
                             else
                             {
-                                clipPos = new(x, y, w, h, false);
+                                clipPos = new(x, y, w, h, false, rotation);
                             }
                         }
                         else if (effect is IContinuousClipPositionProvider cp)
                         {
-                            (var x, var y, var w, var h, bool delta) = cp.GetPosition(srcFrame.ParentClip, frameIndex, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight);
+                            (var x, var y, var w, var h, bool delta, float rotation) = cp.GetPosition(srcFrame.ParentClip, frameIndex, targetWidth, targetHeight, layoutRelativeWidth, layoutRelativeHeight);
                             preserveAspect &= cp.PreserveAspectRatio;
                             if (delta)
                             {
-                                clipPos = new ClipPositionTuple(clipPos.TargetX + x, clipPos.TargetY + y, clipPos.TargetWidth + w, clipPos.TargetHeight + h, false);
+                                clipPos = new ClipPositionTuple(clipPos.TargetX + x, clipPos.TargetY + y, clipPos.TargetWidth + w, clipPos.TargetHeight + h, false, clipPos.Rotation + rotation);
                             }
                             else
                             {
-                                clipPos = new(x, y, w, h, false);
+                                clipPos = new(x, y, w, h, false, rotation);
                             }
                         }
                         else if (effect is ITransform or IMixture or ISpeedVarianceProvider //these will be processed later; skip here
-                                        or ITextEffect or IContinuousTextEffect or IVectorComponentEffect) //these are processed inside TextClip
+                                        or ITextEffect or IContinuousTextEffect or IVectorComponentEffect or IVectorPictureEffect) //these are processed inside TextClip
                         {
 
                         }
@@ -383,16 +391,18 @@ namespace projectFrameCut.Render.Rendering
 
                         if (AfterEffectCallback is not null)
                         {
-                            IPicture d = effected;
+                            IPicture d = Track(VideoClipRotation.Rotate(effected, clipPos.Rotation));
                             int x = ScaleCoordinateToTarget(clipPos.TargetX, layoutRelativeWidth, targetWidth);
                             int y = ScaleCoordinateToTarget(clipPos.TargetY, layoutRelativeHeight, targetHeight);
                             if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && y == 0 && effected.Height < targetHeight)
                             {
                                 y += (targetHeight - effected.Height) / 2;
                             }
+                            x += (int)Math.Round((clipPos.TargetWidth - d.Width) / 2d);
+                            y += (int)Math.Round((clipPos.TargetHeight - d.Height) / 2d);
                             if (x != 0 || y != 0 || effected.Width != targetWidth || effected.Height != targetHeight)
                             {
-                                d = EffectRuntimeDefaults.Place(d, targetWidth, targetHeight, x, y);
+                                d = Track(EffectRuntimeDefaults.Place(d, targetWidth, targetHeight, x, y));
                             }
                             AfterEffectCallback(effect, d);
                         }
@@ -423,8 +433,18 @@ namespace projectFrameCut.Render.Rendering
                     {
                         clipY += (targetHeight - effected.Height) / 2;
                     }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    effected = Track(VideoClipRotation.Apply(effected, clipPos.Rotation));
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (clipLocalOutput)
+                    {
+                        output = effected;
+                        return output;
+                    }
+                    clipX += (int)Math.Round((clipPos.TargetWidth - effected.Width) / 2d);
+                    clipY += (int)Math.Round((clipPos.TargetHeight - effected.Height) / 2d);
                     bool needsPlacement = clipX != 0 || clipY != 0 || effected.Width != targetWidth || effected.Height != targetHeight;
-                    LogDiagnostic($"Clip {srcFrame.ParentClip.Name}: {clipX},{clipY} in ({targetWidth}*{targetHeight})");
+                    LogDiagnostic($"Clip {srcFrame.ParentClip.Name}: {clipX},{clipY} in ({targetWidth}*{targetHeight}), rotation {clipPos.Rotation} degrees.");
 
                     var mixer = srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default;
                     if (result is null)
@@ -757,6 +777,7 @@ namespace projectFrameCut.Render.Rendering
 
         public OneFrame(uint frameNumber, IClip parent, IPicture pic, bool resolveEffects)
         {
+            if (ClipArgumentBinding.IsFrameCopy(parent)) resolveEffects = false;
             FrameNumber = frameNumber;
             ParentClip = parent;
             Clip = pic;
@@ -795,7 +816,8 @@ namespace projectFrameCut.Render.Rendering
                     .ToArray();
             }
 
-            Effects = effectInstances.Where(c => c.Enabled && c.TypeOfEffect != EffectType.SpeedVarianceProvider).ToArray();
+            Effects = effectInstances.Where(c => c.Enabled && c.TypeOfEffect.GetPipeline() == EffectPipeline.Picture
+                && c.TypeOfEffect != EffectType.SpeedVarianceProvider).ToArray();
         }
     }
 }

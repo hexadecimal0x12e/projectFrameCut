@@ -1,5 +1,6 @@
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Text.Entry;
+using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -25,6 +26,7 @@ internal static class RemoteEffectFactory
             (int)EffectType.AudioContinuousEffect => new RemoteAudioContinuousEffect(session, descriptor),
             (int)EffectType.TextEffect => new RemoteTextEffect(session, descriptor),
             (int)EffectType.VectorComponentEffect => new RemoteVectorComponentEffect(session, descriptor),
+            (int)EffectType.VectorPictureEffect => new RemoteVectorPictureEffect(session, descriptor),
             (int)EffectType.ContinuousTextEffect => new RemoteContinuousTextEffect(session, descriptor),
             (int)EffectType.SpeedVarianceProvider => new RemoteSpeedVarianceProvider(session, descriptor),
             (int)EffectType.ClipPositionProvider => new RemoteClipPositionProvider(session, descriptor),
@@ -107,6 +109,26 @@ internal sealed class RemoteVectorComponentEffect(IPluginIsolationSession sessio
         var serializer = Type.GetType("projectFrameCut.Render.VectorContent.VectorComponentSerializer, projectFrameCut.Render", throwOnError: true)!;
         return (projectFrameCut.Render.RenderAPIBase.VectorContent.IVectorComponent)serializer.GetMethod("Restore")!
             .Invoke(null, [JsonSerializer.SerializeToElement<projectFrameCut.Render.RenderAPIBase.VectorContent.IVectorComponent>(remote)])!;
+    }
+}
+
+internal sealed class RemoteVectorPictureEffect(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) : RemoteEffectBase(session, descriptor), IVectorPictureEffect
+{
+    public VectorPicture Process(VectorPicture source, float progress)
+    {
+        var request = new IsolationEffectInvokeRequest
+        {
+            ObjectId = ObjectId, State = CreateState(), Progress = progress, ClipProgress = progress,
+            VectorElements = VectorPictureCodec.Encode(source),
+            Value = (uint)Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) ?? 0f)
+        };
+        foreach (var id in DynamicProviderIds)
+        {
+            var value = GetDynamicValue(id);
+            if (value is not null) request.DynamicValues[id] = IsolationValueConverter.FromObject(value);
+        }
+        return VectorPictureCodec.Decode(Invoke<IsolationEffectInvokeRequest, IsolationVectorElementList>(
+            RenderOperation.IsolationProcessVectorPictureEffect, request).Elements);
     }
 }
 
@@ -228,7 +250,7 @@ internal static class RemoteEffectInvoke
             TargetWidth = width,
             TargetHeight = height,
         }).AsTask().GetAwaiter().GetResult();
-        return new(response.TargetX, response.TargetY, response.TargetWidth, response.TargetHeight, response.IsDelta);
+        return new(response.TargetX, response.TargetY, response.TargetWidth, response.TargetHeight, response.IsDelta, response.Rotation);
     }
 }
 
@@ -519,6 +541,7 @@ internal static class IsolationClipSnapshotFactory
             TargetHeight = clip.TargetHeight,
             TargetX = clip.TargetX,
             TargetY = clip.TargetY,
+            Rotation = clip.Rotation,
             StartingX = clip.StartingX,
             StartingY = clip.StartingY,
             FrameTime = clip.FrameTime,

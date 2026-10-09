@@ -121,7 +121,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 #endif
     ];
 
-    static readonly JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
+    static readonly JsonSerializerOptions savingOpts = DraftImportAndExportHelper.DraftJSONOption;
 
     public static JsonSerializerOptions DraftJSONOption => savingOpts;
     #endregion
@@ -453,6 +453,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         SetStatusText(Localized.DraftPage_PleaseWait);
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = true, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill };
         FastPreviewEditor = new LightweightInteractableEditor { HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill };
+        FastPreviewEditor.SetBinding(LightweightInteractableEditor.AllowClipOutOfBoundsProperty,
+            new Binding(nameof(ClipEditor.AllowClipOutOfBounds), source: ClipEditor, mode: BindingMode.OneWay));
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview();
         DynamicPreviewProvider.ClipInitializationFailed += OnClipInitializationFailed;
         DynamicPreviewProvider.ClipInitializationRecovered += OnClipInitializationRecovered;
@@ -529,6 +531,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         SetStatusText(Localized.DraftPage_PleaseWait);
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = true, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill };
         FastPreviewEditor = new LightweightInteractableEditor { HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill };
+        FastPreviewEditor.SetBinding(LightweightInteractableEditor.AllowClipOutOfBoundsProperty,
+            new Binding(nameof(ClipEditor.AllowClipOutOfBounds), source: ClipEditor, mode: BindingMode.OneWay));
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview();
         DynamicPreviewProvider.ClipInitializationFailed += OnClipInitializationFailed;
         DynamicPreviewProvider.ClipInitializationRecovered += OnClipInitializationRecovered;
@@ -4056,6 +4060,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             pasted.TargetHeight = dto.TargetHeight;
             pasted.TargetX = dto.TargetX;
             pasted.TargetY = dto.TargetY;
+            pasted.Rotation = dto.Rotation;
             pasted.StartingX = dto.StartingX;
             pasted.StartingY = dto.StartingY;
             pasted.ExtraData = dto.MetaData?.ToDictionary(kv => kv.Key, kv => kv.Value) ?? new Dictionary<string, object>();
@@ -7502,7 +7507,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             position.TargetY,
             Math.Max(1, position.TargetWidth),
             Math.Max(1, position.TargetHeight),
-            false);
+            false, position.Rotation);
 
         provider.UpsertStep(progress, safePosition);
         ClipInfoBuilder.RebuildAllEffects(clip);

@@ -147,6 +147,7 @@ public enum RenderOperation
     [ProtoEnum] IsolationAuthorizeProjectExternalSource = 2059,
     [ProtoEnum] IsolationListProjectExternalSources = 2060,
     [ProtoEnum] IsolationProcessTransformEffect = 2061,
+    [ProtoEnum] IsolationProcessVectorPictureEffect = 2062,
 }
 
 [ProtoContract]

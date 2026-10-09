@@ -185,6 +185,8 @@ public partial class VectorComponentWrapperClip : IClip
 
     public int TargetY { get; set; }
 
+    public float Rotation { get; set; }
+
     public int StartingX { get; set; }
 
     public int StartingY { get; set; }

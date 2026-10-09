@@ -1,4 +1,7 @@
+#if !HEADLESS
 using projectFrameCut.ApplicationAPIBase.Plugins;
+#endif
+
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.PluginIsolation;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -42,7 +45,7 @@ internal static class PluginIsolationFactory
 
     public static async ValueTask<IPluginBase> CreateAsync(IPluginBase local, PluginPackageVerificationResult verification, string pluginRoot, PluginIsolationMode mode, CancellationToken cancellationToken = default)
     {
-        bool hasPictureProviders = local.EffectProviderProvider.Values.Any(x => x().TypeOfEffect is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect or EffectType.Transform);
+        bool hasPictureProviders = local.EffectProviderProvider.Values.Any(x => x().TypeOfEffect is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect or EffectType.VectorPictureEffect or EffectType.Transform);
         bool hasAIProviders = local is IAIProviderPlugin aiPlugin && aiPlugin.AIProviderFactories.Count > 0;
         bool hasIsolatableCapabilities = hasPictureProviders || local.VideoSourceProvider.Count > 0 ||
             local.AudioSourceProvider.Count > 0 || local.VideoWriterProvider.Count > 0 ||
@@ -54,7 +57,9 @@ internal static class PluginIsolationFactory
         switch (mode)
         {
             case PluginIsolationMode.Containerized:
-#if WINDOWS
+#if HEADLESS
+                throw new PlatformNotSupportedException("AppContainer plugin isolation is unavailable in the headless client.");
+#elif WINDOWS
                 client = await StartClientAsync(
                     new Platforms.Windows.WindowsPluginIsolationPlatform(),
                     local.PluginID,
@@ -91,7 +96,11 @@ internal static class PluginIsolationFactory
         try
         {
             Logger.Log($"Plugin '{local.PluginID}' isolated providers are running in {mode} isolation mode.");
+#if HEADLESS
+            return new IsolatedPluginProxy(local, client);
+#else
             return local is IApplicationPluginBase app ? new IsolatedApplicationPluginProxy(app, client) : new IsolatedPluginProxy(local, client);
+#endif
         }
         catch
         {

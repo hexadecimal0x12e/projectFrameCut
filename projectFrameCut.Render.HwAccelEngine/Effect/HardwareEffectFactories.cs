@@ -7,7 +7,7 @@ public static class HardwareEffectFactories
 {
     public static IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> Create() => new Dictionary<EffectImplementationKey, Func<IEffect>>
     {
-#if WINDOWS || LINUX || WINNETCORE || ANDROID || IOS || MACCATALYST
+#if WINDOWS || LINUX || HEADLESS || ANDROID || IOS || MACCATALYST
         [new("Blur", EffectImplementType.HwAcceleration)] = () => new BlurEffect_HwAccel(),
         [new("Crop", EffectImplementType.HwAcceleration)] = () => new CropEffect_HwAccel(),
         [new("ProgressCrop", EffectImplementType.HwAcceleration)] = () => new ProgressCropper_HwAccel(),

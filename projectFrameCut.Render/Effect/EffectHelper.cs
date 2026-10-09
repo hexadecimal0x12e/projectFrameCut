@@ -29,6 +29,8 @@ namespace projectFrameCut.Render.Effect
 
         public static void ReleaseClipEffects(IClip clip)
         {
+            foreach (var provider in (clip.EffectProvidersInstances ?? []).OfType<ClipArgumentProvider>())
+                provider.ClearRuntimeFields();
             foreach (var effect in (clip.EffectsInstances ?? []).Concat(new IEffect?[] { clip.MixtureInstance, clip.SpeedVarianceProviderInstance, clip.AlternativeSource }).OfType<IDisposable>().Distinct(ReferenceEqualityComparer.Instance))
                 ((IDisposable)effect).Dispose();
             clip.EffectsInstances = [];
@@ -78,6 +80,7 @@ namespace projectFrameCut.Render.Effect
                     null,
                     out restoreDiagnostics);
                 target.EffectProvidersInstances = providers.Values.ToArray();
+                foreach (var provider in providers.Values.OfType<ClipArgumentProvider>()) provider.Attach(target);
             }
             catch (Exception ex)
             {
@@ -339,6 +342,7 @@ namespace projectFrameCut.Render.Effect
             try
             {
                 var providers = EffectBindingHelper.MigrateToEffectProviders(clip.EffectProviders, null);
+                foreach (var provider in providers.Values.OfType<ClipArgumentProvider>()) provider.Attach(clip);
                 rebuilt = EffectBindingHelper.RebuildAllEffects(providers, existing) ?? [];
                 var result = rebuilt.Values.Where(e => e.Enabled && e is not (IValueProviderEffect or ISpeedVarianceProvider or IMixture or ISourceReplacementEffect))
                     .OrderBy(e => e.Index).ToArray();

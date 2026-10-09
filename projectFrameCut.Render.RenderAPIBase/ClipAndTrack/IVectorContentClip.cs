@@ -15,6 +15,10 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
         public AntiAliasMode? ClipAntiAliasMode { get; set; } 
 
+        /// <summary>True when the clip already applies vector-picture effects in its own source pipeline.</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool ProcessesVectorPictureEffects => false;
+
         public VectorPicture GetVectorPictureRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight);
     }
 }

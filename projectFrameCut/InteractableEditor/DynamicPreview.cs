@@ -692,12 +692,14 @@ public sealed class DynamicPreview : IDisposable
 
     private PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, bool _, CancellationToken token, string? vectorClipJson = null)
     {
+        var clip = request.Clip;
         try
         {
             ImageSource source;
             bool canvasPreview = TransformProcessing.HasActiveTransform(request.Clip, _clips ?? [request.Clip], frameIndex);
             if (_previewer is not null)
             {
+                clip = ClipArgumentBinding.InitializeFrame(clip, frameIndex);
                 var displayFrame = _previewer.RenderClipFrameForDisplay(request.Clip.Id, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson);
 #if WINDOWS
                 if (displayFrame.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb || displayFrame.RequireSwapChain)
@@ -708,7 +710,7 @@ public sealed class DynamicPreview : IDisposable
                         HorizontalOptions = LayoutOptions.Fill,
                         VerticalOptions = LayoutOptions.Fill,
                         AutomationId = $"hdr-clip={request.Clip.ClipType},id={request.Clip.Id}",
-                    }, null, request.Clip, isPositionedClipPreview: canvasPreview, isTransparentAt: CreateVfdTransparencyHitTest(displayFrame.VfdPath));
+                    }, null, clip, isPositionedClipPreview: canvasPreview, isTransparentAt: CreateVfdTransparencyHitTest(displayFrame.VfdPath));
                 }
 #endif
                 source = PreviewFrameMaterializer.CreateImageSource(displayFrame.VfdPath);
@@ -720,16 +722,16 @@ public sealed class DynamicPreview : IDisposable
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.Fill,
                     AutomationId = $"clip={request.Clip.ClipType},id={request.Clip.Id}",
-                }, null, request.Clip, isPositionedClipPreview: canvasPreview, isTransparentAt: CreateVfdTransparencyHitTest(displayFrame.VfdPath));
+                }, null, clip, isPositionedClipPreview: canvasPreview, isTransparentAt: CreateVfdTransparencyHitTest(displayFrame.VfdPath));
             }
             else
             {
                 // Compatibility fallback for isolated editor surfaces that do not own a project
                 // render session. Normal DraftPage previews always use the RPC/file path above.
-                var rendered = RenderClipPreviewSource(request.Clip, canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex, token);
+                var rendered = RenderClipPreviewSource(ref clip, canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex, token);
                 if (rendered is null)
                 {
-                    return new PreparedPreview(request.Clip.Id, null, "Failed to render preview source.", request.Clip);
+                    return new PreparedPreview(request.Clip.Id, null, "Failed to render preview source.", clip);
                 }
                 Func<double, double, bool>? isTransparentAt;
                 try
@@ -746,12 +748,12 @@ public sealed class DynamicPreview : IDisposable
                     HorizontalOptions = LayoutOptions.Fill,
                     VerticalOptions = LayoutOptions.Fill,
                     AutomationId = $"clip={request.Clip.ClipType},id={request.Clip.Id}",
-                }, null, request.Clip, isPositionedClipPreview: canvasPreview, isTransparentAt: isTransparentAt);
+                }, null, clip, isPositionedClipPreview: canvasPreview, isTransparentAt: isTransparentAt);
             }
         }
         catch (OperationCanceledException)
         {
-            return new PreparedPreview(request.Clip.Id, null, null, request.Clip);
+            return new PreparedPreview(request.Clip.Id, null, null, clip);
         }
         catch (Exception ex)
         {
@@ -759,28 +761,29 @@ public sealed class DynamicPreview : IDisposable
             Func<View>? errorFactory = DefaultOutputMode == NativePreviewOutputMode.Required
                 ? () => CreatePreviewErrorView(ex.Message)
                 : null;
-            return new PreparedPreview(request.Clip.Id, errorFactory, ex.Message, request.Clip);
+            return new PreparedPreview(request.Clip.Id, errorFactory, ex.Message, clip);
         }
     }
 
     /// <summary>
-    /// Renders one clip through the same source/effect stages as <see cref="Timeline"/>, but deliberately
-    /// stops before clip positioning, target-rectangle resizing and layer composition. Those operations
-    /// belong to <see cref="InteractableEditor"/>, whose preview host already owns the final layout.
+    /// Renders clip-local output through the compositor; the preview host owns its canvas position.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    private IPicture? RenderClipPreviewSource(IClip clip, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token)
+    private IPicture? RenderClipPreviewSource(ref IClip clip, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
 
         if (TransformProcessing.HasActiveTransform(clip, _clips ?? [clip], frameIndex))
-            return TransformProcessing.RenderCanvas(clip, _clips ?? [clip], frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, IPicture.PicturePixelMode.BytePicture);
+        {
+            var arguments = new ClipArgumentFrameCache();
+            var rendered = TransformProcessing.RenderCanvas(clip, _clips ?? [clip], frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, IPicture.PicturePixelMode.BytePicture, arguments);
+            clip = arguments.Get(clip, frameIndex);
+            return rendered;
+        }
 
-        var sourceWidth = ResolveClipPreviewDimension(clip.TargetWidth, projectWidth, canvasWidth);
-        var sourceHeight = ResolveClipPreviewDimension(clip.TargetHeight, projectHeight, canvasHeight);
         var pixelMode = IPicture.PicturePixelMode.BytePicture;
 
-        if (!ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
+        if (!ClipArgumentBinding.IsFrameCopy(clip) && !ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
         {
             try
             {
@@ -794,6 +797,9 @@ public sealed class DynamicPreview : IDisposable
             }
         }
 
+        clip = ClipArgumentBinding.InitializeFrame(clip, frameIndex);
+        var sourceWidth = ResolveClipPreviewDimension(clip.TargetWidth, projectWidth, canvasWidth);
+        var sourceHeight = ResolveClipPreviewDimension(clip.TargetHeight, projectHeight, canvasHeight);
         token.ThrowIfCancellationRequested();
         IPicture? frame;
         try
@@ -806,15 +812,7 @@ public sealed class DynamicPreview : IDisposable
             {
                 var actualFrame = clip.GetRelativeFrameIndex(frameIndex)
                     ?? clip.StartFrame + clip.GetEffectiveDuration();
-                if (clip.AlternativeSource is ISourceReplacementEffect replacement
-                    && replacement.SupportsSourceReplacement(clip, sourceWidth, sourceHeight))
-                {
-                    frame = replacement.Compute(clip, clip.GetFrame(frameIndex, sourceWidth, sourceHeight, pixelMode), sourceWidth, sourceHeight, actualFrame, pixelMode);
-                }
-                else
-                {
-                    frame = clip.GetFrameRelativeToStartPointOfSource(actualFrame, sourceWidth, sourceHeight, pixelMode);
-                }
+                frame = VideoClipRotation.ReadFrame(clip, actualFrame, sourceWidth, sourceHeight, pixelMode);
             }
         }
         catch (Exception ex)
@@ -838,19 +836,23 @@ public sealed class DynamicPreview : IDisposable
         OneFrame oneFrame;
         try
         {
-            oneFrame = new OneFrame(frameIndex, clip, frame);
+            oneFrame = new OneFrame(frameIndex, clip, frame, resolveEffects: false);
         }
         catch (Exception ex)
         {
             ClipInitializationFailure.Mark(clip, "ResolveEffect", ex);
             Log(ex, $"Resolve preview effects for clip {clip.Name} ({clip.Id}); using fallback", this);
             try { frame.Dispose(); } catch { }
-            return ClipInitializationFailure.CreateFallbackFrame(sourceWidth, sourceHeight, pixelMode, clip.ExtraData);
+            frame = ClipInitializationFailure.CreateFallbackFrame(sourceWidth, sourceHeight, pixelMode, clip.ExtraData);
+            oneFrame = new OneFrame(frameIndex, clip, frame, resolveEffects: false);
         }
 
         try
         {
-            return RenderClipEffectsWithoutLayout(oneFrame, canvasWidth, canvasHeight, frameIndex, token);
+            token.ThrowIfCancellationRequested();
+            return Timeline.MixtureLayers([oneFrame], frameIndex, canvasWidth, canvasHeight, (int)pixelMode,
+                projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight,
+                transparentBackground: true, disposeIntermediateFrames: true, clipLocalOutput: true, cancellationToken: token);
         }
         catch
         {
@@ -935,73 +937,6 @@ public sealed class DynamicPreview : IDisposable
             },
         };
 
-
-    private static IPicture RenderClipEffectsWithoutLayout(OneFrame source, int targetWidth, int targetHeight, uint frameIndex, CancellationToken token)
-    {
-        var effected = source.Clip;
-        var globalBindableCache = new ConcurrentDictionary<string, object>();
-        var frameBindableCache = new Dictionary<string, object>();
-        var duration = source.ParentClip.GetEffectiveDuration();
-        var clipProgress = duration > 0
-            ? Math.Clamp((float)((long)frameIndex - source.ParentClip.StartFrame) / duration, 0f, 1f)
-            : 0f;
-
-        ValueProviderFrameContext.BeginFrame(frameIndex, clipProgress);
-        try
-        {
-            foreach (var effect in source.Effects.OrderBy(effect => effect.Index))
-            {
-                token.ThrowIfCancellationRequested();
-
-                // Position providers and the deprecated Place/Resize effects are layout operations.
-                // InteractableEditor evaluates the former when it lays out PreviewHost; applying them
-                // here would bake a canvas offset/size into the image and then apply it a second time.
-                if (effect is IClipPositionProvider or IContinuousClipPositionProvider
-                    || IsLegacyInternalLayoutEffect(effect))
-                {
-                    continue;
-                }
-
-                if (effect is IValueProviderEffect valueProvider)
-                {
-                    throw new InvalidOperationException($"Effect {valueProvider.Name} of clip {source.ParentClip.Id} should have been inlined by the effect binding pipeline.");
-                }
-
-                if (effect is IContinuousEffect continuous)
-                {
-                    var scopedStart = continuous.IsScoped ? continuous.StartPoint : (int)source.ParentClip.StartFrame;
-                    var scopedEnd = continuous.IsScoped
-                        ? continuous.EndPoint
-                        : (int)(source.ParentClip.StartFrame + source.ParentClip.GetEffectiveDuration());
-                    if (scopedEnd <= scopedStart || frameIndex < scopedStart || frameIndex >= scopedEnd)
-                    {
-                        continue;
-                    }
-
-                    var progress = Math.Clamp((float)(frameIndex - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
-                    effected = continuous.Render(effected, progress, targetWidth, targetHeight);
-                }
-                else if (effect is INormalEffect normal)
-                {
-                    effected = normal.Render(effected, targetWidth, targetHeight);
-                }
-                else if (effect is IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect or IVectorComponentEffect)
-                {
-                    // These stages are handled when resolving the source or composing layers.
-                }
-                else
-                {
-                    throw new NotSupportedException($"Effect {effect.TypeName}/{effect.Name} of clip {source.ParentClip.Id} is not supported by the render pipeline.");
-                }
-            }
-
-            return effected;
-        }
-        finally
-        {
-            ValueProviderFrameContext.EndFrame();
-        }
-    }
 
     private static int ResolveClipPreviewDimension(int clipDimension, int projectDimension, int canvasDimension)
     {

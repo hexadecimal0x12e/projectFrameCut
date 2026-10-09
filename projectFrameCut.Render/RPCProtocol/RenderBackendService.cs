@@ -8,6 +8,7 @@ using projectFrameCut.Render.PreviewAudio;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
+using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
@@ -19,8 +20,8 @@ namespace projectFrameCut.Render.RPCProtocol;
 
 public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = null, string? stateRoot = null, Action<RenderJob>? completionSink = null, Action<RenderJob>? progressSink = null, IAudioPreviewSinkFactory? previewAudioSinkFactory = null) : IRenderService, IAsyncDisposable
 {
-    private const string TimelineFrameCacheVersion = "v4-vfd";
-    private const string ClipPreviewCacheVersion = "v4-vfd";
+    private const string TimelineFrameCacheVersion = "v5-vfd";
+    private const string ClipPreviewCacheVersion = "v5-vfd";
     private const string TimelineSegmentCacheVersion = "v2-audio-source";
     private const string AudioSegmentCacheVersion = "v2-track-source";
     private const string FrameHashIndexVersion = "v2-lazy-frame-clip";
@@ -328,8 +329,9 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         foreach (var dto in draft.Clips)
         {
             if (clips.FirstOrDefault(clip => clip.Id == dto.Id) is not { } clip) continue;
-            if (dto.FromPlugin != InternalPluginBase.InternalPluginBaseID || dto.ClipType != ClipMode.VideoClip
-                || reusable?.Clips.Contains(clip, ReferenceEqualityComparer.Instance) != true) continue;
+            if (reusable?.Clips.Contains(clip, ReferenceEqualityComparer.Instance) != true) continue;
+            clip.Rotation = VideoClipRotation.Normalize(dto.Rotation);
+            if (dto.FromPlugin != InternalPluginBase.InternalPluginBaseID || dto.ClipType != ClipMode.VideoClip) continue;
             clip.TargetX = dto.TargetX;
             clip.TargetY = dto.TargetY;
             clip.TargetWidth = dto.TargetWidth;
@@ -342,7 +344,9 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
 
     private string GetClipSignature(ClipDraftDTO dto)
     {
+        VideoClipRotation.Migrate(dto);
         var json = (JsonObject)JsonSerializer.SerializeToNode(dto, _jsonOptions)!;
+        json.Remove(nameof(dto.Rotation));
         if (dto.FromPlugin == InternalPluginBase.InternalPluginBaseID && dto.ClipType == ClipMode.VideoClip)
         {
             json.Remove(nameof(dto.TargetX));
@@ -661,6 +665,15 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 {
                     try { picture?.Dispose(); } catch { }
                 }
+            }
+            using (var stream = File.OpenRead(finalPath))
+            {
+                var header = new byte[18];
+                stream.ReadExactly(header);
+                if (!header.AsSpan(0, 4).SequenceEqual("VFCD"u8)) throw new InvalidDataException("Invalid VFD clip preview header.");
+                int offset = header[4] == 0xFF ? 10 : 5;
+                previewWidth = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(offset, 4));
+                previewHeight = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(offset + 4, 4));
             }
             var artifact = _artifacts.Register(
                 session.Id, session.ProjectRoot, relativePath,

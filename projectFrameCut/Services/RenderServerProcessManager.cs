@@ -84,7 +84,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
     {
         get
         {
-#if WINDOWS || LINUX || MACOS || ANDROID
+#if WINDOWS || LINUX || MACOS || ANDROID || HEADLESS
             return !SettingsManager.IsBoolSettingTrue("render_ForceDirectRenderTransport");
 #else
             return false;
@@ -118,7 +118,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
 #else
         if (_independentWorker && TryConnectRegisteredWorker()) return;
         var enableHttp = SettingsManager.IsBoolSettingTrue("render_RpcServerEnableHttp");
-#if WINDOWS || MACOS || LINUX
+#if WINDOWS || MACOS || LINUX || HEADLESS
         List<Exception> failures = [];
         foreach (var executable in CliProcessLauncher.GetExecutableCandidates())
         {

@@ -238,6 +238,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public ISpeedVarianceProvider? SpeedVarianceProviderInstance { get; set; }

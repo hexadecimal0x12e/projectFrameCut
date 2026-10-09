@@ -286,8 +286,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public static void SetFinalOutputSource(this IEffectProvider provider, bool isFinalOutput)
         {
-            if (isFinalOutput && provider.TypeOfEffect == projectFrameCut.Shared.EffectType.Transform)
-                throw new InvalidOperationException("Transforms cannot be the final picture output.");
+            if (isFinalOutput && (provider is ClipArgumentProvider || provider.TypeOfEffect == projectFrameCut.Shared.EffectType.Transform))
+                throw new InvalidOperationException("This provider cannot be the final picture output.");
             var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);
             state[OutputKey] = (isFinalOutput ? IEffectProvider.OutputAnchorGUID : IEffectProvider.NoConnectionGUID).ToString();
             provider.AnchorsBindingState = state;

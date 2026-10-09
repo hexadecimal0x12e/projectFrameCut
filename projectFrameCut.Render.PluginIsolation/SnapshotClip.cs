@@ -26,6 +26,7 @@ internal sealed class SnapshotClip : IClip
         TargetHeight = source.TargetHeight;
         TargetX = source.TargetX;
         TargetY = source.TargetY;
+        Rotation = source.Rotation;
         StartingX = source.StartingX;
         StartingY = source.StartingY;
         FrameTime = source.FrameTime;
@@ -50,6 +51,7 @@ internal sealed class SnapshotClip : IClip
     public int TargetHeight { get; set; }
     public int TargetX { get; set; }
     public int TargetY { get; set; }
+    public float Rotation { get; set; }
     public int StartingX { get; set; }
     public int StartingY { get; set; }
     public float FrameTime { get; init; }

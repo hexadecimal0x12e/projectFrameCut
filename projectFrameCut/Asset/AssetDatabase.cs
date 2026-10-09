@@ -3,14 +3,21 @@ using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
+using projectFrameCut.DraftStuff;
+#if !HEADLESS
 using projectFrameCut.ViewModels;
+#endif
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+#if !HEADLESS
 using CommunityToolkit.Maui.Alerts;
+#endif
+
 using projectFrameCut.Drawing.Base;
 
 namespace projectFrameCut.Asset
@@ -19,7 +26,7 @@ namespace projectFrameCut.Asset
     {
         public static void Initialize(string json)
         {
-            Assets = JsonSerializer.Deserialize<ConcurrentDictionary<string, AssetItem>>(json, DraftPage.DraftJSONOption) ?? new ConcurrentDictionary<string, AssetItem>();
+            Assets = JsonSerializer.Deserialize<ConcurrentDictionary<string, AssetItem>>(json, DraftImportAndExportHelper.DraftJSONOption) ?? new ConcurrentDictionary<string, AssetItem>();
 
             DecoderContextPJFCProject.GlobalAssetGetter = new(() => Assets);
         }
@@ -27,6 +34,7 @@ namespace projectFrameCut.Asset
         public static ConcurrentDictionary<string, AssetItem> Assets { get; set; } = new();
 
 
+#if !HEADLESS
         public static async Task<AssetItem?> Add(string path, Page page)
         {
             if (string.IsNullOrWhiteSpace(path)) return null;
@@ -97,6 +105,8 @@ namespace projectFrameCut.Asset
             return asset;
         }
 
+#endif
+
         public static bool Add(string path, string name, AssetType type, out AssetItem asset, bool proxyOption = false)
         {
             var createdAsset = Create(path, name, type);
@@ -113,13 +123,17 @@ namespace projectFrameCut.Asset
             if (AssetDatabase.Assets.TryAdd(asset.AssetId, asset))
             {
                 File.Copy(path, asset.Path);
-                File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftPage.DraftJSONOption));
+                File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftImportAndExportHelper.DraftJSONOption));
 
                 new Thread(() =>
                 {
+#if !HEADLESS
                     Toast.Make(Localized.AssetPage_PostProcess_StartPrompt(name));
+#endif
                     StartBackgroundProcessing(createdAsset, path, type, proxyOption, name);
+#if !HEADLESS
                     Toast.Make(Localized.AssetPage_PostProcess_FinishPrompt(name));
+#endif
 
                 }).Start();
                 return true;
@@ -152,7 +166,7 @@ namespace projectFrameCut.Asset
                 }
 
                 File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"),
-                    JsonSerializer.Serialize(Assets, DraftPage.DraftJSONOption));
+                    JsonSerializer.Serialize(Assets, DraftImportAndExportHelper.DraftJSONOption));
             }
             catch (Exception ex)
             {
@@ -183,7 +197,16 @@ namespace projectFrameCut.Asset
             {
                 case AssetType.VectorComposition:
                     {
+#if HEADLESS
+                        if (Path.GetExtension(sourcePath).Equals(".svg", StringComparison.OrdinalIgnoreCase))
+                            projectFrameCut.Drawing.Vector.ImportExport.SVGToVectorElement.ImportFromFile(sourcePath);
+                        else
+                        {
+                            using var json = JsonDocument.Parse(File.ReadAllText(sourcePath));
+                        }
+#else
                         VectorClipServices.Import(sourcePath);
+#endif
                         asset.ClipType = ClipMode.VectorComponentClip;
                         asset.ThumbnailPath = null;
                         Log($"Created vector composition asset {asset.AssetId}: {sourcePath}");
@@ -235,8 +258,10 @@ namespace projectFrameCut.Asset
 
                                 if (!File.Exists(asset.ThumbnailPath))
                                 {
+#if !HEADLESS
                                     var path = FileSystemService.GetAppPackageFileSync("Images","unknown_music.png");
                                     File.Copy(path, asset.ThumbnailPath, true);
+#endif
                                 }
                             }
                             catch { }
@@ -247,6 +272,7 @@ namespace projectFrameCut.Asset
                     }
                 case AssetType.Font:
                     {
+#if !HEADLESS
                         TextServices.GenerateFontThumbnail(sourcePath).SaveToPng(thumbnailPath);
                         var t = new Thread(TextServices.LoadFonts)
                         {
@@ -254,6 +280,8 @@ namespace projectFrameCut.Asset
                             IsBackground = true
                         };
                         t.Start();
+#endif
+
                         break;
                     }
                 case AssetType.Image:
@@ -262,6 +290,7 @@ namespace projectFrameCut.Asset
                         break;
                     }
             }
+#if !HEADLESS
             if (DeviceInfo.DeviceType == DeviceType.Virtual)
             {
                 return (AssetItem?)asset;
@@ -270,6 +299,9 @@ namespace projectFrameCut.Asset
             {
                 return (fail ? null : asset);
             }
+#else
+            return fail ? null : asset;
+#endif
         }
 
         public static bool Remove(string assetId)
@@ -287,7 +319,7 @@ namespace projectFrameCut.Asset
                     {
                         File.Delete(asset.ThumbnailPath);
                     }
-                    File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftPage.DraftJSONOption));
+                    File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftImportAndExportHelper.DraftJSONOption));
                     return true;
                 }
 
@@ -306,7 +338,7 @@ namespace projectFrameCut.Asset
             if (Assets.TryGetValue(assetId, out var asset))
             {
                 asset.Name = newName;
-                File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftPage.DraftJSONOption));
+                File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftImportAndExportHelper.DraftJSONOption));
                 return true;
             }
             return false;

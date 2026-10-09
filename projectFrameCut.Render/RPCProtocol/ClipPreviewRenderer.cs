@@ -4,7 +4,6 @@ using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Rendering;
-using System.Collections.Concurrent;
 using System.Text.Json;
 
 namespace projectFrameCut.Render.RPCProtocol;
@@ -16,8 +15,6 @@ internal static class ClipPreviewRenderer
         token.ThrowIfCancellationRequested();
         if (TransformProcessing.HasActiveTransform(clip, allClips, frameIndex))
             return TransformProcessing.RenderCanvas(clip, allClips, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, pixelMode);
-        var sourceWidth = ResolveDimension(clip.TargetWidth, projectWidth, canvasWidth);
-        var sourceHeight = ResolveDimension(clip.TargetHeight, projectHeight, canvasHeight);
         if (!ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
         {
             try
@@ -31,6 +28,9 @@ internal static class ClipPreviewRenderer
             }
         }
 
+        clip = ClipArgumentBinding.InitializeFrame(clip, frameIndex);
+        var sourceWidth = ResolveDimension(clip.TargetWidth, projectWidth, canvasWidth);
+        var sourceHeight = ResolveDimension(clip.TargetHeight, projectHeight, canvasHeight);
         IPicture? frame;
         try
         {
@@ -41,21 +41,7 @@ internal static class ClipPreviewRenderer
             else
             {
                 var actualFrame = clip.GetRelativeFrameIndex(frameIndex) ?? clip.StartFrame + clip.GetEffectiveDuration();
-                if (clip.AlternativeSource is ISourceReplacementEffect replacement
-                    && replacement.SupportsSourceReplacement(clip, sourceWidth, sourceHeight))
-                {
-                    frame = replacement.Compute(
-                        clip,
-                        clip.GetFrame(frameIndex, sourceWidth, sourceHeight, pixelMode),
-                        sourceWidth,
-                        sourceHeight,
-                        actualFrame,
-                        pixelMode);
-                }
-                else
-                {
-                    frame = clip.GetFrameRelativeToStartPointOfSource(actualFrame, sourceWidth, sourceHeight, pixelMode);
-                }
+                frame = VideoClipRotation.ReadFrame(clip, actualFrame, sourceWidth, sourceHeight, pixelMode);
             }
         }
         catch (Exception ex)
@@ -70,18 +56,22 @@ internal static class ClipPreviewRenderer
         OneFrame oneFrame;
         try
         {
-            oneFrame = new OneFrame(frameIndex, clip, frame);
+            oneFrame = new OneFrame(frameIndex, clip, frame, resolveEffects: false);
         }
         catch (Exception ex)
         {
             ClipInitializationFailure.Mark(clip, "ResolveEffect", ex);
             try { frame.Dispose(); } catch { }
-            return ClipInitializationFailure.CreateFallbackFrame(sourceWidth, sourceHeight, pixelMode, clip.ExtraData);
+            frame = ClipInitializationFailure.CreateFallbackFrame(sourceWidth, sourceHeight, pixelMode, clip.ExtraData);
+            oneFrame = new OneFrame(frameIndex, clip, frame, resolveEffects: false);
         }
 
         try
         {
-            return RenderEffectsWithoutLayout(oneFrame, canvasWidth, canvasHeight, frameIndex, token);
+            token.ThrowIfCancellationRequested();
+            return Timeline.MixtureLayers([oneFrame], frameIndex, canvasWidth, canvasHeight, (int)pixelMode,
+                projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight,
+                transparentBackground: true, disposeIntermediateFrames: true, clipLocalOutput: true, cancellationToken: token);
         }
         catch
         {
@@ -89,58 +79,6 @@ internal static class ClipPreviewRenderer
             throw;
         }
     }
-
-    private static IPicture RenderEffectsWithoutLayout(OneFrame source, int targetWidth, int targetHeight, uint frameIndex, CancellationToken token)
-    {
-        var effected = source.Clip;
-        var globalBindableCache = new ConcurrentDictionary<string, object>();
-        var frameBindableCache = new Dictionary<string, object>();
-        var duration = source.ParentClip.GetEffectiveDuration();
-        var clipProgress = duration > 0
-            ? Math.Clamp((float)((long)frameIndex - source.ParentClip.StartFrame) / duration, 0f, 1f)
-            : 0f;
-
-        ValueProviderFrameContext.BeginFrame(frameIndex, clipProgress);
-        try
-        {
-            foreach (var effect in source.Effects.OrderBy(effect => effect.Index))
-            {
-                token.ThrowIfCancellationRequested();
-                if (effect is ITransform or IClipPositionProvider or IContinuousClipPositionProvider || IsLegacyLayoutEffect(effect)) continue;
-                if (effect is IValueProviderEffect valueProvider)
-                    throw new InvalidOperationException($"Effect {valueProvider.Name} of clip {source.ParentClip.Id} should have been inlined by the binding pipeline.");
-
-                if (effect is IContinuousEffect continuous)
-                {
-                    var scopedStart = continuous.IsScoped ? continuous.StartPoint : (int)source.ParentClip.StartFrame;
-                    var scopedEnd = continuous.IsScoped ? continuous.EndPoint : (int)(source.ParentClip.StartFrame + source.ParentClip.GetEffectiveDuration());
-                    if (scopedEnd <= scopedStart || frameIndex < scopedStart || frameIndex >= scopedEnd) continue;
-                    var progress = Math.Clamp((float)(frameIndex - scopedStart) / (scopedEnd - scopedStart), 0f, 1f);
-                    effected = continuous.Render(effected, progress, targetWidth, targetHeight);
-                }
-                else if (effect is INormalEffect normal)
-                {
-                    effected = normal.Render(effected, targetWidth, targetHeight);
-                }
-                else if (effect is not (IMixture or ISpeedVarianceProvider or ITextEffect or IContinuousTextEffect))
-                {
-                    throw new NotSupportedException($"Effect {effect.TypeName}/{effect.Name} is not supported by the clip preview pipeline.");
-                }
-            }
-            return effected;
-        }
-        finally
-        {
-            ValueProviderFrameContext.EndFrame();
-        }
-    }
-
-    private static bool IsLegacyLayoutEffect(IEffect effect)
-        => string.Equals(effect.Name, "__Internal_Place__", StringComparison.Ordinal)
-           || string.Equals(effect.Name, "__Internal_Resize__", StringComparison.Ordinal)
-           || (string.IsNullOrWhiteSpace(effect.Name)
-               && (string.Equals(effect.TypeName, "Place", StringComparison.OrdinalIgnoreCase)
-                   || string.Equals(effect.TypeName, "Resize", StringComparison.OrdinalIgnoreCase)));
 
     private static int ResolveDimension(int clipDimension, int projectDimension, int canvasDimension)
         => clipDimension <= 0 || projectDimension <= 0

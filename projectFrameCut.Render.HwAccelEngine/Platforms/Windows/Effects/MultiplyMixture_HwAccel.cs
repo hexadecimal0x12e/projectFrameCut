@@ -1,4 +1,4 @@
-#if WINDOWS || LINUX || WINNETCORE
+#if WINDOWS || LINUX || HEADLESS
 using ILGPU;
 using ILGPU.Runtime;
 using ILGPU.Runtime.OpenCL;

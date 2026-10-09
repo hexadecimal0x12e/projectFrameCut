@@ -174,6 +174,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </remarks>
         FrameAsParameterFlow = 1 << 12,
 
+        VectorPicture = IPicture | (1 << 13),
+
         /// <summary>
         /// Indicate that the field is a mandatory field, which means it must be set before the effect can be applied.
         /// </summary>
@@ -245,8 +247,18 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         CustomType = 1 << 64,
     }
 
+    /// <summary>A clip argument that can retain its original property value until explicitly overridden.</summary>
+    public record ClipArgumentField : StaticEffectArgumentField, IEffectArgumentField
+    {
+        public new string TypeName => nameof(ClipArgumentField);
+        public bool UsesClipValue { get; init; }
+
+        [System.Diagnostics.CodeAnalysis.SetsRequiredMembers]
+        public ClipArgumentField(object value, EffectArgumentFieldType fieldType) : base(value, fieldType) { }
+    }
+
     /// <summary>
-    /// A static effect argument field that holds a value of type <see cref="object"/>. 
+    /// A static effect argument field that holds a value of type <see cref="object"/>.
     /// This class is used to represent a static value for an effect argument field, which is not dynamic and does not change at runtime.
     /// </summary>
     public record StaticEffectArgumentField : StaticEffectArgumentField<object>

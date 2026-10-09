@@ -3116,6 +3116,30 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_ClipInfoTabOrder",
+        "Value": "片段属性 Tab 顺序",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_ClipInfoTabOrder_Subtitle",
+        "Value": "左右拖拽 Tab 调整顺序，刷新属性面板后生效。",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_ClipInfoTabOrder_Reset",
+        "Value": "恢复默认顺序",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [

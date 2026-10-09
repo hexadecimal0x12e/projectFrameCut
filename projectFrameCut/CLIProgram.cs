@@ -1,6 +1,9 @@
 using FFmpeg.AutoGen;
 using LocalizedResources;
+#if !HEADLESS
 using projectFrameCut.ApplicationAPIBase.Plugins;
+#endif
+
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Base;
@@ -37,10 +40,12 @@ using static projectFrameCut.Shared.Logger;
 
 
 
-#if WINDOWS
+#if WINDOWS || HEADLESS
 using projectFrameCut.Render.WindowsRender;
 using ILGPU;
+#if WINDOWS
 using System.Security.Principal;
+#endif
 
 #elif ANDROID
 
@@ -269,7 +274,7 @@ namespace projectFrameCut
                 return SuccessExitCode;
             }
 
-#if WINDOWS || LINUX
+#if WINDOWS || LINUX || HEADLESS
             if (command.Equals("accels", StringComparison.OrdinalIgnoreCase))
             {
                 Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
@@ -301,8 +306,10 @@ namespace projectFrameCut
         {
             Localized = SimpleLocalizer.Init(args.FirstOrDefault(c => c.StartsWith("--locale="))?.Substring("--locale=".Length));
             SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+#if !HEADLESS
             SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
             projectFrameCut.ApplicationAPIBase.Localize.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(Localized._LocaleId_, out var apiloc) ? apiloc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+#endif
 #if WINDOWS
             SimpleLocalizerBaseGeneratedHelper.Localized = ISimpleLocalizerBase_Helper.GetMapping().TryGetValue(Localized._LocaleId_, out var hloc) ? hloc : ISimpleLocalizerBase_Helper.GetMapping().First().Value;
 #endif
@@ -362,7 +369,7 @@ namespace projectFrameCut
             }
             else if (transportValue.Equals("raw_pipe", StringComparison.OrdinalIgnoreCase))
             {
-#if WINDOWS || LINUX
+#if WINDOWS || LINUX || HEADLESS
                 var origColor = Console.ForegroundColor;
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.Error.WriteLine("WARNNING: 'raw_pipe' transport is used internally ONLY. The behave of this transport is not guaranteed to be stable and may change with time.");
@@ -437,8 +444,12 @@ namespace projectFrameCut
             string? rpcToken = GetOption(args, "rpcToken", required: false)
                 ?? GetOption(args, "projectServerToken", required: false);
             string globalAssetsDatabasePath = Path.Combine(dataRoot, "My Assets", ".database", "database.json");
-            bool startClient = !args.Any(static argument =>
-                argument.Equals("--headless", StringComparison.OrdinalIgnoreCase));
+            bool startClient =
+#if HEADLESS
+                false;
+#else
+                !args.Any(static argument => argument.Equals("--headless", StringComparison.OrdinalIgnoreCase));
+#endif
             string? rpcListen = GetOption(args, "rpcListen", required: false)
                 ?? GetOption(args, "projectServer", required: false);
             if (!string.IsNullOrWhiteSpace(rpcListen))
@@ -468,7 +479,7 @@ namespace projectFrameCut
             }
 
             using var cancellation = new CancellationTokenSource();
-#if WINDOWS || LINUX
+#if WINDOWS || LINUX || HEADLESS
             Console.CancelKeyPress += (_, eventArgs) =>
             {
                 eventArgs.Cancel = true;
@@ -564,7 +575,7 @@ namespace projectFrameCut
                     throw new ArgumentException("backend requires an absolute --listen=<http[s]://host:port> address.");
 
                 using var cancellation = new CancellationTokenSource();
-#if WINDOWS || LINUX
+#if WINDOWS || LINUX || HEADLESS
                 Console.CancelKeyPress += (_, e) =>
                 {
                     e.Cancel = true;
@@ -661,7 +672,7 @@ namespace projectFrameCut
                 }
 
                 using var cancellation = new CancellationTokenSource();
-#if WINDOWS || LINUX
+#if WINDOWS || LINUX || HEADLESS
                 Console.CancelKeyPress += (_, e) =>
                 {
                     e.Cancel = true;
@@ -837,7 +848,7 @@ namespace projectFrameCut
         private static void InitializeCliRenderRuntime(string dataRoot, string ffmpegRoot = "")
         {
             InitializeRenderRuntime(dataRoot, ffmpegRoot);
-#if WINDOWS || LINUX
+#if WINDOWS || LINUX || HEADLESS
             AcceleratorsManager.IsRendering = true;
             if (!AcceleratorsManager.Accelerators.Any())
                 throw new InvalidOperationException("No valid rendering accelerator is available.");
@@ -932,7 +943,7 @@ namespace projectFrameCut
                     ? parsedBitRate
                     : null;
             using var consoleCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-#if WINDOWS || LINUX
+#if WINDOWS || LINUX || HEADLESS
             Console.CancelKeyPress += (_, e) => { e.Cancel = true; consoleCancellation.Cancel(); };
 #endif
             IVideoWriter CreateConfiguredWriter(string path, bool intermediateChunk)
@@ -1694,7 +1705,11 @@ namespace projectFrameCut
                 PluginManager.Init(
                 [
                     new InternalPluginBase(),
+#if HEADLESS
+                    new Platforms.Headless.ILGPUPlugin(),
+#else
                     new projectFrameCut.Render.HwAccelEngine.HwAccelEnginePlugin(),
+#endif
                 ]);
             }
             if (!ffmpeg.Ready)
@@ -1855,11 +1870,26 @@ namespace projectFrameCut
 #endif
         }
 
+        private static string GetUiVersionInfo() =>
+#if HEADLESS
+            "Headless client (ILGPU)";
+#else
+    $".NET MAUI version:    {typeof(View).Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "10.0.?"}";
+#endif
+
+        private static string GetApplicationPluginVersionInfo() =>
+#if HEADLESS
+            "Application-level plugins: unavailable";
+#else
+            $"IApplicationPluginBase API:   v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}";
+#endif
+
         #endregion
 
         #region help
         private static void WriteGeneralHelp()
         {
+#if !HEADLESS
             Console.WriteLine(
 @"projectFrameCut command-line interface
 
@@ -1913,6 +1943,50 @@ Global options:
 Help options:
   -h, --help, /?    Show this help text.
 ");
+#else
+            Console.WriteLine(
+@"projectFrameCut headless server
+Warning: Headless client was mainly desgined for providing client backward compatibility ability via RPC. 
+It is not designed as a full-featured CLI tool. Consider use GUI or CLI tool for normal usage.
+
+Usage:
+  pjfc <command> [arguments] [options]
+  pjfc help [command]
+
+Commands:
+  headless    Start the headless backend for remote access and automation.
+  render      Run the built-in renderer.
+  mcp         Serve the user library or one project over MCP in HTTP/stdio.
+  help        Show general help or detailed help for a command.
+  about       Show version and build information.
+
+Global options:
+  --quiet             Suppress all console outputs, include logs, version/copyright banner, and diagnostic messages.
+
+  --consoleLog        Write application logs to the console. Mutually exclusive with with --quiet flag. 
+
+  --logDiagnostic     Include diagnostic-level log messages to be announced in logger system.
+                      Not applicable to gui mode because of user configuration.
+                      Note that this option only affects the logger system and does not change the console output behavior.
+
+  --noLog             Disable logging file writing. This does not affect 'gui' mode or console logging.
+                      Set environment variable PJFC_NO_LOG to achieve the same effect.
+
+  --loadPlugins       Load all enabled User-level plugin(s) which has been enabled.
+                      Not applicable to gui mode because GUI will handle plugin by itself.
+
+  --ffmpegRoot=...    Sets the root path for FFmpeg binaries. 
+                      If not specified, defaults to the internal FFmpeg path, or the user configured 
+                      path/plugin in the GUI settings when in gui mode.
+
+  --dataRoot=...      Optional user-data directory used for assets and rendering.
+                      If not specified, defaults to the path defined in <App Data>\OverrideUserDataPath.txt 
+                      or %USERPROFILE%\Documents\projectFrameCut by default.
+
+Help options:
+  -h, --help, /?    Show this help text.
+");
+#endif
         }
 
         private static void WriteMcpHelp()
@@ -2159,9 +2233,9 @@ $"""
 https://github.com/hexadecimal0x12e/projectFrameCut
 
 .NET CoreCLR version: {Environment.Version}
-.NET MAUI version:    {typeof(View).Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "10.0.?"}
+{GetUiVersionInfo()}
 IPluginBase API:      v{IPluginBase.CurrentPluginAPIVersion} 
-IApplicationPluginBase API:   v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+{GetApplicationPluginVersionInfo()}
 {renderType.GetName().Name}:  v{renderType.GetName().Version} {renderHash}
 {drawingType.GetName().Name}: v{drawingType.GetName().Version} ({drawingCommit})
 
@@ -2200,23 +2274,7 @@ For the usage of params, refer to the StandaloneRender's documentation.
 ");
         }
 
-        #endregion
+#endregion
     }
 
-    #region headless helper
-#if HEADLESS
-    public static class HeadlessProgramClass
-    {
-        public static int Main(string[] args)
-        {
-            if (args[0] == "gui")
-            {
-                Console.Error.WriteLine("ERROR: 'gui' command is not available in headless client.");
-                return 65535;
-            }
-            return CLIProgram.CLIMain(args);
-        }
-    }
-#endif
-    #endregion
 }

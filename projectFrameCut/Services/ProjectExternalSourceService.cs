@@ -1,4 +1,7 @@
+#if !HEADLESS
 using CommunityToolkit.Maui.Extensions;
+#endif
+
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.PluginIsolation;
 using projectFrameCut.Render.RPCProtocol;
@@ -42,7 +45,7 @@ public static class ProjectExternalSourceService
             if (Directory.Exists(stageRoot)) Directory.Delete(stageRoot, true);
             throw;
         }
-#elif MACOS || LINUX
+#elif MACOS || LINUX || HEADLESS
         return await new ProjectExternalSourceProcessPlatform(CliProcessLauncher.GetExecutableCandidates()).StartAsync(
             ProjectExternalSourceRuntime.CreateContext(asset, sourceRoot, Path.Combine(MauiProgram.CachePath, "external-source-sessions", Guid.NewGuid().ToString("N")), $"desktop-{Environment.ProcessId}"), cancellationToken);
 #else
@@ -50,6 +53,7 @@ public static class ProjectExternalSourceService
 #endif
     }
 
+#if !HEADLESS
     public static async Task SelectAsync(Page page, string root)
     {
         await SelectionGate.WaitAsync();
@@ -151,12 +155,16 @@ public static class ProjectExternalSourceService
         await ApplyAsync(root);
     }
 
+#endif
+
     public static async Task ApplyAsync(string root)
     {
         InitializeRuntime();
         await ProjectExternalSourceRuntime.SetAsync(new() { ProjectRoot = root, AllowedSources = GetApprovals(root) });
+#if !HEADLESS
         if (RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
             await client.SetProjectExternalSourcesAsync(new() { ProjectRoot = root, AllowedSources = GetApprovals(root) });
+#endif
     }
 
     public static async Task SetLoadedAsync(string root, Guid importId, bool loaded)
@@ -177,6 +185,7 @@ public static class ProjectExternalSourceService
         Log($"Project external source {importId}: {(loaded ? "load" : "unload")}.");
     }
 
+#if !HEADLESS
     public static async Task RemoveAsync(DraftPage page, Guid importId)
     {
         if (page.IsReadonly) throw new InvalidOperationException("Project is read-only.");
@@ -249,6 +258,8 @@ public static class ProjectExternalSourceService
         await ApplyAsync(page.WorkingPath);
         await page.Save(true);
     }
+
+#endif
 
     public static async Task CloseAsync(string root)
     {

@@ -10,7 +10,9 @@ internal sealed class PreviewAudioSinkFactory : IAudioPreviewSinkFactory
 
     public IAudioPreviewSink Create()
     {
-#if WINDOWS
+#if HEADLESS
+        return OperatingSystem.IsWindows() ? new Platforms.Windows.WasapiPreviewAudioSink() : new FfplayPreviewAudioSink();
+#elif WINDOWS
         return new Platforms.Windows.WasapiPreviewAudioSink();
 #elif ANDROID
         return new Platforms.Android.AudioTrackPreviewAudioSink();
@@ -138,7 +140,7 @@ internal sealed class FfplayPreviewAudioSink : IAudioPreviewSink
         _resume.Dispose();
     }
 
-#if LINUX
+#if LINUX || HEADLESS
     [DllImport("libc", SetLastError = true)]
     private static extern int kill(int pid, int signal);
 #elif WINDOWS

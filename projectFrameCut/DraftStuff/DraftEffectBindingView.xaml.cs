@@ -11,6 +11,7 @@ using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -34,7 +35,7 @@ using Rect = Microsoft.Maui.Graphics.Rect;
 
 namespace projectFrameCut.DraftStuff;
 
-public enum NodeKind { Effect, Input, Output }
+public enum NodeKind { Effect, Input, Output, ClipArguments }
 
 public enum PortKind { AnchorInput, AnchorOutput, ParamBind }
 
@@ -67,6 +68,8 @@ public partial class DraftEffectBindingView : ContentView
 
     private const string ParamDirectionKey = "__DraftEffectBindingView_ParamDirection__";
 
+    private EffectPipeline _pipeline = EffectPipeline.Picture;
+    private bool _loadingPipeline;
     private ClipElementUI? _clip;
     private DraftPage? _page;
     private Dictionary<Guid, NodeViewModel> _nodes = new();
@@ -125,6 +128,13 @@ public partial class DraftEffectBindingView : ContentView
         ResetButton.Clicked += OnReset;
 
         InfoLabel.Text = PPLocalizedResources.EffectBindView_Hint;
+        PipelinePicker.ItemsSource = new[] { Localized.Effect_NativePipeline, Localized.Effect_PicturePipeline };
+        PipelinePicker.SelectedIndexChanged += (_, _) =>
+        {
+            if (_loadingPipeline || _clip is null) return;
+            _pipeline = PipelinePicker.SelectedIndex == 0 ? EffectPipeline.NativeContent : EffectPipeline.Picture;
+            LoadClip(_clip, _page, _showIsNotVisibleInEffectEditorEffect, _pipeline);
+        };
 
         _panelWidthBeforeCollapse = RightPanelColumn.Width.Value;
         UpdatePanelToggleText();
@@ -300,10 +310,20 @@ public partial class DraftEffectBindingView : ContentView
     }
 
     public void LoadClip(ClipElementUI clip, DraftPage? page = null, bool showIsNotVisibleInEffectEditorEffect = false)
+        => LoadClip(clip, page, showIsNotVisibleInEffectEditorEffect, null);
+
+    public void LoadClip(ClipElementUI clip, DraftPage? page, bool showIsNotVisibleInEffectEditorEffect, EffectPipeline? pipeline)
     {
+        if (pipeline is { } stage) _pipeline = stage;
+        if (!clip.SupportsNativeEffects) _pipeline = EffectPipeline.Picture;
+        _loadingPipeline = true;
+        PipelinePicker.IsVisible = clip.SupportsNativeEffects;
+        PipelinePicker.SelectedIndex = _pipeline == EffectPipeline.NativeContent ? 0 : 1;
+        _loadingPipeline = false;
         _clip = clip;
         _page = page;
         _showIsNotVisibleInEffectEditorEffect = showIsNotVisibleInEffectEditorEffect;
+        EnsureClipArgumentProvider();
         UpdateAddEffectsPanel();
         _nodes.Clear();
         NodesContainer.Children.Clear();
@@ -330,13 +350,13 @@ public partial class DraftEffectBindingView : ContentView
             Y = inputY,
             Id = IEffectProvider.InputAnchorGUID,
             Provider = null,
-            DisplayName = PPLocalizedResources.EffectBind_SourcePicture,
+            DisplayName = _pipeline == EffectPipeline.NativeContent ? Localized.Effect_NativeInput : PPLocalizedResources.EffectBind_SourcePicture,
             OutputPort = new NodePort
             {
                 Kind = PortKind.AnchorOutput,
                 Key = EffectProviderAnchorExtensions.InputKey,
                 FieldType = EffectArgumentFieldType.IPicture,
-                DisplayName = PPLocalizedResources.EffectBind_SourcePicture,
+                DisplayName = _pipeline == EffectPipeline.NativeContent ? Localized.Effect_NativeInput : PPLocalizedResources.EffectBind_SourcePicture,
                 Index = 0,
                 Id = IEffectProvider.InputAnchorGUID
             }
@@ -353,15 +373,17 @@ public partial class DraftEffectBindingView : ContentView
         {
             foreach (var bundle in _clip.EffectProviders.Values)
             {
+                if (bundle is not ClipArgumentProvider && !bundle.Target.HasFlag(EffectTarget.ValueProvider) && bundle.TypeOfEffect.GetPipeline() != _pipeline) continue;
                 // Skip bundles that are internal/special effects (e.g. Crop, Place, Resize)
                 // to keep consistent with ClipInfoBuilder.BuildEffectTab filtering behavior.
-                if (!showIsNotVisibleInEffectEditorEffect && (bundle.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor) || !EffectBindingHelper.AreTargetsCompatible(bundle.Target, _clip.GetEffectTarget())))
+                if (bundle is not ClipArgumentProvider && !showIsNotVisibleInEffectEditorEffect && (bundle.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)
+                    || !bundle.Target.HasFlag(EffectTarget.ValueProvider) && !EffectBindingHelper.AreTargetsCompatible(bundle.Target, _clip.GetEffectTarget())))
                     continue;
 
                 var node = new NodeViewModel
                 {
                     Id = bundle.Id,
-                    Kind = NodeKind.Effect,
+                    Kind = bundle is ClipArgumentProvider ? NodeKind.ClipArguments : NodeKind.Effect,
                     Provider = bundle,
                     DisplayName = bundle.Name
                 };
@@ -401,13 +423,13 @@ public partial class DraftEffectBindingView : ContentView
             Y = outputY,
             Id = IEffectProvider.OutputAnchorGUID,
             Provider = null,
-            DisplayName = PPLocalizedResources.EffectBind_FinalResult,
+            DisplayName = _pipeline == EffectPipeline.NativeContent ? Localized.Effect_NativeOutput : PPLocalizedResources.EffectBind_FinalResult,
             MainInputPort = new NodePort
             {
                 Kind = PortKind.AnchorInput,
                 Key = EffectProviderAnchorExtensions.InputKey,
                 FieldType = EffectArgumentFieldType.IPicture,
-                DisplayName = PPLocalizedResources.EffectBind_FinalResult,
+                DisplayName = _pipeline == EffectPipeline.NativeContent ? Localized.Effect_NativeOutput : PPLocalizedResources.EffectBind_FinalResult,
                 Index = 0,
                 Id = IEffectProvider.OutputAnchorGUID
             }
@@ -430,6 +452,45 @@ public partial class DraftEffectBindingView : ContentView
         ConnectionsLayer.Invalidate();
     }
 
+    private void EnsureClipArgumentProvider()
+    {
+        if (_clip is null) return;
+        _clip.EffectProviders ??= new();
+        var provider = _clip.EffectProviders.Values.OfType<ClipArgumentProvider>().FirstOrDefault();
+        if (provider is null)
+        {
+            provider = new ClipArgumentProvider { Name = (string)Resources["ClipArgumentsNodeTitle"] };
+            _clip.EffectProviders.Add(provider.Id, provider);
+            Log($"Created clip argument node for {_clip.Id}.");
+        }
+        IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> fields = ClipArgumentHandler.DefaultFields;
+        var defaults = new Dictionary<string, object>();
+        if (_page is not null)
+        {
+            try
+            {
+                var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(_page, _clip, rebuildEffects: false);
+                using var owner = PluginManager.CreateClip(JsonSerializer.SerializeToElement(dto));
+                fields = owner.ArgumentFields;
+                foreach (var (key, field) in fields) defaults[key] = field.ReadValue(owner);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Read argument fields for clip {_clip.Id}", this);
+            }
+        }
+        var clip = _clip;
+        provider.Attach(fields, key => key switch
+        {
+            nameof(IClip.TargetX) => clip.TargetX,
+            nameof(IClip.TargetY) => clip.TargetY,
+            nameof(IClip.TargetWidth) => clip.TargetWidth,
+            nameof(IClip.TargetHeight) => clip.TargetHeight,
+            nameof(IClip.Rotation) => clip.Rotation,
+            _ => defaults.GetValueOrDefault(key) ?? fields[key].DefaultValue,
+        });
+    }
+
     /// <summary>
     /// Reloads all effect data from the current clip.
     /// Call this when external code (e.g. ClipInfoBuilder) has modified effect bundlesOnPortPan
@@ -438,7 +499,7 @@ public partial class DraftEffectBindingView : ContentView
     public void Reload()
     {
         if (_clip == null) return;
-        LoadClip(_clip, _page, _showIsNotVisibleInEffectEditorEffect);
+        LoadClip(_clip, _page, _showIsNotVisibleInEffectEditorEffect, _pipeline);
     }
 
     private void AddNode(NodeViewModel node)
@@ -642,7 +703,7 @@ public partial class DraftEffectBindingView : ContentView
         // ── Parameter display strip (above or below the frame, read-only) ──
         VerticalStackLayout? paramStack = null;
         bool paramsOnTop = true;
-        if (node.Kind == NodeKind.Effect && node.ParamPorts.Count > 0)
+        if (node.Provider is not null && node.ParamPorts.Count > 0)
         {
             paramsOnTop = GetParamDirection(node);
             paramStack = BuildParamStack(node, paramsOnTop);
@@ -919,7 +980,7 @@ public partial class DraftEffectBindingView : ContentView
             case GestureStatus.Completed:
             case GestureStatus.Canceled:
                 _isDraggingNodeOrPort = false;
-                if (node.Kind == NodeKind.Effect && node?.Provider is { } b)
+                if (node?.Provider is { } b)
                 {
                     b.MetaData ??= new Dictionary<string, object>();
                     b.MetaData["__DraftEffectBindingView_InteractiveEditorX__"] = node.X;
@@ -1105,7 +1166,7 @@ public partial class DraftEffectBindingView : ContentView
             if (srcIsValueOutput)
             {
                 // 值输出 → 目标 Effect 的参数行（兼容类型，取最近行）
-                if (candidate.Kind != NodeKind.Effect || candidate.Provider == null) continue;
+                if (candidate.Provider == null) continue;
                 for (int i = 0; i < candidate.ParamPorts.Count; i++)
                 {
                     var pp = candidate.ParamPorts[i];
@@ -1145,6 +1206,7 @@ public partial class DraftEffectBindingView : ContentView
             else if (isInput)
             {
                 // 输入口 → 图片来源输出
+                if (!NodePort.IsValidPort(candidate.OutputPort)) continue;
                 if (candidate.Kind == NodeKind.Output) continue;
                 if (IsValueNode(candidate)) continue;
                 var candidateFieldType = candidate.OutputPort?.FieldType ?? EffectArgumentFieldType.Unknown;
@@ -1163,6 +1225,7 @@ public partial class DraftEffectBindingView : ContentView
             else if (portKind == PortKind.AnchorOutput && !IsValueNode(node))
             {
                 // 输出口 → 目标图片输入
+                if (!NodePort.IsValidPort(candidate.MainInputPort)) continue;
                 if (candidate.Kind == NodeKind.Input) continue;
                 var srcFieldType = node.OutputPort?.FieldType ?? EffectArgumentFieldType.Unknown;
                 var targetFieldType = candidate.MainInputPort?.FieldType ?? EffectArgumentFieldType.Unknown;
@@ -1225,7 +1288,7 @@ public partial class DraftEffectBindingView : ContentView
                 // 值绑定路径：值输出 ⇄ 参数绑定点
                 if (srcIsValueOutput)
                 {
-                    if (candidate.Kind != NodeKind.Effect || candidate.Provider == null) continue;
+                    if (candidate.Provider == null) continue;
                     // 命中窗口（40px）覆盖多行参数（行距 24px），不能取第一个命中——否则总是连到最上面的参数。
                     // 改为遍历所有兼容参数行，取与落点距离最近的一行。
                     int bestIdx = -1;
@@ -1285,6 +1348,7 @@ public partial class DraftEffectBindingView : ContentView
             if (isInput)
             {
                 // 从输入拖出，寻找来源输出
+                if (!NodePort.IsValidPort(candidate.OutputPort)) continue;
                 if (candidate.Kind == NodeKind.Output) continue;
                 if (IsValueNode(candidate)) continue; // 值输出不能喂图片输入
 
@@ -1304,6 +1368,7 @@ public partial class DraftEffectBindingView : ContentView
             else if (portKind == PortKind.AnchorOutput && !IsValueNode(node))
             {
                 // 从输出拖出，寻找目标输入
+                if (!NodePort.IsValidPort(candidate.MainInputPort)) continue;
                 if (candidate.Kind == NodeKind.Input) continue;
 
                 var srcFieldType = node.OutputPort?.FieldType ?? EffectArgumentFieldType.Unknown;
@@ -1324,6 +1389,16 @@ public partial class DraftEffectBindingView : ContentView
 
         if (match != null && node != null)
         {
+            if (!srcIsParamBind && !srcIsValueOutput)
+            {
+                var source = isInput ? match.Provider : node.Provider;
+                var target = isInput ? node.Provider : match.Provider;
+                if (source is not null && target is not null && !source.CanConnectContent(target))
+                {
+                    SetStatusText(Localized.Effect_IncompatiblePipeline);
+                    return;
+                }
+            }
             if (srcIsParamBind)
             {
                 // 参数绑定点拖到值输出 → 把节点参数绑定到该来源。
@@ -1426,8 +1501,8 @@ public partial class DraftEffectBindingView : ContentView
         if (_clip?.EffectProviders is not { } providers) return false;
         if (targetId == IEffectProvider.OutputAnchorGUID && (kind is null || kind == UIBindingKind.Picture))
         {
-            var hadOutput = providers.Values.Any(p => p.IsFinalOutputSource());
-            EffectBindingHelper.SetFinalOutput(providers, null);
+            var hadOutput = providers.Values.Any(p => p.TypeOfEffect.GetPipeline() == _pipeline && p.IsFinalOutputSource());
+            EffectBindingHelper.SetFinalOutput(providers, null, _pipeline);
             return hadOutput;
         }
         if (!providers.TryGetValue(targetId, out var target)) return false;
@@ -1561,10 +1636,15 @@ public partial class DraftEffectBindingView : ContentView
         else if (binding.Target == IEffectProvider.OutputAnchorGUID)
         {
             EffectBindingHelper.SetFinalOutput(providers,
-                binding.Source == IEffectProvider.InputAnchorGUID ? null : binding.Source);
+                binding.Source == IEffectProvider.InputAnchorGUID ? null : binding.Source, _pipeline);
         }
         else if (providers.TryGetValue(binding.Target, out var target))
         {
+            if (providers.TryGetValue(binding.Source, out var source) && !source.CanConnectContent(target))
+            {
+                SetStatusText(Localized.Effect_IncompatiblePipeline);
+                return;
+            }
             target.SetMainInputSource(binding.Source);
         }
         LogDiagnostic($"Provider binding updated: {JsonSerializer.Serialize(binding)}");
@@ -1606,7 +1686,7 @@ public partial class DraftEffectBindingView : ContentView
 
         PropertiesPanel.Children.Add(new Label { Text = node.DisplayName, FontAttributes = FontAttributes.Bold, HorizontalOptions = LayoutOptions.Center });
 
-        if (node.Kind != NodeKind.Effect)
+        if (node.Provider is null)
         {
             return;
         }
@@ -1614,7 +1694,7 @@ public partial class DraftEffectBindingView : ContentView
         try
         {
             ArgumentNullException.ThrowIfNull(node.Provider);
-            var ui = EffectServices.GetUIProvider(node.Provider);
+            var ui = node.Provider is ClipArgumentProvider ? new EffectProviderUI(node.Provider) : EffectServices.GetUIProvider(node.Provider);
             // Inject the binding host so each field in the property UI can offer a bind action.
             // Note: the property-panel bind channel writes directly into the provider's Fields
             // (via ClipBindingHost), while drag bindings in this view stay in the UI layer only.
@@ -1660,7 +1740,7 @@ public partial class DraftEffectBindingView : ContentView
     /// </summary>
     private void RefreshSelectedNode()
     {
-        if (_selectedNode is not null && _selectedNode.Kind == NodeKind.Effect)
+        if (_selectedNode?.Provider is not null)
         {
             SelectNode(_selectedNode);
         }
@@ -1671,7 +1751,7 @@ public partial class DraftEffectBindingView : ContentView
     /// </summary>
     private void RefreshNodeParams(NodeViewModel node)
     {
-        if (node?.Kind != NodeKind.Effect || node.View == null) return;
+        if (node?.Provider is null || node.View == null) return;
         RecreateNodeView(node);
     }
 
@@ -1690,14 +1770,15 @@ public partial class DraftEffectBindingView : ContentView
             Margin = new Thickness(0, 0, 0, 8)
         });
 
-        if (node.Kind == NodeKind.Effect)
+        if (node.Provider is not null)
         {
             AddNodeActionButton(PPLocalizedResources.EffectBindView_Configure, () =>
             {
                 SelectNode(node);
                 RightTabView.SelectedIndex = 0;
             });
-            AddNodeActionButton(Localized.DraftPage_ContextMenu_Delete, () => RemoveEffect(node));
+            if (node.Kind == NodeKind.Effect)
+                AddNodeActionButton(Localized.DraftPage_ContextMenu_Delete, () => RemoveEffect(node));
             AddNodeActionButton("切换参数方向", () => ToggleParamDirection(node));
         }
     }
@@ -1806,11 +1887,7 @@ public partial class DraftEffectBindingView : ContentView
         if (_clip.ClipType != ClipMode.VideoClip && _clip.ClipType != ClipMode.PhotoClip) return;
 
         // Get source image
-        var clipId = _clip.Id;
         ClipInfoBuilder.RebuildAllEffects(_clip);
-        var clip = _page.previewer.Clips?.FirstOrDefault(c => c.Id == clipId);
-        if (clip == null) return;
-
         Dictionary<string, object> localCache = new(), globalCache = new(); //for bindable effect
         var w = _page.previewWidth;
         var h = _page.previewHeight;
@@ -1819,13 +1896,21 @@ public partial class DraftEffectBindingView : ContentView
 
         try
         {
-            var srcFrame = clip.GetFrameRelativeToStartPointOfSource(0, 1280, 720, 8);
+            using var owner = PluginManager.CreateClip(JsonSerializer.SerializeToElement(
+                DraftImportAndExportHelper.ExportClipElementFromDraftPage(_page, _clip, rebuildEffects: false)));
+            owner.ReInit(8);
+            uint targetFrame = (uint)Math.Clamp(_page.CurrentFrame, owner.StartFrame,
+                (double)owner.StartFrame + Math.Max(1u, owner.GetEffectiveDuration()) - 1);
+            var clip = ClipArgumentBinding.InitializeFrame(owner, targetFrame);
+            var srcFrame = VideoClipRotation.ReadFrame(clip, clip.GetRelativeFrameIndex(targetFrame) ?? 0,
+                clip.TargetWidth > 0 ? Math.Max(1, (int)Math.Round((double)clip.TargetWidth * w / projectRelativeWidth)) : w,
+                clip.TargetHeight > 0 ? Math.Max(1, (int)Math.Round((double)clip.TargetHeight * h / projectRelativeHeight)) : h, 8);
             if (_inputNode is not null)
             {
                 await UpdateNodePreview(_inputNode, srcFrame);
             }
             srcFrame.CanBeDisposed = false;
-            var frame = new OneFrame(42, clip, srcFrame)
+            var frame = new OneFrame(targetFrame, clip, srcFrame, resolveEffects: false)
             {
                 Effects = _clip.Effects?.Values?.ToArray() ?? []
             };
@@ -1873,7 +1958,7 @@ public partial class DraftEffectBindingView : ContentView
             }
 
             // Use AfterEffect callback to receive intermediate pictures after each effect
-            var result = Timeline.MixtureLayers([frame], 0, w, h, 8, async (effect, pic) =>
+            var result = Timeline.MixtureLayers([frame], targetFrame, w, h, 8, async (effect, pic) =>
             {
                 try
                 {
@@ -1908,6 +1993,8 @@ public partial class DraftEffectBindingView : ContentView
             if (_outputNode is not null && result is not null)
             {
                 await UpdateNodePreview(_outputNode, result);
+                foreach (var node in _nodes.Values.Where(n => n.Kind == NodeKind.ClipArguments))
+                    await UpdateNodePreview(node, result);
             }
             else
             {
@@ -2003,7 +2090,7 @@ public partial class DraftEffectBindingView : ContentView
                 };
             }
 
-            OutputPort = Provider.TypeOfEffect == EffectType.Transform ? null : new NodePort { Kind = PortKind.AnchorOutput, Key = Provider.OutField.Id, FieldType = Provider.OutField.FieldType, DisplayName = HumanizePortName(Provider.OutField.Id), Index = 0 };
+            OutputPort = Provider is ClipArgumentProvider || Provider.TypeOfEffect == EffectType.Transform ? null : new NodePort { Kind = PortKind.AnchorOutput, Key = Provider.OutField.Id, FieldType = Provider.OutField.FieldType, DisplayName = HumanizePortName(Provider.OutField.Id), Index = 0 };
 
             ParamPorts = Provider.Fields
                 .Where(kv => !kv.Value.FieldType.HasFlag(EffectArgumentFieldType.IPicture)
@@ -2024,9 +2111,11 @@ public partial class DraftEffectBindingView : ContentView
         if (_clip is null || _page is null) return;
 
         AddEffectsPanel.Children.Add(ClipInfoBuilder.BuildAddEffectPanel(
-            _clip.GetEffectSelectionTarget(),
+            _clip.SupportsNativeEffects ? _clip.GetEffectSelectionTarget(_pipeline) : _clip.GetEffectSelectionTarget(),
             _page,
-            EffectServices.GetAvailableEffectProviders(),
+            EffectServices.GetAvailableEffectProviders()
+                .Where(p => !_clip.SupportsNativeEffects || p.Value().Target.HasFlag(EffectTarget.ValueProvider) || p.Value().TypeOfEffect.GetPipeline() == _pipeline)
+                .ToDictionary(p => p.Key, p => p.Value),
             new(),
             (s, e) =>
             {
@@ -2049,7 +2138,7 @@ public partial class DraftEffectBindingView : ContentView
         if (providerFactories.TryGetValue(providerTypeName, out var factory))
         {
             var instance = factory();
-            if (!ClipInfoBuilder.CanSelectEffectProvider(instance, _clip.GetEffectSelectionTarget(), hideKeyFramedProviders: true))
+            if (!ClipInfoBuilder.CanSelectEffectProvider(instance, _clip.SupportsNativeEffects ? _clip.GetEffectSelectionTarget(_pipeline) : _clip.GetEffectSelectionTarget(), hideKeyFramedProviders: true))
             {
                 Log($"Rejected effect provider {providerTypeName} for clip {_clip.Id} ({_clip.ClipType}).", "warning");
                 return;
@@ -2059,8 +2148,9 @@ public partial class DraftEffectBindingView : ContentView
             instance.SetFinalOutputSource(false);
             _clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
             _clip.EffectProviders[instance.Id] = instance;
+            EffectBindingHelper.AutoConnectProviderToOutput(_clip.EffectProviders, instance, _clip.GetEffectTarget());
 
-            LoadClip(_clip, _page);
+            LoadClip(_clip, _page, _showIsNotVisibleInEffectEditorEffect, _pipeline);
             OnBindingConfigurationChanged();
         }
 
@@ -2119,7 +2209,7 @@ public partial class DraftEffectBindingView : ContentView
         var diagnostics = allDiagnostics ?? EffectBindingHelper.ValidateBindings(providers);
         return node.Kind switch
         {
-            NodeKind.Effect => diagnostics.Where(d => d.ProviderId == node.Id).ToList(),
+            NodeKind.Effect or NodeKind.ClipArguments => diagnostics.Where(d => d.ProviderId == node.Id).ToList(),
             NodeKind.Output => diagnostics.Where(d => d.ProviderId is null).ToList(),
             _ => []
         };
@@ -2170,7 +2260,7 @@ public partial class DraftEffectBindingView : ContentView
             }
         }
 
-        if (!providers.Values.Any(p => p.IsFinalOutputSource()))
+        if (!providers.Values.Any(p => p.TypeOfEffect.GetPipeline() == _pipeline && p.IsFinalOutputSource()))
             bindings.Add(new UIBinding(UIBindingKind.Picture, IEffectProvider.InputAnchorGUID, IEffectProvider.OutputAnchorGUID));
         return bindings;
     }

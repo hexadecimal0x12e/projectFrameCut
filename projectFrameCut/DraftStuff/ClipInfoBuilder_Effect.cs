@@ -70,13 +70,38 @@ namespace projectFrameCut.DraftStuff
         #region effect
         public static void RebuildAllEffects(ClipElementUI clip, bool diag = false)
         {
+            if (clip.Effects?.TryGetValue(InternalRotationID, out var rotation) == true && rotation.TypeName == "Rotation")
+            {
+                if (rotation.Enabled) clip.Rotation += ReadEffectFloatParameter(rotation, "Angle", rotation is RotationEffect_IPicture r ? r.Angle : 0);
+                clip.Rotation = VideoClipRotation.Normalize(clip.Rotation);
+                clip.Effects.Remove(InternalRotationID);
+                Log($"Migrated rotation for clip {clip.Id}: {clip.Rotation} degrees.");
+            }
             var effects = EffectBindingHelper.RebuildAllEffects(clip.EffectProviders, clip.Effects);
             if (effects != null) clip.Effects = effects;
         }
 
-        public async Task<View> BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        public Task<View> BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+            => BuildEffectTab(clip, handler, null);
+
+        public async Task<View> BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler, EffectPipeline? pipeline)
         {
             ArgumentNullException.ThrowIfNull(clip);
+            if (pipeline is null && clip.SupportsNativeEffects)
+            {
+                var tabs = new CompactTabView();
+                foreach (var stage in new[] { EffectPipeline.NativeContent, EffectPipeline.Picture })
+                    tabs.TabItems.Add(new TabbedViewItem
+                    {
+                        Header = stage == EffectPipeline.NativeContent ? Localized.Effect_NativePipeline : Localized.Effect_PicturePipeline,
+                        Tag = stage.ToString(),
+                        Content = await BuildEffectTab(clip, handler, stage)
+                    });
+                tabs.OnTabSwitched += (_, item) => clip.ExtraData["__EffectPipelineTab__"] = item.Tag;
+                tabs.SelectByTag(clip.ExtraData.GetValueOrDefault("__EffectPipelineTab__")?.ToString() ?? EffectPipeline.NativeContent.ToString());
+                return tabs;
+            }
+            var selectionTarget = pipeline is { } stageTarget ? clip.GetEffectSelectionTarget(stageTarget) : clip.GetEffectSelectionTarget();
             PropertyPanelBuilder ppb = new();
             var bindingDiagnostics = EffectBindingHelper.ValidateBindings(clip.EffectProviders);
 
@@ -97,7 +122,7 @@ namespace projectFrameCut.DraftStuff
                 try
                 {
                     var bindView = new DraftEffectBindingView();
-                    bindView.LoadClip(clip, page, showAllEffect);
+                    bindView.LoadClip(clip, page, showAllEffect, pipeline);
                     // Sync the completed graph rebuild to the draft preview.
                     bindView.EffectProvidersChanged += () =>
                     {
@@ -135,17 +160,21 @@ namespace projectFrameCut.DraftStuff
                 }
 
             });
-            var bundlesFactories = EffectServices.GetAvailableEffectProviders();
+            var bundlesFactories = EffectServices.GetAvailableEffectProviders()
+                .Where(p => pipeline is null || p.Value().Target.HasFlag(EffectTarget.ValueProvider) || p.Value().TypeOfEffect.GetPipeline() == pipeline)
+                .ToDictionary(p => p.Key, p => p.Value);
             var haveManySpeedVarianceProvider = (clip.EffectProviders?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.SpeedVarianceProvider)) ?? 0) >= 2;
             var haveManyMixtureProvider = (clip.EffectProviders?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.MixtureProvider)) ?? 0) >= 2;
             var haveManySourceReplacementEffect = (clip.EffectProviders?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.SourceReplacement)) ?? 0) >= 2;
             if (clip.EffectProviders != null)
             {
                 var filteredProviders = clip.EffectProviders
-                     .Where(c => c.Value.TypeOfEffect != EffectType.Transform && (
+                     .Where(c => (pipeline is null || c.Value.Target.HasFlag(EffectTarget.ValueProvider) || c.Value.TypeOfEffect.GetPipeline() == pipeline)
+                         && c.Value.TypeOfEffect != EffectType.Transform && (
                          showAllEffect
                          || (!c.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)
-                              && EffectBindingHelper.AreTargetsCompatible(c.Value.Target, clip.GetEffectTarget()))
+                              && (c.Value.Target.HasFlag(EffectTarget.ValueProvider)
+                                  || EffectBindingHelper.AreTargetsCompatible(c.Value.Target, clip.GetEffectTarget())))
                          || (c.Value.Target == EffectTarget.SpeedVariance && haveManySpeedVarianceProvider)
                          || (c.Value.Target == EffectTarget.Mixture && haveManyMixtureProvider)
                          || (c.Value.Target == EffectTarget.SourceReplacement && haveManySourceReplacementEffect)))
@@ -195,6 +224,7 @@ namespace projectFrameCut.DraftStuff
                         // Deprecated effect types are not used in the new system, but we still provide a localized name for them.
                         (EffectType)2 => PPLocalizedResources.Effect_BindableArgsEffect,
                         (EffectType)5 => PPLocalizedResources.Effect_BindableArgsEffect,
+                        Shared.EffectType.VectorPictureEffect => Localized.Effect_VectorPictureEffect,
                         Shared.EffectType.VectorComponentEffect => Localized.Effect_VectorComponentEffect,
                         Shared.EffectType.TextEffect => PPLocalizedResources.Effect_TextEffect,
                         Shared.EffectType.ContinuousTextEffect => PPLocalizedResources.Effect_ContinuousTextEffect,
@@ -265,7 +295,7 @@ namespace projectFrameCut.DraftStuff
                         // 构建过滤后的 InAnchor 下拉选项：排除自身、类型不兼容和（showAllEffect=false 时）内部 bundle
                         var inAnchorProviderOptions = clip.EffectProviders
                              .Where(b => b.Key != bundleId
-                                 && EffectBindingHelper.AreTargetsCompatible(b.Value.Target, bundleInstance.Target)
+                                 && b.Value.CanConnectContent(bundleInstance)
                                  && (showAllEffect || !b.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)))
                              .Select(b => $"{b.Value.Name} ({b.Key})")
                              .ToList();
@@ -301,7 +331,7 @@ namespace projectFrameCut.DraftStuff
             }
 
             ppb.AddText(new SingleLineLabel(PPLocalizedResources.Effect_Add_Title, 20));
-            ppb.AddCustomChild(BuildAddEffectPanel(clip.GetEffectSelectionTarget(), page, bundlesFactories, ppb, handler, hideKeyFramedProviders: true));
+            ppb.AddCustomChild(BuildAddEffectPanel(selectionTarget, page, bundlesFactories, ppb, handler, hideKeyFramedProviders: true));
 
             static bool TryParseAnchorSelection(string? selection, string anchorLabel, Guid anchorGuid, out Guid id)
             {
@@ -431,7 +461,7 @@ namespace projectFrameCut.DraftStuff
                                         if (TryParseAnchorSelection(e.Value?.ToString(), PPLocalizedResources.EffectBind_FinalResult, IEffectProvider.OutputAnchorGUID, out var newTargetId))
                                         {
                                             EffectBindingHelper.SetFinalOutput(clip.EffectProviders,
-                                                newTargetId == IEffectProvider.OutputAnchorGUID ? outProvider.Id : null);
+                                                newTargetId == IEffectProvider.OutputAnchorGUID ? outProvider.Id : null, outProvider.TypeOfEffect.GetPipeline());
                                             RebuildAllEffects(clip);
                                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                         }
@@ -447,7 +477,7 @@ namespace projectFrameCut.DraftStuff
                             if (bundlesFactories.TryGetValue(bundleTypeName, out var factory))
                             {
                                 var instance = factory();
-                                if (!CanSelectEffectProvider(instance, clip.GetEffectSelectionTarget(), hideKeyFramedProviders: true))
+                                if (!CanSelectEffectProvider(instance, selectionTarget, hideKeyFramedProviders: true))
                                 {
                                     Log($"Rejected effect provider {bundleTypeName} for clip {clip.Id} ({clip.ClipType}).", "warning");
                                     return;
@@ -703,7 +733,7 @@ namespace projectFrameCut.DraftStuff
             {
                 int width = clip.TargetWidth > 0 ? clip.TargetWidth : (int)Math.Max(1, page.ProjectInfo.RelativeWidth);
                 int height = clip.TargetHeight > 0 ? clip.TargetHeight : (int)Math.Max(1, page.ProjectInfo.RelativeHeight);
-                return new ClipPositionTuple(clip.TargetX, clip.TargetY, width, height, false);
+                return new ClipPositionTuple(clip.TargetX, clip.TargetY, width, height, false, clip.Rotation);
             }
 
             bool hasAnyProvider = false;
@@ -1149,6 +1179,7 @@ namespace projectFrameCut.DraftStuff
             if (target.HasFlag(EffectTarget.ColorAdjustment)) result.Append(Localized.EffectType_ColorAdjustment);
             if (target.HasFlag(EffectTarget.Text)) result.Append(PPLocalizedResources.Effect_TextEffect);
             if (target.HasFlag(EffectTarget.VectorComponent)) result.Append(Localized.Effect_VectorComponentEffect);
+            if (target.HasFlag(EffectTarget.VectorPicture)) result.Append(Localized.Effect_VectorPictureEffect);
             if (target.HasFlag(EffectTarget.IsKeyFramed)) result.Append(Localized.EffectType_KeyFramed);
             return result.ToString();
         }
@@ -1160,7 +1191,7 @@ namespace projectFrameCut.DraftStuff
             bool hideKeyFramedProviders = false)
         {
             const EffectTarget targetKinds = EffectTarget.Video | EffectTarget.Audio | EffectTarget.Text
-                | EffectTarget.VectorComponent | EffectTarget.SpeedVariance | EffectTarget.Mixture
+                | EffectTarget.VectorComponent | EffectTarget.VectorPicture | EffectTarget.SpeedVariance | EffectTarget.Mixture
                 | EffectTarget.ColorAdjustment | EffectTarget.SourceReplacement | EffectTarget.ValueProvider;
             if (provider.TypeOfEffect == EffectType.Transform)
                 return false;

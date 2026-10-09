@@ -15,6 +15,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
 {
     public class VectorCanvasClip : IVectorContentClip
     {
+        [JsonIgnore]
+        public bool ProcessesVectorPictureEffects => true;
+
         // ── IClip required properties ──────────────────────
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
@@ -33,6 +36,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public float FrameTime { get; init; }
@@ -77,11 +81,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
             int width = Math.Max(1, TargetWidth > 0 ? TargetWidth : requiredWidth);
             int height = Math.Max(1, TargetHeight > 0 ? TargetHeight : requiredHeight);
             // Resolve component coordinates in the clip's own canvas before output scaling.
-            return new VectorPicture
+            return VectorPictureEffectProcessing.Process(this, new VectorPicture
             {
                 Elements = picture.Elements.Select(e => (VectorCanvasElement)new VectorContent.VectorViewportElement(
                     e, width, height, 0, 0, width, height)).ToList()
-            };
+            }, frameIndex, CalculateProgress(frameIndex));
         }
 
         private VectorPicture BuildVectorPicture(uint frameIndex)
@@ -205,6 +209,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }
         public int TargetY { get; set; }
+        public float Rotation { get; set; }
         public int StartingX { get; set; }
         public int StartingY { get; set; }
         public float FrameTime { get; init; }

@@ -71,6 +71,7 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         int TargetHeight { get; set; }
         int TargetX { get; set; }
         int TargetY { get; set; }
+        float Rotation { get; set; }
         int SubLayerIndex { get; set; }
         int SubTrackIndex { get; set; }
         string? ClipColor { get; set; }

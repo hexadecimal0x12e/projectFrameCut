@@ -132,7 +132,7 @@ namespace projectFrameCut.Render.Effect
             int w = (int)Math.Round(from.TargetWidth + (to.TargetWidth - from.TargetWidth) * t);
             int h = (int)Math.Round(from.TargetHeight + (to.TargetHeight - from.TargetHeight) * t);
             bool isDelta = from.IsDelta == to.IsDelta && from.IsDelta;
-            return new ClipPositionTuple(x, y, w, h, isDelta);
+            return new ClipPositionTuple(x, y, w, h, isDelta, (float)(from.Rotation + (to.Rotation - from.Rotation) * t));
         }
 
         private ClipPositionTuple NormalizePosition(ClipPositionTuple position, IClip source)
@@ -141,7 +141,7 @@ namespace projectFrameCut.Render.Effect
             {
                 int width = position.TargetWidth <= 0 ? source.TargetWidth : position.TargetWidth;
                 int height = position.TargetHeight <= 0 ? source.TargetHeight : position.TargetHeight;
-                return new ClipPositionTuple(position.TargetX, position.TargetY, width, height, false);
+                return position with { TargetWidth = width, TargetHeight = height };
             }
 
             return position;
@@ -158,7 +158,7 @@ namespace projectFrameCut.Render.Effect
             int y = (int)Math.Round((double)position.TargetY * targetHeight / RelativeHeight);
             int w = (int)Math.Round((double)position.TargetWidth * targetWidth / RelativeWidth);
             int h = (int)Math.Round((double)position.TargetHeight * targetHeight / RelativeHeight);
-            return new ClipPositionTuple(x, y, w, h, position.IsDelta);
+            return new ClipPositionTuple(x, y, w, h, position.IsDelta, position.Rotation);
         }
 
         private static List<ProgressData> ParseProgressList(object? value)

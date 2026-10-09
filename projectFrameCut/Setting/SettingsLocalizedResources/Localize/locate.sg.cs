@@ -2546,6 +2546,27 @@ public interface ISimpleLocalizerBase_Settings
     public string Edit_DefaultTransformRenderOrder { get; }
     
     /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder (like '
+    /// 片段属性 Tab 顺序
+    ///')
+    /// </summary>
+    public string Edit_ClipInfoTabOrder { get; }
+
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle (like '
+    /// 左右拖拽 Tab 调整顺序，刷新属性面板后生效。
+    ///')
+    /// </summary>
+    public string Edit_ClipInfoTabOrder_Subtitle { get; }
+
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset (like '
+    /// 恢复默认顺序
+    ///')
+    /// </summary>
+    public string Edit_ClipInfoTabOrder_Reset { get; }
+
+    /// <summary>
     /// Get the current Locale's ID (like 'zh-CN')
     /// </summary>
     public string _LocaleId_ { get; }
@@ -2931,6 +2952,9 @@ public interface ISimpleLocalizerBase_Settings
         "Security_Script_DisallowCommand_Hint", 
         "Security_Script_EnableScript", 
         "Edit_DefaultTransformRenderOrder", 
+        "Edit_ClipInfoTabOrder",
+        "Edit_ClipInfoTabOrder_Subtitle",
+        "Edit_ClipInfoTabOrder_Reset",
     };
     
     /// <summary>
@@ -3264,6 +3288,9 @@ public interface ISimpleLocalizerBase_Settings
             "Security_Script_DisallowCommand_Hint" => Security_Script_DisallowCommand_Hint,
             "Security_Script_EnableScript" => Security_Script_EnableScript,
             "Edit_DefaultTransformRenderOrder" => Edit_DefaultTransformRenderOrder,
+            "Edit_ClipInfoTabOrder" => Edit_ClipInfoTabOrder,
+            "Edit_ClipInfoTabOrder_Subtitle" => Edit_ClipInfoTabOrder_Subtitle,
+            "Edit_ClipInfoTabOrder_Reset" => Edit_ClipInfoTabOrder_Reset,
             _ => fallbackValue ?? $"Can't find the localized string for id '{id}'"
         };
     }
@@ -6198,6 +6225,30 @@ public class __ISimpleLocalizerBase_Settings_zh_CN__ : ISimpleLocalizerBase_Sett
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"新建转场的默认渲染顺序";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in zh-CN (like '
+    /// 片段属性 Tab 顺序
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"片段属性 Tab 顺序";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in zh-CN (like '
+    /// 左右拖拽 Tab 调整顺序，刷新属性面板后生效。
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"左右拖拽 Tab 调整顺序，刷新属性面板后生效。";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in zh-CN (like '
+    /// 恢复默认顺序
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"恢复默认顺序";
+
     /// <summary>
     /// Get the current locale's Id (like 'z')
     /// </summary>
@@ -9071,6 +9122,30 @@ This action cannot be undone, existing templates ({templates}) will be overwritt
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"Unset localization item:Edit_DefaultTransformRenderOrder()";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in en-US (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"Unset localization item:Edit_ClipInfoTabOrder()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in en-US (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Subtitle()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in en-US (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Reset()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"Unset localization item:Edit_ClipInfoTabOrder_Reset()";
+
     string ISimpleLocalizerBase_Settings.Advanced_RpcBackendEnvironmentVariables_Desc => Advanced_RpcBackendEnvironmentVariables_Desc;
     /// <summary>
     /// Get the localized string for Advanced_RpcBackendEnvironmentVariables_Desc in en-US (like '
@@ -11973,6 +12048,30 @@ public class __ISimpleLocalizerBase_Settings_zh_TW__ : ISimpleLocalizerBase_Sett
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"Unset localization item:Edit_DefaultTransformRenderOrder()";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in zh-TW (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"Unset localization item:Edit_ClipInfoTabOrder()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in zh-TW (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Subtitle()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in zh-TW (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Reset()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"Unset localization item:Edit_ClipInfoTabOrder_Reset()";
+
     string ISimpleLocalizerBase_Settings.Advanced_RpcBackendEnvironmentVariables_Desc => Advanced_RpcBackendEnvironmentVariables_Desc;
     /// <summary>
     /// Get the localized string for Advanced_RpcBackendEnvironmentVariables_Desc in zh-TW (like '
@@ -14941,6 +15040,30 @@ public class __ISimpleLocalizerBase_Settings_ja_JP__ : ISimpleLocalizerBase_Sett
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"Unset localization item:Edit_DefaultTransformRenderOrder()";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in ja-JP (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"Unset localization item:Edit_ClipInfoTabOrder()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in ja-JP (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Subtitle()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in ja-JP (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Reset()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"Unset localization item:Edit_ClipInfoTabOrder_Reset()";
+
     string ISimpleLocalizerBase_Settings.Advanced_RpcBackendEnvironmentVariables_Desc => Advanced_RpcBackendEnvironmentVariables_Desc;
     /// <summary>
     /// Get the localized string for Advanced_RpcBackendEnvironmentVariables_Desc in ja-JP (like '
@@ -17898,6 +18021,30 @@ public class __ISimpleLocalizerBase_Settings_ko_KR__ : ISimpleLocalizerBase_Sett
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"Unset localization item:Edit_DefaultTransformRenderOrder()";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in ko-KR (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"Unset localization item:Edit_ClipInfoTabOrder()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in ko-KR (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Subtitle()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in ko-KR (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Reset()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"Unset localization item:Edit_ClipInfoTabOrder_Reset()";
+
     string ISimpleLocalizerBase_Settings.Advanced_RpcBackendEnvironmentVariables_Desc => Advanced_RpcBackendEnvironmentVariables_Desc;
     /// <summary>
     /// Get the localized string for Advanced_RpcBackendEnvironmentVariables_Desc in ko-KR (like '
@@ -20844,6 +20991,30 @@ public class __ISimpleLocalizerBase_Settings_fr_FR__ : ISimpleLocalizerBase_Sett
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"Unset localization item:Edit_DefaultTransformRenderOrder()";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in fr-FR (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"Unset localization item:Edit_ClipInfoTabOrder()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in fr-FR (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Subtitle()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in fr-FR (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Reset()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"Unset localization item:Edit_ClipInfoTabOrder_Reset()";
+
     string ISimpleLocalizerBase_Settings.Advanced_RpcBackendEnvironmentVariables_Desc => Advanced_RpcBackendEnvironmentVariables_Desc;
     /// <summary>
     /// Get the localized string for Advanced_RpcBackendEnvironmentVariables_Desc in fr-FR (like '
@@ -23768,6 +23939,30 @@ $""""
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"Unset localization item:Edit_DefaultTransformRenderOrder()";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in ar-SA (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"Unset localization item:Edit_ClipInfoTabOrder()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in ar-SA (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Subtitle()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in ar-SA (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Reset()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"Unset localization item:Edit_ClipInfoTabOrder_Reset()";
+
     string ISimpleLocalizerBase_Settings.Advanced_RpcBackendEnvironmentVariables_Desc => Advanced_RpcBackendEnvironmentVariables_Desc;
     /// <summary>
     /// Get the localized string for Advanced_RpcBackendEnvironmentVariables_Desc in ar-SA (like '
@@ -26669,6 +26864,30 @@ Vorlage "{id}"
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"Unset localization item:Edit_DefaultTransformRenderOrder()";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in de-DE (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"Unset localization item:Edit_ClipInfoTabOrder()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in de-DE (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Subtitle()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in de-DE (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Reset()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"Unset localization item:Edit_ClipInfoTabOrder_Reset()";
+
     string ISimpleLocalizerBase_Settings.Advanced_RpcBackendEnvironmentVariables_Desc => Advanced_RpcBackendEnvironmentVariables_Desc;
     /// <summary>
     /// Get the localized string for Advanced_RpcBackendEnvironmentVariables_Desc in de-DE (like '
@@ -29574,6 +29793,30 @@ $""""
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"Unset localization item:Edit_DefaultTransformRenderOrder()";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in es-ES (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"Unset localization item:Edit_ClipInfoTabOrder()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in es-ES (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Subtitle()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in es-ES (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Reset()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"Unset localization item:Edit_ClipInfoTabOrder_Reset()";
+
     string ISimpleLocalizerBase_Settings.Advanced_RpcBackendEnvironmentVariables_Desc => Advanced_RpcBackendEnvironmentVariables_Desc;
     /// <summary>
     /// Get the localized string for Advanced_RpcBackendEnvironmentVariables_Desc in es-ES (like '
@@ -32500,6 +32743,30 @@ Confermi la rimozione del plugin "{name}"?{Environment.NewLine}{Environment.NewL
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"Unset localization item:Edit_DefaultTransformRenderOrder()";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in it-IT (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"Unset localization item:Edit_ClipInfoTabOrder()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in it-IT (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Subtitle()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in it-IT (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Reset()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"Unset localization item:Edit_ClipInfoTabOrder_Reset()";
+
     string ISimpleLocalizerBase_Settings.Advanced_RpcBackendEnvironmentVariables_Desc => Advanced_RpcBackendEnvironmentVariables_Desc;
     /// <summary>
     /// Get the localized string for Advanced_RpcBackendEnvironmentVariables_Desc in it-IT (like '
@@ -35416,6 +35683,30 @@ Szablon "{id}"
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"Unset localization item:Edit_DefaultTransformRenderOrder()";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in pl-PL (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"Unset localization item:Edit_ClipInfoTabOrder()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in pl-PL (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Subtitle()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in pl-PL (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Reset()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"Unset localization item:Edit_ClipInfoTabOrder_Reset()";
+
     string ISimpleLocalizerBase_Settings.Advanced_RpcBackendEnvironmentVariables_Desc => Advanced_RpcBackendEnvironmentVariables_Desc;
     /// <summary>
     /// Get the localized string for Advanced_RpcBackendEnvironmentVariables_Desc in pl-PL (like '
@@ -38344,6 +38635,30 @@ Atualizar "{name}"
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"Unset localization item:Edit_DefaultTransformRenderOrder()";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in pt-BR (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"Unset localization item:Edit_ClipInfoTabOrder()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in pt-BR (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Subtitle()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in pt-BR (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Reset()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"Unset localization item:Edit_ClipInfoTabOrder_Reset()";
+
     string ISimpleLocalizerBase_Settings.Advanced_RpcBackendEnvironmentVariables_Desc => Advanced_RpcBackendEnvironmentVariables_Desc;
     /// <summary>
     /// Get the localized string for Advanced_RpcBackendEnvironmentVariables_Desc in pt-BR (like '
@@ -41242,6 +41557,30 @@ public class __ISimpleLocalizerBase_Settings_ru_RU__ : ISimpleLocalizerBase_Sett
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"Unset localization item:Edit_DefaultTransformRenderOrder()";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in ru-RU (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"Unset localization item:Edit_ClipInfoTabOrder()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in ru-RU (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Subtitle()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in ru-RU (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Reset()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"Unset localization item:Edit_ClipInfoTabOrder_Reset()";
+
     string ISimpleLocalizerBase_Settings.Advanced_RpcBackendEnvironmentVariables_Desc => Advanced_RpcBackendEnvironmentVariables_Desc;
     /// <summary>
     /// Get the localized string for Advanced_RpcBackendEnvironmentVariables_Desc in ru-RU (like '
@@ -44149,6 +44488,30 @@ $""""
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => $"Unset localization item:Edit_DefaultTransformRenderOrder()";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in tr-TR (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => $"Unset localization item:Edit_ClipInfoTabOrder()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in tr-TR (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Subtitle()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in tr-TR (like '
+    /// Unset localization item:Edit_ClipInfoTabOrder_Reset()
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => $"Unset localization item:Edit_ClipInfoTabOrder_Reset()";
+
     string ISimpleLocalizerBase_Settings.Advanced_RpcBackendEnvironmentVariables_Desc => Advanced_RpcBackendEnvironmentVariables_Desc;
     /// <summary>
     /// Get the localized string for Advanced_RpcBackendEnvironmentVariables_Desc in tr-TR (like '
@@ -47114,6 +47477,30 @@ public class __ISimpleLocalizerBase_Settings_qps_ploc__ : ISimpleLocalizerBase_S
     /// </summary>
     public static string Edit_DefaultTransformRenderOrder => "Localized item:Edit_DefaultTransformRenderOrder";
     
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder => Edit_ClipInfoTabOrder;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder in qps-ploc (like '
+    /// 片段属性 Tab 顺序
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder => "Localized item:Edit_ClipInfoTabOrder";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Subtitle => Edit_ClipInfoTabOrder_Subtitle;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Subtitle in qps-ploc (like '
+    /// 拖拽条目调整顺序，从上到下对应 Tab 从左到右；刷新属性面板后生效。
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Subtitle => "Localized item:Edit_ClipInfoTabOrder_Subtitle";
+
+    string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
+    /// <summary>
+    /// Get the localized string for Edit_ClipInfoTabOrder_Reset in qps-ploc (like '
+    /// 恢复默认顺序
+    /// ')
+    /// </summary>
+    public static string Edit_ClipInfoTabOrder_Reset => "Localized item:Edit_ClipInfoTabOrder_Reset";
+
     /// <summary>
     /// Get the current localized Id (like 'qps-ploc')
     /// </summary>

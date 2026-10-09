@@ -33,6 +33,7 @@ public sealed class IsolationValue
     [ProtoMember(10)] public long Height { get; set; }
     [ProtoMember(11)] public float Alpha { get; set; }
     [ProtoMember(12)] public bool HasAlpha { get; set; }
+    [ProtoMember(13)] public float Rotation { get; set; }
 }
 
 [ProtoContract]
@@ -559,6 +560,7 @@ public sealed class IsolationClipSnapshot
     [ProtoMember(21)] public bool NeedFilePath { get; set; }
     [ProtoMember(22)] public Dictionary<string, IsolationValue> Metadata { get; set; } = [];
     [ProtoMember(23)] public string FilePath { get; set; } = string.Empty;
+    [ProtoMember(24)] public float Rotation { get; set; }
 }
 
 [ProtoContract]
@@ -694,4 +696,5 @@ public sealed class IsolationEffectInvokeResponse
     [ProtoMember(6)] public int TargetWidth { get; set; }
     [ProtoMember(7)] public int TargetHeight { get; set; }
     [ProtoMember(8)] public bool IsDelta { get; set; }
+    [ProtoMember(9)] public float Rotation { get; set; }
 }

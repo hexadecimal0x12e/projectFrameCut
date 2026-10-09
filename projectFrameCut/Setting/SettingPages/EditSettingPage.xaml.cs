@@ -15,6 +15,7 @@ using projectFrameCut.Render.Compose;
 using projectFrameCut.LivePreview;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using RoundRectangle = Microsoft.Maui.Controls.Shapes.RoundRectangle;
 
 public partial class EditSettingPage : ContentPage
 {
@@ -66,6 +67,9 @@ public partial class EditSettingPage : ContentPage
             .AddPicker("Edit_DefaultTransformRenderOrder", SettingLocalizedResources.Edit_DefaultTransformRenderOrder,
                 TransformOrderStringMapping.Keys.ToArray(), TransformOrderStringMapping.First(p => p.Value == TransformServices.DefaultRenderOrder.ToString()).Key)
             .AddSeparator()
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_ClipInfoTabOrder, SettingLocalizedResources.Edit_ClipInfoTabOrder_Subtitle))
+            .AddCustomChild(BuildClipInfoTabOrder())
+            .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_PreviewOption, SettingLocalizedResources.Edit_PreviewOption_Subtitle))
             .AddCheckbox("Edit_UseDynamicPreview", SettingLocalizedResources.Edit_UseDynamicPreview, IsBoolSettingTrue("Edit_UseDynamicPreview"))
             .AddPicker("Edit_PreviewOutputMode", SettingLocalizedResources.Edit_NativePreviewOutputMode, PreviewOutputModeStringMapping.Keys.ToArray(), PreviewOutputModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Required)), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_NativePreviewOutputMode_Required, nameof(NativePreviewOutputMode.Required))).Key, null)
@@ -100,6 +104,105 @@ public partial class EditSettingPage : ContentPage
             Content = rootPPB.ListenToChanges(SettingInvoker).BuildWithScrollView();
 
         });
+    }
+
+    private View BuildClipInfoTabOrder()
+    {
+        var order = ClipInfoBuilder.GetTabOrder().ToList();
+        var titles = ClipInfoBuilder.GetTabOrderOptions().ToDictionary(t => t.Tag, t => t.Header);
+        var list = new HorizontalStackLayout { Spacing = 2, Padding = new Thickness(5, 5, 5, 0) };
+        var rows = new Dictionary<string, Border>();
+        foreach (var tag in order)
+        {
+            var row = new Border
+            {
+                Stroke = Colors.Gray,
+                StrokeThickness = 0.5,
+                StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(6, 6, 0, 0) },
+                BackgroundColor = Colors.Gray,
+                Margin = new Thickness(0, 2, 2, 0),
+                Padding = new Thickness(10, 6),
+                Content = new Label
+                {
+                    Text = titles[tag],
+                    VerticalOptions = LayoutOptions.Center,
+                    HorizontalOptions = LayoutOptions.Center,
+                    Margin = new Thickness(8, 4),
+                    TextColor = Colors.Black
+                }
+            };
+            var drag = new DragGestureRecognizer { CanDrag = true };
+            drag.DragStarting += (_, e) =>
+            {
+                e.Data.Properties[ClipInfoBuilder.TabOrderSettingKey] = tag;
+                e.Data.Text = titles[tag];
+            };
+            row.GestureRecognizers.Add(drag);
+
+            var drop = new DropGestureRecognizer { AllowDrop = true };
+            drop.DragOver += (_, e) =>
+            {
+                var allowed = e.Data.Properties.TryGetValue(ClipInfoBuilder.TabOrderSettingKey, out var source)
+                    && source is string t && t != tag && rows.ContainsKey(t);
+                e.AcceptedOperation = allowed ? DataPackageOperation.Copy : DataPackageOperation.None;
+                row.Stroke = allowed ? Colors.CornflowerBlue : Colors.Gray;
+                row.StrokeThickness = allowed ? 2 : 0.5;
+            };
+            drop.DragLeave += (_, _) =>
+            {
+                row.Stroke = Colors.Gray;
+                row.StrokeThickness = 0.5;
+            };
+            drop.Drop += (_, e) =>
+            {
+                row.Stroke = Colors.Gray;
+                row.StrokeThickness = 0.5;
+                if (!e.Data.Properties.TryGetValue(ClipInfoBuilder.TabOrderSettingKey, out var source)
+                    || source is not string t || t == tag || !rows.ContainsKey(t)) return;
+                e.Handled = true;
+                var from = order.IndexOf(t);
+                var to = order.IndexOf(tag);
+                if (e.GetPosition(row) is { } p && p.X >= row.Width / 2) to++;
+                if (from < to) to--;
+                if (from == to) return;
+                order.RemoveAt(from);
+                order.Insert(to, t);
+                WriteSetting(ClipInfoBuilder.TabOrderSettingKey, string.Join(",", order));
+                list.Children.Remove(rows[t]);
+                list.Children.Insert(to, rows[t]);
+                LogDiagnostic($"Clip info tab order changed to {string.Join(",", order)}.");
+            };
+            row.GestureRecognizers.Add(drop);
+            rows.Add(tag, row);
+            list.Children.Add(row);
+        }
+        var reset = new Button { Text = SettingLocalizedResources.Edit_ClipInfoTabOrder_Reset, HorizontalOptions = LayoutOptions.End };
+        reset.Clicked += (_, _) =>
+        {
+            WriteSetting(ClipInfoBuilder.TabOrderSettingKey, "");
+            LogDiagnostic("Clip info tab order reset to default.");
+            BuildPPB();
+        };
+        return new VerticalStackLayout
+        {
+            Spacing = 8,
+            Margin = new Thickness(12, 0),
+            Children =
+            {
+                new Border
+                {
+                    StrokeThickness = 0,
+                    BackgroundColor = Color.FromArgb("#80404040"),
+                    Content = new ScrollView
+                    {
+                        Orientation = ScrollOrientation.Horizontal,
+                        HorizontalScrollBarVisibility = ScrollBarVisibility.Default,
+                        Content = list
+                    }
+                },
+                reset
+            }
+        };
     }
 
     private async void ResetQuickCommands(object? sender, EventArgs e)

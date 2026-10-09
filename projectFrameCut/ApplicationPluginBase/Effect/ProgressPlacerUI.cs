@@ -84,6 +84,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                         TargetY = item.Position.TargetY,
                         TargetWidth = item.Position.TargetWidth,
                         TargetHeight = item.Position.TargetHeight,
+                        Rotation = item.Position.Rotation,
                         RelativeWidth = 1920,
                         RelativeHeight = 1080
                     };
@@ -177,6 +178,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                         contentPanel, $"step_h_{index}",
                         EffectProviderHelper.L("_Height", "H"),
                         item.Position.TargetHeight.ToString(), "1");
+
+                    EffectProviderHelper.AddNumericEntry(
+                        contentPanel, $"step_rotation_{index}",
+                        EffectProviderHelper.L("General_Rotation", "Rotation (degrees)"),
+                        item.Position.Rotation.ToString(), "0");
                 });
 
             return panel;
@@ -224,6 +230,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 item = item with { Position = item.Position with { TargetHeight = Math.Max(1, h) } };
                 changed = true;
             }
+            else if (args.Id == $"step_rotation_{index}" && EffectParamConvert.TryConvertToFloat(args.Value, out var rotation) && float.IsFinite(rotation))
+            {
+                item = item with { Position = item.Position with { Rotation = rotation } };
+                changed = true;
+            }
             else if (args.Id == $"step_editor_refresh_{index}")
             {
                 return true;
@@ -267,7 +278,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             var safePosition = new ClipPositionTuple(
                 position.TargetX, position.TargetY,
                 Math.Max(1, position.TargetWidth), Math.Max(1, position.TargetHeight),
-                false);
+                false, position.Rotation);
 
             var existingIndex = list.FindIndex(p => Math.Abs(p.Index - clampedProgress) <= 0.000001d);
             if (existingIndex >= 0)
