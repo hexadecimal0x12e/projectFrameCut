@@ -16,6 +16,7 @@ namespace projectFrameCut;
 
 public partial class DraftPage
 {
+    private readonly Dictionary<Guid, bool> _transformConnections = new();
     internal TransformSide SelectedTransformSide { get; set; }
     public ClipElementUI? _transformMenuActivatedCenterClip;
     public string _transformMenuActivatedHandle = "none";
@@ -25,10 +26,12 @@ public partial class DraftPage
     internal static bool SupportsAudioTransform(ClipElementUI clip) => clip.ClipType == ClipMode.AudioClip && !clip.IsGhost && !clip.IsShadow;
 
     internal TransformClipInfo[] GetTransformClipInfos(bool audio = false) => Clips.Values.Where(c => audio ? SupportsAudioTransform(c) : SupportsPictureTransform(c))
-        .Select(c => new TransformClipInfo(c.Id, PixelToFrame(Math.Max(0, c.Clip.TranslationX)),
-            PixelToFrame(Math.Max(0, c.Clip.WidthRequest > 0 ? c.Clip.WidthRequest : c.origLength)),
-            (uint)(c.origTrack ?? 0), (uint)c.SubLayerIndex,
-            c.EffectProviders?.Values.Select(EffectBindingHelper.SerializeProvider).ToArray() ?? [])).ToArray();
+        .Select(c =>
+        {
+            var range = GetClipFrameRange(c);
+            return new TransformClipInfo(c.Id, range.Start, range.Duration, (uint)(c.origTrack ?? 0), (uint)c.SubLayerIndex,
+                c.EffectProviders?.Values.Select(EffectBindingHelper.SerializeProvider).ToArray() ?? []);
+        }).ToArray();
 
     internal (ClipElementUI? left, ClipElementUI? right) FindTransformNeighbors(ClipElementUI clip, bool audio = false)
     {
@@ -98,7 +101,7 @@ public partial class DraftPage
             var support = mode == TransformInputMode.OneInput ? TransformDefinition.SupportOneInput : TransformDefinition.SupportTwoInput;
             if (!(audio ? SupportsAudioTransform(center) : SupportsPictureTransform(center)) ||
                 !transform.Definition.HasFlag(audio ? TransformDefinition.Audio : TransformDefinition.Clip) || !transform.Definition.HasFlag(support)
-                || PixelToFrame(Math.Max(0, center.Clip.WidthRequest)) == 0 ||
+                || GetClipFrameRange(center).Duration == 0 ||
                 mode == TransformInputMode.TwoInput && (neighbor is null || !(audio ? SupportsAudioTransform(neighbor) : SupportsPictureTransform(neighbor)))) return false;
         }
         finally { (transform as IDisposable)?.Dispose(); }
@@ -268,6 +271,7 @@ public partial class DraftPage
 #endif
         var index = new TransformProcessing.Index(GetTransformClipInfos());
         var audioIndex = new TransformProcessing.Index(GetTransformClipInfos(audio: true));
+        var seen = new HashSet<Guid>();
         foreach (var clip in Clips.Values)
         {
             if (clip.Clip.Content is not Grid grid || (!SupportsPictureTransform(clip) && !SupportsAudioTransform(clip))) continue;
@@ -275,7 +279,23 @@ public partial class DraftPage
             {
                 string key = side == TransformSide.Left ? "LeftTransformShadow" : "RightTransformShadow";
                 var old = grid.Children.OfType<View>().FirstOrDefault(v => v.ClassId == key);
-                var resolved = (clip.ClipType == ClipMode.AudioClip ? audioIndex : index).Resolve(clip.Id, side);
+                var clipIndex = clip.ClipType == ClipMode.AudioClip ? audioIndex : index;
+                var resolved = clipIndex.Resolve(clip.Id, side);
+                if (clipIndex.Find(clip.Id, side) is { } edge && edge.Owner.Id == clip.Id
+                    && TransformProcessing.ReadEnum<TransformInputMode>(edge.Provider.MetaData, TransformProcessing.ModeKey) == TransformInputMode.TwoInput)
+                {
+                    bool connected = false;
+                    if (Clips.TryGetValue(TransformProcessing.ReadNextClip(edge.Provider.MetaData), out var next))
+                    {
+                        var range = GetClipFrameRange(next);
+                        connected = next.origTrack == clip.origTrack && next.SubLayerIndex == clip.SubLayerIndex
+                            && range.Duration > 0 && edge.Owner.End == range.Start;
+                    }
+                    seen.Add(edge.Provider.Id);
+                    if (!_transformConnections.TryGetValue(edge.Provider.Id, out var previous) || previous != connected)
+                        Log($"Transform {edge.Provider.Id} connected={connected}: {clip.Id} end={edge.Owner.End}, next={next?.Id}, start={next?.TimelineStartFrame}.");
+                    _transformConnections[edge.Provider.Id] = connected;
+                }
                 uint length = resolved is null ? 0 : TransformProcessing.ReadEnum<TransformInputMode>(resolved.Provider.MetaData, TransformProcessing.ModeKey) == TransformInputMode.OneInput
                     ? resolved.Duration : side == TransformSide.Left ? resolved.Duration / 2 + resolved.Duration % 2 : resolved.Duration / 2;
                 if (length == 0)
@@ -310,5 +330,7 @@ public partial class DraftPage
                 grid.Children.Add(shadow);
             }
         }
+        foreach (var id in _transformConnections.Keys.Where(id => !seen.Contains(id)).ToArray())
+            _transformConnections.Remove(id);
     }
 }

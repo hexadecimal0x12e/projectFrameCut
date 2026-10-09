@@ -70,6 +70,29 @@ public sealed class VideoClipRotationTests
     }
 
     [TestMethod]
+    public void BeforeLayoutOutputKeepsPictureEffectsWithoutResizingRotatingOrPlacing()
+    {
+        bool effectRan = false;
+        using IClip clip = new SolidColorClip
+        {
+            Id = Guid.NewGuid(), Name = "before layout", Duration = 1, Rotation = 90,
+            TargetX = 100, TargetY = 100, TargetWidth = 8, TargetHeight = 8, ExtraData = new(),
+            EffectsInstances = [new InspectEffect(p =>
+            {
+                effectRan = true;
+                ((IPicture<byte>)p).r[0] = 42;
+            })]
+        };
+        using var source = new Picture8bpp(3, 2) { r = [1, 2, 3, 4, 5, 6] };
+        using var result = Timeline.MixtureLayers([new OneFrame(0, clip, source, resolveEffects: false)], 0, 20, 20,
+            beforeLayoutOutput: true);
+        Assert.IsTrue(effectRan);
+        Assert.AreEqual(3, result.Width);
+        Assert.AreEqual(2, result.Height);
+        CollectionAssert.AreEqual(new byte[] { 42, 2, 3, 4, 5, 6 }, ((IPicture<byte>)result).r);
+    }
+
+    [TestMethod]
     public void CompositingUsesAbsoluteAndDeltaRotation()
     {
         using IClip clip = new VirtualSourceVideoClip

@@ -101,6 +101,22 @@ Disconnect-ProjectFrameCut
 
 `Get-ProjectHistory` 返回当前快照状态和完整历史节点列表。历史节点包含前后继快照、保存时间、变更原因和操作者。Undo、Redo 和 Restore 只切换当前 GUI 项目的历史状态，不会隐式调用 `Save-Project`；Redo 遇到多个分支时选择保存时间最新的后继。
 
+## PNG 帧预览
+
+连接项目后，获取完整画布或单 Clip 在布局、旋转和合成之前的画面：
+
+```powershell
+$canvas = Get-ProjectFramePreview -FrameIndex 30
+$canvas.Path
+$small = Get-ProjectFramePreview -FrameIndex 30 -WidthPixels 960 -HeightPixels 540
+$clipFrame = Get-ProjectClipFramePreview -ClipId $clip.ClipId -FrameIndex 30
+$clip | Get-ProjectClipFramePreview -FrameIndex 30
+```
+
+`FrameIndex` 从 0 开始，始终是项目时间线帧号；单 Clip 请求必须处于该 Clip 的有效时间区间，音频 Clip 不支持图像预览。画布默认使用项目分辨率。单 Clip 保留源图像和图像效果（含原生矢量效果），不应用布局、Clip 旋转、边缘转场或与其他 Clip 的合成。
+
+服务器复用有效预览缓存或生成新预览，再转换为 PNG，保存在项目 `thumbs` 下。返回对象包含 `Path`、`ProjectRelativePath`、`FrameIndex`、`ClipId`、`WidthPixels`、`HeightPixels` 和 `CacheHit`；`CacheHit` 表示复用了 PNG 或源预览缓存。缓存 PNG 沿用预览缓存的 48 小时清理规则；禁止缓存的 Clip 使用会话临时目录，项目会话结束时清理。预览不改变项目内容，无需 `Save-Project`。
+
 ## 迁移
 
 | 原接口 | 新接口 |

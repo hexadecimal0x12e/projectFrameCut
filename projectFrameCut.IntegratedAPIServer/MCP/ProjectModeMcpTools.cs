@@ -700,14 +700,14 @@ internal static class ProjectModeEditingTools
                 """, "clipId", "providerId"), Edit(controller, "updateEffectProvider"), requireAuthorization),
             Tool("remove_effect_provider", "Remove an EffectProvider and clear references to it.", ProviderIdSchema,
                 Edit(controller, "removeEffectProvider"), requireAuthorization),
-            Tool("connect_effect_provider_input", "Connect a provider picture input to clip-input, none, or another picture provider UUID.", ObjectSchema("""
-                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},"source":{"type":"string"}
+            Tool("connect_effect_provider_input", "Connect a provider input to clip-input, none, a built-in value, or a compatible provider output. Multiple-output sources require sourceOutputId or a provider:// output reference.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},"source":{"type":"string"},"sourceOutputId":{"type":"string"}
                 """, "clipId", "providerId", "source"), Edit(controller, "connectEffectProviderInput"), requireAuthorization),
-            Tool("set_effect_provider_output", "Select the provider connected to final picture output; omit providerId to disconnect output.", ObjectSchema("""
-                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":["string","null"],"format":"uuid"}
+            Tool("set_effect_provider_output", "Select the provider output connected to final picture output; multiple-output providers require outputId. Omit providerId to disconnect output.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":["string","null"],"format":"uuid"},"outputId":{"type":"string"}
                 """, "clipId"), Edit(controller, "setEffectProviderOutput"), requireAuthorization),
-            Tool("bind_effect_provider_field", "Bind a provider field to a compatible value-provider UUID, builtin://frame, or builtin://progress.", ObjectSchema("""
-                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},"fieldId":{"type":"string"},"source":{"type":"string"}
+            Tool("bind_effect_provider_field", "Bind a provider field to a compatible provider output, clip-input, builtin://frame, or builtin://progress. Multiple-output sources require sourceOutputId or a provider:// output reference.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},"fieldId":{"type":"string"},"source":{"type":"string"},"sourceOutputId":{"type":"string"}
                 """, "clipId", "providerId", "fieldId", "source"), Edit(controller, "bindEffectProviderField"), requireAuthorization),
             Tool("unbind_effect_provider_field", "Remove a dynamic field binding while preserving its static fallback.", ObjectSchema("""
                 "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},"fieldId":{"type":"string"}

@@ -2782,14 +2782,7 @@ namespace projectFrameCut.InteractableEditor
                 Rect renderRect = GetRenderRect();
                 double scale = renderRect.Width / _videoWidth;
 
-                if (AllowClipOutOfBounds)
-                    ClipStatesHost.Clip = null;
-                else if (ClipStatesHost.Clip is RectangleGeometry clip)
-                {
-                    if (clip.Rect != renderRect) clip.Rect = renderRect;
-                }
-                else
-                    ClipStatesHost.Clip = new RectangleGeometry { Rect = renderRect };
+                ClipStatesHost.ClipBounds = AllowClipOutOfBounds ? null : renderRect;
 
                 UpdateRenderRectOverlay(renderRect);
                 UpdateReferenceLines(renderRect, scale);

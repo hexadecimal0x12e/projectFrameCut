@@ -134,6 +134,32 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <b>DO NOT</b> set this property manually. EffectGroup will do this.
         /// </remarks>
         public string? BindedEffectProvidingSystemID { get; set; }
+
+        /// <summary>
+        /// Compute a graph node for the current frame. Override for picture-to-value or non-picture primary inputs.
+        /// Input pictures and picture parameters are owned by the caller and are valid for this invocation.
+        /// </summary>
+        public virtual object? Compute(EffectExecutionContext context)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+            return this switch
+            {
+                IMultipleOutputEffect multiple => multiple.ComputeOutputs(context),
+                IValueProviderEffect value => value.GetGetter()(),
+                IClipPositionProvider position when context.Clip is not null => position.GetPosition(context.Clip, context.TargetWidth, context.TargetHeight),
+                IContinuousClipPositionProvider position when context.Clip is not null => position.GetPosition(context.Clip, context.FrameIndex,
+                    context.TargetWidth, context.TargetHeight, context.RelativeWidth, context.RelativeHeight),
+                IContinuousEffect continuous when context.Input is IPicture picture => continuous.Render(picture, context.Progress, context.TargetWidth, context.TargetHeight),
+                INormalEffect normal when context.Input is IPicture picture => normal.Render(picture, context.TargetWidth, context.TargetHeight),
+                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support this input. Override Compute to handle it."),
+            };
+        }
+    }
+
+    /// <summary>Computes all named outputs once for the current node invocation.</summary>
+    public interface IMultipleOutputEffect : IEffect
+    {
+        public IReadOnlyDictionary<string, object?> ComputeOutputs(EffectExecutionContext context);
     }
 
     public interface INormalEffect : IEffect

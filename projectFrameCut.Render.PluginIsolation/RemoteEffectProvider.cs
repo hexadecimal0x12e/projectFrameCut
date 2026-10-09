@@ -5,7 +5,7 @@ using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.PluginIsolation;
 
-public sealed class RemoteEffectProvider : IEffectProvider
+public class RemoteEffectProvider : IEffectProvider
 {
     private readonly IPluginIsolationSession _session;
     private readonly long _objectId;
@@ -23,8 +23,8 @@ public sealed class RemoteEffectProvider : IEffectProvider
         Name = descriptor.Name;
         InFields = descriptor.InputFields.ToDictionary(x => x.Id, ToDescriptor);
         OutField = ToDescriptor(descriptor.OutputField);
-        Fields = descriptor.InputFields
-            .Where(x => !((EffectArgumentFieldType)x.FieldType).HasFlag(EffectArgumentFieldType.IPicture))
+        Fields = (descriptor.Fields.Count > 0 ? descriptor.Fields : descriptor.InputFields)
+            .Where(x => x.Id != EffectProviderAnchorExtensions.InputKey)
             .ToDictionary(x => x.Id, ToField);
         DefaultImplementType = (EffectImplementType)descriptor.DefaultImplementType;
     }
@@ -46,6 +46,19 @@ public sealed class RemoteEffectProvider : IEffectProvider
 
     public IEffect[] Build()
     {
+        if (this is IMultipleOutputEffectProvider)
+        {
+            List<IsolationPayloadLease> leases = [];
+            try
+            {
+                return Invoke<IsolationBuildProviderRequest, IsolationEffectList>(RenderOperation.IsolationBuildProvider,
+                    new() { Provider = CreateState(leases) }).Effects.Select(e => RemoteEffectFactory.Create(_session, e)).ToArray();
+            }
+            finally
+            {
+                foreach (var lease in leases) lease.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+        }
         var requested = DefaultImplementType;
         if (MetaData.TryGetValue(EffectProviderBase.ImplementTypeParameterKey, out var raw))
         {
@@ -53,7 +66,7 @@ public sealed class RemoteEffectProvider : IEffectProvider
             else if (Enum.TryParse(raw?.ToString(), true, out EffectImplementType parsed)) requested = parsed;
         }
         var parameters = Fields
-            .Where(x => !x.Value.FieldType.HasFlag(EffectArgumentFieldType.IPicture))
+            .Where(x => x.Key != EffectProviderAnchorExtensions.InputKey)
             .ToDictionary(x => x.Key, x => x.Value.IsDynamicAtRenderTime ? (object)x.Value.GetGetter() : x.Value.GetGetter()());
         var typeName = TypeName == "Crop" && MetaData.ContainsKey(IEffectProvider.IsContinuousEffectParameterKey)
             ? "ProgressCrop"
@@ -147,4 +160,17 @@ public sealed class RemoteEffectProvider : IEffectProvider
                 Remarks = string.IsNullOrEmpty(value.Remarks) ? null : value.Remarks,
             };
     }
+}
+
+public sealed class RemoteMultipleOutputEffectProvider : RemoteEffectProvider, IMultipleOutputEffectProvider
+{
+    public RemoteMultipleOutputEffectProvider(IPluginIsolationSession session, IsolationProviderDescriptor descriptor) : base(session, descriptor)
+        => OutFields = descriptor.OutputFields.ToDictionary(x => x.Id, x => new EffectArgumentFieldDescriptor
+        {
+            Id = x.Id, TypeName = x.TypeName, FromPlugin = x.FromPlugin, FieldType = (EffectArgumentFieldType)x.FieldType,
+            DefaultValue = x.DefaultValue, MinValue = x.MinimumValue, MaxValue = x.MaximumValue,
+            PresetOptions = x.PresetOptions.ToArray(), Remarks = x.Remarks, IsDynamic = x.IsDynamic,
+        });
+
+    public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> OutFields { get; }
 }

@@ -464,6 +464,7 @@ namespace projectFrameCut
 #if WINDOWS
                     handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Windows.ToggleButtonHandler>();
                     handlers.AddHandler<projectFrameCut.Controls.HdrPreviewView, projectFrameCut.Platforms.Windows.HdrPreviewViewHandler>();
+                    handlers.AddHandler<projectFrameCut.Controls.PreviewClipLayout, projectFrameCut.Platforms.Windows.PreviewClipLayoutHandler>();
 #elif ANDROID
                     handlers.AddHandler<projectFrameCut.Controls.ToggleButton, projectFrameCut.Platforms.Android.ToggleButtonHandler>();
                     handlers.AddHandler<projectFrameCut.InteractableEditor.InteractableEditor, projectFrameCut.Platforms.Android.InteractableEditorHandler>();

@@ -615,15 +615,19 @@ public partial class DraftPage : ContentPage, IDraftPage
         PlayheadLine.HeightRequest = (TrackContentLayout.Children.Count + SubTrackContentLayout.Children.Count) * ClipHeight;
     }
 
-    private void UpdateTimelineWidth()
+    public void UpdateTimelineWidth()
     {
+        if (!Inited) return;
         double maxPixel = 0;
         foreach (var clip in Clips.Values)
         {
-            double end = clip.Clip.TranslationX + clip.Clip.WidthRequest;
+            if (clip.IsGhost || clip.IsShadow || clip.IsExtraDataOptionIsTrue("ExtendToWholeDraft")) continue;
+            var range = GetClipFrameRange(clip);
+            double end = ((double)range.Start + range.Duration) / (FramePerPixel * tracksZoomOffest);
             if (end > maxPixel) maxPixel = end;
         }
 
+        ProjectDuration = GetTimelineDuration();
         maxPixel += 50;
 
         double minWidth = Math.Max(1000d, Window?.Width ?? 2000 + 200);
@@ -1148,12 +1152,16 @@ public partial class DraftPage : ContentPage, IDraftPage
                 var item = kv.Value;
                 int t = item.origTrack ?? 0;
                 if (!Tracks.ContainsKey(t)) AddATrack(t);
-                AddAClip(item);
-                RegisterClip(item, true);
+                RegisterClip(item, false);
+                AddAClip(item, false);
             }
 
+            NormalizeLoadedClipFrameSemantics();
             EnsureContinuousTrackIndices();
+            await UpdateAdjacencyForTrack();
+            UpdateTimelineWidth();
             await ClipEditor.UpdateClips(Clips);
+            await RefreshRestoredSelectionAsync();
             CurrentSnapshotID = snapshotId;
             _activeHistoryProvider?.NotifyExternalSnapshotChanged();
             PreviousSnapshotID = draftJson.PreviousSnapshot;

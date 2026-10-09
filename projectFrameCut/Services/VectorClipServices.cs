@@ -87,12 +87,11 @@ public static partial class VectorClipServices
         {
             var dto = JsonSerializer.Deserialize<ClipDraftDTO>(saved.ToString()!)!;
             dto.Id = Guid.NewGuid(); dto.LayerIndex = (uint)track;
-            dto.StartFrame = page.PixelToFrame(start);
+            dto.StartFrame = page.EditPixelToFrame(start);
             dto.ClipType = ClipMode.VectorComponentClip; dto.TypeName = nameof(VectorComponentClip);
             var restored = DraftImportAndExportHelper.ImportFromJSON(new DraftStructureJSON { Clips = [dto] }, page.ProjectInfo).Item1[dto.Id];
-            restored.Clip.TranslationX = start;
-            restored.Clip.WidthRequest = page.FrameToPixel(dto.Duration);
-            restored.origLength = restored.Clip.WidthRequest; restored.origX = start;
+            restored.AttachTiming(page);
+            restored.SetTimelineStart(dto.StartFrame);
             return restored;
         }
         var clip = ClipElementUI.CreateClip(start, page.FrameToPixel(duration), track, labelText: component.Name, maxFrames: duration);

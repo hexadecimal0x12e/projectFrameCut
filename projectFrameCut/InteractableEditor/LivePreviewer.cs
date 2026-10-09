@@ -147,6 +147,51 @@ namespace projectFrameCut.LivePreview
             return path;
         }
 
+        public async Task<(RenderArtifact Artifact, string Path)> RenderPngPreviewAsync(uint frameIndex, int width, int height,
+            Guid? clipId = null, CancellationToken cancellationToken = default)
+        {
+            await _updateDraftGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
+                var client = RpcClient ?? RenderRpcBootstrap.Client;
+                var artifact = clipId is { } id
+                    ? await client.RenderClipPreviewAsync(new ClipPreviewRequest
+                    {
+                        SessionId = RenderSessionId, ClipId = id, FrameIndex = frameIndex,
+                        CanvasWidth = width, CanvasHeight = height,
+                        ProjectWidth = ProjectRelativeWidth, ProjectHeight = ProjectRelativeHeight,
+                        PreferredPixelFormat = PreviewPixelFormat.PngImage, BeforeLayout = true,
+                    }, cancellationToken).ConfigureAwait(false)
+                    : await client.RenderTimelineFrameAsync(new TimelineFrameRequest
+                    {
+                        SessionId = RenderSessionId, FrameIndex = frameIndex, Width = width, Height = height,
+                        PreferredPixelFormat = PreviewPixelFormat.PngImage,
+                    }, cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    if (artifact.MediaType != "image/png")
+                        throw new InvalidDataException("The render backend did not return a PNG preview.");
+                    var path = await ResolveArtifactPathAsync(artifact, cancellationToken).ConfigureAwait(false);
+                    if (!File.Exists(path)) throw new FileNotFoundException("The preview PNG does not exist.", path);
+                    return (artifact, path);
+                }
+                finally
+                {
+                    try
+                    {
+                        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                        await client.ReleaseArtifactAsync(new() { SessionId = artifact.SessionId, ArtifactId = artifact.ArtifactId }, timeout.Token).ConfigureAwait(false);
+                    }
+                    catch (Exception ex) { Log(ex, "Release PNG preview artifact", this); }
+                }
+            }
+            finally
+            {
+                _updateDraftGate.Release();
+            }
+        }
+
         public IPicture GetFrame(uint frameIndex, int targetWidth, int targetHeight)
         {
             (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);

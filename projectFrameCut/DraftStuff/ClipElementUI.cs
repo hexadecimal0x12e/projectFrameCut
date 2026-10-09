@@ -58,7 +58,65 @@ namespace projectFrameCut.DraftStuff
         [JsonIgnore]
         public bool ShowDefaultHandles { get; set; } = true;
 
-        public uint lengthInFrame { get; set; } = 0;
+        private uint _lengthInFrame;
+        public uint lengthInFrame
+        {
+            get => _lengthInFrame;
+            set
+            {
+                if (_lengthInFrame == value) return;
+                _lengthInFrame = value;
+                TimingPage?.InvalidateTimelineTiming(this);
+            }
+        }
+        internal uint? TimelineStartFrame { get; set; }
+        internal DraftPage? TimingPage { get; private set; }
+        private bool _projectingTiming;
+        internal ISpeedVarianceProvider? SpeedProvider => Effects?.Values.OfType<ISpeedVarianceProvider>().FirstOrDefault();
+        internal uint TimelineDuration => ClipTiming.EffectiveDuration(lengthInFrame, SpeedProvider);
+        internal ulong TimelineEnd => (ulong)(TimelineStartFrame ?? 0) + TimelineDuration;
+
+        internal void AttachTiming(DraftPage page)
+        {
+            if (TimingPage == page) return;
+            Clip.PropertyChanged -= OnTimelineLayoutChanged;
+            TimelineStartFrame ??= page.EditPixelToFrame(Math.Max(0, origX));
+            if (lengthInFrame == 0) lengthInFrame = Math.Max(1u, page.EditPixelToFrame(Math.Max(0, origLength)));
+            TimingPage = page;
+            Clip.PropertyChanged += OnTimelineLayoutChanged;
+            ProjectTiming();
+        }
+
+        private void OnTimelineLayoutChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (_projectingTiming || TimingPage is null || IsExtraDataOptionIsTrue("ExtendToWholeDraft")
+                || e.PropertyName != nameof(Clip.TranslationX)) return;
+            TimelineStartFrame = TimingPage.EditPixelToFrame(Math.Max(0, Clip.TranslationX));
+            TimingPage.InvalidateTimelineTiming(this);
+            ProjectTiming();
+        }
+
+        internal void SetTimelineStart(uint frame)
+        {
+            TimelineStartFrame = frame;
+            TimingPage?.InvalidateTimelineTiming(this);
+            ProjectTiming();
+        }
+
+        internal void ProjectTiming()
+        {
+            if (TimingPage is null) return;
+            _projectingTiming = true;
+            try
+            {
+                origX = TimingPage.FrameToPixel(TimelineStartFrame ?? 0);
+                origLength = TimingPage.FrameToPixel(lengthInFrame);
+                var range = TimingPage.GetClipFrameRange(this);
+                Clip.TranslationX = TimingPage.FrameToPixel(range.Start);
+                Clip.WidthRequest = TimingPage.FrameToPixel(range.Duration);
+            }
+            finally { _projectingTiming = false; }
+        }
         /// <summary>
         /// Indicates whether a clip's <b>SOURCE</b> is infinite length.
         /// <b>NOT MEANS The Clip itself is infinite length</b> when this prop is true.
@@ -112,28 +170,7 @@ namespace projectFrameCut.DraftStuff
 
         public float GetAverageSpeedRatio()
         {
-            float ratio = 0;
-
-            var spvProvider = Effects?.FirstOrDefault(c => c.Value.TypeOfEffect == EffectType.SpeedVarianceProvider);
-            if (spvProvider?.Value is ISpeedVarianceProvider pvd)
-            {
-                uint sourceLength = maxFrameCount;
-                if (sourceLength == 0)
-                {
-                    sourceLength = 1;
-                }
-
-                try
-                {
-                    uint effectiveLength = pvd.GetEffectiveLength(sourceLength);
-                    ratio = (float)effectiveLength / sourceLength;
-                }
-                catch
-                {
-                    ratio = 1f;
-                }
-            }
-            return ratio > 0 ? ratio : 1;
+            return lengthInFrame > 0 ? (float)TimelineDuration / lengthInFrame : 1f;
         }
 
         public void UpdateSourceDuration()
@@ -158,8 +195,15 @@ namespace projectFrameCut.DraftStuff
 
         public void ApplySpeedRatio()
         {
-            Clip.WidthRequest = origLength * GetAverageSpeedRatio();
-
+            if (TimingPage is not null)
+            {
+                TimingPage.InvalidateTimelineTiming(this);
+                ProjectTiming();
+            }
+            else
+            {
+                Clip.WidthRequest = origLength * GetAverageSpeedRatio();
+            }
         }
 
         public void ApplyClipColor()
@@ -246,29 +290,9 @@ namespace projectFrameCut.DraftStuff
                 return extend;
             }
 
-            double startPx = (Clip is not null) ? Clip.TranslationX : layoutX;
-            if (double.IsNaN(startPx) || double.IsInfinity(startPx))
-            {
-                startPx = layoutX;
-            }
-            startPx = Math.Max(0d, startPx);
-
-            uint startFrame = workingPage.PixelToFrame(startPx);
-
-            uint effectiveLength = lengthInFrame;
-            if (effectiveLength == 0)
-            {
-                double widthPx = origLength;
-                if (Clip is not null)
-                {
-                    widthPx = Clip.WidthRequest > 0 ? Clip.WidthRequest : Clip.Width;
-                }
-
-                effectiveLength = Math.Max(1u, workingPage.PixelToFrame(Math.Max(0d, widthPx)));
-            }
-
-            ulong start = startFrame;
-            ulong endExclusive = start + Math.Max(1u, effectiveLength);
+            if (workingPage is DraftPage page) AttachTiming(page);
+            ulong start = TimelineStartFrame ?? workingPage.PixelToFrame(Math.Max(0, Clip.TranslationX));
+            ulong endExclusive = start + TimelineDuration;
             ulong frame = targetFrame;
 
             return frame >= start && frame < endExclusive;
@@ -445,7 +469,8 @@ namespace projectFrameCut.DraftStuff
                 Background = background ?? prototype?.Background ?? new SolidColorBrush(Colors.CornflowerBlue),
                 WidthRequest = width,
                 HeightRequest = prototype?.HeightRequest > 0 ? prototype!.HeightRequest : _defaultClipHeight,
-                StrokeShape = prototype?.StrokeShape ?? new RoundRectangle
+                StrokeShape = prototype?.StrokeShape is RoundRectangle r ? new RoundRectangle { CornerRadius = r.CornerRadius }
+                    : prototype?.StrokeShape ?? new RoundRectangle
                 {
                     CornerRadius = 20,
                     BackgroundColor = Colors.White,

@@ -2377,10 +2377,13 @@ public class DraftSettingPage
                 parent.AddATrack(trackIndex);
             }
 
-            parent.AddAClip(item);
-            parent.RegisterClip(item, true);
+            parent.RegisterClip(item, false);
+            parent.AddAClip(item, false);
         }
-
+        parent.NormalizeLoadedClipFrameSemantics();
+        _ = parent.UpdateAdjacencyForTrack();
+        parent.UpdateTimelineWidth();
+        _ = parent.RefreshRestoredSelectionAsync();
     }
 
     private static System.Collections.Concurrent.ConcurrentDictionary<string, AssetItem> CreateAssetDictionary(IEnumerable<AssetItem> assets)

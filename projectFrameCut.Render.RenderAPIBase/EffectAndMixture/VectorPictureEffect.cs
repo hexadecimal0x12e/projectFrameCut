@@ -17,10 +17,18 @@ public static class EffectPipelineExtensions
             ? EffectPipeline.NativeContent : EffectPipeline.Picture;
 
     public static bool CanConnectContent(this IEffectProvider source, IEffectProvider target)
+        => source.CanConnectContent(target, null);
+
+    public static bool CanConnectContent(this IEffectProvider source, IEffectProvider target, string? outputId)
     {
+        if (!target.InFields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var input)
+            || source.TypeOfEffect == EffectType.Transform || source is ClipArgumentProvider) return false;
+        if (target.TypeOfEffect.GetPipeline() == EffectPipeline.Picture)
+            return source.TypeOfEffect.GetPipeline() == EffectPipeline.Picture
+                && source.TryGetOutputField(outputId, out var output)
+                && EffectFieldTypes.AreCompatible(output.FieldType, input.FieldType);
         if (!source.HasMainPictureInput() || !target.HasMainPictureInput()
             || source.TypeOfEffect.GetPipeline() != target.TypeOfEffect.GetPipeline()) return false;
-        if (target.TypeOfEffect.GetPipeline() == EffectPipeline.Picture) return true;
         return target.TypeOfEffect == EffectType.VectorPictureEffect
             || source.TypeOfEffect == target.TypeOfEffect
             || (source.TypeOfEffect is EffectType.TextEffect or EffectType.ContinuousTextEffect)

@@ -28,11 +28,15 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         [ThreadStatic]
         private static Dictionary<string, object>? _values;
 
+        [ThreadStatic]
+        private static Dictionary<object, object>? _computed;
+
         /// <summary>
         /// Begin a render frame: pre-fills the built-in frame/progress sources and clears provider values.
         /// </summary>
         public static void BeginFrame(uint frameIndex, float progress)
         {
+            _computed = new(ReferenceEqualityComparer.Instance);
             _values = new Dictionary<string, object>(8)
             {
                 [BuiltInFrameProviderId] = (float)frameIndex,
@@ -73,18 +77,47 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static void EndFrame()
         {
             _values = null;
+            _computed = null;
         }
 
-        public static IDisposable PushFrame(uint frameIndex, float progress)
+        public static T GetOrCompute<T>(object key, Func<T> compute) where T : class
+        {
+            if (_values is null) return compute();
+            _computed ??= new(ReferenceEqualityComparer.Instance);
+            if (_computed.TryGetValue(key, out var value)) return (T)value;
+            var result = compute();
+            _computed[key] = result;
+            return result;
+        }
+
+        public static IDisposable PushFrame(uint frameIndex, float progress) => PushFrame(frameIndex, progress, false);
+
+        public static IDisposable PushFrame(uint frameIndex, float progress, bool reuseComputed)
         {
             var previous = _values;
+            var computed = _computed;
             BeginFrame(frameIndex, progress);
-            return new FrameScope(previous);
+            if (reuseComputed && previous?.GetValueOrDefault(BuiltInFrameProviderId) is float frame && frame == frameIndex
+                && previous.GetValueOrDefault(BuiltInProgressProviderId) is float clipProgress && clipProgress == progress)
+                _computed = computed;
+            return new FrameScope(previous, computed);
         }
 
-        private sealed class FrameScope(Dictionary<string, object>? previous) : IDisposable
+        public static IDisposable PushValues(IReadOnlyDictionary<string, object?> values)
         {
-            public void Dispose() => _values = previous;
+            var previous = _values;
+            _values = previous is null ? new() : new(previous);
+            foreach (var value in values) Set(value.Key, value.Value);
+            return new FrameScope(previous, _computed);
+        }
+
+        private sealed class FrameScope(Dictionary<string, object>? previous, Dictionary<object, object>? computed) : IDisposable
+        {
+            public void Dispose()
+            {
+                _values = previous;
+                _computed = computed;
+            }
         }
 
     }

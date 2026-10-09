@@ -12,6 +12,7 @@ using static SettingManager.SettingsManager;
 using projectFrameCut.Shared;
 using projectFrameCut.Services;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.LivePreview;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -63,6 +64,7 @@ public partial class EditSettingPage : ContentPage
             .AddCheckbox("Edit_EnableMultiWindow", SettingLocalizedResources.Edit_EnableMultiWindow, IsBoolSettingTrueOrDefault("Edit_EnableMultiWindow", true))
             .AppendWhen(IsBoolSettingTrueOrDefault("Edit_EnableMultiWindow", true), c => c.AddCheckbox("Edit_RememberWindowLayout", SettingLocalizedResources.Edit_RememberWindowLayout, IsBoolSettingTrueOrDefault("Edit_RememberWindowLayout", true)))
             .AddCheckbox("Edit_EnableQuickCommandShortcuts", SettingLocalizedResources.Edit_EnableQuickCommandShortcuts, IsBoolSettingTrue("Edit_EnableQuickCommandShortcuts"))
+            .AddCheckbox("Edit_AllowColorAdjustAppearInEffectEditor", SettingLocalizedResources.Edit_AllowColorAdjustAppearInEffectEditor, IsBoolSettingTrue("Edit_AllowColorAdjustAppearInEffectEditor"))
             .AddEntry("Edit_DefaultInfLengthClipLength", SettingLocalizedResources.Edit_DefaultInfLengthClipLength, GetSettingAs("Edit_DefaultInfLengthClipLength", 300, 300).ToString(), "300")
             .AddPicker("Edit_DefaultTransformRenderOrder", SettingLocalizedResources.Edit_DefaultTransformRenderOrder,
                 TransformOrderStringMapping.Keys.ToArray(), TransformOrderStringMapping.First(p => p.Value == TransformServices.DefaultRenderOrder.ToString()).Key)
@@ -220,10 +222,16 @@ public partial class EditSettingPage : ContentPage
         {
             switch (args.Id)
             {
+                case "Edit_AllowColorAdjustAppearInEffectEditor":
+                    if (args.Value is bool enabled)
+                    {
+                        WriteSetting(args.Id, enabled.ToString());
+                        ColorAdjustmentEffectProvider.AllowColorAdjustAppearInEffectEditor = enabled;
+                    }
+                    return;
                 case "Edit_DefaultTransformRenderOrder":
                     var order = TransformOrderStringMapping.GetValueOrDefault(args.Value?.ToString() ?? "", nameof(TransformRenderOrder.AfterEffects));
                     WriteSetting(args.Id, order);
-                    LogDiagnostic($"Default transform render order changed to {order}.");
                     return;
                 case "Edit_ProxyOption":
                     {

@@ -3,7 +3,7 @@
     "Windows Machine": {
       "commandName": "MsixPackage",
       "commandLineArgs": "--noSplash --noUIWatchdog",
-      "nativeDebugging": false
+      "nativeDebugging": true
     },
     "Windows Machine (Fast launch)": {
       "commandName": "MsixPackage",

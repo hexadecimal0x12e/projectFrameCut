@@ -2465,17 +2465,14 @@ public sealed class DynamicPreview : IDisposable
         float scaleX = viewW / vpW;
         float scaleY = viewH / vpH;
 
-        var container = new AbsoluteLayout
+        var container = new PreviewClipLayout
         {
             WidthRequest = viewW,
             HeightRequest = viewH,
             HorizontalOptions = LayoutOptions.Start,
             VerticalOptions = LayoutOptions.Start,
             InputTransparent = true,
-            Clip = new RectangleGeometry
-            {
-                Rect = new Rect(0, 0, viewW, viewH),
-            },
+            ClipBounds = new Rect(0, 0, viewW, viewH),
         };
 
         if (elements.Count == 0)

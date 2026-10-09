@@ -1,3 +1,4 @@
+using projectFrameCut.Drawing.Processing.Converting;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Contracts;
@@ -116,8 +117,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             .ToList(),
         Encoders = ["libx264"],
         Features = _previewAudioSinkFactory is null
-            ? ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "thumbs-cache", "vfd-preview", "render-jobs", "persistent-render-jobs", "artifact-files"]
-            : ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "thumbs-cache", "vfd-preview", "render-jobs", "persistent-render-jobs", "artifact-files", "preview-audio-device-clock"],
+            ? ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "clip-preview-before-layout", "thumbs-cache", "vfd-preview", "png-preview", "render-jobs", "persistent-render-jobs", "artifact-files"]
+            : ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "clip-preview-before-layout", "thumbs-cache", "vfd-preview", "png-preview", "render-jobs", "persistent-render-jobs", "artifact-files", "preview-audio-device-clock"],
     };
 
     private async Task<ProjectExternalSourceCatalog> SetProjectExternalSourcesAsync(SetProjectExternalSourcesRequest request, CancellationToken cancellationToken)
@@ -568,16 +569,12 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                     try { picture?.Dispose(); } catch { }
                 }
             }
-            var artifact = _artifacts.Register(
-                session.Id, session.ProjectRoot, relativePath,
-                "application/x-projectframecut-vfd",
-                cacheHit, isPreview: true, width, height, session.FrameRate,
-                PreviewPixelFormat.VfdPicture,
-                0,
-                "vfd-native");
             if (allowCaching)
                 TrackPreviewCacheAccess(session.ProjectRoot, relativePath, null, request.FrameIndex, $"{width}x{height}:{formatSuffix}");
-            return artifact;
+            if (request.PreferredPixelFormat == PreviewPixelFormat.PngImage)
+                return MaterializePreviewPng(session, relativePath, null, request.FrameIndex, width, height, cacheHit, allowCaching, cancellationToken);
+            return _artifacts.Register(session.Id, session.ProjectRoot, relativePath, "application/x-projectframecut-vfd",
+                cacheHit, isPreview: true, width, height, session.FrameRate, PreviewPixelFormat.VfdPicture, 0, "vfd-native");
         }
         finally
         {
@@ -612,7 +609,9 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             // important for transform clips whose output depends on bound clips
             // outside the requested clip itself.
             var clips = snapshot is null ? session.Clips : session.Clips.Select(c => c.Id == clip.Id ? clip : c).ToArray();
-            if (TransformProcessing.HasActiveTransform(clip, GetVisualClips(clips), request.FrameIndex))
+            if (request.BeforeLayout && clip.GetRelativeFrameIndex(request.FrameIndex) is null)
+                throw new ArgumentOutOfRangeException(nameof(request.FrameIndex), "The frame is outside the clip's timeline interval.");
+            if (!request.BeforeLayout && TransformProcessing.HasActiveTransform(clip, GetVisualClips(clips), request.FrameIndex))
             {
                 previewWidth = canvasWidth;
                 previewHeight = canvasHeight;
@@ -623,8 +622,9 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             var wantsScRgb = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb;
             var formatSuffix = wantsScRgb ? "vfd16" : "vfd8";
             var allowCaching = Timeline.CanCacheClipFrame(clips, clip);
+            var layoutPrefix = request.BeforeLayout ? "before-layout_" : string.Empty;
             var relativePath = allowCaching
-                ? $"thumbs/perClip/{clip.Id}/dynamic/dynamic_{ClipPreviewCacheVersion}_{namespacePrefix}{clipHash}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}_{formatSuffix}.vfd"
+                ? $"thumbs/perClip/{clip.Id}/dynamic/dynamic_{ClipPreviewCacheVersion}_{layoutPrefix}{namespacePrefix}{clipHash}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}_{formatSuffix}.vfd"
                 : $"thumbs/unCacheablePerClip/{session.Id:N}/clip_{clip.Id:N}_{Guid.NewGuid():N}.vfd";
             var finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
             var cacheHit = allowCaching && File.Exists(finalPath);
@@ -649,7 +649,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                         projectHeight,
                         request.FrameIndex,
                         cancellationToken,
-                        wantsScRgb ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture)
+                        wantsScRgb ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture,
+                        request.BeforeLayout)
                         ?? throw new InvalidOperationException($"Clip '{clip.Id}' did not produce a preview frame.");
                     cancellationToken.ThrowIfCancellationRequested();
                     picture.SaveToDisk(temporaryPath, Drawing.Base.PictureExtensions.SharedVfdPictureEncoder);
@@ -675,21 +676,57 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 previewWidth = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(offset, 4));
                 previewHeight = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(offset + 4, 4));
             }
-            var artifact = _artifacts.Register(
-                session.Id, session.ProjectRoot, relativePath,
-                "application/x-projectframecut-vfd",
-                cacheHit, isPreview: true, previewWidth, previewHeight, session.FrameRate,
-                PreviewPixelFormat.VfdPicture,
-                0,
-                "vfd-native");
             if (allowCaching)
                 TrackPreviewCacheAccess(session.ProjectRoot, relativePath, clip.Id, request.FrameIndex, $"project:{projectWidth}x{projectHeight};canvas:{canvasWidth}x{canvasHeight};output:{previewWidth}x{previewHeight};format:{formatSuffix}");
-            return artifact;
+            if (request.PreferredPixelFormat == PreviewPixelFormat.PngImage)
+                return MaterializePreviewPng(session, relativePath, clip.Id, request.FrameIndex, previewWidth, previewHeight, cacheHit, allowCaching, cancellationToken);
+            return _artifacts.Register(session.Id, session.ProjectRoot, relativePath, "application/x-projectframecut-vfd",
+                cacheHit, isPreview: true, previewWidth, previewHeight, session.FrameRate, PreviewPixelFormat.VfdPicture, 0, "vfd-native");
         }
         finally
         {
             session.RenderGate.Release();
         }
+    }
+
+    private RenderArtifact MaterializePreviewPng(BackendSession session, string vfdRelativePath, Guid? clipId, uint frameIndex,
+        int width, int height, bool sourceCacheHit, bool allowCaching, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var relativePath = Path.ChangeExtension(vfdRelativePath, ".png");
+        var finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
+        var cacheHit = allowCaching && File.Exists(finalPath);
+        if (!cacheHit)
+        {
+            var temporaryPath = _artifacts.CreateTemporaryPath(finalPath);
+            try
+            {
+                using var stream = File.OpenRead(_artifacts.ResolveProjectPath(session.ProjectRoot, vfdRelativePath));
+                if (!PictureExtensions.SharedVfdPictureDecoder.TryLoad(stream, out IPicture? picture) || picture is null)
+                    throw new InvalidDataException("The cached preview is not a valid VFD picture.");
+                using (picture)
+                {
+                    if (picture is IHDRPicture<ushort> hdr)
+                    {
+                        using var sdr = hdr.DegradeToSDR(HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB);
+                        sdr.SaveToPng(temporaryPath);
+                    }
+                    else picture.SaveToPng(temporaryPath);
+                }
+                cancellationToken.ThrowIfCancellationRequested();
+                _artifacts.CommitTemporaryFile(temporaryPath, finalPath);
+            }
+            catch
+            {
+                try { File.Delete(temporaryPath); } catch { }
+                throw;
+            }
+        }
+        if (allowCaching)
+            TrackPreviewCacheAccess(session.ProjectRoot, relativePath, clipId, frameIndex, $"{width}x{height}:png");
+        LogDiagnostic($"[RenderRPC] PNG preview: clip={clipId}, frame={frameIndex}, sourceCacheHit={sourceCacheHit}, pngCacheHit={cacheHit}, path={relativePath}.");
+        return _artifacts.Register(session.Id, session.ProjectRoot, relativePath, "image/png",
+            cacheHit || sourceCacheHit, isPreview: true, width, height, session.FrameRate, PreviewPixelFormat.EncodedImage);
     }
 
     private IClip CreateVectorPreviewSnapshot(ClipPreviewRequest request, IClip savedClip, BackendSession session)

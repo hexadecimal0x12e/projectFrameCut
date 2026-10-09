@@ -3,6 +3,7 @@ using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 
 namespace projectFrameCut.Render.Contracts.Tests;

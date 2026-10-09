@@ -5,6 +5,7 @@ using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.PluginIsolation;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.Context;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
@@ -115,6 +116,7 @@ internal sealed class PluginIsolationWorkerService(
                     RenderOperation.IsolationMapSpeedLength => MapSpeed(request, true),
                     RenderOperation.IsolationGetClipPosition => GetClipPosition(request),
                     RenderOperation.IsolationGetEffectValue => GetEffectValue(request),
+                    RenderOperation.IsolationComputeEffect => await ComputeEffectAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationAIValidateConfiguration => await ValidateAIConfigurationAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationAIListModels => await ListAIModelsAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationAIBeginOperation => BeginAIOperation(request),
@@ -239,8 +241,9 @@ internal sealed class PluginIsolationWorkerService(
                     throw new NotSupportedException($"External effect provider '{item.Key}' uses unsupported effect type '{provider.TypeOfEffect}'.");
                 var custom = provider.InFields.Values.FirstOrDefault(x => x.FieldType.HasFlag(EffectArgumentFieldType.CustomType));
                 if (custom is not null) throw new NotSupportedException($"External effect provider '{item.Key}' field '{custom.Id}' uses unsupported CustomType '{custom.TypeName}'.");
-                if (provider.OutField.FieldType.HasFlag(EffectArgumentFieldType.CustomType))
-                    throw new NotSupportedException($"External effect provider '{item.Key}' output field '{provider.OutField.Id}' uses unsupported CustomType '{provider.OutField.TypeName}'.");
+                foreach (var output in provider.GetOutputFields().Values)
+                    if (output.FieldType.HasFlag(EffectArgumentFieldType.CustomType))
+                        throw new NotSupportedException($"External effect provider '{item.Key}' output field '{output.Id}' uses unsupported CustomType '{output.TypeName}'.");
             }
         }
 
@@ -520,6 +523,90 @@ internal sealed class PluginIsolationWorkerService(
         var request = Read<IsolationEffectInvokeRequest>(envelope);
         var field = Require<IValueProviderEffect>(request.ObjectId);
         return Success(envelope, new IsolationEffectInvokeResponse { Json = System.Text.Json.JsonSerializer.Serialize(IsolationValueConverter.FromObject(field.GetGetter()())) });
+    }
+
+    private async ValueTask<RenderResponseEnvelope> ComputeEffectAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
+    {
+        var request = Read<IsolationEffectComputeRequest>(envelope);
+        var frame = request.Frame;
+        var effect = Require<IEffect>(frame.ObjectId);
+        var pictures = new HashSet<IPicture>(ReferenceEqualityComparer.Instance);
+        var published = new List<IsolationPayloadLease>();
+        bool transferred = false;
+        var previousBuffer = IRenderContext.CurrentFrameBuffer;
+        try
+        {
+            var values = frame.DynamicValues.ToDictionary(p => p.Key, p => IsolationValueConverter.ToObject(p.Value));
+            foreach (var p in frame.DynamicPictures)
+            {
+                var picture = await PicturePayloadCodec.ReadAsync(p.Value, _payloads, cancellationToken).ConfigureAwait(false);
+                pictures.Add(picture);
+                values[p.Key] = picture;
+            }
+            object? input = IsolationValueConverter.ToObject(request.Input);
+            if (request.InputPicture is not null)
+            {
+                var picture = await PicturePayloadCodec.ReadAsync(request.InputPicture, _payloads, cancellationToken).ConfigureAwait(false);
+                pictures.Add(picture);
+                input = picture;
+            }
+            ApplyEffectState(effect, frame.State);
+            object? result;
+            using var clip = frame.Clip is null ? null : new SnapshotClip(frame.Clip);
+            using (ValueProviderFrameContext.PushFrame(frame.TargetFrame, frame.ClipProgress))
+            {
+                foreach (var p in values) ValueProviderFrameContext.Set(p.Key, p.Value);
+                IRenderContext.CurrentFrameBuffer = input as IPicture;
+                var context = new EffectExecutionContext
+                {
+                    Input = input, Parameters = request.ParameterNames.ToDictionary(p => p, p => values.GetValueOrDefault(p)),
+                    Clip = clip, FrameIndex = frame.TargetFrame, Progress = frame.Progress, ClipProgress = frame.ClipProgress,
+                    TargetWidth = frame.TargetWidth, TargetHeight = frame.TargetHeight, CancellationToken = cancellationToken,
+                    RelativeWidth = request.RelativeWidth, RelativeHeight = request.RelativeHeight,
+                };
+                result = effect is IMultipleOutputEffect multiple ? multiple.ComputeOutputs(context) : effect.Compute(context);
+            }
+            if (effect is IMultipleOutputEffect)
+            {
+                var outputs = result as IReadOnlyDictionary<string, object?> ?? throw new InvalidOperationException("No multiple output map was returned.");
+                foreach (var picture in outputs.Values.OfType<IPicture>()) pictures.Add(picture);
+                var response = new IsolationEffectComputeResponse { HasMultipleOutputs = true };
+                foreach (var (key, value) in outputs)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (value is IPicture picture)
+                    {
+                        var outputLease = await PicturePayloadCodec.WriteAsync(picture, _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
+                        published.Add(outputLease);
+                        response.Pictures[key] = outputLease.Reference;
+                    }
+                    else response.Values[key] = IsolationValueConverter.FromObject(value);
+                }
+                var envelopeResult = Success(envelope, response);
+                transferred = true;
+                return envelopeResult;
+            }
+            if (result is not IPicture output)
+                return Success(envelope, new IsolationEffectComputeResponse { Value = IsolationValueConverter.FromObject(result) });
+            pictures.Add(output);
+            var lease = await PicturePayloadCodec.WriteAsync(output, _payloads, _payloadKind, cancellationToken).ConfigureAwait(false);
+            return Success(envelope, new IsolationEffectComputeResponse { Picture = lease.Reference });
+        }
+        finally
+        {
+            IRenderContext.CurrentFrameBuffer = previousBuffer;
+            if (!transferred)
+                foreach (var payload in published)
+                {
+                    try { await payload.DisposeAsync().ConfigureAwait(false); }
+                    catch (Exception ex) { Logger.Log(ex, "Release incomplete effect output payload", this); }
+                }
+            foreach (var picture in pictures)
+            {
+                try { picture.Dispose(); }
+                catch (Exception ex) { Logger.Log(ex, "Release isolated effect output picture", this); }
+            }
+        }
     }
 
     private RenderResponseEnvelope CloneEffect(RenderRequestEnvelope envelope)
@@ -1164,7 +1251,10 @@ internal sealed class PluginIsolationWorkerService(
         InstanceId = provider.Id.ToString(),
         Name = provider.Name,
         InputFields = provider.InFields.Select(x => DescribeField(x.Value)).ToList(),
-        OutputField = DescribeField(provider.OutField),
+        Fields = provider.Fields.Values.Select(DescribeField).ToList(),
+        OutputField = provider is IMultipleOutputEffectProvider ? new() : DescribeField(provider.OutField),
+        HasMultipleOutputs = provider is IMultipleOutputEffectProvider,
+        OutputFields = provider.GetOutputFields().Values.Select(DescribeField).ToList(),
         SupportedImplementTypes = provider.SupportsImplementTypes.Select(x => (int)x).ToList(),
         DefaultImplementType = (int)provider.DefaultImplementType,
     };
@@ -1181,7 +1271,7 @@ internal sealed class PluginIsolationWorkerService(
         PresetOptions = field.PresetOptions?.ToList() ?? [],
         Remarks = field.Remarks ?? string.Empty,
         IsDynamic = field.IsDynamic,
-        Value = TryValue(field),
+        Value = field is IValueProviderEffect || field.IsDynamicAtRenderTime ? new() : TryValue(field),
     };
 
     private static IsolationValue TryValue(IEffectArgumentField field)
@@ -1214,6 +1304,8 @@ internal sealed class PluginIsolationWorkerService(
         IsColorAdjust = effect is IColorAdjustEffect,
         ValueField = effect is IValueProviderEffect field ? DescribeField(field) : null,
         TransformDefinition = effect is ITransform transform ? (int)transform.Definition : 0,
+        PreserveAspectRatio = effect is not IContinuousClipPositionProvider cp || cp.PreserveAspectRatio,
+        HasMultipleOutputs = effect is IMultipleOutputEffect,
     };
 
     private static void ApplyEffectState(IEffect effect, IsolationEffectMutableState state)
@@ -1295,7 +1387,10 @@ internal sealed class PluginIsolationWorkerService(
         catch (ReflectionTypeLoadException ex) { return ex.Types.OfType<Type>(); }
     }
 
-    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect or EffectType.VectorPictureEffect or EffectType.Transform;
+    private static bool IsPictureEffect(EffectType type) => type is EffectType.NormalEffect or EffectType.ContinuousEffect
+        or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.VectorComponentEffect
+        or EffectType.VectorPictureEffect or EffectType.Transform or EffectType.NonIPictureOutputValueProvider
+        or EffectType.ClipPositionProvider or EffectType.ContinuousClipPositionProvider;
     private static bool IsSupportedExternalEffect(EffectType type) => type is EffectType.NormalEffect
         or EffectType.ContinuousEffect
         or EffectType.AudioNormalEffect

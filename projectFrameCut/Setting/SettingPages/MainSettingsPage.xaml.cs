@@ -226,6 +226,7 @@ namespace projectFrameCut
 
                 DynamicPreview.DefaultOutputMode = ParsePreviewOutputMode(GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Required)));
                 LivePreviewer.DefaultOutputMode = DynamicPreview.DefaultOutputMode;
+                ColorAdjustmentEffectProvider.AllowColorAdjustAppearInEffectEditor = IsBoolSettingTrue("Edit_AllowColorAdjustAppearInEffectEditor");
 
                 // ===== 安全设置同步 =====
 

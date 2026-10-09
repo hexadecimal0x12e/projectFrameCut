@@ -10,6 +10,7 @@ public enum GuiProjectOperation
     GetEffectProviderType, GetEffectProviderField, GetClipEffectProvider,
     AddClipEffectProvider, SetClipEffectProvider, RemoveClipEffectProvider,
     GetProjectHistory, UndoProjectHistory, RedoProjectHistory, RestoreProjectHistory,
+    GetFramePreview, GetClipFramePreview,
 }
 
 [ProtoContract]

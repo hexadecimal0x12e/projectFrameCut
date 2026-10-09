@@ -3134,6 +3134,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_AllowColorAdjustAppearInEffectEditor",
+        "Value": "\u5728\u6548\u679c\u7f16\u8f91\u5668\u4e2d\u663e\u793a\u989c\u8272\u8c03\u6574",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_ClipInfoTabOrder_Reset",
         "Value": "恢复默认顺序",
         "Mode": "ConstString",

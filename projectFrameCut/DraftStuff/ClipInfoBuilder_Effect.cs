@@ -163,6 +163,7 @@ namespace projectFrameCut.DraftStuff
             var bundlesFactories = EffectServices.GetAvailableEffectProviders()
                 .Where(p => pipeline is null || p.Value().Target.HasFlag(EffectTarget.ValueProvider) || p.Value().TypeOfEffect.GetPipeline() == pipeline)
                 .ToDictionary(p => p.Key, p => p.Value);
+            var inputSources = new Dictionary<(Guid ProviderId, string Display), string>();
             var haveManySpeedVarianceProvider = (clip.EffectProviders?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.SpeedVarianceProvider)) ?? 0) >= 2;
             var haveManyMixtureProvider = (clip.EffectProviders?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.MixtureProvider)) ?? 0) >= 2;
             var haveManySourceReplacementEffect = (clip.EffectProviders?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.SourceReplacement)) ?? 0) >= 2;
@@ -236,11 +237,16 @@ namespace projectFrameCut.DraftStuff
                     {
                         if (id == IEffectProvider.NoConnectionGUID.ToString()) return PPLocalizedResources.EffectBind_NoConnection;
                         if (id == IEffectProvider.InputAnchorGUID.ToString()) return PPLocalizedResources.EffectBind_SourcePicture;
-                        if (Guid.TryParse(id, out var providerId) && clip.EffectProviders != null && clip.EffectProviders.TryGetValue(providerId, out var b))
+                        if (id == ValueProviderFrameContext.BuiltInFrameProviderId) return PPLocalizedResources.EffectBindView_BoundSource_FrameIndex;
+                        if (id == ValueProviderFrameContext.BuiltInProgressProviderId) return PPLocalizedResources.EffectBindView_BoundSource_Progress;
+                        if (EffectProviderOutputExtensions.TryParseOutputSourceId(id, out var providerId, out var outputId)
+                            && clip.EffectProviders != null && clip.EffectProviders.TryGetValue(providerId, out var b))
                         {
                             if (!showAllEffect && b.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor))
                                 return GetInputAnchorSelection(b.GetMainInputSource());
-                            return $"{b.Name} ({b.Id})";
+                            var display = outputId is null ? $"{b.Name} ({b.Id})" : $"{b.Name} [{outputId}] ({b.Id})";
+                            inputSources[(bundleId, display)] = id;
+                            return display;
                         }
                         return string.Empty;
                     }
@@ -287,28 +293,64 @@ namespace projectFrameCut.DraftStuff
                         ppb.AddSeparator();
 
                         //they can't be reordered
-                        if (bundleInstance.TypeOfEffect is EffectType.Transform or EffectType.SpeedVarianceProvider or EffectType.MixtureProvider or EffectType.SourceReplacement or EffectType.NonIPictureOutputValueProvider) goto remove_btn;
+                        if (bundleInstance.TypeOfEffect is EffectType.Transform or EffectType.SpeedVarianceProvider or EffectType.MixtureProvider or EffectType.SourceReplacement) goto remove_btn;
 
 
                         var resolvedInAnchorId = bundleInstance.GetMainInputSource();
 
                         // 构建过滤后的 InAnchor 下拉选项：排除自身、类型不兼容和（showAllEffect=false 时）内部 bundle
-                        var inAnchorProviderOptions = clip.EffectProviders
-                             .Where(b => b.Key != bundleId
-                                 && b.Value.CanConnectContent(bundleInstance)
-                                 && (showAllEffect || !b.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)))
-                             .Select(b => $"{b.Value.Name} ({b.Key})")
-                             .ToList();
+                        var inAnchorProviderOptions = new List<string>();
+                        foreach (var b in clip.EffectProviders.Values.Where(p => p.Id != bundleId
+                            && (showAllEffect || !p.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor))))
+                            foreach (var output in b.GetOutputFields().Values)
+                            {
+                                string? outputId = b is IMultipleOutputEffectProvider ? output.Id : null;
+                                if (!b.CanConnectContent(bundleInstance, outputId)) continue;
+                                string source = outputId is null ? b.Id.ToString() : EffectProviderOutputExtensions.CreateOutputSourceId(b.Id, outputId);
+                                inAnchorProviderOptions.Add(GetInputAnchorSelection(source));
+                            }
                         var curIn = GetInputAnchorSelection(resolvedInAnchorId);
                         if (curIn is not null && !inAnchorProviderOptions.Contains(curIn))
                             inAnchorProviderOptions.Add(curIn);
 
-                        ppb.AddPicker($"Provider|{bundleId}|InAnchor", PPLocalizedResources.EffectBind_InputAnchor,
-                            inAnchorProviderOptions.Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(),
-                            GetInputAnchorSelection(resolvedInAnchorId));
-                        ppb.AddPicker($"Provider|{bundleId}|OutAnchor", PPLocalizedResources.EffectBind_OutputAnchor,
-                            [PPLocalizedResources.EffectBind_FinalResult, PPLocalizedResources.EffectBind_NoConnection],
-                            bundleInstance.IsFinalOutputSource() ? PPLocalizedResources.EffectBind_FinalResult : PPLocalizedResources.EffectBind_NoConnection);
+                        if (bundleInstance.InFields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var mainInput))
+                        {
+                            if (mainInput.FieldType.IsPicture()) inAnchorProviderOptions.Add(PPLocalizedResources.EffectBind_SourcePicture);
+                            if (EffectFieldTypes.AreCompatible(EffectArgumentFieldType.Numeric, mainInput.FieldType))
+                            {
+                                inAnchorProviderOptions.Add(PPLocalizedResources.EffectBindView_BoundSource_FrameIndex);
+                                inAnchorProviderOptions.Add(PPLocalizedResources.EffectBindView_BoundSource_Progress);
+                            }
+                            ppb.AddPicker($"Provider|{bundleId}|InAnchor", PPLocalizedResources.EffectBind_InputAnchor,
+                                inAnchorProviderOptions.Append(PPLocalizedResources.EffectBind_NoConnection).Distinct().ToArray(), curIn);
+                        }
+                        if (bundleInstance is IMultipleOutputEffectProvider multiple)
+                        {
+                            foreach (var output in multiple.OutFields.Values)
+                            {
+                                var targets = new List<string>();
+                                if (bundleInstance.IsFinalOutputSource() && bundleInstance.GetFinalOutputFieldId() == output.Id)
+                                    targets.Add(PPLocalizedResources.EffectBind_FinalResult);
+                                string source = EffectProviderOutputExtensions.CreateOutputSourceId(bundleId, output.Id);
+                                foreach (var target in clip.EffectProviders.Values)
+                                {
+                                    if (target.GetMainInputSource() == source)
+                                        targets.Add($"{target.Name} ({target.Id}) [{PPLocalizedResources.EffectBind_InputAnchor}]");
+                                    foreach (var binding in target.EnumerateFieldBindings().Where(b => b.Value == source))
+                                        targets.Add($"{target.Name} ({target.Id}) [{binding.Key}]");
+                                }
+                                string current = targets.Count > 0 ? string.Join("; ", targets) : PPLocalizedResources.EffectBind_NoConnection;
+                                var options = new List<string> { current };
+                                if (output.FieldType.IsPicture()) options.Add(PPLocalizedResources.EffectBind_FinalResult);
+                                options.Add(PPLocalizedResources.EffectBind_NoConnection);
+                                ppb.AddPicker($"Provider|{bundleId}|OutAnchor|{Uri.EscapeDataString(output.Id)}",
+                                    $"{PPLocalizedResources.EffectBind_OutputAnchor} ({output.Id})", options.Distinct().ToArray(), current);
+                            }
+                        }
+                        else if (bundleInstance.OutField.FieldType.IsPicture())
+                            ppb.AddPicker($"Provider|{bundleId}|OutAnchor", PPLocalizedResources.EffectBind_OutputAnchor,
+                                [PPLocalizedResources.EffectBind_FinalResult, PPLocalizedResources.EffectBind_NoConnection],
+                                bundleInstance.IsFinalOutputSource() ? PPLocalizedResources.EffectBind_FinalResult : PPLocalizedResources.EffectBind_NoConnection);
 
                     remove_btn:
                         ppb.AddButton($"Provider|{bundleId}|Remove", PPLocalizedResources.EffectProp_Remove);
@@ -447,9 +489,17 @@ namespace projectFrameCut.DraftStuff
                                 case "InAnchor":
                                     if (clip.EffectProviders.TryGetValue(bundleId, out var inProvider))
                                     {
-                                        if (TryParseAnchorSelection(e.Value?.ToString(), PPLocalizedResources.EffectBind_SourcePicture, IEffectProvider.InputAnchorGUID, out var newSourceId))
+                                        string? source = e.Value?.ToString() switch
                                         {
-                                            inProvider.SetMainInputSource(newSourceId);
+                                            var v when v == PPLocalizedResources.EffectBindView_BoundSource_FrameIndex => ValueProviderFrameContext.BuiltInFrameProviderId,
+                                            var v when v == PPLocalizedResources.EffectBindView_BoundSource_Progress => ValueProviderFrameContext.BuiltInProgressProviderId,
+                                            _ => null,
+                                        };
+                                        Guid newSourceId = IEffectProvider.NoConnectionGUID;
+                                        if (inputSources.TryGetValue((bundleId, e.Value?.ToString() ?? ""), out var selectedSource)) source = selectedSource;
+                                        if (source is not null || TryParseAnchorSelection(e.Value?.ToString(), PPLocalizedResources.EffectBind_SourcePicture, IEffectProvider.InputAnchorGUID, out newSourceId))
+                                        {
+                                            inProvider.SetMainInputSource(source ?? newSourceId.ToString());
                                             RebuildAllEffects(clip);
                                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                         }
@@ -458,6 +508,27 @@ namespace projectFrameCut.DraftStuff
                                 case "OutAnchor":
                                     if (clip.EffectProviders.TryGetValue(bundleId, out var outProvider))
                                     {
+                                        if (outProvider is IMultipleOutputEffectProvider multiple)
+                                        {
+                                            if (parts.Length != 4 || !multiple.OutFields.TryGetValue(Uri.UnescapeDataString(parts[3]), out var output)) break;
+                                            if (output.FieldType.IsPicture() && e.Value?.ToString() == PPLocalizedResources.EffectBind_FinalResult)
+                                            {
+                                                EffectBindingHelper.SetFinalOutput(clip.EffectProviders, bundleId,
+                                                    outProvider.TypeOfEffect.GetPipeline(), output.Id);
+                                            }
+                                            else if (e.Value?.ToString() == PPLocalizedResources.EffectBind_NoConnection)
+                                            {
+                                                EffectBindingHelper.RemoveReferencesTo(clip.EffectProviders.Values,
+                                                    EffectProviderOutputExtensions.CreateOutputSourceId(bundleId, output.Id));
+                                                if (outProvider.IsFinalOutputSource() && outProvider.GetFinalOutputFieldId() == output.Id)
+                                                    outProvider.SetFinalOutputSource(false);
+                                            }
+                                            else break;
+                                            Log($"Changed output binding for clip {clip.Id}, provider {bundleId}, output {output.Id}: {e.Value}.");
+                                            RebuildAllEffects(clip);
+                                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                                            break;
+                                        }
                                         if (TryParseAnchorSelection(e.Value?.ToString(), PPLocalizedResources.EffectBind_FinalResult, IEffectProvider.OutputAnchorGUID, out var newTargetId))
                                         {
                                             EffectBindingHelper.SetFinalOutput(clip.EffectProviders,
@@ -1331,6 +1402,7 @@ namespace projectFrameCut.DraftStuff
             // Filter state
             string? filterSearchText = null;
             string? filterCategory = null;
+            Border? selectedCard = null;
 
             void ApplyFilter()
             {
@@ -1350,6 +1422,7 @@ namespace projectFrameCut.DraftStuff
                     filtered = filtered.Where(c => c.EffectTypeName == filterCategory);
                 }
 
+                selectedCard = null;
                 BindableLayout.SetItemsSource(flex, filtered.ToList());
             }
 
@@ -1508,7 +1581,7 @@ namespace projectFrameCut.DraftStuff
                     Padding = 0,
                     StrokeShape = new RoundRectangle { CornerRadius = 12 },
                     Stroke = new SolidColorBrush(Colors.Gray.WithAlpha(0.25f)),
-                    StrokeThickness = 1,
+                    StrokeThickness = 2,
                     Background = new SolidColorBrush(Colors.Transparent),
                     Content = cardContent
                 };
@@ -1616,16 +1689,15 @@ namespace projectFrameCut.DraftStuff
 
                 void SelectCard(Border selected)
                 {
-                    foreach (var child in flex.Children)
+                    if (selectedCard == selected) return;
+                    if (selectedCard is { } previous)
                     {
-                        if (child is Border b)
-                        {
-                            bool isSelected = b == selected;
-                            b.Stroke = new SolidColorBrush(isSelected ? Colors.DodgerBlue : Colors.Gray.WithAlpha(0.25f));
-                            b.StrokeThickness = isSelected ? 2 : 1;
-                            b.Background = new SolidColorBrush(isSelected ? Colors.DodgerBlue.WithAlpha(0.1f) : Colors.Transparent);
-                        }
+                        previous.Stroke = new SolidColorBrush(Colors.Gray.WithAlpha(0.25f));
+                        previous.Background = new SolidColorBrush(Colors.Transparent);
                     }
+                    selected.Stroke = new SolidColorBrush(Colors.DodgerBlue);
+                    selected.Background = new SolidColorBrush(Colors.DodgerBlue.WithAlpha(0.1f));
+                    selectedCard = selected;
                 }
 
                 UIServices.RegisterSelectOrContextMenu(
@@ -1636,6 +1708,7 @@ namespace projectFrameCut.DraftStuff
                         {
                             onSelected?.Invoke(item.ProviderTypeName);
                             SelectCard(border);
+                            Log($"Selected effect provider {item.ProviderTypeName}.", "debug");
                         }
                     },
                     OnClicked: () =>

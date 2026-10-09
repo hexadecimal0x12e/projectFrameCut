@@ -206,41 +206,28 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             }
 
             long max = 0, audMax = 0;
-            foreach (var clip in clips)
+            foreach (var dto in clips.OfType<ClipDraftDTO>())
             {
-                if (clip is ClipDraftDTO dto)
+                var range = page.Clips.TryGetValue(dto.Id, out var element) ? page.GetClipFrameRange(element)
+                    : (Start: dto.StartFrame, Duration: dto.Duration);
+                ulong end = (ulong)range.Start + range.Duration;
+                if (end > uint.MaxValue)
                 {
-                    if (dto.ClipType == ClipMode.AudioClip)
-                    {
-                        if (wrapSoundtrackAsClip)
-                        {
-                            var end = (ulong)dto.StartFrame + dto.Duration;
-                            if (end > uint.MaxValue)
-                            {
-                                Log($"Ignoring overflowing audio clip end during draft export: {dto.Id}/{dto.Name}, start={dto.StartFrame}, duration={dto.Duration}.", "warn");
-                                end = (ulong)dto.StartFrame + 1;
-                            }
-                            audMax = Math.Max((long)end, audMax);
-                        }
-                    }
-                    else
-                    {
-                        var end = (ulong)dto.StartFrame + dto.Duration;
-                        if (end > uint.MaxValue)
-                        {
-                            Log($"Ignoring overflowing clip end during draft export: {dto.Id}/{dto.Name}, start={dto.StartFrame}, duration={dto.Duration}.", "warn");
-                            end = (ulong)dto.StartFrame + 1;
-                        }
-                        max = Math.Max((long)end, max);
-                    }
+                    Log($"Ignoring overflowing clip end during draft export: {dto.Id}/{dto.Name}, start={range.Start}, duration={range.Duration}.", "warn");
+                    end = (ulong)range.Start + 1;
                 }
-
-
+                if (dto.ClipType == ClipMode.AudioClip)
+                {
+                    if (wrapSoundtrackAsClip) audMax = Math.Max((long)end, audMax);
+                }
+                else max = Math.Max((long)end, max);
             }
 
             foreach (var track in soundtracks)
             {
-                var end = (ulong)track.StartFrame + track.Duration;
+                var range = Guid.TryParse(track.Id, out var id) && page.Clips.TryGetValue(id, out var element)
+                    ? page.GetClipFrameRange(element) : (Start: track.StartFrame, Duration: track.Duration);
+                ulong end = (ulong)range.Start + range.Duration;
                 if (end > uint.MaxValue)
                 {
                     Log($"Ignoring overflowing soundtrack end during draft export: {track.Id}/{track.Name}, start={track.StartFrame}, duration={track.Duration}.", "warn");
@@ -419,7 +406,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
         private static EffectAndMixtureJSONStructure[]? SerializeEffects(ClipElementUI elem)
         {
-            return elem.Effects?.Select(kv =>
+            return elem.Effects?.Where(kv => kv.Value is not DynamicEffectGraph).Select(kv =>
             {
                 var effect = kv.Value;
                 if (kv.Key == "__Internal_Rotation__" && effect is RotationEffect_IPicture rotation)
@@ -454,57 +441,9 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             out uint startFrame,
             out uint durationFrames)
         {
-            double ratio = elem.SecondPerFrameRatio;
-            if (!double.IsFinite(ratio) || ratio <= 0d)
-            {
-                ratio = 1d;
-            }
-
-            double startPx = border.TranslationX;
-            if (!double.IsFinite(startPx) || startPx < 0d)
-            {
-                startPx = double.IsFinite(elem.layoutX) && elem.layoutX > 0d ? elem.layoutX : 0d;
-            }
-
-            startFrame = ConvertExportFrame(startPx / page.FrameToPixel(1) / ratio, 0u);
-
-            double widthPx = border.WidthRequest;
-            if (!double.IsFinite(widthPx) || widthPx <= 0d)
-            {
-                widthPx = border.Width;
-            }
-            if (!double.IsFinite(widthPx) || widthPx <= 0d)
-            {
-                widthPx = elem.origLength;
-            }
-
-            uint fallbackDuration = elem.lengthInFrame is > 0 and < uint.MaxValue
-                ? elem.lengthInFrame
-                : 1u;
-            durationFrames = !double.IsFinite(widthPx) || widthPx <= 0d
-                ? fallbackDuration
-                : ConvertExportFrame(widthPx / page.FrameToPixel(1) / ratio, fallbackDuration);
-
-            if (durationFrames == 0 || (ulong)startFrame + durationFrames > uint.MaxValue)
-            {
-                Log($"Invalid clip timing was repaired during draft export: {elem.Id}/{elem.DisplayName}, start={startFrame}, duration={durationFrames}, width={widthPx}.", "warn");
-                durationFrames = startFrame < uint.MaxValue ? 1u : 0u;
-                if (durationFrames == 0)
-                {
-                    startFrame = uint.MaxValue - 1;
-                    durationFrames = 1u;
-                }
-            }
-        }
-
-        private static uint ConvertExportFrame(double value, uint fallback)
-        {
-            if (!double.IsFinite(value) || value < 0d || value >= uint.MaxValue)
-            {
-                return fallback;
-            }
-
-            return (uint)Math.Round(value);
+            elem.AttachTiming(page);
+            startFrame = elem.TimelineStartFrame!.Value;
+            durationFrames = elem.lengthInFrame;
         }
 
 #endif
@@ -932,6 +871,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 element.origTrack = (int)dto.LayerIndex;
                 element.origLength = widthPx;
                 element.origX = startPx;
+                element.TimelineStartFrame = dto.StartFrame;
+                element.lengthInFrame = Math.Max(1u, dto.Duration);
                 element.SubLayerIndex = (int)dto.SubLayerIndex;
                 element.relativeStartFrame = dto.RelativeStartFrame;
                 element.maxFrameCount = maxFrames;
@@ -1013,6 +954,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 element.origTrack = (int)dto.LayerIndex;
                 element.origLength = widthPx;
                 element.origX = startPx;
+                element.TimelineStartFrame = dto.StartFrame;
+                element.lengthInFrame = Math.Max(1u, dto.Duration);
                 element.relativeStartFrame = dto.RelativeStartFrame;
                 element.SubLayerIndex = (int)dto.SubLayerIndex;
                 element.maxFrameCount = dto.Duration;
@@ -1024,10 +967,10 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
                 element.Clip.IsVisible = dto.ShouldDisplayInUI;
                 element.sourceSecondPerFrame = 1f / proj.TargetFrameRate;
                 //element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
-                element.ApplySpeedRatio();
                 element.TypeName = dto.TypeName;
                 element.FromPlugin = dto.FromPlugin;
                 InitializeEffects(element, new ClipDraftDTO { Effects = dto.Effects, EffectProviders = dto.EffectProviders }, proj.RelativeWidth, proj.RelativeHeight);
+                element.ApplySpeedRatio();
 
                 clipsDict.AddOrUpdate(element.Id, element, (_, _) => element);
             }
@@ -1168,6 +1111,8 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             element.origTrack = (int)clip.LayerIndex;
             element.origLength = widthPx;
             element.origX = clip.StartFrame;
+            element.TimelineStartFrame = clip.StartFrame;
+            element.lengthInFrame = Math.Max(1u, clip.Duration);
             element.SubLayerIndex = (int)clip.SubLayerIndex;
             element.relativeStartFrame = clip.RelativeStartFrame;
             element.maxFrameCount = maxFrames;

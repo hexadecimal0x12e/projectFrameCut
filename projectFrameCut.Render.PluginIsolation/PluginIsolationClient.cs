@@ -33,7 +33,8 @@ public sealed class PluginIsolationClient : IAsyncDisposable
         return plugin.Providers.ToDictionary(x => x.TypeName, x => (Func<IEffectProvider>)(() =>
         {
             var descriptor = Invoke<IsolationCreateProviderRequest, IsolationProviderDescriptor>(RenderOperation.IsolationCreateProvider, new() { TypeName = x.TypeName });
-            return new RemoteEffectProvider(_session, descriptor);
+            return descriptor.HasMultipleOutputs
+                ? new RemoteMultipleOutputEffectProvider(_session, descriptor) : new RemoteEffectProvider(_session, descriptor);
         }));
     }
 

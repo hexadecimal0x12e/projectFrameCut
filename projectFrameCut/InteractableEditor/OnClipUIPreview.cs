@@ -1,3 +1,4 @@
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Shared;
 using System;
@@ -340,17 +341,13 @@ namespace projectFrameCut.InteractableEditor
                 return 0;
 
             double progress = Math.Clamp(tileIndex * _videoFrameWidth / ContentWidth, 0, 1);
-            double ratio = clip.SecondPerFrameRatio;
-            if (!double.IsFinite(ratio) || ratio <= 0)
-                ratio = 1;
-
-            double clipWidth = ContentWidth + 60;
-            uint duration = Math.Max(1u, page.PixelToFrame(clipWidth));
-            double sourceDuration = duration / ratio;
-            if (clip.maxFrameCount > clip.relativeStartFrame)
-                sourceDuration = Math.Min(sourceDuration, clip.maxFrameCount - clip.relativeStartFrame);
-
-            int target = (int)Math.Round(clip.relativeStartFrame + progress * Math.Max(0, sourceDuration - 1));
+            uint duration = page.GetClipFrameRange(clip).Duration;
+            uint offset = (uint)Math.Round(progress * Math.Max(0, (long)duration - 1));
+            uint sourceOffset = ClipTiming.SourceOffset(offset, clip.lengthInFrame, clip.SpeedProvider, duration);
+            double sourceFrame = (ulong)clip.relativeStartFrame + sourceOffset;
+            if (page.ProjectInfo.TargetFrameRate > 0 && float.IsFinite(clip.sourceSecondPerFrame) && clip.sourceSecondPerFrame > 0)
+                sourceFrame /= page.ProjectInfo.TargetFrameRate * (double)clip.sourceSecondPerFrame;
+            int target = (int)Math.Min(int.MaxValue, Math.Floor(sourceFrame + 1e-9));
             int index = _videoAvailableFrames.BinarySearch(target);
             if (index >= 0)
                 return _videoAvailableFrames[index];

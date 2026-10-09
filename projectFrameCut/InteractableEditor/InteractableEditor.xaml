@@ -4,6 +4,7 @@
              x:Class="projectFrameCut.InteractableEditor.InteractableEditor"
              BackgroundColor="Transparent"
              xmlns:local="clr-namespace:projectFrameCut"
+             xmlns:controls="clr-namespace:projectFrameCut.Controls"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
              xmlns:l="clr-namespace:LocalizedResources"
              x:DataType="local:InteractableEditor.InteractableEditor"
@@ -59,7 +60,7 @@
                               InputTransparent="True" />
             </Border>
 
-            <AbsoluteLayout x:Name="ClipStatesHost"
+            <controls:PreviewClipLayout x:Name="ClipStatesHost"
                     BackgroundColor="Transparent"
                     InputTransparent="False"
                     ZIndex="101"

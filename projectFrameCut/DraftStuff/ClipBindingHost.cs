@@ -38,16 +38,20 @@ namespace projectFrameCut.DraftStuff
                     LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_FrameIndex),
                 new(ValueProviderFrameContext.BuiltInProgressProviderId,
                     LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_Progress),
+                new(IEffectProvider.InputAnchorGUID.ToString(),
+                    LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBind_SourcePicture, "IPicture"),
             };
             if (_clip.EffectProviders is { } bundles)
             {
                 foreach (var (id, bundle) in bundles)
                 {
                     if (id == _provider.Id) continue;
-                    if (bundle is IEffectProvider p && p.Target.HasFlag(EffectTarget.ValueProvider))
+                    if (bundle is not ClipArgumentProvider && bundle.TypeOfEffect != EffectType.Transform)
                     {
-                        var outName = bundle.OutField?.TypeName;
-                        sources.Add(new ValueBindingSource(id.ToString(), bundle.Name ?? bundle.TypeName, outName));
+                        foreach (var output in bundle.GetOutputFields().Values)
+                            sources.Add(new ValueBindingSource(bundle is IMultipleOutputEffectProvider
+                                ? EffectProviderOutputExtensions.CreateOutputSourceId(id, output.Id) : id.ToString(),
+                                bundle.Name ?? bundle.TypeName, bundle is IMultipleOutputEffectProvider ? output.Id : output.TypeName));
                     }
                 }
             }
@@ -58,7 +62,7 @@ namespace projectFrameCut.DraftStuff
         {
             foreach (var s in GetBindingSources())
             {
-                if (s.Id == sourceId) return s.DisplayName;
+                if (s.Id == sourceId) return s.OutputAnchorName is { Length: > 0 } ? $"{s.DisplayName} ({s.OutputAnchorName})" : s.DisplayName;
             }
             return null;
         }
@@ -81,7 +85,7 @@ namespace projectFrameCut.DraftStuff
 
         public void ApplyBinding(string fieldId, string sourceId)
         {
-            if (!_provider.Fields.ContainsKey(fieldId)) return;
+            if (!_provider.Fields.ContainsKey(fieldId) && !_provider.InFields.ContainsKey(fieldId)) return;
             _provider.SetFieldBinding(fieldId, sourceId);
             EffectBindingHelper.MaterializeFields([_provider]);
             _onChanged?.Invoke();
@@ -110,6 +114,16 @@ namespace projectFrameCut.DraftStuff
             AddOption(string.Empty, LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_Disconnect);
             foreach (var s in GetBindingSources())
             {
+                if (DynamicEffectBindings.InputFields(_provider).TryGetValue(fieldId, out var field))
+                {
+                    var type = EffectArgumentFieldType.Numeric;
+                    if (s.Id == IEffectProvider.InputAnchorGUID.ToString()) type = EffectArgumentFieldType.IPicture;
+                    else if (EffectProviderOutputExtensions.TryParseOutputSourceId(s.Id, out var id, out var outputId)
+                        && _clip.EffectProviders is { } providers && providers.TryGetValue(id, out var source)
+                        && source.TryGetOutputField(outputId, out var output))
+                        type = output.FieldType;
+                    if (!EffectFieldTypes.AreCompatible(type, field.FieldType)) continue;
+                }
                 var suffix = s.OutputAnchorName is { Length: > 0 } ? $" ({s.OutputAnchorName})" : string.Empty;
                 AddOption(s.Id, $"{s.DisplayName}{suffix}");
             }

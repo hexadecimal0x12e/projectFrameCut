@@ -148,6 +148,7 @@ public enum RenderOperation
     [ProtoEnum] IsolationListProjectExternalSources = 2060,
     [ProtoEnum] IsolationProcessTransformEffect = 2061,
     [ProtoEnum] IsolationProcessVectorPictureEffect = 2062,
+    [ProtoEnum] IsolationComputeEffect = 2063,
 }
 
 [ProtoContract]
@@ -414,6 +415,7 @@ public enum PreviewPixelFormat
     [ProtoEnum] EncodedImage = 0,
     [ProtoEnum] Rgba16FloatScRgb = 1,
     [ProtoEnum] VfdPicture = 2,
+    [ProtoEnum] PngImage = 3,
 }
 
 [ProtoContract]
@@ -438,6 +440,7 @@ public sealed class ClipPreviewRequest
     [ProtoMember(7)] public int ProjectHeight { get; set; }
     [ProtoMember(8)] public PreviewPixelFormat PreferredPixelFormat { get; set; } = PreviewPixelFormat.EncodedImage;
     [ProtoMember(9)] public string? VectorClipJson { get; set; }
+    [ProtoMember(10)] public bool BeforeLayout { get; set; }
 }
 
 [ProtoContract]

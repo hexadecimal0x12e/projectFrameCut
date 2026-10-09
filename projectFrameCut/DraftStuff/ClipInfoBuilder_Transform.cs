@@ -40,11 +40,25 @@ public partial class ClipInfoBuilder
         bool audio = clip.ClipType == ClipMode.AudioClip;
         var host = new ContentView();
         var previewQueue = new SemaphoreSlim(1);
+        host.Loaded += (_, _) =>
+        {
+            page.TimelineTimingChanged -= Rebuild;
+            page.TimelineTimingChanged += Rebuild;
+            Rebuild();
+        };
+        host.Unloaded += (_, _) => page.TimelineTimingChanged -= Rebuild;
         Rebuild();
         return host;
 
         void Rebuild()
         {
+            if (!page.Clips.TryGetValue(clip.Id, out var current))
+            {
+                host.Content = null;
+                return;
+            }
+            clip = current;
+            audio = clip.ClipType == ClipMode.AudioClip;
             var infos = page.GetTransformClipInfos(audio);
             var existing = TransformProcessing.Find(infos, clip.Id, side);
             var saved = existing?.Provider;

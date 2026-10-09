@@ -303,6 +303,8 @@ public partial class DraftPage : ContentPage, IDraftPage
                 Content = new Grid { HeightRequest = 1 }
             });
         }
+        if (_fixedClipInfoPopupTabs.SelectedItem is { } selectedItem)
+            _fixedClipInfoTabs.SelectByTag(selectedItem.Tag);
         _fixedClipInfoPopupTabs.OnTabSwitched += (_, selectedItem) =>
         {
             if (_syncingFixedClipInfoTabs) return;
@@ -1314,5 +1316,32 @@ public partial class DraftPage : ContentPage, IDraftPage
         Opacity = 0.85,
         Margin = new Thickness(12)
     };
+
+    private async Task<object> GetGuiPreviewAsync(GuiProjectRequest request, JsonElement parameters, CancellationToken cancellationToken)
+    {
+        if (!parameters.TryGetProperty("FrameIndex", out var frame)) throw new ArgumentException("FrameIndex is required.");
+        var frameIndex = frame.GetUInt32();
+        Guid? clipId = request.Operation == GuiProjectOperation.GetClipFramePreview
+            ? parameters.GetProperty("ClipId").GetGuid() : null;
+        if (clipId is { } id && !Clips.ContainsKey(id)) throw new KeyNotFoundException("Clip not found.");
+        if (clipId is null && frameIndex >= ProjectDuration)
+            throw new ArgumentOutOfRangeException("FrameIndex", "The frame is outside the project timeline.");
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(Math.Clamp(request.TimeoutSeconds, 1, 3600)));
+        var (artifact, path) = await previewer.RenderPngPreviewAsync(frameIndex,
+            parameters.TryGetProperty("WidthPixels", out var width) ? width.GetInt32() : ProjectInfo.RelativeWidth,
+            parameters.TryGetProperty("HeightPixels", out var height) ? height.GetInt32() : ProjectInfo.RelativeHeight,
+            clipId, timeout.Token);
+        return new
+        {
+            Path = path,
+            artifact.ProjectRelativePath,
+            FrameIndex = frameIndex,
+            ClipId = clipId,
+            WidthPixels = artifact.Width,
+            HeightPixels = artifact.Height,
+            artifact.CacheHit,
+        };
+    }
     #endregion
 }

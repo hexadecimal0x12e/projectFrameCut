@@ -19,6 +19,8 @@
         'Get-ProjectInstance',
         'Get-ProjectTemplateVariable',
         'Get-ProjectInfo',
+        'Get-ProjectFramePreview',
+        'Get-ProjectClipFramePreview',
         'Save-Project',
         'Get-ProjectHistory',
         'Undo-ProjectHistory',

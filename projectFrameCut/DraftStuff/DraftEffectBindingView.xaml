@@ -34,6 +34,7 @@
 
             <!-- Nodes Layer -->
             <AbsoluteLayout x:Name="NodesContainer" 
+                            AnchorX="0" AnchorY="0"
                             InputTransparent="False">
             </AbsoluteLayout>
 
@@ -78,7 +79,7 @@
                     </Grid>
                 </tv:TabbedViewItem>
                 <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_EffectBindView_AddEffect}">
-                    <ScrollView Padding="10">
+                    <ScrollView x:Name="AddEffectsScrollView" Padding="10">
                         <VerticalStackLayout x:Name="AddEffectsPanel" Spacing="10"/>
                     </ScrollView>
                 </tv:TabbedViewItem>

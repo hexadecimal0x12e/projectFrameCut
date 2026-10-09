@@ -88,6 +88,7 @@ namespace projectFrameCut.DraftStuff
         #region init
         DraftPage page;
         TabbedView tabbedView = new();
+        private string? lastSelectedTab;
 
         static JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
@@ -287,6 +288,8 @@ namespace projectFrameCut.DraftStuff
                 var i = Array.IndexOf(order, t.Tag);
                 return i < 0 ? int.MaxValue : i;
             }));
+            tabbedView.OnTabSwitched += (_, item) => lastSelectedTab = item.Tag;
+            if (!string.IsNullOrEmpty(lastSelectedTab)) tabbedView.SelectByTag(lastSelectedTab);
 
             tabbedView.HeaderRightContent = new Button
             {

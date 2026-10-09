@@ -2,6 +2,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
@@ -41,6 +42,11 @@ namespace projectFrameCut.DraftStuff
                     LazyContentFactory = () => BuildSpeedAndRatioTab(clip, handler, out refreshSpeed)
                 });
             }
+            else
+            {
+                tabs.IsTabBarVisible = false;
+            }
+
             tabs.OnTabSwitched += (_, item) =>
             {
                 page.SelectedTimingTab = item.Tag;
@@ -51,9 +57,7 @@ namespace projectFrameCut.DraftStuff
             return tabs;
         }
 
-        private uint ReadTimingLength(ClipElementUI clip) => clip.origLength > 0
-            ? (uint)Math.Clamp(Math.Round(clip.origLength / page.FrameToPixel(1)), 1d, uint.MaxValue)
-            : Math.Max(1u, clip.lengthInFrame);
+        private uint ReadTimingLength(ClipElementUI clip) => Math.Max(1u, clip.lengthInFrame);
 
         private View BuildTimingOptions(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler, out Action refresh)
         {
@@ -161,8 +165,7 @@ namespace projectFrameCut.DraftStuff
             fields.Children.Add(applyBtn);
             stack.Children.Add(fields);
 
-            uint ReadStartFrame() => (uint)Math.Clamp(Math.Round(Math.Max(0, clip.Clip.TranslationX)
-                / (page.FrameToPixel(1) * clip.SecondPerFrameRatio)), 0, uint.MaxValue - 1d);
+            uint ReadStartFrame() => page.GetClipFrameRange(clip).Start;
 
             bool TryReadFrames(out uint start, out uint sourceStart, out uint length)
             {
@@ -171,7 +174,7 @@ namespace projectFrameCut.DraftStuff
                 return uint.TryParse(startEntry.Text, out start)
                     && (clip.isInfiniteLength || uint.TryParse(sourceEntry.Text, out sourceStart))
                     && uint.TryParse(lengthEntry.Text, out length) && length > 0
-                    && (ulong)start + length <= uint.MaxValue
+                    && (ulong)start + ClipTiming.EffectiveDuration(length, clip.SpeedProvider) <= uint.MaxValue
                     && (ulong)sourceStart + length <= uint.MaxValue
                     && (!finite || (ulong)sourceStart + length <= clip.maxFrameCount);
             }
@@ -205,18 +208,13 @@ namespace projectFrameCut.DraftStuff
 
             void ApplyFrames(object? sender, uint start, uint sourceStart, uint length)
             {
-                if ((ulong)start + length > uint.MaxValue || (ulong)sourceStart + length > uint.MaxValue) return;
+                if ((ulong)start + ClipTiming.EffectiveDuration(length, clip.SpeedProvider) > uint.MaxValue || (ulong)sourceStart + length > uint.MaxValue) return;
                 var old = (ReadStartFrame(), clip.relativeStartFrame, ReadTimingLength(clip));
                 if (old == (start, sourceStart, length)) return;
                 clip.relativeStartFrame = sourceStart;
                 clip.lengthInFrame = length;
-                clip.origLength = page.FrameToPixel(length);
+                clip.SetTimelineStart(start);
                 clip.ApplySpeedRatio();
-                if (old.Item1 != start)
-                {
-                    clip.Clip.TranslationX = page.FrameToPixel(start) * clip.SecondPerFrameRatio;
-                    clip.origX = clip.layoutX = clip.Clip.TranslationX;
-                }
                 SyncFields();
                 Log($"Updated clip {clip.Id} timing: {old} -> {(start, sourceStart, length)}.");
                 handler?.Invoke(sender, new PropertyPanelPropertyChangedEventArgs("timing", (start, sourceStart, length), old));

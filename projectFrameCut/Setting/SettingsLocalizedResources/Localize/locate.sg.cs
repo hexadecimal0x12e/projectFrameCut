@@ -2560,6 +2560,13 @@ public interface ISimpleLocalizerBase_Settings
     public string Edit_ClipInfoTabOrder_Subtitle { get; }
 
     /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor (like '
+    /// 在效果编辑器中显示颜色调整
+    ///')
+    /// </summary>
+    public string Edit_AllowColorAdjustAppearInEffectEditor { get; }
+
+    /// <summary>
     /// Get the localized string for Edit_ClipInfoTabOrder_Reset (like '
     /// 恢复默认顺序
     ///')
@@ -2954,6 +2961,7 @@ public interface ISimpleLocalizerBase_Settings
         "Edit_DefaultTransformRenderOrder", 
         "Edit_ClipInfoTabOrder",
         "Edit_ClipInfoTabOrder_Subtitle",
+        "Edit_AllowColorAdjustAppearInEffectEditor",
         "Edit_ClipInfoTabOrder_Reset",
     };
     
@@ -3290,6 +3298,7 @@ public interface ISimpleLocalizerBase_Settings
             "Edit_DefaultTransformRenderOrder" => Edit_DefaultTransformRenderOrder,
             "Edit_ClipInfoTabOrder" => Edit_ClipInfoTabOrder,
             "Edit_ClipInfoTabOrder_Subtitle" => Edit_ClipInfoTabOrder_Subtitle,
+            "Edit_AllowColorAdjustAppearInEffectEditor" => Edit_AllowColorAdjustAppearInEffectEditor,
             "Edit_ClipInfoTabOrder_Reset" => Edit_ClipInfoTabOrder_Reset,
             _ => fallbackValue ?? $"Can't find the localized string for id '{id}'"
         };
@@ -6241,6 +6250,14 @@ public class __ISimpleLocalizerBase_Settings_zh_CN__ : ISimpleLocalizerBase_Sett
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"左右拖拽 Tab 调整顺序，刷新属性面板后生效。";
 
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in zh-CN (like '
+    /// 在效果编辑器中显示颜色调整
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"在效果编辑器中显示颜色调整";
+
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
     /// Get the localized string for Edit_ClipInfoTabOrder_Reset in zh-CN (like '
@@ -9137,6 +9154,14 @@ This action cannot be undone, existing templates ({templates}) will be overwritt
     /// ')
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in en-US (like '
+    /// Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()";
 
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
@@ -12063,6 +12088,14 @@ public class __ISimpleLocalizerBase_Settings_zh_TW__ : ISimpleLocalizerBase_Sett
     /// ')
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in zh-TW (like '
+    /// Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()";
 
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
@@ -15056,6 +15089,14 @@ public class __ISimpleLocalizerBase_Settings_ja_JP__ : ISimpleLocalizerBase_Sett
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
 
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in ja-JP (like '
+    /// Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()";
+
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
     /// Get the localized string for Edit_ClipInfoTabOrder_Reset in ja-JP (like '
@@ -18037,6 +18078,14 @@ public class __ISimpleLocalizerBase_Settings_ko_KR__ : ISimpleLocalizerBase_Sett
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
 
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in ko-KR (like '
+    /// Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()";
+
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
     /// Get the localized string for Edit_ClipInfoTabOrder_Reset in ko-KR (like '
@@ -21007,6 +21056,14 @@ public class __ISimpleLocalizerBase_Settings_fr_FR__ : ISimpleLocalizerBase_Sett
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
 
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in fr-FR (like '
+    /// Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()";
+
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
     /// Get the localized string for Edit_ClipInfoTabOrder_Reset in fr-FR (like '
@@ -23955,6 +24012,14 @@ $""""
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
 
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in ar-SA (like '
+    /// Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()";
+
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
     /// Get the localized string for Edit_ClipInfoTabOrder_Reset in ar-SA (like '
@@ -26879,6 +26944,14 @@ Vorlage "{id}"
     /// ')
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in de-DE (like '
+    /// Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()";
 
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
@@ -29808,6 +29881,14 @@ $""""
     /// ')
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in es-ES (like '
+    /// Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()";
 
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
@@ -32759,6 +32840,14 @@ Confermi la rimozione del plugin "{name}"?{Environment.NewLine}{Environment.NewL
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
 
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in it-IT (like '
+    /// Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()";
+
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
     /// Get the localized string for Edit_ClipInfoTabOrder_Reset in it-IT (like '
@@ -35698,6 +35787,14 @@ Szablon "{id}"
     /// ')
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in pl-PL (like '
+    /// Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()";
 
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
@@ -38651,6 +38748,14 @@ Atualizar "{name}"
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
 
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in pt-BR (like '
+    /// Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()";
+
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
     /// Get the localized string for Edit_ClipInfoTabOrder_Reset in pt-BR (like '
@@ -41572,6 +41677,14 @@ public class __ISimpleLocalizerBase_Settings_ru_RU__ : ISimpleLocalizerBase_Sett
     /// ')
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in ru-RU (like '
+    /// Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()";
 
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
@@ -44503,6 +44616,14 @@ $""""
     /// ')
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => $"Unset localization item:Edit_ClipInfoTabOrder_Subtitle()";
+
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in tr-TR (like '
+    /// Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => $"Unset localization item:Edit_AllowColorAdjustAppearInEffectEditor()";
 
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>
@@ -47492,6 +47613,14 @@ public class __ISimpleLocalizerBase_Settings_qps_ploc__ : ISimpleLocalizerBase_S
     /// ')
     /// </summary>
     public static string Edit_ClipInfoTabOrder_Subtitle => "Localized item:Edit_ClipInfoTabOrder_Subtitle";
+
+    string ISimpleLocalizerBase_Settings.Edit_AllowColorAdjustAppearInEffectEditor => Edit_AllowColorAdjustAppearInEffectEditor;
+    /// <summary>
+    /// Get the localized string for Edit_AllowColorAdjustAppearInEffectEditor in qps-ploc (like '
+    /// 在效果编辑器中显示颜色调整
+    /// ')
+    /// </summary>
+    public static string Edit_AllowColorAdjustAppearInEffectEditor => "Localized item:Edit_AllowColorAdjustAppearInEffectEditor";
 
     string ISimpleLocalizerBase_Settings.Edit_ClipInfoTabOrder_Reset => Edit_ClipInfoTabOrder_Reset;
     /// <summary>

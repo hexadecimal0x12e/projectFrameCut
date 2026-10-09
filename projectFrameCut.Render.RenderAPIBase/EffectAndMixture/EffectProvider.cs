@@ -1,4 +1,5 @@
 using projectFrameCut.Drawing.Vector.ImportExport;
+using projectFrameCut.Drawing.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -78,8 +79,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// The key is the field id, and the value is the field descriptor.
         /// </summary>
         /// <remarks>
-        /// None of the input fields except the <c>__Input__</c> field can be act as a picture source. 
-        /// The <c>__Input__</c> field is the primary input for the effect, and it is used to determine the input picture for the effect.
+        /// <c>__Input__</c> is the primary input. Other fields are named parameters; both may accept pictures or values.
         /// </remarks>
         public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> InFields { get; }
 
@@ -89,7 +89,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public EffectArgumentFieldDescriptor OutField { get; }
 
         /// <summary>
-        /// Persisted binding configuration. <c>__Input__</c> stores the single picture source,
+        /// Persisted binding configuration. <c>__Input__</c> stores the primary source,
         /// <c>__Output__</c> stores the final-output marker, and ordinary field ids store value sources.
         /// Values are strings so both Guid-based sources and <c>builtin://</c> sources are representable.
         /// </summary>
@@ -123,8 +123,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <b>DO NOT</b> set the output effect's <see cref="IEffect.Id"/>, <see cref="IEffect.BindedEffectProvidingSystemID"/> and <see cref="IEffect.Index"/> property manually.
         /// It will be set when the effect is created.
         /// <para/>
-        /// Throw a <see cref="NotSupportedException"/> if the effect does not yield IPicture output (e.g. <see cref="IValueProviderEffect"/>)
-        /// and Providers that can create a ordinary effect (e.g. <see cref="INormalEffect"/>) override this member.
+        /// Value-provider effects are built here too; their output is described by <see cref="OutField"/>.
         /// </remarks>
         public IEffect[] Build();
 
@@ -169,10 +168,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Indicates which parameters are needed for this effect.
         /// </summary>
         /// <remarks>
-        /// Default implementation derives the list from the non-<see cref="EffectArgumentFieldType.IPicture"/> settable fields.
+        /// Default implementation derives the list from the named input fields.
         /// </remarks>
         public virtual List<string> ParametersNeeded => Fields
-            .Where(c => !c.Value.FieldType.HasFlag(EffectArgumentFieldType.IPicture))
+            .Where(c => c.Key != EffectProviderAnchorExtensions.InputKey)
             .Select(c => c.Key)
             .ToList();
 
@@ -180,11 +179,57 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Indicates the type of each parameter.
         /// </summary>
         /// <remarks>
-        /// Default implementation derives the type map from the non-<see cref="EffectArgumentFieldType.IPicture"/> settable fields.
+        /// Default implementation derives the type map from the named input fields.
         /// </remarks>
         public virtual Dictionary<string, string> ParametersType => Fields
-            .Where(c => !c.Value.FieldType.HasFlag(EffectArgumentFieldType.IPicture))
+            .Where(c => c.Key != EffectProviderAnchorExtensions.InputKey)
             .ToDictionary(c => c.Key, c => EffectProviderContractMapping.FieldTypeToParamType(c.Value.FieldType));
+    }
+
+    /// <summary>A provider with explicitly selected, named output ports.</summary>
+    public interface IMultipleOutputEffectProvider : IEffectProvider
+    {
+        public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> OutFields { get; }
+
+        EffectArgumentFieldDescriptor IEffectProvider.OutField => throw new NotSupportedException("Select a named output port.");
+    }
+
+    public static class EffectProviderOutputExtensions
+    {
+        public static IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> GetOutputFields(this IEffectProvider provider) =>
+            provider is IMultipleOutputEffectProvider multiple ? multiple.OutFields
+                : new Dictionary<string, EffectArgumentFieldDescriptor> { [provider.OutField.Id] = provider.OutField };
+
+        public static bool TryGetOutputField(this IEffectProvider provider, string? outputId, out EffectArgumentFieldDescriptor field)
+        {
+            if (provider is IMultipleOutputEffectProvider multiple)
+            {
+                field = null!;
+                return outputId is not null && multiple.OutFields.TryGetValue(outputId, out field!);
+            }
+            field = provider.OutField;
+            return outputId is null || outputId == field.Id;
+        }
+
+        public static string CreateOutputSourceId(Guid providerId, string outputId)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(outputId);
+            return $"provider://{providerId}/{Uri.EscapeDataString(outputId)}";
+        }
+
+        public static bool TryParseOutputSourceId(string? source, out Guid providerId, out string? outputId)
+        {
+            outputId = null;
+            if (Guid.TryParse(source, out providerId)) return true;
+            const string prefix = "provider://";
+            if (source is null || !source.StartsWith(prefix, StringComparison.Ordinal)) return false;
+            int slash = source.IndexOf('/', prefix.Length);
+            if (slash < 0 || !Guid.TryParse(source.AsSpan(prefix.Length, slash - prefix.Length), out providerId)) return false;
+            string encoded = source[(slash + 1)..];
+            if (encoded.Length == 0 || encoded.Contains('/') || encoded.Contains('?') || encoded.Contains('#')) return false;
+            outputId = Uri.UnescapeDataString(encoded);
+            return !string.IsNullOrWhiteSpace(outputId);
+        }
     }
 
     /// <summary>
@@ -198,6 +243,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public static string FieldTypeToParamType(EffectArgumentFieldType fieldType)
         {
+            if (fieldType.IsPicture()) return nameof(IPicture);
             return (fieldType & (EffectArgumentFieldType)0x3FF) switch
             {
                 EffectArgumentFieldType.Integer => EffectArgsHelper.ArgTypeInt32,
@@ -224,22 +270,29 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// The anchor key of the output in <see cref="IEffectProvider.AnchorsBindingState"/>.
         /// </summary>
         public const string OutputKey = "__Output__";
+        public const string OutputFieldKey = "__OutputField__";
+
+        public static bool IsOutputBindingKey(string key) => key is OutputKey or OutputFieldKey;
+
+        public static string? GetFinalOutputFieldId(this IEffectProvider provider) =>
+            provider.AnchorsBindingState.GetValueOrDefault(OutputFieldKey);
+
+        public static string GetFinalOutputSourceId(this IEffectProvider provider) =>
+            provider.GetFinalOutputFieldId() is { } outputId
+                ? EffectProviderOutputExtensions.CreateOutputSourceId(provider.Id, outputId) : provider.Id.ToString();
 
         /// <summary>
-        /// Returns whether the provider declares <c>__Input__</c> as its only picture input.
-        /// Non-picture descriptors do not participate in the picture graph.
+        /// Returns whether the provider declares a picture primary input.
         /// </summary>
         public static bool HasMainPictureInput(this IEffectProvider provider)
         {
             return provider.TypeOfEffect != projectFrameCut.Shared.EffectType.Transform
                 && provider.InFields.TryGetValue(InputKey, out var main)
-                && main.FieldType.HasFlag(EffectArgumentFieldType.IPicture)
-                && !provider.InFields.Any(field => field.Key != InputKey
-                    && field.Value.FieldType.HasFlag(EffectArgumentFieldType.IPicture));
+                && main.FieldType.IsPicture();
         }
 
         /// <summary>
-        /// Reads the configured source of the single picture input.
+        /// Reads the configured source of the primary input.
         /// </summary>
         public static string GetMainInputSource(this IEffectProvider provider)
         {
@@ -249,13 +302,13 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         }
 
         /// <summary>
-        /// Configures the source of the single picture input.
+        /// Configures the source of the primary input.
         /// </summary>
         public static void SetMainInputSource(this IEffectProvider provider, string sourceId)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(sourceId);
-            if (!provider.HasMainPictureInput())
-                throw new InvalidOperationException($"Provider '{provider.TypeName}' does not declare '__Input__' as its only picture input.");
+            if (!provider.InFields.ContainsKey(InputKey))
+                throw new InvalidOperationException($"Provider '{provider.TypeName}' does not declare '__Input__'.");
             var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);
             state[InputKey] = sourceId;
             provider.AnchorsBindingState = state;
@@ -285,11 +338,17 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// clearing the marker on other providers before setting it here.
         /// </summary>
         public static void SetFinalOutputSource(this IEffectProvider provider, bool isFinalOutput)
+            => provider.SetFinalOutputSource(isFinalOutput, null);
+
+        public static void SetFinalOutputSource(this IEffectProvider provider, bool isFinalOutput, string? outputId)
         {
-            if (isFinalOutput && (provider is ClipArgumentProvider || provider.TypeOfEffect == projectFrameCut.Shared.EffectType.Transform))
+            if (isFinalOutput && (provider is ClipArgumentProvider || provider.TypeOfEffect == projectFrameCut.Shared.EffectType.Transform
+                || !provider.TryGetOutputField(outputId, out var field) || !field.FieldType.IsPicture()))
                 throw new InvalidOperationException("This provider cannot be the final picture output.");
             var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);
             state[OutputKey] = (isFinalOutput ? IEffectProvider.OutputAnchorGUID : IEffectProvider.NoConnectionGUID).ToString();
+            state.Remove(OutputFieldKey);
+            if (isFinalOutput && outputId is not null) state[OutputFieldKey] = outputId;
             provider.AnchorsBindingState = state;
         }
 
@@ -300,7 +359,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         {
             sourceId = string.Empty;
             return fieldId != InputKey
-                && fieldId != OutputKey
+                && !IsOutputBindingKey(fieldId)
                 && provider.AnchorsBindingState is { } state
                 && state.TryGetValue(fieldId, out sourceId)
                 && !string.IsNullOrWhiteSpace(sourceId);
@@ -313,9 +372,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(fieldId);
             ArgumentException.ThrowIfNullOrWhiteSpace(sourceId);
-            if (fieldId == InputKey || fieldId == OutputKey)
-                throw new ArgumentException($"'{fieldId}' is a reserved picture binding key.", nameof(fieldId));
-            if (!provider.Fields.ContainsKey(fieldId))
+            if (fieldId == InputKey || IsOutputBindingKey(fieldId))
+                throw new ArgumentException($"'{fieldId}' is a reserved anchor key.", nameof(fieldId));
+            if (!provider.Fields.ContainsKey(fieldId) && !provider.InFields.ContainsKey(fieldId))
                 throw new ArgumentException($"Provider '{provider.TypeName}' does not own field '{fieldId}'.", nameof(fieldId));
 
             var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);
@@ -340,7 +399,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static IEnumerable<KeyValuePair<string, string>> EnumerateFieldBindings(this IEffectProvider provider)
         {
             return (provider.AnchorsBindingState ?? [])
-                .Where(kv => kv.Key != InputKey && kv.Key != OutputKey);
+                .Where(kv => kv.Key != InputKey && !IsOutputBindingKey(kv.Key));
         }
     }
 

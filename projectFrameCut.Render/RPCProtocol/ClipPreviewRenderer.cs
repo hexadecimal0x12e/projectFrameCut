@@ -10,10 +10,10 @@ namespace projectFrameCut.Render.RPCProtocol;
 
 internal static class ClipPreviewRenderer
 {
-    public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode)
+    public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode, bool beforeLayout = false)
     {
         token.ThrowIfCancellationRequested();
-        if (TransformProcessing.HasActiveTransform(clip, allClips, frameIndex))
+        if (!beforeLayout && TransformProcessing.HasActiveTransform(clip, allClips, frameIndex))
             return TransformProcessing.RenderCanvas(clip, allClips, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, pixelMode);
         if (!ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
         {
@@ -71,7 +71,8 @@ internal static class ClipPreviewRenderer
             token.ThrowIfCancellationRequested();
             return Timeline.MixtureLayers([oneFrame], frameIndex, canvasWidth, canvasHeight, (int)pixelMode,
                 projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight,
-                transparentBackground: true, disposeIntermediateFrames: true, clipLocalOutput: true, cancellationToken: token);
+                transparentBackground: true, disposeIntermediateFrames: true, clipLocalOutput: true, cancellationToken: token,
+                beforeLayoutOutput: beforeLayout);
         }
         catch
         {

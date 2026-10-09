@@ -21,9 +21,14 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 var field = kvp.Value;
                 if (field is null) continue;
-                if (field.FieldType.HasFlag(EffectArgumentFieldType.IPicture)) continue;
                 bool isBound = field.IsDynamic;
                 var componentId = ComponentId(provider, field.Id);
+                if (field.FieldType.IsPicture())
+                {
+                    panel.AddText(Label(provider.TypeName, field), componentId);
+                    MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
+                    continue;
+                }
 
                 // Enum-like string fields are rendered as a picker.
                 if (field.PresetOptions is { Length: > 0 })

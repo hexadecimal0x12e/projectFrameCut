@@ -405,67 +405,8 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public required ISpeedVarianceProvider? Provider { get; init; }
         public required uint EffectiveDurationFrames { get; init; }
 
-        public ulong MapTimelineOffsetToSourceOffset(uint timelineOffset)
-        {
-            if (Duration == 0)
-            {
-                return 0;
-            }
-
-            if (Provider is null)
-            {
-                return Math.Min(timelineOffset, Duration - 1);
-            }
-
-            return MapTimelineOffsetWithProvider(timelineOffset);
-        }
-
-        private ulong MapTimelineOffsetWithProvider(uint timelineOffset)
-        {
-            ulong maxSourceOffset = Duration - 1;
-            ulong left = 0;
-            ulong right = maxSourceOffset;
-            ulong best = 0;
-
-            while (left <= right)
-            {
-                ulong mid = left + ((right - left) / 2);
-                uint mappedTarget = ResolveTargetFrameForSourceOffset((uint)mid);
-
-                if (mappedTarget <= timelineOffset)
-                {
-                    best = mid;
-                    if (mid == maxSourceOffset)
-                    {
-                        break;
-                    }
-
-                    left = mid + 1;
-                    continue;
-                }
-
-                if (mid == 0)
-                {
-                    break;
-                }
-
-                right = mid - 1;
-            }
-
-            return best;
-        }
-
-        private uint ResolveTargetFrameForSourceOffset(uint sourceOffset)
-        {
-            try
-            {
-                return Provider!.GetTargetFrame(sourceOffset);
-            }
-            catch
-            {
-                return sourceOffset;
-            }
-        }
+        public ulong MapTimelineOffsetToSourceOffset(uint timelineOffset) =>
+            ClipTiming.SourceOffset(timelineOffset, Duration, Provider, EffectiveDurationFrames);
     }
 
     internal static class SpeedVarianceMapCache
@@ -516,30 +457,13 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
                 };
             }
 
-            uint effectiveDuration = ResolveEffectiveDuration(provider, duration);
+            uint effectiveDuration = ClipTiming.EffectiveDuration(duration, provider);
             return new SpeedVarianceProfile
             {
                 Duration = duration,
                 Provider = provider,
                 EffectiveDurationFrames = effectiveDuration,
             };
-        }
-
-        private static uint ResolveEffectiveDuration(ISpeedVarianceProvider provider, uint duration)
-        {
-            try
-            {
-                uint effective = provider.GetEffectiveLength(duration);
-                if (effective > 0)
-                {
-                    return effective;
-                }
-            }
-            catch
-            {
-            }
-
-            return duration;
         }
     }
 

@@ -127,7 +127,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region members
-    ConcurrentDictionary<string, double> HandleStartWidth = new();
 
     ClipElementUI? _selected = null;
     internal string SelectedTimingTab { get; set; } = "timing";
@@ -622,7 +621,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             int t = item.origTrack ?? 0;
             if (!Tracks.ContainsKey(t)) AddATrack(t);
             AddAClip(item, false);
-            RegisterClip(item, true);
+            RegisterClip(item, false);
             if (yieldToDispatcher && ++completed % 4 == 0) await Task.Delay(1, cancellationToken);
         }
         NormalizeLoadedClipFrameSemantics();
@@ -1167,7 +1166,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private void NormalizeLoadedClipFrameSemantics()
+    internal void NormalizeLoadedClipFrameSemantics()
     {
         var projectFps = ProjectInfo.TargetFrameRate > 0 ? ProjectInfo.TargetFrameRate : 30u;
         foreach (var clip in Clips.Values)
@@ -1224,8 +1223,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             ? clip.maxFrameCount - clip.relativeStartFrame
             : 1u;
         clip.lengthInFrame = Math.Min(migratedLength, Math.Max(1u, remaining));
-        clip.origLength = FrameToPixel(clip.lengthInFrame);
-        clip.Clip.WidthRequest = clip.origLength * clip.SecondPerFrameRatio;
+        clip.ProjectTiming();
     }
 
     private static uint ConvertLegacyFrameCount(uint legacyFrameCount, double timelinePerLegacyFrame)
@@ -1787,6 +1785,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     public void RegisterClip(ClipElementUI element, bool resolveOverlap)
     {
+        if (resolveOverlap && element.TimingPage != this)
+            element.TimelineStartFrame = EditPixelToFrame(Math.Max(0, element.origX));
+        element.AttachTiming(this);
         var cid = element.Id;
         var clipInteractionTarget = GetClipInteractionTarget(element);
 
@@ -1865,8 +1866,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         // compute X
         if (resolveOverlap)
         {
-            double snapped = SnapPixels(element.origX);
-            element.Clip.TranslationX = ResolveOverlapStartPixels(element.origTrack ?? 0, cid, snapped, element.origLength);
+            double snapped = element.CanSnapWhilePlacing ? SnapPixels(element.origX, cid, FrameToPixel(element.TimelineDuration)) : element.origX;
+            element.Clip.TranslationX = ResolveOverlapStartPixels(element.origTrack ?? 0, cid, snapped,
+                FrameToPixel(element.TimelineDuration), element.SubLayerIndex);
         }
 
         Clips.AddOrUpdate(element.Id, element, (_, _) => element);
@@ -1874,7 +1876,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     public void AddAClip(ClipElementUI c) => AddAClip(c, true);
 
-    private void AddAClip(ClipElementUI c, bool updateLayout)
+    internal void AddAClip(ClipElementUI c, bool updateLayout)
     {
         if (c.origTrack is null)
             throw new ArgumentNullException(nameof(c.origTrack));
@@ -1979,7 +1981,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         track.sourceSecondPerFrame = video.sourceSecondPerFrame;
         track.SubLayerIndex = video.SubLayerIndex;
         track.lengthInFrame = video.lengthInFrame;
-        track.origLength = video.Clip.WidthRequest > 0 ? video.Clip.WidthRequest : video.origLength;
+        if (video.SpeedProvider is { } speed) track.Effects!["__GeneratedAudioSpeed__"] = speed;
+        track.origLength = FrameToPixel(video.lengthInFrame);
+        track.TimelineStartFrame = video.TimelineStartFrame;
         track.ExtraData[SoundTrackMetadata.SourceClipIdKey] = video.Id.ToString("D");
         track.ExtraData[SoundTrackMetadata.GeneratedFromVideoKey] = true;
         track.ExtraData[SoundTrackMetadata.EnabledKey] = true;
@@ -2048,11 +2052,12 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         track.SourcePath = video.SourcePath;
         track.SubLayerIndex = video.SubLayerIndex;
-        track.origX = video.Clip.TranslationX;
-        track.Clip.TranslationX = video.Clip.TranslationX;
-        track.origLength = video.Clip.WidthRequest > 0 ? video.Clip.WidthRequest : video.origLength;
-        track.Clip.WidthRequest = track.origLength;
-        track.lengthInFrame = video.lengthInFrame > 0 ? video.lengthInFrame : PixelToFrame(track.origLength);
+        track.Effects ??= new();
+        foreach (var key in track.Effects.Where(p => p.Value is ISpeedVarianceProvider).Select(p => p.Key).ToArray())
+            track.Effects.Remove(key);
+        if (video.SpeedProvider is { } speed) track.Effects["__GeneratedAudioSpeed__"] = speed;
+        track.lengthInFrame = video.lengthInFrame;
+        track.SetTimelineStart(video.TimelineStartFrame ?? 0);
         track.relativeStartFrame = video.relativeStartFrame;
         track.maxFrameCount = video.maxFrameCount;
         track.sourceSecondPerFrame = video.sourceSecondPerFrame;
@@ -2251,49 +2256,40 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         try
         {
-            // Absolute X of playhead relative to page root
-            var playheadAbs = GetAbsolutePosition(PlayheadLine, null);
-            var contentAbs = GetAbsolutePosition(TrackContentLayout, null);
-            double playheadXInContent = playheadAbs.X - contentAbs.X;
-
-            var border = clip.Clip;
-            double clipStartX = border.TranslationX;
-            double clipWidth = (border.WidthRequest > 0) ? border.WidthRequest : ((border.Width > 0) ? border.Width : border.WidthRequest);
-            double clipEndX = clipStartX + clipWidth;
-
-            if (playheadXInContent <= clipStartX + 1 || playheadXInContent >= clipEndX - 1)
+            var range = GetClipFrameRange(clip);
+            uint frame = ClipTiming.RoundFrame(Math.Max(0, _currentFrame));
+            if (frame <= range.Start || (ulong)frame >= (ulong)range.Start + range.Duration || clip.lengthInFrame < 2)
             {
                 SetStatusText("Playhead not inside selected clip");
                 return;
             }
-
-            double leftWidth = Math.Max(MinClipWidth, playheadXInContent - clipStartX);
-            double rightWidth = Math.Max(MinClipWidth, clipEndX - playheadXInContent);
-
-            border.WidthRequest = leftWidth;
-
-            int trackIdx = clip.origTrack ?? Tracks.Keys.Max();
-            uint framesOffset = (uint)Math.Round(leftWidth * FramePerPixel * tracksZoomOffest);
-
+            uint consumed = Math.Clamp(ClipTiming.SourceOffset(frame - range.Start, clip.lengthInFrame, clip.SpeedProvider), 1u, clip.lengthInFrame - 1);
+            uint remaining = clip.lengthInFrame - consumed;
+            uint sourceStart = clip.relativeStartFrame;
+            clip.lengthInFrame = consumed;
+            clip.ProjectTiming();
             var rightClip = CreateAndAddClip(
-                startX: playheadXInContent,
-                width: rightWidth,
-                trackIndex: trackIdx,
-                id: null,
+                startX: FrameToPixel((uint)clip.TimelineEnd),
+                width: FrameToPixel(remaining),
+                trackIndex: clip.origTrack ?? 0,
                 labelText: $"{clip.DisplayName} (2)",
-                background: border.Background,
-                prototype: border,
-                resolveOverlap: true,
-                // pass source total frames (or Infinity) so resize checks use frames
+                background: clip.Clip.Background,
+                resolveOverlap: false,
                 maxFrames: clip.maxFrameCount,
-                // relative start for right clip = original in-point + frames consumed by left clip
-                relativeStart: (uint)(clip.relativeStartFrame + framesOffset),
+                relativeStart: sourceStart + consumed,
                 sourceElement: clip);
-            clip.lengthInFrame = PixelToFrame(leftWidth);
-            clip.origLength = leftWidth;
+            rightClip.SubLayerIndex = clip.SubLayerIndex;
             TransferSplitTransforms(clip, rightClip);
-
-            UpdateAdjacencyForTrack();
+            Log($"Split clip {clip.Id} into {consumed}+{remaining} source frames, joined at {clip.TimelineEnd} with {rightClip.Id}.");
+            OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
+            {
+                SourceId = clip.Id,
+                SourceName = clip.DisplayName,
+                Reason = ClipUpdateReason.ClipResized,
+                DetailInfo = $"Split at frame {clip.TimelineEnd}"
+            });
+            ApplyClipPreview(clip);
+            UpdateTimelineWidth();
             SetStatusText(Localized._Done);
         }
         catch (Exception ex)
@@ -3456,9 +3452,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void HandlePanCanceled(Border border, ClipElementUI clip)
     {
+        border.TranslationX = clip.layoutX;
         clip.MovingStatus = ClipMovingStatus.Free;
         border.TranslationY = 0;
         CleanupGhostAndShadow();
+        _ = UpdateAdjacencyForTrack();
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
     }
@@ -3490,9 +3488,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         // If no ghost (still within same track), apply snapping and overlap resolution live
         if (!ghostExists)
         {
-            double clipWidth = (border.Width > 0) ? border.Width : border.WidthRequest;
+            double clipWidth = FrameToPixel(GetClipFrameRange(clip).Duration);
             int trackIndex = clip.origTrack ?? origTrack;
-            double snapped = SnapPixels(xToBe);
+            double snapped = clip.CanSnapWhilePlacing ? SnapPixels(xToBe, cid, clipWidth) : FrameToPixel(EditPixelToFrame(Math.Max(0, xToBe)));
             double resolved = ResolveOverlapStartPixels(trackIndex, cid, snapped, clipWidth);
             border.TranslationX = resolved;
         }
@@ -3517,8 +3515,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipElementUI shadow = Clips[_shadowByClipId[cid]];
         // Apply snapping and overlap resolution for shadow placement
         double proposed = xToBe;
-        double snapped = SnapPixels(proposed);
-        double clipWidth = border.Width > 0 ? border.Width : border.WidthRequest;
+        double clipWidth = FrameToPixel(GetClipFrameRange(Clips[cid]).Duration);
+        double snapped = SnapPixels(proposed, cid, clipWidth);
         if (Tracks.ContainsKey(newTrack))
         {
             // resolve overlaps on the target track
@@ -3656,8 +3654,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
 
                 // snap X and resolve overlaps on target track before inserting
-                double clipWidth = (border.Width > 0) ? border.Width : border.WidthRequest;
-                double snappedX = SnapPixels(border.TranslationX);
+                double clipWidth = FrameToPixel(GetClipFrameRange(clip).Duration);
+                double snappedX = clip.CanSnapWhilePlacing ? SnapPixels(border.TranslationX, cid, clipWidth) : border.TranslationX;
                 double resolvedX = ResolveOverlapStartPixels(newTrack, cid, snappedX, clipWidth);
                 border.TranslationX = resolvedX;
 
@@ -3691,6 +3689,8 @@ public partial class DraftPage : ContentPage, IDraftPage
 
 
         LogDiagnostic($"{cid} moved to {border.TranslationX},{border.TranslationY} in track:{clip.origTrack} ");
+        clip.ProjectTiming();
+        Log($"Committed clip {cid} position: track={clip.origTrack}, start={clip.TimelineStartFrame}, end={clip.TimelineEnd}.");
         string movedClipName = GetClipNameForChangeReason(clip, cid.ToString());
         OnClipChanged?.Invoke(cid, new ClipUpdateEventArgs
         {
@@ -3914,9 +3914,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 _timelineClipboard.Add(new TimelineClipboardItem
                 {
                     Dto = clonedDto,
-                    TrackIndex = clip.origTrack ?? (int)clonedDto.LayerIndex,
-                    StartPx = clip.Clip.TranslationX,
-                    WidthPx = clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength
+                    TrackIndex = clip.origTrack ?? (int)clonedDto.LayerIndex
                 });
             }
             catch (Exception ex)
@@ -3972,11 +3970,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         var orderedItems = _timelineClipboard
             .OrderBy(i => i.TrackIndex)
-            .ThenBy(i => i.StartPx)
+            .ThenBy(i => i.Dto.StartFrame)
             .ToList();
 
         int minTrack = orderedItems.Min(i => i.TrackIndex);
-        double minStartPx = orderedItems.Min(i => i.StartPx);
+        uint minStartFrame = orderedItems.Min(i => i.Dto.StartFrame);
         string placementName = orderedItems.Count == 1
             ? (string.IsNullOrWhiteSpace(orderedItems[0].Dto.Name) ? "Clip" : orderedItems[0].Dto.Name)
             : $"{orderedItems.Count} Clips";
@@ -3984,7 +3982,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         BeginClipPlacement(
             (clickedTrack, clickedStartX) =>
             {
-                return PlaceClipboardAt(clickedTrack, clickedStartX, orderedItems, minTrack, minStartPx);
+                return PlaceClipboardAt(clickedTrack, clickedStartX, orderedItems, minTrack, minStartFrame);
             },
             null,
             placementName);
@@ -4008,7 +4006,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         _timelineClipboardFromCut = bool.Parse(origFromCut);
     }
 
-    private ClipElementUI PlaceClipboardAt(int clickedTrack, double clickedStartX, List<TimelineClipboardItem> orderedItems, int minTrack, double minStartPx)
+    private ClipElementUI PlaceClipboardAt(int clickedTrack, double clickedStartX, List<TimelineClipboardItem> orderedItems, int minTrack, uint minStartFrame)
     {
         int trackDelta = clickedTrack - minTrack;
         int minTargetTrack = orderedItems.Min(i => i.TrackIndex + trackDelta);
@@ -4027,12 +4025,11 @@ public partial class DraftPage : ContentPage, IDraftPage
             int targetTrack = item.TrackIndex + trackDelta;
             EnsureTrackForPaste(targetTrack);
 
-            double relativeOffsetPx = item.StartPx - minStartPx;
-            double desiredStartPx = Math.Max(0, targetStartPx + relativeOffsetPx);
-            double widthPx = Math.Max(MinClipWidth, item.WidthPx);
-
             var dto = item.Dto;
-            var pasted = CreateAndAddClip(
+            uint desiredStart = checked(EditPixelToFrame(targetStartPx) + (dto.StartFrame - minStartFrame));
+            double desiredStartPx = FrameToPixel(desiredStart);
+            double widthPx = FrameToPixel(dto.Duration);
+            var pasted = ClipElementUI.CreateClip(
                 startX: desiredStartPx,
                 width: widthPx,
                 trackIndex: targetTrack,
@@ -4040,10 +4037,11 @@ public partial class DraftPage : ContentPage, IDraftPage
                 labelText: string.IsNullOrWhiteSpace(dto.Name) ? "Clip" : dto.Name,
                 background: ClipElementUI.DetermineAssetColor(dto.ClipType),
                 prototype: null,
-                resolveOverlap: true,
                 relativeStart: dto.RelativeStartFrame,
                 maxFrames: (uint)Math.Max(dto.SourceDuration ?? dto.Duration, dto.Duration));
 
+            pasted.TimelineStartFrame = desiredStart;
+            pasted.lengthInFrame = Math.Max(1u, dto.Duration);
             pasted.DisplayName = string.IsNullOrWhiteSpace(dto.Name) ? pasted.DisplayName : dto.Name;
             pasted.SourcePath = dto.FilePath;
             pasted.ClipType = dto.ClipType;
@@ -4073,9 +4071,19 @@ public partial class DraftPage : ContentPage, IDraftPage
 
             pasted.ApplySpeedRatio();
             pasted.ApplyClipColor();
+            pastedClips.Add(pasted);
+        }
+        double offset = ResolveGroupMove(pastedClips.Select(c => (c, c.origTrack!.Value, c.TimelineStartFrame!.Value)).ToArray());
+        foreach (var pasted in pastedClips)
+        {
+            pasted.SetTimelineStart(EditPixelToFrame(FrameToPixel(pasted.TimelineStartFrame!.Value) + offset));
+            RegisterClip(pasted, false);
+            AddAClip(pasted, false);
+        }
+        foreach (var pasted in pastedClips)
+        {
             if (pasted.ClipType == ClipMode.VideoClip) EnsureGeneratedSoundTrack(pasted);
             AddClipToSelection(pasted);
-            pastedClips.Add(pasted);
             string pastedName = GetClipNameForChangeReason(pasted, pasted.Id.ToString());
 
             OnClipChanged?.Invoke(this, new ClipUpdateEventArgs
@@ -4086,7 +4094,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
                     ClipUpdateReason.ClipPasted,
                     pastedName,
-                    $"Pasted to track {targetTrack}, x={Math.Round(desiredStartPx, 2)}")
+                    $"Pasted to track {pasted.origTrack}, frame={pasted.TimelineStartFrame}")
             });
         }
 
@@ -4178,8 +4186,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             (clickedTrack, clickedStartX) =>
             {
                 int trackDelta = clickedTrack - anchorTrack;
-                double snappedAnchorX = Math.Max(0, SnapPixels(clickedStartX));
-                double moveDeltaX = snappedAnchorX - anchorStartX;
+                double snappedAnchorX = SnapPixels(clickedStartX, excluded: orderedClips.Select(c => c.Id).ToHashSet());
+                double moveDeltaX = Math.Max(snappedAnchorX - anchorStartX, -orderedClips.Min(c => c.Clip.TranslationX));
 
                 foreach (var clip in orderedClips)
                 {
@@ -4194,8 +4202,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     {
                         Clip = clip,
                         TargetTrack = (clip.origTrack ?? 0) + trackDelta,
-                        DesiredX = Math.Max(0, SnapPixels(clip.Clip.TranslationX + moveDeltaX)),
-                        Width = Math.Max(MinClipWidth, clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength)
+                        DesiredX = FrameToPixel(EditPixelToFrame(Math.Max(0, clip.Clip.TranslationX + moveDeltaX)))
                     })
                     .ToList();
 
@@ -4204,24 +4211,18 @@ public partial class DraftPage : ContentPage, IDraftPage
                     EnsurePlacementTrackExists(targetTrack);
                 }
 
+                double groupOffset = ResolveGroupMove(movePlans.Select(p => (p.Clip, p.TargetTrack, EditPixelToFrame(p.DesiredX))).ToArray());
                 foreach (var trackGroup in movePlans.GroupBy(plan => plan.TargetTrack))
                 {
-                    double groupStartX = trackGroup.Min(plan => plan.DesiredX);
-                    double groupEndX = trackGroup.Max(plan => plan.DesiredX + plan.Width);
-                    double groupWidth = Math.Max(MinClipWidth, groupEndX - groupStartX);
-                    double resolvedGroupStartX = ResolveOverlapStartPixels(trackGroup.Key, null, groupStartX, groupWidth);
-                    double groupOffset = resolvedGroupStartX - groupStartX;
-
                     foreach (var plan in trackGroup.OrderBy(plan => plan.DesiredX))
                     {
                         var clip = plan.Clip;
-                        double finalX = Math.Max(0, SnapPixels(plan.DesiredX + groupOffset));
+                        double finalX = FrameToPixel(EditPixelToFrame(Math.Max(0, plan.DesiredX + groupOffset)));
 
                         clip.Clip.TranslationX = finalX;
                         clip.Clip.TranslationY = 0;
                         clip.origX = finalX;
                         clip.origTrack = trackGroup.Key;
-                        clip.SubLayerIndex = trackGroup.Key;
                         clip.layoutX = finalX;
                         clip.layoutY = 0;
                         clip.defaultY = 0;
@@ -4538,6 +4539,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void ApplyKeyboardMovePreview()
     {
+        double minX = _keyboardMoveClips.Min(c => _keyboardMoveOriginalPlacement[c.Id.ToString()].X);
+        double delta = SnapPixels(Math.Max(0, minX + _keyboardMovePixelDelta),
+            excluded: _keyboardMoveClips.Select(c => c.Id).ToHashSet()) - minX;
         var movePlans = _keyboardMoveClips
             .Select(clip =>
             {
@@ -4546,8 +4550,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     Clip = clip,
                     TargetTrack = basePlacement.Track + _keyboardMoveTrackDelta,
-                    DesiredX = Math.Max(0, SnapPixels(basePlacement.X + _keyboardMovePixelDelta)),
-                    Width = Math.Max(MinClipWidth, clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength)
+                    DesiredX = FrameToPixel(EditPixelToFrame(Math.Max(0, basePlacement.X + delta)))
                 };
             })
             .ToList();
@@ -4565,17 +4568,13 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
         }
 
+        double groupOffset = ResolveGroupMove(movePlans.Select(p => (p.Clip, p.TargetTrack, EditPixelToFrame(p.DesiredX))).ToArray());
         foreach (var trackGroup in movePlans.GroupBy(plan => plan.TargetTrack))
         {
-            double groupStartX = trackGroup.Min(plan => plan.DesiredX);
-            double groupEndX = trackGroup.Max(plan => plan.DesiredX + plan.Width);
-            double groupWidth = Math.Max(MinClipWidth, groupEndX - groupStartX);
-            double resolvedGroupStartX = ResolveOverlapStartPixels(trackGroup.Key, null, groupStartX, groupWidth);
-            double groupOffset = resolvedGroupStartX - groupStartX;
-
             foreach (var plan in trackGroup.OrderBy(plan => plan.DesiredX))
             {
-                double finalX = Math.Max(0, SnapPixels(plan.DesiredX + groupOffset));
+                double finalX = FrameToPixel(EditPixelToFrame(Math.Max(0, plan.DesiredX + groupOffset)));
+                plan.Clip.origTrack = trackGroup.Key;
                 plan.Clip.Clip.TranslationX = finalX;
                 plan.Clip.Clip.TranslationY = 0;
                 Tracks[trackGroup.Key].Children.Add(plan.Clip.Clip);
@@ -4610,6 +4609,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 track.Children.Remove(clip.Clip);
             }
 
+            clip.origTrack = basePlacement.Track;
             clip.Clip.TranslationX = basePlacement.X;
             clip.Clip.TranslationY = 0;
             Tracks[basePlacement.Track].Children.Add(clip.Clip);
@@ -4649,7 +4649,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                 }
 
                 clip.origTrack = track.Key;
-                clip.SubLayerIndex = track.Key;
                 clip.origX = clip.Clip.TranslationX;
                 clip.layoutX = clip.Clip.TranslationX;
                 clip.layoutY = 0;
@@ -4688,149 +4687,44 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region resize clip
-    private void FinalizeLeftHandleResize(Border border, ClipElementUI clip, bool triggeredByCancel)
+    private void LeftHandlePanded(object? sender, PanUpdatedEventArgs e) => HandleResizePan(sender, e, left: true);
+
+    private void RightHandlePaned(object? sender, PanUpdatedEventArgs e) => HandleResizePan(sender, e, left: false);
+
+    private void HandleResizePan(object? sender, PanUpdatedEventArgs e, bool left)
     {
-        HandleStartWidth.TryRemove(clip.Id.ToString(), out _);
-        clip.lengthInFrame = PixelToFrame((clip.Clip.WidthRequest > 0) ? clip.Clip.WidthRequest : clip.Clip.Width);
-        clip.origLength = (clip.Clip.WidthRequest > 0) ? clip.Clip.WidthRequest : clip.Clip.Width;
-
-        double deltaPx = clip.Clip.TranslationX - clip.layoutX;
-        long deltaFrames = (long)Math.Round(deltaPx * FramePerPixel * clip.SecondPerFrameRatio * tracksZoomOffest);
-        long newRel = (long)clip.relativeStartFrame + deltaFrames;
-        if (newRel < 0) newRel = 0;
-        uint maxRelAllowed = (clip.maxFrameCount >= clip.lengthInFrame) ? (clip.maxFrameCount - clip.lengthInFrame) : 0u;
-        if ((ulong)newRel > maxRelAllowed) newRel = maxRelAllowed;
-        clip.relativeStartFrame = (uint)newRel;
-
-        clip.Clip.BatchCommit();
-        string leftResizeClipName = GetClipNameForChangeReason(clip, clip.Id.ToString());
-        OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
-        {
-            SourceId = clip.Id,
-            SourceName = leftResizeClipName,
-            Reason = ClipUpdateReason.ClipResized,
-            DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
-                ClipUpdateReason.ClipResized,
-                leftResizeClipName,
-                triggeredByCancel
-                    ? $"Left handle resize canceled, keep lengthFrames={clip.lengthInFrame}, relativeStartFrame={clip.relativeStartFrame}"
-                    : $"Left handle resize, lengthFrames={clip.lengthInFrame}, relativeStartFrame={clip.relativeStartFrame}")
-        });
-
-        clip.MovingStatus = ClipMovingStatus.Free;
-        LogDiagnostic($"clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}");
-    }
-
-    private void FinalizeRightHandleResize(Border border, ClipElementUI clip, bool triggeredByCancel)
-    {
-        HandleStartWidth.TryRemove(clip.Id.ToString(), out _);
-        clip.Clip.BatchCommit();
-        clip.lengthInFrame = PixelToFrame((clip.Clip.WidthRequest > 0) ? clip.Clip.WidthRequest : clip.Clip.Width);
-        clip.origLength = (clip.Clip.WidthRequest > 0) ? clip.Clip.WidthRequest : clip.Clip.Width;
-
-        string rightResizeClipName = GetClipNameForChangeReason(clip, clip.Id.ToString());
-        OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
-        {
-            SourceId = clip.Id,
-            SourceName = rightResizeClipName,
-            Reason = ClipUpdateReason.ClipResized,
-            DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
-                ClipUpdateReason.ClipResized,
-                rightResizeClipName,
-                triggeredByCancel
-                    ? $"Right handle resize canceled, keep lengthFrames={clip.lengthInFrame}, relativeStartFrame={clip.relativeStartFrame}"
-                    : $"Right handle resize, lengthFrames={clip.lengthInFrame}, relativeStartFrame={clip.relativeStartFrame}")
-        });
-
-        clip.MovingStatus = ClipMovingStatus.Free;
-        LogDiagnostic($"clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}");
-    }
-
-    private void LeftHandlePanded(object? sender, PanUpdatedEventArgs e)
-    {
-        if (sender is not Border border) return;
-        if (border.BindingContext is not ClipElementUI clip) return;
-
-        clip.MovingStatus = ClipMovingStatus.Resize;
-
+        if (sender is not Border { BindingContext: ClipElementUI clip }) return;
         switch (e.StatusType)
         {
             case GestureStatus.Started:
-                clip.handleLayoutX = border.TranslationX;
-                clip.layoutX = clip.Clip.TranslationX;
-                clip.Clip.BatchBegin();
-                HandleStartWidth.AddOrUpdate(clip.Id.ToString(), clip.Clip.WidthRequest, (_, __) => clip.Clip.WidthRequest);
+                BeginHandleResize(clip);
                 break;
-
             case GestureStatus.Running:
-                double startWidth = HandleStartWidth.TryGetValue(clip.Id.ToString(), out var sw) ? sw : clip.Clip.WidthRequest;
-                double newWidth = Math.Max(MinClipWidth, startWidth - e.TotalX);
-                if (clip.isInfiniteLength || clip.maxFrameCount == 0) goto go_resize;
-                //Log($"Clip's new width {newWidth}, max width {FrameToPixel(clip.maxFrameCount)}");
-                double lengthAvailable = FrameToPixel(clip.relativeStartFrame) * clip.SecondPerFrameRatio * tracksZoomOffest;
-                bool reachStartOfSrc = !clip.isInfiniteLength && startWidth + lengthAvailable - newWidth > -0.5d;
-                bool isLongerThanSrc = newWidth <= FrameToPixel(clip.maxFrameCount) * clip.SecondPerFrameRatio * tracksZoomOffest;
-                if (!reachStartOfSrc || !isLongerThanSrc)
-                {
-                    clip.Clip.TranslationX = (clip.layoutX + lengthAvailable) * clip.SecondPerFrameRatio * tracksZoomOffest;
-                    SetStatusText(Localized.DraftPage_ReachLimit($"{clip.maxFrameCount * SecondsPerFrame}s"));
-                    break;
-                }
-
-            go_resize:
-                clip.Clip.TranslationX = clip.layoutX + e.TotalX;
-                clip.Clip.WidthRequest = newWidth;
-                SetStatusText(Localized.DraftPage_WaitForUser);
+                PreviewHandleResize(clip, e.TotalX, left);
                 break;
-
             case GestureStatus.Completed:
-                FinalizeLeftHandleResize(border, clip, triggeredByCancel: false);
-                break;
-
             case GestureStatus.Canceled:
-                FinalizeLeftHandleResize(border, clip, triggeredByCancel: true);
-                break;
-        }
-    }
-
-    private void RightHandlePaned(object? sender, PanUpdatedEventArgs e)
-    {
-        if (sender is not Border border) return;
-        if (border.BindingContext is not ClipElementUI clip) return;
-
-        clip.MovingStatus = ClipMovingStatus.Resize;
-
-        switch (e.StatusType)
-        {
-            case GestureStatus.Started:
-                clip.handleLayoutX = border.TranslationX;
-                clip.layoutX = clip.Clip.TranslationX;
-                clip.Clip.BatchBegin();
-                HandleStartWidth.AddOrUpdate(clip.Id.ToString(), clip.Clip.WidthRequest, (_, __) => clip.Clip.WidthRequest);
-                break;
-
-            case GestureStatus.Running:
-                double startWidth = HandleStartWidth.TryGetValue(clip.Id.ToString(), out var sw) ? sw : clip.Clip.WidthRequest;
-                double newWidth = Math.Max(MinClipWidth, startWidth + e.TotalX);
-                bool isLongerThanSrc = newWidth + FrameToPixel(clip.relativeStartFrame) * clip.SecondPerFrameRatio * tracksZoomOffest >= FrameToPixel(clip.maxFrameCount) * clip.SecondPerFrameRatio * tracksZoomOffest;
-                if (clip.isInfiniteLength || clip.maxFrameCount == 0 || !isLongerThanSrc)
+                if (!_resizeTiming.Remove(clip.Id, out var before)) return;
+                if (e.StatusType == GestureStatus.Canceled) RestoreResizeTiming(clip, before);
+                clip.ProjectTiming();
+                clip.Clip.BatchCommit();
+                clip.MovingStatus = ClipMovingStatus.Free;
+                if (e.StatusType == GestureStatus.Completed && before != (clip.TimelineStartFrame!.Value, clip.lengthInFrame, clip.relativeStartFrame))
                 {
-                    clip.Clip.WidthRequest = newWidth;
-                    SetStatusText(Localized.DraftPage_WaitForUser);
+                    Log($"Resized clip {clip.Id}: {before} -> {(clip.TimelineStartFrame, clip.lengthInFrame, clip.relativeStartFrame)}, end={clip.TimelineEnd}.");
+                    OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
+                    {
+                        SourceId = clip.Id,
+                        SourceName = clip.DisplayName,
+                        Reason = ClipUpdateReason.ClipResized,
+                        DetailInfo = ClipUpdateEventArgs.BuildChangeReason(ClipUpdateReason.ClipResized, clip.DisplayName,
+                            $"start={clip.TimelineStartFrame}, length={clip.lengthInFrame}, sourceStart={clip.relativeStartFrame}")
+                    });
                 }
-                else
-                {
-                    clip.Clip.WidthRequest = (FrameToPixel(clip.maxFrameCount) - FrameToPixel(clip.relativeStartFrame)) * clip.SecondPerFrameRatio * tracksZoomOffest;
-                    SetStatusText(Localized.DraftPage_ReachLimit($"{clip.maxFrameCount * SecondsPerFrame}s"));
-                }
-                break;
-
-            case GestureStatus.Completed:
-                FinalizeRightHandleResize(border, clip, triggeredByCancel: false);
-                break;
-
-            case GestureStatus.Canceled:
-                FinalizeRightHandleResize(border, clip, triggeredByCancel: true);
+                ApplyClipPreview(clip);
+                _ = UpdateAdjacencyForTrack();
+                UpdateTimelineWidth();
+                SetStateOK();
                 break;
         }
     }
@@ -4878,8 +4772,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     private double CalculateExtendToWholeDraftWidth(ClipElementUI clip)
     {
         if (clip?.Clip == null) return clip?.origLength ?? 0;
-        double desiredWidth = Math.Max(MinClipWidth, TrackContentLayout.Width + 50);
-        return desiredWidth;
+        return FrameToPixel(GetTimelineDuration());
     }
 
     public async void OnClipPropertiesChanged(object? sender, PropertyPanelPropertyChangedEventArgs e)
@@ -4987,7 +4880,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 // 关闭ExtendToWholeDraft时，恢复原始宽度
                 clip.ExtraData["ExtendToWholeDraft"] = false;
                 // 还原到原始长度
-                clip.Clip.WidthRequest = clip.origLength * clip.SecondPerFrameRatio;
+                clip.ProjectTiming();
             }
             else
             {
@@ -6207,14 +6100,6 @@ public partial class DraftPage : ContentPage, IDraftPage
                             Log(ex, "ApplySpeedRatio in ReRenderUI", this);
                         }
 
-                        // Update cached length in frames to match actual visual width
-                        try
-                        {
-                            var w = border.WidthRequest > 0 ? border.WidthRequest : border.Width;
-                            clip.lengthInFrame = PixelToFrame(w);
-                        }
-                        catch { /* non-critical */ }
-
                         try
                         {
                             ApplyClipPreview(clip);
@@ -6267,9 +6152,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 try
                 {
-                    double extendedWidth = CalculateExtendToWholeDraftWidth(clip);
-                    clip.Clip.TranslationX = 0;
-                    clip.Clip.WidthRequest = extendedWidth;
+                    clip.ProjectTiming();
                 }
                 catch (Exception ex)
                 {
@@ -6291,7 +6174,11 @@ public partial class DraftPage : ContentPage, IDraftPage
             cancellationToken.ThrowIfCancellationRequested();
             await UpdateAdjacencyForTrack(item, cancellationToken, refreshShadows: false);
         }
-        await Dispatcher.DispatchAsync(RefreshTransformShadows);
+        await Dispatcher.DispatchAsync(() =>
+        {
+            RefreshTransformShadows();
+            TimelineTimingChanged?.Invoke();
+        });
     }
 
     private async Task UpdateAdjacencyForTrack(int trackIndex, CancellationToken cancellationToken = default, bool refreshShadows = true)
@@ -6308,6 +6195,9 @@ public partial class DraftPage : ContentPage, IDraftPage
             .OrderBy(c => c.Id)
             .ToList();
 
+        var ranges = byorder.Select(GetClipFrameRange).ToArray();
+        var subLayers = byorder.Select(c => c.SubLayerIndex).ToArray();
+        long version = _timelineTimingVersions.AddOrUpdate(trackIndex, 1, (_, current) => current + 1);
         const double defaultRadius = 20.0;
         var localRadius = new RoundRectangleRadiusType[byorder.Count];
         var starts = new Dictionary<(int, ulong), List<int>>();
@@ -6317,13 +6207,12 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             cancellationToken.ThrowIfCancellationRequested();
             localRadius[i] = new RoundRectangleRadiusType { tl = defaultRadius, tr = defaultRadius, br = defaultRadius, bl = defaultRadius };
-            var c = byorder[i];
-            ulong start = PixelToFrame(Math.Max(0, c.Clip.TranslationX));
-            ulong end = start + PixelToFrame(Math.Max(0, c.Clip.WidthRequest > 0 ? c.Clip.WidthRequest : c.origLength));
-            if (!starts.TryGetValue((c.SubLayerIndex, start), out var atStart))
-                starts[(c.SubLayerIndex, start)] = atStart = [];
-            if (!ends.TryGetValue((c.SubLayerIndex, end), out var atEnd))
-                ends[(c.SubLayerIndex, end)] = atEnd = [];
+            ulong start = ranges[i].Start;
+            ulong end = start + ranges[i].Duration;
+            if (!starts.TryGetValue((subLayers[i], start), out var atStart))
+                starts[(subLayers[i], start)] = atStart = [];
+            if (!ends.TryGetValue((subLayers[i], end), out var atEnd))
+                ends[(subLayers[i], end)] = atEnd = [];
             atStart.Add(i);
             atEnd.Add(i);
             if (cancellationToken.CanBeCanceled && i % 16 == 15) await Task.Delay(1, cancellationToken);
@@ -6338,36 +6227,37 @@ public partial class DraftPage : ContentPage, IDraftPage
         for (int i = 0; i < byorder.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var self = byorder[i];
-            ulong start = PixelToFrame(Math.Max(0, self.Clip.TranslationX));
-            ulong end = start + PixelToFrame(Math.Max(0, self.Clip.WidthRequest > 0 ? self.Clip.WidthRequest : self.origLength));
-            int li = Neighbor(ends, (self.SubLayerIndex, start), i);
-            int ri = Neighbor(starts, (self.SubLayerIndex, end), i);
+            ulong start = ranges[i].Start;
+            ulong end = start + ranges[i].Duration;
+            int li = Neighbor(ends, (subLayers[i], start), i);
+            int ri = Neighbor(starts, (subLayers[i], end), i);
             if (li >= 0)
             {
                 localRadius[i].tl = 0;
-                localRadius[i].br = 0;
+                localRadius[i].bl = 0;
                 localRadius[li].tr = 0;
-                localRadius[li].bl = 0;
+                localRadius[li].br = 0;
             }
             if (ri >= 0)
             {
                 localRadius[i].tr = 0;
-                localRadius[i].bl = 0;
+                localRadius[i].br = 0;
                 localRadius[ri].tl = 0;
-                localRadius[ri].br = 0;
+                localRadius[ri].bl = 0;
             }
             if (cancellationToken.CanBeCanceled && i % 16 == 15) await Task.Delay(1, cancellationToken);
         }
 
         await Dispatcher.DispatchAsync(() =>
         {
+            if (!_timelineTimingVersions.TryGetValue(trackIndex, out var current) || version != current) return;
             for (int i = 0; i < byorder.Count; i++)
             {
+                if (byorder[i].IsExtraDataOptionIsTrue("ExtendToWholeDraft")) continue;
                 var r = localRadius[i];
                 try
                 {
-                    var radius = new Microsoft.Maui.CornerRadius(r.tl, r.tr, r.br, r.bl);
+                    var radius = new Microsoft.Maui.CornerRadius(r.tl, r.tr, r.bl, r.br);
                     if (byorder[i].Clip.StrokeShape is RoundRectangle shape)
                     {
                         if (!shape.CornerRadius.Equals(radius)) shape.CornerRadius = radius;
@@ -6380,7 +6270,11 @@ public partial class DraftPage : ContentPage, IDraftPage
                     SetStateFail("Failed to update clip border.");
                 }
             }
-            if (refreshShadows) RefreshTransformShadows();
+            if (refreshShadows)
+            {
+                RefreshTransformShadows();
+                TimelineTimingChanged?.Invoke();
+            }
             InvalidateClipPreviewViewport();
         });
 
@@ -7515,26 +7409,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private double ComputeClipProgressForFrame(ClipElementUI clip, uint frame)
     {
-        double clipStartPx = clip.Clip?.TranslationX ?? clip.layoutX;
-        if (double.IsNaN(clipStartPx) || double.IsInfinity(clipStartPx))
-        {
-            clipStartPx = clip.layoutX;
-        }
-
-        clipStartPx = Math.Max(0d, clipStartPx);
-        uint startFrame = PixelToFrame(clipStartPx);
-
-        uint duration = clip.lengthInFrame;
-        if (duration == 0)
-        {
-            double widthPx = clip.origLength;
-            if (clip.Clip is not null)
-            {
-                widthPx = clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.Clip.Width;
-            }
-
-            duration = Math.Max(1u, PixelToFrame(Math.Max(0d, widthPx)));
-        }
+        var range = GetClipFrameRange(clip);
+        uint startFrame = range.Start;
+        uint duration = range.Duration;
 
         if (duration == 0)
         {
@@ -7594,46 +7471,38 @@ public partial class DraftPage : ContentPage, IDraftPage
         return new Point(x, y);
     }
 
-    private double SnapPixels(double x)
+    private double SnapPixels(double x, Guid? selfId = null, double width = 0, ISet<Guid>? excluded = null)
     {
-        if (!SnapEnabled) return Math.Max(0, x);
-        double best = x;
-        double bestDist = SnapThresholdPixels + 1;
-
-        // 1) grid
-        var grid = Math.Round(x / SnapGridPixels) * SnapGridPixels;
-        var d = Math.Abs(grid - x);
-        if (d < bestDist && d <= SnapThresholdPixels)
+        x = Math.Max(0, x);
+        if (!SnapEnabled) return FrameToPixel(EditPixelToFrame(x));
+        double best = Math.Round(x / SnapGridPixels) * SnapGridPixels;
+        double bestDist = Math.Abs(best - x);
+        bool edgeSnap = false;
+        if (bestDist > SnapThresholdPixels)
         {
-            best = grid; bestDist = d;
+            best = x;
+            bestDist = SnapThresholdPixels;
         }
-
-        // 2) edges of other clips
-        foreach (var kv in Clips)
+        foreach (var c in Clips.Values)
         {
-            var clip = kv.Value;
-            if (clip.IsGhost || clip.IsShadow) continue;
-            var b = clip.Clip;
-            if (b == null) continue;
-            double bx = b.TranslationX;
-            double bw = (!double.IsNaN(b.Width) && b.Width > 0) ? b.Width : b.WidthRequest;
-            // prefer integer pixel edges
-            bx = Math.Round(bx);
-            bw = Math.Round(bw);
-            var startEdge = bx;
-            var endEdge = bx + bw;
-            var ds = Math.Abs(startEdge - x);
-            if (ds < bestDist && ds <= SnapThresholdPixels) { best = startEdge; bestDist = ds; }
-            var de = Math.Abs(endEdge - x);
-            if (de < bestDist && de <= SnapThresholdPixels) { best = endEdge; bestDist = de; }
+            if (!ShouldParticipateInTimelineLayout(c) || c.Id == selfId || excluded?.Contains(c.Id) == true) continue;
+            var range = GetClipFrameRange(c);
+            foreach (double edge in new[] { FrameToPixel(range.Start), ((double)range.Start + range.Duration) / (FramePerPixel * tracksZoomOffest) })
+            {
+                foreach (double candidate in new[] { edge, edge - width })
+                {
+                    double distance = Math.Abs(candidate - x);
+                    if (candidate >= 0 && (distance < bestDist || distance == bestDist && (!edgeSnap || candidate > best)))
+                    {
+                        best = candidate;
+                        bestDist = distance;
+                        edgeSnap = true;
+                    }
+                }
+            }
         }
-
-        // clamp and round to integer pixel to avoid sub-pixel gaps
-        return Math.Max(0, Math.Round(best));
+        return FrameToPixel(EditPixelToFrame(Math.Max(0, best)));
     }
-
-    private readonly double LeftOverlapDelta = 4.2d;
-    private readonly double RightOverlapDelta = 3.2d;
 
     private bool ShouldParticipateInTimelineLayout(ClipElementUI? clip)
     {
@@ -7643,71 +7512,16 @@ public partial class DraftPage : ContentPage, IDraftPage
         return true;
     }
 
-    private double ResolveOverlapStartPixels(int trackIndex, Guid? selfId, double startX, double width)
+    private double ResolveOverlapStartPixels(int trackIndex, Guid? selfId, double startX, double width, int? subLayerIndex = null)
     {
-        // Try to find a non-overlapping X on the given track by shifting left/right
-        if (!Tracks.TryGetValue(trackIndex, out var trackLayout))
-            return startX;
-
-        // use rounded start to avoid fractional pixel gaps
-        double s = startX;
-        const double eps = 1e-3;
-        for (int i = 0; i < 16; i++)
-        {
-            double end = s + width;
-            var overlappers = trackLayout.Children
-                .OfType<Border>()
-                .Where(b =>
-                {
-                    // find clip id for this border
-                    var pair = Clips.FirstOrDefault(kv => kv.Value.Clip == b);
-                    if (pair.Key == selfId) return false;
-                    if (!ShouldParticipateInTimelineLayout(pair.Value)) return false;
-                    double bx = Math.Round(b.TranslationX);
-                    double bw = (!double.IsNaN(b.Width) && b.Width > 0) ? Math.Round(b.Width) : Math.Round(b.WidthRequest);
-                    // overlap check using integer pixels
-                    return Math.Max(s, bx) < Math.Min(end, bx + bw);
-                })
-                .ToList();
-            if (overlappers.Count == 0) break;
-
-            // compute integer-edge candidates
-            double rightCandidate = overlappers.Max(b => Math.Round(b.TranslationX) + (((!double.IsNaN(b.Width) && b.Width > 0) ? Math.Round(b.Width) : Math.Round(b.WidthRequest))));
-            double leftCandidate = overlappers.Min(b => Math.Round(b.TranslationX)) - Math.Round(width);
-            if (leftCandidate < 0) leftCandidate = 0;
-
-            // prefer tight adjacency to the right (no gap) to eliminate visible gaps
-            // however if shifting left yields strictly smaller movement and does not overlap, pick it
-            double moveRight = Math.Abs(rightCandidate - s);
-            double moveLeft = Math.Abs(s - leftCandidate);
-
-            // check if leftCandidate would overlap (using integer math)
-            bool leftOverlaps = trackLayout.Children
-                .OfType<Border>()
-                .Any(b =>
-                {
-                    var pair = Clips.FirstOrDefault(kv => kv.Value.Clip == b);
-                    if (pair.Key == null) return false;
-                    if (pair.Key == selfId) return false;
-                    if (!ShouldParticipateInTimelineLayout(pair.Value)) return false;
-                    double bx = Math.Round(b.TranslationX);
-                    double bw = (!double.IsNaN(b.Width) && b.Width > 0) ? Math.Round(b.Width) : Math.Round(b.WidthRequest);
-                    return Math.Max(leftCandidate, bx) < Math.Min(leftCandidate + Math.Round(width), bx + bw);
-                });
-
-            if (!leftOverlaps && moveLeft < moveRight)
-            {
-                s = leftCandidate + LeftOverlapDelta;
-            }
-            else
-            {
-                // default to tight adjacency on right to avoid gaps
-                s = rightCandidate - RightOverlapDelta;
-            }
-        }
-
-        // final rounding
-        return Math.Max(0, s);
+        uint duration = Math.Max(1u, EditPixelToFrame(Math.Max(0, width)));
+        int subLayer = subLayerIndex ?? (selfId is Guid id && Clips.TryGetValue(id, out var self) ? self.SubLayerIndex : 0);
+        var forbidden = Clips.Values.Where(c => c.Id != selfId && c.origTrack == trackIndex && c.SubLayerIndex == subLayer
+                && ShouldParticipateInTimelineLayout(c))
+            .Select(GetClipFrameRange).Where(r => r.Duration > 0)
+            .Select(r => ((long)r.Start - duration + 1, (long)r.Start + r.Duration - 1));
+        uint start = (uint)ClipTiming.NearestPosition(EditPixelToFrame(Math.Max(0, startX)), 0, (long)uint.MaxValue - duration, forbidden);
+        return FrameToPixel(start);
     }
 
     public (ClipElementUI? left, ClipElementUI? right) FindNeighbors(ClipElementUI? clip)
@@ -7716,16 +7530,19 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (clip.origTrack is null) return (null, null);
         int track = clip.origTrack.Value;
 
-        uint start = PixelToFrame(Math.Max(0, clip.Clip.TranslationX));
-        ulong end = (ulong)start + PixelToFrame(Math.Max(0, clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength));
+        var own = GetClipFrameRange(clip);
+        uint start = own.Start;
+        ulong end = (ulong)start + own.Duration;
         ClipElementUI? leftNeighbor = null;
         ClipElementUI? rightNeighbor = null;
         if (!Tracks.TryGetValue(track, out var layout)) return (null, null);
         foreach (var c in layout.Children.OfType<Border>().Select(b => b.BindingContext).OfType<ClipElementUI>())
         {
             if (c.Id == clip.Id || c.origTrack != track || c.SubLayerIndex != clip.SubLayerIndex || !ShouldParticipateInTimelineLayout(c)) continue;
-            uint cStart = PixelToFrame(Math.Max(0, c.Clip.TranslationX));
-            ulong cEnd = (ulong)cStart + PixelToFrame(Math.Max(0, c.Clip.WidthRequest > 0 ? c.Clip.WidthRequest : c.origLength));
+            var range = GetClipFrameRange(c);
+            uint cStart = range.Start;
+            ulong cEnd = (ulong)cStart + range.Duration;
+            if (range.Duration == 0) continue;
             if (cEnd == start && (leftNeighbor is null || c.Id.CompareTo(leftNeighbor.Id) < 0)) leftNeighbor = c;
             if (cStart == end && (rightNeighbor is null || c.Id.CompareTo(rightNeighbor.Id) < 0)) rightNeighbor = c;
         }
@@ -7786,7 +7603,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                             if (AlreadyDisappeared || id != _guiSessionId || ct.IsCancellationRequested)
                                 throw new InvalidOperationException("Project session is closed.");
                             Log($"GUI RPC {work.Request.Operation}, request {work.Request.RequestId}.");
-                            return JsonSerializer.Serialize(await ExecuteGuiProjectAsync(work.Request));
+                            return JsonSerializer.Serialize(await ExecuteGuiProjectAsync(work.Request, ct));
                         });
                     }
                     catch (Exception ex)
@@ -7862,12 +7679,12 @@ public partial class DraftPage : ContentPage, IDraftPage
         provider.Enabled,
         Target = provider.Target.ToString(),
         EffectType = provider.TypeOfEffect.ToString(),
-        InputProviderId = provider.HasMainPictureInput() ? provider.GetMainInputSource() : null,
+        InputProviderId = provider.InFields.ContainsKey(EffectProviderAnchorExtensions.InputKey) ? provider.GetMainInputSource() : null,
         IsFinalOutput = provider.IsFinalOutputSource(),
         Fields = provider.Fields.Values.Select(GuiField).ToArray(),
     };
 
-    private async Task<object?> ExecuteGuiProjectAsync(GuiProjectRequest request)
+    private async Task<object?> ExecuteGuiProjectAsync(GuiProjectRequest request, CancellationToken cancellationToken)
     {
         using var document = JsonDocument.Parse(request.ParametersJson);
         var p = document.RootElement;
@@ -7924,6 +7741,9 @@ public partial class DraftPage : ContentPage, IDraftPage
             case GuiProjectOperation.RestoreProjectHistory:
                 return await ApplyProjectHistorySnapshotAsync(G("SnapshotId"), false);
             case GuiProjectOperation.GetInfo: return Info();
+            case GuiProjectOperation.GetFramePreview:
+            case GuiProjectOperation.GetClipFramePreview:
+                return await GetGuiPreviewAsync(request, p, cancellationToken);
             case GuiProjectOperation.Save:
                 await Save(args: CreateGuiProjectChange(request), throwOnFailure: true);
                 return Info();
@@ -8042,12 +7862,12 @@ public partial class DraftPage : ContentPage, IDraftPage
                     var provider = operation == GuiProjectOperation.AddClipEffectProvider ? Factory()
                         : c.EffectProviders?.GetValueOrDefault(G("ProviderId")) ?? throw new KeyNotFoundException("Effect provider not found.");
                     if (!EffectBindingHelper.AreTargetsCompatible(provider.Target, c.GetEffectTarget())) throw new ArgumentException("Effect target is incompatible.");
-                    if (Has("InputProviderId") && !provider.HasMainPictureInput()) throw new ArgumentException("Provider has no main picture input.");
+                    if (Has("InputProviderId") && !provider.InFields.ContainsKey(EffectProviderAnchorExtensions.InputKey)) throw new ArgumentException("Provider has no primary input.");
                     ApplyGuiProviderFields(provider, Fields(), B("ResetToDefaults"));
                     if (Has("Name")) provider.Name = S("Name")!;
                     if (Has("Enabled")) provider.Enabled = B("Enabled");
                     if (operation == GuiProjectOperation.AddClipEffectProvider) TimelineMcpLiveService.AddEffectProvider(this, c.Id.ToString(), provider);
-                    if (Has("InputProviderId")) provider.SetMainInputSource(G("InputProviderId"));
+                    if (Has("InputProviderId")) provider.SetMainInputSource(S("InputProviderId")!);
                     if (Has("IsFinalOutput"))
                     {
                         if (B("IsFinalOutput")) EffectBindingHelper.SetFinalOutput(c.EffectProviders!, provider.Id);
@@ -8631,20 +8451,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 #endif
         tracksZoomOffest = newZoom;
         double ratio = oldZoom / newZoom;
-
-        foreach (var kv in Clips)
+        foreach (var clip in Clips.Values)
         {
-            var clip = kv.Value;
-            if (clip == null) continue;
-
-            clip.origX *= ratio;
-            clip.origLength *= ratio;
-
-            if (clip.Clip != null)
-            {
-                clip.Clip.TranslationX *= ratio;
-                clip.ApplySpeedRatio();
-            }
+            if (clip.IsGhost || clip.IsShadow) continue;
+            clip.AttachTiming(this);
+            clip.ProjectTiming();
         }
 
         // Update Playhead
@@ -8653,7 +8464,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         PlayheadLine.TranslationX = currentPlayheadX + TrackHeadLayout.Width;
 
         UpdateTimelineWidth();
-        RefreshTransformShadows();
+        _ = UpdateAdjacencyForTrack();
         return -1; //allow to put this method in <var> switch { <case> } expression
     }
 
@@ -9279,8 +9090,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     private sealed class TimelineClipboardItem
     {
         public required ClipDraftDTO Dto { get; init; }
-        public required double StartPx { get; init; }
-        public required double WidthPx { get; init; }
         public required int TrackIndex { get; init; }
     }
 

@@ -412,6 +412,8 @@ public static class TimelineMcpLiveService
             throw new KeyNotFoundException($"Clip '{clipId}' not found.");
         }
 
+        clip.AttachTiming(page);
+        if ((ulong)startFrame + clip.TimelineDuration > uint.MaxValue) throw new ArgumentOutOfRangeException(nameof(startFrame));
         var targetTrack = (int)layerIndex;
         if (!page.Tracks.ContainsKey(targetTrack))
         {
@@ -425,11 +427,10 @@ public static class TimelineMcpLiveService
 
         clip.origTrack = targetTrack;
         clip.SubLayerIndex = checked((int)(subLayerIndex ?? layerIndex));
-        clip.Clip.TranslationX = page.FrameToPixel(startFrame);
-        clip.origX = clip.Clip.TranslationX;
+        clip.SetTimelineStart(startFrame);
         page.Dispatcher.Dispatch(() =>
         {
-            page.RegisterClip(clip, true);
+            page.RegisterClip(clip, false);
             page.AddAClip(clip);
         });
         return clip;
@@ -609,7 +610,7 @@ public static class TimelineMcpLiveService
         }
 
         page.Clips[element.Id] = element;
-        page.RegisterClip(element, true);
+        page.RegisterClip(element, false);
         page.AddAClip(element);
     }
 }

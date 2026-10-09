@@ -406,6 +406,9 @@ public sealed class IsolationProviderDescriptor
     [ProtoMember(10)] public IsolationFieldDescriptor OutputField { get; set; } = new();
     [ProtoMember(11)] public List<int> SupportedImplementTypes { get; set; } = [];
     [ProtoMember(12)] public int DefaultImplementType { get; set; }
+    [ProtoMember(13)] public List<IsolationFieldDescriptor> Fields { get; set; } = [];
+    [ProtoMember(14)] public bool HasMultipleOutputs { get; set; }
+    [ProtoMember(15)] public List<IsolationFieldDescriptor> OutputFields { get; set; } = [];
 }
 
 [ProtoContract]
@@ -451,6 +454,8 @@ public sealed class IsolationEffectDescriptor
     [ProtoMember(21)] public bool IsColorAdjust { get; set; }
     [ProtoMember(22)] public IsolationFieldDescriptor? ValueField { get; set; }
     [ProtoMember(23)] public int TransformDefinition { get; set; }
+    [ProtoMember(24), System.ComponentModel.DefaultValue(true)] public bool PreserveAspectRatio { get; set; } = true;
+    [ProtoMember(25)] public bool HasMultipleOutputs { get; set; }
 }
 
 [ProtoContract]
@@ -510,6 +515,27 @@ public sealed class IsolationEffectMutableState
     [ProtoMember(9)] public int EndPoint { get; set; }
     [ProtoMember(10)] public bool IsScoped { get; set; }
     [ProtoMember(11)] public int ProjectFrameRate { get; set; }
+}
+
+[ProtoContract]
+public sealed class IsolationEffectComputeRequest
+{
+    [ProtoMember(1)] public IsolationEffectFrameRequest Frame { get; set; } = new();
+    [ProtoMember(2)] public IsolationValue Input { get; set; } = new();
+    [ProtoMember(3)] public IsolationPayloadReference? InputPicture { get; set; }
+    [ProtoMember(4)] public List<string> ParameterNames { get; set; } = [];
+    [ProtoMember(5)] public int RelativeWidth { get; set; }
+    [ProtoMember(6)] public int RelativeHeight { get; set; }
+}
+
+[ProtoContract]
+public sealed class IsolationEffectComputeResponse
+{
+    [ProtoMember(1)] public IsolationValue Value { get; set; } = new();
+    [ProtoMember(2)] public IsolationPayloadReference? Picture { get; set; }
+    [ProtoMember(3)] public bool HasMultipleOutputs { get; set; }
+    [ProtoMember(4)] public Dictionary<string, IsolationValue> Values { get; set; } = [];
+    [ProtoMember(5)] public Dictionary<string, IsolationPayloadReference> Pictures { get; set; } = [];
 }
 
 [ProtoContract]

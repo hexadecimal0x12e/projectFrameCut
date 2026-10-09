@@ -116,7 +116,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             get
             {
                 var result = new Dictionary<string, IEffectArgumentField>();
-                foreach (var desc in DefineFields())
+                foreach (var desc in ParameterFields())
                 {
                     object value = _fieldValues.TryGetValue(desc.Id, out var raw) && raw is not null
                         ? raw
@@ -194,6 +194,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Each field maps to a parameter key in <see cref="Parameters"/>.
         /// </summary>
         protected abstract IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields();
+
+        private IEnumerable<EffectArgumentFieldDescriptor> ParameterFields() => DefineFields()
+            .Concat(DefineInFields().Where(p => p.Key != PrimaryInputAnchorKey).Select(p => p.Value))
+            .DistinctBy(p => p.Id);
 
         /// <summary>
         /// Define the input fields (anchors) of the effect. Defaults to a single IPicture input.
@@ -359,10 +363,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         protected Dictionary<string, object> BuildDynamicParameters()
         {
             var result = new Dictionary<string, object>();
-            foreach (var desc in DefineFields())
+            foreach (var desc in ParameterFields())
             {
-                if (desc.FieldType.HasFlag(EffectArgumentFieldType.IPicture)) continue;
-
                 var bindingKey = BoundParameterKey(desc.Id);
                 if (_inlinedFieldValues.TryGetValue(desc.Id, out var inline))
                 {

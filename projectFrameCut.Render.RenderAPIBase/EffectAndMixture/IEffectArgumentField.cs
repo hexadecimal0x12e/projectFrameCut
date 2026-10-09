@@ -170,7 +170,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// This is used for effects that need to process a frame as a parameter, but not as a rendering target.
         /// </summary>
         /// <remarks>
-        /// <b>This node cannot be connected to another <see cref="IPicture"/> node, and the effect provider should not use this node as a rendering target.</b>
+        /// Connects to picture outputs as a named parameter in the dynamic effect graph.
         /// </remarks>
         FrameAsParameterFlow = 1 << 12,
 

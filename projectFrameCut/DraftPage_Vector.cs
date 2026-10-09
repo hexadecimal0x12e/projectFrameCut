@@ -154,10 +154,6 @@ public partial class DraftPage
         {
             if (Clips.ContainsKey(child.Id)) child.Id = Guid.NewGuid();
             var imported = DraftImportAndExportHelper.ImportFromJSON(new DraftStructureJSON { Clips = [child] }, ProjectInfo).Item1[child.Id];
-            imported.Clip.TranslationX = FrameToPixel(child.StartFrame);
-            imported.Clip.WidthRequest = FrameToPixel(child.Duration);
-            imported.origLength = imported.Clip.WidthRequest;
-            imported.origX = imported.Clip.TranslationX;
             RegisterClip(imported, false);
             AddAClip(imported);
         }

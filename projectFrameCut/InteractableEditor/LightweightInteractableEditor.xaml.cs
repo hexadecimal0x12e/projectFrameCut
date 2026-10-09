@@ -5,7 +5,6 @@ using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
-using Microsoft.Maui.Controls.Shapes;
 
 namespace projectFrameCut.InteractableEditor;
 
@@ -165,14 +164,7 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
         {
             var rect = GetRenderRect();
             AbsoluteLayout.SetLayoutBounds(CanvasBackground, rect);
-            if (AllowClipOutOfBounds)
-                PreviewCanvas.Clip = null;
-            else if (PreviewCanvas.Clip is RectangleGeometry clip)
-            {
-                if (clip.Rect != rect) clip.Rect = rect;
-            }
-            else
-                PreviewCanvas.Clip = new RectangleGeometry { Rect = rect };
+            PreviewCanvas.ClipBounds = AllowClipOutOfBounds ? null : rect;
         }
 
         foreach (var state in _states.Values)

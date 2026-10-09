@@ -12,7 +12,7 @@ namespace projectFrameCut.DraftStuff
         /// Strip high-bit flags (HasMinValue, HasMaxValue, Mandatory, etc.) to get the base type.
         /// </summary>
         public static EffectArgumentFieldType GetBaseType(EffectArgumentFieldType ft)
-            => ft & (EffectArgumentFieldType)0x3FF;
+            => ft.BaseType();
 
         /// <summary>
         /// Get the display color for a port type.
@@ -92,36 +92,6 @@ namespace projectFrameCut.DraftStuff
         /// otherwise strict equality is required.
         /// </summary>
         public static bool IsPortTypeCompatible(EffectArgumentFieldType source, EffectArgumentFieldType target)
-        {
-            var src = GetBaseType(source);
-            var tgt = GetBaseType(target);
-
-            if (src == EffectArgumentFieldType.Unknown || tgt == EffectArgumentFieldType.Unknown)
-                return true;
-            if (src == EffectArgumentFieldType.CustomType || tgt == EffectArgumentFieldType.CustomType)
-                return true;
-            if (src == tgt) return true;
-
-            // Numeric family inter-compatibility
-            if (IsNumericFamily(src) && IsNumericFamily(tgt))
-                return true;
-
-            // SizeAndPosition ↔ Size / Position
-            if (src == EffectArgumentFieldType.SizeAndPosition)
-                return tgt == EffectArgumentFieldType.Size || tgt == EffectArgumentFieldType.Position;
-            if (tgt == EffectArgumentFieldType.SizeAndPosition)
-                return src == EffectArgumentFieldType.Size || src == EffectArgumentFieldType.Position;
-
-            return false;
-        }
-
-        private static bool IsNumericFamily(EffectArgumentFieldType ft)
-        {
-            return ft == EffectArgumentFieldType.Numeric
-                || ft == EffectArgumentFieldType.Integer
-                || ft == EffectArgumentFieldType.UnsignedInteger
-                || ft == EffectArgumentFieldType.Long
-                || ft == EffectArgumentFieldType.UnsignedLong;
-        }
+            => EffectFieldTypes.AreCompatible(source, target);
     }
 }

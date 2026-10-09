@@ -25,15 +25,6 @@ using System.Threading.Tasks;
 
 namespace projectFrameCut.Render.Rendering
 {
-    public readonly record struct ChunkRenderProgress(
-        int ChunkIndex,
-        int ChunkCount,
-        int FinishedFrames,
-        uint ChunkFrames,
-        double ChunkProgress,
-        double GlobalProgress,
-        TimeSpan EstimatedRemaining);
-
     public class Renderer : IRenderContext
     {
         #region opts
@@ -1746,7 +1737,7 @@ namespace projectFrameCut.Render.Rendering
         private IPicture? DecodeClipSourceFrame(IClip item, uint frameIndex, IPicture.PicturePixelMode ppb, bool throwOnMissingTransformInput = true)
         {
             item = clipArgumentFrames.Get(item, frameIndex);
-            if (TryLoadDynamicPreviewFrame(item, frameIndex, ppb, out var previewFrame))
+            if (item.EffectsInstances?.Any(e => e is DynamicEffectGraph) != true && TryLoadDynamicPreviewFrame(item, frameIndex, ppb, out var previewFrame))
             {
                 _dynamicPreviewFrames.Add(previewFrame, DynamicPreviewFrameMarker);
                 return previewFrame;
@@ -1966,10 +1957,20 @@ namespace projectFrameCut.Render.Rendering
                     var clipProgress = clipDuration > 0
                         ? Math.Clamp((float)((long)targetFrame - (long)clip.StartFrame) / clipDuration, 0f, 1f)
                         : 0f;
-                    ValueProviderFrameContext.BeginFrame(targetFrame, clipProgress);
+                    using var effectContext = ValueProviderFrameContext.PushFrame(targetFrame, clipProgress);
                     for (int _effectIdx = 0; _effectIdx < effects.Length; _effectIdx++)
                     {
                         var item = effects[_effectIdx];
+                        if (item is DynamicEffectGraph graph)
+                        {
+                            var result = graph.Evaluate(frame, clip, targetFrame, TargetWidth, TargetHeight,
+                                layoutRelativeWidth, layoutRelativeHeight, targetPos, preserveAspect, ProcessEffectFromCanvas, token);
+                            if (!ReferenceEquals(frame, result.Picture)) frame.Dispose();
+                            frame = result.Picture;
+                            targetPos = result.Position;
+                            preserveAspect = result.PreserveAspect;
+                            continue;
+                        }
                         if (reusedPreview && item is not IClipPositionProvider and not IContinuousClipPositionProvider)
                             continue;
                         IRenderContext.CurrentFrameBuffer = frame;
@@ -2120,7 +2121,6 @@ namespace projectFrameCut.Render.Rendering
 
                     }
                     // The per-frame value-provider values are only needed during effect processing.
-                    ValueProviderFrameContext.EndFrame();
                 }
 
                 // Resize frame to match targetPos dimensions when they differ (replaces legacy __Internal_Resize__ effect)
@@ -3002,5 +3002,12 @@ namespace projectFrameCut.Render.Rendering
 
     }
 
-
+    public readonly record struct ChunkRenderProgress(
+        int ChunkIndex,
+        int ChunkCount,
+        int FinishedFrames,
+        uint ChunkFrames,
+        double ChunkProgress,
+        double GlobalProgress,
+        TimeSpan EstimatedRemaining);
 }

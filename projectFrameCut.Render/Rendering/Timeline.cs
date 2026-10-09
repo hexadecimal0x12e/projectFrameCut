@@ -272,7 +272,9 @@ namespace projectFrameCut.Render.Rendering
             bool transparentBackground = false,
             bool disposeIntermediateFrames = false,
             bool clipLocalOutput = false,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Action<IEffect, object?>? afterNodeCallback = null,
+            bool beforeLayoutOutput = false)
         {
             var temporaryFrames = new HashSet<IPicture>(ReferenceEqualityComparer.Instance);
             IPicture? output = null;
@@ -331,7 +333,22 @@ namespace projectFrameCut.Render.Rendering
                     foreach (var effect in effectsList)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        if (clipLocalOutput && effect.Name is ("__Internal_Place__" or "__Internal_Resize__")) continue;
+                        if ((clipLocalOutput || beforeLayoutOutput) && effect.Name is ("__Internal_Place__" or "__Internal_Resize__")) continue;
+                        if (effect is DynamicEffectGraph graph)
+                        {
+                            var graphResult = graph.Evaluate(effected, srcFrame.ParentClip, frameIndex, targetWidth, targetHeight,
+                                layoutRelativeWidth, layoutRelativeHeight, clipPos, preserveAspect, ProcessEffectFromCanvas,
+                                cancellationToken, (node, value) =>
+                                {
+                                    afterNodeCallback?.Invoke(node, value);
+                                    if (value is IPicture picture) AfterEffectCallback?.Invoke(node, picture);
+                                });
+                            Track(effected);
+                            effected = Track(graphResult.Picture);
+                            clipPos = graphResult.Position;
+                            preserveAspect = graphResult.PreserveAspect;
+                            continue;
+                        }
                         if (effect is IValueProviderEffect vp)
                         {
                             throw new InvalidOperationException($"Effect {vp.Name} ({srcFrame.ParentClip.Id}) of clip {srcFrame.ParentClip.Id} is a IValueProviderEffect and should have been handled in the EffectBindingHelper.RebuildAllEffects. This indicates a logic error.");
@@ -408,6 +425,13 @@ namespace projectFrameCut.Render.Rendering
                         }
                     }
                     // The per-frame value-provider values are only needed during effect processing.
+
+                    if (beforeLayoutOutput)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        output = effected;
+                        return output;
+                    }
 
                     // Position providers may change the clip rectangle without changing the source
                     // frame itself. Honor the resulting Target size before compositing, just like the
