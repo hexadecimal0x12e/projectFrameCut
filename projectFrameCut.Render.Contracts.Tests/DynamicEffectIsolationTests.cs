@@ -46,10 +46,13 @@ public sealed class DynamicEffectIsolationTests
     }
 
     [TestMethod]
-    [DataRow(IsolationPayloadKind.Inline)]
-    [DataRow(IsolationPayloadKind.LocalFile)]
-    [DataRow(IsolationPayloadKind.SharedMemory)]
-    public async Task PictureAndScalarInputsCrossTheWorkerChannel(IsolationPayloadKind kind)
+    [DataRow(IsolationPayloadKind.Inline, false)]
+    [DataRow(IsolationPayloadKind.LocalFile, false)]
+    [DataRow(IsolationPayloadKind.SharedMemory, false)]
+    [DataRow(IsolationPayloadKind.Inline, true)]
+    [DataRow(IsolationPayloadKind.LocalFile, true)]
+    [DataRow(IsolationPayloadKind.SharedMemory, true)]
+    public async Task PictureAndScalarInputsCrossTheWorkerChannel(IsolationPayloadKind kind, bool any)
     {
         using var files = new ProjectExternalSourceTests.SourceFiles();
         using var lifetime = new CancellationTokenSource();
@@ -58,16 +61,35 @@ public sealed class DynamicEffectIsolationTests
         await using var resources = new SessionResourceBroker(root);
         var plugin = new Plugin(new()
         {
-            ["Scalar"] = () => new Provider(EffectArgumentFieldType.IPicture, EffectArgumentFieldType.Integer,
-                c => ((IPicture<byte>)c.Input!).r[0] + (int)c.FrameIndex),
-            ["Picture"] = () => new Provider(EffectArgumentFieldType.Integer, EffectArgumentFieldType.IPicture, _ => null,
-                new EffectArgumentFieldDescriptor { Id = "Other", FieldType = EffectArgumentFieldType.IPicture }) { Factory = () => new ParameterPictureEffect() },
+            ["Scalar"] = () => new Provider(any ? EffectArgumentFieldType.Any : EffectArgumentFieldType.IPicture, any ? EffectArgumentFieldType.Any : EffectArgumentFieldType.Integer,
+                c => ((IPicture<byte>)c.Input!).r[0] + (int)c.FrameIndex,
+                new EffectArgumentFieldDescriptor { Id = "Expected", FieldType = EffectArgumentFieldType.String, DefaultValue = "Integer" })
+            {
+                TypeResolver = (_, input, c) =>
+                {
+                    Assert.AreEqual("bound-state", c.BoundProviders[EffectProviderAnchorExtensions.InputKey].Metadata["Tag"]);
+                    Assert.AreEqual("source-config", c.BoundProviders[EffectProviderAnchorExtensions.InputKey].Parameters["Config"]);
+                    return input ? c.InputTypes[EffectProviderAnchorExtensions.InputKey]
+                        : Enum.Parse<EffectArgumentFieldType>(c.Parameters["Expected"]!.ToString()!);
+                },
+            },
+            ["Picture"] = () => new Provider(any ? EffectArgumentFieldType.Any : EffectArgumentFieldType.Integer, any ? EffectArgumentFieldType.Any : EffectArgumentFieldType.IPicture, _ => null,
+                new EffectArgumentFieldDescriptor { Id = "Other", FieldType = any ? EffectArgumentFieldType.Any : EffectArgumentFieldType.IPicture })
+            {
+                Factory = () => new ParameterPictureEffect(),
+                TypeResolver = (key, input, _) => input && key == EffectProviderAnchorExtensions.InputKey
+                    ? EffectArgumentFieldType.Integer : EffectArgumentFieldType.IPicture,
+            },
             ["Multiple"] = () => new MultipleOutputEffectTests.MultipleOutputProvider(EffectArgumentFieldType.IPicture,
-                [MultipleOutputEffectTests.Port("Left", EffectArgumentFieldType.IPicture), MultipleOutputEffectTests.Port("Right", EffectArgumentFieldType.IPicture),
-                 MultipleOutputEffectTests.Port("Value", EffectArgumentFieldType.Integer)], c => new Dictionary<string, object?>
+                [MultipleOutputEffectTests.Port("Left", any ? EffectArgumentFieldType.Any : EffectArgumentFieldType.IPicture), MultipleOutputEffectTests.Port("Right", any ? EffectArgumentFieldType.Any : EffectArgumentFieldType.IPicture),
+                 MultipleOutputEffectTests.Port("Value", any ? EffectArgumentFieldType.Any : EffectArgumentFieldType.Integer)], c => new Dictionary<string, object?>
                 {
                     ["Left"] = Picture((byte)(10 + c.FrameIndex)), ["Right"] = c.Input, ["Value"] = (int)c.FrameIndex,
-                }) { Prefix = [new TestEffect(c => Picture((byte)(((IPicture<byte>)c.Input!).r[0] + 1)))] },
+                })
+            {
+                Prefix = [new TestEffect(c => Picture((byte)(((IPicture<byte>)c.Input!).r[0] + 1)))],
+                TypeResolver = (key, _, _) => key == "Value" ? EffectArgumentFieldType.Integer : EffectArgumentFieldType.IPicture,
+            },
         });
         await using var communication = new NamedPipePluginCommunicationService(plugin.PluginID, lifetime.Token);
         using var worker = new PluginIsolationWorkerService("secret", Environment.ProcessId, root, plugin.PluginID,
@@ -87,7 +109,38 @@ public sealed class DynamicEffectIsolationTests
         async Task<IEffect[]> Create(string type)
         {
             var provider = await session.InvokeAsync<IsolationCreateProviderRequest, IsolationProviderDescriptor>(RenderOperation.IsolationCreateProvider, new() { TypeName = type });
-            if (type == "Picture") Assert.AreEqual("Other", provider.Fields.Single().Id);
+            if (any && type != "Multiple")
+                Assert.AreEqual(EffectArgumentFieldType.Any, (EffectArgumentFieldType)provider.InputFields.Single().FieldType);
+            if (type == "Picture")
+            {
+                Assert.AreEqual("Other", provider.Fields.Single().Id);
+                Assert.AreEqual(any ? EffectArgumentFieldType.Any : EffectArgumentFieldType.IPicture, (EffectArgumentFieldType)provider.Fields.Single().FieldType);
+            }
+            if (any)
+            {
+                IEffectProvider remote = type == "Multiple" ? new RemoteMultipleOutputEffectProvider(session, provider) : new RemoteEffectProvider(session, provider);
+                var source = new Provider(null, type == "Picture" ? EffectArgumentFieldType.Integer : EffectArgumentFieldType.IPicture,
+                    _ => throw new AssertFailedException("Type resolution evaluated an upstream effect."),
+                    new EffectArgumentFieldDescriptor { Id = "Config", FieldType = EffectArgumentFieldType.String, DefaultValue = "source-config" });
+                source.MetaData["Tag"] = "bound-state";
+                remote.SetMainInputSource(source.Id);
+                var types = new EffectFieldTypeResolution(Providers(source, remote));
+                Assert.AreEqual(0, types.Diagnostics.Count);
+                Assert.AreEqual(type == "Scalar" ? EffectArgumentFieldType.Integer : EffectArgumentFieldType.IPicture,
+                    types.GetOutputType(remote, type == "Multiple" ? "Left" : null));
+                if (type == "Multiple") Assert.AreEqual(EffectArgumentFieldType.Integer, types.GetOutputType(remote, "Value"));
+                session.Capabilities.SupportsFieldTypeResolution = false;
+                Assert.AreEqual(EffectArgumentFieldType.Any,
+                    new EffectFieldTypeResolution(Providers(source, remote)).GetOutputType(remote, type == "Multiple" ? "Left" : null));
+                Assert.IsFalse(lifetime.IsCancellationRequested);
+                session.Capabilities.SupportsFieldTypeResolution = true;
+                if (type == "Scalar")
+                {
+                    remote.Fields["Expected"] = new StaticEffectArgumentField("Boolean", EffectArgumentFieldType.String);
+                    Assert.AreEqual(EffectArgumentFieldType.Boolean, new EffectFieldTypeResolution(Providers(source, remote)).GetOutputType(remote));
+                    Assert.AreEqual(EffectArgumentFieldType.Integer, types.GetOutputType(remote));
+                }
+            }
             if (type == "Multiple")
             {
                 Assert.IsTrue(provider.HasMultipleOutputs);

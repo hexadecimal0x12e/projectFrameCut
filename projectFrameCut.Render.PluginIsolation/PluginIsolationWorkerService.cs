@@ -73,6 +73,7 @@ internal sealed class PluginIsolationWorkerService(
                     RenderOperation.IsolationLoadPlugin => await LoadPluginAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationCreateProvider => CreateProvider(request),
                     RenderOperation.IsolationBuildProvider => await BuildProviderAsync(request, cancellationToken).ConfigureAwait(false),
+                    RenderOperation.IsolationResolveFieldTypes => await ResolveFieldTypesAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationCloneEffect => CloneEffect(request),
                     RenderOperation.IsolationReleaseObject => ReleaseObject(request),
                     RenderOperation.IsolationProcessNormalEffect => await ProcessNormalAsync(request, cancellationToken).ConfigureAwait(false),
@@ -184,6 +185,7 @@ internal sealed class PluginIsolationWorkerService(
             Platform = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsLinux() ? "linux" : OperatingSystem.IsMacOS() ? "macos" : "unknown",
             PayloadKinds = [IsolationPayloadKind.Inline, IsolationPayloadKind.SharedMemory, IsolationPayloadKind.LocalFile, IsolationPayloadKind.TransferredResource],
             SupportsResourceTransfer = true,
+            SupportsFieldTypeResolution = true,
         });
     }
 
@@ -237,6 +239,7 @@ internal sealed class PluginIsolationWorkerService(
             foreach (var item in _plugin.EffectProviderProvider)
             {
                 var provider = item.Value();
+                provider.ValidateOutputFields();
                 if (!IsSupportedExternalEffect(provider.TypeOfEffect))
                     throw new NotSupportedException($"External effect provider '{item.Key}' uses unsupported effect type '{provider.TypeOfEffect}'.");
                 var custom = provider.InFields.Values.FirstOrDefault(x => x.FieldType.HasFlag(EffectArgumentFieldType.CustomType));
@@ -319,6 +322,7 @@ internal sealed class PluginIsolationWorkerService(
         var plugin = RequirePlugin();
         if (!plugin.EffectProviderProvider.TryGetValue(request.TypeName, out var factory)) throw new KeyNotFoundException($"Effect provider '{request.TypeName}' was not found.");
         var provider = factory();
+        provider.ValidateOutputFields();
         return Success(envelope, DescribeProvider(AddObject(provider), provider));
     }
 
@@ -326,6 +330,7 @@ internal sealed class PluginIsolationWorkerService(
     {
         var request = Read<IsolationBuildProviderRequest>(envelope);
         var provider = Require<IEffectProvider>(request.Provider.ObjectId);
+        provider.ValidateOutputFields();
         var pictures = new Dictionary<string, IPicture>();
         var retained = false;
         try
@@ -347,6 +352,36 @@ internal sealed class PluginIsolationWorkerService(
         {
             if (!retained)
                 foreach (var picture in pictures.Values) picture.Dispose();
+        }
+    }
+
+    private async ValueTask<RenderResponseEnvelope> ResolveFieldTypesAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
+    {
+        var request = Read<IsolationResolveFieldTypesRequest>(envelope);
+        var provider = Require<IEffectProvider>(request.ObjectId);
+        var pictures = new List<IPicture>();
+        try
+        {
+            var state = await IsolationFieldTypeCodec.ReadAsync(request.State, _payloads, pictures, cancellationToken).ConfigureAwait(false);
+            var sources = new Dictionary<string, EffectProviderTypeState>();
+            foreach (var (key, source) in request.BoundProviders)
+                sources[key] = await IsolationFieldTypeCodec.ReadAsync(source, _payloads, pictures, cancellationToken).ConfigureAwait(false);
+            var context = new EffectFieldTypeContext
+            {
+                State = state, BoundProviders = new System.Collections.ObjectModel.ReadOnlyDictionary<string, EffectProviderTypeState>(sources),
+                InputTypes = new System.Collections.ObjectModel.ReadOnlyDictionary<string, EffectArgumentFieldType>(
+                    request.InputTypes.ToDictionary(p => p.Key, p => (EffectArgumentFieldType)p.Value)),
+            };
+            var response = new IsolationResolvedFieldTypes();
+            foreach (var (key, field) in state.Fields.Where(p => p.Value.FieldType.HasFlag(EffectArgumentFieldType.Any)))
+                response.Inputs[key] = (ulong)provider.ResolveFieldType(key, true, context);
+            foreach (var (key, field) in state.Outputs.Where(p => p.Value.FieldType.HasFlag(EffectArgumentFieldType.Any)))
+                response.Outputs[key] = (ulong)provider.ResolveFieldType(key, false, context);
+            return Success(envelope, response);
+        }
+        finally
+        {
+            foreach (var picture in pictures) picture.Dispose();
         }
     }
 
@@ -1240,24 +1275,28 @@ internal sealed class PluginIsolationWorkerService(
         provider.Fields = fields;
     }
 
-    private IsolationProviderDescriptor DescribeProvider(long objectId, IEffectProvider provider) => new()
+    private IsolationProviderDescriptor DescribeProvider(long objectId, IEffectProvider provider)
     {
-        ObjectId = objectId,
-        TypeName = provider.TypeName,
-        FromPlugin = provider.FromPlugin,
-        EffectType = (int)provider.TypeOfEffect,
-        Target = (int)provider.Target,
-        Enabled = provider.Enabled,
-        InstanceId = provider.Id.ToString(),
-        Name = provider.Name,
-        InputFields = provider.InFields.Select(x => DescribeField(x.Value)).ToList(),
-        Fields = provider.Fields.Values.Select(DescribeField).ToList(),
-        OutputField = provider is IMultipleOutputEffectProvider ? new() : DescribeField(provider.OutField),
-        HasMultipleOutputs = provider is IMultipleOutputEffectProvider,
-        OutputFields = provider.GetOutputFields().Values.Select(DescribeField).ToList(),
-        SupportedImplementTypes = provider.SupportsImplementTypes.Select(x => (int)x).ToList(),
-        DefaultImplementType = (int)provider.DefaultImplementType,
-    };
+        provider.ValidateOutputFields();
+        return new()
+        {
+            ObjectId = objectId,
+            TypeName = provider.TypeName,
+            FromPlugin = provider.FromPlugin,
+            EffectType = (int)provider.TypeOfEffect,
+            Target = (int)provider.Target,
+            Enabled = provider.Enabled,
+            InstanceId = provider.Id.ToString(),
+            Name = provider.Name,
+            InputFields = provider.InFields.Select(x => DescribeField(x.Value)).ToList(),
+            Fields = provider.Fields.Values.Select(DescribeField).ToList(),
+            OutputField = provider is IMultipleOutputEffectProvider ? new() : DescribeField(provider.OutField),
+            HasMultipleOutputs = provider is IMultipleOutputEffectProvider,
+            OutputFields = provider.GetOutputFields().Values.Select(DescribeField).ToList(),
+            SupportedImplementTypes = provider.SupportsImplementTypes.Select(x => (int)x).ToList(),
+            DefaultImplementType = (int)provider.DefaultImplementType,
+        };
+    }
 
     private static IsolationFieldDescriptor DescribeField(IEffectArgumentField field) => new()
     {

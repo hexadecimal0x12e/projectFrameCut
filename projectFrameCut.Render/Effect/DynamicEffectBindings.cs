@@ -21,7 +21,9 @@ public static class DynamicEffectBindings
     public static bool RequiresGraph(IReadOnlyDictionary<Guid, IEffectProvider>? providers)
     {
         if (providers is null) return false;
-        if (providers.Values.Any(p => p is IMultipleOutputEffectProvider || p.GetFinalOutputFieldId() is not null
+        if (providers.Values.Any(p => p is IClipValueEndpointProvider or IMultipleOutputEffectProvider || p.GetFinalOutputFieldId() is not null
+            || InputFields(p).Values.Any(f => f.FieldType.HasFlag(EffectArgumentFieldType.Any))
+            || p.GetOutputFields().Values.Any(f => f.FieldType.HasFlag(EffectArgumentFieldType.Any))
             || p.AnchorsBindingState.Any(x => !EffectProviderAnchorExtensions.IsOutputBindingKey(x.Key)
                 && x.Value.StartsWith("provider://", StringComparison.Ordinal)))) return true;
         var consumers = new Dictionary<string, int>();
@@ -49,20 +51,26 @@ public static class DynamicEffectBindings
         return consumers.Values.Any(n => n > 1);
     }
 
-    public static bool CanInlineValue(IEffectProvider provider, IReadOnlyDictionary<Guid, IEffectProvider> providers, HashSet<Guid>? seen = null)
+    public static bool CanInlineValue(IEffectProvider provider, IReadOnlyDictionary<Guid, IEffectProvider> providers, HashSet<Guid>? seen = null,
+        EffectFieldTypeResolution? types = null)
     {
+        if (provider is IClipValueEndpointProvider) return false;
+        types ??= new(providers);
         seen ??= [];
         if (!seen.Add(provider.Id)) return false;
         if (provider is not IMultipleOutputEffectProvider && provider.TypeOfEffect != EffectType.NonIPictureOutputValueProvider
-            || provider.GetOutputFields().Values.Any(p => p.FieldType.IsPicture())
-            || InputFields(provider).Any(p => p.Key == EffectProviderAnchorExtensions.InputKey || p.Value.FieldType.IsPicture())) return false;
+            || provider.GetOutputFields().Keys.Any(key => types.GetOutputType(provider, key).IsPicture()
+                || types.GetOutputType(provider, key).HasFlag(EffectArgumentFieldType.Any))
+            || InputFields(provider).Any(p => p.Key == EffectProviderAnchorExtensions.InputKey || p.Value.FieldType.IsPicture()
+                || p.Value is StaticEffectArgumentField { Value: projectFrameCut.Drawing.Base.IPicture }
+                    or DynamicEffectParamField { StaticFallbackValue: projectFrameCut.Drawing.Base.IPicture })) return false;
         foreach (var binding in provider.EnumerateFieldBindings())
         {
             if (binding.Value == IEffectProvider.NoConnectionGUID.ToString()) continue;
             if (binding.Value is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId) continue;
             if (!EffectProviderOutputExtensions.TryParseOutputSourceId(binding.Value, out var id, out var outputId)
                 || !providers.TryGetValue(id, out var source) || !source.TryGetOutputField(outputId, out _)
-                || !CanInlineValue(source, providers, new(seen))) return false;
+                || !CanInlineValue(source, providers, new(seen), types)) return false;
         }
         return true;
     }
@@ -96,15 +104,17 @@ public static class DynamicEffectBindings
         return diagnostics;
     }
 
-    public static IReadOnlyList<EffectBindingHelper.BindingDiagnostic> Validate(IReadOnlyDictionary<Guid, IEffectProvider> providers)
+    public static IReadOnlyList<EffectBindingHelper.BindingDiagnostic> Validate(IReadOnlyDictionary<Guid, IEffectProvider> providers, EffectFieldTypeResolution? types = null)
     {
-        var errors = new List<EffectBindingHelper.BindingDiagnostic>();
+        types ??= new(providers);
+        var errors = types.Diagnostics.Select(d => new EffectBindingHelper.BindingDiagnostic(d.ProviderId, d.Code, d.Message)).ToList();
         foreach (var group in providers.Values.Where(p => p.IsFinalOutputSource()).GroupBy(p => p.TypeOfEffect.GetPipeline()))
         {
             if (group.Count() > 1) errors.Add(new(null, "MultipleFinalOutputs", $"Multiple providers feed {group.Key} output."));
             foreach (var p in group)
-                if (!p.TryGetOutputField(p.GetFinalOutputFieldId(), out var output) || !output.FieldType.IsPicture()
-                    || p is ClipArgumentProvider || p.TypeOfEffect == EffectType.Transform)
+                if (!p.TryGetOutputField(p.GetFinalOutputFieldId(), out var output)
+                    || !types.GetOutputType(p, output.Id).IsPicture() && !types.GetOutputType(p, output.Id).HasFlag(EffectArgumentFieldType.Any)
+                    || p is ClipArgumentProvider or IClipValueEndpointProvider { IsExport: true } || p.TypeOfEffect == EffectType.Transform)
                     errors.Add(new(p.Id, "InvalidFinalOutput", $"Provider {p.Id} cannot produce the final picture."));
         }
         if (providers.Values.OfType<ClipArgumentProvider>().Count() > 1)
@@ -119,8 +129,9 @@ public static class DynamicEffectBindings
                 if (multiple.OutFields.Count == 0 || multiple.OutFields.Any(x => string.IsNullOrWhiteSpace(x.Key) || x.Key != x.Value.Id))
                     errors.Add(new(p.Id, "InvalidOutputPorts", $"Provider {p.Id} must declare nonempty output IDs matching their descriptors."));
             }
-            if (IsGraphProvider(p) && (p.GetOutputFields().Values.Any(x => x.FieldType.HasFlag(EffectArgumentFieldType.VectorPicture))
-                || fields.Any(x => x.Value.FieldType.HasFlag(EffectArgumentFieldType.VectorPicture))))
+            if (IsGraphProvider(p) && (p.GetOutputFields().Keys.Any(key => types.GetOutputType(p, key).HasFlag(EffectArgumentFieldType.VectorPicture))
+                || fields.Any(x => !types.GetInputType(p, x.Key).HasFlag(EffectArgumentFieldType.Any)
+                    && types.GetInputType(p, x.Key).HasFlag(EffectArgumentFieldType.VectorPicture))))
                 errors.Add(new(p.Id, "UnsupportedGraphInput", $"Provider {p.Id} cannot consume native vector pictures in the raster graph."));
             foreach (var binding in p.AnchorsBindingState.Where(x => !EffectProviderAnchorExtensions.IsOutputBindingKey(x.Key)))
             {
@@ -132,15 +143,17 @@ public static class DynamicEffectBindings
                 }
                 if (field.FieldType.HasFlag(EffectArgumentFieldType.CannotBeDynamic))
                     errors.Add(new(p.Id, "FieldCannotBeDynamic", $"Input '{binding.Key}' on {p.Id} cannot be bound."));
+                var inputType = types.GetInputType(p, binding.Key);
                 if (binding.Value is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId)
                 {
-                    if (!EffectFieldTypes.AreCompatible(EffectArgumentFieldType.Numeric, field.FieldType))
+                    if (!EffectFieldTypes.AreCompatible(EffectArgumentFieldType.Numeric, inputType))
                         errors.Add(new(p.Id, "IncompatibleInput", $"Built-in source cannot feed '{binding.Key}' on {p.Id}."));
                     continue;
                 }
                 if (binding.Value == IEffectProvider.InputAnchorGUID.ToString())
                 {
-                    if (!field.FieldType.IsPicture() || !IsGraphProvider(p) && binding.Key != EffectProviderAnchorExtensions.InputKey)
+                    if (!EffectFieldTypes.AreCompatible(EffectArgumentFieldType.IPicture, inputType)
+                        || !IsGraphProvider(p) && binding.Key != EffectProviderAnchorExtensions.InputKey)
                         errors.Add(new(p.Id, "IncompatibleInput", $"Source picture cannot feed '{binding.Key}' on {p.Id}."));
                     continue;
                 }
@@ -154,13 +167,16 @@ public static class DynamicEffectBindings
                     errors.Add(new(p.Id, "UnknownOutputPort", $"Source {id} requires a valid output port for '{binding.Key}' on {p.Id}."));
                     continue;
                 }
-                if (!EffectFieldTypes.AreCompatible(output.FieldType, field.FieldType))
+                if (source is IClipValueEndpointProvider { IsExport: true })
+                    errors.Add(new(p.Id, "EndpointIsNotLocalSource", "Export endpoints can only be read through another clip's endpoint input."));
+                var outputType = types.GetOutputType(source, output.Id);
+                if (!outputType.HasFlag(EffectArgumentFieldType.Any) && !EffectFieldTypes.AreCompatible(outputType, inputType))
                     errors.Add(new(p.Id, "IncompatibleInput", $"Provider {id} cannot feed '{binding.Key}' on {p.Id}."));
                 if (IsGraphProvider(p) && !IsGraphProvider(source)
-                    || !IsGraphProvider(p) && IsGraphProvider(source) && !CanInlineValue(source, providers))
+                    || !IsGraphProvider(p) && IsGraphProvider(source) && !CanInlineValue(source, providers, types: types))
                     errors.Add(new(p.Id, "CrossStageBinding", $"Binding '{binding.Key}' on {p.Id} crosses picture-processing stages."));
                 if (p.TypeOfEffect.GetPipeline() == EffectPipeline.NativeContent && source.TypeOfEffect.GetPipeline() == EffectPipeline.NativeContent
-                    && !source.CanConnectContent(p, outputId))
+                    && !source.CanConnectContent(p, outputId, types))
                     errors.Add(new(p.Id, "IncompatibleContentInput", $"Provider {id} cannot feed native content on {p.Id}."));
             }
         }
@@ -184,15 +200,25 @@ public static class DynamicEffectBindings
         return errors.Distinct().ToArray();
     }
 
-    public static void ValidateOutputValues(IEffectProvider provider, IReadOnlyDictionary<string, object?> outputs)
+    public static void ValidateOutputValues(IEffectProvider provider, IReadOnlyDictionary<string, object?> outputs,
+        EffectFieldTypeResolution? types = null, uint? frame = null)
     {
-        var fields = provider.GetOutputFields();
+        types ??= new(new Dictionary<Guid, IEffectProvider> { [provider.Id] = provider });
+        var fields = types.GetContext(provider.Id).State.Outputs;
         foreach (var key in outputs.Keys)
             if (!fields.ContainsKey(key)) throw new InvalidOperationException($"Provider {provider.Id} returned unknown output '{key}'.");
         foreach (var (key, field) in fields)
-            if (!outputs.TryGetValue(key, out var value) || value is null && field.FieldType.HasFlag(EffectArgumentFieldType.Mandatory)
-                || !EffectFieldTypes.Accepts(field.FieldType, value))
-                throw new InvalidOperationException($"Provider {provider.Id} returned a missing or incompatible output '{key}'.");
+        {
+            if (!outputs.TryGetValue(key, out var value))
+                throw new InvalidOperationException($"Provider {provider.Id} returned a missing output '{key}', frame {frame}.");
+            if (provider is IMultipleOutputEffectProvider && types.GetOutputType(provider, key).HasFlag(EffectArgumentFieldType.Any))
+            {
+                if (value is null && field.FieldType.HasFlag(EffectArgumentFieldType.Mandatory))
+                    throw new InvalidOperationException($"Provider {provider.Id} returned no value for mandatory output '{key}', frame {frame}.");
+                continue;
+            }
+            types.ValidateValue(provider, key, false, field, value, frame);
+        }
     }
 
     public static void ValidateMultipleOutputEffects(IEffectProvider provider, IEffect[] effects)

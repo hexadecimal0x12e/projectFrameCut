@@ -21,6 +21,7 @@ namespace projectFrameCut.DraftStuff
         private readonly IEffectProvider _provider;
         private readonly DraftPage? _page;
         private readonly Action? _onChanged;
+        private readonly Dictionary<string, int> _bindingVersions = new();
 
         public ClipBindingHost(ClipElementUI clip, IEffectProvider provider, DraftPage? page = null, Action? onChanged = null)
         {
@@ -46,7 +47,7 @@ namespace projectFrameCut.DraftStuff
                 foreach (var (id, bundle) in bundles)
                 {
                     if (id == _provider.Id) continue;
-                    if (bundle is not ClipArgumentProvider && bundle.TypeOfEffect != EffectType.Transform)
+                    if (bundle is not ClipArgumentProvider and not IClipValueEndpointProvider { IsExport: true } && bundle.TypeOfEffect != EffectType.Transform)
                     {
                         foreach (var output in bundle.GetOutputFields().Values)
                             sources.Add(new ValueBindingSource(bundle is IMultipleOutputEffectProvider
@@ -86,13 +87,49 @@ namespace projectFrameCut.DraftStuff
         public void ApplyBinding(string fieldId, string sourceId)
         {
             if (!_provider.Fields.ContainsKey(fieldId) && !_provider.InFields.ContainsKey(fieldId)) return;
+            _bindingVersions[fieldId] = _bindingVersions.GetValueOrDefault(fieldId) + 1;
+            ApplyBindingCore(fieldId, sourceId, _clip.EffectProviders is { } providers
+                ? new EffectFieldTypeResolution(providers, BindingOverride(fieldId, sourceId)) : null);
+        }
+
+        private Dictionary<Guid, IReadOnlyDictionary<string, string>> BindingOverride(string fieldId, string sourceId) => new()
+        {
+            [_provider.Id] = new Dictionary<string, string>(_provider.AnchorsBindingState) { [fieldId] = sourceId },
+        };
+
+        private void ApplyBindingCore(string fieldId, string sourceId, EffectFieldTypeResolution? types)
+        {
+            if (types is not null && (!types.AreInputsCompatible(_provider) || types.Diagnostics.Count != 0))
+                throw new InvalidOperationException($"Source '{sourceId}' is incompatible with '{fieldId}' on provider {_provider.Id}.");
             _provider.SetFieldBinding(fieldId, sourceId);
             EffectBindingHelper.MaterializeFields([_provider]);
             _onChanged?.Invoke();
         }
 
+        private async Task ApplyBindingAsync(string fieldId, string sourceId)
+        {
+            if (!_provider.Fields.ContainsKey(fieldId) && !_provider.InFields.ContainsKey(fieldId)) return;
+            int version = _bindingVersions[fieldId] = _bindingVersions.GetValueOrDefault(fieldId) + 1;
+            try
+            {
+                EffectFieldTypeResolution? types = null;
+                if (_clip.EffectProviders is { } providers)
+                {
+                    types = await EffectFieldTypeResolution.ResolveAsync(providers, bindingOverrides: BindingOverride(fieldId, sourceId));
+                    if (!ReferenceEquals(_clip.EffectProviders, providers) || version != _bindingVersions[fieldId]) return;
+                }
+                ApplyBindingCore(fieldId, sourceId, types);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, $"Bind '{fieldId}' on provider {_provider.Id}", this);
+                _page?.SetStatusText(ex.Message);
+            }
+        }
+
         public void Unbind(string fieldId)
         {
+            _bindingVersions[fieldId] = _bindingVersions.GetValueOrDefault(fieldId) + 1;
             _provider.ClearFieldBinding(fieldId);
             EffectBindingHelper.MaterializeFields([_provider]);
             _onChanged?.Invoke();
@@ -114,15 +151,13 @@ namespace projectFrameCut.DraftStuff
             AddOption(string.Empty, LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_Disconnect);
             foreach (var s in GetBindingSources())
             {
-                if (DynamicEffectBindings.InputFields(_provider).TryGetValue(fieldId, out var field))
+                if (_clip.EffectProviders is { } providers)
                 {
-                    var type = EffectArgumentFieldType.Numeric;
-                    if (s.Id == IEffectProvider.InputAnchorGUID.ToString()) type = EffectArgumentFieldType.IPicture;
-                    else if (EffectProviderOutputExtensions.TryParseOutputSourceId(s.Id, out var id, out var outputId)
-                        && _clip.EffectProviders is { } providers && providers.TryGetValue(id, out var source)
-                        && source.TryGetOutputField(outputId, out var output))
-                        type = output.FieldType;
-                    if (!EffectFieldTypes.AreCompatible(type, field.FieldType)) continue;
+                    var types = await EffectFieldTypeResolution.ResolveAsync(providers, bindingOverrides: new Dictionary<Guid, IReadOnlyDictionary<string, string>>
+                    {
+                        [_provider.Id] = new Dictionary<string, string>(_provider.AnchorsBindingState) { [fieldId] = s.Id },
+                    });
+                    if (!types.AreInputsCompatible(_provider) || types.Diagnostics.Count != 0) continue;
                 }
                 var suffix = s.OutputAnchorName is { Length: > 0 } ? $" ({s.OutputAnchorName})" : string.Empty;
                 AddOption(s.Id, $"{s.DisplayName}{suffix}");
@@ -134,7 +169,7 @@ namespace projectFrameCut.DraftStuff
             if (sourceByOption.TryGetValue(pick, out var chosen))
             {
                 if (string.IsNullOrEmpty(chosen)) Unbind(fieldId);
-                else ApplyBinding(fieldId, chosen);
+                else await ApplyBindingAsync(fieldId, chosen);
             }
         }
     }

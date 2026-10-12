@@ -83,6 +83,11 @@
                         <VerticalStackLayout x:Name="AddEffectsPanel" Spacing="10"/>
                     </ScrollView>
                 </tv:TabbedViewItem>
+                <tv:TabbedViewItem Header="{l:Localized Key=Effect_ValuePassThrough}">
+                    <ScrollView x:Name="ClipValuesScrollView" Padding="10">
+                        <VerticalStackLayout x:Name="ClipValuesPanel" Spacing="10"/>
+                    </ScrollView>
+                </tv:TabbedViewItem>
             </tv:TabbedView>
 
 

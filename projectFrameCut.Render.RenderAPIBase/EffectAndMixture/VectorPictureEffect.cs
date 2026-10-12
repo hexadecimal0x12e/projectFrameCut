@@ -20,14 +20,21 @@ public static class EffectPipelineExtensions
         => source.CanConnectContent(target, null);
 
     public static bool CanConnectContent(this IEffectProvider source, IEffectProvider target, string? outputId)
+        => source.CanConnectContent(target, outputId, null);
+
+    public static bool CanConnectContent(this IEffectProvider source, IEffectProvider target, string? outputId, EffectFieldTypeResolution? types)
     {
         if (!target.InFields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var input)
             || source.TypeOfEffect == EffectType.Transform || source is ClipArgumentProvider) return false;
         if (target.TypeOfEffect.GetPipeline() == EffectPipeline.Picture)
             return source.TypeOfEffect.GetPipeline() == EffectPipeline.Picture
                 && source.TryGetOutputField(outputId, out var output)
-                && EffectFieldTypes.AreCompatible(output.FieldType, input.FieldType);
-        if (!source.HasMainPictureInput() || !target.HasMainPictureInput()
+                && ((types?.GetOutputType(source, outputId) ?? output.FieldType).HasFlag(EffectArgumentFieldType.Any)
+                    || EffectFieldTypes.AreCompatible(types?.GetOutputType(source, outputId) ?? output.FieldType,
+                        types?.GetInputType(target, EffectProviderAnchorExtensions.InputKey) ?? input.FieldType));
+        if (!source.InFields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var sourceInput)
+            || !(sourceInput.FieldType.IsPicture() || sourceInput.FieldType.HasFlag(EffectArgumentFieldType.Any))
+            || !(input.FieldType.IsPicture() || input.FieldType.HasFlag(EffectArgumentFieldType.Any))
             || source.TypeOfEffect.GetPipeline() != target.TypeOfEffect.GetPipeline()) return false;
         return target.TypeOfEffect == EffectType.VectorPictureEffect
             || source.TypeOfEffect == target.TypeOfEffect

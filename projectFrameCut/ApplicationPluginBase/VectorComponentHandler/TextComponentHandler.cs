@@ -23,6 +23,7 @@ public class TextComponentHandler : BaseVectorComponentHandler
     public override string DisplayName => PPLocalizedResources.VectorContentHandler_Text_DisplayName;
     public override string Icon => "\ue262";
     public override bool HasDefaultHandles => true;
+    public override bool IsNotVisibleInNewComponentSelector => true;
 
     /// <summary>
     /// Returns per-component resize capability based on the text layout mode.

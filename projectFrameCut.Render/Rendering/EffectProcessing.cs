@@ -9,7 +9,6 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -19,22 +18,6 @@ namespace projectFrameCut.Render.Rendering
 {
     public static class EffectProcessing
     {
-        /// <summary>
-        /// 从缓存中获取值，优先从帧缓存获取，然后从全局缓存获取
-        /// </summary>
-        private static object GetCachedValue(string key, Dictionary<string, object> frameLocalCache, ConcurrentDictionary<string, object> globalResultCache)
-        {
-            if (frameLocalCache.TryGetValue(key, out var value))
-            {
-                return value;
-            }
-            if (globalResultCache.TryGetValue(key, out value))
-            {
-                return value;
-            }
-            throw new KeyNotFoundException($"Cached value with key '{key}' not found in either frame-local or global cache.");
-        }
-
         // ---- 水印缓存（按源尺寸缓存不同分辨率的渲染结果） ----
         private static readonly Dictionary<(int Width, int Height), IPicture> _watermarkCache = new();
         private static readonly List<(int, int)> _watermarkKeys = new(); // FIFO 淘汰顺序

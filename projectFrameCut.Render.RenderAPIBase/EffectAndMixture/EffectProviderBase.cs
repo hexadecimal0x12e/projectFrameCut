@@ -81,6 +81,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         public EffectArgumentFieldDescriptor OutField => DefineOutField();
 
+        public virtual EffectArgumentFieldType ResolveFieldType(string fieldId, bool isInput, EffectFieldTypeContext context) =>
+            (isInput ? context.State.Fields : context.State.Outputs).TryGetValue(fieldId, out var field)
+                ? field.FieldType : EffectArgumentFieldType.Any;
+
         /// <summary>
         /// The single source of truth of the anchor bindings.
         /// Kept as a live backing dictionary. Read and mutate it through the
@@ -348,6 +352,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         private IEffect[] BuildRegisteredEffects(EffectImplementType implementType, Dictionary<string, object> parameters)
         {
+            this.ValidateOutputFields();
             var typeName = TypeName;
             if (typeName == "Crop" && (MetaData.ContainsKey(IsContinuousEffectParameterKey) || parameters.ContainsKey(IsContinuousEffectParameterKey)))
                 typeName = "ProgressCrop";
@@ -412,6 +417,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         private static object ParseDefault(EffectArgumentFieldDescriptor desc)
         {
+            if (desc.FieldType.HasFlag(EffectArgumentFieldType.Any)) return desc.DefaultValue;
             var baseType = desc.FieldType & (EffectArgumentFieldType)0x3FF;
             return baseType switch
             {

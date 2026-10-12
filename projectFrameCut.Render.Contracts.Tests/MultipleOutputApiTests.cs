@@ -16,13 +16,18 @@ namespace projectFrameCut.Render.Contracts.Tests;
 public sealed class MultipleOutputApiTests
 {
     [TestMethod]
-    public void ApiSelectsPortsAndWorkspaceReloadPreservesTheirBindings()
+    [DataRow(false)]
+    [DataRow(true)]
+    public void ApiSelectsPortsAndWorkspaceReloadPreservesTheirBindings(bool any)
     {
         MultipleOutputProvider CreateSource() => new(null,
-            [Port("Image", EffectArgumentFieldType.IPicture), Port("Value", EffectArgumentFieldType.Integer)],
-            _ => new Dictionary<string, object?> { ["Image"] = Picture(5), ["Value"] = 2 });
-        Provider CreateTarget() => new(EffectArgumentFieldType.IPicture, EffectArgumentFieldType.IPicture, c => c.Input,
-            Port("Amount", EffectArgumentFieldType.Integer));
+            [Port("Image", any ? EffectArgumentFieldType.Any : EffectArgumentFieldType.IPicture), Port("Value", any ? EffectArgumentFieldType.Any : EffectArgumentFieldType.Integer)],
+            _ => new Dictionary<string, object?> { ["Image"] = Picture(5), ["Value"] = 2 })
+        {
+            TypeResolver = (key, _, _) => key == "Image" ? EffectArgumentFieldType.IPicture : EffectArgumentFieldType.Integer,
+        };
+        Provider CreateTarget() => new(any ? EffectArgumentFieldType.Any : EffectArgumentFieldType.IPicture, EffectArgumentFieldType.IPicture, c => c.Input,
+            Port("Amount", any ? EffectArgumentFieldType.Any : EffectArgumentFieldType.Integer));
         var source = CreateSource();
         var target = CreateTarget();
         source.SetFinalOutputSource(true, "Image");
@@ -52,9 +57,16 @@ public sealed class MultipleOutputApiTests
             var error = Assert.ThrowsExactly<TargetInvocationException>(() => Edit(new
                 { kind = "connectEffectProviderInput", clipId = clip.Id, providerId = target.Id, source = source.Id.ToString() }));
             Assert.IsInstanceOfType<ArgumentException>(error.InnerException);
+            if (any) Edit(new { kind = "connectEffectProviderInput", clipId = clip.Id, providerId = target.Id, source = source.Id.ToString(), sourceOutputId = "Value" });
             var description = JsonSerializer.SerializeToElement(Edit(new
                 { kind = "connectEffectProviderInput", clipId = clip.Id, providerId = target.Id, source = source.Id.ToString(), sourceOutputId = "Image" }));
             Assert.AreEqual(1, description.GetProperty("outputPorts").GetArrayLength());
+            Assert.AreEqual("IPicture", description.GetProperty("outputPorts")[0].GetProperty("resolvedFieldType").GetString());
+            if (any)
+            {
+                Edit(new { kind = "updateEffectProvider", clipId = clip.Id, providerId = target.Id, fields = new { Amount = new { numbers = new[] { 1, 2 } } } });
+                Edit(new { kind = "bindEffectProviderField", clipId = clip.Id, providerId = target.Id, fieldId = "Amount", source = source.Id.ToString(), sourceOutputId = "Image" });
+            }
             Edit(new { kind = "bindEffectProviderField", clipId = clip.Id, providerId = target.Id, fieldId = "Amount", source = source.Id.ToString(), sourceOutputId = "Value" });
             Edit(new { kind = "setEffectProviderOutput", clipId = clip.Id, providerId = source.Id, outputId = "Image" });
             workspace.Save();
@@ -65,6 +77,12 @@ public sealed class MultipleOutputApiTests
             Assert.AreEqual(EffectProviderOutputExtensions.CreateOutputSourceId(source.Id, "Image"), restored[target.Id].GetMainInputSource());
             Assert.IsTrue(restored[target.Id].TryGetFieldBinding("Amount", out var binding));
             Assert.AreEqual(EffectProviderOutputExtensions.CreateOutputSourceId(source.Id, "Value"), binding);
+            if (any)
+            {
+                var field = (DynamicEffectParamField)restored[target.Id].Fields["Amount"];
+                Assert.AreEqual(EffectArgumentFieldType.Any, field.FieldType);
+                Assert.AreEqual(2, ((JsonElement)field.StaticFallbackValue!).GetProperty("numbers")[1].GetInt32());
+            }
             Edit(new { kind = "setEffectProviderOutput", clipId = clip.Id, providerId = target.Id });
             Edit(new { kind = "removeEffectProvider", clipId = clip.Id, providerId = source.Id });
             restored = EffectBindingHelper.MigrateToEffectProviders(workspace.Draft.Clips.Single().EffectProviders, null);

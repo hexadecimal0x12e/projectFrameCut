@@ -385,8 +385,12 @@ namespace projectFrameCut.AIAssistance
 
         private static object ConvertEffectProviderFieldValue(IEffectArgumentField field, object? rawValue)
         {
-            rawValue = EffectParamConvert.Normalize(rawValue);
-            var baseType = field.FieldType & (EffectArgumentFieldType)0xFFFF;
+            if (field.FieldType.HasFlag(EffectArgumentFieldType.Any))
+            {
+                if (rawValue is JsonElement json) rawValue = json.Clone();
+            }
+            else rawValue = EffectParamConvert.Normalize(rawValue);
+            var baseType = field.FieldType.BaseType();
             object converted = baseType switch
             {
                 EffectArgumentFieldType.Integer when EffectParamConvert.TryConvertToInt(rawValue, out var intValue) => intValue,

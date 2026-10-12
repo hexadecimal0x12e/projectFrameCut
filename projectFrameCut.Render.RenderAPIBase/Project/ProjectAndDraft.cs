@@ -439,6 +439,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 AssetType.Image => ClipMode.PhotoClip,
                 AssetType.Audio => ClipMode.AudioClip,
                 AssetType.VectorComposition => ClipMode.VectorComponentClip,
+                AssetType.Subtitle => ClipMode.SubtitleClip,
                 _ => ClipType
             };
         }
@@ -518,6 +519,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 ".mp3" or ".wav" or ".aac" or ".flac" or ".ogg" => AssetType.Audio,
                 ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" => AssetType.Image,
                 ".svg" or ".pjfcvec" => AssetType.VectorComposition,
+                ".srt" or ".vtt" or ".ass" or ".ssa" => AssetType.Subtitle,
                 ".ttf" or ".otf" => AssetType.Font,
                 _ => AssetType.Other
             };
@@ -532,6 +534,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 AssetType.Image => "Image",
                 AssetType.Font => "Font",
                 AssetType.VectorComposition => "VectorComposition",
+                AssetType.Subtitle => "Subtitle",
                 _ => "Other"
             };
         }

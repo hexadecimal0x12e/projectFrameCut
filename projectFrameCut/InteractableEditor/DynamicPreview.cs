@@ -47,16 +47,6 @@ public sealed class DynamicPreview : IDisposable
     private const string TextStyleProviderFromKey = "TextStyleProvider_FromPlugin";
     private const string TextStyleProviderTypeKey = "TextStyleProvider_TypeName";
     private static readonly int s_maxPreparationParallelism = Math.Max(1, Environment.ProcessorCount / 2);
-    private static readonly IComparer<IClip> s_clipLayerComparer = Comparer<IClip>.Create(static (left, right) =>
-    {
-        var layerCompare = right.LayerIndex.CompareTo(left.LayerIndex);
-        if (layerCompare != 0)
-        {
-            return layerCompare;
-        }
-
-        return right.SubLayerIndex.CompareTo(left.SubLayerIndex);
-    });
     private static readonly ConcurrentDictionary<FallbackFrameCacheKey, CachedFallbackFrame> s_fallbackFrameCache = new();
     private static readonly ConcurrentDictionary<string, long> s_fallbackDiskFrameAccess = new(StringComparer.Ordinal);
     public static string DiskCacheRoot { get; set { if (Directory.Exists(value)) field = value; } } = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
@@ -772,6 +762,10 @@ public sealed class DynamicPreview : IDisposable
     private IPicture? RenderClipPreviewSource(ref IClip clip, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
+        var previewClip = clip;
+        var allClips = (_clips ?? [clip]).Select(c => c.Id == previewClip.Id ? previewClip : c).ToArray();
+        using var endpoints = ClipValuePassThrough.Open(allClips, frameIndex, canvasWidth, canvasHeight,
+            projectWidth, projectHeight, IPicture.PicturePixelMode.BytePicture, token);
 
         if (TransformProcessing.HasActiveTransform(clip, _clips ?? [clip], frameIndex))
         {
@@ -994,7 +988,7 @@ public sealed class DynamicPreview : IDisposable
             return [];
         }
 
-        visibleClips.Sort(s_clipLayerComparer);
+        visibleClips.Sort(ClipLayerOrder.BottomToTop);
         var requests = new PreviewRequest[visibleClips.Count];
         for (var i = 0; i < visibleClips.Count; i++)
         {

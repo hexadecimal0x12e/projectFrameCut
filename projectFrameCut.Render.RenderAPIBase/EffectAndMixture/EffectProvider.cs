@@ -88,6 +88,11 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public EffectArgumentFieldDescriptor OutField { get; }
 
+        /// <summary>Resolves a declared Any input or output from the complete editing state.</summary>
+        public virtual EffectArgumentFieldType ResolveFieldType(string fieldId, bool isInput, EffectFieldTypeContext context) =>
+            (isInput ? context.State.Fields : context.State.Outputs).TryGetValue(fieldId, out var field)
+                ? field.FieldType : EffectArgumentFieldType.Any;
+
         /// <summary>
         /// Persisted binding configuration. <c>__Input__</c> stores the primary source,
         /// <c>__Output__</c> stores the final-output marker, and ordinary field ids store value sources.
@@ -196,6 +201,13 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
     public static class EffectProviderOutputExtensions
     {
+        public static void ValidateOutputFields(this IEffectProvider provider)
+        {
+            if (provider is IMultipleOutputEffectProvider multiple && (multiple.OutFields.Count == 0
+                || multiple.OutFields.Any(p => string.IsNullOrWhiteSpace(p.Key) || p.Key != p.Value.Id)))
+                throw new InvalidOperationException($"Provider {provider.Id} must declare valid named output ports.");
+        }
+
         public static IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> GetOutputFields(this IEffectProvider provider) =>
             provider is IMultipleOutputEffectProvider multiple ? multiple.OutFields
                 : new Dictionary<string, EffectArgumentFieldDescriptor> { [provider.OutField.Id] = provider.OutField };
@@ -243,6 +255,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public static string FieldTypeToParamType(EffectArgumentFieldType fieldType)
         {
+            if (fieldType.HasFlag(EffectArgumentFieldType.Any)) return "object";
             if (fieldType.IsPicture()) return nameof(IPicture);
             return (fieldType & (EffectArgumentFieldType)0x3FF) switch
             {
@@ -341,9 +354,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             => provider.SetFinalOutputSource(isFinalOutput, null);
 
         public static void SetFinalOutputSource(this IEffectProvider provider, bool isFinalOutput, string? outputId)
+            => provider.SetFinalOutputSource(isFinalOutput, outputId, null);
+
+        public static void SetFinalOutputSource(this IEffectProvider provider, bool isFinalOutput, string? outputId, EffectFieldTypeResolution? types)
         {
             if (isFinalOutput && (provider is ClipArgumentProvider || provider.TypeOfEffect == projectFrameCut.Shared.EffectType.Transform
-                || !provider.TryGetOutputField(outputId, out var field) || !field.FieldType.IsPicture()))
+                || !provider.TryGetOutputField(outputId, out var field)
+                || !(types?.GetOutputType(provider, outputId) ?? field.FieldType).IsPicture()
+                    && (types is not null || !field.FieldType.HasFlag(EffectArgumentFieldType.Any))))
                 throw new InvalidOperationException("This provider cannot be the final picture output.");
             var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);
             state[OutputKey] = (isFinalOutput ? IEffectProvider.OutputAnchorGUID : IEffectProvider.NoConnectionGUID).ToString();

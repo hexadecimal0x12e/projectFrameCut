@@ -10,12 +10,16 @@ namespace projectFrameCut.Render.RPCProtocol;
 
 internal static class ClipPreviewRenderer
 {
-    public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode, bool beforeLayout = false)
+    public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode, bool beforeLayout = false, bool initializeClips = true)
     {
         token.ThrowIfCancellationRequested();
+        using var endpoints = ClipValuePassThrough.Open(allClips, frameIndex, canvasWidth, canvasHeight,
+            projectWidth, projectHeight, pixelMode, token);
+        using var endpointClip = ClipValueFrameContext.Current?.EnterClip(clip.Id, independent: true);
         if (!beforeLayout && TransformProcessing.HasActiveTransform(clip, allClips, frameIndex))
-            return TransformProcessing.RenderCanvas(clip, allClips, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, pixelMode);
-        if (!ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
+            return TransformProcessing.RenderCanvas(clip, allClips, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, pixelMode,
+                initializeClips: initializeClips);
+        if (initializeClips && !ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
         {
             try
             {

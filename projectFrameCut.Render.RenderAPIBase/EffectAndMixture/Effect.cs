@@ -180,6 +180,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     public interface IColorAdjustEffect : INormalEffect
     {
         /// <summary>
+        /// Allow color adjust effect to appear in the effect editor. Default is false, which means color adjust effect will not appear in the effect editor.
+        /// </summary>
+        /// <remarks>
+        /// This property should be set only by main GUI applications.
+        /// </remarks>
+        public static bool AllowColorAdjustAppearInEffectEditor { get; internal set; } = false;
+
+        /// <summary>
         /// Adjust the target frame.
         /// </summary>
         /// <param name="source"></param>

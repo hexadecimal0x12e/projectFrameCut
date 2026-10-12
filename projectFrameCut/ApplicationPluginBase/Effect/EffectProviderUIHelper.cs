@@ -23,7 +23,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 if (field is null) continue;
                 bool isBound = field.IsDynamic;
                 var componentId = ComponentId(provider, field.Id);
-                if (field.FieldType.IsPicture())
+                if (field.FieldType.IsPicture() || field.FieldType.HasFlag(EffectArgumentFieldType.Any))
                 {
                     panel.AddText(Label(provider.TypeName, field), componentId);
                     MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
@@ -185,9 +185,13 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             object? convertedValue = null;
             bool converted = false;
-            var baseType = field.FieldType & (EffectArgumentFieldType)0x3FF;
+            var baseType = field.FieldType.BaseType();
             switch (baseType)
             {
+                case EffectArgumentFieldType.Any:
+                    convertedValue = value;
+                    converted = true;
+                    break;
                 case EffectArgumentFieldType.Boolean:
                     if (EffectParamConvert.TryConvertToBool(value, out var b))
                     {

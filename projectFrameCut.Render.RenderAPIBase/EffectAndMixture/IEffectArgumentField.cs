@@ -238,6 +238,11 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         SupportsHDR = 1 << 25,
 
         /// <summary>
+        /// Accepts any input object or declares a field whose actual type is resolved by the provider.
+        /// </summary>
+        Any = 1 << 31,
+
+        /// <summary>
         /// Indicate that the field is a custom type, which means the value of the field can be any type, and the handling of the field should be implemented in <see cref="IEffectProvider.Build"/>.
         /// </summary>
         /// <remarks>

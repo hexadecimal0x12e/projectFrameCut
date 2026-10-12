@@ -146,7 +146,7 @@ internal static class ProjectModeEditingService
         return new
         {
             clipId = clip.Id,
-            providers = providers.Values.Select(provider => DescribeProvider(provider.TypeName, provider)).ToArray(),
+            providers = DescribeProviders(providers),
             diagnostics = restoreDiagnostics,
         };
     }
@@ -313,7 +313,7 @@ internal static class ProjectModeEditingService
         else if (!string.Equals(autoConnect, "none", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("'autoConnect' must be output, input, or none.");
         CommitProviders(clip, providers, allowIncompletePicturePath: string.Equals(autoConnect, "none", StringComparison.OrdinalIgnoreCase));
-        return DescribeProvider(provider.TypeName, provider);
+        return DescribeProvider(provider.TypeName, provider, providers);
     }
 
     private static object UpdateEffectProvider(TimelineProjectWorkspace workspace, JsonElement arguments)
@@ -327,7 +327,7 @@ internal static class ProjectModeEditingService
         ApplyProviderMetadata(provider, OptionalObject(arguments, "metadata"));
         ApplyProviderImplementType(provider, arguments);
         CommitProviders(clip, providers);
-        return DescribeProvider(provider.TypeName, provider);
+        return DescribeProvider(provider.TypeName, provider, providers);
     }
 
     private static object RemoveEffectProvider(TimelineProjectWorkspace workspace, JsonElement arguments)
@@ -352,8 +352,9 @@ internal static class ProjectModeEditingService
         providers.Remove(providerId);
         if (wasFinalOutput)
         {
+            var types = new EffectFieldTypeResolution(providers);
             Guid? replacementOutput = EffectProviderOutputExtensions.TryParseOutputSourceId(upstream, out Guid upstreamId, out var outputId)
-                && providers.TryGetValue(upstreamId, out var source) && source.TryGetOutputField(outputId, out var output) && output.FieldType.IsPicture()
+                && providers.TryGetValue(upstreamId, out var source) && source.TryGetOutputField(outputId, out _) && types.GetOutputType(source, outputId).IsPicture()
                 ? upstreamId
                 : null;
             EffectBindingHelper.SetFinalOutput(providers, replacementOutput, removedProvider.TypeOfEffect.GetPipeline(), replacementOutput.HasValue ? outputId : null);
@@ -370,10 +371,14 @@ internal static class ProjectModeEditingService
         string source = ReadProviderBindingSource(arguments);
         if (string.Equals(source, "clip-input", StringComparison.OrdinalIgnoreCase)) source = IEffectProvider.InputAnchorGUID.ToString();
         if (string.Equals(source, "none", StringComparison.OrdinalIgnoreCase)) source = IEffectProvider.NoConnectionGUID.ToString();
+        var types = new EffectFieldTypeResolution(providers, new Dictionary<Guid, IReadOnlyDictionary<string, string>>
+        {
+            [target.Id] = new Dictionary<string, string>(target.AnchorsBindingState) { [EffectProviderAnchorExtensions.InputKey] = source },
+        });
         if (source is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId)
         {
             if (!target.InFields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var input)
-                || !EffectFieldTypes.AreCompatible(EffectArgumentFieldType.Numeric, input.FieldType))
+                || !EffectFieldTypes.AreCompatible(EffectArgumentFieldType.Numeric, types.GetInputType(target, EffectProviderAnchorExtensions.InputKey)))
                 throw new ArgumentException($"Built-in source cannot feed the primary input of '{target.Id}'.");
         }
         else if (source != IEffectProvider.InputAnchorGUID.ToString() && source != IEffectProvider.NoConnectionGUID.ToString())
@@ -381,12 +386,12 @@ internal static class ProjectModeEditingService
             if (!EffectProviderOutputExtensions.TryParseOutputSourceId(source, out Guid sourceId, out var outputId))
                 throw new ArgumentException("Input source must be clip-input, none, a built-in source, or a provider output reference.");
             IEffectProvider sourceProvider = FindProvider(providers, sourceId);
-            if (!sourceProvider.CanConnectContent(target, outputId))
+            if (!sourceProvider.CanConnectContent(target, outputId, types))
                 throw new ArgumentException($"Provider '{sourceId}' cannot feed the primary input of '{target.Id}'.");
         }
         target.SetMainInputSource(source);
         CommitProviders(clip, providers, allowIncompletePicturePath: true);
-        return DescribeProvider(target.TypeName, target);
+        return DescribeProvider(target.TypeName, target, providers);
     }
 
     private static object SetEffectProviderOutput(TimelineProjectWorkspace workspace, JsonElement arguments)
@@ -426,11 +431,17 @@ internal static class ProjectModeEditingService
             if (!sourceProvider.TryGetOutputField(outputId, out var output)) throw new ArgumentException("Select a valid source output port.");
             sourceType = output.FieldType;
         }
-        if (!ArePortTypesCompatible(sourceType, targetField.FieldType))
+        var types = new EffectFieldTypeResolution(providers, new Dictionary<Guid, IReadOnlyDictionary<string, string>>
+        {
+            [target.Id] = new Dictionary<string, string>(target.AnchorsBindingState) { [fieldId] = source },
+        });
+        if (EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var resolvedSourceId, out var resolvedOutputId)
+            && providers.TryGetValue(resolvedSourceId, out var resolvedSource)) sourceType = types.GetOutputType(resolvedSource, resolvedOutputId);
+        if (!sourceType.HasFlag(EffectArgumentFieldType.Any) && !ArePortTypesCompatible(sourceType, types.GetInputType(target, fieldId)))
             throw new ArgumentException($"Port type '{sourceType}' cannot be bound to '{targetField.FieldType}'.");
         target.SetFieldBinding(fieldId, source);
         CommitProviders(clip, providers);
-        return DescribeProvider(target.TypeName, target);
+        return DescribeProvider(target.TypeName, target, providers);
     }
 
     private static object UnbindEffectProviderField(TimelineProjectWorkspace workspace, JsonElement arguments)
@@ -442,7 +453,7 @@ internal static class ProjectModeEditingService
         provider.ClearFieldBinding(fieldId);
         EffectBindingHelper.MaterializeFields(providers.Values);
         CommitProviders(clip, providers);
-        return DescribeProvider(provider.TypeName, provider);
+        return DescribeProvider(provider.TypeName, provider, providers);
     }
 
     private static object ReplaceEffectProviderGraph(TimelineProjectWorkspace workspace, JsonElement arguments)
@@ -453,7 +464,7 @@ internal static class ProjectModeEditingService
         if (providers.Count != structures.Length)
             throw new ArgumentException("One or more effect providers could not be restored: " + string.Join(" ", restoreDiagnostics.Select(item => item.Message)));
         CommitProviders(clip, providers);
-        return new { clipId = clip.Id, providers = providers.Values.Select(provider => DescribeProvider(provider.TypeName, provider)).ToArray() };
+        return new { clipId = clip.Id, providers = DescribeProviders(providers) };
     }
 
     private static object SetColorAdjustment(TimelineProjectWorkspace workspace, JsonElement arguments)
@@ -512,7 +523,7 @@ internal static class ProjectModeEditingService
         if (!ArePortTypesCompatible(animation.OutField.FieldType, targetField.FieldType)) throw new ArgumentException("The animation output is incompatible with the target field.");
         target.SetFieldBinding(fieldId, animation.Id.ToString());
         CommitProviders(clip, providers);
-        return new { target = DescribeProvider(target.TypeName, target), animation = DescribeProvider(animation.TypeName, animation) };
+        return new { target = DescribeProvider(target.TypeName, target, providers), animation = DescribeProvider(animation.TypeName, animation, providers) };
     }
 
     private static object SetPositionKeyframes(TimelineProjectWorkspace workspace, JsonElement arguments)
@@ -580,7 +591,7 @@ internal static class ProjectModeEditingService
         ApplyProviderFields(provider, fields.Where(item => item.Value is not null).ToDictionary(item => item.Key, item => JsonSerializer.SerializeToElement(item.Value, JsonOptions)));
         if (isNew && autoConnect) EffectBindingHelper.AutoConnectProviderToOutput(providers, provider, ClipTarget(clip));
         CommitProviders(clip, providers);
-        return DescribeProvider(provider.TypeName, provider);
+        return DescribeProvider(provider.TypeName, provider, providers);
     }
 
     private static ClipDraftDTO NewClip(TimelineProjectWorkspace workspace, JsonElement arguments, string name, ClipMode mode, uint duration)
@@ -742,7 +753,7 @@ internal static class ProjectModeEditingService
         BindingDiagnostic[] diagnostics = ValidateProviderPorts(providers).ToArray();
         if (!allowIncompletePicturePath && diagnostics.Length != 0)
             throw new InvalidOperationException("Invalid effect provider graph: " + string.Join(" ", diagnostics.Select(item => item.Message)));
-        if (allowIncompletePicturePath && diagnostics.Any(item => item.Code != "MissingFinalOutput"))
+        if (allowIncompletePicturePath && diagnostics.Any(item => item.Code is not ("MissingFinalOutput" or "BrokenActivePath")))
             throw new InvalidOperationException("Invalid effect provider graph: " + string.Join(" ", diagnostics.Select(item => item.Message)));
         clip.EffectProviders = providers.Values.Select(SerializeProvider).ToArray();
     }
@@ -756,15 +767,18 @@ internal static class ProjectModeEditingService
             StaticFields = provider.Fields
                 .Where(item => item.Value is StaticEffectArgumentField or DynamicEffectParamField)
                 .Where(item => !item.Value.FieldType.IsPicture())
-                .ToDictionary(item => item.Key, item => EffectParamConvert.Normalize(GetFieldValue(item.Value)) ?? new object()),
+                .Where(item => GetFieldValue(item.Value) is not projectFrameCut.Drawing.Base.IPicture)
+                .ToDictionary(item => item.Key, item => (item.Value.FieldType.HasFlag(EffectArgumentFieldType.Any)
+                    ? GetFieldValue(item.Value) : EffectParamConvert.Normalize(GetFieldValue(item.Value))) ?? new object()),
             MetaData = provider.MetaData is { Count: > 0 } ? new(provider.MetaData) : null,
         };
 
     private static IEnumerable<BindingDiagnostic> ValidateProviderPorts(IReadOnlyDictionary<Guid, IEffectProvider> providers)
     {
-        foreach (BindingDiagnostic diagnostic in EffectBindingHelper.ValidateBindings(providers)) yield return diagnostic;
+        var types = new EffectFieldTypeResolution(providers);
+        foreach (BindingDiagnostic diagnostic in EffectBindingHelper.ValidateBindings(providers, types)) yield return diagnostic;
         IEffectProvider[] pictureProviders = providers.Values
-            .Where(provider => provider.GetOutputFields().Values.Any(p => p.FieldType.IsPicture()))
+            .Where(provider => provider.GetOutputFields().Keys.Any(key => types.GetOutputType(provider, key).IsPicture()))
             .ToArray();
         if (pictureProviders.Length > 0 && !pictureProviders.Any(provider => provider.IsFinalOutputSource()))
             yield return new BindingDiagnostic(null, "MissingFinalOutput", "The picture provider graph has no final output provider.");
@@ -787,19 +801,19 @@ internal static class ProjectModeEditingService
                     if (sourceId == target.Id)
                         yield return new BindingDiagnostic(target.Id, "SelfFieldBinding", $"Field '{binding.Key}' is bound to its own provider output.");
                     if (!source.TryGetOutputField(outputId, out var output)) continue;
-                    sourceType = output.FieldType;
+                    sourceType = types.GetOutputType(source, output.Id);
                 }
                 else continue;
                 if (targetField.FieldType.HasFlag(EffectArgumentFieldType.CannotBeDynamic))
                     yield return new BindingDiagnostic(target.Id, "FieldCannotBeDynamic", $"Field '{binding.Key}' does not support dynamic bindings.");
-                if (!ArePortTypesCompatible(sourceType, targetField.FieldType))
+                if (!sourceType.HasFlag(EffectArgumentFieldType.Any) && !ArePortTypesCompatible(sourceType, types.GetInputType(target, binding.Key)))
                     yield return new BindingDiagnostic(target.Id, "IncompatibleFieldPort", $"Field '{binding.Key}' cannot accept source type '{sourceType}'.");
             }
 
             string pictureSource = target.GetMainInputSource();
             if (EffectProviderOutputExtensions.TryParseOutputSourceId(pictureSource, out Guid pictureSourceId, out var pictureOutputId)
                 && providers.TryGetValue(pictureSourceId, out IEffectProvider? pictureProvider)
-                && !pictureProvider.CanConnectContent(target, pictureOutputId))
+                && !pictureProvider.CanConnectContent(target, pictureOutputId, types))
             {
                 yield return new BindingDiagnostic(target.Id, "IncompatiblePicturePort", $"Picture input cannot accept output '{pictureOutputId}' from provider {pictureSourceId}.");
             }
@@ -859,8 +873,16 @@ internal static class ProjectModeEditingService
         return EffectProviderOutputExtensions.CreateOutputSourceId(id, outputId);
     }
 
-    private static object DescribeProvider(string typeName, IEffectProvider provider)
-        => new
+    private static object[] DescribeProviders(IReadOnlyDictionary<Guid, IEffectProvider> providers)
+    {
+        var types = new EffectFieldTypeResolution(providers);
+        return providers.Values.Select(provider => DescribeProvider(provider.TypeName, provider, providers, types)).ToArray();
+    }
+
+    private static object DescribeProvider(string typeName, IEffectProvider provider, IReadOnlyDictionary<Guid, IEffectProvider>? providers = null, EffectFieldTypeResolution? resolvedTypes = null)
+    {
+        var types = resolvedTypes ?? new EffectFieldTypeResolution(providers ?? new Dictionary<Guid, IEffectProvider> { [provider.Id] = provider });
+        return new
         {
             available = true,
             provider.Id, typeName, provider.Name, provider.FromPlugin, provider.Enabled,
@@ -871,22 +893,25 @@ internal static class ProjectModeEditingService
             configuredImplementType = provider.MetaData is not null && provider.MetaData.TryGetValue(EffectProviderBase.ImplementTypeParameterKey, out object? configuredImplementType)
                 ? configuredImplementType?.ToString()
                 : null,
-            inputPorts = provider.InFields.Values.Select(DescribeDescriptor).ToArray(),
-            outputPort = provider is IMultipleOutputEffectProvider ? null : DescribeDescriptor(provider.OutField),
-            outputPorts = provider.GetOutputFields().Values.Select(DescribeDescriptor).ToArray(),
+            inputPorts = provider.InFields.Values.Select(field => DescribeDescriptor(field, types.GetInputType(provider, field.Id))).ToArray(),
+            outputPort = provider is IMultipleOutputEffectProvider ? null : DescribeDescriptor(provider.OutField, types.GetOutputType(provider)),
+            outputPorts = provider.GetOutputFields().Values.Select(field => DescribeDescriptor(field, types.GetOutputType(provider, field.Id))).ToArray(),
             finalOutputFieldId = provider.GetFinalOutputFieldId(),
             fields = provider.Fields.Values.Select(field => new
             {
                 field.Id, fieldType = field.FieldType.ToString(), value = GetFieldValue(field),
+                resolvedFieldType = types.GetInputType(provider, field.Id).HasFlag(EffectArgumentFieldType.Any) ? null : types.GetInputType(provider, field.Id).ToString(),
                 bindingSource = provider.TryGetFieldBinding(field.Id, out string source) ? source : null,
                 field.DefaultValue, field.MinValue, field.MaxValue, field.PresetOptions, field.Remarks,
             }).ToArray(),
             anchorsBindingState = provider.AnchorsBindingState,
             metadata = provider.MetaData,
         };
+    }
 
-    private static object DescribeDescriptor(EffectArgumentFieldDescriptor descriptor)
-        => new { descriptor.Id, fieldType = descriptor.FieldType.ToString(), descriptor.TypeName, descriptor.DefaultValue, descriptor.MinValue, descriptor.MaxValue, descriptor.PresetOptions, descriptor.Remarks };
+    private static object DescribeDescriptor(EffectArgumentFieldDescriptor descriptor, EffectArgumentFieldType type)
+        => new { descriptor.Id, fieldType = descriptor.FieldType.ToString(), resolvedFieldType = type.HasFlag(EffectArgumentFieldType.Any) ? null : type.ToString(),
+            descriptor.TypeName, descriptor.DefaultValue, descriptor.MinValue, descriptor.MaxValue, descriptor.PresetOptions, descriptor.Remarks };
 
     private static object? GetFieldValue(IEffectArgumentField field) => field switch
     {
@@ -945,6 +970,11 @@ internal static class ProjectModeEditingService
 
     private static object ConvertFieldValue(IEffectArgumentField field, JsonElement raw)
     {
+        if (field.FieldType.HasFlag(EffectArgumentFieldType.Any))
+        {
+            if (raw.ValueKind == JsonValueKind.Null) throw new ArgumentException($"Field '{field.Id}' cannot be null.");
+            return raw.Clone();
+        }
         object? value = JsonValue(raw);
         EffectArgumentFieldType type = field.FieldType & (EffectArgumentFieldType)0x3FF;
         return type switch

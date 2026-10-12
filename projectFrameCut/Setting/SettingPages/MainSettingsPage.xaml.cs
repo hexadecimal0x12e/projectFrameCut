@@ -23,6 +23,7 @@ using static projectFrameCut.Setting.SettingManager.SettingsManager;
 using projectFrameCut.ApplicationAPIBase.Views.MarkdownToXAML;
 using projectFrameCut.Render.HwAccelEngine.VectorRasterizer;
 using System.ComponentModel;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
 namespace projectFrameCut
 {
@@ -226,11 +227,8 @@ namespace projectFrameCut
 
                 DynamicPreview.DefaultOutputMode = ParsePreviewOutputMode(GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Required)));
                 LivePreviewer.DefaultOutputMode = DynamicPreview.DefaultOutputMode;
-                ColorAdjustmentEffectProvider.AllowColorAdjustAppearInEffectEditor = IsBoolSettingTrue("Edit_AllowColorAdjustAppearInEffectEditor");
+                IColorAdjustEffect.AllowColorAdjustAppearInEffectEditor = IsBoolSettingTrue("Edit_AllowColorAdjustAppearInEffectEditor");
 
-                // ===== 安全设置同步 =====
-
-                // RichText 安全设置（通过 Markdown2XAML 静态属性，跨程序集通信）
                 Markdown2XAML.ApplySecuritySettings(
                     enableRendering: IsBoolSettingTrueOrDefault("Security_RichText_EnableRendering", true),
                     enableDisplayingImage: IsBoolSettingTrueOrDefault("Security_RichText_EnableDisplayingImage", true),
@@ -239,8 +237,6 @@ namespace projectFrameCut
                     enableXAMLExternalSource: IsBoolSettingTrueOrDefault("Security_RichText_EnableXAMLExternalSource", false)
                 );
 
-
-                // 远程内容：HTTP 解码器
                 HttpDecoderContext.Enabled = IsBoolSettingTrueOrDefault("Security_RemoteContent_EnableHttpDecoder", true);
             }
             catch (Exception ex)

@@ -136,8 +136,7 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
             state.IsCanvasPreview = preview.IsCanvasPreview || preview.IsPositionedClipPreview;
             if (preview.Source is not null)
             {
-                var z = (long)preview.Source.LayerIndex * 10000L + Math.Min(9999u, preview.Source.SubLayerIndex);
-                state.Host.ZIndex = z >= int.MaxValue ? int.MinValue : -(int)z;
+                state.Host.ZIndex = ClipLayerOrder.GetPreviewZIndex(preview.Source.LayerIndex, preview.Source.SubLayerIndex);
             }
             if (preview.View is not null)
             {

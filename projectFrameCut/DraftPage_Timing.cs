@@ -3,6 +3,7 @@ using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using System.Collections.Concurrent;
 using projectFrameCut.ApplicationAPIBase.Project;
+using projectFrameCut.Render.ClipsAndTracks;
 
 namespace projectFrameCut;
 
@@ -144,5 +145,38 @@ public partial class DraftPage
         await RefreshSelectionUiAsync();
         if (tab is not null && RightContentBorder.Content is TabbedView panel) panel.SelectByTag(tab);
         if (_selected is not null && Popup.IsVisible && popupShowingDirection != "none") RefreshPropertyPanel(_selected);
+    }
+
+    internal async Task JumpToSubtitleAsync(ClipElementUI clip, SubtitleCue cue)
+    {
+        var range = GetClipFrameRange(clip);
+        IClip timing = new SubtitleClip
+        {
+            Id = clip.Id,
+            Name = clip.DisplayName,
+            StartFrame = clip.TimelineStartFrame!.Value,
+            Duration = clip.lengthInFrame,
+            RelativeStartFrame = clip.relativeStartFrame,
+            ExtendToWholeDraft = clip.IsExtraDataOptionIsTrue("ExtendToWholeDraft"),
+            SpeedVarianceProviderInstance = clip.SpeedProvider
+        };
+        uint source = SubtitleData.FrameAt(cue.StartMilliseconds, ProjectInfo.TargetFrameRate);
+        uint end = SubtitleData.FrameAt(cue.EndMilliseconds, ProjectInfo.TargetFrameRate);
+        ulong left = range.Start, right = (ulong)range.Start + range.Duration;
+        ulong endFrame = right;
+        while (left < right)
+        {
+            uint middle = (uint)(left + (right - left) / 2);
+            if (timing.TryGetRelativeFrameIndex(middle, null) is uint frame && frame < source) left = (ulong)middle + 1;
+            else right = middle;
+        }
+        if (left >= endFrame || timing.TryGetRelativeFrameIndex((uint)left, null) is not uint found || found >= end)
+            throw new InvalidOperationException(Localized.Subtitle_OutsideClip);
+        _currentFrame = left;
+        SyncClipEditorCurrentFrame();
+        UpdatePlayheadPosition();
+        CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss\\.ff}";
+        await TimelineScrollView.ScrollToAsync(Math.Max(0, FrameToPixel((uint)left) - 50), 0, false);
+        await RenderOneFrame((uint)left);
     }
 }

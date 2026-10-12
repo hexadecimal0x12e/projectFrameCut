@@ -174,11 +174,14 @@ public static class TransformProcessing
     }
 
     public static IPicture RenderCanvas(IClip clip, IReadOnlyList<IClip> clips, uint frame, int width, int height,
-        int projectWidth, int projectHeight, IPicture.PicturePixelMode pixelMode, ClipArgumentFrameCache? argumentFrames = null)
+        int projectWidth, int projectHeight, IPicture.PicturePixelMode pixelMode, ClipArgumentFrameCache? argumentFrames = null,
+        bool initializeClips = true)
     {
         var arguments = argumentFrames ?? new ClipArgumentFrameCache();
-        if (TryRender(clip, clips, frame, width, height, projectWidth, projectHeight, pixelMode, out var result, argumentFrames: arguments)) return result!;
-        return RenderInput(clip, frame, width, height, projectWidth, projectHeight, pixelMode, argumentFrames: arguments);
+        if (TryRender(clip, clips, frame, width, height, projectWidth, projectHeight, pixelMode, out var result,
+            initializeClips: initializeClips, argumentFrames: arguments)) return result!;
+        return RenderInput(clip, frame, width, height, projectWidth, projectHeight, pixelMode,
+            initializeClips: initializeClips, argumentFrames: arguments);
     }
 
     public static bool TryRender(IClip clip, IReadOnlyList<IClip> clips, uint frameIndex, int width, int height,
@@ -188,6 +191,7 @@ public static class TransformProcessing
     {
         argumentFrames ??= new();
         result = null;
+        using var endpointClip = ClipValueFrameContext.Current?.EnterClip(clip.Id);
         var index = new Index(clips.Select(TransformClipInfo.FromClip).ToArray());
         foreach (var side in Enum.GetValues<TransformSide>())
         {
@@ -258,7 +262,8 @@ public static class TransformProcessing
                 transformed?.Dispose();
                 result?.Dispose();
                 result = null;
-                Logger.Log(ex, $"Transform {resolved.Provider.Id} on clip {clip.Id}, frame {frameIndex}; using normal picture", nameof(TransformProcessing));
+                Logger.Log(ex, $"Transform {resolved.Provider.Id} on clip {clip.Id}, frame {frameIndex}", nameof(TransformProcessing));
+                if (ex is ClipValueBindingException or OperationCanceledException) throw;
                 return false;
             }
         }
@@ -328,6 +333,7 @@ public static class TransformProcessing
         ClipArgumentFrameCache? argumentFrames = null)
     {
         uint clamped = ClampFrame(clip, frame);
+        using var endpointInput = ClipValueFrameContext.Current?.EnterTransformInput();
         using var context = ValueProviderFrameContext.PushFrame(clamped,
             Math.Clamp(((float)clamped - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1));
         argumentFrames ??= new();

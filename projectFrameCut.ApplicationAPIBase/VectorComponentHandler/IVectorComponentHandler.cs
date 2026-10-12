@@ -24,6 +24,11 @@ public interface IVectorComponentHandler : projectFrameCut.Render.RenderAPIBase.
     public string Icon { get; }
 
     /// <summary>
+    /// Indicates whether this component type is hidden from the add-component selector.
+    /// </summary>
+    public bool IsNotVisibleInNewComponentSelector => false;
+
+    /// <summary>
     /// Indicates whether this component type has default handles in the UI that can be used for user interaction. 
     /// </summary>
     public bool HasDefaultHandles { get; }

@@ -92,7 +92,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
             foreach (var kvp in elements)
             {
-                if (DynamicParam.IsDynamicValue(kvp.Value))
+                if (DynamicParam.IsDynamicValue(kvp.Value) || GetParamType(kvp.Key, ParametersType) == "object")
                 {
                     result[kvp.Key] = kvp.Value;
                     continue;

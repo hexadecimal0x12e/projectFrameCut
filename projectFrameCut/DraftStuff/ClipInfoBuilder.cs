@@ -193,8 +193,8 @@ namespace projectFrameCut.DraftStuff
             {
                 tabs.Add(new TabbedViewItem
                 {
-                    Header = PPLocalizedResources.TextOption_TabTitle,
-                    LazyAsyncContentFactory = () => BuildTextOptionTab(clip, handler),
+                    Header = clip.ClipType == ClipMode.SubtitleClip ? Localized.Subtitle_Title : PPLocalizedResources.TextOption_TabTitle,
+                    LazyAsyncContentFactory = () => clip.ClipType == ClipMode.SubtitleClip ? BuildSubtitleOptionTab(clip, handler) : BuildTextOptionTab(clip, handler),
                     Tag = "text"
                 });
             }
@@ -208,7 +208,7 @@ namespace projectFrameCut.DraftStuff
                     Tag = "timing"
                 });
             }
-            if (clip.ClipType is ClipMode.VideoClip or ClipMode.PhotoClip or ClipMode.VectorComponentClip)
+            if (clip.ClipType is ClipMode.VideoClip or ClipMode.PhotoClip or ClipMode.VectorComponentClip or ClipMode.SubtitleClip)
             {
                 tabs.Add(new TabbedViewItem
                 {
@@ -261,7 +261,7 @@ namespace projectFrameCut.DraftStuff
                         LazyContentFactory = () => BuildClassicEffectTab(clip, handler),
                         Tag = "effectClassic"
                     });
-                    if (clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
+                    if (clip.ClipType == ClipMode.TextClip)
                     {
                         tabs.Add(new TabbedViewItem
                         {

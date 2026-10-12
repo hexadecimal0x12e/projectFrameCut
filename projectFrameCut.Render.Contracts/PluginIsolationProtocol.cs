@@ -430,6 +430,34 @@ public sealed class IsolationBuildProviderRequest
 }
 
 [ProtoContract]
+public sealed class IsolationFieldTypeState
+{
+    [ProtoMember(1)] public IsolationProviderState State { get; set; } = new();
+    [ProtoMember(2)] public string TypeName { get; set; } = "";
+    [ProtoMember(3)] public string FromPlugin { get; set; } = "";
+    [ProtoMember(4)] public List<IsolationFieldDescriptor> Outputs { get; set; } = [];
+    [ProtoMember(5)] public List<string> DynamicParameters { get; set; } = [];
+    [ProtoMember(6)] public int EffectType { get; set; }
+    [ProtoMember(7)] public int Target { get; set; }
+}
+
+[ProtoContract]
+public sealed class IsolationResolveFieldTypesRequest
+{
+    [ProtoMember(1)] public long ObjectId { get; set; }
+    [ProtoMember(2)] public IsolationFieldTypeState State { get; set; } = new();
+    [ProtoMember(3)] public Dictionary<string, IsolationFieldTypeState> BoundProviders { get; set; } = [];
+    [ProtoMember(4)] public Dictionary<string, ulong> InputTypes { get; set; } = [];
+}
+
+[ProtoContract]
+public sealed class IsolationResolvedFieldTypes
+{
+    [ProtoMember(1)] public Dictionary<string, ulong> Inputs { get; set; } = [];
+    [ProtoMember(2)] public Dictionary<string, ulong> Outputs { get; set; } = [];
+}
+
+[ProtoContract]
 public sealed class IsolationEffectDescriptor
 {
     [ProtoMember(1)] public long ObjectId { get; set; }

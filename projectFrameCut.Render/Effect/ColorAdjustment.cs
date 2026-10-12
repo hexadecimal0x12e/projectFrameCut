@@ -542,8 +542,6 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class ColorAdjustmentEffectProvider : EffectProviderBase
     {
-        public static bool AllowColorAdjustAppearInEffectEditor { get; set; } = false;
-
         public ColorAdjustmentEffectProvider()
         {
             Name = "ColorAdjustment";
@@ -563,7 +561,7 @@ namespace projectFrameCut.Render.Effect
 
         public override EffectType TypeOfEffect => EffectType.NormalEffect;
 
-        public override EffectTarget Target => AllowColorAdjustAppearInEffectEditor ? EffectTarget.ColorAdjustment : EffectTarget.ColorAdjustment | EffectTarget.IsNotVisibleInEffectEditor;
+        public override EffectTarget Target => IColorAdjustEffect.AllowColorAdjustAppearInEffectEditor ? EffectTarget.ColorAdjustment : EffectTarget.ColorAdjustment | EffectTarget.IsNotVisibleInEffectEditor;
 
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 

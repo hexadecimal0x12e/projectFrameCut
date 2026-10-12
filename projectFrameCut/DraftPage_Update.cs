@@ -265,6 +265,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task DraftChangedAsync(object? sender, ClipUpdateEventArgs e)
     {
+        if (e.DetailInfo == "__EFFECT_BINDING_CHANGED__")
+        {
+            if (!IsReadonly && !AlreadyDisappeared && !e.NoSave) ScheduleSnapshotSave(e);
+            return;
+        }
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var changeMark = new UserMarkRange("Draft.ApplyChanges", $"reason={e.Reason}, clip={e.SourceId}");
 #endif
@@ -417,13 +422,14 @@ public partial class DraftPage : ContentPage, IDraftPage
             _snapshotSaveCts?.Dispose();
             _snapshotSaveCts = new CancellationTokenSource();
             var cts = _snapshotSaveCts;
+            var token = cts.Token;
 
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await Task.Delay(SnapshotSaveDebounceMs, cts.Token);
-                    if (cts.Token.IsCancellationRequested || AlreadyDisappeared || IsReadonly || string.IsNullOrWhiteSpace(WorkingPath))
+                    await Task.Delay(SnapshotSaveDebounceMs, token);
+                    if (token.IsCancellationRequested || AlreadyDisappeared || IsReadonly || string.IsNullOrWhiteSpace(WorkingPath))
                     {
                         return;
                     }
@@ -432,10 +438,10 @@ public partial class DraftPage : ContentPage, IDraftPage
                     lock (_snapshotSaveGate)
                     {
                         pendingArgs = _pendingSnapshotSaveArgs;
-                        _pendingSnapshotSaveArgs = null;
                     }
 
-                    await Save(false, pendingArgs);
+                    if (pendingArgs is null) return;
+                    await SaveCoreAsync(false, pendingArgs, false, token);
                     MarkHistoryPanelDirty();
                 }
                 catch (TaskCanceledException)
@@ -445,7 +451,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 {
                     Log(ex, "snapshot save failed", this);
                 }
-            }, cts.Token);
+            }, token);
         }
     }
 
@@ -667,7 +673,11 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region save, undo and redo
-    public async Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null, bool throwOnFailure = false)
+    public Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null, bool throwOnFailure = false)
+        => SaveCoreAsync(noSlot, args, throwOnFailure);
+
+    private async Task SaveCoreAsync(bool noSlot, ClipUpdateEventArgs? args, bool throwOnFailure,
+        CancellationToken snapshotSaveToken = default)
     {
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var saveMark = new UserMarkRange("Draft.Save", $"noSlot={noSlot}");
@@ -686,16 +696,23 @@ public partial class DraftPage : ContentPage, IDraftPage
             SetStateFail(Localized.DraftPage_CannotSave_Readonly);
             return;
         }
-        if (!await saveLocker.WaitAsync(1500))
-        {
-            if (throwOnFailure) throw new TimeoutException("Project save is busy.");
-            Log("Cannot save because of failed to acquire save lock, skipping this save.", "warn");
-            return;
-        }
+        await saveLocker.WaitAsync();
         try
         {
-            var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: true);
-            var assets = Assets.Values.ToList();
+            if (snapshotSaveToken.IsCancellationRequested) return;
+            lock (_snapshotSaveGate)
+            {
+                args = _pendingSnapshotSaveArgs ?? args;
+                _pendingSnapshotSaveArgs = null;
+                _snapshotSaveCts?.Cancel();
+            }
+            DraftStructureJSON draft = null!;
+            List<AssetItem> assets = null!;
+            await Dispatcher.DispatchAsync(() =>
+            {
+                draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: true);
+                assets = Assets.Values.ToList();
+            });
             var timelineModule = _workspace.GetModule<TimelineModule>();
             var assetModule = _workspace.GetModule<AssetModule>();
             timelineModule.Reset(draft.Clips);
@@ -738,36 +755,10 @@ public partial class DraftPage : ContentPage, IDraftPage
                 return;
             }
 
-            var snapshotId = Guid.NewGuid();
-            string slot = ".";
-            if (noSlot)
+            if (!noSlot || args is not null || CurrentSnapshotID == Guid.Empty || FindSlotDirectory(CurrentSnapshotID) is null)
             {
-                ProjectInfo.NormallyExited = true;
-                await Task.Run(SaveProjectThumbnailBeforeExit);
-                await timelineModule.SaveAsync(draft);
-                await assetModule.SaveAsync();
-            }
-            else //avoid worst condition (crashes while saving)
-            {
-                slot = $"slot_{snapshotId}";
-                ProjectInfo.SnapshotIDMapping[snapshotId] = new ProjectJSONStructure.SnapshotIDMappingStructure
-                {
-                    Previous = PreviousSnapshotID
-                };
-                if (PreviousSnapshotID != Guid.Empty && ProjectInfo.SnapshotIDMapping.TryGetValue(PreviousSnapshotID, out var prevEntry))
-                {
-                    if (!prevEntry.Next.Contains(snapshotId))
-                        prevEntry.Next.Add(snapshotId);
-                }
-                ProjectInfo.LastSnapshotID = snapshotId;
-                CurrentSnapshotID = snapshotId;
-                LogDiagnostic($"Switching slot to {snapshotId}...");
-
-                if (MaximumSaveSlot >= 0)
-                {
-                    PruneOldestSaveSlots();
-                }
-
+                var snapshotId = Guid.NewGuid();
+                var slot = $"slot_{snapshotId}";
                 if (args is not null)
                 {
                     draft.ChangeReason = args.ToString();
@@ -777,14 +768,41 @@ public partial class DraftPage : ContentPage, IDraftPage
                 draft.OperatorDetailName = args?.OperatorDetailName ?? string.Empty;
                 draft.ChangedByUserDisplayName = SettingsManager.GetSetting("UserName", "User");
                 draft.ChangedByUser = SettingsManager.GetSettingAs("UserID", Guid.Empty, Guid.Empty);
-                draft.PreviousSnapshot = PreviousSnapshotID;
+                draft.PreviousSnapshot = CurrentSnapshotID;
                 draft.SnapshotID = snapshotId;
-                Directory.CreateDirectory(Path.Combine(WorkingPath, "saveSlots", slot));
-                await _workspace.GetModule<HistoryModule>().SaveSnapshotAsync(draft, slot);
-                await _workspace.Context.Storage.WriteTextAsync(Path.Combine("saveSlots", slot, "assets.json"), JsonSerializer.Serialize(assets, savingOpts));
-                PreviousSnapshotID = draft.SnapshotID;
+                await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "saveSlots", slot, "timeline.json"), draft);
+                await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "saveSlots", slot, "assets.json"), assets);
+                // Publish the pointer only after both snapshot files are durable.
+                await WriteCurrentSnapshotAsync(draft, slot, true);
+                ProjectInfo.SnapshotIDMapping[snapshotId] = new ProjectJSONStructure.SnapshotIDMappingStructure
+                {
+                    Previous = draft.PreviousSnapshot
+                };
+                if (ProjectInfo.SnapshotIDMapping.TryGetValue(draft.PreviousSnapshot, out var prevEntry)
+                    && !prevEntry.Next.Contains(snapshotId))
+                    prevEntry.Next.Add(snapshotId);
+                if (MaximumSaveSlot >= 0) PruneOldestSaveSlots();
                 _historyNavigatedByUndoRedo = false;
             }
+            else
+            {
+                if (_currentSnapshot is null)
+                {
+                    var path = FindSlotDirectory(CurrentSnapshotID)!;
+                    InitializeCurrentSnapshot(JsonSerializer.Deserialize<DraftStructureJSON>(
+                        File.ReadAllText(Path.Combine(path, "timeline.json")), savingOpts)
+                        ?? throw new InvalidDataException("Current snapshot timeline is invalid."), Path.GetFileName(path));
+                }
+                _currentSnapshot.CopyTo(draft);
+            }
+
+            if (noSlot)
+            {
+                await Task.Run(SaveProjectThumbnailBeforeExit);
+                await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "timeline.json"), draft);
+                await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "assets.json"), assets);
+            }
+            ProjectInfo.NormallyExited = noSlot;
 
             ProjectDuration = draft.Duration;
             ProjectInfo.LastChanged = DateTime.Now;
@@ -815,7 +833,20 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
 
             if (!AlreadyDisappeared) _workspaceWindowHost.SaveLayout();
-            await _workspace.GetModule<ProjectModule>().SaveProjectAsync();
+            await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "project.pjfc"), ProjectInfo);
+            await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, ProjectJSONStructure.SnapshotMappingFileName), ProjectInfo.SnapshotIDMapping);
+            if (noSlot)
+            {
+                bool isDirty;
+                lock (_snapshotSaveGate) isDirty = _pendingSnapshotSaveArgs is not null;
+                await WriteCurrentSnapshotAsync(draft, _currentSnapshot!.SlotName, isDirty);
+                if (isDirty)
+                    _workspace.GetModule<ProjectModule>().MarkDirty(draft.ChangeReason);
+                else
+                    _workspace.GetModule<ProjectModule>().MarkClean();
+            }
+            else
+                _workspace.GetModule<ProjectModule>().MarkDirty(draft.ChangeReason);
             DraftImportAndExportHelper.EnsureProjectDirectoryShellIntegration(WorkingPath);
         }
         catch (Exception ex)
@@ -977,10 +1008,12 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private void PruneOldestSaveSlots()
     {
+        var protectedSnapshots = ReadCurrentSnapshotRecords(WorkingPath).Select(r => r.SnapshotID).ToHashSet();
+        protectedSnapshots.Add(CurrentSnapshotID);
         while (ProjectInfo.SnapshotIDMapping.Count > MaximumSaveSlot && MaximumSaveSlot >= 0)
         {
             var leafToRemove = ProjectInfo.SnapshotIDMapping
-                .Where(kv => kv.Value.Next.Count == 0 && kv.Key != CurrentSnapshotID)
+                .Where(kv => kv.Value.Next.Count == 0 && !protectedSnapshots.Contains(kv.Key))
                 .Select(kv => new { kv.Key, SavedAt = GetSlotSavedAt(kv.Key) })
                 .OrderBy(x => x.SavedAt)
                 .FirstOrDefault();
@@ -1115,8 +1148,14 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     public async Task ApplySlot(Guid snapshotId)
     {
+        await saveLocker.WaitAsync();
         try
         {
+            lock (_snapshotSaveGate)
+            {
+                _snapshotSaveCts?.Cancel();
+                _pendingSnapshotSaveArgs = null;
+            }
             LogDiagnostic($"Switching slot from {CurrentSnapshotID} to {snapshotId}...");
             var slotPath = FindSlotDirectory(snapshotId);
             if (slotPath is null)
@@ -1126,9 +1165,10 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
 
             var tml = File.ReadAllText(Path.Combine(slotPath, "timeline.json"));
-            var assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(slotPath, "assets.json")), savingOpts) ?? new();
+            var assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(slotPath, "assets.json")), savingOpts)
+                ?? throw new InvalidDataException("Snapshot assets are invalid.");
             var draftJson = JsonSerializer.Deserialize<DraftStructureJSON>(tml, savingOpts);
-            if (draftJson is null)
+            if (draftJson is null || draftJson.SnapshotID != snapshotId)
             {
                 SetStateOK(Localized.DraftPage_RedoAndUndo_Failed);
                 return;
@@ -1162,9 +1202,12 @@ public partial class DraftPage : ContentPage, IDraftPage
             UpdateTimelineWidth();
             await ClipEditor.UpdateClips(Clips);
             await RefreshRestoredSelectionAsync();
-            CurrentSnapshotID = snapshotId;
+            if (!IsReadonly && !IsRemoteProject)
+                await WriteCurrentSnapshotAsync(draftJson, Path.GetFileName(slotPath), true);
+            else
+                InitializeCurrentSnapshot(draftJson, Path.GetFileName(slotPath));
+            _workspace.GetModule<ProjectModule>().MarkDirty("Sync changes");
             _activeHistoryProvider?.NotifyExternalSnapshotChanged();
-            PreviousSnapshotID = draftJson.PreviousSnapshot;
             RefreshHistorySubWindowContent();
             await DraftChangedAsync(this, new() { DetailInfo = "Sync changes", NoSave = true });
             SetStateOK(Localized.DraftPage_RedoAndUndo_Success(draftJson.SavedAt));
@@ -1172,11 +1215,12 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         catch (Exception ex)
         {
-            if (MyLoggerExtensions.LoggingDiagnosticInfo)
-            {
-                Log(ex, "apply changes", this);
-            }
+            Log(ex, "apply changes", this);
             SetStateOK(Localized.DraftPage_RedoAndUndo_Failed);
+        }
+        finally
+        {
+            saveLocker.Release();
         }
     }
 

@@ -93,7 +93,7 @@ namespace projectFrameCut.DraftStuff
                 foreach (var stage in new[] { EffectPipeline.NativeContent, EffectPipeline.Picture })
                     tabs.TabItems.Add(new TabbedViewItem
                     {
-                        Header = stage == EffectPipeline.NativeContent ? Localized.Effect_NativePipeline : Localized.Effect_PicturePipeline,
+                        Header = stage == EffectPipeline.NativeContent ? PPLocalizedResources.EffectBind_VectorPipeline : PPLocalizedResources.EffectBind_PicturePipeline,
                         Tag = stage.ToString(),
                         Content = await BuildEffectTab(clip, handler, stage)
                     });
@@ -103,7 +103,8 @@ namespace projectFrameCut.DraftStuff
             }
             var selectionTarget = pipeline is { } stageTarget ? clip.GetEffectSelectionTarget(stageTarget) : clip.GetEffectSelectionTarget();
             PropertyPanelBuilder ppb = new();
-            var bindingDiagnostics = EffectBindingHelper.ValidateBindings(clip.EffectProviders);
+            var types = clip.EffectProviders is { } typeProviders ? await EffectFieldTypeResolution.ResolveAsync(typeProviders) : null;
+            var bindingDiagnostics = EffectBindingHelper.ValidateBindings(clip.EffectProviders, types);
 
             if (bindingDiagnostics.Count > 0)
             {
@@ -297,6 +298,13 @@ namespace projectFrameCut.DraftStuff
 
 
                         var resolvedInAnchorId = bundleInstance.GetMainInputSource();
+                        async Task<EffectFieldTypeResolution?> InputCandidateTypes(string source) =>
+                            bundleInstance.InFields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var input)
+                                && input.FieldType.HasFlag(EffectArgumentFieldType.Any)
+                                ? await EffectFieldTypeResolution.ResolveAsync(clip.EffectProviders, bindingOverrides: new Dictionary<Guid, IReadOnlyDictionary<string, string>>
+                                {
+                                    [bundleId] = new Dictionary<string, string>(bundleInstance.AnchorsBindingState) { [EffectProviderAnchorExtensions.InputKey] = source },
+                                }) : types;
 
                         // 构建过滤后的 InAnchor 下拉选项：排除自身、类型不兼容和（showAllEffect=false 时）内部 bundle
                         var inAnchorProviderOptions = new List<string>();
@@ -305,8 +313,10 @@ namespace projectFrameCut.DraftStuff
                             foreach (var output in b.GetOutputFields().Values)
                             {
                                 string? outputId = b is IMultipleOutputEffectProvider ? output.Id : null;
-                                if (!b.CanConnectContent(bundleInstance, outputId)) continue;
                                 string source = outputId is null ? b.Id.ToString() : EffectProviderOutputExtensions.CreateOutputSourceId(b.Id, outputId);
+                                var candidateTypes = await InputCandidateTypes(source);
+                                if (!b.CanConnectContent(bundleInstance, outputId, candidateTypes)
+                                    || candidateTypes?.AreInputsCompatible(bundleInstance) == false) continue;
                                 inAnchorProviderOptions.Add(GetInputAnchorSelection(source));
                             }
                         var curIn = GetInputAnchorSelection(resolvedInAnchorId);
@@ -315,11 +325,18 @@ namespace projectFrameCut.DraftStuff
 
                         if (bundleInstance.InFields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var mainInput))
                         {
-                            if (mainInput.FieldType.IsPicture()) inAnchorProviderOptions.Add(PPLocalizedResources.EffectBind_SourcePicture);
-                            if (EffectFieldTypes.AreCompatible(EffectArgumentFieldType.Numeric, mainInput.FieldType))
+                            foreach (var source in new[] { IEffectProvider.InputAnchorGUID.ToString(), ValueProviderFrameContext.BuiltInFrameProviderId, ValueProviderFrameContext.BuiltInProgressProviderId })
                             {
-                                inAnchorProviderOptions.Add(PPLocalizedResources.EffectBindView_BoundSource_FrameIndex);
-                                inAnchorProviderOptions.Add(PPLocalizedResources.EffectBindView_BoundSource_Progress);
+                                var candidateTypes = await InputCandidateTypes(source);
+                                var sourceType = source == IEffectProvider.InputAnchorGUID.ToString() ? EffectArgumentFieldType.IPicture : EffectArgumentFieldType.Numeric;
+                                if (!EffectFieldTypes.AreCompatible(sourceType, candidateTypes?.GetInputType(bundleInstance, EffectProviderAnchorExtensions.InputKey) ?? mainInput.FieldType)
+                                    || candidateTypes?.AreInputsCompatible(bundleInstance) == false) continue;
+                                inAnchorProviderOptions.Add(source switch
+                                {
+                                    ValueProviderFrameContext.BuiltInFrameProviderId => PPLocalizedResources.EffectBindView_BoundSource_FrameIndex,
+                                    ValueProviderFrameContext.BuiltInProgressProviderId => PPLocalizedResources.EffectBindView_BoundSource_Progress,
+                                    _ => PPLocalizedResources.EffectBind_SourcePicture,
+                                });
                             }
                             ppb.AddPicker($"Provider|{bundleId}|InAnchor", PPLocalizedResources.EffectBind_InputAnchor,
                                 inAnchorProviderOptions.Append(PPLocalizedResources.EffectBind_NoConnection).Distinct().ToArray(), curIn);
@@ -341,13 +358,13 @@ namespace projectFrameCut.DraftStuff
                                 }
                                 string current = targets.Count > 0 ? string.Join("; ", targets) : PPLocalizedResources.EffectBind_NoConnection;
                                 var options = new List<string> { current };
-                                if (output.FieldType.IsPicture()) options.Add(PPLocalizedResources.EffectBind_FinalResult);
+                                if ((types?.GetOutputType(bundleInstance, output.Id) ?? output.FieldType).IsPicture()) options.Add(PPLocalizedResources.EffectBind_FinalResult);
                                 options.Add(PPLocalizedResources.EffectBind_NoConnection);
                                 ppb.AddPicker($"Provider|{bundleId}|OutAnchor|{Uri.EscapeDataString(output.Id)}",
                                     $"{PPLocalizedResources.EffectBind_OutputAnchor} ({output.Id})", options.Distinct().ToArray(), current);
                             }
                         }
-                        else if (bundleInstance.OutField.FieldType.IsPicture())
+                        else if ((types?.GetOutputType(bundleInstance) ?? bundleInstance.OutField.FieldType).IsPicture())
                             ppb.AddPicker($"Provider|{bundleId}|OutAnchor", PPLocalizedResources.EffectBind_OutputAnchor,
                                 [PPLocalizedResources.EffectBind_FinalResult, PPLocalizedResources.EffectBind_NoConnection],
                                 bundleInstance.IsFinalOutputSource() ? PPLocalizedResources.EffectBind_FinalResult : PPLocalizedResources.EffectBind_NoConnection);
@@ -511,10 +528,10 @@ namespace projectFrameCut.DraftStuff
                                         if (outProvider is IMultipleOutputEffectProvider multiple)
                                         {
                                             if (parts.Length != 4 || !multiple.OutFields.TryGetValue(Uri.UnescapeDataString(parts[3]), out var output)) break;
-                                            if (output.FieldType.IsPicture() && e.Value?.ToString() == PPLocalizedResources.EffectBind_FinalResult)
+                                            if (e.Value?.ToString() == PPLocalizedResources.EffectBind_FinalResult)
                                             {
                                                 EffectBindingHelper.SetFinalOutput(clip.EffectProviders, bundleId,
-                                                    outProvider.TypeOfEffect.GetPipeline(), output.Id);
+                                                    outProvider.TypeOfEffect.GetPipeline(), output.Id, types);
                                             }
                                             else if (e.Value?.ToString() == PPLocalizedResources.EffectBind_NoConnection)
                                             {

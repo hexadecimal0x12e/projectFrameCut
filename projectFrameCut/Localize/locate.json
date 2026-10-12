@@ -7,10 +7,66 @@
   "NameOfBaseInterface": "ISimpleLocalizerBase",
   "EnableBaseGenerate": true,
   "EnablePseudoLocalization": true,
+  "EnableDynamicGenerate": false,
   "PseudoLocalizationCondition": "DEBUG",
   "PseudoLocalizationLocaleId": "qps-ploc",
   "Values": {
     "zh-CN": [
+      {
+        "Id": "HomePage_GoDraft_Recovery_Select",
+        "Value": "\u9009\u62E9\u8981\u6062\u590D\u7684\u9879\u76EE\u72B6\u6001",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_Recovery_LastSaved",
+        "Value": "\u5DF2\u77E5\u6700\u540E\u4E00\u6B21\u6B63\u786E\u7684\u9879\u76EE\u72B6\u6001\uFF08\u4FDD\u5B58\u4E8E {savedAt:F}{reason}\uFF09",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "DateTime",
+            "Value": "savedAt"
+          },
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_Recovery_LatestSnapshot",
+        "Value": "\u5DF2\u77E5\u6700\u65B0\u53EF\u7528\u7684\u5FEB\u7167\uFF08\u4FDD\u5B58\u4E8E {savedAt:F}{reason}\uFF09",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "DateTime",
+            "Value": "savedAt"
+          },
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_GoDraft_Recovery_Reason",
+        "Value": "\uFF0C\u300C{reason}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
       {
         "Id": "_Apply",
         "Value": "\u5E94\u7528",
@@ -10469,6 +10525,310 @@
       {
         "Id": "Effect_IncompatiblePipeline",
         "Value": "\u65e0\u6cd5\u8fde\u63a5\u4e0d\u540c\u7ba1\u7ebf\u6216\u4e0d\u517c\u5bb9\u7684\u539f\u751f\u5185\u5bb9\u7c7b\u578b\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_ImportMode",
+        "Value": "\u5BFC\u5165\u65B9\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_ImportCopy",
+        "Value": "\u590D\u5236\u5230\u9879\u76EE asset \u76EE\u5F55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_ImportReference",
+        "Value": "\u4FDD\u7559\u539F\u6587\u4EF6\uFF0C\u76F4\u63A5\u5F15\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_Title",
+        "Value": "\u5B57\u5E55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_Import",
+        "Value": "\u5BFC\u5165\u5B57\u5E55\u6587\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_New",
+        "Value": "\u65B0\u5EFA\u5B57\u5E55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_Formats",
+        "Value": "\u652F\u6301 SRT\u3001WebVTT\u3001ASS\u3001SSA \u5B57\u5E55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_ImportWarnings",
+        "Value": "\u5DF2\u5BFC\u5165\u5B57\u5E55\u6587\u5B57\u548C\u65F6\u95F4\u3002\u5B57\u4F53\u3001\u989C\u8272\u548C\u4F4D\u7F6E\u4F7F\u7528\u7EDF\u4E00\u6837\u5F0F\uFF1B\u65E0\u6CD5\u8F6C\u6362\u7684\u7279\u6548\u3001\u52A8\u753B\u6216\u7ED8\u56FE\u5185\u5BB9\u5DF2\u5FFD\u7565\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_Encoding",
+        "Value": "\u65E0\u6CD5\u6309\u5F53\u524D\u7F16\u7801\u8BFB\u53D6\u5B57\u5E55\uFF0C\u8BF7\u9009\u62E9\u6587\u4EF6\u7F16\u7801",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_DeleteCue",
+        "Value": "\u5220\u9664\u6B64\u53E5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_GoToCue",
+        "Value": "\u8DF3\u8F6C\u5230\u6B64\u53E5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_InvalidData",
+        "Value": "\u5B57\u5E55\u8BBE\u7F6E\u65E0\u6548\uFF0C\u8BF7\u4FEE\u6B63\u540E\u518D\u5E94\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_AddCue",
+        "Value": "\u6DFB\u52A0\u4E00\u53E5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_FitLength",
+        "Value": "\u5339\u914D\u5B57\u5E55\u957F\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_OutsideClip",
+        "Value": "\u8FD9\u53E5\u5B57\u5E55\u4E0D\u5728\u7247\u6BB5\u5F53\u524D\u7684\u53EF\u89C1\u65F6\u95F4\u8303\u56F4\u5185\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_Start",
+        "Value": "\u5F00\u59CB\u65F6\u95F4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_End",
+        "Value": "\u7ED3\u675F\u65F6\u95F4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_Markdown",
+        "Value": "\u5B57\u5E55\u5185\u5BB9\uFF08Markdown\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_MarkdownHint",
+        "Value": "\u652F\u6301 **\u7C97\u4F53**\u3001*\u659C\u4F53*\u3001\u002B\u002B\u4E0B\u5212\u7EBF\u002B\u002B\u3001~~\u5220\u9664\u7EBF~~\u3001\u0060\u884C\u5185\u4EE3\u7801\u0060 \u548C\u6362\u884C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_Style",
+        "Value": "\u7EDF\u4E00\u5B57\u5E55\u6837\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Subtitle_BottomMargin",
+        "Value": "\u5E95\u90E8\u7559\u767D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ValuePassThrough",
+        "Value": "\u503C\u7A7F\u900F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_EndpointOutputs",
+        "Value": "\u672C Clip \u7AEF\u70B9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_EndpointInputs",
+        "Value": "\u5176\u4ED6 Clip \u7684\u7AEF\u70B9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_CreateEndpoint",
+        "Value": "\u521B\u5EFA\u7AEF\u70B9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_EndpointName",
+        "Value": "\u7AEF\u70B9\u540D\u79F0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_EndpointType",
+        "Value": "\u7AEF\u70B9\u7C7B\u578B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_AddEndpointInput",
+        "Value": "\u6DFB\u52A0\u5230\u7ED1\u5B9A\u56FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_EndpointUnavailable",
+        "Value": "\u7AEF\u70B9\u4E0D\u53EF\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_NoAvailableEndpoints",
+        "Value": "\u6CA1\u6709\u53EF\u5F15\u7528\u7684\u7AEF\u70B9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_EndpointSource",
+        "Value": "\u6765\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_EndpointSourceMissing",
+        "Value": "\u6765\u6e90 Clip \u5df2\u5220\u9664\u6216\u4e0d\u53ef\u7528\uff0c\u8bf7\u91cd\u65b0\u9009\u62e9\u6765\u6e90\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_EndpointMissing",
+        "Value": "\u6765\u6e90\u7aef\u70b9\u5df2\u5220\u9664\u6216\u4e0d\u53ef\u7528\uff0c\u8bf7\u91cd\u65b0\u6dfb\u52a0\u5f15\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_EndpointDisabled",
+        "Value": "\u6765\u6e90\u7aef\u70b9\u5df2\u7981\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_EndpointDisconnected",
+        "Value": "\u6765\u6e90\u7aef\u70b9\u5c1a\u672a\u7ed1\u5b9a Effect \u8f93\u51fa\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_EndpointTypeChanged",
+        "Value": "\u6765\u6e90\u7aef\u70b9\u7c7b\u578b\u5df2\u53d8\u5316\uff0c\u8bf7\u91cd\u65b0\u6dfb\u52a0\u5f15\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_EndpointOrderInvalid",
+        "Value": "\u6765\u6e90 Clip \u5fc5\u987b\u5728\u5f53\u524d Clip \u4e4b\u524d\u6e32\u67d3\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_EndpointOutputDisconnected",
+        "Value": "\u6b64\u7aef\u70b9\u5c1a\u672a\u7ed1\u5b9a Effect \u8f93\u51fa\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

@@ -21,6 +21,9 @@ public sealed class DynamicEffectGraphTests
         public override EffectType TypeOfEffect => output.IsPicture() ? EffectType.NormalEffect : EffectType.NonIPictureOutputValueProvider;
         public override EffectTarget Target => output.IsPicture() ? EffectTarget.Video : EffectTarget.ValueProvider;
         public Func<TestEffect>? Factory { get; init; }
+        public Func<string, bool, EffectFieldTypeContext, EffectArgumentFieldType>? TypeResolver { get; init; }
+        public override EffectArgumentFieldType ResolveFieldType(string fieldId, bool isInput, EffectFieldTypeContext context) =>
+            TypeResolver?.Invoke(fieldId, isInput, context) ?? base.ResolveFieldType(fieldId, isInput, context);
         public int Builds { get; private set; }
         public TestEffect? LastEffect { get; private set; }
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => fields;

@@ -50,6 +50,7 @@ record NodePort
     public PortKind Kind;
     public string Key;
     public EffectArgumentFieldType FieldType;
+    public EffectArgumentFieldType DeclaredFieldType;
     public string DisplayName;
     public int Index;
 
@@ -71,6 +72,8 @@ public partial class DraftEffectBindingView : ContentView
     private EffectPipeline _pipeline = EffectPipeline.Picture;
     private bool _loadingPipeline;
     private ClipElementUI? _clip;
+    private EffectFieldTypeResolution? _fieldTypes;
+    private int _fieldTypeVersion;
     private DraftPage? _page;
     private (ClipElementUI Clip, DraftPage Page, EffectTarget Target, EffectPipeline Pipeline)? _addEffectsContext;
     private Dictionary<Guid, NodeViewModel> _nodes = new();
@@ -333,10 +336,13 @@ public partial class DraftEffectBindingView : ContentView
         PipelinePicker.SelectedIndex = _pipeline == EffectPipeline.NativeContent ? 0 : 1;
         _loadingPipeline = false;
         _clip = clip;
+        _fieldTypes = null;
+        _fieldTypeVersion++;
         _page = page;
         _showIsNotVisibleInEffectEditorEffect = showIsNotVisibleInEffectEditorEffect;
         EnsureClipArgumentProvider();
         UpdateAddEffectsPanel();
+        UpdateClipValuesPanel();
         _nodes.Clear();
         NodesContainer.Children.Clear();
         PropertiesPanel.Children.Clear();
@@ -385,6 +391,7 @@ public partial class DraftEffectBindingView : ContentView
         {
             foreach (var bundle in _clip.EffectProviders.Values)
             {
+                if (bundle is IClipValueEndpointProvider && _pipeline != EffectPipeline.Picture) continue;
                 if (bundle is not ClipArgumentProvider && !bundle.Target.HasFlag(EffectTarget.ValueProvider) && bundle.TypeOfEffect.GetPipeline() != _pipeline) continue;
                 // Skip bundles that are internal/special effects (e.g. Crop, Place, Resize)
                 // to keep consistent with ClipInfoBuilder.BuildEffectTab filtering behavior.
@@ -458,6 +465,7 @@ public partial class DraftEffectBindingView : ContentView
 
         // Normalize provider-owned configuration and project it directly into drawable connections.
         NormalizeBindingConfiguration();
+        RefreshFieldTypes();
         RefreshBindingDiagnosticIndicators();
         RebuildConnections();
         ApplySavedViewTransform();
@@ -741,7 +749,7 @@ public partial class DraftEffectBindingView : ContentView
         if (bindingDiagnostics.Count > 0)
         {
             ToolTipProperties.SetText(frame,
-                string.Join(Environment.NewLine, bindingDiagnostics.Select(d => $"[{d.Code}] {d.Message}")));
+                string.Join(Environment.NewLine, bindingDiagnostics.Select(FormatBindingDiagnostic)));
         }
 
         // ── Parameter display strip (above or below the frame, read-only) ──
@@ -772,7 +780,7 @@ public partial class DraftEffectBindingView : ContentView
             var inputPan = new PanGestureRecognizer();
             inputPan.PanUpdated += (s, e) => OnPortPan(node, e, true, 0, PortKind.AnchorInput);
             box.GestureRecognizers.Add(inputPan);
-            ToolTipProperties.SetText(box, port.DisplayName);
+            ToolTipProperties.SetText(box, $"{port.DisplayName} ({PortTypeHelper.HumanizeTypeName(port.FieldType)})");
 
             inputPortView = box;
             node.MainInputPortView = box;
@@ -794,7 +802,7 @@ public partial class DraftEffectBindingView : ContentView
                     VerticalOptions = LayoutOptions.Center, LineBreakMode = LineBreakMode.TailTruncation });
             var box = new BoxView { Color = PortTypeHelper.GetTypeColor(port.FieldType), WidthRequest = PortSize,
                 HeightRequest = PortSize, VerticalOptions = LayoutOptions.Center };
-            ToolTipProperties.SetText(box, port.DisplayName);
+            ToolTipProperties.SetText(box, $"{port.DisplayName} ({PortTypeHelper.HumanizeTypeName(port.FieldType)})");
             int index = i;
             var outputPan = new PanGestureRecognizer();
             outputPan.PanUpdated += (s, e) => OnPortPan(node, e, false, index, PortKind.AnchorOutput);
@@ -861,7 +869,7 @@ public partial class DraftEffectBindingView : ContentView
         {
             container.Add(new Label
             {
-                Text = string.Join(Environment.NewLine, bindingDiagnostics.Select(d => $"⚠ [{d.Code}] {d.Message}")),
+                Text = string.Join(Environment.NewLine, bindingDiagnostics.Select(d => $"⚠ {FormatBindingDiagnostic(d)}")),
                 TextColor = Colors.OrangeRed,
                 FontSize = 11,
                 FontAttributes = FontAttributes.Bold,
@@ -966,7 +974,7 @@ public partial class DraftEffectBindingView : ContentView
             dotPan.PanUpdated += (s, e) => OnPortPan(node, e, true, rowIndex, PortKind.ParamBind);
             dot.GestureRecognizers.Add(dotPan);
             node.ParamPortViews.Add(dot);
-            ToolTipProperties.SetText(dot, isBound ? $"Bound: {GetBoundSourceDisplayName(node, boundSourceId)}" : "Bind");
+            ToolTipProperties.SetText(dot, $"{(isBound ? $"Bound: {GetBoundSourceDisplayName(node, boundSourceId)}" : "Bind")} ({PortTypeHelper.HumanizeTypeName(p.FieldType)})");
             row.Add(dot);
 
             var nameLabel = new Label
@@ -1159,8 +1167,17 @@ public partial class DraftEffectBindingView : ContentView
     private void OnPageClipChanged(object? sender, ClipUpdateEventArgs e)
     {
         if (_clip == null) return;
-        if (e.SourceId != _clip.Id) return;
-        if (e.Reason != ClipUpdateReason.PropertyChanged) return;
+        if (e.SourceId != _clip.Id)
+        {
+            Dispatcher.Dispatch(() =>
+            {
+                _previewCts?.Cancel();
+                UpdateClipValuesPanel();
+                RefreshBindingDiagnosticIndicators();
+            });
+            return;
+        }
+        if (e.Reason != ClipUpdateReason.PropertyChanged || e.DetailInfo == "__EFFECT_BINDING_CHANGED__") return;
 
         Dispatcher.Dispatch(() =>
         {
@@ -1239,7 +1256,12 @@ public partial class DraftEffectBindingView : ContentView
         void Check(NodeViewModel candidate, NodePort? port, PortKind targetKind, int targetIndex)
         {
             if (!NodePort.IsValidPort(port)) return;
-            if (!PortTypeHelper.IsPortTypeCompatible(input ? port!.FieldType : type, input ? type : port!.FieldType)) return;
+            var sourceType = input ? port!.FieldType : type;
+            if (sourceType.HasFlag(EffectArgumentFieldType.Any) && (candidate.Kind == NodeKind.Output || input && node.Kind == NodeKind.Output)) return;
+            var targetPort = input ? kind == PortKind.ParamBind ? node.ParamPorts[index] : node.MainInputPort : port;
+            if (!sourceType.HasFlag(EffectArgumentFieldType.Any)
+                && targetPort?.DeclaredFieldType.HasFlag(EffectArgumentFieldType.Any) != true
+                && !PortTypeHelper.IsPortTypeCompatible(sourceType, input ? type : port!.FieldType)) return;
             var position = GetPortPosition(candidate, targetKind, targetIndex);
             double x = position.X * NodesContainer.Scale + _drawable.PanX;
             double y = position.Y * NodesContainer.Scale + _drawable.PanY;
@@ -1268,7 +1290,7 @@ public partial class DraftEffectBindingView : ContentView
         return hit;
     }
 
-    private void HandlePortConnect(NodeViewModel node, bool isInput, int portIndex, PortKind portKind, Point dropPoint)
+    private async void HandlePortConnect(NodeViewModel node, bool isInput, int portIndex, PortKind portKind, Point dropPoint)
     {
         var hit = FindPortTarget(node, isInput, portKind, portIndex, dropPoint, 40);
         if (hit is null)
@@ -1285,15 +1307,45 @@ public partial class DraftEffectBindingView : ContentView
         int targetIndex = input ? portIndex : hit.Index;
         int sourceIndex = input ? hit.Index : portIndex;
         string? sourcePortKey = source.Provider is IMultipleOutputEffectProvider ? source.OutputPorts[sourceIndex].Key : null;
+        if (_clip?.EffectProviders is not { } providers) return;
+        var owner = _clip;
+        int version = _fieldTypeVersion;
+        var sourceId = sourcePortKey is null ? BindingIdOf(source).ToString()
+            : EffectProviderOutputExtensions.CreateOutputSourceId(BindingIdOf(source), sourcePortKey);
+        EffectFieldTypeResolution types;
+        try
+        {
+            types = await EffectFieldTypeResolution.ResolveAsync(providers, bindingOverrides: target.Provider is null ? null
+                : new Dictionary<Guid, IReadOnlyDictionary<string, string>>
+                {
+                    [target.Id] = new Dictionary<string, string>(target.Provider.AnchorsBindingState)
+                    {
+                        [targetKind == PortKind.ParamBind ? target.ParamPorts[targetIndex].Key : EffectProviderAnchorExtensions.InputKey] = sourceId,
+                    },
+                });
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(ex, "Resolve candidate effect connection", this);
+            SetStatusText(ex.Message);
+            return;
+        }
+        if (!ReferenceEquals(_clip, owner) || version != _fieldTypeVersion) return;
+        if (types.Diagnostics.Count != 0 || target.Provider is not null && !types.AreInputsCompatible(target.Provider)
+            || target.Kind == NodeKind.Output && source.Provider is not null && !types.GetOutputType(source.Provider, sourcePortKey).IsPicture())
+        {
+            SetStatusText(PPLocalizedResources.EffectBindView_ConnectedFail);
+            return;
+        }
         if (targetKind == PortKind.AnchorInput && source.Provider is not null && target.Provider is not null
-            && !source.Provider.CanConnectContent(target.Provider, sourcePortKey))
+            && !source.Provider.CanConnectContent(target.Provider, sourcePortKey, types))
         {
             SetStatusText(Localized.Effect_IncompatiblePipeline);
             return;
         }
         AddUIBinding(targetKind == PortKind.ParamBind
             ? new(UIBindingKind.Value, BindingIdOf(source), BindingIdOf(target), target.ParamPorts[targetIndex].Key, sourcePortKey)
-            : new(UIBindingKind.Picture, BindingIdOf(source), BindingIdOf(target), SourcePortKey: sourcePortKey));
+            : new(UIBindingKind.Picture, BindingIdOf(source), BindingIdOf(target), SourcePortKey: sourcePortKey), types);
         LogDiagnostic($"Connected '{source.DisplayName}' to '{target.DisplayName}', port {targetKind}/{targetIndex}.");
         SetStatusText(PPLocalizedResources.EffectBindView_Connected(source.DisplayName, target.DisplayName));
         RecreateNodeView(target);
@@ -1448,7 +1500,7 @@ public partial class DraftEffectBindingView : ContentView
     /// 旧绑定（无论来源），再追加新绑定。值绑定的来源（一个值输出）可同时喂给多个参数，因此不做来源去重。
     /// 图片入边只覆盖图片入边，值入边只覆盖值入边——两者互不干扰。
     /// </summary>
-    private void AddUIBinding(UIBinding binding)
+    private void AddUIBinding(UIBinding binding, EffectFieldTypeResolution? types = null)
     {
         if (_clip?.EffectProviders is not { } providers) return;
         var sourceId = binding.SourcePortKey is null ? binding.Source.ToString()
@@ -1461,11 +1513,11 @@ public partial class DraftEffectBindingView : ContentView
         else if (binding.Target == IEffectProvider.OutputAnchorGUID)
         {
             EffectBindingHelper.SetFinalOutput(providers,
-                binding.Source == IEffectProvider.InputAnchorGUID ? null : binding.Source, _pipeline, binding.SourcePortKey);
+                binding.Source == IEffectProvider.InputAnchorGUID ? null : binding.Source, _pipeline, binding.SourcePortKey, types ?? _fieldTypes);
         }
         else if (providers.TryGetValue(binding.Target, out var target))
         {
-            if (providers.TryGetValue(binding.Source, out var source) && !source.CanConnectContent(target, binding.SourcePortKey))
+            if (providers.TryGetValue(binding.Source, out var source) && !source.CanConnectContent(target, binding.SourcePortKey, types))
             {
                 SetStatusText(Localized.Effect_IncompatiblePipeline);
                 return;
@@ -1513,6 +1565,12 @@ public partial class DraftEffectBindingView : ContentView
 
         if (node.Provider is null)
         {
+            return;
+        }
+
+        if (node.Provider is IClipValueEndpointProvider endpoint)
+        {
+            BuildEndpointProperties(node, endpoint);
             return;
         }
 
@@ -1693,6 +1751,7 @@ public partial class DraftEffectBindingView : ContentView
         OnBindingConfigurationChanged();
         RebuildConnections();
         ConnectionsLayer.Invalidate();
+        UpdateClipValuesPanel();
         SetStatusText(Localized._Done);
     }
 
@@ -1709,7 +1768,7 @@ public partial class DraftEffectBindingView : ContentView
     private async Task GeneratePreviews()
     {
         if (_clip == null || _page == null) return;
-        if (_clip.ClipType != ClipMode.VideoClip && _clip.ClipType != ClipMode.PhotoClip) return;
+        if (_clip.ClipType is ClipMode.AudioClip or ClipMode.MarkingClip) return;
 
         // Get source image
         ClipInfoBuilder.RebuildAllEffects(_clip);
@@ -1723,8 +1782,8 @@ public partial class DraftEffectBindingView : ContentView
 
         try
         {
-            using var owner = PluginManager.CreateClip(JsonSerializer.SerializeToElement(
-                DraftImportAndExportHelper.ExportClipElementFromDraftPage(_page, _clip, rebuildEffects: false)));
+            using var previewClips = new EndpointPreviewClips(CreateEndpointPreviewClips());
+            var owner = previewClips.Clips.First(c => c.Id == _clip.Id);
             owner.ReInit(8);
             uint targetFrame = (uint)Math.Clamp(_page.CurrentFrame, owner.StartFrame,
                 (double)owner.StartFrame + Math.Max(1u, owner.GetEffectiveDuration()) - 1);
@@ -1757,7 +1816,8 @@ public partial class DraftEffectBindingView : ContentView
                     projectRelativeWidth: projectRelativeWidth, projectRelativeHeight: projectRelativeHeight,
                     disposeIntermediateFrames: true,
                     cancellationToken: cts.Token,
-                    afterNodeCallback: (effect, value) => { if (value is not IPicture) Capture(effect, value); });
+                    afterNodeCallback: (effect, value) => { if (value is not IPicture) Capture(effect, value); },
+                    allClips: previewClips.Clips);
                 foreach (var (node, value) in previews)
                 {
                     cts.Token.ThrowIfCancellationRequested();
@@ -1862,6 +1922,8 @@ public partial class DraftEffectBindingView : ContentView
         /// from the provider's <see cref="IEffectProvider.InFields"/>, <see cref="IEffectProvider.OutField"/>
         /// and <see cref="IEffectProvider.Fields"/>.
         /// </summary>
+        public EffectFieldTypeResolution? FieldTypes { get; set; }
+
         public void BuildPortsFromProvider()
         {
             if (Provider == null) return;
@@ -1872,22 +1934,26 @@ public partial class DraftEffectBindingView : ContentView
                 {
                     Kind = PortKind.AnchorInput,
                     Key = inputField.Id,
-                    FieldType = inputField.FieldType,
+                    FieldType = FieldTypes?.GetInputType(Provider, inputField.Id) ?? inputField.FieldType,
+                    DeclaredFieldType = inputField.FieldType,
                     DisplayName = HumanizePortName(inputField.Id),
                     Index = 0
                 };
             }
 
-            OutputPorts = Provider is ClipArgumentProvider || Provider.TypeOfEffect == EffectType.Transform ? []
+            OutputPorts = Provider is ClipArgumentProvider or IClipValueEndpointProvider { IsExport: true } || Provider.TypeOfEffect == EffectType.Transform ? []
                 : Provider.GetOutputFields().Values.Select((p, i) => new NodePort
                 {
-                    Kind = PortKind.AnchorOutput, Key = p.Id, FieldType = p.FieldType, DisplayName = HumanizePortName(p.Id), Index = i,
+                    Kind = PortKind.AnchorOutput, Key = p.Id, FieldType = FieldTypes?.GetOutputType(Provider, p.Id) ?? p.FieldType,
+                    DeclaredFieldType = p.FieldType, DisplayName = HumanizePortName(p.Id), Index = i,
                 }).ToList();
 
             ParamPorts = DynamicEffectBindings.InputFields(Provider)
                 .Where(kv => !kv.Value.FieldType.HasFlag(EffectArgumentFieldType.NotVisibleInEffectPanel)
                           && kv.Key != EffectProviderAnchorExtensions.InputKey)
-                .Select((kv, i) => new NodePort { Kind = PortKind.ParamBind, Key = kv.Key, FieldType = kv.Value.FieldType, DisplayName = kv.Key, Index = i })
+                .Select((kv, i) => new NodePort { Kind = PortKind.ParamBind, Key = kv.Key,
+                    FieldType = FieldTypes?.GetInputType(Provider, kv.Key) ?? kv.Value.FieldType,
+                    DeclaredFieldType = kv.Value.FieldType, DisplayName = kv.Key, Index = i })
                 .ToList();
         }
 
@@ -1912,7 +1978,8 @@ public partial class DraftEffectBindingView : ContentView
             target,
             _page,
             EffectServices.GetAvailableEffectProviders()
-                .Where(p => !_clip.SupportsNativeEffects || p.Value().Target.HasFlag(EffectTarget.ValueProvider) || p.Value().TypeOfEffect.GetPipeline() == _pipeline)
+                .Where(p => p.Key is not ("ClipValueInput" or "ClipValueOutput")
+                    && (!_clip.SupportsNativeEffects || p.Value().Target.HasFlag(EffectTarget.ValueProvider) || p.Value().TypeOfEffect.GetPipeline() == _pipeline))
                 .ToDictionary(p => p.Key, p => p.Value),
             new(),
             (s, e) =>
@@ -1998,7 +2065,7 @@ public partial class DraftEffectBindingView : ContentView
         if (_clip?.EffectProviders == null) return;
         var diagnostics = EffectBindingHelper.NormalizeStoredBindings(_clip.EffectProviders).ToList();
         EffectBindingHelper.MaterializeFields(_clip.EffectProviders.Values);
-        diagnostics.AddRange(EffectBindingHelper.ValidateBindings(_clip.EffectProviders));
+        diagnostics.AddRange(GetAllBindingDiagnostics());
         if (diagnostics.Count > 0)
             SetStatusText(string.Join(Environment.NewLine, diagnostics.Select(d => d.Message)));
     }
@@ -2012,7 +2079,7 @@ public partial class DraftEffectBindingView : ContentView
         IReadOnlyList<EffectBindingHelper.BindingDiagnostic>? allDiagnostics = null)
     {
         if (_clip?.EffectProviders is not { } providers) return [];
-        var diagnostics = allDiagnostics ?? EffectBindingHelper.ValidateBindings(providers);
+        var diagnostics = allDiagnostics ?? GetAllBindingDiagnostics();
         return node.Kind switch
         {
             NodeKind.Effect or NodeKind.ClipArguments => diagnostics.Where(d => d.ProviderId == node.Id).ToList(),
@@ -2024,12 +2091,15 @@ public partial class DraftEffectBindingView : ContentView
     private static string GetBindingDiagnosticSignature(IEnumerable<EffectBindingHelper.BindingDiagnostic> diagnostics) =>
         string.Join("\n", diagnostics.Select(d => $"{d.ProviderId}|{d.Code}|{d.Message}"));
 
+    private static string FormatBindingDiagnostic(EffectBindingHelper.BindingDiagnostic diagnostic) =>
+        diagnostic.Code is "InvalidClipEndpoint" or "UnboundClipEndpoint" ? diagnostic.Message : $"[{diagnostic.Code}] {diagnostic.Message}";
+
     /// <summary>Recreates node visuals so newly added or resolved binding diagnostics are visible immediately.</summary>
     private void RefreshBindingDiagnosticIndicators(
         IReadOnlyList<EffectBindingHelper.BindingDiagnostic>? diagnostics = null)
     {
         if (_clip?.EffectProviders is not { } providers) return;
-        diagnostics ??= EffectBindingHelper.ValidateBindings(providers);
+        diagnostics ??= GetAllBindingDiagnostics();
         foreach (var node in _nodes.Values.ToList())
         {
             var signature = GetBindingDiagnosticSignature(GetBindingDiagnostics(node, diagnostics));
@@ -2178,12 +2248,44 @@ public partial class DraftEffectBindingView : ContentView
         if (_clip?.EffectProviders == null) return;
         var providers = _clip.EffectProviders;
         EffectBindingHelper.MaterializeFields(providers.Values);
-        var diagnostics = EffectBindingHelper.ValidateBindings(providers);
-        if (diagnostics.Count > 0)
-            SetStatusText(string.Join(Environment.NewLine, diagnostics.Select(d => d.Message)));
-        RefreshBindingDiagnosticIndicators(diagnostics);
+        _fieldTypes = null;
+        RefreshFieldTypes();
         ScheduleProviderRebuild();
     }
+
+    private async void RefreshFieldTypes()
+    {
+        if (_clip?.EffectProviders is not { } providers) return;
+        var owner = _clip;
+        int version = ++_fieldTypeVersion;
+        try
+        {
+            var types = await EffectFieldTypeResolution.ResolveAsync(providers);
+            if (!ReferenceEquals(_clip, owner) || version != _fieldTypeVersion) return;
+            _fieldTypes = types;
+            foreach (var node in _nodes.Values.Where(n => n.Provider is not null).ToArray())
+            {
+                string before = GetPortTypeSignature(node);
+                node.FieldTypes = types;
+                node.BuildPortsFromProvider();
+                if (before != GetPortTypeSignature(node)) RecreateNodeView(node);
+            }
+            var diagnostics = GetAllBindingDiagnostics();
+            if (diagnostics.Count > 0) SetStatusText(string.Join(Environment.NewLine, diagnostics.Select(d => d.Message)));
+            RefreshBindingDiagnosticIndicators(diagnostics);
+            RebuildConnections();
+        }
+        catch (Exception ex)
+        {
+            if (!ReferenceEquals(_clip, owner) || version != _fieldTypeVersion) return;
+            Logger.Log(ex, "Resolve effect editor field types", this);
+            SetStatusText(ex.Message);
+        }
+    }
+
+    private static string GetPortTypeSignature(NodeViewModel node) =>
+        $"{node.MainInputPort?.Key}:{node.MainInputPort?.FieldType}|" + string.Join("|",
+            node.OutputPorts.Concat(node.ParamPorts).Select(p => $"{p.Kind}:{p.Key}:{p.FieldType}"));
 
     /// <summary>
     /// 防抖并串行化完整重建。Provider 构建在工作线程进行，只在完成后

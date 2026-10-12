@@ -76,6 +76,7 @@ public sealed class IsolationChannelCapabilities
     [ProtoMember(4)] public long MaximumSharedMemoryBytes { get; set; } = PluginIsolationProtocol.DefaultMaximumPayloadBytes;
     [ProtoMember(5)] public bool SupportsResourceTransfer { get; set; }
     [ProtoMember(6)] public string Platform { get; set; } = string.Empty;
+    [ProtoMember(7)] public bool SupportsFieldTypeResolution { get; set; }
 }
 
 public sealed class PluginIsolationTransportOptions

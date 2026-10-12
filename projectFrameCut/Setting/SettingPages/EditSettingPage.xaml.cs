@@ -64,7 +64,6 @@ public partial class EditSettingPage : ContentPage
             .AddCheckbox("Edit_EnableMultiWindow", SettingLocalizedResources.Edit_EnableMultiWindow, IsBoolSettingTrueOrDefault("Edit_EnableMultiWindow", true))
             .AppendWhen(IsBoolSettingTrueOrDefault("Edit_EnableMultiWindow", true), c => c.AddCheckbox("Edit_RememberWindowLayout", SettingLocalizedResources.Edit_RememberWindowLayout, IsBoolSettingTrueOrDefault("Edit_RememberWindowLayout", true)))
             .AddCheckbox("Edit_EnableQuickCommandShortcuts", SettingLocalizedResources.Edit_EnableQuickCommandShortcuts, IsBoolSettingTrue("Edit_EnableQuickCommandShortcuts"))
-            .AddCheckbox("Edit_AllowColorAdjustAppearInEffectEditor", SettingLocalizedResources.Edit_AllowColorAdjustAppearInEffectEditor, IsBoolSettingTrue("Edit_AllowColorAdjustAppearInEffectEditor"))
             .AddEntry("Edit_DefaultInfLengthClipLength", SettingLocalizedResources.Edit_DefaultInfLengthClipLength, GetSettingAs("Edit_DefaultInfLengthClipLength", 300, 300).ToString(), "300")
             .AddPicker("Edit_DefaultTransformRenderOrder", SettingLocalizedResources.Edit_DefaultTransformRenderOrder,
                 TransformOrderStringMapping.Keys.ToArray(), TransformOrderStringMapping.First(p => p.Value == TransformServices.DefaultRenderOrder.ToString()).Key)
@@ -94,6 +93,7 @@ public partial class EditSettingPage : ContentPage
             .AddCheckbox("Edit_AccelerateControlUpdates", SettingLocalizedResources.Edit_AccelerateControlUpdates, IsBoolSettingTrue("Edit_AccelerateControlUpdates"))
             .AddCheckbox("Edit_Denoise", SettingLocalizedResources.Edit_Denoise, IsBoolSettingTrue("Edit_Denoise"))
             .AddCheckbox("Edit_LockScrollViewAfterSelection", SettingLocalizedResources.Edit_LockScrollViewAfterSelection, IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection", true))
+            .AddCheckbox("Edit_AllowColorAdjustAppearInEffectEditor", SettingLocalizedResources.Edit_AllowColorAdjustAppearInEffectEditor, IsBoolSettingTrue("Edit_AllowColorAdjustAppearInEffectEditor"))
 #if WINDOWS || MACCATALYST
             .AddCheckbox("Edit_AlwaysShowToolbarButtons", SettingLocalizedResources.Edit_AlwaysShowToolbarButtons, IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons"))
 #endif
@@ -226,7 +226,7 @@ public partial class EditSettingPage : ContentPage
                     if (args.Value is bool enabled)
                     {
                         WriteSetting(args.Id, enabled.ToString());
-                        ColorAdjustmentEffectProvider.AllowColorAdjustAppearInEffectEditor = enabled;
+                        MainSettingsPage.SyncSettingToModules();
                     }
                     return;
                 case "Edit_DefaultTransformRenderOrder":

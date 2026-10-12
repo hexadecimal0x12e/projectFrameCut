@@ -31,7 +31,8 @@ namespace projectFrameCut.Shared
         Image,
         Font,
         Other,
-        VectorComposition
+        VectorComposition,
+        Subtitle
     }
 
     public enum TrackMode

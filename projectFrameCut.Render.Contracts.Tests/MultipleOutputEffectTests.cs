@@ -20,6 +20,9 @@ public sealed class MultipleOutputEffectTests
         public override EffectTarget Target => outputs.Any(p => p.FieldType.IsPicture()) ? EffectTarget.Video : EffectTarget.ValueProvider;
         public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> OutFields => outputs.ToDictionary(p => p.Id);
         public Func<MultipleOutputEffect>? Factory { get; init; }
+        public Func<string, bool, EffectFieldTypeContext, EffectArgumentFieldType>? TypeResolver { get; init; }
+        public override EffectArgumentFieldType ResolveFieldType(string fieldId, bool isInput, EffectFieldTypeContext context) =>
+            TypeResolver?.Invoke(fieldId, isInput, context) ?? base.ResolveFieldType(fieldId, isInput, context);
         public IEffect[] Prefix { get; init; } = [];
         public int Builds { get; private set; }
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => fields;

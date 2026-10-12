@@ -24,7 +24,11 @@ public partial class ProjectAddClipViewModel
         {
             try
             {
-                vectorComponents.Add(new VectorComponentItemViewModel(this, factory()));
+                var handler = factory();
+                if (!handler.IsNotVisibleInNewComponentSelector)
+                {
+                    vectorComponents.Add(new VectorComponentItemViewModel(this, handler));
+                }
             }
             catch (Exception ex)
             {

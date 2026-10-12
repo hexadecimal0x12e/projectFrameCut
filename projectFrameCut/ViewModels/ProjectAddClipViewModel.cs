@@ -535,6 +535,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     void RegisterCommands()
     {
+        InitializeSubtitleCommands();
         AddSolidColorClipCommand = new Command(async () => await AddSolidColorClip());
         AddTextClipWithStyleCommand = new Command<TextStyleItemViewModel?>(async (style) => await AddTextClipWithStyle(style));
         GenerateTextPreviewCommand = new Command(async () => InitializeTextStyles(string.IsNullOrWhiteSpace(TextToAdd) ? null : TextToAdd));
@@ -774,6 +775,22 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public async Task AddAssetClip(AssetItemViewModel? assetViewModel)
     {
         if (assetViewModel?.OriginalAsset == null) return;
+
+        if (assetViewModel.OriginalAsset.Path is string subtitlePath && projectFrameCut.Render.Subtitles.SubtitleImporter.Supports(subtitlePath))
+        {
+            if (_draftPage.IsReadonly) return;
+            try
+            {
+                var imported = await SubtitleServices.ReadAsync(subtitlePath, _draftPage);
+                if (imported is not null) AddSubtitle(imported.Data, assetViewModel.Name);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Add subtitle asset", _draftPage);
+                await _draftPage.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            }
+            return;
+        }
 
         if (assetViewModel.OriginalAsset.GetClipMode() == ClipMode.VectorComponentClip)
         {

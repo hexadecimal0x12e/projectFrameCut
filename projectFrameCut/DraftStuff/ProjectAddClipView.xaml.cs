@@ -69,7 +69,9 @@ public partial class ProjectAddClipView : ContentView
             });
             if (file is null) return;
 
-            await AddAssetPathAsync(file.FullPath, sourceType);
+            var copyToProject = await PickAssetImportModeAsync(sourceType);
+            if (copyToProject is null) return;
+            await AddAssetPathAsync(file.FullPath, sourceType, copyToProject.Value);
         }
         catch (Exception ex)
         {
@@ -87,7 +89,19 @@ public partial class ProjectAddClipView : ContentView
 
     private bool CanAddAsset(string sourceType) => !_isAddingAsset && (!_page.IsReadonly || sourceType == "SharedAssets");
 
-    private async Task AddAssetPathAsync(string path, string sourceType)
+    private async Task<bool?> PickAssetImportModeAsync(string sourceType)
+    {
+        if (sourceType != "LocalAssets") return true;
+
+        var mode = await _page.DisplayActionSheetAsync(Localized.DraftPage_AssetPanel_ImportMode, Localized._Cancel, null,
+            Localized.DraftPage_AssetPanel_ImportCopy, Localized.DraftPage_AssetPanel_ImportReference);
+        Log($"Asset import mode selected: '{mode}'.");
+        if (mode == Localized.DraftPage_AssetPanel_ImportCopy) return true;
+        if (mode == Localized.DraftPage_AssetPanel_ImportReference) return false;
+        return null;
+    }
+
+    private async Task AddAssetPathAsync(string path, string sourceType, bool copyToProject)
     {
         Log($"Importing '{path}' into {sourceType} from the clip panel.");
         if (sourceType == "RpcSources")
@@ -95,7 +109,7 @@ public partial class ProjectAddClipView : ContentView
         else if (sourceType == "SharedAssets")
             await Asset.AssetDatabase.Add(path, _page);
         else
-            await _page.AddAsset(path, false);
+            await _page.AddAsset(path, false, copyToProject: copyToProject);
     }
 
     private async Task RefreshSourceAssetsAsync(string sourceType)
@@ -161,12 +175,18 @@ public partial class ProjectAddClipView : ContentView
 #endif
         try
         {
-            var paths = await FileDropHelper.GetFilePathsFromDrop(e, source.SourceType == "RpcSources");
-            foreach (var path in paths.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal))
+            var paths = (await FileDropHelper.GetFilePathsFromDrop(e, source.SourceType == "RpcSources"))
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
+                .ToList();
+            if (paths.Count == 0) return;
+            var copyToProject = await PickAssetImportModeAsync(source.SourceType);
+            if (copyToProject is null) return;
+            foreach (var path in paths)
             {
                 try
                 {
-                    await AddAssetPathAsync(path, source.SourceType);
+                    await AddAssetPathAsync(path, source.SourceType, copyToProject.Value);
                 }
                 catch (Exception ex)
                 {

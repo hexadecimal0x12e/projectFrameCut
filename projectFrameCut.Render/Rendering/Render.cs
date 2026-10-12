@@ -28,7 +28,7 @@ namespace projectFrameCut.Render.Rendering
     public class Renderer : IRenderContext
     {
         #region opts
-        public const int SubTrackOffset = 10000;
+        public const int SubTrackOffset = ClipLayerOrder.SubTrackOffset;
 
         public required IClip[] Clips { get; set; }
         public uint Duration;
@@ -151,7 +151,6 @@ namespace projectFrameCut.Render.Rendering
         ConcurrentDictionary<(uint Frame, int LayerOrdinal), IPicture>? LayerResults;
 
         ConcurrentDictionary<Guid, IEffect[]> EffectCache = new();
-        ConcurrentDictionary<string, object> BindableEffectResultCache = new();
 
         int ThreadWorking = 0, Finished = 0;
         private SemaphoreSlim _threadLimiter = null!;
@@ -172,11 +171,6 @@ namespace projectFrameCut.Render.Rendering
         private IPicture BlankFrame = null!;
 
         private readonly EffectRuntimeContext effectRuntime = new();
-
-        // Thread-local pool for frame-level cache dictionaries to reduce GC pressure
-        private ThreadLocal<Stack<Dictionary<string, object>>> _frameLocalCachePool =
-            new(() => new Stack<Dictionary<string, object>>(4));
-
 
         // Running totals for O(1) average elapsed statistics (avoids scanning the bags on every stat log)
         private long _renderElapsedTicksTotal;
@@ -215,9 +209,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     // Sort once per frame instead of re-sorting on every AddOrUpdate
                     ClipNeedForFrame[idx] = clipsForFrame
-                        .OrderBy(x => x.LayerIndex >= SubTrackOffset ? 1 : 0)
-                        .ThenByDescending(x => x.LayerIndex)
-                        .ThenByDescending(x => x.SubLayerIndex)
+                        .OrderBy(x => x, ClipLayerOrder.BottomToTop)
                         .ToArray();
                 }
                 else
@@ -424,6 +416,12 @@ namespace projectFrameCut.Render.Rendering
 
                 if (clips.Length == 0)
                     continue;
+
+                if (ClipValuePassThrough.HasInputs(clips))
+                {
+                    FrameLayerGroups[frame] = [new LayerGroup { LayerIndex = clips[0].LayerIndex, StartIndex = 0, Count = clips.Length }];
+                    continue;
+                }
 
                 var groups = new List<LayerGroup>();
                 int i = 0;
@@ -1519,9 +1517,7 @@ namespace projectFrameCut.Render.Rendering
                     clipsNeed.Add(item);
                 }
             }
-            clipsNeed = clipsNeed.OrderBy(x => x.LayerIndex >= SubTrackOffset ? 1 : 0)
-                                 .ThenByDescending(x => x.LayerIndex)
-                                 .ThenByDescending(x => x.SubLayerIndex)
+            clipsNeed = clipsNeed.OrderBy(x => x, ClipLayerOrder.BottomToTop)
                                  .ToList();
 
             var framesToRender = new List<ClipFrameTuple>(clipsNeed.Count);
@@ -1658,9 +1654,7 @@ namespace projectFrameCut.Render.Rendering
                 if (clipsNeed.Count > 0)
                 {
                     clipsNeed = clipsNeed
-                        .OrderBy(x => x.LayerIndex >= SubTrackOffset ? 1 : 0)
-                        .ThenByDescending(x => x.LayerIndex)
-                        .ThenByDescending(x => x.SubLayerIndex)
+                        .OrderBy(x => x, ClipLayerOrder.BottomToTop)
                         .ToList();
                 }
             }
@@ -1908,10 +1902,10 @@ namespace projectFrameCut.Render.Rendering
             uint targetFrame,
             int layoutRelativeWidth,
             int layoutRelativeHeight,
-            Dictionary<string, object> frameLocalCache,
             CancellationToken token)
         {
             if (token.IsCancellationRequested) return null;
+            using var endpointClip = ClipValueFrameContext.Current?.EnterClip(clip.Id);
             clip = clipArgumentFrames.Get(clip, targetFrame);
 
             // Update per-thread worker state so external diagnostics can see
@@ -1948,8 +1942,6 @@ namespace projectFrameCut.Render.Rendering
 
                 if (EffectCache.TryGetValue(clip.Id, out var effects) && effects is not null)
                 {
-                    // Copy is only materialized when a bindable effect actually gets removed
-                    List<IEffect>? effectCopy = null;
                     // Begin the per-frame value-provider context: pre-fills the built-in frame/progress
                     // sources and clears provider values. Value-provider effects write into it during
                     // the effect loop and consumer dynamic parameters read from it.
@@ -2207,8 +2199,9 @@ namespace projectFrameCut.Render.Rendering
             List<ClipFrameTuple> clipsNeed,
             CancellationToken token)
         {
+            using var endpoints = ClipValuePassThrough.Open(Clips, targetFrame, TargetWidth, TargetHeight,
+                ProjectRelativeWidth, ProjectRelativeHeight, _ppb, token);
             IPicture? result = null;
-            var frameLocalCache = RentFrameLocalCache();
             try
             {
                 int layoutRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
@@ -2221,7 +2214,7 @@ namespace projectFrameCut.Render.Rendering
 
                     if (frame == null) continue;
 
-                    result = ProcessAndCompositeClip(clip, frame, result, targetFrame, layoutRelativeWidth, layoutRelativeHeight, frameLocalCache, token);
+                    result = ProcessAndCompositeClip(clip, frame, result, targetFrame, layoutRelativeWidth, layoutRelativeHeight, token);
                     if (result is null) return null; // cancelled
                 }
 
@@ -2245,7 +2238,6 @@ namespace projectFrameCut.Render.Rendering
             }
             finally
             {
-                ReturnFrameLocalCache(frameLocalCache);
                 clipArgumentFrames.RemoveFrame(targetFrame);
             }
         }
@@ -2363,28 +2355,23 @@ namespace projectFrameCut.Render.Rendering
         {
             if (clipsNeed.Count == 0) return null;
 
+            using var endpoints = ClipValuePassThrough.Open(Clips, frame, TargetWidth, TargetHeight,
+                ProjectRelativeWidth, ProjectRelativeHeight, _ppb, token);
+
             IPicture? result = null;
-            var frameLocalCache = RentFrameLocalCache();
-            try
+            int layoutRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
+            int layoutRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
+
+            foreach (var (clip, framePic) in clipsNeed)
             {
-                int layoutRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
-                int layoutRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
+                if (token.IsCancellationRequested) return result;
+                if (framePic == null) continue;
 
-                foreach (var (clip, framePic) in clipsNeed)
-                {
-                    if (token.IsCancellationRequested) return result;
-                    if (framePic == null) continue;
-
-                    result = ProcessAndCompositeClip(clip, framePic, result, frame, layoutRelativeWidth, layoutRelativeHeight, frameLocalCache, token);
-                    if (result is null) return null; // cancelled
-                }
-
-                return result;
+                result = ProcessAndCompositeClip(clip, framePic, result, frame, layoutRelativeWidth, layoutRelativeHeight, token);
+                if (result is null) return null; // cancelled
             }
-            finally
-            {
-                ReturnFrameLocalCache(frameLocalCache);
-            }
+
+            return result;
         }
 
         /// <summary>
@@ -2714,22 +2701,6 @@ namespace projectFrameCut.Render.Rendering
             return new TimeSpan(totalTicks / count);
         }
 
-        private Dictionary<string, object> RentFrameLocalCache()
-        {
-            var pool = _frameLocalCachePool.Value;
-            if (pool != null && pool.Count > 0)
-                return pool.Pop();
-            return new Dictionary<string, object>();
-        }
-
-        private void ReturnFrameLocalCache(Dictionary<string, object> cache)
-        {
-            cache.Clear();
-            var pool = _frameLocalCachePool.Value;
-            if (pool != null && pool.Count < 8)
-                pool.Push(cache);
-        }
-
         private void ReleaseResources()
         {
             try
@@ -2789,9 +2760,6 @@ namespace projectFrameCut.Render.Rendering
                 try { BlankFrame?.Dispose(true); } catch { }
 
                 effectRuntime.Dispose();
-
-                // Clean up thread-local frame cache pool
-                try { _frameLocalCachePool?.Dispose(); } catch { }
 
                 // Clean up thread limiter
                 try { _threadLimiter?.Dispose(); } catch { }

@@ -40,6 +40,29 @@ namespace projectFrameCut.Render.Rendering
             bool initializeClips = true,
             ClipArgumentFrameCache? argumentFrames = null)
         {
+            IEnumerable<OneFrame> Read() => ReadFramesInOneFrame(video, targetFrame, targetWidth, targetHeight,
+                targetPPB, projectRelativeWidth, projectRelativeHeight, applyTransforms, initializeClips, argumentFrames);
+            return ClipValuePassThrough.HasInputs(video)
+                ? new FrameSequence(video, Read, () => ClipValuePassThrough.Open(video, targetFrame, targetWidth,
+                    targetHeight, projectRelativeWidth, projectRelativeHeight, targetPPB ?? 8, CancellationToken.None))
+                : Read();
+        }
+
+        private sealed class FrameSequence(IClip[] clips, Func<IEnumerable<OneFrame>> read, Func<IDisposable?> open) : IEnumerable<OneFrame>
+        {
+            public IClip[] Clips => clips;
+            public IEnumerator<OneFrame> GetEnumerator()
+            {
+                using var scope = open();
+                foreach (var frame in read()) yield return frame;
+            }
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
+        private static IEnumerable<OneFrame> ReadFramesInOneFrame(IClip[] video, uint targetFrame,
+            int targetWidth, int targetHeight, IPicture.PicturePixelMode? targetPPB, int projectRelativeWidth,
+            int projectRelativeHeight, bool applyTransforms, bool initializeClips, ClipArgumentFrameCache? argumentFrames)
+        {
             argumentFrames ??= new();
             var ppb = targetPPB ?? 8;
             List<OneFrame> result = new List<OneFrame>();
@@ -85,6 +108,11 @@ namespace projectFrameCut.Render.Rendering
                             frame = VideoClipRotation.ReadFrame(clip, actualFrame, clipTargetWidth, clipTargetHeight, ppb);
                         }
                     }
+                    catch (Exception ex) when (ex is ClipValueBindingException or OperationCanceledException)
+                    {
+                        foreach (var item in result) item.Clip.Dispose(true);
+                        throw;
+                    }
                     catch (Exception ex)
                     {
                         ClipInitializationFailure.Mark(clip, "SourceReading", ex);
@@ -116,7 +144,7 @@ namespace projectFrameCut.Render.Rendering
                 }
             }
 
-            return result.OrderBy(x => x.LayerIndex >= Renderer.SubTrackOffset ? 1 : 0).ThenByDescending(x => x.LayerIndex).ThenByDescending(x => x.ParentClip.SubLayerIndex);
+            return result.OrderBy(x => x.ParentClip, ClipLayerOrder.BottomToTop);
         }
 
         public static string GetFrameHash(IClip[] video, uint targetFrame)
@@ -214,6 +242,7 @@ namespace projectFrameCut.Render.Rendering
                 .Select(side => TransformProcessing.Find(infos, clip.Id, side))
                 .Where(found => found is not null)
                 .SelectMany(found => new[] { found!.Value.Owner.Id, TransformProcessing.ReadNextClip(found.Value.Provider.MetaData) })
+                .Concat(ClipValuePassThrough.GetSourceClipIds(clip))
                 .Where(id => id != Guid.Empty && id != clip.Id).Distinct().ToArray();
 
             if (dependencyIds.Length == 0)
@@ -274,8 +303,17 @@ namespace projectFrameCut.Render.Rendering
             bool clipLocalOutput = false,
             CancellationToken cancellationToken = default,
             Action<IEffect, object?>? afterNodeCallback = null,
-            bool beforeLayoutOutput = false)
+            bool beforeLayoutOutput = false, IReadOnlyList<IClip>? allClips = null)
         {
+            if (allClips is null && frames is FrameSequence sequence) allClips = sequence.Clips;
+            if (allClips is null)
+            {
+                var materialized = frames.ToArray();
+                frames = materialized;
+                allClips = materialized.Select(f => f.ParentClip).DistinctBy(c => c.Id).ToArray();
+            }
+            using var endpoints = ClipValuePassThrough.Open(allClips, frameIndex, targetWidth, targetHeight,
+                projectRelativeWidth, projectRelativeHeight, targetPPB, cancellationToken);
             var temporaryFrames = new HashSet<IPicture>(ReferenceEqualityComparer.Instance);
             IPicture? output = null;
             IPicture Track(IPicture picture)
@@ -298,6 +336,7 @@ namespace projectFrameCut.Render.Rendering
                     // The ResizeEffect and PlaceEffect will handle sizing and positioning.
                     ArgumentNullException.ThrowIfNull(srcFrame, nameof(srcFrame));
                     ArgumentNullException.ThrowIfNull(srcFrame.ParentClip, nameof(srcFrame.ParentClip));
+                    using var endpointClip = ClipValueFrameContext.Current?.EnterClip(srcFrame.ParentClip.Id);
                     if (TransformProcessing.IsCanvasFrame(srcFrame.Clip))
                     {
                         result = (srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default).Mix(
@@ -338,7 +377,7 @@ namespace projectFrameCut.Render.Rendering
                         {
                             var graphResult = graph.Evaluate(effected, srcFrame.ParentClip, frameIndex, targetWidth, targetHeight,
                                 layoutRelativeWidth, layoutRelativeHeight, clipPos, preserveAspect, ProcessEffectFromCanvas,
-                                cancellationToken, (node, value) =>
+                                cancellationToken, AfterEffectCallback is null && afterNodeCallback is null ? null : (node, value) =>
                                 {
                                     afterNodeCallback?.Invoke(node, value);
                                     if (value is IPicture picture) AfterEffectCallback?.Invoke(node, picture);

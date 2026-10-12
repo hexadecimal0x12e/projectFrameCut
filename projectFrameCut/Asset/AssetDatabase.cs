@@ -195,6 +195,10 @@ namespace projectFrameCut.Asset
             bool fail = false;
             switch (asset.AssetType)
             {
+                case AssetType.Subtitle:
+                    asset.ClipType = ClipMode.SubtitleClip;
+                    asset.ThumbnailPath = null;
+                    break;
                 case AssetType.VectorComposition:
                     {
 #if HEADLESS

@@ -23,13 +23,17 @@ public sealed class EffectExecutionContext
 public static class EffectFieldTypes
 {
     public static bool IsPicture(this EffectArgumentFieldType type) =>
-        type.HasFlag(EffectArgumentFieldType.IPicture) || type.HasFlag(EffectArgumentFieldType.FrameAsParameterFlow);
+        !type.HasFlag(EffectArgumentFieldType.Any)
+            && (type.HasFlag(EffectArgumentFieldType.IPicture) || type.HasFlag(EffectArgumentFieldType.FrameAsParameterFlow));
 
     public static EffectArgumentFieldType BaseType(this EffectArgumentFieldType type) =>
-        type.IsPicture() ? EffectArgumentFieldType.IPicture : type & (EffectArgumentFieldType)0xFFFF;
+        type.HasFlag(EffectArgumentFieldType.Any) ? EffectArgumentFieldType.Any
+            : type.IsPicture() ? EffectArgumentFieldType.IPicture : type & (EffectArgumentFieldType)0xFFFF;
 
     public static bool AreCompatible(EffectArgumentFieldType source, EffectArgumentFieldType target)
     {
+        if (source.HasFlag(EffectArgumentFieldType.Any)) return false;
+        if (target.HasFlag(EffectArgumentFieldType.Any)) return true;
         source = source.BaseType();
         target = target.BaseType();
         if (source == target || source == EffectArgumentFieldType.Unknown || target == EffectArgumentFieldType.Unknown) return true;
@@ -58,7 +62,7 @@ public static class EffectFieldTypes
         if (value is null) return true;
         return type.BaseType() switch
         {
-            EffectArgumentFieldType.Unknown => true,
+            EffectArgumentFieldType.Unknown or EffectArgumentFieldType.Any => true,
             EffectArgumentFieldType.IPicture => value is IPicture,
             EffectArgumentFieldType.Integer or EffectArgumentFieldType.UnsignedInteger or EffectArgumentFieldType.Long
                 or EffectArgumentFieldType.UnsignedLong or EffectArgumentFieldType.Numeric => value is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal,
@@ -72,6 +76,7 @@ public static class EffectFieldTypes
 
     public static object? ConvertInput(EffectArgumentFieldType type, object? value)
     {
+        if (type.HasFlag(EffectArgumentFieldType.Any)) return value;
         if (value is JsonElement json) value = json.ValueKind switch
         {
             JsonValueKind.String => json.GetString(),

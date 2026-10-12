@@ -205,6 +205,117 @@ public partial class DraftPage : ContentPage, IDraftPage
     private DateTime _lastDynamicPreviewUIUpdate = DateTime.MinValue;
 
     readonly SemaphoreSlim saveLocker = new(1, 1);
+    private const int CurrentSnapshotSlotCount = 3;
+    private CurrentSnapshotRecord? _currentSnapshot;
+
+    internal sealed class CurrentSnapshotRecord
+    {
+        public long Sequence { get; set; }
+        public DateTime UpdatedAtUtc { get; set; }
+        public bool IsDirty { get; set; }
+        public Guid SnapshotID { get; set; }
+        public Guid PreviousSnapshot { get; set; }
+        public string SlotName { get; set; } = string.Empty;
+        public DateTime SavedAt { get; set; }
+        public string ChangeReason { get; set; } = string.Empty;
+        public string DetailedChangeReason { get; set; } = string.Empty;
+        public Guid ChangedByUser { get; set; }
+        public string ChangedByUserDisplayName { get; set; } = string.Empty;
+        public ClipChangeOperatorKind Operator { get; set; }
+        public string OperatorDetailName { get; set; } = string.Empty;
+
+        public void CopyTo(DraftStructureJSON draft)
+        {
+            draft.SnapshotID = SnapshotID;
+            draft.PreviousSnapshot = PreviousSnapshot;
+            draft.SavedAt = SavedAt;
+            draft.ChangeReason = ChangeReason;
+            draft.DetailedChangeReason = DetailedChangeReason;
+            draft.ChangedByUser = ChangedByUser;
+            draft.ChangedByUserDisplayName = ChangedByUserDisplayName;
+            draft.Operator = Operator;
+            draft.OperatorDetailName = OperatorDetailName;
+        }
+    }
+
+    internal void InitializeCurrentSnapshot(DraftStructureJSON draft, string? slotName = null, bool isDirty = false)
+    {
+        _currentSnapshot = CreateCurrentSnapshotRecord(draft, slotName ?? $"slot_{draft.SnapshotID}");
+        _currentSnapshot.IsDirty = isDirty;
+        CurrentSnapshotID = PreviousSnapshotID = ProjectInfo.LastSnapshotID = draft.SnapshotID;
+    }
+
+    private static CurrentSnapshotRecord CreateCurrentSnapshotRecord(DraftStructureJSON draft, string slotName)
+        => new()
+        {
+            SnapshotID = draft.SnapshotID,
+            PreviousSnapshot = draft.PreviousSnapshot,
+            SlotName = slotName,
+            SavedAt = draft.SavedAt,
+            ChangeReason = draft.ChangeReason,
+            DetailedChangeReason = draft.DetailedChangeReason,
+            ChangedByUser = draft.ChangedByUser,
+            ChangedByUserDisplayName = draft.ChangedByUserDisplayName,
+            Operator = draft.Operator,
+            OperatorDetailName = draft.OperatorDetailName
+        };
+
+    internal static List<CurrentSnapshotRecord> ReadCurrentSnapshotRecords(string projectPath)
+        => ReadCurrentSnapshotRecords(projectPath, out _);
+
+    internal static List<CurrentSnapshotRecord> ReadCurrentSnapshotRecords(string projectPath, out bool hasInvalidRecords)
+    {
+        hasInvalidRecords = false;
+        List<CurrentSnapshotRecord> records = [];
+        for (int i = 0; i < CurrentSnapshotSlotCount; i++)
+        {
+            var path = Path.Combine(projectPath, "savesSlots", $"current-{i}.json");
+            if (!File.Exists(path)) continue;
+            try
+            {
+                var record = JsonSerializer.Deserialize<CurrentSnapshotRecord>(File.ReadAllText(path), savingOpts);
+                if (record is null || record.Sequence <= 0 || record.SnapshotID == Guid.Empty
+                    || !record.SlotName.StartsWith("slot_", StringComparison.Ordinal)
+                    || Path.GetFileName(record.SlotName) != record.SlotName)
+                    throw new InvalidDataException($"Invalid current snapshot record: {path}");
+                records.Add(record);
+            }
+            catch (Exception ex)
+            {
+                hasInvalidRecords = true;
+                Log(ex, "read current snapshot record", nameof(DraftPage));
+            }
+        }
+        return records.OrderByDescending(r => r.Sequence).ThenByDescending(r => r.UpdatedAtUtc).ToList();
+    }
+
+    private static async Task WriteSnapshotJsonAsync<T>(string path, T data)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var temp = path + ".tmp";
+        await using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None,
+            4096, FileOptions.Asynchronous | FileOptions.WriteThrough))
+        {
+            await JsonSerializer.SerializeAsync(stream, data, savingOpts);
+            await stream.FlushAsync();
+            stream.Flush(true);
+        }
+        File.Move(temp, path, true);
+    }
+
+    internal async Task WriteCurrentSnapshotAsync(DraftStructureJSON draft, string slotName, bool isDirty)
+    {
+        long sequence = Math.Max(_currentSnapshot?.Sequence ?? 0,
+            ReadCurrentSnapshotRecords(WorkingPath).FirstOrDefault()?.Sequence ?? 0) + 1;
+        var record = CreateCurrentSnapshotRecord(draft, slotName);
+        record.Sequence = sequence;
+        record.UpdatedAtUtc = DateTime.UtcNow;
+        record.IsDirty = isDirty;
+        await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "savesSlots", $"current-{(sequence - 1) % CurrentSnapshotSlotCount}.json"), record);
+        _currentSnapshot = record;
+        CurrentSnapshotID = PreviousSnapshotID = ProjectInfo.LastSnapshotID = draft.SnapshotID;
+        ProjectInfo.NormallyExited = !isDirty;
+    }
 
     private CancellationTokenSource? _autoSaveCts;
     private const int AutoSaveDelayMs = 3000;
@@ -509,10 +620,18 @@ public partial class DraftPage : ContentPage, IDraftPage
         ProjectInfo = info;
         ProjectInfo.NormallyExited = false;
         ProjectInfo.UserDefinedProperties ??= new();
-        ProjectInfo.SnapshotIDMapping = ProjectJSONStructure.LoadSnapshotMapping(workingDir, savingOpts);
         if (ProjectInfo.SnapshotIDMapping.Count == 0)
         {
-            ProjectInfo.SnapshotIDMapping = ProjectJSONStructure.RebuildSnapshotMappingFromSlots(workingDir, savingOpts);
+            try
+            {
+                ProjectInfo.SnapshotIDMapping = ProjectJSONStructure.LoadSnapshotMapping(workingDir, savingOpts);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "read snapshot mapping", this);
+            }
+            if (ProjectInfo.SnapshotIDMapping.Count == 0)
+                ProjectInfo.SnapshotIDMapping = ProjectJSONStructure.RebuildSnapshotMappingFromSlots(workingDir, savingOpts);
         }
         SecondsPerFrame = ProjectInfo.TargetFrameRate > 0 ? 1d / ProjectInfo.TargetFrameRate : 1d / 30d;
         if (ProjectInfo.LastSnapshotID != Guid.Empty)
@@ -803,6 +922,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             projectFrameCut.Render.HwAccelEngine.AcceleratorsManager.UseExternalBackend = true;
 #endif
         await _workspace.StartAsync();
+        if (!IsRemoteProject && _currentSnapshot?.IsDirty == true)
+            _workspace.GetModule<ProjectModule>().MarkDirty(_currentSnapshot.ChangeReason);
         OnClipChanged += ForwardClipChangeToWorkspace;
         SelectedClipChanged += ForwardSelectionToWorkspace;
 
@@ -1564,8 +1685,12 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (_workspace.State is WorkspaceState.Disposed or WorkspaceState.Faulted) return;
         var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, wrapSoundtrackAsClip: true, includeUiOnlyClips: true, fixOverlap: false, rebuildEffects: false);
         _workspace.GetModule<TimelineModule>().Reset(draft.Clips);
-        _workspace.GetModule<ProjectModule>().MarkDirty(args.ToString());
-        if (!args.NoSave) _workspace.GetModule<HistoryModule>().Capture(args.ToString());
+        if (!args.NoSave)
+        {
+            if (!IsReadonly) ProjectInfo.NormallyExited = false;
+            _workspace.GetModule<ProjectModule>().MarkDirty(args.ToString());
+            _workspace.GetModule<HistoryModule>().Capture(args.ToString());
+        }
     }
 
     private void ForwardSelectionToWorkspace(object? sender, EventArgs args)
@@ -1625,6 +1750,23 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     public ClipElementUI CreateFromAsset(AssetItem asset, int trackIndex, string fromPlugin = InternalPluginBase.InternalPluginBaseID, string? path = null, double startPoint = 0)
     {
+        if (asset.GetClipMode() == ClipMode.SubtitleClip)
+        {
+            var data = projectFrameCut.Render.Subtitles.SubtitleImporter.Read(path ?? asset.Path ?? throw new InvalidDataException("Subtitle asset path is missing.")).Data;
+            data.Style.FontSize = Math.Max(12, ProjectInfo.RelativeHeight * 48f / 1080);
+            data.Style.StrokeThickness = Math.Max(1, ProjectInfo.RelativeHeight * 2f / 1080);
+            data.BottomMargin = Math.Max(12, ProjectInfo.RelativeHeight * 60f / 1080);
+            uint duration = Math.Max(1u, SubtitleData.FrameAt(data.Cues.Max(c => c.EndMilliseconds), ProjectInfo.TargetFrameRate));
+            var subtitle = ClipElementUI.CreateClip(startPoint, FrameToPixel(duration), trackIndex, labelText: asset.Name);
+            subtitle.ClipType = ClipMode.SubtitleClip;
+            subtitle.FromPlugin = InternalPluginBase.InternalPluginBaseID;
+            subtitle.sourceSecondPerFrame = 1f / ProjectInfo.TargetFrameRate;
+            subtitle.TargetWidth = ProjectInfo.RelativeWidth;
+            subtitle.TargetHeight = ProjectInfo.RelativeHeight;
+            subtitle.ExtraData[SubtitleData.MetadataKey] = data;
+            subtitle.isInfiniteLength = true;
+            return subtitle;
+        }
         if (asset.GetClipMode() == ClipMode.VectorComponentClip)
             return VectorClipServices.CreateClip(this, VectorClipServices.Import(path ?? asset.Path ?? throw new InvalidDataException("Vector asset path is missing.")),
                 trackIndex, startPoint, Math.Max(1u, SettingsManager.GetSettingAs<uint>("Edit_DefaultInfLengthClipLength", 300, 300)));
@@ -4827,6 +4969,11 @@ public partial class DraftPage : ContentPage, IDraftPage
             var changedClip = e.Value as ClipElementUI ?? clip;
             Clips[changedClip.Id] = changedClip;
             MarkHistoryPanelDirty();
+            OnClipChanged?.Invoke(this, new ClipUpdateEventArgs
+            {
+                Reason = ClipUpdateReason.PropertyChanged, SourceId = changedClip.Id,
+                SourceName = changedClip.DisplayName, DetailInfo = e.Id, NoSave = false,
+            });
             try
             {
                 // The changed clip was rebuilt by DraftEffectBindingView. Rebuilding every clip again
@@ -4924,7 +5071,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         await ReRenderUI(clip);
 
-        if (e.Id == "TextEntries" && UseDynamicPreview)
+        if ((e.Id is "TextEntries" or SubtitleData.MetadataKey) && UseDynamicPreview)
         {
             var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
             await previewer.UpdateDraft(d);
@@ -4983,12 +5130,12 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region asset
-    internal async Task AddAsset(string path, bool showAssetPanel = false)
+    internal async Task AddAsset(string path, bool showAssetPanel = false, bool? copyToProject = null)
     {
         SetStateBusy(Localized.DraftPage_PrepareAsset);
         try
         {
-
+            path = Path.GetFullPath(path);
             if (Assets.Values.Any((v) => v.Name == Path.GetFileNameWithoutExtension(path)))
             {
                 var existing = Assets.Values.First((v) => v.Name == Path.GetFileNameWithoutExtension(path));
@@ -5022,7 +5169,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     Log($"Adding duplicated asset from {path} together with existing one.");
                 }
             }
-            if (AssetItem.GetAssetType(path) == AssetType.VectorComposition)
+            if (copyToProject is null && AssetItem.GetAssetType(path) == AssetType.VectorComposition)
             {
                 var component = VectorClipServices.Import(path);
                 component.Name = Path.GetFileNameWithoutExtension(path);
@@ -5039,10 +5186,37 @@ public partial class DraftPage : ContentPage, IDraftPage
                 return;
             }
             item.Path = path;
+            if (copyToProject == true)
+            {
+                Directory.CreateDirectory(Path.Combine(WorkingPath, "asset"));
+                var destination = Path.Combine(WorkingPath, "asset", $"{item.AssetId}{Path.GetExtension(path)}");
+                try
+                {
+                    await Task.Run(() => File.Copy(path, destination));
+                }
+                catch
+                {
+                    if (File.Exists(destination)) File.Delete(destination);
+                    throw;
+                }
+                item.Path = destination;
+                if (item.AssetType == AssetType.Image) item.ThumbnailPath = destination;
+                Log($"Copied project asset '{path}' to '{destination}'.");
+            }
+            else
+            {
+                Log($"Referenced project asset '{path}'.");
+            }
+            if (item.AssetType == AssetType.VectorComposition)
+            {
+                item.Width = ProjectInfo.RelativeWidth;
+                item.Height = ProjectInfo.RelativeHeight;
+            }
             var cid = item.AssetId;
             Log($"Added asset '{item.Path}'s info: {item.Duration} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.Duration * item.SecondPerFrame} s");
             Assets.AddOrUpdate(cid, item, (_, _) => item);
             _workspace.GetModule<AssetModule>().Add(item);
+            if (item.AssetType == AssetType.VectorComposition) NotifyVectorAssetChanged();
             await AddClipView.RefreshAssetsAsync();
             if (showAssetPanel)
             {
@@ -5061,7 +5235,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     var proxiedPath = Path.Combine(WorkingPath, "proxy", $"{Path.GetFileNameWithoutExtension(path)}.proxy.mp4");
                     VideoResizer.ReencodeToResolution(item.Path, proxiedPath, 1280, 720, "libx264");
                 }
-                Assets[cid].SourceHash = await HashServices.ComputeFileHashAsync(path, null, c);
+                Assets[cid].SourceHash = await HashServices.ComputeFileHashAsync(item.Path, null, c);
             }), $"Add asset {item.Name}", $"Add asset {item.Name}");
             RunningTasks.AddOrUpdate(cid, task, (_, _) => task);
 
@@ -7915,8 +8089,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         foreach (var (id, raw) in values)
         {
             if (!fields.TryGetValue(id, out var f)) throw new ArgumentException($"Unknown effect field '{id}'.");
-            var value = EffectParamConvert.Normalize(raw);
-            object? converted = (f.FieldType & (EffectArgumentFieldType)0xFFFF) switch
+            var value = f.FieldType.HasFlag(EffectArgumentFieldType.Any) ? raw : EffectParamConvert.Normalize(raw);
+            if (f.FieldType.HasFlag(EffectArgumentFieldType.Any) && value is JsonElement json) value = json.Clone();
+            object? converted = f.FieldType.BaseType() switch
             {
                 EffectArgumentFieldType.Integer => Convert.ToInt32(value, CultureInfo.InvariantCulture),
                 EffectArgumentFieldType.UnsignedInteger => Convert.ToUInt16(value, CultureInfo.InvariantCulture),

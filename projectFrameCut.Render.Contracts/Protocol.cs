@@ -149,6 +149,7 @@ public enum RenderOperation
     [ProtoEnum] IsolationProcessTransformEffect = 2061,
     [ProtoEnum] IsolationProcessVectorPictureEffect = 2062,
     [ProtoEnum] IsolationComputeEffect = 2063,
+    [ProtoEnum] IsolationResolveFieldTypes = 2064,
 }
 
 [ProtoContract]

@@ -1175,12 +1175,6 @@ public partial class HomePage : ContentPage
             return;
         }
 
-        project.SnapshotIDMapping = ProjectJSONStructure.LoadSnapshotMapping(draftSourcePath, DraftPage.DraftJSONOption);
-        if (project.SnapshotIDMapping.Count == 0)
-        {
-            project.SnapshotIDMapping = ProjectJSONStructure.RebuildSnapshotMappingFromSlots(draftSourcePath, DraftPage.DraftJSONOption);
-        }
-
 #if WINDOWS
         bool currentProjectLinkCreated = false;
         void ClearCurrentProjectLink()
@@ -1236,7 +1230,7 @@ public partial class HomePage : ContentPage
                 {
                     throw new DirectoryNotFoundException("Working path not found: " + draftSourcePath);
                 }
-                string[] filesShouldExist = [(File.Exists(Path.Combine(draftSourcePath, "project.pjfc")) ? "project.pjfc" : "project.json"), "timeline.json", "assets.json"];
+                string[] filesShouldExist = [(File.Exists(Path.Combine(draftSourcePath, "project.pjfc")) ? "project.pjfc" : "project.json")];
                 if (filesShouldExist.Any((f) => !File.Exists(Path.Combine(draftSourcePath, f))))
                 {
                     await Dispatcher.DispatchAsync(async () =>
@@ -1249,13 +1243,44 @@ public partial class HomePage : ContentPage
                 {
                     File.Move(Path.Combine(draftSourcePath, "project.json"), Path.Combine(draftSourcePath, "project.pjfc"));
                 }
-                if (!project.NormallyExited) goto recover;
-                List<AssetItem> assets;
-                DraftStructureJSON timeline;
                 try
                 {
-                    assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(draftSourcePath, "assets.json")), DraftPage.DraftJSONOption) ?? new();
-                    timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(draftSourcePath, "timeline.json")), DraftPage.DraftJSONOption) ?? new();
+                    project.SnapshotIDMapping = ProjectJSONStructure.LoadSnapshotMapping(draftSourcePath, DraftPage.DraftJSONOption);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "read snapshot mapping", this);
+                }
+                foreach (var entry in ProjectJSONStructure.RebuildSnapshotMappingFromSlots(draftSourcePath, DraftPage.DraftJSONOption))
+                {
+                    if (!project.SnapshotIDMapping.TryGetValue(entry.Key, out var existing) || existing is null)
+                        project.SnapshotIDMapping[entry.Key] = entry.Value;
+                    else
+                    {
+                        existing.Previous = entry.Value.Previous;
+                        existing.Next ??= [];
+                        foreach (var next in entry.Value.Next)
+                            if (!existing.Next.Contains(next)) existing.Next.Add(next);
+                    }
+                }
+                var currentRecords = DraftPage.ReadCurrentSnapshotRecords(draftSourcePath, out bool hasInvalidCurrentRecords);
+                List<AssetItem> assets;
+                DraftStructureJSON timeline;
+                string? recoveredSlotName = null;
+                ConcurrentDictionary<Guid, ClipElementUI>? recoveredClips = null;
+                int recoveredTrackCount = 0;
+                bool wasRecovered = false;
+                if (hasInvalidCurrentRecords || !project.NormallyExited || currentRecords.FirstOrDefault()?.IsDirty == true) goto recover;
+                try
+                {
+                    assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(draftSourcePath, "assets.json")), DraftPage.DraftJSONOption)
+                        ?? throw new InvalidDataException("Project assets are invalid.");
+                    timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(draftSourcePath, "timeline.json")), DraftPage.DraftJSONOption)
+                        ?? throw new InvalidDataException("Project timeline is invalid.");
+                    if (timeline.Clips is null || timeline.SoundTracks is null)
+                        throw new InvalidDataException("Project timeline collections are invalid.");
+                    _ = assets.ToDictionary(a => a.AssetId ?? Guid.NewGuid().ToString());
+                    (recoveredClips, recoveredTrackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline, project);
                     goto ok;
                 }
                 catch (Exception ex)
@@ -1267,64 +1292,88 @@ public partial class HomePage : ContentPage
             recover:
                 try
                 {
-                    bool skipAsk = skipAskForRecover ?? SettingsManager.IsBoolSettingTrue("AutoRecoverDraft");
-                    bool conf = false;
-                    await Dispatcher.DispatchAsync(async delegate
+                    (string Path, DraftStructureJSON Timeline, List<AssetItem> Assets, ConcurrentDictionary<Guid, ClipElementUI> Clips, int TrackCount)?
+                        ReadSnapshot(string path, Guid snapshotId = default)
                     {
-                        conf = skipAsk || await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken, Localized._Confirm, Localized._Cancel);
-                    });
-                    if (!conf) return;
-                    Dictionary<string, DraftStructureJSON?> tmls = new Dictionary<string, DraftStructureJSON?>();
-                    string[] directories = Directory.GetDirectories(Path.Combine(draftSourcePath, "saveSlots"));
-                    foreach (string item in directories)
-                    {
-                        if (File.Exists(Path.Combine(item, "timeline.json")))
+                        try
                         {
-                            try
-                            {
-                                DraftStructureJSON? tml = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(item, "timeline.json")));
-                                if (tml != null)
-                                {
-                                    tmls.Add(item, tml);
-                                }
-                            }
-                            catch (Exception ex2)
-                            {
-                                Exception exInner = ex2;
-                                Logger.Log(exInner, "read draft from save slot", this);
-                            }
+                            var tml = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(path, "timeline.json")), DraftPage.DraftJSONOption)
+                                ?? throw new InvalidDataException("Recovery timeline is invalid.");
+                            if (tml.Clips is null || tml.SoundTracks is null)
+                                throw new InvalidDataException("Recovery timeline collections are invalid.");
+                            if (snapshotId != Guid.Empty && tml.SnapshotID != snapshotId)
+                                throw new InvalidDataException("Recovery snapshot ID does not match.");
+                            var items = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(path, "assets.json")), DraftPage.DraftJSONOption)
+                                ?? throw new InvalidDataException("Recovery assets are invalid.");
+                            _ = items.ToDictionary(a => a.AssetId ?? Guid.NewGuid().ToString());
+                            var (clips, tracks) = DraftImportAndExportHelper.ImportFromJSON(tml, project);
+                            return (path, tml, items, clips, tracks);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, $"open recovery snapshot from {path}", this);
+                            return null;
                         }
                     }
-                    KeyValuePair<string, DraftStructureJSON?> newest = tmls.Where(c => c.Value is not null && c.Value.SavedAt <= DateTime.Now).OrderByDescending(t => t.Value?.SavedAt).FirstOrDefault(new KeyValuePair<string, DraftStructureJSON?>("", null));
-                    bool result = false;
+
+                    (string Path, DraftStructureJSON Timeline, List<AssetItem> Assets, ConcurrentDictionary<Guid, ClipElementUI> Clips, int TrackCount)? recovered = null;
+                    foreach (var record in currentRecords)
+                    {
+                        recovered = ReadSnapshot(Path.Combine(draftSourcePath, "saveSlots", record.SlotName), record.SnapshotID);
+                        if (recovered is not null) break;
+                    }
+                    if (recovered is not null) goto recovered;
+
+                    var root = ReadSnapshot(draftSourcePath);
+                    var saveRoot = Path.Combine(draftSourcePath, "saveSlots");
+                    List<(string Path, DraftStructureJSON Draft)> slots = [];
+                    foreach (var dir in Directory.Exists(saveRoot) ? Directory.GetDirectories(saveRoot, "slot_*") : [])
+                    {
+                        try
+                        {
+                            var tml = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(dir, "timeline.json")), DraftPage.DraftJSONOption);
+                            if (tml is not null) slots.Add((dir, tml));
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, "read recovery snapshot", this);
+                        }
+                    }
+                    foreach (var slot in slots.OrderByDescending(s => s.Draft.SavedAt.ToUniversalTime()))
+                    {
+                        recovered = ReadSnapshot(slot.Path, slot.Draft.SnapshotID);
+                        if (recovered is not null) break;
+                    }
+                    if (root is null && recovered is null)
+                        throw new InvalidDataException("No readable project snapshot was found.");
+
+                    string Reason(DraftStructureJSON tml) => string.IsNullOrWhiteSpace(tml.ChangeReason)
+                        ? string.Empty : Localized.HomePage_GoDraft_Recovery_Reason(tml.ChangeReason);
+                    DateTime SavedAt(DraftStructureJSON tml) => tml.SavedAt.Kind == DateTimeKind.Utc ? tml.SavedAt.ToLocalTime() : tml.SavedAt;
+                    var rootOption = root is null ? null : Localized.HomePage_GoDraft_Recovery_LastSaved(SavedAt(root.Value.Timeline), Reason(root.Value.Timeline));
+                    var latestOption = recovered is null ? null : Localized.HomePage_GoDraft_Recovery_LatestSnapshot(SavedAt(recovered.Value.Timeline), Reason(recovered.Value.Timeline));
+                    string? choice = null;
                     await Dispatcher.DispatchAsync(async () =>
-                    {
-                        if (newest.Value is null)
-                        {
-                            await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Fail, Localized._OK);
-                        }
-                        else
-                        {
-                            result = skipAsk || await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Confirm(newest.Value.SavedAt), Localized._Confirm, Localized._Cancel);
-                        }
-                    });
-                    if (!result)
-                    {
+                        choice = await DisplayActionSheetAsync(Localized.HomePage_GoDraft_Recovery_Select, Localized._Cancel, null,
+                            new[] { rootOption, latestOption }.OfType<string>().ToArray()));
+                    if (choice == rootOption && rootOption is not null)
+                        recovered = root;
+                    else if (choice != latestOption || latestOption is null)
                         return;
-                    }
-                    assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(newest.Key, "assets.json"))) ?? new List<AssetItem>();
-                    timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(newest.Key, "timeline.json"))) ?? new DraftStructureJSON();
-                    if (!skipAsk)
-                    {
-                        await Dispatcher.DispatchAsync(async () =>
-                        {
-                            await DisplayAlertAsync(Localized._Info, Localized.HomePage_GoDraft_DraftBroken_Success, Localized._OK);
-                        });
-                    }
+
+                recovered:
+                    timeline = recovered!.Value.Timeline;
+                    assets = recovered.Value.Assets;
+                    recoveredClips = recovered.Value.Clips;
+                    recoveredTrackCount = recovered.Value.TrackCount;
+                    recoveredSlotName = recovered.Value.Path == draftSourcePath ? null : Path.GetFileName(recovered.Value.Path);
+                    wasRecovered = true;
+                    Log($"Recovered project snapshot {timeline.SnapshotID} from {recovered.Value.Path}.");
+                    goto ok;
                 }
                 catch (Exception ex3)
                 {
-                    Log(ex3, "read draft from save slot confirm", this);
+                    Log(ex3, "recover draft from save slots", this);
                     await Dispatcher.DispatchAsync(async () =>
                     {
                         await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_Fail}\r\n({ex3.Message})", Localized._OK);
@@ -1346,7 +1395,9 @@ public partial class HomePage : ContentPage
                         await DisplayAlertAsync(Localized._Info, Localized.HomePage_GoDraft_OneWayDestructiveUpdateWarn("- BindableEffect"), Localized._Confirm);
                     }
                 });
-                (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline, project);
+                project.LastSnapshotID = timeline.SnapshotID;
+                var dict = recoveredClips!;
+                var trackCount = recoveredTrackCount;
                 ConcurrentDictionary<string, AssetItem> assetDict = new(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}"));
                 Dictionary<string, AssetItem> notfounds = new();
                 foreach (var item in dict)
@@ -1424,7 +1475,10 @@ public partial class HomePage : ContentPage
                                     p.DefaultPreviewHeight = 720;
                                 }
                             }
+                            p.InitializeCurrentSnapshot(timeline, recoveredSlotName, wasRecovered);
                             await p.InitializeLoadedUiAsync(true, loadCancellation.Token);
+                            if (wasRecovered && recoveredSlotName is not null && !isReadonly)
+                                await p.WriteCurrentSnapshotAsync(timeline, recoveredSlotName, true);
                             await p.PostInit();
                             loadCancellation.Token.ThrowIfCancellationRequested();
                             //var projectPluginsItem = new MenuFlyoutItem { Text = "Project plugins" };

@@ -29,7 +29,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public float SecondPerFrameRatio { get => 1; init { } }
 
         public string? filePath { get; } = null;
-        public ClipMode ClipType => ClipMode.TextClip;
+        public virtual ClipMode ClipType => ClipMode.TextClip;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
@@ -184,7 +184,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
            EffectHelper.ResolveClipEffects(this);
         }
 
-        public void ReInit(IPicture.PicturePixelMode targetPPB)
+        public virtual void ReInit(IPicture.PicturePixelMode targetPPB)
         {
             ClearFrameCache();
             if (!string.IsNullOrWhiteSpace(FontPath))
@@ -254,6 +254,32 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 hash.Add(e.GetFixedHeightValue() ?? float.NaN);
                 hash.Add(e.GetUseVerticalLayout());
                 hash.Add(e.GetKeepNonCJKTextAsHorizontal());
+                foreach (var font in e.FallbackFonts) hash.Add(font);
+                foreach (var axis in e.VariationAxes.OrderBy(a => a.Key))
+                {
+                    hash.Add(axis.Key);
+                    hash.Add(axis.Value);
+                }
+                if (e is RichTextEntry rich)
+                    foreach (var range in rich.StyledRanges)
+                    {
+                        hash.Add(range.Start);
+                        hash.Add(range.Length);
+                        hash.Add(range.Style.FontName);
+                        hash.Add(range.Style.FontStyle);
+                        hash.Add(range.Style.FontSize);
+                        hash.Add(range.Style.FillR); hash.Add(range.Style.FillG); hash.Add(range.Style.FillB); hash.Add(range.Style.FillA);
+                        hash.Add(range.Style.StrokeR); hash.Add(range.Style.StrokeG); hash.Add(range.Style.StrokeB); hash.Add(range.Style.StrokeA);
+                        hash.Add(range.Style.StrokeThickness);
+                        hash.Add(range.Style.CharacterSpacing); hash.Add(range.Style.WordSpacing); hash.Add(range.Style.LineSpacing);
+                        hash.Add(range.Style.Alignment); hash.Add(range.Style.Decoration);
+                        foreach (var font in range.Style.FallbackFonts ?? []) hash.Add(font);
+                        foreach (var axis in (range.Style.VariationAxes ?? []).OrderBy(a => a.Key))
+                        {
+                            hash.Add(axis.Key);
+                            hash.Add(axis.Value);
+                        }
+                    }
             }
             return hash.ToHashCode();
         }
@@ -313,7 +339,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         private IReadOnlyList<TextEntry> ResolveTextEntriesForRender(uint targetFrame)
         {
-            var raw = GetRawEntries();
+            var raw = GetRawEntries(targetFrame);
             foreach (var item in (EffectsInstances ?? []).Where(e => e.Enabled && (e is ITextEffect or IContinuousTextEffect)).OrderBy(e => e.Index))
             {
                 if (item is ITextEffect textEffect)
@@ -335,7 +361,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             return raw;
         }
 
-        private IReadOnlyList<TextEntry> GetRawEntries()
+        protected virtual IReadOnlyList<TextEntry> GetRawEntries(uint frameIndex)
         {
             if (ExtraData?.TryGetValue("TextEntries", out var rawEntries) == true)
             {

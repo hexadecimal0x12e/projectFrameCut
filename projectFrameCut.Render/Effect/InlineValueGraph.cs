@@ -4,8 +4,9 @@ using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.Effect;
 
-internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider> providers)
+internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider> providers, EffectFieldTypeResolution? resolvedTypes = null)
 {
+    public EffectFieldTypeResolution Types { get; } = resolvedTypes ?? new(providers);
     private sealed record Node(IEffectProvider Provider, Dictionary<string, IEffectArgumentField> Fields,
         Dictionary<string, string> Bindings, IEffect[] Effects, bool Enabled);
     private readonly Dictionary<Guid, Node> nodes = new();
@@ -23,6 +24,7 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
         if (!nodes.TryGetValue(id, out var node))
         {
             var provider = providers[id];
+            provider.ValidateOutputFields();
             var effects = provider.Enabled ? EffectBindingHelper.BuildProviderEffects(provider) : [];
             try
             {
@@ -94,7 +96,7 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
         if (source is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId)
             return ValueProviderFrameContext.Get(source);
         if (!EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out var outputId)
-            || !nodes.TryGetValue(id, out var node) || !node.Provider.TryGetOutputField(outputId, out var output)) return null;
+            || !nodes.TryGetValue(id, out var node) || !Types.TryGetOutputField(node.Provider, outputId, out var output)) return null;
         return ValueProviderFrameContext.GetOrCompute(node, () => Compute(node)).GetValueOrDefault(output.Id);
     }
 
@@ -119,7 +121,7 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
                 };
                 parameters[key] = EffectFieldTypes.ConvertInput(field.FieldType, binding is null ? fallback : Resolve(binding) ?? fallback);
                 if (parameters[key] is null && field.FieldType.HasFlag(EffectArgumentFieldType.Mandatory)
-                    || !EffectFieldTypes.Accepts(field.FieldType, parameters[key]))
+                    || !EffectFieldTypes.Accepts(Types.GetInputType(node.Provider, key), parameters[key]))
                     throw new InvalidOperationException($"Invalid input '{key}' on provider {node.Provider.Id}.");
                 if (binding is not null) values[binding] = parameters[key];
             }
@@ -144,14 +146,14 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
                 {
                     var outputs = multiple.ComputeOutputs(context) ?? throw new InvalidOperationException($"Provider {node.Provider.Id} returned no output map.");
                     foreach (var picture in outputs.Values.OfType<IPicture>()) pictures.Add(picture);
-                    DynamicEffectBindings.ValidateOutputValues(node.Provider, outputs);
+                    DynamicEffectBindings.ValidateOutputValues(node.Provider, outputs, Types, frame);
                     return outputs;
                 }
                 value = effect.Compute(context);
                 if (value is IPicture p) pictures.Add(p);
             }
-            var result = new Dictionary<string, object?> { [node.Provider.OutField.Id] = value };
-            DynamicEffectBindings.ValidateOutputValues(node.Provider, result);
+            var result = new Dictionary<string, object?> { [Types.GetOutputField(node.Provider).Id] = value };
+            DynamicEffectBindings.ValidateOutputValues(node.Provider, result, Types, frame);
             return result;
         }
         catch (Exception ex)

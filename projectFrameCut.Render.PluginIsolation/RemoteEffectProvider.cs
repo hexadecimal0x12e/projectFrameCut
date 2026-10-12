@@ -9,6 +9,7 @@ public class RemoteEffectProvider : IEffectProvider
 {
     private readonly IPluginIsolationSession _session;
     private readonly long _objectId;
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<EffectFieldTypeContext, IsolationResolvedFieldTypes> _fieldTypes = new();
 
     public RemoteEffectProvider(IPluginIsolationSession session, IsolationProviderDescriptor descriptor)
     {
@@ -44,8 +45,33 @@ public class RemoteEffectProvider : IEffectProvider
     public EffectImplementType[] SupportsImplementTypes => IPluginBase.EffectImplementations.GetImplementTypes(TypeName);
     public EffectImplementType DefaultImplementType { get; }
 
+    public EffectArgumentFieldType ResolveFieldType(string fieldId, bool isInput, EffectFieldTypeContext context)
+    {
+        if (!_session.Capabilities.SupportsFieldTypeResolution) return EffectArgumentFieldType.Any;
+        var result = _fieldTypes.GetValue(context, c =>
+        {
+            var leases = new List<IsolationPayloadLease>();
+            try
+            {
+                return Invoke<IsolationResolveFieldTypesRequest, IsolationResolvedFieldTypes>(RenderOperation.IsolationResolveFieldTypes, new()
+                {
+                    ObjectId = _objectId, State = IsolationFieldTypeCodec.Write(c.State, _session, leases),
+                    BoundProviders = c.BoundProviders.ToDictionary(p => p.Key, p => IsolationFieldTypeCodec.Write(p.Value, _session, leases)),
+                    InputTypes = c.InputTypes.ToDictionary(p => p.Key, p => (ulong)p.Value),
+                });
+            }
+            finally
+            {
+                foreach (var lease in leases) lease.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+        });
+        return (isInput ? result.Inputs : result.Outputs).TryGetValue(fieldId, out var type)
+            ? (EffectArgumentFieldType)type : EffectArgumentFieldType.Any;
+    }
+
     public IEffect[] Build()
     {
+        this.ValidateOutputFields();
         if (this is IMultipleOutputEffectProvider)
         {
             List<IsolationPayloadLease> leases = [];

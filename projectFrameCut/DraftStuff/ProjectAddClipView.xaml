@@ -191,25 +191,27 @@
             </HorizontalStackLayout>
         </tv:TabbedView.HeaderRightContent>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}" Tag="LocalAssets" x:Name="LocalAssetsTab" x:FieldModifier="public">
-            <CollectionView x:Name="LocalAssetsCollectionView"
-                            ItemsSource="{Binding FilteredLocalAssets}"
-                            ItemTemplate="{StaticResource SourceCardTemplateSelector}"
-                            SelectionMode="None"
-                            Margin="8"
-                            SizeChanged="OnCollectionViewSizeChanged">
+            <Grid>
+                <CollectionView x:Name="LocalAssetsCollectionView"
+                                ItemsSource="{Binding FilteredLocalAssets}"
+                                ItemTemplate="{StaticResource SourceCardTemplateSelector}"
+                                SelectionMode="None"
+                                Margin="8"
+                                SizeChanged="OnCollectionViewSizeChanged">
                     <CollectionView.ItemsLayout>
                         <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
                     </CollectionView.ItemsLayout>
 
-                <CollectionView.Header>
+                    <CollectionView.Header>
                         <Label Text="{l:Localized Key=AssetPage_SearchNoResult}"
                            IsVisible="{Binding FilteredLocalAssets.Count, Converter={StaticResource OnlyAddCardConverter}}"
                            FontSize="14"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"
                            Margin="20"/>
-                </CollectionView.Header>
-            </CollectionView>
+                    </CollectionView.Header>
+                </CollectionView>
+            </Grid>
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_SharedAssets}" Tag="SharedAssets" x:Name="SharedAssetsTab" x:FieldModifier="public">
             <CollectionView x:Name="SharedAssetsCollectionView"
@@ -612,6 +614,13 @@
                     </tv:TabbedViewItem>
                 </tv:CompactTabView>
             </Grid>
+        </tv:TabbedViewItem>
+        <tv:TabbedViewItem Header="{l:Localized Key=Subtitle_Title}" Tag="Subtitles">
+            <VerticalStackLayout Padding="16" Spacing="12">
+                <Label Text="{l:Localized Key=Subtitle_Formats}" />
+                <Button Text="{l:Localized Key=Subtitle_New}" Command="{Binding NewSubtitleCommand}" />
+                <Button Text="{l:Localized Key=Subtitle_Import}" Command="{Binding ImportSubtitleCommand}" />
+            </VerticalStackLayout>
         </tv:TabbedViewItem>
         <!-- <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddPicture}" Tag="Picture" x:Name="AddPictureTab" x:FieldModifier="public" >
             <Button Text="➕" 

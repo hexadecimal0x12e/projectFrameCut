@@ -3532,13 +3532,7 @@ namespace projectFrameCut.InteractableEditor
 
         private static int ResolveClipOverlayZIndex(ClipElementUI clip)
         {
-            // Keep overlay order aligned with timeline track order (lower track index on top).
-            var layer = Math.Max(0, clip.origTrack ?? 0);
-            var subLayer = Math.Max(0, clip.SubLayerIndex);
-            var composite = (long)layer * 10000L + Math.Min(9999, subLayer);
-            var zIndex = composite >= int.MaxValue ? int.MinValue : -((int)composite);
-            //LogDiagnostic($"For clip {clip.Id}/{clip.DisplayName}, track:{layer}, sub:{subLayer}, ZIndex is {zIndex}");
-            return zIndex;
+            return ClipLayerOrder.GetPreviewZIndex((uint)Math.Max(0, clip.origTrack ?? 0), (uint)Math.Max(0, clip.SubLayerIndex));
         }
 
         private void ReorderClipStateRootsByZIndex()

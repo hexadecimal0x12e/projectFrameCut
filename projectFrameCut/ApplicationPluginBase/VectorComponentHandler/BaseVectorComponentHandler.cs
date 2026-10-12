@@ -14,6 +14,7 @@ public abstract class BaseVectorComponentHandler : IVectorComponentHandler
     public string FromPlugin => InternalApplicationPluginBase.InternalPluginBaseID;
     public abstract string DisplayName { get; }
     public abstract string Icon { get; }
+    public virtual bool IsNotVisibleInNewComponentSelector => false;
     public abstract bool HasDefaultHandles { get; }
 
     Dictionary<string, object> IVectorComponentHandler.DefaultParameters => GetDefaultParameters();

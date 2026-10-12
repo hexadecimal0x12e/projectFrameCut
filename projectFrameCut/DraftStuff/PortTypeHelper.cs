@@ -45,6 +45,7 @@ namespace projectFrameCut.DraftStuff
             var baseType = GetBaseType(ft);
             return baseType switch
             {
+                EffectArgumentFieldType.Any => "*",
                 EffectArgumentFieldType.IPicture => "P",
                 EffectArgumentFieldType.Numeric => "N",
                 EffectArgumentFieldType.Integer => "I",
@@ -68,6 +69,7 @@ namespace projectFrameCut.DraftStuff
             var baseType = GetBaseType(ft);
             return baseType switch
             {
+                EffectArgumentFieldType.Any => "Any",
                 EffectArgumentFieldType.IPicture => "IPicture",
                 EffectArgumentFieldType.Numeric => "Numeric",
                 EffectArgumentFieldType.Integer => "Integer",
