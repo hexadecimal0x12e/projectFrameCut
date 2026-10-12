@@ -533,6 +533,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
     public int DynamicPreviewTimeout { get; set; } = 4096;
+    private bool _propertyPreviewTimedOut;
+    private readonly SemaphoreSlim _propertyPreviewLock = new(1, 1);
+    private int _propertyPreviewVersion;
     public int DynamicPreviewResolutionDivisor { get => DynamicPreviewProvider?.PreviewResolutionDivisor ?? 1; set { DynamicPreviewProvider?.PreviewResolutionDivisor = value; } }
     public bool ReverseScrollLockKeyBehavior { get { return field; } set { if (field == value) return; field = value; OnPropertyChanged(nameof(ReverseScrollLockKeyBehavior)); RefreshToggleCommandStates(); } } = false;
     public bool IsKeyframeRecordingEnabled
@@ -4984,7 +4987,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     rebuildEffects: false);
                 await previewer.UpdateDraft(d);
                 DynamicPreviewProvider.SetClips(previewer.Clips);
-                await RefreshPreviewFromCurrentProviderAsync();
+                await RefreshPreviewAfterPropertyChangeAsync();
                 StartClipPreviewWarmup(changedClip.Id);
             }
             catch (Exception refreshEx)
@@ -5007,7 +5010,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
                 await previewer.UpdateDraft(d);
                 DynamicPreviewProvider.SetClips(previewer.Clips);
-                await RefreshPreviewFromCurrentProviderAsync();
+                await RefreshPreviewAfterPropertyChangeAsync();
                 StartClipPreviewWarmup(clip.Id);
             }
             catch (Exception refreshEx)
@@ -5076,7 +5079,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
             await previewer.UpdateDraft(d);
             DynamicPreviewProvider.SetClips(previewer.Clips);
-            _ = RefreshDynamicPreviewOverlay();
+            _ = RefreshPreviewAfterPropertyChangeAsync();
             StartClipPreviewWarmup(clip.Id);
         }
 
@@ -5090,9 +5093,39 @@ public partial class DraftPage : ContentPage, IDraftPage
             && propertyId is not ("rotationDeg" or "allowFreeScaleResize" or "ExtendToWholeDraft")
             && !propertyId.StartsWith("place_", StringComparison.Ordinal);
 
+    private async Task RefreshPreviewAfterPropertyChangeAsync()
+    {
+        if (_propertyPreviewTimedOut || AlreadyDisappeared) return;
+        var version = Interlocked.Increment(ref _propertyPreviewVersion);
+        await _propertyPreviewLock.WaitAsync();
+        try
+        {
+            if (_propertyPreviewTimedOut || AlreadyDisappeared || version != _propertyPreviewVersion) return;
+            var timeout = Math.Max(1, DynamicPreviewTimeout);
+            var startedAt = Stopwatch.GetTimestamp();
+            try
+            {
+                await RefreshPreviewFromCurrentProviderAsync();
+            }
+            finally
+            {
+                if (Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds > timeout)
+                {
+                    _propertyPreviewTimedOut = true;
+                    DynamicPreviewProvider.CancelClipWarmups();
+                    LogDiagnostic($"Property preview exceeded {timeout} ms; automatic property previews stopped.");
+                }
+            }
+        }
+        finally
+        {
+            _propertyPreviewLock.Release();
+        }
+    }
+
     private void StartClipPreviewWarmup(Guid clipId)
     {
-        if (AlreadyDisappeared) return;
+        if (AlreadyDisappeared || _propertyPreviewTimedOut) return;
         if (!DynamicPreviewProvider.PreviewWarmupEnabled) return;
         var (width, height) = DynamicPreviewProvider.ResolveDimensions(
             ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight, ClipEditor.Width, ClipEditor.Height);

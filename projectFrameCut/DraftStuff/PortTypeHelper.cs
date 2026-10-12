@@ -23,6 +23,7 @@ namespace projectFrameCut.DraftStuff
             return baseType switch
             {
                 EffectArgumentFieldType.IPicture => Color.FromArgb("#4CAF50"),    // Green
+                EffectArgumentFieldType.VectorPicture => Color.FromArgb("#A6C436"),
                 EffectArgumentFieldType.Numeric => Color.FromArgb("#1E90FF"),      // Blue
                 EffectArgumentFieldType.Integer => Color.FromArgb("#4169E1"),      // Royal Blue
                 EffectArgumentFieldType.UnsignedInteger => Color.FromArgb("#87CEEB"), // Sky Blue
@@ -47,6 +48,7 @@ namespace projectFrameCut.DraftStuff
             {
                 EffectArgumentFieldType.Any => "*",
                 EffectArgumentFieldType.IPicture => "P",
+                EffectArgumentFieldType.VectorPicture => "V",
                 EffectArgumentFieldType.Numeric => "N",
                 EffectArgumentFieldType.Integer => "I",
                 EffectArgumentFieldType.UnsignedInteger => "U",
@@ -71,6 +73,7 @@ namespace projectFrameCut.DraftStuff
             {
                 EffectArgumentFieldType.Any => "Any",
                 EffectArgumentFieldType.IPicture => "IPicture",
+                EffectArgumentFieldType.VectorPicture => Localized.Effect_VectorContentType,
                 EffectArgumentFieldType.Numeric => "Numeric",
                 EffectArgumentFieldType.Integer => "Integer",
                 EffectArgumentFieldType.UnsignedInteger => "UInt",

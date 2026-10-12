@@ -12,6 +12,7 @@ public static class IsolationValueConverter
         return value switch
         {
             null => new(),
+            projectFrameCut.Drawing.Vector.VectorPicture x => new() { Kind = IsolationValueKind.VectorPicture, VectorElements = VectorPictureCodec.Encode(x) },
             string x => new() { Kind = IsolationValueKind.String, StringValue = x },
             bool x => new() { Kind = IsolationValueKind.Boolean, BooleanValue = x },
             byte x => new() { Kind = IsolationValueKind.UInt32, UnsignedValue = x },
@@ -38,6 +39,7 @@ public static class IsolationValueConverter
         return value.Kind switch
         {
             IsolationValueKind.Null => null,
+            IsolationValueKind.VectorPicture => VectorPictureCodec.Decode(value.VectorElements),
             IsolationValueKind.String => value.StringValue,
             IsolationValueKind.Boolean => value.BooleanValue,
             IsolationValueKind.Int32 => RestoreEnum(value) ?? checked((int)value.SignedValue),

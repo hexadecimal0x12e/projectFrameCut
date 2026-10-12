@@ -800,9 +800,11 @@ internal sealed class PluginIsolationWorkerService(
     private async ValueTask<RenderResponseEnvelope> ReadAudioSamplesAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
     {
         var request = Read<IsolationReadAudioSamplesRequest>(envelope);
+        if (request.Count < 0 || request.Count > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(request.Count));
         var samples = Require<IAudioSource>(request.ObjectId).GetSample(request.StartIndex, request.Count);
+        if (samples.SampleCount > request.Count) throw new InvalidDataException("Isolated audio source returned too many samples.");
         var data = AudioPayloadCodec.Encode(samples);
-        var lease = await _payloads.PublishAsync(data, _payloadKind, cancellationToken).ConfigureAwait(false);
+        var lease = await _payloads.PublishAsync(data, data.Length == 0 ? IsolationPayloadKind.Inline : _payloadKind, cancellationToken).ConfigureAwait(false);
         return Success(envelope, new IsolationAudioSamplesResponse
         {
             Samples = lease.Reference,

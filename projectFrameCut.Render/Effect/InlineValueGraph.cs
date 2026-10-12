@@ -15,9 +15,14 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
     private int activeCalls;
     private bool disposed;
     private Action? release;
+    private int owners;
     public IEnumerable<IEffect> Effects => nodes.Values.SelectMany(n => n.Effects);
     public IEffect[]? FindEffects(Guid id) => nodes.GetValueOrDefault(id)?.Effects;
     public bool Contains(Guid id) => nodes.ContainsKey(id);
+    public void AddOwner()
+    {
+        lock (sync) owners++;
+    }
 
     public IEffect[] GetEffects(Guid id)
     {
@@ -60,14 +65,12 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
         lock (sync)
         {
             if (disposed) return;
+            release += releaseEffects;
+            if (--owners > 0) return;
             disposed = true;
-            if (activeCalls > 0)
-            {
-                release = releaseEffects;
-                return;
-            }
+            if (activeCalls > 0) return;
         }
-        releaseEffects();
+        release?.Invoke();
     }
 
     public object? GetValue(string source)

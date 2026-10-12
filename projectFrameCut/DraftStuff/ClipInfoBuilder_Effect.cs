@@ -70,6 +70,7 @@ namespace projectFrameCut.DraftStuff
         #region effect
         public static void RebuildAllEffects(ClipElementUI clip, bool diag = false)
         {
+            EffectGroupBindingGuard.Synchronize(clip);
             if (clip.Effects?.TryGetValue(InternalRotationID, out var rotation) == true && rotation.TypeName == "Rotation")
             {
                 if (rotation.Enabled) clip.Rotation += ReadEffectFloatParameter(rotation, "Angle", rotation is RotationEffect_IPicture r ? r.Angle : 0);
@@ -162,7 +163,7 @@ namespace projectFrameCut.DraftStuff
 
             });
             var bundlesFactories = EffectServices.GetAvailableEffectProviders()
-                .Where(p => pipeline is null || p.Value().Target.HasFlag(EffectTarget.ValueProvider) || p.Value().TypeOfEffect.GetPipeline() == pipeline)
+                .Where(p => pipeline is null || p.Value().Target.HasFlag(EffectTarget.ValueProvider) || p.Value().GetPipeline() == pipeline)
                 .ToDictionary(p => p.Key, p => p.Value);
             var inputSources = new Dictionary<(Guid ProviderId, string Display), string>();
             var haveManySpeedVarianceProvider = (clip.EffectProviders?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.SpeedVarianceProvider)) ?? 0) >= 2;
@@ -171,7 +172,7 @@ namespace projectFrameCut.DraftStuff
             if (clip.EffectProviders != null)
             {
                 var filteredProviders = clip.EffectProviders
-                     .Where(c => (pipeline is null || c.Value.Target.HasFlag(EffectTarget.ValueProvider) || c.Value.TypeOfEffect.GetPipeline() == pipeline)
+                     .Where(c => (pipeline is null || c.Value.GetPipeline() == pipeline)
                          && c.Value.TypeOfEffect != EffectType.Transform && (
                          showAllEffect
                          || (!c.Value.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)
@@ -328,7 +329,7 @@ namespace projectFrameCut.DraftStuff
                             foreach (var source in new[] { IEffectProvider.InputAnchorGUID.ToString(), ValueProviderFrameContext.BuiltInFrameProviderId, ValueProviderFrameContext.BuiltInProgressProviderId })
                             {
                                 var candidateTypes = await InputCandidateTypes(source);
-                                var sourceType = source == IEffectProvider.InputAnchorGUID.ToString() ? EffectArgumentFieldType.IPicture : EffectArgumentFieldType.Numeric;
+                                var sourceType = source == IEffectProvider.InputAnchorGUID.ToString() ? bundleInstance.GetPipeline().GetContentType() : EffectArgumentFieldType.Numeric;
                                 if (!EffectFieldTypes.AreCompatible(sourceType, candidateTypes?.GetInputType(bundleInstance, EffectProviderAnchorExtensions.InputKey) ?? mainInput.FieldType)
                                     || candidateTypes?.AreInputsCompatible(bundleInstance) == false) continue;
                                 inAnchorProviderOptions.Add(source switch
@@ -358,13 +359,13 @@ namespace projectFrameCut.DraftStuff
                                 }
                                 string current = targets.Count > 0 ? string.Join("; ", targets) : PPLocalizedResources.EffectBind_NoConnection;
                                 var options = new List<string> { current };
-                                if ((types?.GetOutputType(bundleInstance, output.Id) ?? output.FieldType).IsPicture()) options.Add(PPLocalizedResources.EffectBind_FinalResult);
+                                if ((types?.GetOutputType(bundleInstance, output.Id) ?? output.FieldType).IsContent()) options.Add(PPLocalizedResources.EffectBind_FinalResult);
                                 options.Add(PPLocalizedResources.EffectBind_NoConnection);
                                 ppb.AddPicker($"Provider|{bundleId}|OutAnchor|{Uri.EscapeDataString(output.Id)}",
                                     $"{PPLocalizedResources.EffectBind_OutputAnchor} ({output.Id})", options.Distinct().ToArray(), current);
                             }
                         }
-                        else if ((types?.GetOutputType(bundleInstance) ?? bundleInstance.OutField.FieldType).IsPicture())
+                        else if ((types?.GetOutputType(bundleInstance) ?? bundleInstance.OutField.FieldType).IsContent())
                             ppb.AddPicker($"Provider|{bundleId}|OutAnchor", PPLocalizedResources.EffectBind_OutputAnchor,
                                 [PPLocalizedResources.EffectBind_FinalResult, PPLocalizedResources.EffectBind_NoConnection],
                                 bundleInstance.IsFinalOutputSource() ? PPLocalizedResources.EffectBind_FinalResult : PPLocalizedResources.EffectBind_NoConnection);
@@ -531,7 +532,7 @@ namespace projectFrameCut.DraftStuff
                                             if (e.Value?.ToString() == PPLocalizedResources.EffectBind_FinalResult)
                                             {
                                                 EffectBindingHelper.SetFinalOutput(clip.EffectProviders, bundleId,
-                                                    outProvider.TypeOfEffect.GetPipeline(), output.Id, types);
+                                                    outProvider.GetPipeline(), output.Id, types);
                                             }
                                             else if (e.Value?.ToString() == PPLocalizedResources.EffectBind_NoConnection)
                                             {
@@ -549,7 +550,7 @@ namespace projectFrameCut.DraftStuff
                                         if (TryParseAnchorSelection(e.Value?.ToString(), PPLocalizedResources.EffectBind_FinalResult, IEffectProvider.OutputAnchorGUID, out var newTargetId))
                                         {
                                             EffectBindingHelper.SetFinalOutput(clip.EffectProviders,
-                                                newTargetId == IEffectProvider.OutputAnchorGUID ? outProvider.Id : null, outProvider.TypeOfEffect.GetPipeline());
+                                                newTargetId == IEffectProvider.OutputAnchorGUID ? outProvider.Id : null, outProvider.GetPipeline());
                                             RebuildAllEffects(clip);
                                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                         }
@@ -565,6 +566,7 @@ namespace projectFrameCut.DraftStuff
                             if (bundlesFactories.TryGetValue(bundleTypeName, out var factory))
                             {
                                 var instance = factory();
+                                instance.SetPipeline(pipeline ?? EffectPipeline.Picture);
                                 if (!CanSelectEffectProvider(instance, selectionTarget, hideKeyFramedProviders: true))
                                 {
                                     Log($"Rejected effect provider {bundleTypeName} for clip {clip.Id} ({clip.ClipType}).", "warning");
@@ -606,12 +608,12 @@ namespace projectFrameCut.DraftStuff
                         })
                         .AddButton("Generate bind graph (AnchorsBindingState)", async (s, e) =>
                         {
-                            var graph = EffectBindingHelper.GenerateStoredMermaidDiagram(clip.EffectProviders);
+                            var graph = EffectBindingHelper.GenerateStoredMermaidDiagram(clip.EffectProviders, EffectGroupHelper.Read(clip.ExtraData));
                             await page.ShowPopupAsync(new MermaidCodeBlockRenderer().Render(graph), new PopupOptions { CanBeDismissedByTappingOutsideOfPopup = true });
                         })
                         .AddButton("Generate bind graph (Fields)", async (s, e) =>
                         {
-                            var graph = EffectBindingHelper.GenerateRenderTimeMermaidDiagram(clip.EffectProviders);
+                            var graph = EffectBindingHelper.GenerateRenderTimeMermaidDiagram(clip.EffectProviders, EffectGroupHelper.Read(clip.ExtraData));
                             await page.ShowPopupAsync(new MermaidCodeBlockRenderer().Render(graph), new PopupOptions { CanBeDismissedByTappingOutsideOfPopup = true });
                         }));
 

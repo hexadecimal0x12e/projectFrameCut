@@ -29,6 +29,12 @@ public interface IExternalVideoSourceProvider
 
 public interface IRenderClient : IAsyncDisposable
 {
+    ValueTask RegisterExternalAudioSourcesAsync(RegisterExternalAudioSourcesRequest request, CancellationToken cancellationToken = default)
+        => ValueTask.FromException(new NotSupportedException("This render client does not support external audio sources."));
+    ValueTask UnregisterExternalAudioSourcesAsync(CancellationToken cancellationToken = default)
+        => ValueTask.FromException(new NotSupportedException("This render client does not support external audio sources."));
+    ValueTask<ExternalAudioSourceCatalog> ListExternalAudioSourcesAsync(CancellationToken cancellationToken = default)
+        => ValueTask.FromException<ExternalAudioSourceCatalog>(new NotSupportedException("This render client does not support external audio sources."));
     ValueTask<ExternalVideoSourceClientCatalog> ListExternalVideoSourceClientsAsync(CancellationToken cancellationToken = default)
         => ValueTask.FromException<ExternalVideoSourceClientCatalog>(new NotSupportedException("This render client does not support external source management."));
     ValueTask<EmptyResponse> ManageExternalVideoSourceClientAsync(ManageExternalVideoSourceClientRequest request, CancellationToken cancellationToken = default)
@@ -112,17 +118,22 @@ public sealed class RenderClient : IRenderClient
     public ValueTask<ProjectExternalSourceCatalog> ListProjectExternalSourcesAsync(ProjectExternalSourceCatalogRequest request, CancellationToken ct = default) => SendAsync<ProjectExternalSourceCatalogRequest, ProjectExternalSourceCatalog>(RenderOperation.ListProjectExternalSources, request, ct);
     public ValueTask<ProjectExternalSourceCatalog> SetProjectExternalSourcesAsync(SetProjectExternalSourcesRequest request, CancellationToken ct = default) => SendAsync<SetProjectExternalSourcesRequest, ProjectExternalSourceCatalog>(RenderOperation.SetProjectExternalSources, request, ct);
     private readonly IRenderTransport _transport;
-    private readonly ExternalVideoSourceCallbackService? _callbackService;
+    private readonly ExternalSourceCallbackService? _callbackService;
 
     public RenderClient(IRenderTransport transport, string? clientId = null, IExternalVideoSourceProvider? externalVideoSourceProvider = null)
+        : this(transport, clientId, externalVideoSourceProvider, null) { }
+
+    public RenderClient(IRenderTransport transport, string? clientId, IExternalVideoSourceProvider? externalVideoSourceProvider,
+        IExternalAudioSourceProvider? externalAudioSourceProvider)
     {
         _transport = transport ?? throw new ArgumentNullException(nameof(transport));
         ClientId = string.IsNullOrWhiteSpace(clientId) ? $"client-{Guid.NewGuid():N}" : clientId;
-        if (externalVideoSourceProvider is not null)
+        externalAudioSourceProvider ??= externalVideoSourceProvider as IExternalAudioSourceProvider;
+        if (externalVideoSourceProvider is not null || externalAudioSourceProvider is not null)
         {
             if (transport is not IRenderDuplexTransport duplex)
-                throw new NotSupportedException("External video sources require a duplex render transport.");
-            _callbackService = new(externalVideoSourceProvider);
+                throw new NotSupportedException("External sources require a duplex render transport.");
+            _callbackService = new(externalVideoSourceProvider, externalAudioSourceProvider);
             duplex.CallbackService = _callbackService;
         }
     }
@@ -145,6 +156,9 @@ public sealed class RenderClient : IRenderClient
     public async ValueTask RegisterExternalVideoSourcesAsync(RegisterExternalVideoSourcesRequest request, CancellationToken ct = default) => _ = await SendAsync<RegisterExternalVideoSourcesRequest, EmptyResponse>(RenderOperation.RegisterExternalVideoSources, request, ct).ConfigureAwait(false);
     public async ValueTask UnregisterExternalVideoSourcesAsync(CancellationToken ct = default) => _ = await SendAsync<EmptyRequest, EmptyResponse>(RenderOperation.UnregisterExternalVideoSources, new(), ct).ConfigureAwait(false);
     public ValueTask<ExternalVideoSourceCatalog> ListExternalVideoSourcesAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, ExternalVideoSourceCatalog>(RenderOperation.ListExternalVideoSources, new(), ct);
+    public async ValueTask RegisterExternalAudioSourcesAsync(RegisterExternalAudioSourcesRequest request, CancellationToken ct = default) => _ = await SendAsync<RegisterExternalAudioSourcesRequest, EmptyResponse>(RenderOperation.RegisterExternalAudioSources, request, ct).ConfigureAwait(false);
+    public async ValueTask UnregisterExternalAudioSourcesAsync(CancellationToken ct = default) => _ = await SendAsync<EmptyRequest, EmptyResponse>(RenderOperation.UnregisterExternalAudioSources, new(), ct).ConfigureAwait(false);
+    public ValueTask<ExternalAudioSourceCatalog> ListExternalAudioSourcesAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, ExternalAudioSourceCatalog>(RenderOperation.ListExternalAudioSources, new(), ct);
     public ValueTask<ExternalVideoSourceClientCatalog> ListExternalVideoSourceClientsAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, ExternalVideoSourceClientCatalog>(RenderOperation.ListExternalVideoSourceClients, new(), ct);
     public ValueTask<EmptyResponse> ManageExternalVideoSourceClientAsync(ManageExternalVideoSourceClientRequest request, CancellationToken ct = default) => SendAsync<ManageExternalVideoSourceClientRequest, EmptyResponse>(RenderOperation.ManageExternalVideoSourceClient, request, ct);
     public string ClientId { get; }
@@ -200,7 +214,7 @@ public sealed class RenderClient : IRenderClient
 
     public ValueTask DisposeAsync() => _transport.DisposeAsync();
 
-    private sealed class ExternalVideoSourceCallbackService(IExternalVideoSourceProvider provider) : IRenderService
+    private sealed class ExternalSourceCallbackService(IExternalVideoSourceProvider? video, IExternalAudioSourceProvider? audio) : IRenderService
     {
         public async ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
         {
@@ -208,10 +222,14 @@ public sealed class RenderClient : IRenderClient
             {
                 byte[] payload = request.Operation switch
                 {
-                    RenderOperation.ExternalVideoSourceCreate => RenderRpcSerializer.Serialize(await provider.CreateAsync(RenderRpcSerializer.Deserialize<ExternalVideoSourceCreateRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
-                    RenderOperation.ExternalVideoSourceInitialize => RenderRpcSerializer.Serialize(await provider.InitializeAsync(RenderRpcSerializer.Deserialize<ExternalVideoSourceStateRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
-                    RenderOperation.ExternalVideoSourceReadFrame => RenderRpcSerializer.Serialize(await provider.ReadFrameAsync(RenderRpcSerializer.Deserialize<ExternalVideoSourceReadRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
-                    RenderOperation.ExternalVideoSourceRelease => await ReleaseAsync(request, cancellationToken).ConfigureAwait(false),
+                    RenderOperation.ExternalVideoSourceCreate when video is not null => RenderRpcSerializer.Serialize(await video.CreateAsync(RenderRpcSerializer.Deserialize<ExternalVideoSourceCreateRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
+                    RenderOperation.ExternalVideoSourceInitialize when video is not null => RenderRpcSerializer.Serialize(await video.InitializeAsync(RenderRpcSerializer.Deserialize<ExternalVideoSourceStateRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
+                    RenderOperation.ExternalVideoSourceReadFrame when video is not null => RenderRpcSerializer.Serialize(await video.ReadFrameAsync(RenderRpcSerializer.Deserialize<ExternalVideoSourceReadRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
+                    RenderOperation.ExternalVideoSourceRelease when video is not null => await ReleaseAsync(request, cancellationToken).ConfigureAwait(false),
+                    RenderOperation.ExternalAudioSourceCreate when audio is not null => RenderRpcSerializer.Serialize(await audio.CreateAudioAsync(RenderRpcSerializer.Deserialize<ExternalAudioSourceCreateRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
+                    RenderOperation.ExternalAudioSourceInitialize when audio is not null => RenderRpcSerializer.Serialize(await audio.InitializeAudioAsync(RenderRpcSerializer.Deserialize<ExternalAudioSourceStateRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
+                    RenderOperation.ExternalAudioSourceReadSamples when audio is not null => await ReadSamplesAsync(request, cancellationToken).ConfigureAwait(false),
+                    RenderOperation.ExternalAudioSourceRelease when audio is not null => await ReleaseAudioAsync(request, cancellationToken).ConfigureAwait(false),
                     _ => throw new NotSupportedException($"Render callback operation '{request.Operation}' is not supported."),
                 };
                 return new() { RequestId = request.RequestId, Payload = payload };
@@ -228,7 +246,23 @@ public sealed class RenderClient : IRenderClient
 
         private async ValueTask<byte[]> ReleaseAsync(RenderRequestEnvelope request, CancellationToken cancellationToken)
         {
-            await provider.ReleaseAsync(RenderRpcSerializer.Deserialize<ExternalVideoSourceStateRequest>(request.Payload), cancellationToken).ConfigureAwait(false);
+            await video!.ReleaseAsync(RenderRpcSerializer.Deserialize<ExternalVideoSourceStateRequest>(request.Payload), cancellationToken).ConfigureAwait(false);
+            return RenderRpcSerializer.Serialize(new EmptyResponse());
+        }
+
+        private async ValueTask<byte[]> ReadSamplesAsync(RenderRequestEnvelope request, CancellationToken cancellationToken)
+        {
+            var read = RenderRpcSerializer.Deserialize<ExternalAudioSourceReadRequest>(request.Payload);
+            read.Validate();
+            var samples = await audio!.ReadSamplesAsync(read, cancellationToken).ConfigureAwait(false);
+            samples.Validate();
+            if (samples.SampleCount > read.Count) throw new InvalidDataException("External audio source returned too many samples.");
+            return RenderRpcSerializer.Serialize(samples);
+        }
+
+        private async ValueTask<byte[]> ReleaseAudioAsync(RenderRequestEnvelope request, CancellationToken cancellationToken)
+        {
+            await audio!.ReleaseAudioAsync(RenderRpcSerializer.Deserialize<ExternalAudioSourceStateRequest>(request.Payload), cancellationToken).ConfigureAwait(false);
             return RenderRpcSerializer.Serialize(new EmptyResponse());
         }
     }

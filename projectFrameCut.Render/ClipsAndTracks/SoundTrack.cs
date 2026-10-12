@@ -1,5 +1,7 @@
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
@@ -149,6 +151,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
     public class NormalSoundTrack : ISoundTrack
     {
         private bool disposedValue;
+        private ProjectExternalSourceHost? externalSourceHost;
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
@@ -184,7 +187,19 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             AudioSource?.Dispose();
             AudioSource = null;
-            AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null;
+            if (ProjectExternalAudioSource.IsPath(FilePath)) externalSourceHost ??= ProjectExternalSourceRuntime.Current;
+            using var sourceScope = ProjectExternalSourceRuntime.Use(externalSourceHost ?? ProjectExternalSourceRuntime.Current);
+            try
+            {
+                AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null;
+                if (ClipInitializationFailure.GetStage(ExtraData) == "ExternalSourceUnavailable") ClipInitializationFailure.Clear(ExtraData);
+            }
+            catch (Exception ex) when (RemoteRpcAudioSource.IsExternalPath(FilePath))
+            {
+                ExtraData ??= new();
+                ClipInitializationFailure.Mark(ExtraData, "ExternalSourceUnavailable", ex);
+                Log(ex, $"Initialize external audio track {Id}", this);
+            }
         }
 
         protected virtual void Dispose(bool disposing)
@@ -252,6 +267,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void Dispose()
         {
+            SoundTrack?.Dispose();
         }
 
         public uint? GetClipLength() => null;
@@ -268,6 +284,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit()
         {
+            SoundTrack?.Dispose();
+            ExtraData ??= new();
             SoundTrack = TrackType switch
             {
                 TrackMode.NormalTrack => new NormalSoundTrack
@@ -283,12 +301,14 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     Volume = 1.0f,
                     Effects = Effects,
                     EffectProviders = EffectProviders,
-                    AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null
+                    FilePath = FilePath,
+                    ExtraData = ExtraData
                 },
                 _ => throw new NotSupportedException($"Unsupported track type {TrackType}."),
             };
 
-           EffectHelper.ResolveClipEffects(this);
+            SoundTrack.ReInit();
+            EffectHelper.ResolveClipEffects(this);
         }
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)

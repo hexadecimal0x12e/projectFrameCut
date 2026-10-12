@@ -67,16 +67,16 @@
 
             <tv:TabbedView Grid.Row="0" x:Name="RightTabView">
                 <tv:TabbedViewItem Header="{l:Localized Key=PropertyPanel}">
-                    <Grid RowDefinitions="Auto,*">
-                        <ScrollView Padding="10" Grid.Row="0">
+                    <ScrollView Padding="10" VerticalScrollBarVisibility="Default">
+                        <VerticalStackLayout Spacing="10">
                             <VerticalStackLayout x:Name="PropertiesPanel" Spacing="10">
                                 <Label HorizontalOptions="Center" VerticalOptions="Center" Text="{l:Localized Key=DraftPage_PropertyPanel_SelectToContinue}"/>
                             </VerticalStackLayout>
-                        </ScrollView>
-                        <Border Grid.Row="1" Stroke="Transparent" StrokeThickness="1" StrokeShape="RoundRectangle 4" VerticalOptions="End" Margin="4">
-                            <Image x:Name="AfterEffectBigPreview" Background="Black" />
-                        </Border>
-                    </Grid>
+                            <Border Stroke="Transparent" StrokeThickness="1" StrokeShape="RoundRectangle 4" Margin="4">
+                                <Image x:Name="AfterEffectBigPreview" Background="Black" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </ScrollView>
                 </tv:TabbedViewItem>
                 <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_EffectBindView_AddEffect}">
                     <ScrollView x:Name="AddEffectsScrollView" Padding="10">

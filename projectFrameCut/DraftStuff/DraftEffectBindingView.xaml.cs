@@ -35,7 +35,7 @@ using Rect = Microsoft.Maui.Graphics.Rect;
 
 namespace projectFrameCut.DraftStuff;
 
-public enum NodeKind { Effect, Input, Output, ClipArguments }
+public enum NodeKind { Effect, Input, Output, ClipArguments, Group }
 
 public enum PortKind { AnchorInput, AnchorOutput, ParamBind }
 
@@ -131,6 +131,7 @@ public partial class DraftEffectBindingView : ContentView
         ZoomInButton.Clicked += OnZoomIn;
         ZoomOutButton.Clicked += OnZoomOut;
         ResetButton.Clicked += OnReset;
+        InitializeGroups();
 
 #if WINDOWS
         AddEffectsScrollView.HandlerChanged += (_, _) =>
@@ -373,7 +374,7 @@ public partial class DraftEffectBindingView : ContentView
             {
                 Kind = PortKind.AnchorOutput,
                 Key = EffectProviderAnchorExtensions.InputKey,
-                FieldType = EffectArgumentFieldType.IPicture,
+                FieldType = _pipeline.GetContentType(),
                 DisplayName = _pipeline == EffectPipeline.NativeContent ? Localized.Effect_NativeInput : PPLocalizedResources.EffectBind_SourcePicture,
                 Index = 0,
                 Id = IEffectProvider.InputAnchorGUID
@@ -391,8 +392,7 @@ public partial class DraftEffectBindingView : ContentView
         {
             foreach (var bundle in _clip.EffectProviders.Values)
             {
-                if (bundle is IClipValueEndpointProvider && _pipeline != EffectPipeline.Picture) continue;
-                if (bundle is not ClipArgumentProvider && !bundle.Target.HasFlag(EffectTarget.ValueProvider) && bundle.TypeOfEffect.GetPipeline() != _pipeline) continue;
+                if (bundle is not ClipArgumentProvider && bundle.GetPipeline() != _pipeline) continue;
                 // Skip bundles that are internal/special effects (e.g. Crop, Place, Resize)
                 // to keep consistent with ClipInfoBuilder.BuildEffectTab filtering behavior.
                 if (bundle is not ClipArgumentProvider && !showIsNotVisibleInEffectEditorEffect && (bundle.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor)
@@ -411,7 +411,8 @@ public partial class DraftEffectBindingView : ContentView
                 if (bundle.MetaData is { } md
                     && md.TryGetValue("__DraftEffectBindingView_InteractiveEditorX__", out var xObj)
                     && md.TryGetValue("__DraftEffectBindingView_InteractiveEditorY__", out var yObj)
-                    && xObj is double x && yObj is double y)
+                    && double.TryParse(xObj?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var x)
+                    && double.TryParse(yObj?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var y))
                 {
                     node.X = x;
                     node.Y = y;
@@ -443,15 +444,15 @@ public partial class DraftEffectBindingView : ContentView
             Id = IEffectProvider.OutputAnchorGUID,
             Provider = null,
             DisplayName = _pipeline == EffectPipeline.NativeContent ? Localized.Effect_NativeOutput : PPLocalizedResources.EffectBind_FinalResult,
-            MainInputPort = new NodePort
+            InputPorts = [new NodePort
             {
                 Kind = PortKind.AnchorInput,
                 Key = EffectProviderAnchorExtensions.InputKey,
-                FieldType = EffectArgumentFieldType.IPicture,
+                FieldType = _pipeline.GetContentType(),
                 DisplayName = _pipeline == EffectPipeline.NativeContent ? Localized.Effect_NativeOutput : PPLocalizedResources.EffectBind_FinalResult,
                 Index = 0,
                 Id = IEffectProvider.OutputAnchorGUID
-            }
+            }]
         };
         if (!outputHasPosition)
         {
@@ -465,6 +466,8 @@ public partial class DraftEffectBindingView : ContentView
 
         // Normalize provider-owned configuration and project it directly into drawable connections.
         NormalizeBindingConfiguration();
+        LoadGroups();
+        ApplyGroupProjection();
         RefreshFieldTypes();
         RefreshBindingDiagnosticIndicators();
         RebuildConnections();
@@ -537,11 +540,13 @@ public partial class DraftEffectBindingView : ContentView
     /// </summary>
     private void RecreateNodeView(NodeViewModel node)
     {
+        bool visible = node.View?.IsVisible != false;
         if (node.View != null)
         {
             NodesContainer.Children.Remove(node.View);
         }
         var view = CreateNodeView(node);
+        view.IsVisible = visible;
         node.View = view;
         NodesContainer.Add(view);
         AbsoluteLayout.SetLayoutBounds(view, new Rect(node.X, node.Y, -1, AbsoluteLayout.AutoSize));
@@ -576,7 +581,9 @@ public partial class DraftEffectBindingView : ContentView
         var candidate = GetNodeBoundsPadded(node, x, y);
         foreach (var other in _nodes.Values)
         {
-            if (other == node) continue;
+            if (other == node || other.View?.IsVisible == false) continue;
+            if (node.Group is { } group && (EffectGroupHelper.Members(group, _groups).Contains(other.Id)
+                || other.Group is not null && ContainsGroup(group, other.Id))) continue;
             var otherRect = GetNodeBoundsPadded(other, other.X, other.Y);
             if (RectsOverlap(candidate, otherRect)) return true;
         }
@@ -649,7 +656,8 @@ public partial class DraftEffectBindingView : ContentView
     private static double GetOutputPortY(NodeViewModel n, int index = 0) => n.ParamsTopHeight
         + 5 + (index + 0.5) * (n.BodyHeight - 10) / Math.Max(1, n.OutputPorts.Count);
 
-    private static double GetInputPortY(NodeViewModel n) => n.ParamsTopHeight + n.BodyHeight / 2;
+    private static double GetInputPortY(NodeViewModel n, int index = 0) => n.ParamsTopHeight
+        + 5 + (index + 0.5) * (n.BodyHeight - 10) / Math.Max(1, n.InputPorts.Count);
 
     private static double GetParamPortY(NodeViewModel n, int idx) => n.ParamPortYOffsets.Length > idx ? n.ParamPortYOffsets[idx] : n.ParamsTopHeight + FrameHeight / 2;
 
@@ -657,7 +665,7 @@ public partial class DraftEffectBindingView : ContentView
     {
         View? port = kind switch
         {
-            PortKind.AnchorInput => node.MainInputPortView,
+            PortKind.AnchorInput => node.InputPortViews.ElementAtOrDefault(index),
             PortKind.AnchorOutput => node.OutputPortViews.ElementAtOrDefault(index),
             _ => node.ParamPortViews.ElementAtOrDefault(index),
         };
@@ -674,7 +682,7 @@ public partial class DraftEffectBindingView : ContentView
         }
         return new Point(node.X + (kind == PortKind.AnchorOutput ? node.Width : 0), node.Y + (kind switch
         {
-            PortKind.AnchorInput => GetInputPortY(node),
+            PortKind.AnchorInput => GetInputPortY(node, index),
             PortKind.AnchorOutput => GetOutputPortY(node, index),
             _ => GetParamPortY(node, index),
         }));
@@ -687,14 +695,14 @@ public partial class DraftEffectBindingView : ContentView
         {
             EffectProviderAnchorExtensions.InputKey => "Input",
             EffectProviderAnchorExtensions.OutputKey => "Output",
-            _ => key,
+            _ => EffectProviderAnchorExtensions.IsInternalInputKey(key) ? key[2..^2] : key,
         };
     }
 
     private VerticalStackLayout CreateNodeView(NodeViewModel node)
     {
         ArgumentNullException.ThrowIfNull(node);
-        node.MainInputPortView = null;
+        node.InputPortViews.Clear();
         node.OutputPortViews.Clear();
         node.ParamPortViews.Clear();
         var bindingDiagnostics = GetBindingDiagnostics(node);
@@ -755,7 +763,7 @@ public partial class DraftEffectBindingView : ContentView
         // ── Parameter display strip (above or below the frame, read-only) ──
         VerticalStackLayout? paramStack = null;
         bool paramsOnTop = true;
-        if (node.Provider is not null && node.ParamPorts.Count > 0)
+        if ((node.Provider is not null || node.Group is not null) && node.ParamPorts.Count > 0)
         {
             paramsOnTop = GetParamDirection(node);
             paramStack = BuildParamStack(node, paramsOnTop);
@@ -766,24 +774,31 @@ public partial class DraftEffectBindingView : ContentView
         if (paramStack is not null && paramsOnTop) container.Add(paramStack);
 
         // Ports
-        View inputPortView;
-
-        if (!NodePort.IsValidPort(node.MainInputPort))
+        var inputPorts = new VerticalStackLayout { Spacing = 0, HeightRequest = node.BodyHeight - 10,
+            MinimumWidthRequest = PortSize };
+        for (int i = 0; i < node.InputPorts.Count; i++)
         {
-            // Explicitly no picture input (e.g. value providers): reserve the column but render no port.
-            inputPortView = new BoxView { Color = Colors.Transparent, WidthRequest = PortSize, HeightRequest = PortSize, InputTransparent = true };
-        }
-        else
-        {
-            var port = node.MainInputPort;
+            var port = node.InputPorts[i];
+            var row = new Grid { ColumnSpacing = 4, HeightRequest = (node.BodyHeight - 10) / node.InputPorts.Count,
+                ColumnDefinitions = new ColumnDefinitionCollection
+                {
+                    new ColumnDefinition { Width = GridLength.Auto },
+                    new ColumnDefinition { Width = GridLength.Star },
+                } };
             var box = new BoxView { Color = PortTypeHelper.GetTypeColor(port.FieldType), WidthRequest = PortSize, HeightRequest = PortSize, VerticalOptions = LayoutOptions.Center };
+            int index = i;
             var inputPan = new PanGestureRecognizer();
-            inputPan.PanUpdated += (s, e) => OnPortPan(node, e, true, 0, PortKind.AnchorInput);
+            inputPan.PanUpdated += (s, e) => OnPortPan(node, e, true, index, PortKind.AnchorInput);
             box.GestureRecognizers.Add(inputPan);
             ToolTipProperties.SetText(box, $"{port.DisplayName} ({PortTypeHelper.HumanizeTypeName(port.FieldType)})");
 
-            inputPortView = box;
-            node.MainInputPortView = box;
+            row.Add(box);
+            if (node.InputPorts.Count > 1)
+                row.Add(new Label { Text = port.DisplayName, FontSize = 10, TextColor = Colors.LightGray,
+                    MaximumWidthRequest = 80, HorizontalOptions = LayoutOptions.Start,
+                    VerticalOptions = LayoutOptions.Center, LineBreakMode = LineBreakMode.TailTruncation }, 1, 0);
+            node.InputPortViews.Add(box);
+            inputPorts.Add(row);
         }
 
         var outputPorts = new VerticalStackLayout { Spacing = 0, HeightRequest = node.BodyHeight - 10 };
@@ -813,7 +828,7 @@ public partial class DraftEffectBindingView : ContentView
         }
 
         // Handle visibility for System Nodes
-        if (node.Kind == NodeKind.Input) inputPortView.IsVisible = false; // Hide Input on Input Node
+        if (node.Kind == NodeKind.Input) inputPorts.IsVisible = false; // Hide Input on Input Node
         if (node.Kind == NodeKind.Output) outputPorts.IsVisible = false;
 
         // Interaction
@@ -827,6 +842,7 @@ public partial class DraftEffectBindingView : ContentView
             {
                 // 桌面平台（Windows/macOS）双击节点断开其所有连接；移动端短按仅为选中（见下）。
 #if MACCATALYST || WINDOWS
+                if (_groupMultiSelect) return;
                 DisconnectAllFromNode(node);
 #else
                 SelectNode(node);
@@ -846,7 +862,7 @@ public partial class DraftEffectBindingView : ContentView
 
         bodyActionContainer.Add(label);
 
-        layout.Add(inputPortView, 0, 0);
+        layout.Add(inputPorts, 0, 0);
         layout.Add(bodyActionContainer, 1, 0);
         layout.Add(outputPorts, 2, 0);
 
@@ -952,7 +968,7 @@ public partial class DraftEffectBindingView : ContentView
     /// </summary>
     private VerticalStackLayout BuildParamStack(NodeViewModel node, bool paramsOnTop)
     {
-        if (node.Provider == null || node.ParamPorts.Count == 0) return null!;
+        if (node.ParamPorts.Count == 0) return null!;
         var stack = new VerticalStackLayout { Spacing = 2, Padding = new Thickness(4, 2), MinimumWidthRequest = NodeDefaultWidth };
         node.ParamPortYOffsets = new double[node.ParamPorts.Count];
         double baseY = paramsOnTop ? 0 : node.BodyHeight;
@@ -960,8 +976,9 @@ public partial class DraftEffectBindingView : ContentView
         for (int i = 0; i < node.ParamPorts.Count; i++)
         {
             var p = node.ParamPorts[i];
-            var field = node.Provider.Fields.TryGetValue(p.Key, out var f) ? f : null;
-            bool isBound = node.Provider.TryGetFieldBinding(p.Key, out var boundSourceId);
+            var provider = node.Group is null ? node.Provider! : _clip!.EffectProviders![p.Id];
+            var field = provider.Fields.TryGetValue(p.Key, out var f) ? f : null;
+            bool isBound = provider.TryGetFieldBinding(p.Key, out var boundSourceId);
 
             var row = new HorizontalStackLayout { Spacing = 4, HeightRequest = ParamRowHeight, VerticalOptions = LayoutOptions.Center };
 
@@ -990,7 +1007,7 @@ public partial class DraftEffectBindingView : ContentView
 
             var valueLabel = new Label
             {
-                Text = GetParamDisplayValue(node, p.Key),
+                Text = node.Group is null ? GetParamDisplayValue(node, p.Key) : isBound ? "←" : field is StaticEffectArgumentField sf ? sf.Value?.ToString() : "-",
                 TextColor = isBound ? Color.FromArgb("#f2c94c") : Colors.White,
                 FontSize = 10,
                 VerticalOptions = LayoutOptions.Center,
@@ -1053,6 +1070,7 @@ public partial class DraftEffectBindingView : ContentView
 
                 double proposedX = node.X + deltaX;
                 double proposedY = node.Y + deltaY;
+                double oldX = node.X, oldY = node.Y;
                 if (TryMoveNodeWithoutOverlap(node, proposedX, proposedY, out var resolvedX, out var resolvedY, out var appliedX, out var appliedY))
                 {
                     node.X = resolvedX;
@@ -1062,12 +1080,19 @@ public partial class DraftEffectBindingView : ContentView
                 }
 
                 AbsoluteLayout.SetLayoutBounds(node.View, new Rect(node.X, node.Y, -1, AbsoluteLayout.AutoSize));
+                MoveGroup(node, node.X - oldX, node.Y - oldY);
+                UpdateGroupBounds();
                 ConnectionsLayer.Invalidate();
                 break;
             case GestureStatus.Completed:
             case GestureStatus.Canceled:
                 _isDraggingNodeOrPort = false;
-                if (node?.Provider is { } b)
+                if (node.Group is not null)
+                {
+                    EffectGroupHelper.Write(_clip!.ExtraData, _groups);
+                    NotifyEffectProvidersChanged();
+                }
+                else if (node?.Provider is { } b)
                 {
                     b.MetaData ??= new Dictionary<string, object>();
                     b.MetaData["__DraftEffectBindingView_InteractiveEditorX__"] = node.X;
@@ -1198,7 +1223,7 @@ public partial class DraftEffectBindingView : ContentView
                 _drawable.DragSourceNode = node;
                 _drawable.DragSourcePortIndex = portIndex;
                 _drawable.DragSourceKind = portKind;
-                _drawable.DragFieldType = GetPortFieldType(node, isInput, portIndex, portKind);
+                _drawable.DragFieldType = GetPortFieldType(node, portIndex, portKind);
                 var start = GetPortPosition(node, portKind, portIndex);
                 _drawable.DragPoint = new Point(start.X * NodesContainer.Scale + _drawable.PanX,
                     start.Y * NodesContainer.Scale + _drawable.PanY);
@@ -1250,7 +1275,7 @@ public partial class DraftEffectBindingView : ContentView
     private PortHit? FindPortTarget(NodeViewModel node, bool isInput, PortKind kind, int index, Point point, double radius)
     {
         bool input = isInput || kind == PortKind.ParamBind;
-        var type = GetPortFieldType(node, input, index, kind);
+        var type = GetPortFieldType(node, index, kind);
         PortHit? hit = null;
         double best = radius * radius;
         void Check(NodeViewModel candidate, NodePort? port, PortKind targetKind, int targetIndex)
@@ -1258,7 +1283,7 @@ public partial class DraftEffectBindingView : ContentView
             if (!NodePort.IsValidPort(port)) return;
             var sourceType = input ? port!.FieldType : type;
             if (sourceType.HasFlag(EffectArgumentFieldType.Any) && (candidate.Kind == NodeKind.Output || input && node.Kind == NodeKind.Output)) return;
-            var targetPort = input ? kind == PortKind.ParamBind ? node.ParamPorts[index] : node.MainInputPort : port;
+            var targetPort = input ? PortOf(node, kind, index) : port;
             if (!sourceType.HasFlag(EffectArgumentFieldType.Any)
                 && targetPort?.DeclaredFieldType.HasFlag(EffectArgumentFieldType.Any) != true
                 && !PortTypeHelper.IsPortTypeCompatible(sourceType, input ? type : port!.FieldType)) return;
@@ -1272,7 +1297,7 @@ public partial class DraftEffectBindingView : ContentView
         }
         foreach (var candidate in _nodes.Values)
         {
-            if (candidate == node) continue;
+            if (candidate == node || candidate.View?.IsVisible == false) continue;
             if (input)
             {
                 if (candidate.Kind == NodeKind.Output) continue;
@@ -1282,7 +1307,8 @@ public partial class DraftEffectBindingView : ContentView
             else
             {
                 if (candidate.Kind == NodeKind.Input) continue;
-                Check(candidate, candidate.MainInputPort, PortKind.AnchorInput, 0);
+                for (int i = 0; i < candidate.InputPorts.Count; i++)
+                    Check(candidate, candidate.InputPorts[i], PortKind.AnchorInput, i);
                 for (int i = 0; i < candidate.ParamPorts.Count; i++)
                     Check(candidate, candidate.ParamPorts[i], PortKind.ParamBind, i);
             }
@@ -1306,21 +1332,28 @@ public partial class DraftEffectBindingView : ContentView
         var targetKind = input ? portKind : hit.Kind;
         int targetIndex = input ? portIndex : hit.Index;
         int sourceIndex = input ? hit.Index : portIndex;
-        string? sourcePortKey = source.Provider is IMultipleOutputEffectProvider ? source.OutputPorts[sourceIndex].Key : null;
         if (_clip?.EffectProviders is not { } providers) return;
+        var sourcePort = source.OutputPorts[sourceIndex];
+        var targetPort = PortOf(target, targetKind, targetIndex);
+        var sourceProviderId = PortProviderId(source, sourcePort);
+        var targetProviderId = PortProviderId(target, targetPort);
+        var sourceProvider = providers.GetValueOrDefault(sourceProviderId);
+        var targetProvider = providers.GetValueOrDefault(targetProviderId);
+        string? sourcePortKey = sourceProvider is IMultipleOutputEffectProvider ? sourcePort.Key : null;
+        string targetKey = targetPort?.Key ?? EffectProviderAnchorExtensions.InputKey;
         var owner = _clip;
         int version = _fieldTypeVersion;
-        var sourceId = sourcePortKey is null ? BindingIdOf(source).ToString()
-            : EffectProviderOutputExtensions.CreateOutputSourceId(BindingIdOf(source), sourcePortKey);
+        var sourceId = sourcePortKey is null ? sourceProviderId.ToString()
+            : EffectProviderOutputExtensions.CreateOutputSourceId(sourceProviderId, sourcePortKey);
         EffectFieldTypeResolution types;
         try
         {
-            types = await EffectFieldTypeResolution.ResolveAsync(providers, bindingOverrides: target.Provider is null ? null
+            types = await EffectFieldTypeResolution.ResolveAsync(providers, bindingOverrides: targetProvider is null ? null
                 : new Dictionary<Guid, IReadOnlyDictionary<string, string>>
                 {
-                    [target.Id] = new Dictionary<string, string>(target.Provider.AnchorsBindingState)
+                    [targetProviderId] = new Dictionary<string, string>(targetProvider.AnchorsBindingState)
                     {
-                        [targetKind == PortKind.ParamBind ? target.ParamPorts[targetIndex].Key : EffectProviderAnchorExtensions.InputKey] = sourceId,
+                        [targetKey] = sourceId,
                     },
                 });
         }
@@ -1331,21 +1364,22 @@ public partial class DraftEffectBindingView : ContentView
             return;
         }
         if (!ReferenceEquals(_clip, owner) || version != _fieldTypeVersion) return;
-        if (types.Diagnostics.Count != 0 || target.Provider is not null && !types.AreInputsCompatible(target.Provider)
-            || target.Kind == NodeKind.Output && source.Provider is not null && !types.GetOutputType(source.Provider, sourcePortKey).IsPicture())
+        if (types.Diagnostics.Count != 0 || targetProvider is not null && !types.AreInputsCompatible(targetProvider)
+            || target.Kind == NodeKind.Output && sourceProvider is not null
+                && !EffectFieldTypes.AreCompatible(types.GetOutputType(sourceProvider, sourcePortKey), _pipeline.GetContentType()))
         {
             SetStatusText(PPLocalizedResources.EffectBindView_ConnectedFail);
             return;
         }
-        if (targetKind == PortKind.AnchorInput && source.Provider is not null && target.Provider is not null
-            && !source.Provider.CanConnectContent(target.Provider, sourcePortKey, types))
+        if (targetKey == EffectProviderAnchorExtensions.InputKey && sourceProvider is not null && targetProvider is not null
+            && !sourceProvider.CanConnectContent(targetProvider, sourcePortKey, types))
         {
             SetStatusText(Localized.Effect_IncompatiblePipeline);
             return;
         }
-        AddUIBinding(targetKind == PortKind.ParamBind
-            ? new(UIBindingKind.Value, BindingIdOf(source), BindingIdOf(target), target.ParamPorts[targetIndex].Key, sourcePortKey)
-            : new(UIBindingKind.Picture, BindingIdOf(source), BindingIdOf(target), SourcePortKey: sourcePortKey), types);
+        AddUIBinding(targetKey != EffectProviderAnchorExtensions.InputKey
+            ? new(UIBindingKind.Value, sourceProviderId, targetProviderId, targetKey, sourcePortKey)
+            : new(UIBindingKind.Picture, sourceProviderId, targetProviderId, SourcePortKey: sourcePortKey), types);
         LogDiagnostic($"Connected '{source.DisplayName}' to '{target.DisplayName}', port {targetKind}/{targetIndex}.");
         SetStatusText(PPLocalizedResources.EffectBindView_Connected(source.DisplayName, target.DisplayName));
         RecreateNodeView(target);
@@ -1359,20 +1393,29 @@ public partial class DraftEffectBindingView : ContentView
     /// </summary>
     private bool TryDisconnectDroppedPort(NodeViewModel node, PortKind portKind, int portIndex)
     {
-        bool removed = false;
-        if (portKind == PortKind.ParamBind)
+        if (node.Group is not null)
         {
-            var paramKey = node.ParamPorts.Count > portIndex ? node.ParamPorts[portIndex].Key : null;
-            if (paramKey is null) return false;
-            removed = RemoveUIBindingsTo(BindingIdOf(node), paramKey, UIBindingKind.Value);
+            var port = PortOf(node, portKind, portIndex);
+            if (port is null) return false;
+            bool changed = portKind == PortKind.AnchorOutput
+                ? DisconnectGroupOutput(node, port)
+                : RemoveUIBindingsTo(port.Id, port.Key == EffectProviderAnchorExtensions.InputKey ? null : port.Key,
+                    port.Key == EffectProviderAnchorExtensions.InputKey ? UIBindingKind.Picture : UIBindingKind.Value);
+            if (changed) OnBindingConfigurationChanged();
+            return changed;
+        }
+        bool removed = false;
+        if (portKind is PortKind.ParamBind or PortKind.AnchorInput)
+        {
+            var port = PortOf(node, portKind, portIndex);
+            if (port is null) return false;
+            removed = port.Key == EffectProviderAnchorExtensions.InputKey
+                ? RemoveUIBindingsTo(BindingIdOf(node), null, UIBindingKind.Picture)
+                : RemoveUIBindingsTo(BindingIdOf(node), port.Key, UIBindingKind.Value);
             if (removed)
             {
                 RecreateNodeView(node);
             }
-        }
-        else if (portKind == PortKind.AnchorInput)
-        {
-            removed = RemoveUIBindingsTo(BindingIdOf(node), null);
         }
         else if (portKind == PortKind.AnchorOutput)
         {
@@ -1393,7 +1436,7 @@ public partial class DraftEffectBindingView : ContentView
         if (_clip?.EffectProviders is not { } providers) return false;
         if (targetId == IEffectProvider.OutputAnchorGUID && (kind is null || kind == UIBindingKind.Picture))
         {
-            var hadOutput = providers.Values.Any(p => p.TypeOfEffect.GetPipeline() == _pipeline && p.IsFinalOutputSource());
+            var hadOutput = providers.Values.Any(p => p.GetPipeline() == _pipeline && p.IsFinalOutputSource());
             EffectBindingHelper.SetFinalOutput(providers, null, _pipeline);
             return hadOutput;
         }
@@ -1459,6 +1502,18 @@ public partial class DraftEffectBindingView : ContentView
     /// </summary>
     private void DisconnectAllFromNode(NodeViewModel node)
     {
+        if (node.Group is not null)
+        {
+            foreach (var port in node.Group.Ports.ToArray())
+            {
+                if (port.IsInput) RemoveUIBindingsTo(port.ProviderId, port.FieldId == EffectProviderAnchorExtensions.InputKey ? null : port.FieldId,
+                    port.FieldId == EffectProviderAnchorExtensions.InputKey ? UIBindingKind.Picture : UIBindingKind.Value);
+                else DisconnectGroupOutput(node, new NodePort { Id = port.ProviderId, Key = port.FieldId });
+            }
+            OnBindingConfigurationChanged();
+            RebuildConnections();
+            return;
+        }
         bool removed = false;
         removed |= RemoveUIBindingsFrom(BindingIdOf(node));
         removed |= RemoveUIBindingsTo(BindingIdOf(node), null);
@@ -1471,12 +1526,8 @@ public partial class DraftEffectBindingView : ContentView
         SetStatusText(Localized._Done);
     }
 
-    private static EffectArgumentFieldType GetPortFieldType(NodeViewModel node, bool isInput, int portIndex, PortKind portKind)
-    {
-        if (portKind == PortKind.ParamBind) return node.ParamPorts.Count > portIndex ? node.ParamPorts[portIndex].FieldType : EffectArgumentFieldType.Unknown;
-        if (isInput) return node.MainInputPort?.FieldType ?? EffectArgumentFieldType.Unknown;
-        return node.OutputPorts.Count > portIndex ? node.OutputPorts[portIndex].FieldType : EffectArgumentFieldType.Unknown;
-    }
+    private static EffectArgumentFieldType GetPortFieldType(NodeViewModel node, int portIndex, PortKind portKind) =>
+        PortOf(node, portKind, portIndex)?.FieldType ?? EffectArgumentFieldType.Unknown;
 
     /// <summary>通过 UI 绑定中存储的节点 id 找回当前节点。</summary>
     private NodeViewModel? GetNodeByBindingId(Guid id)
@@ -1554,15 +1605,20 @@ public partial class DraftEffectBindingView : ContentView
 
     private void SelectNode(NodeViewModel node)
     {
-        if (_selectedNode != null && _selectedNode.View is Border b) b.Stroke = Colors.Gray;
+        if (TrySelectGroupMember(node)) return;
         _selectedNode = node;
-        if (node.View is Border b2) b2.Stroke = Colors.Yellow;
+        RefreshGroupSelection();
 
         PropertiesPanel.Children.Clear();
         AfterEffectBigPreview.Source = node.PreviewImage;
 
         PropertiesPanel.Children.Add(new Label { Text = node.DisplayName, FontAttributes = FontAttributes.Bold, HorizontalOptions = LayoutOptions.Center });
 
+        if (node.Group is not null)
+        {
+            BuildGroupProperties(node);
+            return;
+        }
         if (node.Provider is null)
         {
             return;
@@ -1653,6 +1709,8 @@ public partial class DraftEffectBindingView : ContentView
             Margin = new Thickness(0, 0, 0, 8)
         });
 
+        AddGroupActions(node);
+
         if (node.Provider is not null)
         {
             AddNodeActionButton(PPLocalizedResources.EffectBindView_Configure, () =>
@@ -1730,6 +1788,8 @@ public partial class DraftEffectBindingView : ContentView
 
         if (_clip.EffectProviders is { } providers)
             EffectBindingHelper.RemoveProvider(providers, node.Id);
+        RemoveEmptyGroups();
+        EffectGroupHelper.Write(_clip.ExtraData, _groups);
 
         _nodes.Remove(node.Id);
 
@@ -1788,14 +1848,6 @@ public partial class DraftEffectBindingView : ContentView
             uint targetFrame = (uint)Math.Clamp(_page.CurrentFrame, owner.StartFrame,
                 (double)owner.StartFrame + Math.Max(1u, owner.GetEffectiveDuration()) - 1);
             var clip = ClipArgumentBinding.InitializeFrame(owner, targetFrame);
-            using var srcFrame = VideoClipRotation.ReadFrame(clip, clip.GetRelativeFrameIndex(targetFrame) ?? 0,
-                clip.TargetWidth > 0 ? Math.Max(1, (int)Math.Round((double)clip.TargetWidth * w / projectRelativeWidth)) : w,
-                clip.TargetHeight > 0 ? Math.Max(1, (int)Math.Round((double)clip.TargetHeight * h / projectRelativeHeight)) : h, 8);
-            if (_inputNode is not null)
-            {
-                await UpdateNodePreview(_inputNode, srcFrame, cts.Token);
-            }
-            var frame = new OneFrame(targetFrame, clip, srcFrame, resolveEffects: false);
             var previews = new Dictionary<NodeViewModel, object?>();
             void Capture(IEffect effect, object? value)
             {
@@ -1804,20 +1856,49 @@ public partial class DraftEffectBindingView : ContentView
                 previews[node] = value switch
                 {
                     IPicture picture => DynamicEffectGraph.CopyPicture(picture),
+                    projectFrameCut.Drawing.Vector.VectorPicture vector => IVectorContentClip.GlobalDefaultRasterizer.Convert(vector, w, h, true,
+                        cancellationToken: cts.Token),
                     IReadOnlyDictionary<string, object?> outputs => string.Join(Environment.NewLine, outputs.Select(p =>
-                        $"{p.Key}: {(p.Value is IPicture pic ? $"{pic.Width}×{pic.Height}" : p.Value?.ToString() ?? "-")}")),
+                        $"{p.Key}: {(p.Value is IPicture pic ? $"{pic.Width}×{pic.Height}"
+                            : p.Value is projectFrameCut.Drawing.Vector.VectorPicture ? Localized.Effect_VectorContentType : p.Value?.ToString() ?? "-")}")),
                     _ => value,
                 };
             }
+            IPicture? inputFrame = null;
+            IPicture? result = null;
             try
             {
-                using var result = Timeline.MixtureLayers([frame], targetFrame, w, h, 8,
-                    AfterEffectCallback: (effect, picture) => Capture(effect, picture),
-                    projectRelativeWidth: projectRelativeWidth, projectRelativeHeight: projectRelativeHeight,
-                    disposeIntermediateFrames: true,
-                    cancellationToken: cts.Token,
-                    afterNodeCallback: (effect, value) => { if (value is not IPicture) Capture(effect, value); },
-                    allClips: previewClips.Clips);
+                IPicture ReadSource(bool nativeInput = false)
+                {
+                    using var context = ValueProviderFrameContext.PushFrame(targetFrame,
+                        Math.Clamp(((float)targetFrame - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1), false, cts.Token);
+                    using var observer = ValueProviderFrameContext.ObserveNodes(Capture);
+                    var source = clip;
+                    if (nativeInput && clip is IVectorContentClip)
+                    {
+                        source = clip.CopyForFrame();
+                        source.EffectsInstances = clip.EffectsInstances?.Where(e => e is not IVectorPictureEffect).ToArray();
+                    }
+                    return VideoClipRotation.ReadFrame(source, clip.GetRelativeFrameIndex(targetFrame) ?? 0,
+                        clip.TargetWidth > 0 ? Math.Max(1, (int)Math.Round((double)clip.TargetWidth * w / projectRelativeWidth)) : w,
+                        clip.TargetHeight > 0 ? Math.Max(1, (int)Math.Round((double)clip.TargetHeight * h / projectRelativeHeight)) : h, 8);
+                }
+                using (ClipValuePassThrough.Open(previewClips.Clips, targetFrame, w, h,
+                    projectRelativeWidth, projectRelativeHeight, 8, cts.Token))
+                {
+                    using var srcFrame = ReadSource();
+                    if (_inputNode is not null)
+                        inputFrame = _pipeline == EffectPipeline.NativeContent ? ReadSource(true) : DynamicEffectGraph.CopyPicture(srcFrame);
+                    var frame = new OneFrame(targetFrame, clip, srcFrame, resolveEffects: false);
+                    result = Timeline.MixtureLayers([frame], targetFrame, w, h, 8,
+                        AfterEffectCallback: (effect, picture) => Capture(effect, picture),
+                        projectRelativeWidth: projectRelativeWidth, projectRelativeHeight: projectRelativeHeight,
+                        disposeIntermediateFrames: true,
+                        cancellationToken: cts.Token,
+                        afterNodeCallback: (effect, value) => { if (value is not IPicture) Capture(effect, value); },
+                        allClips: previewClips.Clips);
+                }
+                if (_inputNode is not null && inputFrame is not null) await UpdateNodePreview(_inputNode, inputFrame, cts.Token);
                 foreach (var (node, value) in previews)
                 {
                     cts.Token.ThrowIfCancellationRequested();
@@ -1830,6 +1911,8 @@ public partial class DraftEffectBindingView : ContentView
             }
             finally
             {
+                inputFrame?.Dispose();
+                result?.Dispose();
                 foreach (var picture in previews.Values.OfType<IPicture>()) picture.Dispose();
             }
 
@@ -1878,17 +1961,16 @@ public partial class DraftEffectBindingView : ContentView
         public required Guid Id;
         public required NodeKind Kind;
         public required IEffectProvider? Provider;
+        public EffectGroup? Group;
         public View? View;
-        public View? MainInputPortView;
+        public List<View> InputPortViews = new();
         public List<View> OutputPortViews = new();
         public List<View> ParamPortViews = new();
         public string BindingDiagnosticSignature = string.Empty;
         public double X, Y;
 
-        /// <summary>
-        /// The main input anchor port, derived from <see cref="IEffectProvider.InFields"/> with key = <see cref="EffectProviderAnchorExtensions.InputKey"/>.
-        /// </summary>
-        public NodePort? MainInputPort;
+        /// <summary>Input ports displayed inside the node.</summary>
+        public List<NodePort> InputPorts = new();
         /// <summary>Output anchor port, derived from <see cref="IEffectProvider.OutField"/>.</summary>
         public List<NodePort> OutputPorts = new();
         public NodePort? OutputPort
@@ -1896,7 +1978,7 @@ public partial class DraftEffectBindingView : ContentView
             get => OutputPorts.FirstOrDefault();
             set => OutputPorts = value is null ? [] : [value];
         }
-        public double BodyHeight => Math.Max(FrameHeight, OutputPorts.Count * ParamRowHeight);
+        public double BodyHeight => Math.Max(FrameHeight, Math.Max(InputPorts.Count, OutputPorts.Count) * ParamRowHeight);
         /// <summary>Visible named input ports.</summary>
         public List<NodePort> ParamPorts = new();
 
@@ -1918,7 +2000,7 @@ public partial class DraftEffectBindingView : ContentView
         public event EventHandler<string>? PreviewValueChanged;
 
         /// <summary>
-        /// Derive <see cref="MainInputPort"/> (if presents), <see cref="OutputPort"/> and <see cref="ParamPorts"/>
+        /// Derive <see cref="InputPorts"/>, <see cref="OutputPort"/> and <see cref="ParamPorts"/>
         /// from the provider's <see cref="IEffectProvider.InFields"/>, <see cref="IEffectProvider.OutField"/>
         /// and <see cref="IEffectProvider.Fields"/>.
         /// </summary>
@@ -1928,18 +2010,18 @@ public partial class DraftEffectBindingView : ContentView
         {
             if (Provider == null) return;
 
-            if (Provider.InFields.FirstOrDefault(c => c.Key == EffectProviderAnchorExtensions.InputKey).Value is IEffectArgumentField inputField)
-            {
-                MainInputPort = new NodePort
+            var inputs = DynamicEffectBindings.InputFields(Provider);
+            InputPorts = inputs
+                .Where(kv => EffectProviderAnchorExtensions.IsInternalInputKey(kv.Key))
+                .Select((kv, i) => new NodePort
                 {
                     Kind = PortKind.AnchorInput,
-                    Key = inputField.Id,
-                    FieldType = FieldTypes?.GetInputType(Provider, inputField.Id) ?? inputField.FieldType,
-                    DeclaredFieldType = inputField.FieldType,
-                    DisplayName = HumanizePortName(inputField.Id),
-                    Index = 0
-                };
-            }
+                    Key = kv.Key,
+                    FieldType = FieldTypes?.GetInputType(Provider, kv.Key) ?? kv.Value.FieldType,
+                    DeclaredFieldType = kv.Value.FieldType,
+                    DisplayName = HumanizePortName(kv.Key),
+                    Index = i
+                }).ToList();
 
             OutputPorts = Provider is ClipArgumentProvider or IClipValueEndpointProvider { IsExport: true } || Provider.TypeOfEffect == EffectType.Transform ? []
                 : Provider.GetOutputFields().Values.Select((p, i) => new NodePort
@@ -1948,9 +2030,9 @@ public partial class DraftEffectBindingView : ContentView
                     DeclaredFieldType = p.FieldType, DisplayName = HumanizePortName(p.Id), Index = i,
                 }).ToList();
 
-            ParamPorts = DynamicEffectBindings.InputFields(Provider)
+            ParamPorts = inputs
                 .Where(kv => !kv.Value.FieldType.HasFlag(EffectArgumentFieldType.NotVisibleInEffectPanel)
-                          && kv.Key != EffectProviderAnchorExtensions.InputKey)
+                          && !EffectProviderAnchorExtensions.IsInternalInputKey(kv.Key))
                 .Select((kv, i) => new NodePort { Kind = PortKind.ParamBind, Key = kv.Key,
                     FieldType = FieldTypes?.GetInputType(Provider, kv.Key) ?? kv.Value.FieldType,
                     DeclaredFieldType = kv.Value.FieldType, DisplayName = kv.Key, Index = i })
@@ -1979,7 +2061,7 @@ public partial class DraftEffectBindingView : ContentView
             _page,
             EffectServices.GetAvailableEffectProviders()
                 .Where(p => p.Key is not ("ClipValueInput" or "ClipValueOutput")
-                    && (!_clip.SupportsNativeEffects || p.Value().Target.HasFlag(EffectTarget.ValueProvider) || p.Value().TypeOfEffect.GetPipeline() == _pipeline))
+                    && (!_clip.SupportsNativeEffects || p.Value().Target.HasFlag(EffectTarget.ValueProvider) || p.Value().GetPipeline() == _pipeline))
                 .ToDictionary(p => p.Key, p => p.Value),
             new(),
             (s, e) =>
@@ -1994,6 +2076,7 @@ public partial class DraftEffectBindingView : ContentView
         );
         AddEffectsPanel.Children.Clear();
         AddEffectsPanel.Children.Add(panel);
+        AddGroupLibraryPanel();
         _addEffectsContext = context;
         Log($"Rebuilt effect selector for {_clip.Id}, target {target}, pipeline {_pipeline}.", "debug");
     }
@@ -2007,6 +2090,7 @@ public partial class DraftEffectBindingView : ContentView
         if (providerFactories.TryGetValue(providerTypeName, out var factory))
         {
             var instance = factory();
+            instance.SetPipeline(_pipeline);
             if (!ClipInfoBuilder.CanSelectEffectProvider(instance, _clip.SupportsNativeEffects ? _clip.GetEffectSelectionTarget(_pipeline) : _clip.GetEffectSelectionTarget(), hideKeyFramedProviders: true))
             {
                 Log($"Rejected effect provider {providerTypeName} for clip {_clip.Id} ({_clip.ClipType}).", "warning");
@@ -2136,7 +2220,7 @@ public partial class DraftEffectBindingView : ContentView
             }
         }
 
-        if (!providers.Values.Any(p => p.TypeOfEffect.GetPipeline() == _pipeline && p.IsFinalOutputSource()))
+        if (!providers.Values.Any(p => p.GetPipeline() == _pipeline && p.IsFinalOutputSource()))
             bindings.Add(new UIBinding(UIBindingKind.Picture, IEffectProvider.InputAnchorGUID, IEffectProvider.OutputAnchorGUID));
         return bindings;
     }
@@ -2149,9 +2233,6 @@ public partial class DraftEffectBindingView : ContentView
     public string GenerateUiBindingsMermaidDiagram()
     {
         var currentBindings = ReadBindings();
-        if (currentBindings.Count == 0)
-            return "graph TD;\n    empty[\"无 UI 绑定数据\"];";
-
         var sb = new StringBuilder();
         sb.AppendLine("graph TD;");
 
@@ -2162,6 +2243,11 @@ public partial class DraftEffectBindingView : ContentView
             referencedIds.Add(b.Source);
             referencedIds.Add(b.Target);
         }
+        foreach (var group in _groups)
+            foreach (var id in group.ProviderIds)
+                if (_nodes.ContainsKey(id)) referencedIds.Add(id);
+        if (referencedIds.Count == 0)
+            return "graph TD;\n    empty[\"无 UI 绑定数据\"];";
 
         // 显示名与短节点 id。Effect 节点用 TypeName/Name，输入/输出/自由字段用各自的显示名。
         var nodeIdByGuid = new Dictionary<Guid, string>();
@@ -2172,8 +2258,8 @@ public partial class DraftEffectBindingView : ContentView
             string shortId = "N" + counter++;
             nodeIdByGuid[id] = shortId;
             labelById[id] = GetNodeLabelForDiagram(id);
-            sb.AppendLine($"    {shortId}[\"{EscapeDiagramText(labelById[id])}\"];");
         }
+        EffectBindingHelper.AppendMermaidNodes(sb, nodeIdByGuid, labelById, _groups);
 
         // 图片链路与值绑定边。
         var edges = new List<string>();
@@ -2183,7 +2269,7 @@ public partial class DraftEffectBindingView : ContentView
             {
                 var targetName = labelById.TryGetValue(b.Target, out var t) ? t : "?";
                 var label = string.IsNullOrEmpty(b.TargetPortKey) ? "Value" : $"{b.TargetPortKey}";
-                edges.Add($"    {nodeIdByGuid[b.Source]} -->|\"{EscapeDiagramText(label)} (值) → {EscapeDiagramText(targetName)}\"| {nodeIdByGuid[b.Target]};");
+                edges.Add($"    {nodeIdByGuid[b.Source]} -->|\"{EffectBindingHelper.EscapeMermaidText(label)} (值) → {EffectBindingHelper.EscapeMermaidText(targetName)}\"| {nodeIdByGuid[b.Target]};");
             }
             else
             {
@@ -2215,19 +2301,6 @@ public partial class DraftEffectBindingView : ContentView
         return id.ToString();
     }
 
-    /// <summary>转义 Mermaid 标签文本中的引号与方括号/大括号。</summary>
-    private static string EscapeDiagramText(string text)
-    {
-        if (text is null) return "";
-        return text
-            .Replace("\\", "\\\\")
-            .Replace("\"", "\\\"")
-            .Replace("[", "\\[")
-            .Replace("]", "\\]")
-            .Replace("{", "\\{")
-            .Replace("}", "\\}");
-    }
-
     private async void ShowUiBindingsGraphButton_Clicked(object sender, EventArgs e)
     {
         try
@@ -2247,6 +2320,7 @@ public partial class DraftEffectBindingView : ContentView
         _previewCts?.Cancel();
         if (_clip?.EffectProviders == null) return;
         var providers = _clip.EffectProviders;
+        if (!SynchronizeGroupBindings()) return;
         EffectBindingHelper.MaterializeFields(providers.Values);
         _fieldTypes = null;
         RefreshFieldTypes();
@@ -2270,6 +2344,7 @@ public partial class DraftEffectBindingView : ContentView
                 node.BuildPortsFromProvider();
                 if (before != GetPortTypeSignature(node)) RecreateNodeView(node);
             }
+            ApplyGroupProjection();
             var diagnostics = GetAllBindingDiagnostics();
             if (diagnostics.Count > 0) SetStatusText(string.Join(Environment.NewLine, diagnostics.Select(d => d.Message)));
             RefreshBindingDiagnosticIndicators(diagnostics);
@@ -2284,8 +2359,8 @@ public partial class DraftEffectBindingView : ContentView
     }
 
     private static string GetPortTypeSignature(NodeViewModel node) =>
-        $"{node.MainInputPort?.Key}:{node.MainInputPort?.FieldType}|" + string.Join("|",
-            node.OutputPorts.Concat(node.ParamPorts).Select(p => $"{p.Kind}:{p.Key}:{p.FieldType}"));
+        string.Join("|", node.InputPorts.Concat(node.OutputPorts).Concat(node.ParamPorts)
+            .Select(p => $"{p.Kind}:{p.Key}:{p.FieldType}"));
 
     /// <summary>
     /// 防抖并串行化完整重建。Provider 构建在工作线程进行，只在完成后
@@ -2352,40 +2427,34 @@ public partial class DraftEffectBindingView : ContentView
 
         foreach (var b in ReadBindings())
         {
-            if (GetNodeByBindingId(b.Source) is not { } from) continue;
-            if (GetNodeByBindingId(b.Target) is not { } to) continue;
-            int sourceIndex = b.SourcePortKey is null ? 0 : from.OutputPorts.FindIndex(p => p.Key == b.SourcePortKey);
+            if (VisiblePortNode(b.Source) is not { } from) continue;
+            string inputKey = b.Kind == UIBindingKind.Value ? b.TargetPortKey! : EffectProviderAnchorExtensions.InputKey;
+            if (VisiblePortNode(b.Target) is not { } to) continue;
+            if (from == to || from.View?.IsVisible == false || to.View?.IsVisible == false) continue;
+            int sourceIndex = from.Group is null
+                ? b.SourcePortKey is null ? 0 : from.OutputPorts.FindIndex(p => p.Key == b.SourcePortKey)
+                : from.OutputPorts.FindIndex(p => p.Id == b.Source && (b.SourcePortKey is null || p.Key == b.SourcePortKey));
             if (sourceIndex < 0 || sourceIndex >= from.OutputPorts.Count) continue;
 
-            if (b.Kind == UIBindingKind.Value)
+            int inputIndex = to.InputPorts.FindIndex(p => p.Key == inputKey && (to.Group is null || p.Id == b.Target));
+            var targetKind = PortKind.AnchorInput;
+            if (inputIndex < 0)
             {
-                var paramIndex = to.ParamPorts.FindIndex(p => p.Key == b.TargetPortKey);
-                if (paramIndex < 0) continue;
-                var fieldType = to.ParamPorts[paramIndex].FieldType;
-                _drawable.Connections.Add(new NodeConnection
-                {
-                    From = from,
-                    FromPortIndex = sourceIndex,
-                    To = to,
-                    ToPortIndex = paramIndex,
-                    IsValueBinding = true,
-                    FieldType = fieldType,
-                    TargetParamFieldId = b.TargetPortKey
-                });
+                inputIndex = to.ParamPorts.FindIndex(p => p.Key == inputKey && (to.Group is null || p.Id == b.Target));
+                targetKind = PortKind.ParamBind;
             }
-            else
+            if (inputIndex < 0) continue;
+            _drawable.Connections.Add(new NodeConnection
             {
-                var srcType = from.OutputPorts[sourceIndex].FieldType;
-                _drawable.Connections.Add(new NodeConnection
-                {
-                    From = from,
-                    FromPortIndex = sourceIndex,
-                    To = to,
-                    ToPortIndex = 0,
-                    IsValueBinding = false,
-                    FieldType = srcType
-                });
-            }
+                From = from,
+                FromPortIndex = sourceIndex,
+                To = to,
+                ToPortIndex = inputIndex,
+                IsValueBinding = b.Kind == UIBindingKind.Value,
+                ToKind = targetKind,
+                FieldType = b.Kind == UIBindingKind.Value ? PortOf(to, targetKind, inputIndex)!.FieldType : from.OutputPorts[sourceIndex].FieldType,
+                TargetParamFieldId = b.TargetPortKey
+            });
         }
     }
 
@@ -2398,6 +2467,7 @@ public partial class DraftEffectBindingView : ContentView
         public int ToPortIndex;
         public int FromPortIndex;
         public bool IsValueBinding;                 // free-field / value-provider → param bind line
+        public PortKind ToKind = PortKind.AnchorInput;
         public EffectArgumentFieldType FieldType;   // drives the line color
         public string? TargetParamFieldId;
     }
@@ -2405,6 +2475,7 @@ public partial class DraftEffectBindingView : ContentView
     class ConnectionsDrawable : IDrawable
     {
         public List<NodeConnection> Connections = new();
+        public List<RectF> GroupBounds = new();
         public double PanX, PanY;
         public double Scale = 1.0;
 
@@ -2424,14 +2495,19 @@ public partial class DraftEffectBindingView : ContentView
         {
             canvas.SaveState();
 
+            canvas.StrokeColor = Colors.CornflowerBlue;
+            canvas.StrokeSize = (float)(2 * Scale);
+            foreach (var bounds in GroupBounds)
+                canvas.DrawRoundedRectangle((float)(bounds.X * Scale + PanX), (float)(bounds.Y * Scale + PanY),
+                    (float)(bounds.Width * Scale), (float)(bounds.Height * Scale), 8);
+
             foreach (var conn in Connections)
             {
                 canvas.StrokeColor = PortTypeHelper.GetTypeColor(conn.FieldType);
                 canvas.StrokeSize = (float)((conn.IsValueBinding ? 1.5 : 2.5) * Scale);
 
                 var start = Transform(GetPortPosition(conn.From, PortKind.AnchorOutput, conn.FromPortIndex));
-                var end = Transform(GetPortPosition(conn.To,
-                    conn.IsValueBinding ? PortKind.ParamBind : PortKind.AnchorInput, conn.ToPortIndex));
+                var end = Transform(GetPortPosition(conn.To, conn.ToKind, conn.ToPortIndex));
 
                 if (conn.IsValueBinding)
                 {

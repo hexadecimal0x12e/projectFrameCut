@@ -64,9 +64,10 @@ public static class ClipValuePassThrough
             var source = clips.FirstOrDefault(c => c.Id == input.SourceClipId);
             var output = source?.EffectProvidersInstances?.OfType<IClipValueEndpointProvider>().FirstOrDefault(p => p.Id == input.SourceEndpointId && p.IsExport);
             if (source is null) error = "The source clip does not exist.";
-            else if (ClipLayerOrder.BottomToTop.Compare(source, consumer) >= 0) error = "The source must precede the consumer in clip render order.";
+            else if (source.Id != consumer.Id && ClipLayerOrder.BottomToTop.Compare(source, consumer) >= 0) error = "The source must precede the consumer in clip render order.";
             else if (output is null) error = "The source endpoint does not exist.";
             else if (!output.Enabled) error = "The source endpoint is disabled.";
+            else if (!output.CanPassTo(input.GetPipeline(), source.Id == consumer.Id)) error = "The endpoint pipeline has changed or does not precede the input stage.";
             else if (output.ValueType.BaseType() != input.ValueType.BaseType()) error = "The endpoint type has changed.";
             if (error is not null) result.Add(new(input.Id, "InvalidClipEndpoint", error));
         }

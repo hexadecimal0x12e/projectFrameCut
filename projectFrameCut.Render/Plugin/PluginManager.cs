@@ -363,6 +363,12 @@ namespace projectFrameCut.Render.Plugin
 
         public static IAudioSource CreateAudioSource(string filePath)
         {
+            if (ProjectExternalAudioSource.IsPath(filePath) || RemoteRpcAudioSource.IsPath(filePath))
+            {
+                var source = ProjectExternalAudioSource.IsPath(filePath) ? ProjectExternalAudioSource.Open(filePath) : RemoteRpcAudioSource.Open(filePath);
+                try { source.Initialize(); return source; }
+                catch { source.Dispose(); throw; }
+            }
             if (!File.Exists(filePath) && !filePath.StartsWith("#"))
             {
                 throw new FileNotFoundException("The specified video file was not found.", filePath);

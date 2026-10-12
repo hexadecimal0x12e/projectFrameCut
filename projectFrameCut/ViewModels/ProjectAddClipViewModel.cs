@@ -739,23 +739,28 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             foreach (var asset in projectFrameCut.Render.PluginIsolation.ProjectExternalSourceDatabase.Read(_draftPage.WorkingPath).Assets)
             {
                 var status = catalog.Sources.FirstOrDefault(x => x.ImportId == asset.ImportId);
-                if (asset.Sources.Count == 0)
-                    sources.Add(new(this, new() { Name = asset.Manifest.Name }, asset, status));
+                if (asset.Sources.Count == 0 && asset.AudioSources.Count == 0)
+                    sources.Add(new(this, new ExternalVideoSourceDescriptor { Name = asset.Manifest.Name }, asset, status));
                 else
+                {
                     foreach (var source in status?.Sources ?? asset.Sources) sources.Add(new(this, source, asset, status));
+                    foreach (var source in status?.AudioSources ?? asset.AudioSources) sources.Add(new(this, source, asset, status));
+                }
             }
         }
-        catch (Exception ex) { Log(ex, "Load project external video sources", this); }
+        catch (Exception ex) { Log(ex, "Load project external sources", this); }
         if (RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
         {
             try
             {
                 foreach (var source in (await client.ListExternalVideoSourcesAsync()).Sources.OrderBy(x => x.ClientName).ThenBy(x => x.Name))
                     sources.Add(new(this, source));
+                foreach (var source in (await client.ListExternalAudioSourcesAsync()).Sources.OrderBy(x => x.ClientName).ThenBy(x => x.Name))
+                    sources.Add(new(this, source));
             }
             catch (Exception ex)
             {
-                Log(ex, "Load external RPC video sources", this);
+                Log(ex, "Load external RPC sources", this);
             }
         }
         bool updated = await MainThread.InvokeOnMainThreadAsync(() =>
@@ -822,17 +827,19 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         try
         {
             var source = item.Source;
-            var path = item.ProjectAsset is null ? RemoteRpcVideoSource.CreatePath(source)
-                : ProjectExternalVideoSource.CreatePath(item.ProjectAsset.ImportId, source);
+            var audio = item.AudioSource;
+            var path = audio is not null
+                ? item.ProjectAsset is null ? RemoteRpcAudioSource.CreatePath(audio) : ProjectExternalAudioSource.CreatePath(item.ProjectAsset.ImportId, audio)
+                : item.ProjectAsset is null ? RemoteRpcVideoSource.CreatePath(source) : ProjectExternalVideoSource.CreatePath(item.ProjectAsset.ImportId, source);
             var asset = new AssetItem
             {
-                AssetId = $"rpc:{source.ClientId:N}:{source.SourceId}",
+                AssetId = $"rpc:{(audio is not null ? "audio:" : "")}{source.ClientId:N}:{source.SourceId}",
                 Name = source.Name,
                 Path = path,
-                AssetType = AssetType.Video,
-                ClipType = ClipMode.VideoClip,
-                Duration = source.TotalFrames,
-                SecondPerFrame = source.Fps > 0 ? (float)(1d / source.Fps) : -1,
+                AssetType = audio is not null ? AssetType.Audio : AssetType.Video,
+                ClipType = audio is not null ? ClipMode.AudioClip : ClipMode.VideoClip,
+                Duration = audio is not null ? audio.Duration : source.TotalFrames,
+                SecondPerFrame = audio is not null ? 1 : source.Fps > 0 ? (float)(1d / source.Fps) : -1,
                 Width = source.Width,
                 Height = source.Height,
                 BitPerPixel = source.HasKnownResultBitsPerPixel ? source.ResultBitsPerPixel : 0,
@@ -844,13 +851,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 _draftPage.RegisterClip(clip, true);
                 _draftPage.AddAClip(clip);
                 return clip;
-            }, name: source.Name);
+            }, name: source.Name, useSubTrack: audio is not null);
             ClipAdded?.Invoke(this, EventArgs.Empty);
-            Log($"Added external RPC video source {source.ClientId}/{source.SourceId} to the timeline.");
+            Log($"Added external source {source.ClientId}/{source.SourceId} to the timeline.");
         }
         catch (Exception ex)
         {
-            Log(ex, "Add external RPC video source", this);
+            Log(ex, "Add external source", this);
             await _draftPage.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }
@@ -3184,6 +3191,14 @@ public class AssetItemViewModel
 
 public sealed class RpcVideoSourceItemViewModel
 {
+    public RpcVideoSourceItemViewModel(ProjectAddClipViewModel parent, ExternalAudioSourceDescriptor source,
+        ProjectExternalSourceAsset? projectAsset = null, ProjectExternalSourceStatus? status = null)
+        : this(parent, new ExternalVideoSourceDescriptor { ClientId = source.ClientId, ClientName = source.ClientName,
+            SourceId = source.SourceId, Name = source.Name, DecoderName = source.DecoderName }, projectAsset, status)
+    {
+        AudioSource = source;
+    }
+
     public RpcVideoSourceItemViewModel(ProjectAddClipViewModel parent, ExternalVideoSourceDescriptor source,
         ProjectExternalSourceAsset? projectAsset = null, ProjectExternalSourceStatus? status = null)
     {
@@ -3194,6 +3209,7 @@ public sealed class RpcVideoSourceItemViewModel
     }
 
     public ExternalVideoSourceDescriptor Source { get; }
+    public ExternalAudioSourceDescriptor? AudioSource { get; }
     public ProjectExternalSourceAsset? ProjectAsset { get; }
     private ProjectExternalSourceStatus? LoadStatus { get; }
     public bool CanAdd => !string.IsNullOrWhiteSpace(Source.SourceId);
@@ -3206,10 +3222,12 @@ public sealed class RpcVideoSourceItemViewModel
     public string DecoderName => Source.DecoderName;
     public string Resolution => Source.Width > 0 && Source.Height > 0 ? $"{Source.Width}×{Source.Height}" : "?";
     public string FrameRate => Source.Fps > 0 ? $"{Source.Fps:0.###} FPS" : "? FPS";
-    public string Duration => Source.TotalFrames > 0 && Source.Fps > 0 ? TimeSpan.FromSeconds(Source.TotalFrames / Source.Fps).ToString("hh\\:mm\\:ss") : "--:--:--";
+    public string Duration => AudioSource is not null ? TimeSpan.FromSeconds(AudioSource.Duration).ToString("hh\\:mm\\:ss")
+        : Source.TotalFrames > 0 && Source.Fps > 0 ? TimeSpan.FromSeconds(Source.TotalFrames / Source.Fps).ToString("hh\\:mm\\:ss") : "--:--:--";
 
-    public string Capabilities => $"{(Source.HasKnownResultBitsPerPixel ? $"{Source.ResultBitsPerPixel}-bit" : "Variable bit depth")} RGB{(Source.SupportsAlpha ? "A" : "")}{(Source.SupportsHdr ? " (HDR)" : "")}";
-    public string SourceInfoDisplay => $"{Resolution} {FrameRate} ({Duration})";
+    public string Capabilities => AudioSource is not null ? $"{AudioSource.ChannelCount} ch · {AudioSource.SamplePerSecond} Hz"
+        : $"{(Source.HasKnownResultBitsPerPixel ? $"{Source.ResultBitsPerPixel}-bit" : "Variable bit depth")} RGB{(Source.SupportsAlpha ? "A" : "")}{(Source.SupportsHdr ? " (HDR)" : "")}";
+    public string SourceInfoDisplay => AudioSource is not null ? $"{Capabilities} ({Duration})" : $"{Resolution} {FrameRate} ({Duration})";
     public Command AddCommand { get; }
 }
 

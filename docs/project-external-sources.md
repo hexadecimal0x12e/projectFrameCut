@@ -1,12 +1,12 @@
-# 项目随附外置视频源
+# 项目随附外置媒体源
 
 在添加素材面板的“RPC 外部源”Tab 选择“添加外置源”，选中发布目录。整个目录会复制到 `externalSource/<ImportId>/`，索引保存在 `externalSource/index.json`。相同清单 ID 可替换、跳过或同时保留；替换保持 ImportId，清单哈希会更新。
 
 每次打开编辑或独立导出页面时，Popup 默认不选任何源。选择仅在本次打开期间有效，从编辑进入导出会继承选择。导入的新源立即加载。跳过或加载失败时保留素材、时间线参数和描述快照，显示已有的初始化失败占位画面。
 
-项目设置的“外部源”Tab 管理 Assembly 源和已注册视频源的 RPC 客户端。Assembly 源的加载、卸载会同步本次允许列表与预览后端；卸载保留目录和索引，移除会删除项目副本和索引，时间线引用仍保留。未打开项目的设置页可查看和移除 Assembly 源，加载、卸载需要进入项目。
+项目设置的“外部源”Tab 管理 Assembly 源和已注册视频或音频源的 RPC 客户端。Assembly 源的加载、卸载会同步本次允许列表与预览后端；卸载保留目录和索引，移除会删除项目副本和索引，时间线引用仍保留。未打开项目的设置页可查看和移除 Assembly 源，加载、卸载需要进入项目。
 
-RPC 客户端的卸载会释放视频实例并暂时停用源，保留注册目录供重新加载；客户端更新目录不会自动解除卸载状态。移除只清除视频源注册，保留 RPC 连接和授权，客户端可重新注册。RPC 管理操作只接受应用自身的管理连接，外部客户端不能管理其他客户端。
+RPC 客户端的卸载会释放视频和音频实例并暂时停用源，保留注册目录供重新加载；客户端更新目录不会自动解除卸载状态。移除清除两类源的注册，保留 RPC 连接和授权，客户端可重新注册。RPC 管理操作只接受应用自身的管理连接，外部客户端不能管理其他客户端。
 
 ## 清单版本 1
 
@@ -32,7 +32,7 @@ RPC 客户端的卸载会释放视频实例并暂时停用源，保留注册目�
 
 除 `description` 和 `authorUrl` 外均为必填。`id` 是发布者定义的稳定 ID。路径使用 `/`，相对于源目录，禁止绝对路径、`.`、`..` 和目录链接。`files` 必须覆盖除根部清单自身外的所有文件，包括依赖、原生库、配置、资源和子目录中的文件；文件缺失、多余或哈希不符均拒绝加载。空目录也会复制。修改文件后需要重新生成清单并重新导入。
 
-入口必须是公开、非抽象、具有公开无参构造函数的 `projectFrameCut.Render.Contracts.IExternalVideoSourceProvider` 实现。发布普通 DLL 与依赖即可，不需要项目插件的加密包。Assembly 只会在隔离 Worker 内加载；托管与原生依赖由独立加载上下文解析，契约程序集使用 Worker 的版本。
+入口必须公开、非抽象、具有公开无参构造函数，并实现 `projectFrameCut.Render.Contracts.IExternalVideoSourceProvider` 或 `IExternalAudioSourceProvider`，也可以同时实现两者。发布普通 DLL 与依赖即可，不需要项目插件的加密包。Assembly 只会在隔离 Worker 内加载；托管与原生依赖由独立加载上下文解析，契约程序集使用 Worker 的版本。
 
 ## Provider 契约
 
@@ -47,6 +47,17 @@ RPC 客户端的卸载会释放视频实例并暂时停用源，保留注册目�
 
 项目时间线保存 `#ProjectExternalVideoSource:<编码引用>`，其中 ClientId 字段表示 ImportId。引用包含 SourceId、DecoderName、Metadata 和描述快照。现有 `#RemoteRpcVideoSource:` 客户端源保持原有行为。
 
+音频 Provider 实现 `IExternalAudioSourceProvider`：
+
+- `AudioSources` 返回音频目录，填写 SourceId、DecoderName、Name、Duration（秒）、ChannelCount 和 SamplePerSecond。
+- `CreateAudioAsync`、`InitializeAudioAsync` 和 `ReleaseAudioAsync` 管理独立音频实例，初始化返回同一 InstanceId 及实际声道数、采样率和时长。
+- `ReadSamplesAsync` 接收 State、StartIndex 和 Count；StartIndex、Count 均按每声道采样数计算。返回 `ExternalAudioSamples`，PCM 使用逐声道排列的小端 float32，字节数必须等于 ChannelCount × SampleCount × 4，SampleCount 不超过请求 Count。到达末尾可返回空数据。
+- 音频载荷沿用 Inline、SharedMemory、LocalFile 三种传输方式，读取完成后释放。Worker 串行调用 Provider，并在关闭、卸载或管道断开时释放音频实例。
+
+音频时间线引用为 `#ProjectExternalAudioSource:<编码引用>`，RPC 音频引用为 `#RemoteRpcAudioSource:<编码引用>`。音频描述与视频描述分别保存，不需要迁移旧项目。
+
+跳过或无法初始化的外部音轨保留引用并记录 `ExternalSourceUnavailable`，预览和导出跳过该音轨，其余内容继续处理。重新加载源后刷新项目会重新初始化音轨；读取期间发生的异常仍会上报。
+
 ## 隔离与 CLI
 
 GUI 和应用 CLI 在 Windows 使用 AppContainer，其他桌面平台使用进程隔离；StandaloneRender 在所有桌面平台使用进程隔离。Windows 会将源复制到独立运行目录并设置现有 Worker 所需 ACL，沿用包内激活机制。
@@ -60,11 +71,11 @@ GUI 和应用 CLI 在 Windows 使用 AppContainer，其他桌面平台使用进�
 
 默认不加载。允许列表在运行时绑定 ImportId 与当前索引清单哈希。GUI 给自身渲染子进程传递确认时的 ID 和哈希，刷新预览不重复询问，也不会自动允许清单变更。RPC 新增 `ListProjectExternalSources` 和 `SetProjectExternalSources`，请求使用 ProjectRoot，设置请求包含 AllowedSources（ImportId、ManifestSha256）；OpenProject 和 OpenHeadlessProject 也接受 AllowedExternalSources。
 
-管理连接还提供 `ListExternalVideoSourceClients` 和 `ManageExternalVideoSourceClient`；后者包含 ClientId 和 Action（Load、Unload、Remove）。
+管理连接还提供 `ListExternalVideoSourceClients` 和 `ManageExternalVideoSourceClient`；列表的 AudioSources 包含音频目录，后者包含 ClientId 和 Action（Load、Unload、Remove），同时管理该客户端的视频和音频源。
 
 ## 示例及验收
 
-`tools/projectFrameCut.ExternalSourceExample` 提供四个源：8 位、16 位、Alpha 和 HDR。发布后运行 `Create-Manifest.ps1 -Directory <发布目录>`，将目录导入项目。示例帧随帧号变化，并支持区域读取。
+`tools/projectFrameCut.ExternalSourceExample` 提供四个视频源（8 位、16 位、Alpha 和 HDR）及一个 48 kHz 双声道音频源。发布后运行 `Create-Manifest.ps1 -Directory <发布目录>`，将目录导入项目。示例帧随帧号变化，并支持区域读取；音频左右声道分别生成 440 Hz 和 660 Hz 正弦波。
 
 ```powershell
 dotnet publish tools/projectFrameCut.ExternalSourceExample -o artifacts/external-source-example

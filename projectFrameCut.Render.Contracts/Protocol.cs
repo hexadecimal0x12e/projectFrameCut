@@ -61,6 +61,13 @@ public enum RenderOperation
     [ProtoEnum] SetProjectExternalSources = 44,
     [ProtoEnum] ListExternalVideoSourceClients = 45,
     [ProtoEnum] ManageExternalVideoSourceClient = 46,
+    [ProtoEnum] RegisterExternalAudioSources = 47,
+    [ProtoEnum] UnregisterExternalAudioSources = 48,
+    [ProtoEnum] ListExternalAudioSources = 49,
+    [ProtoEnum] ExternalAudioSourceCreate = 50,
+    [ProtoEnum] ExternalAudioSourceInitialize = 51,
+    [ProtoEnum] ExternalAudioSourceReadSamples = 52,
+    [ProtoEnum] ExternalAudioSourceRelease = 53,
     [ProtoEnum] RegisterGuiProject = 30,
     [ProtoEnum] UnregisterGuiProject = 31,
     [ProtoEnum] GetGuiProjectWork = 32,
@@ -150,6 +157,7 @@ public enum RenderOperation
     [ProtoEnum] IsolationProcessVectorPictureEffect = 2062,
     [ProtoEnum] IsolationComputeEffect = 2063,
     [ProtoEnum] IsolationResolveFieldTypes = 2064,
+    [ProtoEnum] IsolationListProjectExternalAudioSources = 2065,
 }
 
 [ProtoContract]

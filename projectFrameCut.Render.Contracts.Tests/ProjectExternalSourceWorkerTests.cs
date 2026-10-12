@@ -11,6 +11,79 @@ namespace projectFrameCut.Render.Contracts.Tests;
 public sealed class ProjectExternalSourceWorkerTests
 {
     [TestMethod]
+    [DataRow(IsolationPayloadKind.Inline)]
+    [DataRow(IsolationPayloadKind.SharedMemory)]
+    [DataRow(IsolationPayloadKind.LocalFile)]
+    public async Task AudioOnlyProvidersCrossTheWorkerChannelAndReleasePayloads(IsolationPayloadKind kind)
+    {
+        using var files = new ProjectExternalSourceTests.SourceFiles();
+        var provider = new TestAudioSourceProvider();
+        await using var worker = await TestWorker.StartAsync(files.Directory("audio-session"), provider, kind);
+        var client = new ProjectExternalSourceClient(worker);
+        await client.LoadAsync();
+        Assert.AreEqual(0, client.Sources.Count);
+        Assert.AreEqual(1, client.AudioSources.Count);
+        var instance = await client.CreateAudioAsync(new() { Source = new() { SourceId = "audio", DecoderName = "ExampleAudio" } });
+        await client.InitializeAudioAsync(new() { InstanceId = instance.InstanceId });
+        var samples = await client.ReadSamplesAsync(new() { State = new() { InstanceId = instance.InstanceId }, StartIndex = 250, Count = 3 });
+        Assert.AreEqual(3, samples.SampleCount);
+        Assert.AreEqual(0.25f, BinaryPrimitives.ReadSingleLittleEndian(samples.Samples));
+        Assert.AreEqual(-0.25f, BinaryPrimitives.ReadSingleLittleEndian(samples.Samples.AsSpan(12)));
+        var empty = await client.ReadSamplesAsync(new() { State = new() { InstanceId = instance.InstanceId }, StartIndex = 480000, Count = 3 });
+        Assert.AreEqual(0, empty.SampleCount);
+        Assert.IsFalse(Directory.EnumerateFiles(Path.Combine(files.Root, "audio-session", "payloads")).Any());
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await client.InitializeAudioAsync(new() { InstanceId = Guid.NewGuid() }));
+        await client.ReleaseAudioAsync(new() { InstanceId = instance.InstanceId });
+        Assert.AreEqual(1, provider.Released);
+        await client.CreateAudioAsync(new() { Source = new() { SourceId = "audio", DecoderName = "ExampleAudio" } });
+        await worker.DisconnectAsync();
+        Assert.AreEqual(2, provider.Released);
+    }
+
+    [TestMethod]
+    public async Task ProjectAudioSourcesCaptureTheirHostAndPersistTheirCatalog()
+    {
+        using var files = new ProjectExternalSourceTests.SourceFiles();
+        var root = files.Directory("audio-project");
+        var asset = await ProjectExternalSourceDatabase.ImportAsync(root, await files.CreateAsync("audio-package"));
+        var previous = ProjectExternalSourceRuntime.StartWorker;
+        var provider = new TestAudioSourceProvider();
+        await using var host = new ProjectExternalSourceHost();
+        try
+        {
+            ProjectExternalSourceRuntime.StartWorker = async (_, _, _) => await TestWorker.StartAsync(files.Directory("audio-host"), provider);
+            using var sourceScope = ProjectExternalSourceRuntime.Use(host);
+            using var track = new projectFrameCut.Render.ClipsAndTracks.NormalSoundTrack { FilePath = projectFrameCut.Render.EncodeAndDecode.ProjectExternalAudioSource.CreatePath(asset.ImportId, provider.AudioSources[0]), ExtraData = new() };
+            track.ReInit();
+            Assert.AreEqual("ExternalSourceUnavailable", projectFrameCut.Render.ClipsAndTracks.ClipInitializationFailure.GetStage(track.ExtraData));
+            Assert.AreEqual(0, track.SamplePerSecond);
+            var catalog = await host.SetAsync(new() { ProjectRoot = root, AllowedSources = ProjectExternalSourceDatabase.ParseApprovals(root, "all") });
+            track.ReInit();
+            Assert.AreEqual(48000, track.SamplePerSecond);
+            Assert.IsFalse(projectFrameCut.Render.ClipsAndTracks.ClipInitializationFailure.IsMarked(track.ExtraData));
+            var descriptor = catalog.Sources.Single().AudioSources.Single();
+            Assert.AreEqual(1, ProjectExternalSourceDatabase.Read(root).Assets.Single().AudioSources.Count);
+            using var source = projectFrameCut.Render.EncodeAndDecode.ProjectExternalAudioSource.Open(
+                projectFrameCut.Render.EncodeAndDecode.ProjectExternalAudioSource.CreatePath(asset.ImportId, descriptor), host);
+            source.Initialize();
+            var samples = source.GetSample(250, 3);
+            Assert.AreEqual(0.25f, samples.GetSamples(0)[0]);
+            Assert.AreEqual(-0.25f, samples.GetSamples(1)[0]);
+            Assert.AreEqual(0.25f, source.GetSingleSample(250));
+            await host.CloseAsync();
+            Assert.AreEqual(2, provider.Released);
+            track.ReInit();
+            Assert.AreEqual(0, track.SamplePerSecond);
+            await host.SetAsync(new() { ProjectRoot = root, AllowedSources = ProjectExternalSourceDatabase.ParseApprovals(root, "all") });
+            track.ReInit();
+            Assert.AreEqual(48000, track.SamplePerSecond);
+            Assert.AreEqual(0.25f, source.GetSingleSample(250));
+            Assert.IsFalse(projectFrameCut.Render.ClipsAndTracks.ClipInitializationFailure.IsMarked(track.ExtraData));
+        }
+        finally { ProjectExternalSourceRuntime.StartWorker = previous; }
+    }
+
+    [TestMethod]
     [DataRow(8, IsolationPayloadKind.Inline, false)]
     [DataRow(16, IsolationPayloadKind.SharedMemory, true)]
     [DataRow(16, IsolationPayloadKind.LocalFile, true)]
@@ -177,16 +250,17 @@ public sealed class ProjectExternalSourceWorkerTests
         private readonly Task dispatcher;
         private PluginIsolationSession session = null!;
         private int disposed;
-        public Provider Provider { get; }
-        private TestWorker(string root, Provider provider, NamedPipeClientStream pipe)
+        private readonly object provider;
+        public Provider Provider => (Provider)provider;
+        private TestWorker(string root, object provider, NamedPipeClientStream pipe)
         {
-            Provider = provider;
+            this.provider = provider;
             this.pipe = pipe;
             workerPayloads = new(root);
             service = new(provider, "test-token", Environment.ProcessId, workerPayloads, lifetime);
             dispatcher = StreamIsolationRequestDispatcher.RunAsync(pipe, service, lifetime.Token);
         }
-        public static async Task<TestWorker> StartAsync(string root, Provider provider, IsolationPayloadKind kind = IsolationPayloadKind.SharedMemory)
+        public static async Task<TestWorker> StartAsync(string root, object provider, IsolationPayloadKind kind = IsolationPayloadKind.SharedMemory)
         {
             var name = "pjfc-source-test-" + Guid.NewGuid().ToString("N");
             var server = new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);

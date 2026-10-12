@@ -31,6 +31,26 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         [ThreadStatic]
         private static Dictionary<object, object>? _computed;
 
+        [ThreadStatic]
+        private static CancellationToken _cancellationToken;
+        public static CancellationToken CancellationToken => _cancellationToken;
+
+        [ThreadStatic]
+        private static Action<IEffect, object?>? _nodeObserver;
+        public static Action<IEffect, object?>? NodeObserver => _nodeObserver;
+
+        public static IDisposable ObserveNodes(Action<IEffect, object?> observer)
+        {
+            var scope = new NodeObserverScope(_nodeObserver);
+            _nodeObserver = observer;
+            return scope;
+        }
+
+        private sealed class NodeObserverScope(Action<IEffect, object?>? previous) : IDisposable
+        {
+            public void Dispose() => _nodeObserver = previous;
+        }
+
         /// <summary>
         /// Begin a render frame: pre-fills the built-in frame/progress sources and clears provider values.
         /// </summary>
@@ -93,14 +113,19 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static IDisposable PushFrame(uint frameIndex, float progress) => PushFrame(frameIndex, progress, false);
 
         public static IDisposable PushFrame(uint frameIndex, float progress, bool reuseComputed)
+            => PushFrame(frameIndex, progress, reuseComputed, _cancellationToken);
+
+        public static IDisposable PushFrame(uint frameIndex, float progress, bool reuseComputed, CancellationToken cancellationToken)
         {
             var previous = _values;
             var computed = _computed;
+            var previousToken = _cancellationToken;
+            _cancellationToken = cancellationToken;
             BeginFrame(frameIndex, progress);
             if (reuseComputed && previous?.GetValueOrDefault(BuiltInFrameProviderId) is float frame && frame == frameIndex
                 && previous.GetValueOrDefault(BuiltInProgressProviderId) is float clipProgress && clipProgress == progress)
                 _computed = computed;
-            return new FrameScope(previous, computed);
+            return new FrameScope(previous, computed, previousToken);
         }
 
         public static IDisposable PushValues(IReadOnlyDictionary<string, object?> values)
@@ -108,15 +133,16 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             var previous = _values;
             _values = previous is null ? new() : new(previous);
             foreach (var value in values) Set(value.Key, value.Value);
-            return new FrameScope(previous, _computed);
+            return new FrameScope(previous, _computed, _cancellationToken);
         }
 
-        private sealed class FrameScope(Dictionary<string, object>? previous, Dictionary<object, object>? computed) : IDisposable
+        private sealed class FrameScope(Dictionary<string, object>? previous, Dictionary<object, object>? computed, CancellationToken cancellationToken) : IDisposable
         {
             public void Dispose()
             {
                 _values = previous;
                 _computed = computed;
+                _cancellationToken = cancellationToken;
             }
         }
 

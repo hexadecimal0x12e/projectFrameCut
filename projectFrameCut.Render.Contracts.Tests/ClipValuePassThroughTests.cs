@@ -1,5 +1,6 @@
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
+using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -68,6 +69,67 @@ public sealed class ClipValuePassThroughTests
         {
             foreach (var item in frames) item.Clip.Dispose(true);
         }
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public void SameClipPictureParametersReadNativeEndpoints(bool alreadyPublished)
+    {
+        int calls = 0;
+        var value = new Provider(null, EffectArgumentFieldType.Numeric, c =>
+        {
+            calls++;
+            return (float)c.FrameIndex;
+        });
+        value.SetPipeline(EffectPipeline.NativeContent);
+        var output = Output(value, EffectArgumentFieldType.Numeric);
+        output.SetPipeline(EffectPipeline.NativeContent);
+        var id = Guid.NewGuid();
+        var input = new ClipValueImportProvider
+        {
+            SourceClipId = id, SourceEndpointId = output.Id, ValueType = output.ValueType,
+        };
+        float actual = 0;
+        IEffectProvider[] providers = [value, output, input, Consumer(input, c => actual = (float)c.Parameters["Amount"]!)];
+        using var clip = new VectorCanvasClip
+        {
+            Id = id, Name = "native endpoint", Duration = 10, TargetWidth = 2, TargetHeight = 1,
+            EffectProvidersInstances = providers,
+            EffectProviders = providers.Select(EffectBindingHelper.SerializeProvider).ToArray(),
+            EffectsInstances = EffectBindingHelper.RebuildAllEffects(providers.ToDictionary(p => p.Id), null)!.Values.ToArray(),
+        };
+        using var frame = ValueProviderFrameContext.PushFrame(2, 0.2f);
+        using var endpoints = new ClipValueFrameContext([clip], 2,
+            c => VectorPictureEffectProcessing.Process(c, new VectorPicture(), 2, width: 2, height: 1),
+            DynamicEffectGraph.CopyPicture);
+        if (alreadyPublished) VectorPictureEffectProcessing.Process(clip, new VectorPicture(), 2, width: 2, height: 1);
+        Assert.AreEqual(0, ClipValuePassThrough.Validate(clip, [clip]).Count);
+        using var raster = Picture8bpp.GenerateSolidColor(2, 1, 1, 2, 3, 1);
+        using var result = clip.EffectsInstances!.OfType<DynamicEffectGraph>().Single()
+            .Evaluate(raster, clip, 2, 2, 1, 2, 1, new(0, 0, 2, 1, false)).Picture;
+        Assert.AreEqual(2f, actual);
+        Assert.AreEqual(1, calls);
+    }
+
+    [TestMethod]
+    [DataRow(EffectPipeline.Picture, EffectPipeline.Picture, EffectArgumentFieldType.Numeric)]
+    [DataRow(EffectPipeline.NativeContent, EffectPipeline.NativeContent, EffectArgumentFieldType.Numeric)]
+    [DataRow(EffectPipeline.Picture, EffectPipeline.NativeContent, EffectArgumentFieldType.Numeric)]
+    [DataRow(EffectPipeline.NativeContent, EffectPipeline.Picture, EffectArgumentFieldType.VectorPicture)]
+    public void SameClipEndpointsRejectInvalidStageDirectionsAndContent(EffectPipeline sourcePipeline,
+        EffectPipeline targetPipeline, EffectArgumentFieldType type)
+    {
+        var output = new ClipValueExportProvider { ValueType = type };
+        output.SetPipeline(sourcePipeline);
+        output.SetMainInputSource(type.IsContent() ? IEffectProvider.InputAnchorGUID.ToString() : ValueProviderFrameContext.BuiltInFrameProviderId);
+        using var clip = Clip(1, output);
+        var input = Input(clip, output);
+        input.SetPipeline(targetPipeline);
+        clip.EffectProvidersInstances = [output, input];
+        using var endpoints = new ClipValueFrameContext([clip], 2, _ => Assert.Fail(), DynamicEffectGraph.CopyPicture);
+        Assert.ThrowsExactly<ClipValueBindingException>(() => endpoints.Read(clip, 2, input));
+        Assert.IsTrue(ClipValuePassThrough.Validate(clip, [clip]).Any(d => d.Code == "InvalidClipEndpoint"));
     }
 
     [TestMethod]

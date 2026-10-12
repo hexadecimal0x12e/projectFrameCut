@@ -214,7 +214,7 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
             try
             {
                 response = CallbackService is null
-                    ? new() { RequestId = request.RequestId, Error = new() { Code = RenderErrorCode.Unsupported, Message = "This client does not provide RPC video sources." } }
+                    ? new() { RequestId = request.RequestId, Error = new() { Code = RenderErrorCode.Unsupported, Message = "This client does not provide RPC sources." } }
                     : await CallbackService.DispatchAsync(request, _lifetime.Token).ConfigureAwait(false);
             }
             catch (Exception ex)

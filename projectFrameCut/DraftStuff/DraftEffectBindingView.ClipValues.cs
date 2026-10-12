@@ -18,6 +18,7 @@ public partial class DraftEffectBindingView
         EffectArgumentFieldType.Long, EffectArgumentFieldType.UnsignedLong, EffectArgumentFieldType.Boolean,
         EffectArgumentFieldType.String, EffectArgumentFieldType.Color, EffectArgumentFieldType.Size,
         EffectArgumentFieldType.Position, EffectArgumentFieldType.SizeAndPosition, EffectArgumentFieldType.IPicture,
+        EffectArgumentFieldType.VectorPicture,
     ];
 
     private bool Precedes(ClipElementUI source, ClipElementUI target)
@@ -41,19 +42,16 @@ public partial class DraftEffectBindingView
         double scroll = ClipValuesScrollView.ScrollY;
         ClipValuesPanel.Children.Clear();
         if (_clip is null || _page is null) return;
-        if (_pipeline != EffectPipeline.Picture)
-        {
-            ClipValuesPanel.Children.Add(new Label { Text = Localized.Effect_IncompatiblePipeline });
-            return;
-        }
+        var endpointTypes = EndpointTypes.Where(t => !t.IsContent() || t == _pipeline.GetContentType()).ToArray();
+        if (!endpointTypes.Contains(_endpointType)) _endpointType = EffectArgumentFieldType.Numeric;
         ClipValuesPanel.Children.Add(new Label { Text = Localized.Effect_EndpointOutputs, FontAttributes = FontAttributes.Bold });
         var name = new Entry { Placeholder = Localized.Effect_EndpointName, Text = _endpointName };
         name.TextChanged += (_, e) => _endpointName = e.NewTextValue ?? "";
         ClipValuesPanel.Children.Add(name);
-        var type = new Picker { Title = Localized.Effect_EndpointType, ItemsSource = EndpointTypes.Select(t => t.ToString()).ToArray(), SelectedIndex = Array.IndexOf(EndpointTypes, _endpointType) };
+        var type = new Picker { Title = Localized.Effect_EndpointType, ItemsSource = endpointTypes.Select(PortTypeHelper.HumanizeTypeName).ToArray(), SelectedIndex = Array.IndexOf(endpointTypes, _endpointType) };
         type.SelectedIndexChanged += (_, _) =>
         {
-            if (type.SelectedIndex >= 0) _endpointType = EndpointTypes[type.SelectedIndex];
+            if (type.SelectedIndex >= 0) _endpointType = endpointTypes[type.SelectedIndex];
         };
         ClipValuesPanel.Children.Add(type);
         var create = new Button { Text = Localized.Effect_CreateEndpoint };
@@ -63,10 +61,10 @@ public partial class DraftEffectBindingView
             ValueType = _endpointType,
         });
         ClipValuesPanel.Children.Add(create);
-        foreach (var endpoint in _clip.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(p => p.IsExport) ?? [])
+        foreach (var endpoint in _clip.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(p => p.IsExport && p.GetPipeline() == _pipeline) ?? [])
         {
             var row = new HorizontalStackLayout { Spacing = 4 };
-            var select = new Button { Text = $"{endpoint.Name} ({endpoint.ValueType})", HorizontalOptions = LayoutOptions.Fill };
+            var select = new Button { Text = $"{endpoint.Name} ({PortTypeHelper.HumanizeTypeName(endpoint.ValueType)})", HorizontalOptions = LayoutOptions.Fill };
             select.Clicked += (_, _) =>
             {
                 if (_nodes.TryGetValue(endpoint.Id, out var node))
@@ -88,11 +86,11 @@ public partial class DraftEffectBindingView
         bool any = false;
         foreach (var source in _page.Clips.Values.Where(c => c.EffectProviders?.Values.Any(p => p is IClipValueEndpointProvider { IsExport: true }) == true))
         {
-            if (!Precedes(source, _clip)) continue;
-            foreach (var output in source.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(p => p.IsExport) ?? [])
+            if (source.Id != _clip.Id && !Precedes(source, _clip)) continue;
+            foreach (var output in source.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(p => p.IsExport && p.CanPassTo(_pipeline, source.Id == _clip.Id)) ?? [])
             {
                 any = true;
-                ClipValuesPanel.Children.Add(new Label { Text = $"{source.DisplayName}: {output.Name} ({output.ValueType})" });
+                ClipValuesPanel.Children.Add(new Label { Text = $"{source.DisplayName}: {output.Name} ({PortTypeHelper.HumanizeTypeName(output.ValueType)})" });
                 var add = new Button { Text = Localized.Effect_AddEndpointInput, IsEnabled = output.Enabled };
                 add.Clicked += (_, _) => AddEndpointNode(new ClipValueImportProvider
                 {
@@ -108,7 +106,8 @@ public partial class DraftEffectBindingView
 
     private void AddEndpointNode(ClipValueEndpointProvider provider)
     {
-        if (_clip is null || _pipeline != EffectPipeline.Picture) return;
+        if (_clip is null) return;
+        provider.SetPipeline(_pipeline);
         _clip.EffectProviders ??= new();
         _clip.EffectProviders[provider.Id] = provider;
         var node = new NodeViewModel { Id = provider.Id, Kind = NodeKind.Effect, Provider = provider, DisplayName = provider.Name };
@@ -145,11 +144,12 @@ public partial class DraftEffectBindingView
         PropertiesPanel.Children.Add(enabled);
         if (endpoint.IsExport)
         {
-            var type = new Picker { Title = Localized.Effect_EndpointType, ItemsSource = EndpointTypes.Select(t => t.ToString()).ToArray(), SelectedIndex = Array.IndexOf(EndpointTypes, endpoint.ValueType) };
+            var endpointTypes = EndpointTypes.Where(t => !t.IsContent() || t == endpoint.GetPipeline().GetContentType()).ToArray();
+            var type = new Picker { Title = Localized.Effect_EndpointType, ItemsSource = endpointTypes.Select(PortTypeHelper.HumanizeTypeName).ToArray(), SelectedIndex = Array.IndexOf(endpointTypes, endpoint.ValueType) };
             type.SelectedIndexChanged += (_, _) =>
             {
                 if (type.SelectedIndex < 0) return;
-                endpoint.ValueType = EndpointTypes[type.SelectedIndex];
+                endpoint.ValueType = endpointTypes[type.SelectedIndex];
                 UpdateEndpointNode(node);
             };
             PropertiesPanel.Children.Add(type);
@@ -202,8 +202,8 @@ public partial class DraftEffectBindingView
         if (output is not { IsExport: true }) status = Localized.Effect_EndpointMissing;
         else if (!output.Enabled) status = Localized.Effect_EndpointDisabled;
         else if (output.GetMainInputSource() == IEffectProvider.NoConnectionGUID.ToString()) status = Localized.Effect_EndpointDisconnected;
-        else if (output.ValueType != input.ValueType) status = Localized.Effect_EndpointTypeChanged;
-        else if (_clip is not null && !Precedes(source, _clip)) status = Localized.Effect_EndpointOrderInvalid;
+        else if (output.ValueType != input.ValueType || !output.CanPassTo(input.GetPipeline(), source.Id == _clip?.Id)) status = Localized.Effect_EndpointTypeChanged;
+        else if (_clip is not null && source.Id != _clip.Id && !Precedes(source, _clip)) status = Localized.Effect_EndpointOrderInvalid;
         else return null;
         return $"「{(output is { IsExport: true } ? $"{source.DisplayName} / {output.Name}" : source.DisplayName)}」：{status}";
     }

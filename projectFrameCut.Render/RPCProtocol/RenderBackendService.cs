@@ -111,6 +111,9 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         Operations = Enum.GetValues<RenderOperation>()
             .Where(operation => operation != RenderOperation.Unknown && (int)operation < 100
                 && operation is not (RenderOperation.ListExternalVideoSourceClients or RenderOperation.ManageExternalVideoSourceClient)
+                && operation is not (RenderOperation.RegisterExternalAudioSources or RenderOperation.UnregisterExternalAudioSources
+                    or RenderOperation.ListExternalAudioSources or RenderOperation.ExternalAudioSourceCreate
+                    or RenderOperation.ExternalAudioSourceInitialize or RenderOperation.ExternalAudioSourceReadSamples or RenderOperation.ExternalAudioSourceRelease)
                 && ((int)operation < 18 || (int)operation > 40)
                 && (_previewAudioSinkFactory is not null || operation is not (RenderOperation.ControlPreviewAudio or RenderOperation.GetPreviewAudioClock)))
             .Select(static operation => operation.ToString())
@@ -258,6 +261,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             Assets = assets.OrderBy(item => item.Key, StringComparer.Ordinal).ToArray(),
             ProjectSources = externalSources.CacheToken,
             RpcSources = ExternalVideoSourceRegistry.CacheToken,
+            RpcAudioSources = ExternalAudioSourceRegistry.CacheToken,
             Effects = EffectHelper.ConfigurationRevision,
         }, _jsonOptions));
         var reusable = previous is not null && previous.SourceConfiguration == sourceConfiguration && previous.ProjectRoot == root ? previous : null;
@@ -453,6 +457,12 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 {
                     AssetId = request.AssetId, MediaType = "video/x-project-external-source", ContentHash = ComputeTextHash(path + session.ExternalSources.CacheToken),
                     Width = descriptor.Width, Height = descriptor.Height, FrameRate = descriptor.Fps, FrameCount = descriptor.TotalFrames,
+                };
+            if (ProjectExternalAudioSource.TryGetDescriptor(path, out _) || RemoteRpcAudioSource.TryGetDescriptor(path, out _))
+                return new AssetMetadata
+                {
+                    AssetId = request.AssetId, MediaType = "audio/x-external-source",
+                    ContentHash = ComputeTextHash(path + session.ExternalSources.CacheToken + ExternalAudioSourceRegistry.CacheToken),
                 };
             var info = new FileInfo(path);
             var result = new AssetMetadata
@@ -1295,7 +1305,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private string ResolveAssetPath(BackendSession session, AssetMetadataRequest request)
     {
         if (!string.IsNullOrWhiteSpace(request.AssetId) && session.Assets.TryGetValue(request.AssetId, out var assetPath))
-            return ProjectExternalVideoSource.IsPath(assetPath) ? assetPath : Path.GetFullPath(assetPath);
+            return RemoteRpcVideoSource.IsExternalPath(assetPath) || RemoteRpcAudioSource.IsExternalPath(assetPath) ? assetPath : Path.GetFullPath(assetPath);
         if (!string.IsNullOrWhiteSpace(request.ProjectRelativePath)) return _artifacts.ResolveProjectPath(session.ProjectRoot, request.ProjectRelativePath);
         throw new ArgumentException("Either AssetId or ProjectRelativePath is required.");
     }
@@ -1594,7 +1604,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         public IReadOnlyDictionary<string, string> TrackSignatures { get; } = trackSignatures;
         public ProjectExternalSourceHost ExternalSources { get; set; } = null!;
         public string CacheNamespace => string.IsNullOrEmpty(ExternalSources.CacheToken) && string.IsNullOrEmpty(ExternalVideoSourceRegistry.CacheToken)
-            ? cacheNamespace : ComputeTextHash(cacheNamespace + ExternalSources.CacheToken + ExternalVideoSourceRegistry.CacheToken);
+            && string.IsNullOrEmpty(ExternalAudioSourceRegistry.CacheToken)
+            ? cacheNamespace : ComputeTextHash(cacheNamespace + ExternalSources.CacheToken + ExternalVideoSourceRegistry.CacheToken + ExternalAudioSourceRegistry.CacheToken);
         public SemaphoreSlim RenderGate { get; } = new(1, 1);
         private readonly object _lifetimeGate = new();
         private readonly CancellationTokenSource _lifetime = new();

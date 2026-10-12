@@ -57,15 +57,16 @@ public static class ProjectExternalSourceWorker
             throw new UnauthorizedAccessException("Invalid external source authorization response.");
         var validated = await ProjectExternalSourceDatabase.ValidateAsync(options.PluginRoot, hash, lifetime.Token).ConfigureAwait(false);
         var loadContext = new SourceLoadContext(ProjectExternalSourceDatabase.ResolvePath(options.PluginRoot, validated.Manifest.Assembly), options.PluginRoot);
-        IExternalVideoSourceProvider? provider = null;
+        object? provider = null;
         Task? monitor = null;
         try
         {
             Environment.CurrentDirectory = options.PluginRoot;
             var type = loadContext.LoadFromAssemblyPath(ProjectExternalSourceDatabase.ResolvePath(options.PluginRoot, validated.Manifest.Assembly)).GetType(validated.Manifest.EntryPoint, true)!;
-            if (!type.IsVisible || type.IsAbstract || !typeof(IExternalVideoSourceProvider).IsAssignableFrom(type) || type.GetConstructor(Type.EmptyTypes) is null)
-                throw new InvalidDataException($"Entry point '{type.FullName}' must publicly implement IExternalVideoSourceProvider with a public parameterless constructor.");
-            provider = (IExternalVideoSourceProvider)Activator.CreateInstance(type)!;
+            if (!type.IsVisible || type.IsAbstract || type.GetConstructor(Type.EmptyTypes) is null
+                || !typeof(IExternalVideoSourceProvider).IsAssignableFrom(type) && !typeof(IExternalAudioSourceProvider).IsAssignableFrom(type))
+                throw new InvalidDataException($"Entry point '{type.FullName}' must publicly implement IExternalVideoSourceProvider or IExternalAudioSourceProvider with a public parameterless constructor.");
+            provider = Activator.CreateInstance(type)!;
             await using var payloads = new SessionPayloadExchange(options.SessionRoot);
             await using var service = new ProjectExternalSourceWorkerService(provider, options.AuthenticationToken, options.ParentProcessId, payloads, lifetime);
             monitor = MonitorParentAsync();

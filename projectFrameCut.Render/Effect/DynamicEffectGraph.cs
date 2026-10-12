@@ -1,4 +1,5 @@
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Context;
@@ -15,6 +16,8 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
     private readonly string? finalSource;
     private readonly InlineValueGraph? inlineValues;
     private readonly EffectFieldTypeResolution types;
+    private readonly EffectPipeline pipeline;
+    private readonly HashSet<Guid> contentSources;
     private readonly object sync = new();
     private bool initialized;
     private bool disposed;
@@ -24,14 +27,18 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
         : this(providers, effects, null) { }
 
     internal DynamicEffectGraph(IReadOnlyDictionary<Guid, IEffectProvider> providers, IReadOnlyDictionary<Guid, IEffect[]> effects,
-        InlineValueGraph? inlineValues, EffectFieldTypeResolution? resolvedTypes = null)
+        InlineValueGraph? inlineValues, EffectFieldTypeResolution? resolvedTypes = null, EffectPipeline pipeline = EffectPipeline.Picture)
     {
+        this.pipeline = pipeline;
         this.inlineValues = inlineValues;
         types = resolvedTypes ?? inlineValues?.Types ?? new(providers);
         foreach (var provider in providers.Values) provider.ValidateOutputFields();
-        nodes = providers.Values.Where(DynamicEffectBindings.IsGraphProvider).ToDictionary(p => p.Id,
+        nodes = providers.Values.Where(p => p.GetPipeline() == pipeline && DynamicEffectBindings.IsGraphProvider(p)).ToDictionary(p => p.Id,
             p => new Node(p, DynamicEffectBindings.InputFields(p), new(p.AnchorsBindingState), effects.GetValueOrDefault(p.Id) ?? [], p.Enabled));
-        finalSource = providers.Values.FirstOrDefault(p => DynamicEffectBindings.IsGraphProvider(p) && p.IsFinalOutputSource())?.GetFinalOutputSourceId();
+        finalSource = providers.Values.FirstOrDefault(p => p.GetPipeline() == pipeline && DynamicEffectBindings.IsGraphProvider(p) && p.IsFinalOutputSource())?.GetFinalOutputSourceId();
+        contentSources = providers.Values.Where(p => p.GetPipeline() == EffectPipeline.NativeContent && !DynamicEffectBindings.IsGraphProvider(p))
+            .Select(p => p.Id).ToHashSet();
+        inlineValues?.AddOwner();
     }
 
     public string TypeName => "__DynamicEffectGraph__";
@@ -74,22 +81,34 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
     private sealed record FrameKey(DynamicEffectGraph Graph, Guid Clip, uint Frame, int Width, int Height,
         int RelativeWidth, int RelativeHeight, int SourceWidth, int SourceHeight, Type SourceType,
         ClipPositionTuple Position, bool PreserveAspect, bool ProcessFromCanvas, bool TransformInput);
-    private sealed record CachedFrame(FrameResult Frame, IReadOnlyDictionary<Guid, object> Exports);
+    internal sealed record ContentFrameResult(object Content, ClipPositionTuple Position, bool PreserveAspect);
+    private sealed record CachedFrame(ContentFrameResult Frame, IReadOnlyDictionary<Guid, object> Exports);
 
     public FrameResult Evaluate(IPicture source, IClip? clip, uint frame, int width, int height, int relativeWidth,
         int relativeHeight, ClipPositionTuple initialPosition, bool preserveAspect = true, bool processFromCanvas = false,
         CancellationToken cancellationToken = default, Action<IEffect, object?>? afterNode = null)
+    {
+        var result = EvaluateContent(source, clip, frame, width, height, relativeWidth, relativeHeight,
+            initialPosition, preserveAspect, processFromCanvas, cancellationToken, afterNode);
+        return new((IPicture)result.Content, result.Position, result.PreserveAspect);
+    }
+
+    internal ContentFrameResult EvaluateContent(object source, IClip? clip, uint frame, int width, int height, int relativeWidth,
+        int relativeHeight, ClipPositionTuple initialPosition, bool preserveAspect = true, bool processFromCanvas = false,
+        CancellationToken cancellationToken = default, Action<IEffect, object?>? afterNode = null, float? clipProgress = null,
+        float? vectorProgress = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var endpoints = clip is not null && ClipValueFrameContext.Current?.FrameIndex == frame && clip.ContainsFrame(frame)
             && nodes.Values.Any(n => n.Provider is IClipValueEndpointProvider)
             ? ClipValueFrameContext.Current : null;
         var key = endpoints is null ? null : new FrameKey(this, clip!.Id, frame, width, height, relativeWidth,
-            relativeHeight, source.Width, source.Height, source.GetType(), initialPosition, preserveAspect, processFromCanvas, endpoints.IsTransformInput);
+            relativeHeight, (source as IPicture)?.Width ?? width, (source as IPicture)?.Height ?? height,
+            source.GetType(), initialPosition, preserveAspect, processFromCanvas, endpoints.IsTransformInput);
         if (key is not null && afterNode is null && endpoints!.TryGetComputed<CachedFrame>(key, out var cachedFrame))
         {
             foreach (var (id, value) in cachedFrame!.Exports) endpoints.Publish(clip!, frame, id, value);
-            return cachedFrame.Frame with { Picture = CopyPicture(cachedFrame.Frame.Picture) };
+            return cachedFrame.Frame with { Content = CopyContent(cachedFrame.Frame.Content) };
         }
         lock (sync)
         {
@@ -99,12 +118,12 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
         var results = new Dictionary<Guid, Result>();
         var visiting = new HashSet<Guid>();
         var pictures = new HashSet<IPicture>(ReferenceEqualityComparer.Instance);
-        IPicture? output = null;
+        object? output = null;
         bool returned = false;
         var previousBuffer = IRenderContext.CurrentFrameBuffer;
-        float progress = clip is not null && clip.GetEffectiveDuration() > 0
+        float progress = clipProgress ?? (clip is not null && clip.GetEffectiveDuration() > 0
             ? Math.Clamp((float)((long)frame - clip.StartFrame) / clip.GetEffectiveDuration(), 0, 1)
-            : Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInProgressProviderId) ?? 0f);
+            : Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInProgressProviderId) ?? 0f));
         using var scope = ValueProviderFrameContext.PushFrame(frame, progress, reuseComputed: true);
 
         IPicture Track(IPicture p)
@@ -112,15 +131,17 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
             if (!ReferenceEquals(p, source)) pictures.Add(p);
             return p;
         }
-        object? Copy(object? value) => value is IPicture p ? Track(CopyPicture(p)) : value;
+        object? Copy(object? value) => value is IPicture p ? Track(CopyPicture(p))
+            : value is VectorPicture v ? VectorPictureEffectProcessing.Copy(v) : value;
         Result Resolve(string? id)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (id == IEffectProvider.InputAnchorGUID.ToString()) return new(source, initialPosition, preserveAspect);
             if (id is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId)
                 return new(ValueProviderFrameContext.Get(id), initialPosition, preserveAspect);
-            if (!EffectProviderOutputExtensions.TryParseOutputSourceId(id, out var guid, out var outputId)
-                || !nodes.TryGetValue(guid, out var node)) return new(null, initialPosition, preserveAspect);
+            if (!EffectProviderOutputExtensions.TryParseOutputSourceId(id, out var guid, out var outputId)) return new(null, initialPosition, preserveAspect);
+            if (!nodes.TryGetValue(guid, out var node)) return new(pipeline == EffectPipeline.NativeContent && contentSources.Contains(guid)
+                ? source : null, initialPosition, preserveAspect);
             if (!types.TryGetOutputField(node.Provider, outputId, out var field))
                 throw new InvalidOperationException($"Provider {guid} requires a valid output port in '{id}'.");
             if (types.GetOutputType(node.Provider, field.Id).HasFlag(EffectArgumentFieldType.Any))
@@ -139,7 +160,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
                 EffectArgumentFieldDescriptor => EffectFieldTypes.DefaultValue(field),
                 _ => field.GetGetter()(),
             };
-            return field.FieldType.IsPicture() && value is not IPicture ? null : value;
+            return field.FieldType.IsContent() && !EffectFieldTypes.Accepts(field.FieldType, value) ? null : value;
         }
         Result EvaluateNode(Guid id)
         {
@@ -163,6 +184,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
                 }
                 float? Progress(IEffect effect)
                 {
+                    if (effect is IVectorPictureEffect) return vectorProgress ?? progress;
                     if (effect is not IContinuousEffect continuous || !continuous.IsScoped && clip is null) return progress;
                     long start = continuous.IsScoped ? continuous.StartPoint : clip?.StartFrame ?? 0;
                     long end = continuous.IsScoped ? continuous.EndPoint : start + (clip?.GetEffectiveDuration() ?? 1);
@@ -203,7 +225,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
                 else
                 {
                     if (main is not null) value = EffectFieldTypes.ConvertInput(main.FieldType, value);
-                    if (main is not null && value is null && main.FieldType.IsPicture())
+                    if (main is not null && value is null && main.FieldType.IsContent())
                         throw new InvalidOperationException($"Invalid primary input on provider {id}.");
                     if (main is not null) types.ValidateValue(node.Provider, EffectProviderAnchorExtensions.InputKey, true, main, value, frame);
                     string? selectedKey = node.Provider is IfConditionNodeEffectProvider
@@ -311,12 +333,14 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
                 }
             var result = finalSource is not null ? Resolve(finalSource) : new Result(source, initialPosition, preserveAspect);
             cancellationToken.ThrowIfCancellationRequested();
-            output = result.Value as IPicture ?? throw new InvalidOperationException($"Dynamic effect output on clip {clip?.Id} is not a picture.");
+            if (!EffectFieldTypes.Accepts(pipeline.GetContentType(), result.Value) || result.Value is null)
+                throw new InvalidOperationException($"Dynamic {pipeline} output on clip {clip?.Id} has invalid content.");
+            output = result.Value;
             if (endpoints is not null)
             {
                 var snapshots = exported.ToDictionary(p => p.Key, p => endpoints.Snapshot(p.Value));
                 foreach (var (id, value) in snapshots) endpoints.Publish(clip!, frame, id, value);
-                endpoints.SetComputed(key!, new CachedFrame(new FrameResult((IPicture)endpoints.Snapshot(output), result.Position, result.PreserveAspect), snapshots));
+                endpoints.SetComputed(key!, new CachedFrame(new ContentFrameResult(endpoints.Snapshot(output), result.Position, result.PreserveAspect), snapshots));
             }
             returned = true;
             return new(output, result.Position, result.PreserveAspect);
@@ -356,6 +380,9 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
             throw;
         }
     }
+
+    private static object CopyContent(object value) => value is IPicture picture ? CopyPicture(picture)
+        : value is VectorPicture vector ? VectorPictureEffectProcessing.Copy(vector) : value;
 
     private static ClipPositionTuple ApplyPosition(ClipPositionTuple current, ClipPositionTuple value) => value.IsDelta
         ? new(current.TargetX + value.TargetX, current.TargetY + value.TargetY, current.TargetWidth + value.TargetWidth,

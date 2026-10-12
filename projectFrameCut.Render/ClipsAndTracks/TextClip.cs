@@ -95,7 +95,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         /// </summary>
         public VectorPicture GetVectorPictureRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight)
         {
-            using var context = ValueProviderFrameContext.PushFrame(frameIndex,
+            using var context = ValueProviderFrameContext.PushFrame(VectorPictureEffectProcessing.GetTargetFrame(this, frameIndex),
                 Duration <= 1 ? 0 : Math.Clamp(frameIndex / (float)(Duration - 1), 0, 1));
             return LayoutEntries(ResolveTextEntriesForRender(frameIndex), frameIndex, targetWidth, targetHeight);
         }
@@ -103,7 +103,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         private VectorPicture LayoutEntries(IReadOnlyList<TextEntry> entriesToRender, uint frameIndex, int targetWidth, int targetHeight)
         {
             if (entriesToRender.Count == 0)
-                return VectorPictureEffectProcessing.Process(this, new VectorPicture(), frameIndex);
+                return VectorPictureEffectProcessing.Process(this, new VectorPicture(), frameIndex, width: targetWidth, height: targetHeight);
 
             // The layout canvas is the clip's own bounding box. This way the
             // pixel values stored in each TextEntry (FontSize, X, Y, WrappingWidth, ...)
@@ -118,7 +118,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             var ctx = TextLayoutContext.FromCanvas(canvasW, canvasH);
             return VectorPictureEffectProcessing.Process(this,
-                TextLayoutPipeline.LayoutForRender(entriesToRender, ctx, targetWidth, targetHeight), frameIndex);
+                TextLayoutPipeline.LayoutForRender(entriesToRender, ctx, targetWidth, targetHeight), frameIndex, width: targetWidth, height: targetHeight);
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
@@ -139,7 +139,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 }
             }
 
-            using var context = ValueProviderFrameContext.PushFrame(frameIndex,
+            using var context = ValueProviderFrameContext.PushFrame(ClipValueFrameContext.Current?.FrameIndex ?? (ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) is float current ? (uint)current : StartFrame + frameIndex),
                 Duration <= 1 ? 0 : Math.Clamp(frameIndex / (float)(Duration - 1), 0, 1));
             var rawEntries = ResolveTextEntriesForRender(frameIndex);
             long cacheKey = BuildFrameCacheKey(targetWidth, targetHeight, targetPPB, rawEntries);

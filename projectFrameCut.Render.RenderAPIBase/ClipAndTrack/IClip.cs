@@ -210,7 +210,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         [DebuggerNonUserCode()]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, IPicture.PicturePixelMode targetPPB)
-            => VectorPictureEffectProcessing.ReadFrame(this, GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight, targetPPB);
+            => VectorPictureEffectProcessing.ReadFrameAtTarget(this, targetFrame, targetWidth, targetHeight, targetPPB);
 
         /// <summary>
         /// Gets the effective timeline duration for this clip after applying speed ratio/profile.

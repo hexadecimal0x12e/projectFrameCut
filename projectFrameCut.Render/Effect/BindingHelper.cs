@@ -53,8 +53,8 @@ namespace projectFrameCut.Render.Effect
                 AnchorsBindingState = new(provider.AnchorsBindingState ?? []),
                 StaticFields = provider is ClipArgumentProvider clipArguments ? new(clipArguments.StaticValues) : provider.Fields
                     .Where(item => item.Value is StaticEffectArgumentField or DynamicEffectParamField)
-                    .Where(item => !item.Value.FieldType.IsPicture())
-                    .Where(item => GetFieldValue(item.Value) is not projectFrameCut.Drawing.Base.IPicture)
+                    .Where(item => !item.Value.FieldType.IsContent())
+                    .Where(item => GetFieldValue(item.Value) is not projectFrameCut.Drawing.Base.IPicture and not projectFrameCut.Drawing.Vector.VectorPicture)
                     .ToDictionary(item => item.Key, item => (item.Value.FieldType.HasFlag(EffectArgumentFieldType.Any)
                         ? GetFieldValue(item.Value) : EffectParamConvert.Normalize(GetFieldValue(item.Value))) ?? new object()),
                 MetaData = provider.MetaData is { Count: > 0 } ? new(provider.MetaData) : null,
@@ -394,7 +394,8 @@ namespace projectFrameCut.Render.Effect
 
                         var effects = inlineValues?.FindEffects(provider.Id) ?? BuildProviderEffects(provider);
 
-                        if (effects.Any(e => e.TypeOfEffect.GetPipeline() != provider.TypeOfEffect.GetPipeline()))
+                        if (!provider.Target.HasFlag(EffectTarget.ValueProvider)
+                            && effects.Any(e => e.TypeOfEffect.GetPipeline() != provider.GetPipeline()))
                         {
                             foreach (var effect in effects.OfType<IDisposable>()) effect.Dispose();
                             throw new InvalidOperationException($"Provider {provider.Id} built effects for another content pipeline.");
@@ -469,11 +470,16 @@ namespace projectFrameCut.Render.Effect
                 if (dynamicGraph && effectProviders is not null)
                 {
                     foreach (var id in graphEffects.Keys) RemoveProviderEffects(result, id);
-                    var graph = new DynamicEffectGraph(effectProviders, graphEffects, inlineValues, types)
+                    foreach (var pipeline in graphEffects.Keys.Select(id => effectProviders[id].GetPipeline()).Distinct())
                     {
-                        Index = graphEffects.Values.SelectMany(e => e).Select(e => e.Index).DefaultIfEmpty(globalIndex).Min(),
-                    };
-                    result[graph.TypeName] = graph;
+                        var graph = new DynamicEffectGraph(effectProviders, graphEffects, inlineValues, types, pipeline)
+                        {
+                            Index = graphEffects.Where(p => effectProviders[p.Key].GetPipeline() == pipeline)
+                                .SelectMany(p => p.Value).Select(e => e.Index).DefaultIfEmpty(globalIndex).Min(),
+                        };
+                        IEffect effect = pipeline == EffectPipeline.NativeContent ? new NativeDynamicEffectGraph(graph) : graph;
+                        result[effect.TypeName] = effect;
+                    }
                 }
                 return result;
             }
@@ -788,7 +794,7 @@ namespace projectFrameCut.Render.Effect
                 var input = inputs[provider.Id];
                 var seen = new HashSet<Guid> { provider.Id };
                 while (Guid.TryParse(input, out var id) && providers.TryGetValue(id, out var source)
-                    && source.TypeOfEffect.GetPipeline() != provider.TypeOfEffect.GetPipeline())
+                    && source.GetPipeline() != provider.GetPipeline())
                 {
                     if (!seen.Add(id)) break;
                     input = inputs[id];
@@ -801,7 +807,7 @@ namespace projectFrameCut.Render.Effect
             }
             if (changed && outputs.Length == 1)
             {
-                foreach (var group in active.GroupBy(p => p.TypeOfEffect.GetPipeline()))
+                foreach (var group in active.GroupBy(p => p.GetPipeline()))
                     group.First().SetFinalOutputSource(true);
                 Logger.Log($"Split legacy effect graph into native and picture pipelines ({providers.Count} providers).");
             }
@@ -819,7 +825,7 @@ namespace projectFrameCut.Render.Effect
                 diagnostics.Add(new(null, "MultipleClipArguments", "A clip can only have one argument provider."));
 
             var finalProviders = providers.Values.Where(p => p.IsFinalOutputSource()).ToList();
-            foreach (var group in finalProviders.GroupBy(p => p.TypeOfEffect.GetPipeline()).Where(g => g.Count() > 1))
+            foreach (var group in finalProviders.GroupBy(p => p.GetPipeline()).Where(g => g.Count() > 1))
                 diagnostics.Add(new(null, "MultipleFinalOutputs", $"Multiple providers are connected to {group.Key} output: {string.Join(", ", group.Select(p => p.Id))}."));
 
             foreach (var provider in providers.Values)
@@ -927,7 +933,9 @@ namespace projectFrameCut.Render.Effect
                     if (!providers.ContainsKey(id) || !active.Add(id)) return;
                     foreach (var source in GetInputDependencyIds(providers[id]).Concat(GetBoundProviderDependencyIds(providers[id]))) Visit(source);
                 }
-                foreach (var p in providers.Values.Where(p => p.IsFinalOutputSource())) Visit(p.Id);
+                foreach (var p in providers.Values.Where(p => p.IsFinalOutputSource()
+                    || p is IClipValueEndpointProvider { IsExport: true, Enabled: true }
+                        && p.GetMainInputSource() != IEffectProvider.NoConnectionGUID.ToString())) Visit(p.Id);
                 return active;
             }
 
@@ -954,9 +962,9 @@ namespace projectFrameCut.Render.Effect
             EffectTarget effectTarget)
         {
             if (effectProviders is null) throw new ArgumentNullException(nameof(effectProviders));
-            var pipeline = newProvider.TypeOfEffect.GetPipeline();
+            var pipeline = newProvider.GetPipeline();
             var lastProvider = effectProviders.Values.FirstOrDefault(p => p.Id != newProvider.Id && p.IsFinalOutputSource()
-                && p.TypeOfEffect.GetPipeline() == pipeline);
+                && p.GetPipeline() == pipeline);
             var proposedSource = lastProvider?.GetFinalOutputSourceId() ?? IEffectProvider.InputAnchorGUID.ToString();
             var all = effectProviders.ToDictionary();
             all[newProvider.Id] = newProvider;
@@ -965,8 +973,9 @@ namespace projectFrameCut.Render.Effect
                 [newProvider.Id] = new Dictionary<string, string>(newProvider.AnchorsBindingState) { [EffectProviderAnchorExtensions.InputKey] = proposedSource },
             });
             bool pictureInput = newProvider.InFields.ContainsKey(EffectProviderAnchorExtensions.InputKey)
-                && EffectFieldTypes.AreCompatible(EffectArgumentFieldType.IPicture, types.GetInputType(newProvider, EffectProviderAnchorExtensions.InputKey));
-            if (!pictureInput || !newProvider.TryGetOutputField(null, out _) || !types.GetOutputType(newProvider).IsPicture())
+                && EffectFieldTypes.AreCompatible(pipeline.GetContentType(), types.GetInputType(newProvider, EffectProviderAnchorExtensions.InputKey));
+            if (!pictureInput || !newProvider.TryGetOutputField(null, out _)
+                || !EffectFieldTypes.AreCompatible(types.GetOutputType(newProvider), pipeline.GetContentType()))
             {
                 if (pictureInput)
                     newProvider.SetMainInputSource(effectProviders.Values.FirstOrDefault(p => p.Id != newProvider.Id
@@ -983,7 +992,7 @@ namespace projectFrameCut.Render.Effect
             {
                 // Specialized native effects must precede the evaluated VectorPicture effects.
                 var roots = effectProviders.Values.Where(p => p.Id != newProvider.Id
-                    && p.TypeOfEffect.GetPipeline() == pipeline
+                    && p.GetPipeline() == pipeline
                     && p.GetMainInputSource() == IEffectProvider.InputAnchorGUID.ToString()).ToArray();
                 if (roots.Length == 0 || roots.Any(root => !newProvider.CanConnectContent(root)))
                     throw new ArgumentException("Incompatible native content effect.");
@@ -992,7 +1001,7 @@ namespace projectFrameCut.Render.Effect
                 newProvider.SetFinalOutputSource(false);
                 return;
             }
-            foreach (var provider in effectProviders.Values.Where(p => p.TypeOfEffect.GetPipeline() == pipeline)) provider.SetFinalOutputSource(false);
+            foreach (var provider in effectProviders.Values.Where(p => p.GetPipeline() == pipeline)) provider.SetFinalOutputSource(false);
             if (lastProvider != null)
             {
                 newProvider.SetMainInputSource(lastSource!);
@@ -1009,6 +1018,7 @@ namespace projectFrameCut.Render.Effect
             IDictionary<Guid, IEffectProvider> effectProviders,
             IEffectProvider newProvider)
         {
+            var pipeline = newProvider.GetPipeline();
             var all = effectProviders.ToDictionary();
             all[newProvider.Id] = newProvider;
             var types = new EffectFieldTypeResolution(all, new Dictionary<Guid, IReadOnlyDictionary<string, string>>
@@ -1017,17 +1027,18 @@ namespace projectFrameCut.Render.Effect
                 { [EffectProviderAnchorExtensions.InputKey] = IEffectProvider.InputAnchorGUID.ToString() },
             });
             if (!newProvider.InFields.ContainsKey(EffectProviderAnchorExtensions.InputKey)
-                || !EffectFieldTypes.AreCompatible(EffectArgumentFieldType.IPicture, types.GetInputType(newProvider, EffectProviderAnchorExtensions.InputKey))
-                || !newProvider.TryGetOutputField(null, out _) || !types.GetOutputType(newProvider).IsPicture())
+                || !EffectFieldTypes.AreCompatible(pipeline.GetContentType(), types.GetInputType(newProvider, EffectProviderAnchorExtensions.InputKey))
+                || !newProvider.TryGetOutputField(null, out _)
+                || !EffectFieldTypes.AreCompatible(types.GetOutputType(newProvider), pipeline.GetContentType()))
                 return;
 
             var roots = effectProviders.Values
                 .Where(provider => provider.Id != newProvider.Id
-                    && provider.TypeOfEffect.GetPipeline() == newProvider.TypeOfEffect.GetPipeline()
+                    && provider.GetPipeline() == newProvider.GetPipeline()
                     && provider.GetMainInputSource() == IEffectProvider.InputAnchorGUID.ToString())
                 .ToList();
             var hasFinalOutput = effectProviders.Values
-                .Any(provider => provider.Id != newProvider.Id && provider.TypeOfEffect.GetPipeline() == newProvider.TypeOfEffect.GetPipeline() && provider.IsFinalOutputSource());
+                .Any(provider => provider.Id != newProvider.Id && provider.GetPipeline() == newProvider.GetPipeline() && provider.IsFinalOutputSource());
             if (roots.Any(root => !newProvider.CanConnectContent(root, null, types))) throw new ArgumentException("Incompatible content effect.");
             newProvider.MetaData[PipelineVersionKey] = 1;
             newProvider.SetMainInputSource(IEffectProvider.InputAnchorGUID);
@@ -1114,13 +1125,14 @@ namespace projectFrameCut.Render.Effect
             if (providerId.HasValue
                 && (!providers.TryGetValue(providerId.Value, out var selected)
                     || selected.TypeOfEffect == EffectType.Transform
-                    || !selected.TryGetOutputField(outputId, out _) || !types.GetOutputType(selected, outputId).IsPicture()))
+                    || !selected.TryGetOutputField(outputId, out _)
+                    || !EffectFieldTypes.AreCompatible(types.GetOutputType(selected, outputId), selected.GetPipeline().GetContentType())))
             {
                 throw new ArgumentException($"Provider '{providerId}' cannot be used as the final picture output.", nameof(providerId));
             }
 
-            if (providerId.HasValue) pipeline = providers[providerId.Value].TypeOfEffect.GetPipeline();
-            foreach (var provider in providers.Values.Where(p => p.TypeOfEffect.GetPipeline() == pipeline))
+            if (providerId.HasValue) pipeline = providers[providerId.Value].GetPipeline();
+            foreach (var provider in providers.Values.Where(p => p.GetPipeline() == pipeline))
                 provider.SetFinalOutputSource(providerId.HasValue && provider.Id == providerId.Value,
                     providerId.HasValue && provider.Id == providerId.Value ? outputId : null, types);
         }
@@ -1159,6 +1171,10 @@ namespace projectFrameCut.Render.Effect
         /// 因此能反映内联后的真实绑定状态，但无法表达渲染后实际子效果条目的顺序。
         /// </remarks>
         public static string GenerateRenderTimeMermaidDiagram(IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders)
+            => GenerateRenderTimeMermaidDiagram(effectProviders, null);
+
+        public static string GenerateRenderTimeMermaidDiagram(IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders,
+            IReadOnlyList<EffectGroup>? groups)
         {
             if (effectProviders is null || effectProviders.Count == 0)
                 return "graph TD;\n    empty[\"无 EffectProvider 数据\"];";
@@ -1172,7 +1188,7 @@ namespace projectFrameCut.Render.Effect
                 var flags = p.Target.HasFlag(EffectTarget.ValueProvider) ? " (值提供器)" : "";
                 if (!p.Enabled) flags += " (已禁用)";
                 return $"{p.TypeName}: {displayName}{flags}";
-            });
+            }, groups);
             AppendTerminalNodes(sb);
             AppendAnchorEdges(sb, effectProviders, nodeByProvider);
             AppendFieldBindingEdges(sb, effectProviders, nodeByProvider, useRenderTimeFields: true);
@@ -1189,6 +1205,10 @@ namespace projectFrameCut.Render.Effect
         /// 该图表示磁盘/保存模型，不反映渲染时内联后的字段绑定状态。
         /// </remarks>
         public static string GenerateStoredMermaidDiagram(IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders)
+            => GenerateStoredMermaidDiagram(effectProviders, null);
+
+        public static string GenerateStoredMermaidDiagram(IReadOnlyDictionary<Guid, IEffectProvider>? effectProviders,
+            IReadOnlyList<EffectGroup>? groups)
         {
             if (effectProviders is null || effectProviders.Count == 0)
                 return "graph TD;\n    empty[\"无 EffectProvider 数据\"];";
@@ -1196,7 +1216,7 @@ namespace projectFrameCut.Render.Effect
             var sb = new StringBuilder();
             sb.AppendLine("graph TD;");
 
-            var nodeByProvider = AssignNodes(sb, effectProviders.Values, p => p.TypeName);
+            var nodeByProvider = AssignNodes(sb, effectProviders.Values, p => p.TypeName, groups);
             AppendTerminalNodes(sb);
             AppendAnchorEdges(sb, effectProviders, nodeByProvider);
             AppendFieldBindingEdges(sb, effectProviders, nodeByProvider, useRenderTimeFields: false);
@@ -1206,16 +1226,50 @@ namespace projectFrameCut.Render.Effect
         /// <summary>
         /// 为每个 provider 生成节点定义，返回 <see cref="Guid"/> → Mermaid 节点 id 的映射。
         /// </summary>
-        private static Dictionary<Guid, string> AssignNodes(StringBuilder sb, IEnumerable<IEffectProvider> providers, Func<IEffectProvider, string> labelBuilder)
+        private static Dictionary<Guid, string> AssignNodes(StringBuilder sb, IEnumerable<IEffectProvider> providers,
+            Func<IEffectProvider, string> labelBuilder, IReadOnlyList<EffectGroup>? groups)
         {
             var nodeByProvider = new Dictionary<Guid, string>();
+            var labels = new Dictionary<Guid, string>();
             int counter = 0;
             foreach (var p in providers)
             {
                 nodeByProvider[p.Id] = "P" + counter++;
-                sb.AppendLine($"    {nodeByProvider[p.Id]}[\"{Escape(labelBuilder(p))}\"];");
+                labels[p.Id] = labelBuilder(p);
             }
+            AppendMermaidNodes(sb, nodeByProvider, labels, groups);
             return nodeByProvider;
+        }
+
+        /// <summary>按 Effect 组层级输出节点，未分组节点留在图的顶层。</summary>
+        public static void AppendMermaidNodes(StringBuilder sb, IReadOnlyDictionary<Guid, string> nodeIds,
+            IReadOnlyDictionary<Guid, string> labels, IReadOnlyList<EffectGroup>? groups = null)
+        {
+            var written = new HashSet<Guid>();
+            void AppendNode(Guid id, string indent)
+            {
+                if (nodeIds.TryGetValue(id, out var nodeId) && written.Add(id))
+                    sb.AppendLine($"{indent}{nodeId}[\"{EscapeMermaidText(labels[id])}\"];");
+            }
+
+            if (groups is { Count: > 0 })
+            {
+                var groupById = groups.Where(g => EffectGroupHelper.Members(g, groups).Any(nodeIds.ContainsKey))
+                    .ToDictionary(g => g.Id);
+                var childIds = groups.SelectMany(g => g.ChildGroupIds).ToHashSet();
+                void AppendGroup(EffectGroup group, string indent)
+                {
+                    sb.AppendLine($"{indent}subgraph G{group.Id:N}[\"{EscapeMermaidText(string.IsNullOrWhiteSpace(group.Name) ? "Effect 组" : group.Name)}\"]");
+                    foreach (var id in group.ProviderIds) AppendNode(id, indent + "    ");
+                    foreach (var id in group.ChildGroupIds)
+                        if (groupById.TryGetValue(id, out var child)) AppendGroup(child, indent + "    ");
+                    sb.AppendLine($"{indent}end");
+                }
+                foreach (var group in groupById.Values.Where(g => !childIds.Contains(g.Id)))
+                    AppendGroup(group, "    ");
+            }
+
+            foreach (var id in nodeIds.Keys) AppendNode(id, "    ");
         }
 
         /// <summary>
@@ -1240,27 +1294,27 @@ namespace projectFrameCut.Render.Effect
             var anchorLines = new List<string>();
             foreach (var p in effectProviders.Values)
             {
-                var inputNode = p.TypeOfEffect.GetPipeline() == EffectPipeline.NativeContent ? "NATIVE_INPUT" : InputNodeId;
-                var outputNode = p.TypeOfEffect.GetPipeline() == EffectPipeline.NativeContent ? "NATIVE_OUTPUT" : OutputNodeId;
+                var inputNode = p.GetPipeline() == EffectPipeline.NativeContent ? "NATIVE_INPUT" : InputNodeId;
+                var outputNode = p.GetPipeline() == EffectPipeline.NativeContent ? "NATIVE_OUTPUT" : OutputNodeId;
                 var input = p.GetMainInputSource();
                 if (input == IEffectProvider.InputAnchorGUID.ToString())
                 {
-                    anchorLines.Add($"    {inputNode} -->|\"{Escape(EffectProviderAnchorExtensions.InputKey)}\"| {nodeByProvider[p.Id]};");
+                    anchorLines.Add($"    {inputNode} -->|\"{EscapeMermaidText(EffectProviderAnchorExtensions.InputKey)}\"| {nodeByProvider[p.Id]};");
                 }
                 else if (EffectProviderOutputExtensions.TryParseOutputSourceId(input, out var sourceId, out var outputId) && effectProviders.ContainsKey(sourceId))
                 {
-                    anchorLines.Add($"    {nodeByProvider[sourceId]} -->|\"{Escape(outputId ?? EffectProviderAnchorExtensions.InputKey)}\"| {nodeByProvider[p.Id]};");
+                    anchorLines.Add($"    {nodeByProvider[sourceId]} -->|\"{EscapeMermaidText(outputId ?? EffectProviderAnchorExtensions.InputKey)}\"| {nodeByProvider[p.Id]};");
                 }
 
                 if (p.IsFinalOutputSource())
                 {
-                    anchorLines.Add($"    {nodeByProvider[p.Id]} -->|\"{Escape(p.GetFinalOutputFieldId() ?? EffectProviderAnchorExtensions.OutputKey)}\"| {outputNode};");
+                    anchorLines.Add($"    {nodeByProvider[p.Id]} -->|\"{EscapeMermaidText(p.GetFinalOutputFieldId() ?? EffectProviderAnchorExtensions.OutputKey)}\"| {outputNode};");
                 }
             }
 
             foreach (var pipeline in Enum.GetValues<EffectPipeline>())
             {
-                if (effectProviders.Values.Any(p => p.TypeOfEffect.GetPipeline() == pipeline && p.IsFinalOutputSource())) continue;
+                if (effectProviders.Values.Any(p => p.GetPipeline() == pipeline && p.IsFinalOutputSource())) continue;
                 var inputNode = pipeline == EffectPipeline.NativeContent ? "NATIVE_INPUT" : InputNodeId;
                 var outputNode = pipeline == EffectPipeline.NativeContent ? "NATIVE_OUTPUT" : OutputNodeId;
                 anchorLines.Add($"    {inputNode} --> {outputNode};");
@@ -1330,7 +1384,7 @@ namespace projectFrameCut.Render.Effect
 
                 foreach (var (sourceId, fieldId, mode) in sourceIdAndFieldId)
                 {
-                    fieldEdges.Add($"    {nodeByProvider[sourceId]} -->|\"{Escape(fieldId)} ({mode})\"| {nodeByProvider[consumer.Id]};");
+                    fieldEdges.Add($"    {nodeByProvider[sourceId]} -->|\"{EscapeMermaidText(fieldId)} ({mode})\"| {nodeByProvider[consumer.Id]};");
                 }
             }
 
@@ -1339,18 +1393,21 @@ namespace projectFrameCut.Render.Effect
         }
 
         /// <summary>
-        /// 转义 Mermaid 标签文本中需要转义的字符（引号、方括号、大括号）。
+        /// 转义 Mermaid 节点、连线与分组标题。
         /// </summary>
-        private static string Escape(string text)
+        public static string EscapeMermaidText(string text)
         {
             if (text is null) return "";
             return text
-                .Replace("\\", "\\\\")
-                .Replace("\"", "\\\"")
-                .Replace("[", "\\[")
-                .Replace("]", "\\]")
-                .Replace("{", "\\{")
-                .Replace("}", "\\}");
+                .Replace("#", "#35;")
+                .Replace("&", "#38;")
+                .Replace("\"", "#quot;")
+                .Replace("<", "#60;")
+                .Replace(">", "#62;")
+                .Replace("|", "#124;")
+                .Replace("\r\n", "<br/>")
+                .Replace("\r", "<br/>")
+                .Replace("\n", "<br/>");
         }
     }
 }

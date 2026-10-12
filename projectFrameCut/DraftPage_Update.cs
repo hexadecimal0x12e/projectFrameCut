@@ -328,7 +328,10 @@ public partial class DraftPage : ContentPage, IDraftPage
                 FastPreviewEditor.SetCurrentFrame((uint)Math.Max(0, _currentFrame));
                 DynamicPreviewProvider.SetClips(previewer.Clips);
             }
-            await RefreshPreviewFromCurrentProviderAsync();
+            if (e.Reason == ClipUpdateReason.PropertyChanged)
+                await RefreshPreviewAfterPropertyChangeAsync();
+            else
+                await RefreshPreviewFromCurrentProviderAsync();
             if (AlreadyDisappeared) return;
             if (e.Reason == ClipUpdateReason.PropertyChanged && e.SourceId is Guid clipId && ShouldWarmClipPreview(e.DetailInfo))
                 StartClipPreviewWarmup(clipId);

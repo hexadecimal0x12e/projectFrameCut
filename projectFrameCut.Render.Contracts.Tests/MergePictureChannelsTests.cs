@@ -21,7 +21,7 @@ public sealed class MergePictureChannelsTests
         {
             using var output = (IPicture)new MergePictureChannelsEffect().ComputeOutputs(new()
             {
-                Parameters = channels.Where(p => p.Key != "Brightness").ToDictionary(p => p.Key, p => p.Value)
+                Parameters = channels.Where(p => p.Key != "Brightness").ToDictionary(p => $"__{p.Key}__", p => p.Value)
             })["Picture"]!;
             var picture = (IPicture<byte>)output;
             CollectionAssert.AreEqual(source.r, picture.r);
@@ -50,7 +50,7 @@ public sealed class MergePictureChannelsTests
         IEffectProvider merge = new InternalPluginBase().EffectProviderProvider["MergePictureChannels"]();
         split.SetMainInputSource(IEffectProvider.InputAnchorGUID);
         foreach (string channel in new[] { "R", "G", "B", "A", "Brightness" })
-            merge.SetFieldBinding(channel, EffectProviderOutputExtensions.CreateOutputSourceId(split.Id, channel));
+            merge.SetFieldBinding($"__{channel}__", EffectProviderOutputExtensions.CreateOutputSourceId(split.Id, channel));
         merge.SetFinalOutputSource(true, "Picture");
         Assert.IsInstanceOfType<IMultipleOutputEffectProvider>(merge);
         Assert.AreEqual(1, merge.GetOutputFields().Count);
@@ -74,7 +74,7 @@ public sealed class MergePictureChannelsTests
         using var r = Picture8bpp.GenerateSolidColor(1, 1, 128, 200, 200, null);
         using var g = Picture16bpp.GenerateSolidColor(1, 1, 100, 12345, 100, null);
         using var b = Picture8bpp.GenerateSolidColor(1, 1, 200, 200, 255, null);
-        var fields = new Dictionary<string, object?> { ["R"] = r, ["G"] = g, ["B"] = b };
+        var fields = new Dictionary<string, object?> { ["__R__"] = r, ["__G__"] = g, ["__B__"] = b };
         var effect = new MergePictureChannelsEffect();
         using (var output = (IPicture)effect.ComputeOutputs(new() { Parameters = fields })["Picture"]!)
         {
@@ -86,7 +86,7 @@ public sealed class MergePictureChannelsTests
             Assert.IsFalse(output.HasAlphaChannel);
         }
         using var brightness = Picture8bpp.GenerateSolidColor(1, 1, 128, 128, 128, null);
-        fields["Brightness"] = brightness;
+        fields["__Brightness__"] = brightness;
         using var hdr = (HDRPicture16bpp)effect.ComputeOutputs(new() { Parameters = fields })["Picture"]!;
         Assert.AreEqual(128f / 255, hdr.Brightness[0], 0.00001f);
         Assert.AreEqual(203f, hdr.MaximumBrightness);
@@ -98,11 +98,11 @@ public sealed class MergePictureChannelsTests
         using var picture = Picture(10);
         using var otherSize = new Picture8bpp(2, 1);
         var effect = new MergePictureChannelsEffect();
-        var fields = new Dictionary<string, object?> { ["R"] = picture, ["G"] = picture };
+        var fields = new Dictionary<string, object?> { ["__R__"] = picture, ["__G__"] = picture };
         Assert.ThrowsExactly<ArgumentException>(() => effect.ComputeOutputs(new() { Parameters = fields }));
-        fields["B"] = otherSize;
+        fields["__B__"] = otherSize;
         Assert.ThrowsExactly<ArgumentException>(() => effect.ComputeOutputs(new() { Parameters = fields }));
-        fields["B"] = picture;
+        fields["__B__"] = picture;
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         Assert.ThrowsExactly<OperationCanceledException>(() => effect.ComputeOutputs(new()

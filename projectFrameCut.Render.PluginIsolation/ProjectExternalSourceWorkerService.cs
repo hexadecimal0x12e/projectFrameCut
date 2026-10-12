@@ -2,10 +2,16 @@ using projectFrameCut.Render.Contracts;
 
 namespace projectFrameCut.Render.PluginIsolation;
 
-public sealed class ProjectExternalSourceWorkerService(IExternalVideoSourceProvider provider, string token, int parentPid, SessionPayloadExchange payloads, CancellationTokenSource lifetime) : IRenderService, IAsyncDisposable
+public sealed class ProjectExternalSourceWorkerService(object provider, string token, int parentPid, SessionPayloadExchange payloads, CancellationTokenSource lifetime) : IRenderService, IAsyncDisposable
 {
+    public ProjectExternalSourceWorkerService(IExternalVideoSourceProvider provider, string token, int parentPid, SessionPayloadExchange payloads, CancellationTokenSource lifetime)
+        : this((object)provider, token, parentPid, payloads, lifetime) { }
+
+    private readonly IExternalVideoSourceProvider? video = provider as IExternalVideoSourceProvider;
+    private readonly IExternalAudioSourceProvider? audio = provider as IExternalAudioSourceProvider;
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly HashSet<Guid> instances = [];
+    private readonly HashSet<Guid> audioInstances = [];
     private bool authenticated;
     private IsolationPayloadKind payloadKind = IsolationPayloadKind.SharedMemory;
 
@@ -28,32 +34,63 @@ public sealed class ProjectExternalSourceWorkerService(IExternalVideoSourceProvi
             switch (request.Operation)
             {
                 case RenderOperation.IsolationListProjectExternalSources:
-                    return Success(new ExternalVideoSourceCatalog { Sources = provider.Sources.Select(x => RenderRpcSerializer.Clone(x)).ToList() });
+                    return Success(new ExternalVideoSourceCatalog { Sources = video?.Sources.Select(x => RenderRpcSerializer.Clone(x)).ToList() ?? [] });
+                case RenderOperation.IsolationListProjectExternalAudioSources:
+                    return Success(new ExternalAudioSourceCatalog { Sources = audio?.AudioSources.Select(x => RenderRpcSerializer.Clone(x)).ToList() ?? [] });
                 case RenderOperation.ExternalVideoSourceCreate:
                     var create = RenderRpcSerializer.Deserialize<ExternalVideoSourceCreateRequest>(request.Payload);
-                    if (!provider.Sources.Any(x => x.SourceId == create.Source.SourceId && x.DecoderName == create.Source.DecoderName))
+                    if (video is null || !video.Sources.Any(x => x.SourceId == create.Source.SourceId && x.DecoderName == create.Source.DecoderName))
                         throw new UnauthorizedAccessException("Requested source is not in this provider's catalog.");
-                    var created = await provider.CreateAsync(create, cancellationToken).ConfigureAwait(false);
+                    var created = await video.CreateAsync(create, cancellationToken).ConfigureAwait(false);
                     if (created.InstanceId == Guid.Empty || !instances.Add(created.InstanceId)) throw new InvalidDataException("External source returned an invalid or duplicate instance ID.");
                     return Success(created);
                 case RenderOperation.ExternalVideoSourceInitialize:
                     var initialize = RenderRpcSerializer.Deserialize<ExternalVideoSourceStateRequest>(request.Payload);
                     RequireInstance(initialize.InstanceId);
-                    var initialized = await provider.InitializeAsync(initialize, cancellationToken).ConfigureAwait(false);
+                    var initialized = await video!.InitializeAsync(initialize, cancellationToken).ConfigureAwait(false);
                     if (initialized.InstanceId != initialize.InstanceId) throw new InvalidDataException("External source initialization changed its instance ID.");
                     return Success(initialized);
                 case RenderOperation.ExternalVideoSourceReadFrame:
                     var read = RenderRpcSerializer.Deserialize<ExternalVideoSourceReadRequest>(request.Payload);
                     RequireInstance(read.State.InstanceId);
-                    var frame = await provider.ReadFrameAsync(read, cancellationToken).ConfigureAwait(false);
+                    var frame = await video!.ReadFrameAsync(read, cancellationToken).ConfigureAwait(false);
                     frame.Validate();
                     var lease = await payloads.PublishAsync(RenderRpcSerializer.Serialize(frame), payloadKind, cancellationToken).ConfigureAwait(false);
                     return Success(new ProjectExternalSourceFrame { Payload = lease.Reference });
                 case RenderOperation.ExternalVideoSourceRelease:
                     var release = RenderRpcSerializer.Deserialize<ExternalVideoSourceStateRequest>(request.Payload);
                     RequireInstance(release.InstanceId);
-                    try { await provider.ReleaseAsync(release, cancellationToken).ConfigureAwait(false); }
+                    try { await video!.ReleaseAsync(release, cancellationToken).ConfigureAwait(false); }
                     finally { instances.Remove(release.InstanceId); }
+                    return Success(new EmptyResponse());
+                case RenderOperation.ExternalAudioSourceCreate:
+                    var audioCreate = RenderRpcSerializer.Deserialize<ExternalAudioSourceCreateRequest>(request.Payload);
+                    if (audio is null || !audio.AudioSources.Any(x => x.SourceId == audioCreate.Source.SourceId && x.DecoderName == audioCreate.Source.DecoderName))
+                        throw new UnauthorizedAccessException("Requested audio source is not in this provider's catalog.");
+                    var audioCreated = await audio.CreateAudioAsync(audioCreate, cancellationToken).ConfigureAwait(false);
+                    if (audioCreated.InstanceId == Guid.Empty || !audioInstances.Add(audioCreated.InstanceId)) throw new InvalidDataException("External audio source returned an invalid or duplicate instance ID.");
+                    return Success(audioCreated);
+                case RenderOperation.ExternalAudioSourceInitialize:
+                    var audioInitialize = RenderRpcSerializer.Deserialize<ExternalAudioSourceStateRequest>(request.Payload);
+                    RequireAudioInstance(audioInitialize.InstanceId);
+                    var audioInitialized = await audio!.InitializeAudioAsync(audioInitialize, cancellationToken).ConfigureAwait(false);
+                    if (audioInitialized.InstanceId != audioInitialize.InstanceId) throw new InvalidDataException("External audio source initialization changed its instance ID.");
+                    return Success(audioInitialized);
+                case RenderOperation.ExternalAudioSourceReadSamples:
+                    var audioRead = RenderRpcSerializer.Deserialize<ExternalAudioSourceReadRequest>(request.Payload);
+                    RequireAudioInstance(audioRead.State.InstanceId);
+                    audioRead.Validate();
+                    var samples = await audio!.ReadSamplesAsync(audioRead, cancellationToken).ConfigureAwait(false);
+                    samples.Validate();
+                    if (samples.SampleCount > audioRead.Count) throw new InvalidDataException("External audio source returned too many samples.");
+                    var audioLease = await payloads.PublishAsync(samples.Samples, samples.Samples.Length == 0 ? IsolationPayloadKind.Inline : payloadKind, cancellationToken).ConfigureAwait(false);
+                    return Success(new IsolationAudioSamplesResponse { Samples = audioLease.Reference, ChannelCount = samples.ChannelCount,
+                        SampleCount = samples.SampleCount, SamplePerSecond = samples.SamplePerSecond });
+                case RenderOperation.ExternalAudioSourceRelease:
+                    var audioRelease = RenderRpcSerializer.Deserialize<ExternalAudioSourceStateRequest>(request.Payload);
+                    RequireAudioInstance(audioRelease.InstanceId);
+                    try { await audio!.ReleaseAudioAsync(audioRelease, cancellationToken).ConfigureAwait(false); }
+                    finally { audioInstances.Remove(audioRelease.InstanceId); }
                     return Success(new EmptyResponse());
                 case RenderOperation.IsolationShutdown:
                     await ReleaseInstancesAsync().ConfigureAwait(false);
@@ -72,15 +109,26 @@ public sealed class ProjectExternalSourceWorkerService(IExternalVideoSourceProvi
     {
         if (!instances.Contains(id)) throw new UnauthorizedAccessException("External source instance does not belong to this worker.");
     }
+    private void RequireAudioInstance(Guid id)
+    {
+        if (!audioInstances.Contains(id)) throw new UnauthorizedAccessException("External audio source instance does not belong to this worker.");
+    }
     private async Task ReleaseInstancesAsync()
     {
         foreach (var id in instances.ToArray())
         {
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            try { await provider.ReleaseAsync(new() { InstanceId = id }, timeout.Token).AsTask().WaitAsync(timeout.Token).ConfigureAwait(false); }
+            try { await video!.ReleaseAsync(new() { InstanceId = id }, timeout.Token).AsTask().WaitAsync(timeout.Token).ConfigureAwait(false); }
             catch (Exception ex) { Log(ex, $"Release external source instance {id}."); }
         }
         instances.Clear();
+        foreach (var id in audioInstances.ToArray())
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            try { await audio!.ReleaseAudioAsync(new() { InstanceId = id }, timeout.Token).AsTask().WaitAsync(timeout.Token).ConfigureAwait(false); }
+            catch (Exception ex) { Log(ex, $"Release external audio source instance {id}."); }
+        }
+        audioInstances.Clear();
     }
     public async ValueTask DisposeAsync()
     {

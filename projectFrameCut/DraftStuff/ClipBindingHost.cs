@@ -101,7 +101,17 @@ namespace projectFrameCut.DraftStuff
         {
             if (types is not null && (!types.AreInputsCompatible(_provider) || types.Diagnostics.Count != 0))
                 throw new InvalidOperationException($"Source '{sourceId}' is incompatible with '{fieldId}' on provider {_provider.Id}.");
-            _provider.SetFieldBinding(fieldId, sourceId);
+            var state = new Dictionary<string, string>(_provider.AnchorsBindingState);
+            try
+            {
+                _provider.SetFieldBinding(fieldId, sourceId);
+                EffectGroupBindingGuard.Synchronize(_clip);
+            }
+            catch
+            {
+                _provider.AnchorsBindingState = state;
+                throw;
+            }
             EffectBindingHelper.MaterializeFields([_provider]);
             _onChanged?.Invoke();
         }

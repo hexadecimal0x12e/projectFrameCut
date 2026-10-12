@@ -79,7 +79,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// The key is the field id, and the value is the field descriptor.
         /// </summary>
         /// <remarks>
-        /// <c>__Input__</c> is the primary input. Other fields are named parameters; both may accept pictures or values.
+        /// Input ids wrapped in <c>__</c> appear inside the node; other inputs appear in the parameter strip.
+        /// All inputs may accept pictures or values.
         /// </remarks>
         public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> InFields { get; }
 
@@ -94,8 +95,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                 ? field.FieldType : EffectArgumentFieldType.Any;
 
         /// <summary>
-        /// Persisted binding configuration. <c>__Input__</c> stores the primary source,
-        /// <c>__Output__</c> stores the final-output marker, and ordinary field ids store value sources.
+        /// Persisted binding configuration. Input field ids store their sources,
+        /// and <c>__Output__</c> stores the final-output marker.
         /// Values are strings so both Guid-based sources and <c>builtin://</c> sources are representable.
         /// </summary>
         /// <remarks>
@@ -256,6 +257,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static string FieldTypeToParamType(EffectArgumentFieldType fieldType)
         {
             if (fieldType.HasFlag(EffectArgumentFieldType.Any)) return "object";
+            if (fieldType.IsVector()) return nameof(projectFrameCut.Drawing.Vector.VectorPicture);
             if (fieldType.IsPicture()) return nameof(IPicture);
             return (fieldType & (EffectArgumentFieldType)0x3FF) switch
             {
@@ -285,6 +287,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public const string OutputKey = "__Output__";
         public const string OutputFieldKey = "__OutputField__";
 
+        public static bool IsInternalInputKey(string key) => key.Length >= 4
+            && key.StartsWith("__", StringComparison.Ordinal) && key.EndsWith("__", StringComparison.Ordinal);
+
         public static bool IsOutputBindingKey(string key) => key is OutputKey or OutputFieldKey;
 
         public static string? GetFinalOutputFieldId(this IEffectProvider provider) =>
@@ -301,7 +306,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         {
             return provider.TypeOfEffect != projectFrameCut.Shared.EffectType.Transform
                 && provider.InFields.TryGetValue(InputKey, out var main)
-                && main.FieldType.IsPicture();
+                && main.FieldType.IsContent();
         }
 
         /// <summary>
@@ -360,7 +365,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         {
             if (isFinalOutput && (provider is ClipArgumentProvider || provider.TypeOfEffect == projectFrameCut.Shared.EffectType.Transform
                 || !provider.TryGetOutputField(outputId, out var field)
-                || !(types?.GetOutputType(provider, outputId) ?? field.FieldType).IsPicture()
+                || !EffectFieldTypes.AreCompatible(types?.GetOutputType(provider, outputId) ?? field.FieldType, provider.GetPipeline().GetContentType())
                     && (types is not null || !field.FieldType.HasFlag(EffectArgumentFieldType.Any))))
                 throw new InvalidOperationException("This provider cannot be the final picture output.");
             var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);

@@ -27,11 +27,11 @@ public sealed class MergePictureChannelsEffectProvider : EffectProviderBase, IMu
 
     protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() => new Dictionary<string, EffectArgumentFieldDescriptor>
     {
-        ["R"] = Field("R", EffectArgumentFieldType.IPicture | EffectArgumentFieldType.Mandatory, "", remarks: "Source red channel."),
-        ["G"] = Field("G", EffectArgumentFieldType.IPicture | EffectArgumentFieldType.Mandatory, "", remarks: "Source green channel."),
-        ["B"] = Field("B", EffectArgumentFieldType.IPicture | EffectArgumentFieldType.Mandatory, "", remarks: "Source blue channel."),
-        ["A"] = Field("A", EffectArgumentFieldType.IPicture, "", remarks: "Source alpha channel. Opaque if absent."),
-        ["Brightness"] = Field("Brightness", EffectArgumentFieldType.IPicture, "", remarks: "HDR brightness channel, or SDR luminance at 203 nits.")
+        ["__R__"] = Field("__R__", EffectArgumentFieldType.IPicture | EffectArgumentFieldType.Mandatory, "", remarks: "Source red channel."),
+        ["__G__"] = Field("__G__", EffectArgumentFieldType.IPicture | EffectArgumentFieldType.Mandatory, "", remarks: "Source green channel."),
+        ["__B__"] = Field("__B__", EffectArgumentFieldType.IPicture | EffectArgumentFieldType.Mandatory, "", remarks: "Source blue channel."),
+        ["__A__"] = Field("__A__", EffectArgumentFieldType.IPicture, "", remarks: "Source alpha channel. Opaque if absent."),
+        ["__Brightness__"] = Field("__Brightness__", EffectArgumentFieldType.IPicture, "", remarks: "HDR brightness channel, or SDR luminance at 203 nits.")
     };
 }
 
@@ -64,11 +64,11 @@ public sealed class MergePictureChannelsEffect : IEffect, IMultipleOutputEffect
             return (IPicture)value;
         }
 
-        var r = Input("R", true)!;
-        var g = Input("G", true)!;
-        var b = Input("B", true)!;
-        var a = Input("A");
-        var brightness = Input("Brightness");
+        var r = Input("__R__", true)!;
+        var g = Input("__G__", true)!;
+        var b = Input("__B__", true)!;
+        var a = Input("__A__");
+        var brightness = Input("__Brightness__");
         Validate(r, r, "R");
         Validate(g, r, "G");
         Validate(b, r, "B");

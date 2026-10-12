@@ -140,6 +140,7 @@ namespace projectFrameCut.Render.Compose
                     int sourceSampleRate = track.SamplePerSecond;
                     if (sourceSampleRate <= 0)
                     {
+                        if (ClipInitializationFailure.GetStage(track.ExtraData) == "ExternalSourceUnavailable") continue;
                         throw new InvalidOperationException(
                             $"Soundtrack '{track.Name}' ({track.Id}) has no initialized audio source.");
                     }

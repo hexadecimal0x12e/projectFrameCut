@@ -3,9 +3,12 @@ using System.Buffers.Binary;
 
 namespace projectFrameCut.ExternalSourceExample;
 
-public sealed class ExampleProvider : IExternalVideoSourceProvider
+public sealed class ExampleProvider : IExternalVideoSourceProvider, IExternalAudioSourceProvider
 {
     private readonly Dictionary<Guid, ExternalVideoSourceDescriptor> instances = [];
+    private readonly HashSet<Guid> audioInstances = [];
+    public IReadOnlyList<ExternalAudioSourceDescriptor> AudioSources { get; } = [new() { SourceId = "tone", DecoderName = "ExampleAudio",
+        Name = "Example stereo tone", Duration = 10, ChannelCount = 2, SamplePerSecond = 48000 }];
     public IReadOnlyList<ExternalVideoSourceDescriptor> Sources { get; } = new[] { "8bit", "16bit", "alpha", "hdr" }.Select(id => new ExternalVideoSourceDescriptor
     {
         SourceId = id, DecoderName = "Example", Name = "Example " + id, Width = 640, Height = 360,
@@ -66,6 +69,38 @@ public sealed class ExampleProvider : IExternalVideoSourceProvider
     public ValueTask ReleaseAsync(ExternalVideoSourceStateRequest request, CancellationToken cancellationToken = default)
     {
         instances.Remove(request.InstanceId);
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask<ExternalAudioSourceInstance> CreateAudioAsync(ExternalAudioSourceCreateRequest request, CancellationToken cancellationToken = default)
+    {
+        var descriptor = AudioSources.Single(x => x.SourceId == request.Source.SourceId);
+        var id = Guid.NewGuid();
+        audioInstances.Add(id);
+        return ValueTask.FromResult(new ExternalAudioSourceInstance { InstanceId = id, Descriptor = descriptor });
+    }
+    public ValueTask<ExternalAudioSourceInstance> InitializeAudioAsync(ExternalAudioSourceStateRequest request, CancellationToken cancellationToken = default)
+    {
+        if (!audioInstances.Contains(request.InstanceId)) throw new InvalidOperationException("Unknown audio instance.");
+        return ValueTask.FromResult(new ExternalAudioSourceInstance { InstanceId = request.InstanceId, Descriptor = AudioSources[0] });
+    }
+    public ValueTask<ExternalAudioSamples> ReadSamplesAsync(ExternalAudioSourceReadRequest request, CancellationToken cancellationToken = default)
+    {
+        if (!audioInstances.Contains(request.State.InstanceId)) throw new InvalidOperationException("Unknown audio instance.");
+        request.Validate();
+        int count = (int)Math.Min(request.Count, Math.Max(0L, 480000L - request.StartIndex));
+        var samples = new ExternalAudioSamples { ChannelCount = 2, SamplePerSecond = 48000, SampleCount = count, Samples = new byte[checked(count * 8)] };
+        for (int i = 0; i < count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            BinaryPrimitives.WriteSingleLittleEndian(samples.Samples.AsSpan(i * 4), 0.2f * (float)Math.Sin(2 * Math.PI * 440 * (request.StartIndex + (long)i) / 48000));
+            BinaryPrimitives.WriteSingleLittleEndian(samples.Samples.AsSpan((count + i) * 4), 0.2f * (float)Math.Sin(2 * Math.PI * 660 * (request.StartIndex + (long)i) / 48000));
+        }
+        return ValueTask.FromResult(samples);
+    }
+    public ValueTask ReleaseAudioAsync(ExternalAudioSourceStateRequest request, CancellationToken cancellationToken = default)
+    {
+        audioInstances.Remove(request.InstanceId);
         return ValueTask.CompletedTask;
     }
 }

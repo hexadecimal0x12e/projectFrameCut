@@ -217,7 +217,7 @@ public class DraftSettingPage
                     if (sources.Sources.Count == 0) rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Empty });
                     foreach (var source in sources.Sources.OrderBy(x => x.Name))
                     {
-                        AddCard(source.Name, $"{source.Author} · {source.Version}\n{source.ManifestId}\n{source.Description}", source.Sources,
+                        AddCard(source.Name, $"{source.Author} · {source.Version}\n{source.ManifestId}\n{source.Description}", source.Sources.Select(x => x.Name).Concat(source.AudioSources.Select(x => x.Name)),
                             source.Loaded, source.Error, !IsStandaloneJsonMode, IsStandaloneJsonMode || !parent.IsReadonly,
                             () => ProjectExternalSourceService.SetLoadedAsync(parent.WorkingPath, source.ImportId, true),
                             () => ProjectExternalSourceService.SetLoadedAsync(parent.WorkingPath, source.ImportId, false),
@@ -240,7 +240,7 @@ public class DraftSettingPage
                         var clients = await client.ListExternalVideoSourceClientsAsync();
                         if (clients.Clients.Count == 0) rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Empty });
                         foreach (var rpc in clients.Clients.OrderBy(x => x.ClientName))
-                            AddCard(rpc.ClientName, rpc.ClientId.ToString(), rpc.Sources, rpc.Loaded, string.Empty, true, true,
+                            AddCard(rpc.ClientName, rpc.ClientId.ToString(), rpc.Sources.Select(x => x.Name).Concat(rpc.AudioSources.Select(x => x.Name)), rpc.Loaded, string.Empty, true, true,
                                 () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Load),
                                 () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Unload),
                                 () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Remove),
@@ -286,7 +286,7 @@ public class DraftSettingPage
             }
         }
 
-        void AddCard(string name, string description, List<ExternalVideoSourceDescriptor> sources, bool loaded, string error,
+        void AddCard(string name, string description, IEnumerable<string> sources, bool loaded, string error,
             bool canLoad, bool canRemove, Func<Task> load, Func<Task> unload, Func<Task> remove, string removePrompt)
         {
             var info = new VerticalStackLayout { Spacing = 6 };
@@ -295,7 +295,7 @@ public class DraftSettingPage
             info.Add(new Label { Text = string.IsNullOrWhiteSpace(error)
                 ? loaded ? Localized.ProjectExternalSource_Loaded : Localized.ProjectExternalSource_NotLoaded
                 : $"{Localized.ProjectExternalSource_Failed}: {error}" });
-            if (sources.Count > 0) info.Add(new Label { Text = string.Join("\n", sources.Select(x => x.Name)), FontSize = 12 });
+            if (sources.Any()) info.Add(new Label { Text = string.Join("\n", sources), FontSize = 12 });
             var buttons = new HorizontalStackLayout { Spacing = 8 };
             var loadButton = new Button { Text = Localized.DraftSettingPage_ExternalSources_Load, IsEnabled = canLoad && (!loaded || !string.IsNullOrWhiteSpace(error)) };
             var unloadButton = new Button { Text = Localized.DraftSettingPage_ExternalSources_Unload, IsEnabled = canLoad && (loaded || !string.IsNullOrWhiteSpace(error)) };

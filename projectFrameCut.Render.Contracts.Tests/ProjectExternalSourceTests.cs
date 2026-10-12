@@ -18,11 +18,13 @@ public sealed class ProjectExternalSourceTests
         var asset = await ProjectExternalSourceDatabase.ImportAsync(project, source);
         Assert.AreEqual($"externalSource/{asset.ImportId:N}", asset.Directory);
         Assert.IsTrue(System.IO.Directory.Exists(Path.Combine(project, asset.Directory, "empty")));
-        await ProjectExternalSourceDatabase.UpdateSourcesAsync(project, asset.ImportId, [new() { SourceId = "main", DecoderName = "Example", Name = "Main" }]);
+        await ProjectExternalSourceDatabase.UpdateSourcesAsync(project, asset.ImportId, [new() { SourceId = "main", DecoderName = "Example", Name = "Main" }],
+            [new() { SourceId = "audio", DecoderName = "ExampleAudio", Name = "Audio", ChannelCount = 2, SamplePerSecond = 48000 }]);
         Assert.AreEqual("main", ProjectExternalSourceDatabase.Read(project).Assets.Single().Sources.Single().SourceId);
 
         var replaced = await ProjectExternalSourceDatabase.ImportAsync(project, source, asset.ImportId);
         Assert.AreEqual(asset.ImportId, replaced.ImportId);
+        Assert.AreEqual("audio", replaced.AudioSources.Single().SourceId);
         var second = await ProjectExternalSourceDatabase.ImportAsync(project, source);
         Assert.AreNotEqual(asset.ImportId, second.ImportId);
         Assert.AreEqual(2, ProjectExternalSourceDatabase.Read(project).Assets.Count);

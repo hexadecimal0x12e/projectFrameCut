@@ -165,7 +165,6 @@ internal static class ExternalVideoSourceRegistry
             {
                 if (action == ExternalVideoSourceClientAction.Load)
                 {
-                    if (_sources.Count == 0) throw new InvalidOperationException("The client must register video sources before loading them.");
                     Interlocked.Exchange(ref _loaded, 1);
                     return;
                 }

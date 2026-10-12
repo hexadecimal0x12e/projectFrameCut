@@ -15,15 +15,16 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
     /// </summary>
     internal static class EffectProviderUIHelper
     {
-        public static void BuildUI(IEffectProvider provider, PropertyPanelBuilder panel, IEffectBindingHost? bindingHost)
+        public static void BuildUI(IEffectProvider provider, PropertyPanelBuilder panel, IEffectBindingHost? bindingHost, IEnumerable<string>? fieldIds = null)
         {
             foreach (var kvp in provider.Fields)
             {
+                if (fieldIds is not null && !fieldIds.Contains(kvp.Key)) continue;
                 var field = kvp.Value;
                 if (field is null) continue;
                 bool isBound = field.IsDynamic;
                 var componentId = ComponentId(provider, field.Id);
-                if (field.FieldType.IsPicture() || field.FieldType.HasFlag(EffectArgumentFieldType.Any))
+                if (field.FieldType.IsContent() || field.FieldType.HasFlag(EffectArgumentFieldType.Any))
                 {
                     panel.AddText(Label(provider.TypeName, field), componentId);
                     MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);

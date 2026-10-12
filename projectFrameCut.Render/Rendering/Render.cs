@@ -257,7 +257,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     if (token.IsCancellationRequested) return;
 
-                    var frame = DecodeClipSourceFrame(item, idx, ppb);
+                    var frame = DecodeClipSourceFrame(item, idx, ppb, cancellationToken: token);
                     if (frame != null)
                     {
                         FrameCache.GetOrAdd(item.Id, (_) => new()).TryAdd(idx, frame);
@@ -912,7 +912,7 @@ namespace projectFrameCut.Render.Rendering
 
                         try
                         {
-                            var frame = DecodeClipSourceFrame(item, targetFrame, ppb);
+                            var frame = DecodeClipSourceFrame(item, targetFrame, ppb, cancellationToken: token);
                             if (frame != null)
                             {
                                 FrameCache.GetOrAdd(item.Id, (_) => new()).TryAdd(targetFrame, frame);
@@ -1528,7 +1528,7 @@ namespace projectFrameCut.Render.Rendering
                 var _wsSync = IRenderContext.WorkerState;
                 if (_wsSync is not null) _wsSync.CurrentClip = clip;
 
-                var frame = DecodeClipSourceFrame(clip, targetFrame, syncPpb);
+                var frame = DecodeClipSourceFrame(clip, targetFrame, syncPpb, cancellationToken: token);
                 if (frame == null)
                 {
                     Log($"[Render] WARN: Frame {targetFrame} not found for clip {clip.Id}.");
@@ -1687,7 +1687,7 @@ namespace projectFrameCut.Render.Rendering
                 else
                 {
                     // 从源重新解码（lenient：输入缺失记录警告并跳过）
-                    frame = DecodeClipSourceFrame(clip, frameIndex, ppb, throwOnMissingTransformInput: false);
+                    frame = DecodeClipSourceFrame(clip, frameIndex, ppb, throwOnMissingTransformInput: false, cancellationToken: token);
                     // 共享的不可变内容不允许被合成管线 dispose，clone 副本
                     if (frame is not null && !frame.CanBeDisposed)
                     {
@@ -1728,10 +1728,16 @@ namespace projectFrameCut.Render.Rendering
         /// <returns>解码后的画面；输入缺失且不抛异常时返回 null</returns>
         private readonly ClipArgumentFrameCache clipArgumentFrames = new();
 
-        private IPicture? DecodeClipSourceFrame(IClip item, uint frameIndex, IPicture.PicturePixelMode ppb, bool throwOnMissingTransformInput = true)
+        private IPicture? DecodeClipSourceFrame(IClip item, uint frameIndex, IPicture.PicturePixelMode ppb, bool throwOnMissingTransformInput = true,
+            CancellationToken cancellationToken = default)
         {
+            using var endpoints = ClipValuePassThrough.Open(Clips ?? [], frameIndex, TargetWidth, TargetHeight,
+                ProjectRelativeWidth, ProjectRelativeHeight, ppb, cancellationToken);
+            using var endpointClip = ClipValueFrameContext.Current?.EnterClip(item.Id, independent: true);
             item = clipArgumentFrames.Get(item, frameIndex);
-            if (item.EffectsInstances?.Any(e => e is DynamicEffectGraph) != true && TryLoadDynamicPreviewFrame(item, frameIndex, ppb, out var previewFrame))
+            using var context = ValueProviderFrameContext.PushFrame(frameIndex,
+                Math.Clamp(((float)frameIndex - item.StartFrame) / Math.Max(1u, item.GetEffectiveDuration()), 0, 1), false, cancellationToken);
+            if (item.EffectsInstances?.Any(e => e is DynamicEffectGraph or NativeDynamicEffectGraph) != true && TryLoadDynamicPreviewFrame(item, frameIndex, ppb, out var previewFrame))
             {
                 _dynamicPreviewFrames.Add(previewFrame, DynamicPreviewFrameMarker);
                 return previewFrame;

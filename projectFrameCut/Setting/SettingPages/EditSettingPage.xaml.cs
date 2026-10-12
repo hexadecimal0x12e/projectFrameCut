@@ -68,6 +68,8 @@ public partial class EditSettingPage : ContentPage
             .AddPicker("Edit_DefaultTransformRenderOrder", SettingLocalizedResources.Edit_DefaultTransformRenderOrder,
                 TransformOrderStringMapping.Keys.ToArray(), TransformOrderStringMapping.First(p => p.Value == TransformServices.DefaultRenderOrder.ToString()).Key)
             .AddSeparator()
+            .AddText(new TitleAndDescriptionLineLabel(Localized.EffectGroup_Library, Localized.EffectGroup_LibraryDescription))
+            .AddButton(Localized.EffectGroup_Manage, ManageEffectGroups)
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_ClipInfoTabOrder, SettingLocalizedResources.Edit_ClipInfoTabOrder_Subtitle))
             .AddCustomChild(BuildClipInfoTabOrder())
             .AddSeparator()
@@ -98,6 +100,7 @@ public partial class EditSettingPage : ContentPage
             .AddCheckbox("Edit_AlwaysShowToolbarButtons", SettingLocalizedResources.Edit_AlwaysShowToolbarButtons, IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons"))
 #endif
             .AddButton(SettingLocalizedResources.Edit_ResetQuickCommands, ResetQuickCommands)
+            .AddSeparator()
             ;
 
 

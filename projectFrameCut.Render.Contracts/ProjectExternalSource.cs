@@ -24,6 +24,7 @@ public sealed class ProjectExternalSourceAsset
     public ProjectExternalSourceManifest Manifest { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public List<ExternalVideoSourceDescriptor> Sources { get; set; } = [];
+    public List<ExternalAudioSourceDescriptor> AudioSources { get; set; } = [];
 }
 
 public sealed class ProjectExternalSourceIndex
@@ -68,6 +69,7 @@ public sealed class ProjectExternalSourceStatus
     [ProtoMember(11)] public string ManifestSha256 { get; set; } = string.Empty;
     [ProtoMember(12)] public string Directory { get; set; } = string.Empty;
     [ProtoMember(13)] public DateTime ImportedAt { get; set; }
+    [ProtoMember(14)] public List<ExternalAudioSourceDescriptor> AudioSources { get; set; } = [];
 }
 
 [ProtoContract]

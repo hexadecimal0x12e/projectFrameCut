@@ -354,10 +354,10 @@ internal static class ProjectModeEditingService
         {
             var types = new EffectFieldTypeResolution(providers);
             Guid? replacementOutput = EffectProviderOutputExtensions.TryParseOutputSourceId(upstream, out Guid upstreamId, out var outputId)
-                && providers.TryGetValue(upstreamId, out var source) && source.TryGetOutputField(outputId, out _) && types.GetOutputType(source, outputId).IsPicture()
+                && providers.TryGetValue(upstreamId, out var source) && source.TryGetOutputField(outputId, out _) && types.GetOutputType(source, outputId).IsContent()
                 ? upstreamId
                 : null;
-            EffectBindingHelper.SetFinalOutput(providers, replacementOutput, removedProvider.TypeOfEffect.GetPipeline(), replacementOutput.HasValue ? outputId : null);
+            EffectBindingHelper.SetFinalOutput(providers, replacementOutput, removedProvider.GetPipeline(), replacementOutput.HasValue ? outputId : null);
         }
         CommitProviders(clip, providers, allowIncompletePicturePath: true);
         return new { removed = true, providerId, diagnostics = ValidateProviderPorts(providers) };
@@ -421,7 +421,7 @@ internal static class ProjectModeEditingService
         EffectArgumentFieldType sourceType;
         if (source is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId)
             sourceType = EffectArgumentFieldType.Numeric;
-        else if (source == IEffectProvider.InputAnchorGUID.ToString()) sourceType = EffectArgumentFieldType.IPicture;
+        else if (source == IEffectProvider.InputAnchorGUID.ToString()) sourceType = target.GetPipeline().GetContentType();
         else
         {
             if (!EffectProviderOutputExtensions.TryParseOutputSourceId(source, out Guid sourceId, out var outputId))
@@ -766,8 +766,8 @@ internal static class ProjectModeEditingService
             AnchorsBindingState = new(provider.AnchorsBindingState ?? []),
             StaticFields = provider.Fields
                 .Where(item => item.Value is StaticEffectArgumentField or DynamicEffectParamField)
-                .Where(item => !item.Value.FieldType.IsPicture())
-                .Where(item => GetFieldValue(item.Value) is not projectFrameCut.Drawing.Base.IPicture)
+                .Where(item => !item.Value.FieldType.IsContent())
+                .Where(item => GetFieldValue(item.Value) is not projectFrameCut.Drawing.Base.IPicture and not projectFrameCut.Drawing.Vector.VectorPicture)
                 .ToDictionary(item => item.Key, item => (item.Value.FieldType.HasFlag(EffectArgumentFieldType.Any)
                     ? GetFieldValue(item.Value) : EffectParamConvert.Normalize(GetFieldValue(item.Value))) ?? new object()),
             MetaData = provider.MetaData is { Count: > 0 } ? new(provider.MetaData) : null,
@@ -778,7 +778,7 @@ internal static class ProjectModeEditingService
         var types = new EffectFieldTypeResolution(providers);
         foreach (BindingDiagnostic diagnostic in EffectBindingHelper.ValidateBindings(providers, types)) yield return diagnostic;
         IEffectProvider[] pictureProviders = providers.Values
-            .Where(provider => provider.GetOutputFields().Keys.Any(key => types.GetOutputType(provider, key).IsPicture()))
+            .Where(provider => provider.GetOutputFields().Keys.Any(key => types.GetOutputType(provider, key).IsContent()))
             .ToArray();
         if (pictureProviders.Length > 0 && !pictureProviders.Any(provider => provider.IsFinalOutputSource()))
             yield return new BindingDiagnostic(null, "MissingFinalOutput", "The picture provider graph has no final output provider.");
@@ -790,6 +790,7 @@ internal static class ProjectModeEditingService
                 EffectArgumentFieldType sourceType;
                 if (binding.Value is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId)
                     sourceType = EffectArgumentFieldType.Numeric;
+                else if (binding.Value == IEffectProvider.InputAnchorGUID.ToString()) sourceType = target.GetPipeline().GetContentType();
                 else if (binding.Value.StartsWith("builtin://", StringComparison.Ordinal))
                 {
                     yield return new BindingDiagnostic(target.Id, "UnknownBuiltinSource", $"Field '{binding.Key}' references unknown built-in source '{binding.Value}'.");

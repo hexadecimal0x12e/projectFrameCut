@@ -33,6 +33,8 @@ internal static class ClipPreviewRenderer
         }
 
         clip = ClipArgumentBinding.InitializeFrame(clip, frameIndex);
+        using var context = ValueProviderFrameContext.PushFrame(frameIndex,
+            Math.Clamp(((float)frameIndex - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1), false, token);
         var sourceWidth = ResolveDimension(clip.TargetWidth, projectWidth, canvasWidth);
         var sourceHeight = ResolveDimension(clip.TargetHeight, projectHeight, canvasHeight);
         IPicture? frame;
@@ -48,6 +50,7 @@ internal static class ClipPreviewRenderer
                 frame = VideoClipRotation.ReadFrame(clip, actualFrame, sourceWidth, sourceHeight, pixelMode);
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             ClipInitializationFailure.Mark(clip, "SourceReading", ex);

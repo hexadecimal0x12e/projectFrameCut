@@ -70,7 +70,8 @@ public sealed class PluginIsolationClient : IAsyncDisposable
     public Dictionary<string, Func<string, IAudioSource>> CreateAudioSources()
     {
         var plugin = _plugin ?? throw new InvalidOperationException("The remote plugin has not been loaded.");
-        return plugin.AudioSources.ToDictionary(x => x.TypeName, x => (Func<string, IAudioSource>)(source => RemoteAudioSource.CreatePrototype(_session, x).CreateNew(source)));
+        return plugin.AudioSources.ToDictionary(x => x.TypeName, x => (Func<string, IAudioSource>)(source =>
+            source is null ? RemoteAudioSource.CreatePrototype(_session, x) : RemoteAudioSource.CreatePrototype(_session, x).CreateNew(source)));
     }
 
     public Dictionary<string, Func<string, IVideoWriter>> CreateVideoWriters()

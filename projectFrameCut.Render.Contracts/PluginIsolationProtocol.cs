@@ -16,6 +16,7 @@ public enum IsolationValueKind
     [ProtoEnum] Double = 8,
     [ProtoEnum] Color = 9,
     [ProtoEnum] Position = 10,
+    [ProtoEnum] VectorPicture = 11,
 }
 
 [ProtoContract]
@@ -34,6 +35,7 @@ public sealed class IsolationValue
     [ProtoMember(11)] public float Alpha { get; set; }
     [ProtoMember(12)] public bool HasAlpha { get; set; }
     [ProtoMember(13)] public float Rotation { get; set; }
+    [ProtoMember(14)] public List<IsolationVectorElement> VectorElements { get; set; } = [];
 }
 
 [ProtoContract]

@@ -25,7 +25,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
             => Rasterize(frameIndex, width, height, ppb);
 
         IPicture IClip.GetFrame(uint frame, int width, int height, IPicture.PicturePixelMode ppb)
-            => Rasterize(((IClip)this).GetRelativeFrameIndex(frame) ?? 0, width, height, ppb);
+            => EffectAndMixture.VectorPictureEffectProcessing.ReadFrameAtTarget(this, frame, width, height, ppb);
 
         private IPicture Rasterize(uint frame, int width, int height, IPicture.PicturePixelMode ppb)
         {
@@ -39,7 +39,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public VectorPicture GetVectorPicture(int requiredWidth, int requiredHeight);
 
         VectorPicture IVectorContentClip.GetVectorPictureRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight)
-            => EffectAndMixture.VectorPictureEffectProcessing.Process(this, GetVectorPicture(requiredWidth, requiredHeight), frameIndex);
+            => EffectAndMixture.VectorPictureEffectProcessing.Process(this, GetVectorPicture(requiredWidth, requiredHeight), frameIndex, width: requiredWidth, height: requiredHeight);
 
         IPicture IImmutableContentClip.GetContent(int width, int height, IPicture.PicturePixelMode targetPPB)
         {

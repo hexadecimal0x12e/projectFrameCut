@@ -85,7 +85,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             {
                 Elements = picture.Elements.Select(e => (VectorCanvasElement)new VectorContent.VectorViewportElement(
                     e, width, height, 0, 0, width, height)).ToList()
-            }, frameIndex, CalculateProgress(frameIndex));
+            }, frameIndex, CalculateProgress(frameIndex), requiredWidth, requiredHeight);
         }
 
         private VectorPicture BuildVectorPicture(uint frameIndex)

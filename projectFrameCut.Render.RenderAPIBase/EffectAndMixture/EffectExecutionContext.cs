@@ -22,12 +22,18 @@ public sealed class EffectExecutionContext
 
 public static class EffectFieldTypes
 {
+    public static bool IsVector(this EffectArgumentFieldType type) =>
+        !type.HasFlag(EffectArgumentFieldType.Any) && type.HasFlag(EffectArgumentFieldType.VectorPicture);
+
+    public static bool IsContent(this EffectArgumentFieldType type) => type.IsVector() || type.IsPicture();
+
     public static bool IsPicture(this EffectArgumentFieldType type) =>
-        !type.HasFlag(EffectArgumentFieldType.Any)
+        !type.HasFlag(EffectArgumentFieldType.Any) && !type.IsVector()
             && (type.HasFlag(EffectArgumentFieldType.IPicture) || type.HasFlag(EffectArgumentFieldType.FrameAsParameterFlow));
 
     public static EffectArgumentFieldType BaseType(this EffectArgumentFieldType type) =>
         type.HasFlag(EffectArgumentFieldType.Any) ? EffectArgumentFieldType.Any
+            : type.IsVector() ? EffectArgumentFieldType.VectorPicture
             : type.IsPicture() ? EffectArgumentFieldType.IPicture : type & (EffectArgumentFieldType)0xFFFF;
 
     public static bool AreCompatible(EffectArgumentFieldType source, EffectArgumentFieldType target)
@@ -47,7 +53,7 @@ public static class EffectFieldTypes
 
     public static object? DefaultValue(IEffectArgumentField field) => field.FieldType.BaseType() switch
     {
-        EffectArgumentFieldType.IPicture => null,
+        EffectArgumentFieldType.IPicture or EffectArgumentFieldType.VectorPicture => null,
         EffectArgumentFieldType.Integer => EffectParamConvert.TryConvertToInt(field.DefaultValue, out var i) ? i : 0,
         EffectArgumentFieldType.UnsignedInteger => uint.TryParse(field.DefaultValue, out var u) ? u : 0u,
         EffectArgumentFieldType.Long => long.TryParse(field.DefaultValue, out var l) ? l : 0L,
@@ -64,13 +70,14 @@ public static class EffectFieldTypes
         {
             EffectArgumentFieldType.Unknown or EffectArgumentFieldType.Any => true,
             EffectArgumentFieldType.IPicture => value is IPicture,
+            EffectArgumentFieldType.VectorPicture => value is projectFrameCut.Drawing.Vector.VectorPicture,
             EffectArgumentFieldType.Integer or EffectArgumentFieldType.UnsignedInteger or EffectArgumentFieldType.Long
                 or EffectArgumentFieldType.UnsignedLong or EffectArgumentFieldType.Numeric => value is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal,
             EffectArgumentFieldType.Boolean => value is bool,
             EffectArgumentFieldType.String => value is string,
             EffectArgumentFieldType.Size or EffectArgumentFieldType.Position or EffectArgumentFieldType.SizeAndPosition => value is projectFrameCut.Shared.ClipPositionTuple,
             EffectArgumentFieldType.Color => value is PictureExtensions.Pixel<byte> or PictureExtensions.Pixel<ushort>,
-            _ => value is not IPicture,
+            _ => value is not IPicture and not projectFrameCut.Drawing.Vector.VectorPicture,
         };
     }
 

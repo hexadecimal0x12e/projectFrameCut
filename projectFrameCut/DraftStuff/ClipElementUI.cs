@@ -181,6 +181,7 @@ namespace projectFrameCut.DraftStuff
                 return;
             }
             if (string.IsNullOrWhiteSpace(SourcePath)) return;
+            if (ClipType == ClipMode.AudioClip && projectFrameCut.Render.EncodeAndDecode.RemoteRpcAudioSource.IsExternalPath(SourcePath)) return;
             try
             {
                 var src = PluginManager.CreateVideoSource(SourcePath, 8);

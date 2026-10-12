@@ -1,5 +1,6 @@
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
@@ -9,6 +10,14 @@ public interface IClipValueEndpointProvider : IEffectProvider
     EffectArgumentFieldType ValueType { get; set; }
     Guid SourceClipId { get; set; }
     Guid SourceEndpointId { get; set; }
+}
+
+public static class ClipValueEndpointExtensions
+{
+    public static bool CanPassTo(this IClipValueEndpointProvider output, EffectPipeline pipeline, bool sameClip) =>
+        sameClip
+            ? output.GetPipeline() == EffectPipeline.NativeContent && pipeline == EffectPipeline.Picture && !output.ValueType.IsContent()
+            : output.GetPipeline() == pipeline;
 }
 
 public sealed class ClipValueBindingException(string message, Exception? inner = null) : InvalidOperationException(message, inner) { }
@@ -48,6 +57,7 @@ public sealed class ClipValueFrameContext : IDisposable
 
     public object Snapshot(object value)
     {
+        if (value is projectFrameCut.Drawing.Vector.VectorPicture vector) return VectorPictureEffectProcessing.Copy(vector);
         if (value is IPicture picture)
         {
             if (pictures.Contains(picture)) return picture;
@@ -108,13 +118,15 @@ public sealed class ClipValueFrameContext : IDisposable
         if (frame != FrameIndex) throw Error("The source is unavailable at this evaluation frame.");
         if (!input.Enabled) throw Error("The endpoint input is disabled.");
         if (!clips.TryGetValue(input.SourceClipId, out var source)) throw Error("The source clip does not exist.");
-        if (ClipLayerOrder.BottomToTop.Compare(source, consumer) >= 0)
+        bool sameClip = source.Id == consumer.Id;
+        if (!sameClip && ClipLayerOrder.BottomToTop.Compare(source, consumer) >= 0)
             throw Error("The source must precede the consumer in clip render order.");
         if (!source.ContainsFrame(frame)) throw Error("The source clip is inactive.");
         if (isAvailable?.Invoke(source) == false) throw Error("The source clip failed to initialize or read its frame.");
         if (source.EffectProvidersInstances?.FirstOrDefault(p => p.Id == input.SourceEndpointId) is not IClipValueEndpointProvider { IsExport: true } output)
             throw Error("The source endpoint does not exist.");
         if (!output.Enabled) throw Error("The source endpoint is disabled.");
+        if (!output.CanPassTo(input.GetPipeline(), sameClip)) throw Error("The endpoint pipeline has changed or does not precede the input stage.");
         if (output.ValueType.BaseType() != input.ValueType.BaseType()) throw Error("The endpoint type has changed.");
         if (output.GetMainInputSource() == IEffectProvider.NoConnectionGUID.ToString()) throw Error("The source endpoint is disconnected.");
         if (!values.ContainsKey((source.Id, output.Id)) && !evaluated.Contains(source.Id))

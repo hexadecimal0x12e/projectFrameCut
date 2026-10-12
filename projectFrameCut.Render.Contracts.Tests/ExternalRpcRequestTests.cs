@@ -67,9 +67,31 @@ public sealed class ExternalRpcRequestTests
                 await Assert.ThrowsAsync<RenderPipeException>(async () => await impostor.GetCapabilitiesAsync(lifetime.Token));
 
             var provider = new TestVideoSourceProvider();
+            var audioProvider = new TestAudioSourceProvider();
             await using var external = new RenderClient(
                 new NamedPipeRenderClientTransport(connection.PipeName, clientId.ToString("D")),
-                clientId.ToString("D"), provider);
+                clientId.ToString("D"), provider, audioProvider);
+            await external.RegisterExternalAudioSourcesAsync(new() { Sources = audioProvider.AudioSources.ToList() }, lifetime.Token);
+            var audioCatalog = await owner.ListExternalAudioSourcesAsync(lifetime.Token);
+            Assert.AreEqual(1, audioCatalog.Sources.Count);
+            Assert.AreEqual(clientId, audioCatalog.Sources[0].ClientId);
+            Assert.AreEqual(0, (await owner.ListExternalVideoSourcesAsync(lifetime.Token)).Sources.Count);
+            using (var audio = RemoteRpcAudioSource.Open(RemoteRpcAudioSource.CreatePath(audioCatalog.Sources[0])))
+            {
+                audio.Initialize();
+                var samples = audio.GetSample(250, 3);
+                Assert.AreEqual(0.25f, samples.GetSamples(0)[0]);
+                Assert.AreEqual(-0.25f, samples.GetSamples(1)[0]);
+                Assert.AreEqual(0.25f, audio.GetSingleSample(250));
+                Assert.Throws<ArgumentOutOfRangeException>(() => audio.GetSample(0, -1));
+                await owner.ManageExternalVideoSourceClientAsync(new() { ClientId = clientId, Action = ExternalVideoSourceClientAction.Unload }, lifetime.Token);
+                Assert.AreEqual(1, audioProvider.Released);
+                Assert.AreEqual(0, (await owner.ListExternalAudioSourcesAsync(lifetime.Token)).Sources.Count);
+                Assert.Throws<IOException>(() => audio.GetSample(250, 3));
+                await owner.ManageExternalVideoSourceClientAsync(new() { ClientId = clientId, Action = ExternalVideoSourceClientAction.Load }, lifetime.Token);
+                Assert.AreEqual(0.25f, audio.GetSingleSample(250));
+            }
+            Assert.AreEqual(2, audioProvider.Released);
             await external.RegisterExternalVideoSourcesAsync(new() { Sources = provider.Sources.ToList() }, lifetime.Token);
             var catalog = await owner.ListExternalVideoSourcesAsync(lifetime.Token);
             Assert.AreEqual(1, catalog.Sources.Count);
@@ -97,6 +119,7 @@ public sealed class ExternalRpcRequestTests
                 var unloaded = (await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Single();
                 Assert.IsFalse(unloaded.Loaded);
                 Assert.AreEqual(1, unloaded.Sources.Count);
+                Assert.AreEqual(1, unloaded.AudioSources.Count);
                 Assert.Throws<IOException>(() => active.GetFrame(0));
                 await external.RegisterExternalVideoSourcesAsync(new() { Sources = provider.Sources.ToList() }, lifetime.Token);
                 Assert.IsFalse((await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Single().Loaded);
@@ -110,6 +133,7 @@ public sealed class ExternalRpcRequestTests
             Assert.AreEqual(0, (await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Count);
             Assert.IsFalse(ExternalRpcAuthorizationStore.Find(ExternalRpcAuthorizationStore.GetPath(directory), clientId)!.Revoked);
             await external.RegisterExternalVideoSourcesAsync(new() { Sources = provider.Sources.ToList() }, lifetime.Token);
+            await external.RegisterExternalAudioSourcesAsync(new() { Sources = audioProvider.AudioSources.ToList() }, lifetime.Token);
             Assert.IsTrue((await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Single().Loaded);
 
             var second = new ExternalRpcRequest
@@ -134,6 +158,7 @@ public sealed class ExternalRpcRequestTests
             ExternalRpcAuthorizationStore.Revoke(ExternalRpcAuthorizationStore.GetPath(directory), clientId);
             await Task.Delay(1100, lifetime.Token);
             Assert.AreEqual(0, (await owner.ListExternalVideoSourcesAsync(lifetime.Token)).Sources.Count);
+            Assert.AreEqual(0, (await owner.ListExternalAudioSourcesAsync(lifetime.Token)).Sources.Count);
         }
         finally
         {

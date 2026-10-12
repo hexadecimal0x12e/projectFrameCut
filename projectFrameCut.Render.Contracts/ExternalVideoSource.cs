@@ -28,6 +28,7 @@ public sealed class ExternalVideoSourceClientStatus
     [ProtoMember(2)] public string ClientName { get; set; } = string.Empty;
     [ProtoMember(3)] public bool Loaded { get; set; }
     [ProtoMember(4)] public List<ExternalVideoSourceDescriptor> Sources { get; set; } = [];
+    [ProtoMember(5)] public List<ExternalAudioSourceDescriptor> AudioSources { get; set; } = [];
 }
 
 [ProtoContract]

@@ -22,6 +22,7 @@ internal sealed class RemoteAudioSource : IAudioSource<float>
         new(session, item.TypeName, item.PreferredExtensions.ToArray());
 
     public string[] PreferredExtension { get; private set; }
+    public string TypeName => _typeName;
     public uint Duration { get; private set; }
     public int ChannelCount { get; private set; }
     public int SamplePerSecond { get; private set; }
@@ -47,6 +48,8 @@ internal sealed class RemoteAudioSource : IAudioSource<float>
     public IAudioSamples<float> GetSample(uint startIndex, long count)
     {
         ObjectDisposedException.ThrowIf(Disposed, this);
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        if (count > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(count));
         var response = Invoke<IsolationReadAudioSamplesRequest, IsolationAudioSamplesResponse>(RenderOperation.IsolationReadAudioSamples,
             new() { ObjectId = _objectId, StartIndex = startIndex, Count = count });
         try { return AudioPayloadCodec.ReadAsync(response, _session.Payloads, CancellationToken.None).AsTask().GetAwaiter().GetResult(); }
@@ -60,7 +63,8 @@ internal sealed class RemoteAudioSource : IAudioSource<float>
         if (Disposed) return;
         Disposed = true;
         if (_objectId != 0)
-            try { Invoke<IsolationReleaseObjectRequest, EmptyResponse>(RenderOperation.IsolationReleaseObject, new() { ObjectId = _objectId }); } catch { }
+            try { Invoke<IsolationReleaseObjectRequest, EmptyResponse>(RenderOperation.IsolationReleaseObject, new() { ObjectId = _objectId }); }
+            catch (Exception ex) { Log(ex, "Release isolated audio source", this); }
     }
 
     private void Apply(IsolationAudioSourceDescriptor descriptor)

@@ -100,7 +100,8 @@ public sealed class EffectFieldTypeResolution
                     Visit(sourceId);
                     sources[key] = upstream;
                 }
-                inputs[key] = GetSourceType(source, providers);
+                inputs[key] = source == IEffectProvider.InputAnchorGUID.ToString()
+                    ? providers[id].GetPipeline().GetContentType() : GetSourceType(source, providers);
             }
             var context = new EffectFieldTypeContext
             {

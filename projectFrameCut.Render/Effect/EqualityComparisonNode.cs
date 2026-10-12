@@ -48,6 +48,8 @@ public sealed class EqualityComparisonNodeEffect : IEffect
         var b = context.Parameters.GetValueOrDefault("B");
         if (a is null) return b is null;
         if (b is null || a.GetType() != b.GetType()) return false;
+        if (a is projectFrameCut.Drawing.Vector.VectorPicture lv && b is projectFrameCut.Drawing.Vector.VectorPicture rv)
+            return VectorPictureEffectProcessing.HasSameContent(lv, rv);
         return a is IPicture left && b is IPicture right
             ? left.GetUniqueID() == right.GetUniqueID() : a.Equals(b);
     }

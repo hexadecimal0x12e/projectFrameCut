@@ -95,11 +95,17 @@ public sealed class ProjectExternalSourceHost : IAsyncDisposable
                     client = new(await ProjectExternalSourceRuntime.StartWorker(root, asset, cancellationToken).ConfigureAwait(false));
                     await client.LoadAsync(cancellationToken).ConfigureAwait(false);
                     asset.Sources = client.Sources.Select(x => RenderRpcSerializer.Clone(x)).ToList();
+                    asset.AudioSources = client.AudioSources.Select(x => RenderRpcSerializer.Clone(x)).ToList();
                     if (asset.Sources.Any(x => string.IsNullOrWhiteSpace(x.SourceId) || string.IsNullOrWhiteSpace(x.DecoderName))
                         || asset.Sources.Select(x => x.SourceId).Distinct(StringComparer.Ordinal).Count() != asset.Sources.Count)
                         throw new InvalidDataException("External source provider returned an invalid catalog.");
                     foreach (var source in asset.Sources) { source.ClientId = asset.ImportId; source.ClientName = asset.Manifest.Name; }
-                    await ProjectExternalSourceDatabase.UpdateSourcesAsync(root, asset.ImportId, asset.Sources, cancellationToken).ConfigureAwait(false);
+                    if (asset.AudioSources.Any(x => string.IsNullOrWhiteSpace(x.SourceId) || string.IsNullOrWhiteSpace(x.DecoderName)
+                        || x.ChannelCount < 0 || x.ChannelCount > 256 || x.SamplePerSecond < 0)
+                        || asset.AudioSources.Select(x => x.SourceId).Distinct(StringComparer.Ordinal).Count() != asset.AudioSources.Count)
+                        throw new InvalidDataException("External audio source provider returned an invalid catalog.");
+                    foreach (var source in asset.AudioSources) { source.ClientId = asset.ImportId; source.ClientName = asset.Manifest.Name; }
+                    await ProjectExternalSourceDatabase.UpdateSourcesAsync(root, asset.ImportId, asset.Sources, asset.AudioSources, cancellationToken).ConfigureAwait(false);
                     Entries[asset.ImportId] = new(asset, client);
                     Interlocked.Increment(ref generation);
                     client = null;
@@ -132,7 +138,8 @@ public sealed class ProjectExternalSourceHost : IAsyncDisposable
             Name = x.Manifest.Name, Version = x.Manifest.Version, Author = x.Manifest.Author, ManifestId = x.Manifest.Id,
             Description = x.Manifest.Description ?? string.Empty, AuthorUrl = x.Manifest.AuthorUrl ?? string.Empty,
             ManifestSha256 = x.ManifestSha256, Directory = x.Directory, ImportedAt = x.CreatedAt,
-            Sources = current && Entries.TryGetValue(x.ImportId, out var entry) ? entry.Asset.Sources : x.Sources }).ToList(),
+            Sources = current && Entries.TryGetValue(x.ImportId, out var entry) ? entry.Asset.Sources : x.Sources,
+            AudioSources = current && Entries.TryGetValue(x.ImportId, out var audioEntry) ? audioEntry.Asset.AudioSources : x.AudioSources }).ToList(),
     };
 
     public async Task CloseAsync()

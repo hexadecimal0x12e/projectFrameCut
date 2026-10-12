@@ -141,6 +141,7 @@ public static class ProjectExternalSourceDatabase
             {
                 ImportId = importId, Directory = $"{DirectoryName}/{importId:N}", Manifest = validated.Manifest, ManifestSha256 = validated.Hash,
                 Sources = replaceId.HasValue ? index.Assets.Single(x => x.ImportId == replaceId.Value).Sources.Select(x => RenderRpcSerializer.Clone(x)).ToList() : [],
+                AudioSources = replaceId.HasValue ? index.Assets.Single(x => x.ImportId == replaceId.Value).AudioSources.Select(x => RenderRpcSerializer.Clone(x)).ToList() : [],
             };
             if (System.IO.Directory.Exists(destination)) System.IO.Directory.Move(destination, backup);
             System.IO.Directory.Move(staging, destination);
@@ -169,6 +170,10 @@ public static class ProjectExternalSourceDatabase
     }
 
     public static async Task UpdateSourcesAsync(string projectRoot, Guid importId, List<ExternalVideoSourceDescriptor> sources, CancellationToken cancellationToken = default)
+        => await UpdateSourcesAsync(projectRoot, importId, sources, null, cancellationToken).ConfigureAwait(false);
+
+    public static async Task UpdateSourcesAsync(string projectRoot, Guid importId, List<ExternalVideoSourceDescriptor> sources,
+        List<ExternalAudioSourceDescriptor>? audioSources, CancellationToken cancellationToken = default)
     {
         await Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -176,6 +181,7 @@ public static class ProjectExternalSourceDatabase
             var index = Read(projectRoot);
             var asset = index.Assets.Single(x => x.ImportId == importId);
             asset.Sources = sources.Select(x => RenderRpcSerializer.Clone(x)).ToList();
+            if (audioSources is not null) asset.AudioSources = audioSources.Select(x => RenderRpcSerializer.Clone(x)).ToList();
             await WriteAsync(projectRoot, index, cancellationToken).ConfigureAwait(false);
         }
         finally { Gate.Release(); }

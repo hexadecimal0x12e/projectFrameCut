@@ -145,6 +145,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             return this switch
             {
                 IMultipleOutputEffect multiple => multiple.ComputeOutputs(context),
+                IVectorPictureEffect vector when context.Input is projectFrameCut.Drawing.Vector.VectorPicture picture => vector.Process(picture, context.Progress),
                 IValueProviderEffect value => value.GetGetter()(),
                 IClipPositionProvider position when context.Clip is not null => position.GetPosition(context.Clip, context.TargetWidth, context.TargetHeight),
                 IContinuousClipPositionProvider position when context.Clip is not null => position.GetPosition(context.Clip, context.FrameIndex,

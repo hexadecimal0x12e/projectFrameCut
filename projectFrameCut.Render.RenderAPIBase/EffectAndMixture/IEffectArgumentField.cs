@@ -174,6 +174,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </remarks>
         FrameAsParameterFlow = 1 << 12,
 
+        /// <summary>
+        /// Indicate a Vector content picture.
+        /// </summary>
         VectorPicture = IPicture | (1 << 13),
 
         /// <summary>

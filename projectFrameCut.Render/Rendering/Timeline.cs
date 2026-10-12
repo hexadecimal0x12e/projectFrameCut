@@ -94,6 +94,8 @@ namespace projectFrameCut.Render.Rendering
                     int clipTargetHeight = ResolveClipOutputHeight(clip, targetHeight, projectRelativeHeight);
                     try
                     {
+                        using var context = ValueProviderFrameContext.PushFrame(targetFrame,
+                            Math.Clamp(((float)targetFrame - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1));
                         if (ClipInitializationFailure.IsMarked(clip))
                         {
                             frame = ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData);
