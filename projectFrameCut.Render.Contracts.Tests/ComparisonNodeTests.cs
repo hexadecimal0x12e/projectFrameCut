@@ -118,4 +118,16 @@ public sealed class ComparisonNodeTests
             }));
         }
     }
+
+    [TestMethod]
+    public void StaticComparisonOperationCannotBeBound()
+    {
+        var source = new Provider(null, EffectArgumentFieldType.Integer, _ => 1);
+        var target = new NumericComparisonNodeEffectProvider();
+        Assert.ThrowsExactly<InvalidOperationException>(() => target.SetFieldBinding("Operation", source.Id.ToString()));
+        Assert.IsFalse(target.TryGetFieldBinding("Operation", out _));
+        Assert.AreEqual(">", target.Fields["Operation"].GetGetter()());
+        target.SetFieldBinding("A", source.Id.ToString());
+        Assert.AreEqual(0, DynamicEffectBindings.Validate(Providers(source, target)).Count);
+    }
 }

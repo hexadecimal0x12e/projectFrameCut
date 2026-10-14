@@ -11,11 +11,19 @@ public record ClipArgumentFieldDescriptor : EffectArgumentFieldDescriptor
 
 public static class ClipArgumentHandler
 {
+    public const string ShouldRenderKey = "ShouldRender";
     private static readonly MethodInfo CloneMethod = typeof(object).GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     public static IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> DefaultFields { get; } =
         new Dictionary<string, ClipArgumentFieldDescriptor>
         {
+            [ShouldRenderKey] = new()
+            {
+                Id = ShouldRenderKey,
+                FieldType = EffectArgumentFieldType.Boolean,
+                DefaultValue = "true",
+                ReadValue = _ => true,
+            },
             [nameof(IClip.TargetX)] = Integer(nameof(IClip.TargetX), c => c.TargetX),
             [nameof(IClip.TargetY)] = Integer(nameof(IClip.TargetY), c => c.TargetY),
             [nameof(IClip.TargetWidth)] = Integer(nameof(IClip.TargetWidth), c => c.TargetWidth),

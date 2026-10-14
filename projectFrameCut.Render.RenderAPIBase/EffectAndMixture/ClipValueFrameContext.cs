@@ -122,7 +122,7 @@ public sealed class ClipValueFrameContext : IDisposable
         if (!sameClip && ClipLayerOrder.BottomToTop.Compare(source, consumer) >= 0)
             throw Error("The source must precede the consumer in clip render order.");
         if (!source.ContainsFrame(frame)) throw Error("The source clip is inactive.");
-        if (isAvailable?.Invoke(source) == false) throw Error("The source clip failed to initialize or read its frame.");
+        if (isAvailable?.Invoke(source) == false) throw Error("The source clip is unavailable at this frame.");
         if (source.EffectProvidersInstances?.FirstOrDefault(p => p.Id == input.SourceEndpointId) is not IClipValueEndpointProvider { IsExport: true } output)
             throw Error("The source endpoint does not exist.");
         if (!output.Enabled) throw Error("The source endpoint is disabled.");

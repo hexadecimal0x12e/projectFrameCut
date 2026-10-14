@@ -16,10 +16,8 @@ internal static class ClipPreviewRenderer
         using var endpoints = ClipValuePassThrough.Open(allClips, frameIndex, canvasWidth, canvasHeight,
             projectWidth, projectHeight, pixelMode, token);
         using var endpointClip = ClipValueFrameContext.Current?.EnterClip(clip.Id, independent: true);
-        if (!beforeLayout && TransformProcessing.HasActiveTransform(clip, allClips, frameIndex))
-            return TransformProcessing.RenderCanvas(clip, allClips, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, pixelMode,
-                initializeClips: initializeClips);
-        if (initializeClips && !ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
+        if (initializeClips && !ClipArgumentBinding.IsFrameCopy(clip) && !ClipArgumentBinding.TryGetFrame(clip, frameIndex, out _)
+            && !ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
         {
             try
             {
@@ -37,6 +35,12 @@ internal static class ClipPreviewRenderer
             Math.Clamp(((float)frameIndex - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1), false, token);
         var sourceWidth = ResolveDimension(clip.TargetWidth, projectWidth, canvasWidth);
         var sourceHeight = ResolveDimension(clip.TargetHeight, projectHeight, canvasHeight);
+        bool transform = !beforeLayout && TransformProcessing.HasActiveTransform(clip, allClips, frameIndex);
+        if (!ClipArgumentBinding.ShouldRender(clip))
+            return Timeline.CreateTransparentFrame(transform ? canvasWidth : sourceWidth, transform ? canvasHeight : sourceHeight, pixelMode);
+        if (transform)
+            return TransformProcessing.RenderCanvas(clip, allClips, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, pixelMode,
+                initializeClips: initializeClips);
         IPicture? frame;
         try
         {

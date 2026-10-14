@@ -21,8 +21,8 @@ namespace projectFrameCut.Render.RPCProtocol;
 
 public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = null, string? stateRoot = null, Action<RenderJob>? completionSink = null, Action<RenderJob>? progressSink = null, IAudioPreviewSinkFactory? previewAudioSinkFactory = null) : IRenderService, IAsyncDisposable
 {
-    private const string TimelineFrameCacheVersion = "v5-vfd";
-    private const string ClipPreviewCacheVersion = "v5-vfd";
+    private const string TimelineFrameCacheVersion = "v6-vfd";
+    private const string ClipPreviewCacheVersion = "v6-vfd";
     private const string TimelineSegmentCacheVersion = "v2-audio-source";
     private const string AudioSegmentCacheVersion = "v2-track-source";
     private const string FrameHashIndexVersion = "v2-lazy-frame-clip";

@@ -90,22 +90,32 @@ namespace projectFrameCut.DraftStuff
             ArgumentNullException.ThrowIfNull(clip);
             if (pipeline is null && clip.SupportsNativeEffects)
             {
-                var tabs = new CompactTabView();
+                var items = new List<TabbedViewItem>();
                 foreach (var stage in new[] { EffectPipeline.NativeContent, EffectPipeline.Picture })
-                    tabs.TabItems.Add(new TabbedViewItem
+                    items.Add(new TabbedViewItem
                     {
                         Header = stage == EffectPipeline.NativeContent ? PPLocalizedResources.EffectBind_VectorPipeline : PPLocalizedResources.EffectBind_PicturePipeline,
                         Tag = stage.ToString(),
-                        Content = await BuildEffectTab(clip, handler, stage)
+                        LazyAsyncContentFactory = () => BuildEffectTab(clip, handler, stage)
                     });
+                var tabs = new CompactTabView
+                {
+                    SelectedIndex = clip.ExtraData.GetValueOrDefault("__EffectPipelineTab__")?.ToString() == EffectPipeline.Picture.ToString() ? 1 : 0,
+                    TabItems = new(items),
+                };
                 tabs.OnTabSwitched += (_, item) => clip.ExtraData["__EffectPipelineTab__"] = item.Tag;
-                tabs.SelectByTag(clip.ExtraData.GetValueOrDefault("__EffectPipelineTab__")?.ToString() ?? EffectPipeline.NativeContent.ToString());
                 return tabs;
             }
+            var sw = Stopwatch.StartNew();
             var selectionTarget = pipeline is { } stageTarget ? clip.GetEffectSelectionTarget(stageTarget) : clip.GetEffectSelectionTarget();
             PropertyPanelBuilder ppb = new();
-            var types = clip.EffectProviders is { } typeProviders ? await EffectFieldTypeResolution.ResolveAsync(typeProviders) : null;
-            var bindingDiagnostics = EffectBindingHelper.ValidateBindings(clip.EffectProviders, types);
+            var providerSnapshot = new Dictionary<Guid, IEffectProvider>(clip.EffectProviders ?? []);
+            var localizedProviderNames = EffectServices.GetLocalizedEffectProviderNames("", false);
+            foreach (var p in providerSnapshot.Values)
+                if (string.IsNullOrWhiteSpace(p.Name)) p.Name = localizedProviderNames.GetValueOrDefault(p.TypeName, p.TypeName);
+            var types = providerSnapshot.Count > 0 ? await EffectFieldTypeResolution.ResolveAsync(providerSnapshot) : null;
+            var bindingDiagnostics = await Task.Run(() => EffectBindingHelper.ValidateBindings(providerSnapshot, types));
+            var diagnosticsByProvider = bindingDiagnostics.Where(d => d.ProviderId.HasValue).ToLookup(d => d.ProviderId!.Value);
 
             if (bindingDiagnostics.Count > 0)
             {
@@ -125,16 +135,29 @@ namespace projectFrameCut.DraftStuff
                 {
                     var bindView = new DraftEffectBindingView();
                     bindView.LoadClip(clip, page, showAllEffect, pipeline);
-                    // Sync the completed graph rebuild to the draft preview.
                     bindView.EffectProvidersChanged += () =>
-                    {
-                        // DraftEffectBindingView has already rebuilt the provider graph. Do not build it a
-                        // second time or rebuild the entire property/timeline UI for a single connection.
                         handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("__EFFECT_BINDING_CHANGED__", clip, null));
-                    };
+                    bool completed = false;
+                    async Task CompleteEditing()
+                    {
+                        if (completed) return;
+                        completed = true;
+                        try
+                        {
+                            await bindView.CompleteEditingAsync();
+                        }
+                        catch (Exception ex) { Log(ex, $"Close effect binding editor for {clip.Id}", this); }
+                    }
                     if (page.UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
                     {
                         page.Popup.Content = bindView;
+                        void OnPopupChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+                        {
+                            if (args.PropertyName != Border.ContentProperty.PropertyName || ReferenceEquals(page.Popup.Content, bindView)) return;
+                            page.Popup.PropertyChanged -= OnPopupChanged;
+                            _ = CompleteEditing();
+                        }
+                        page.Popup.PropertyChanged += OnPopupChanged;
                     }
                     else
                     {
@@ -146,12 +169,14 @@ namespace projectFrameCut.DraftStuff
                         };
                         page.MainMultiWindowView.AddWindow(v);
                         v.Maximize();
-                        v.CloseClicked += (s, e) =>
+                        v.CloseClicked += async (s, e) =>
                         {
-                            RebuildAllEffects(clip, false);
-                            // 与 EffectProvidersChanged 一致：触发 __REFRESH_PANEL__ 让 DraftPage 重建并刷新预览。
-                            handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                            if (!e.Cancel) await CompleteEditing();
                         };
+                        bindView.Unloaded += (_, _) => bindView.Dispatcher.Dispatch(async () =>
+                        {
+                            if (v.Parent is null && !v.IsInStandaloneWindowMode) await CompleteEditing();
+                        });
                     }
                 }
                 catch (Exception ex)
@@ -163,15 +188,22 @@ namespace projectFrameCut.DraftStuff
 
             });
             var bundlesFactories = EffectServices.GetAvailableEffectProviders()
-                .Where(p => pipeline is null || p.Value().Target.HasFlag(EffectTarget.ValueProvider) || p.Value().GetPipeline() == pipeline)
+                .Where(p =>
+                {
+                    if (pipeline is null) return true;
+                    var instance = p.Value();
+                    return instance.Target.HasFlag(EffectTarget.ValueProvider) || instance.GetPipeline() == pipeline;
+                })
                 .ToDictionary(p => p.Key, p => p.Value);
             var inputSources = new Dictionary<(Guid ProviderId, string Display), string>();
+            var inputDisplayNames = new Dictionary<string, string>();
+            var inputEditVersions = new Dictionary<Guid, int>();
             var haveManySpeedVarianceProvider = (clip.EffectProviders?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.SpeedVarianceProvider)) ?? 0) >= 2;
             var haveManyMixtureProvider = (clip.EffectProviders?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.MixtureProvider)) ?? 0) >= 2;
             var haveManySourceReplacementEffect = (clip.EffectProviders?.Count(c => c.Value.TypeOfEffect.HasFlag(EffectType.SourceReplacement)) ?? 0) >= 2;
             if (clip.EffectProviders != null)
             {
-                var filteredProviders = clip.EffectProviders
+                var filteredProviders = providerSnapshot
                      .Where(c => (pipeline is null || c.Value.GetPipeline() == pipeline)
                          && c.Value.TypeOfEffect != EffectType.Transform && (
                          showAllEffect
@@ -185,6 +217,9 @@ namespace projectFrameCut.DraftStuff
 
                 // Sort providers by their single stored picture input. Fan-out is allowed.
                 var sortedProviders = new List<KeyValuePair<Guid, IEffectProvider>>();
+                var providersById = filteredProviders.ToDictionary(p => p.Key);
+                var consumers = filteredProviders.ToLookup(p => EffectProviderOutputExtensions.TryParseOutputSourceId(p.Value.GetMainInputSource(), out var id, out _)
+                    ? id : IEffectProvider.NoConnectionGUID);
                 var visitedIds = new HashSet<Guid>();
                 var traverseQueue = new Queue<Guid>();
                 foreach (var b in filteredProviders)
@@ -198,11 +233,10 @@ namespace projectFrameCut.DraftStuff
                 {
                     var id = traverseQueue.Dequeue();
                     if (!visitedIds.Add(id)) continue;
-                    var bundleKvp = filteredProviders.First(b => b.Key == id);
-                    sortedProviders.Add(bundleKvp);
-                    foreach (var b in filteredProviders)
+                    sortedProviders.Add(providersById[id]);
+                    foreach (var b in consumers[id])
                     {
-                        if (b.Value.GetMainInputSource() == id.ToString() && !visitedIds.Contains(b.Key))
+                        if (!visitedIds.Contains(b.Key))
                         {
                             traverseQueue.Enqueue(b.Key);
                         }
@@ -215,11 +249,28 @@ namespace projectFrameCut.DraftStuff
                         sortedProviders.Add(b);
                 }
 
+                var inputOptions = types is null ? new Dictionary<Guid, List<string>>()
+                    : await Task.Run(() => BuildInputCandidateSources(sortedProviders.Select(p => p.Value).ToArray(), providerSnapshot, types, showAllEffect));
+                var outputTargets = new Dictionary<string, List<string>>();
+                foreach (var p in providerSnapshot.Values)
+                {
+                    AddOutputTarget(p.GetMainInputSource(), $"{p.Name} ({p.Id}) [{PPLocalizedResources.EffectBind_InputAnchor}]");
+                    foreach (var binding in p.EnumerateFieldBindings())
+                        AddOutputTarget(binding.Value, $"{p.Name} ({p.Id}) [{binding.Key}]");
+                }
+                void AddOutputTarget(string source, string display)
+                {
+                    if (!EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out _) || !providerSnapshot.ContainsKey(id)) return;
+                    if (!outputTargets.TryGetValue(source, out var targets)) outputTargets[source] = targets = [];
+                    targets.Add(display);
+                }
+                Log($"Prepared effect panel for {clip.Id}, pipeline {pipeline}, providers {providerSnapshot.Count}, candidates {inputOptions.Values.Sum(o => o.Count)}, elapsed {sw.ElapsedMilliseconds} ms.", "debug");
+
                 foreach (var bundleKvp in sortedProviders)
                 {
                     var bundleId = bundleKvp.Key;
                     var bundleInstance = bundleKvp.Value;
-                    var locedName = EffectServices.GetLocalizedEffectProviderNames("", false).GetValueOrDefault(bundleInstance.TypeName, bundleInstance.TypeName);
+                    var locedName = localizedProviderNames.GetValueOrDefault(bundleInstance.TypeName, bundleInstance.TypeName);
                     var locedType = bundleInstance.TypeOfEffect switch
                     {
                         Shared.EffectType.ContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
@@ -237,16 +288,24 @@ namespace projectFrameCut.DraftStuff
 
                     string GetInputAnchorSelection(string id)
                     {
+                        HashSet<Guid>? visited = null;
+                        while (EffectProviderOutputExtensions.TryParseOutputSourceId(id, out var hiddenId, out _)
+                            && providerSnapshot.TryGetValue(hiddenId, out var hidden) && !showAllEffect
+                            && hidden.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor))
+                        {
+                            visited ??= [];
+                            if (!visited.Add(hiddenId)) return PPLocalizedResources.EffectBind_NoConnection;
+                            id = hidden.GetMainInputSource();
+                        }
                         if (id == IEffectProvider.NoConnectionGUID.ToString()) return PPLocalizedResources.EffectBind_NoConnection;
                         if (id == IEffectProvider.InputAnchorGUID.ToString()) return PPLocalizedResources.EffectBind_SourcePicture;
                         if (id == ValueProviderFrameContext.BuiltInFrameProviderId) return PPLocalizedResources.EffectBindView_BoundSource_FrameIndex;
                         if (id == ValueProviderFrameContext.BuiltInProgressProviderId) return PPLocalizedResources.EffectBindView_BoundSource_Progress;
                         if (EffectProviderOutputExtensions.TryParseOutputSourceId(id, out var providerId, out var outputId)
-                            && clip.EffectProviders != null && clip.EffectProviders.TryGetValue(providerId, out var b))
+                            && providerSnapshot.TryGetValue(providerId, out var b))
                         {
-                            if (!showAllEffect && b.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor))
-                                return GetInputAnchorSelection(b.GetMainInputSource());
-                            var display = outputId is null ? $"{b.Name} ({b.Id})" : $"{b.Name} [{outputId}] ({b.Id})";
+                            if (!inputDisplayNames.TryGetValue(id, out var display))
+                                inputDisplayNames[id] = display = outputId is null ? $"{b.Name} ({b.Id})" : $"{b.Name} [{outputId}] ({b.Id})";
                             inputSources[(bundleId, display)] = id;
                             return display;
                         }
@@ -271,8 +330,8 @@ namespace projectFrameCut.DraftStuff
                         var bundlePpb = bundleUI.CreateUI(bundleInstance);
 
                         ppb.AddText(new TitleAndDescriptionLineLabel(locedName, locedType));
-                        var providerDiagnostics = bindingDiagnostics.Where(d => d.ProviderId == bundleId).ToList();
-                        if (providerDiagnostics.Count > 0)
+                        var providerDiagnostics = diagnosticsByProvider[bundleId];
+                        if (providerDiagnostics.Any())
                         {
                             ppb.AddText(new Label
                             {
@@ -292,6 +351,7 @@ namespace projectFrameCut.DraftStuff
                             ppb.AddFromAnother(bundlePpb, bundleInstance);
                         }
 
+                        AddContinuousEffectRangeUI(ppb, bundleInstance, clip, page);
                         ppb.AddSeparator();
 
                         //they can't be reordered
@@ -299,46 +359,13 @@ namespace projectFrameCut.DraftStuff
 
 
                         var resolvedInAnchorId = bundleInstance.GetMainInputSource();
-                        async Task<EffectFieldTypeResolution?> InputCandidateTypes(string source) =>
-                            bundleInstance.InFields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var input)
-                                && input.FieldType.HasFlag(EffectArgumentFieldType.Any)
-                                ? await EffectFieldTypeResolution.ResolveAsync(clip.EffectProviders, bindingOverrides: new Dictionary<Guid, IReadOnlyDictionary<string, string>>
-                                {
-                                    [bundleId] = new Dictionary<string, string>(bundleInstance.AnchorsBindingState) { [EffectProviderAnchorExtensions.InputKey] = source },
-                                }) : types;
-
-                        // 构建过滤后的 InAnchor 下拉选项：排除自身、类型不兼容和（showAllEffect=false 时）内部 bundle
-                        var inAnchorProviderOptions = new List<string>();
-                        foreach (var b in clip.EffectProviders.Values.Where(p => p.Id != bundleId
-                            && (showAllEffect || !p.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor))))
-                            foreach (var output in b.GetOutputFields().Values)
-                            {
-                                string? outputId = b is IMultipleOutputEffectProvider ? output.Id : null;
-                                string source = outputId is null ? b.Id.ToString() : EffectProviderOutputExtensions.CreateOutputSourceId(b.Id, outputId);
-                                var candidateTypes = await InputCandidateTypes(source);
-                                if (!b.CanConnectContent(bundleInstance, outputId, candidateTypes)
-                                    || candidateTypes?.AreInputsCompatible(bundleInstance) == false) continue;
-                                inAnchorProviderOptions.Add(GetInputAnchorSelection(source));
-                            }
+                        var inAnchorProviderOptions = inputOptions.GetValueOrDefault(bundleId, []).Select(GetInputAnchorSelection).ToList();
                         var curIn = GetInputAnchorSelection(resolvedInAnchorId);
                         if (curIn is not null && !inAnchorProviderOptions.Contains(curIn))
                             inAnchorProviderOptions.Add(curIn);
 
-                        if (bundleInstance.InFields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var mainInput))
+                        if (bundleInstance.InFields.ContainsKey(EffectProviderAnchorExtensions.InputKey))
                         {
-                            foreach (var source in new[] { IEffectProvider.InputAnchorGUID.ToString(), ValueProviderFrameContext.BuiltInFrameProviderId, ValueProviderFrameContext.BuiltInProgressProviderId })
-                            {
-                                var candidateTypes = await InputCandidateTypes(source);
-                                var sourceType = source == IEffectProvider.InputAnchorGUID.ToString() ? bundleInstance.GetPipeline().GetContentType() : EffectArgumentFieldType.Numeric;
-                                if (!EffectFieldTypes.AreCompatible(sourceType, candidateTypes?.GetInputType(bundleInstance, EffectProviderAnchorExtensions.InputKey) ?? mainInput.FieldType)
-                                    || candidateTypes?.AreInputsCompatible(bundleInstance) == false) continue;
-                                inAnchorProviderOptions.Add(source switch
-                                {
-                                    ValueProviderFrameContext.BuiltInFrameProviderId => PPLocalizedResources.EffectBindView_BoundSource_FrameIndex,
-                                    ValueProviderFrameContext.BuiltInProgressProviderId => PPLocalizedResources.EffectBindView_BoundSource_Progress,
-                                    _ => PPLocalizedResources.EffectBind_SourcePicture,
-                                });
-                            }
                             ppb.AddPicker($"Provider|{bundleId}|InAnchor", PPLocalizedResources.EffectBind_InputAnchor,
                                 inAnchorProviderOptions.Append(PPLocalizedResources.EffectBind_NoConnection).Distinct().ToArray(), curIn);
                         }
@@ -346,17 +373,11 @@ namespace projectFrameCut.DraftStuff
                         {
                             foreach (var output in multiple.OutFields.Values)
                             {
+                                string source = EffectProviderOutputExtensions.CreateOutputSourceId(bundleId, output.Id);
                                 var targets = new List<string>();
                                 if (bundleInstance.IsFinalOutputSource() && bundleInstance.GetFinalOutputFieldId() == output.Id)
                                     targets.Add(PPLocalizedResources.EffectBind_FinalResult);
-                                string source = EffectProviderOutputExtensions.CreateOutputSourceId(bundleId, output.Id);
-                                foreach (var target in clip.EffectProviders.Values)
-                                {
-                                    if (target.GetMainInputSource() == source)
-                                        targets.Add($"{target.Name} ({target.Id}) [{PPLocalizedResources.EffectBind_InputAnchor}]");
-                                    foreach (var binding in target.EnumerateFieldBindings().Where(b => b.Value == source))
-                                        targets.Add($"{target.Name} ({target.Id}) [{binding.Key}]");
-                                }
+                                if (outputTargets.TryGetValue(source, out var boundTargets)) targets.AddRange(boundTargets);
                                 string current = targets.Count > 0 ? string.Join("; ", targets) : PPLocalizedResources.EffectBind_NoConnection;
                                 var options = new List<string> { current };
                                 if ((types?.GetOutputType(bundleInstance, output.Id) ?? output.FieldType).IsContent()) options.Add(PPLocalizedResources.EffectBind_FinalResult);
@@ -429,10 +450,17 @@ namespace projectFrameCut.DraftStuff
                 return false;
             }
 
-            ppb.PropertyChanged += (s, e) =>
+            ppb.PropertyChanged += async (s, e) =>
             {
                 ArgumentNullException.ThrowIfNull(clip);
                 clip.EffectProviders ??= new();
+
+                if (e.Id.StartsWith(ContinuousEffectRangePropertyPrefix, StringComparison.Ordinal))
+                {
+                    RebuildAllEffects(clip);
+                    handler?.Invoke(s, e);
+                    return;
+                }
 
                 if (!ppb.Equals(s)) //from another
                 {
@@ -487,7 +515,7 @@ namespace projectFrameCut.DraftStuff
                                 case "Name":
                                     if (clip.EffectProviders.TryGetValue(bundleId, out var nameProvider))
                                     {
-                                        var locedName = EffectServices.GetLocalizedEffectProviderNames().GetValueOrDefault(nameProvider.TypeName, nameProvider.TypeName);
+                                        var locedName = localizedProviderNames.GetValueOrDefault(nameProvider.TypeName, nameProvider.TypeName);
                                         var newName = e.Value?.ToString();
                                         nameProvider.Name = string.IsNullOrWhiteSpace(newName) ? locedName : newName;
                                         handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
@@ -517,7 +545,32 @@ namespace projectFrameCut.DraftStuff
                                         if (inputSources.TryGetValue((bundleId, e.Value?.ToString() ?? ""), out var selectedSource)) source = selectedSource;
                                         if (source is not null || TryParseAnchorSelection(e.Value?.ToString(), PPLocalizedResources.EffectBind_SourcePicture, IEffectProvider.InputAnchorGUID, out newSourceId))
                                         {
-                                            inProvider.SetMainInputSource(source ?? newSourceId.ToString());
+                                            int version = inputEditVersions[bundleId] = inputEditVersions.GetValueOrDefault(bundleId) + 1;
+                                            source ??= newSourceId.ToString();
+                                            if (source != IEffectProvider.NoConnectionGUID.ToString())
+                                            {
+                                                try
+                                                {
+                                                    var candidate = await EffectFieldTypeResolution.ResolveAsync(clip.EffectProviders, bindingOverrides: new Dictionary<Guid, IReadOnlyDictionary<string, string>>
+                                                    {
+                                                        [bundleId] = new Dictionary<string, string>(inProvider.AnchorsBindingState) { [EffectProviderAnchorExtensions.InputKey] = source },
+                                                    });
+                                                    if (version != inputEditVersions[bundleId] || !ReferenceEquals(clip.EffectProviders?.GetValueOrDefault(bundleId), inProvider)) return;
+                                                    if (!candidate.AreInputsCompatible(inProvider) || candidate.Diagnostics.Count > 0)
+                                                    {
+                                                        Log($"Rejected effect input {source} for provider {bundleId} on clip {clip.Id}.", "warning");
+                                                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                                                        return;
+                                                    }
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    Log(ex, $"Resolve effect input for provider {bundleId} on clip {clip.Id}", this);
+                                                    page.SetStatusText(ex.Message);
+                                                    return;
+                                                }
+                                            }
+                                            inProvider.SetMainInputSource(source);
                                             RebuildAllEffects(clip);
                                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                         }
@@ -618,7 +671,42 @@ namespace projectFrameCut.DraftStuff
                         }));
 
             var panel = ppb.BuildWithScrollView();
+            Log($"Built effect panel for {clip.Id}, pipeline {pipeline}, providers {providerSnapshot.Count}, elapsed {sw.ElapsedMilliseconds} ms.", "debug");
             return panel;
+        }
+
+        private static Dictionary<Guid, List<string>> BuildInputCandidateSources(IReadOnlyList<IEffectProvider> targets,
+            IReadOnlyDictionary<Guid, IEffectProvider> providers, EffectFieldTypeResolution types, bool showInternal)
+        {
+            var outputs = providers.Values.Where(p => showInternal || !p.Target.HasFlag(EffectTarget.IsNotVisibleInEffectEditor))
+                .SelectMany(p => types.GetContext(p.Id).State.Outputs.Keys.Select(key =>
+                {
+                    string? outputId = p is IMultipleOutputEffectProvider ? key : null;
+                    return (Provider: p, OutputId: outputId, Source: outputId is null ? p.Id.ToString() : EffectProviderOutputExtensions.CreateOutputSourceId(p.Id, outputId));
+                })).ToArray();
+            var options = new Dictionary<Guid, List<string>>();
+            foreach (var target in targets)
+            {
+                if (target.TypeOfEffect is EffectType.Transform or EffectType.SpeedVarianceProvider or EffectType.MixtureProvider or EffectType.SourceReplacement
+                    || !target.InFields.ContainsKey(EffectProviderAnchorExtensions.InputKey)) continue;
+                var sources = options[target.Id] = [];
+                foreach (var output in outputs)
+                {
+                    if (output.Provider.Id == target.Id || output.Provider.GetPipeline() != target.GetPipeline()
+                        || output.Provider is ClipArgumentProvider || output.Provider.TypeOfEffect == EffectType.Transform) continue;
+                    var candidate = types.ResolveBindingCandidate(target, EffectProviderAnchorExtensions.InputKey, output.Source);
+                    if (candidate is not null && output.Provider.CanConnectContent(target, output.OutputId, candidate)
+                        && candidate.AreInputsCompatible(target)) sources.Add(output.Source);
+                }
+                foreach (var source in new[] { IEffectProvider.InputAnchorGUID.ToString(), ValueProviderFrameContext.BuiltInFrameProviderId, ValueProviderFrameContext.BuiltInProgressProviderId })
+                {
+                    var candidate = types.ResolveBindingCandidate(target, EffectProviderAnchorExtensions.InputKey, source);
+                    var sourceType = source == IEffectProvider.InputAnchorGUID.ToString() ? target.GetPipeline().GetContentType() : EffectArgumentFieldType.Numeric;
+                    if (candidate is not null && EffectFieldTypes.AreCompatible(sourceType, candidate.GetInputType(target, EffectProviderAnchorExtensions.InputKey))
+                        && candidate.AreInputsCompatible(target)) sources.Add(source);
+                }
+            }
+            return options;
         }
 
         #endregion

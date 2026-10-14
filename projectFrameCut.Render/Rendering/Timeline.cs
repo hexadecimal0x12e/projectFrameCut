@@ -28,6 +28,13 @@ namespace projectFrameCut.Render.Rendering
         public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture16bpp.GenerateSolidColor(w, h, 0, 0, 0, null);
         public static bool ProcessEffectFromCanvas { get; set; } = true;
 
+        internal static IPicture CreateTransparentFrame(int width, int height, IPicture.PicturePixelMode pixelMode) => pixelMode.Value switch
+        {
+            8 => Picture8bpp.GenerateSolidColor(width, height, 0, 0, 0, 0),
+            16 => HDRPicture16bpp.GenerateSolidColor(width, height, 0, 0, 0, 0, 0),
+            _ => throw new NotSupportedException($"Unsupported target pixel mode {pixelMode}."),
+        };
+
         public static IEnumerable<OneFrame> GetFramesInOneFrame(
             IClip[] video,
             uint targetFrame,
@@ -84,6 +91,7 @@ namespace projectFrameCut.Render.Rendering
                         }
                     }
                 });
+                if (!ClipArgumentBinding.ShouldRender(clip)) continue;
                 if (IsFrameInClipRange(clip, targetFrame))
                 {
                     var endPoint = clip.StartFrame + clip.GetEffectiveDuration();
@@ -331,13 +339,21 @@ namespace projectFrameCut.Render.Rendering
                 ConcurrentDictionary<string, object> bindableEffectResultCache = new();
                 Dictionary<string, object> bindableEffectResultCache2 = new();
                 Dictionary<string, bool> producedValueTable = new();
-                foreach (var srcFrame in frames)
+                foreach (var original in frames)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     // Don't resize the frame before applying effects!
                     // The ResizeEffect and PlaceEffect will handle sizing and positioning.
-                    ArgumentNullException.ThrowIfNull(srcFrame, nameof(srcFrame));
-                    ArgumentNullException.ThrowIfNull(srcFrame.ParentClip, nameof(srcFrame.ParentClip));
+                    ArgumentNullException.ThrowIfNull(original, nameof(frames));
+                    ArgumentNullException.ThrowIfNull(original.ParentClip, nameof(original.ParentClip));
+                    var clip = ClipArgumentBinding.InitializeFrame(original.ParentClip, frameIndex);
+                    if (!ClipArgumentBinding.ShouldRender(clip))
+                    {
+                        Track(original.Clip);
+                        continue;
+                    }
+                    var srcFrame = ReferenceEquals(clip, original.ParentClip) ? original
+                        : new OneFrame(frameIndex, clip, original.Clip, resolveEffects: false);
                     using var endpointClip = ClipValueFrameContext.Current?.EnterClip(srcFrame.ParentClip.Id);
                     if (TransformProcessing.IsCanvasFrame(srcFrame.Clip))
                     {
@@ -550,7 +566,7 @@ namespace projectFrameCut.Render.Rendering
                 }
                 else if (result is null)
                 {
-                    return Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
+                    return CreateTransparentFrame(targetWidth, targetHeight, targetPPB);
                 }
                 else
                 {

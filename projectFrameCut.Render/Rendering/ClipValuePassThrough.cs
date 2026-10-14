@@ -43,7 +43,8 @@ public static class ClipValuePassThrough
                 frame, token, pixelMode, initializeClips: false);
             if (picture is null || ClipsAndTracks.ClipInitializationFailure.IsMarked(source))
                 throw new ClipValueBindingException($"Source clip {source.Id} failed to produce an endpoint frame at {frame}.");
-        }, DynamicEffectGraph.CopyPicture, source => !ClipsAndTracks.ClipInitializationFailure.IsMarked(source));
+        }, DynamicEffectGraph.CopyPicture, source => !ClipsAndTracks.ClipInitializationFailure.IsMarked(source)
+            && ClipArgumentBinding.ShouldRender(ClipArgumentBinding.InitializeFrame(source, frame)));
     }
 
     public static IEnumerable<Guid> GetSourceClipIds(IClip clip)

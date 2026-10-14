@@ -72,6 +72,15 @@ public sealed class EffectImplementationRegistry
             Validate(blank, typeName, type);
             effect = blank.WithParameters(parameters) ?? throw new InvalidOperationException($"WithParameters returned null for '{typeName}/{type}'.");
             Validate(effect, typeName, type);
+            if (effect is IContinuousEffect c)
+            {
+                if (parameters.TryGetValue(nameof(IContinuousEffect.StartPoint), out var start) && EffectParamConvert.TryConvertToInt(start, out var startPoint))
+                    c.StartPoint = startPoint;
+                if (parameters.TryGetValue(nameof(IContinuousEffect.EndPoint), out var end) && EffectParamConvert.TryConvertToInt(end, out var endPoint))
+                    c.EndPoint = endPoint;
+                if (parameters.TryGetValue(nameof(IContinuousEffect.IsScoped), out var scoped) && EffectParamConvert.TryConvertToBool(scoped, out var isScoped))
+                    c.IsScoped = isScoped;
+            }
             return effect;
         }
         catch

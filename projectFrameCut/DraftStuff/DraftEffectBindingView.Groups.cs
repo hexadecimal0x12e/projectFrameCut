@@ -43,11 +43,14 @@ public partial class DraftEffectBindingView
 
     private void OnGroupLibraryChanged() => Dispatcher.Dispatch(RefreshGroupLibrary);
 
-    private void LoadGroups()
+    private void LoadGroups(bool resetSelection = true)
     {
         _groups = [];
-        _groupSelection.Clear();
-        _selectedNode = null;
+        if (resetSelection)
+        {
+            _groupSelection.Clear();
+            _selectedNode = null;
+        }
         _drawable.GroupBounds.Clear();
         if (_clip?.EffectProviders is not { } providers) return;
         try
@@ -162,8 +165,10 @@ public partial class DraftEffectBindingView
                 { ProviderId = id, FieldId = f.Key, Name = $"{p.Name}: {f.Key}" }));
         }
         foreach (var id in group.ChildGroupIds) ports.AddRange(EffectGroupHelper.Copy(groups.Single(g => g.Id == id).Ports));
-        return ports.Where(port => !port.IsInput || !providers[port.ProviderId].AnchorsBindingState.TryGetValue(port.FieldId, out var source)
-            || !EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out _) || !members.Contains(id)).ToList();
+        return ports.Where(port => port.IsInput
+            ? !providers[port.ProviderId].AnchorsBindingState.TryGetValue(port.FieldId, out var source)
+                || !EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out _) || !members.Contains(id)
+            : DynamicEffectBindings.CanBindOutput(providers[port.ProviderId])).ToList();
     }
 
     private void ShowGroupEditor(EffectGroup group, List<EffectGroup> candidate)
@@ -241,9 +246,13 @@ public partial class DraftEffectBindingView
         if (_clip is null) return;
         SaveGroupPositions();
         EffectGroupHelper.Write(_clip.ExtraData, _groups);
-        LoadClip(_clip, _page, _showIsNotVisibleInEffectEditorEffect, _pipeline);
+        CaptureGroupBindings();
+        UpdateProviderNodes();
+        ApplyGroupProjection();
+        RebuildConnections();
+        UpdateClipValuesPanel();
+        ConnectionsLayer.Invalidate();
         if (rebuild) OnBindingConfigurationChanged();
-        else NotifyEffectProvidersChanged();
     }
 
     private void SaveGroupPositions()
@@ -363,7 +372,7 @@ public partial class DraftEffectBindingView
         var provider = _clip!.EffectProviders![port.ProviderId];
         var field = port.IsInput ? DynamicEffectBindings.InputFields(provider)[port.FieldId] : provider.GetOutputFields()[port.FieldId];
         return new() { Id = port.ProviderId, Key = port.FieldId, DisplayName = port.Name, Index = index,
-            Kind = port.IsInput ? EffectProviderAnchorExtensions.IsInternalInputKey(port.FieldId) ? PortKind.AnchorInput : PortKind.ParamBind
+            Kind = port.IsInput ? IsNodeInput(provider, port.FieldId) ? PortKind.AnchorInput : PortKind.ParamBind
                 : PortKind.AnchorOutput, DeclaredFieldType = field.FieldType,
             FieldType = port.IsInput ? _fieldTypes?.GetInputType(provider, port.FieldId) ?? field.FieldType
                 : _fieldTypes?.GetOutputType(provider, port.FieldId) ?? field.FieldType };
@@ -371,37 +380,50 @@ public partial class DraftEffectBindingView
 
     private void ApplyGroupProjection()
     {
-        var selected = _selectedNode?.Id;
-        foreach (var node in _nodes.Values.Where(n => n.Group is not null).ToArray())
-        {
-            NodesContainer.Children.Remove(node.View!);
-            _nodes.Remove(node.Id);
-        }
+        var visibleGroups = new HashSet<Guid>();
+        var hiddenProviders = new HashSet<Guid>();
         _drawable.GroupBounds.Clear();
-        foreach (var node in _nodes.Values) if (node.View is not null) node.View.IsVisible = true;
         if (_clip?.EffectProviders is not { } providers) return;
         bool Hidden(EffectGroup group) => _groups.Any(g => g.Collapsed && g.Id != group.Id && ContainsGroup(g, group.Id));
         foreach (var group in _groups)
         {
             var members = EffectGroupHelper.Members(group, _groups);
             if (!members.All(id => _nodes.ContainsKey(id))) continue;
-            if (group.Collapsed)
-                foreach (var i in members) _nodes[i].View!.IsVisible = false;
+            if (group.Collapsed) hiddenProviders.UnionWith(members);
             if (Hidden(group)) continue;
-            var node = new NodeViewModel { Id = group.Id, Kind = NodeKind.Group, Provider = null, Group = group,
-                DisplayName = group.Name, X = group.X, Y = group.Y };
-            if (group.Collapsed)
+            visibleGroups.Add(group.Id);
+            bool added = !_nodes.TryGetValue(group.Id, out var node);
+            node ??= new NodeViewModel { Id = group.Id, Kind = NodeKind.Group, Provider = null };
+            node.Group = group;
+            node.DisplayName = group.Name;
+            node.X = group.X;
+            node.Y = group.Y;
+            node.InputPorts = group.Collapsed ? group.Ports.Where(p => p.IsInput && IsNodeInput(providers[p.ProviderId], p.FieldId))
+                .Select(GroupNodePort).ToList() : [];
+            node.ParamPorts = group.Collapsed ? group.Ports.Where(p => p.IsInput && !IsNodeInput(providers[p.ProviderId], p.FieldId))
+                .Select(GroupNodePort).ToList() : [];
+            node.OutputPorts = group.Collapsed ? group.Ports.Where(p => !p.IsInput && DynamicEffectBindings.CanBindOutput(providers[p.ProviderId]))
+                .Select(GroupNodePort).ToList() : [];
+            if (added) AddNode(node);
+            else
             {
-                node.InputPorts = group.Ports.Where(p => p.IsInput && EffectProviderAnchorExtensions.IsInternalInputKey(p.FieldId))
-                    .Select(GroupNodePort).ToList();
-                node.ParamPorts = group.Ports.Where(p => p.IsInput && !EffectProviderAnchorExtensions.IsInternalInputKey(p.FieldId))
-                    .Select(GroupNodePort).ToList();
-                node.OutputPorts = group.Ports.Where(p => !p.IsInput).Select(GroupNodePort).ToList();
+                if (node.VisualSignature != GetNodeVisualSignature(node)) RecreateNodeView(node);
+                SetNodePosition(node, commit: !_isDraggingNodeOrPort);
             }
-            AddNode(node);
         }
+        foreach (var node in _nodes.Values.Where(n => n.Group is not null && !visibleGroups.Contains(n.Id)).ToArray())
+        {
+            NodesContainer.Children.Remove(node.View!);
+            _nodes.Remove(node.Id);
+            if (_selectedNode == node)
+            {
+                _selectedNode = null;
+                PropertiesPanel.Children.Clear();
+            }
+        }
+        foreach (var node in _nodes.Values)
+            if (node.View is not null) node.View.IsVisible = !hiddenProviders.Contains(node.Id);
         UpdateGroupBounds();
-        if (selected is { } id) _selectedNode = _nodes.GetValueOrDefault(id);
         RefreshGroupSelection();
     }
 
@@ -440,11 +462,9 @@ public partial class DraftEffectBindingView
             if (!_nodes.TryGetValue(id, out var child)) continue;
             child.X += dx;
             child.Y += dy;
-            child.Provider!.MetaData["__DraftEffectBindingView_InteractiveEditorX__"] = child.X;
-            child.Provider.MetaData["__DraftEffectBindingView_InteractiveEditorY__"] = child.Y;
         }
         foreach (var child in _nodes.Values.Where(n => members.Contains(n.Id) || n.Group is not null && ContainsGroup(group, n.Id)))
-            AbsoluteLayout.SetLayoutBounds(child.View!, new Rect(child.X, child.Y, -1, AbsoluteLayout.AutoSize));
+            SetNodePosition(child, commit: false);
         UpdateGroupBounds();
     }
 

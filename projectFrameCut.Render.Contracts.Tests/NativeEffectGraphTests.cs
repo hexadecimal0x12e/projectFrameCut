@@ -85,7 +85,7 @@ public sealed class NativeEffectGraphTests
         equal.SetFieldBinding("A", IEffectProvider.InputAnchorGUID.ToString());
         equal.SetFieldBinding("B", other.Id.ToString());
         var condition = Native(new IfConditionNodeEffectProvider());
-        condition.SetMainInputSource(equal.Id);
+        condition.SetFieldBinding(IfConditionNodeEffectProvider.ConditionKey, equal.Id.ToString());
         condition.SetFieldBinding("TrueValue", IEffectProvider.InputAnchorGUID.ToString());
         condition.SetFieldBinding("FalseValue", unused.Id.ToString());
         condition.SetFinalOutputSource(true);
@@ -93,6 +93,45 @@ public sealed class NativeEffectGraphTests
         var source = Vector();
         var output = VectorPictureEffectProcessing.Process(clip, source, 2, width: 16, height: 8);
         Assert.AreEqual(3f, output.Elements[0].RelativeX);
+        Assert.AreNotSame(source, output);
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public void NativeConditionComputeShortCircuitsAndPreservesVectorIsolation(bool condition)
+    {
+        var gate = Native(new ConditionComputeNodeEffectProvider
+        {
+            Fields = new() { ["Condition"] = new StaticEffectArgumentField(condition, EffectArgumentFieldType.Boolean) },
+        });
+        gate.SetMainInputSource(IEffectProvider.InputAnchorGUID);
+        var expensive = Native(new Provider(null, EffectArgumentFieldType.Integer,
+            _ => throw new AssertFailedException("The inactive vector route's parameter must not run.")));
+        Provider Route(bool branch)
+        {
+            var provider = Native(new Provider(EffectArgumentFieldType.Any, EffectArgumentFieldType.VectorPicture, c =>
+            {
+                Assert.AreEqual(condition, branch);
+                var vector = (VectorPicture)c.Input!;
+                vector.Elements[0].RelativeX = 8;
+                return vector;
+            }, Port("Amount", EffectArgumentFieldType.Integer)));
+            provider.SetMainInputSource(EffectProviderOutputExtensions.CreateOutputSourceId(gate.Id, branch ? "True" : "False"));
+            if (branch != condition) provider.SetFieldBinding("Amount", expensive.Id.ToString());
+            return provider;
+        }
+        var yes = Route(true);
+        var no = Route(false);
+        var join = Native(new IsUpstreamAvailableOrDefaultEffectProvider());
+        join.SetMainInputSource(yes.Id);
+        join.SetFieldBinding("DefaultValue", no.Id.ToString());
+        join.SetFinalOutputSource(true);
+        using var clip = Clip(0, gate, expensive, yes, no, join);
+        var source = Vector();
+        var output = VectorPictureEffectProcessing.Process(clip, source, 2, width: 16, height: 8);
+        Assert.AreEqual(8f, output.Elements[0].RelativeX);
+        Assert.AreEqual(3f, source.Elements[0].RelativeX);
         Assert.AreNotSame(source, output);
     }
 

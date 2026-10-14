@@ -4957,8 +4957,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             return false;
         }
 
-        if (_selected is null) return;
-        var clip = _selected;
+        var clip = e.Id == "__EFFECT_BINDING_CHANGED__" ? e.Value as ClipElementUI ?? _selected : _selected;
+        if (clip is null) return;
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var propertyMark = new UserMarkRange("Properties.Change", $"clip={clip.Id}, property={e.Id}");
 #endif
@@ -4966,9 +4966,6 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         if (e.Id == "__EFFECT_BINDING_CHANGED__")
         {
-            // The binding editor already rebuilt clip.Effects off the UI thread. Updating the timeline
-            // and property panel here used to turn every completed connection into a full-page refresh.
-            // Keep the model/history current and refresh only the preview that actually depends on it.
             var changedClip = e.Value as ClipElementUI ?? clip;
             Clips[changedClip.Id] = changedClip;
             MarkHistoryPanelDirty();
@@ -4979,8 +4976,8 @@ public partial class DraftPage : ContentPage, IDraftPage
             });
             try
             {
-                // The changed clip was rebuilt by DraftEffectBindingView. Rebuilding every clip again
-                // during export is both redundant and the largest source of the 10-15 second UI stall.
+                await ReRenderUI(changedClip);
+                if (ReferenceEquals(_selected, changedClip)) RefreshPropertyPanel(changedClip);
                 var d = DraftImportAndExportHelper.ExportFromDraftPage(
                     this,
                     includeUiOnlyClips: false,
@@ -5002,9 +4999,6 @@ public partial class DraftPage : ContentPage, IDraftPage
             Clips[clip.Id] = clip;
             await ReRenderUI(clip);
             RefreshPropertyPanel(clip);
-            // 节点编辑器（DraftEffectBindingView）的 EffectBundlesChanged 经 __REFRESH_PANEL__ 路由到这里。
-            // 绑定/连线在渲染层只有通过 provider 重建才生效（见 EffectHelper.GetClipEffectsInstances），
-            // 因此这里必须同步刷新预览，否则关闭节点编辑器后画面不会反映新的绑定。
             try
             {
                 var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);

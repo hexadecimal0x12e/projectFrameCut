@@ -6,18 +6,22 @@ namespace projectFrameCut.Render.Effect;
 
 public sealed class IfConditionNodeEffectProvider : EffectProviderBase
 {
+    public const string ConditionKey = "Condition";
+
     public IfConditionNodeEffectProvider() => Name = "IfConditionNode";
     public override string TypeName => "IfConditionNode";
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public override EffectType TypeOfEffect => EffectType.NormalEffect;
     public override EffectTarget Target => EffectTarget.Video | EffectTarget.ValueProvider;
 
-    protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => [];
+    protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() =>
+    [
+        Field(ConditionKey, EffectArgumentFieldType.Boolean | EffectArgumentFieldType.Mandatory, "false"),
+    ];
 
     protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() =>
         new Dictionary<string, EffectArgumentFieldDescriptor>
         {
-            [PrimaryInputAnchorKey] = Field(PrimaryInputAnchorKey, EffectArgumentFieldType.Boolean | EffectArgumentFieldType.Mandatory, "false"),
             ["TrueValue"] = Field("TrueValue", EffectArgumentFieldType.Any | EffectArgumentFieldType.CanNotBeStatic, ""),
             ["FalseValue"] = Field("FalseValue", EffectArgumentFieldType.Any | EffectArgumentFieldType.CanNotBeStatic, ""),
         };
@@ -53,7 +57,8 @@ public sealed class IfConditionNodeEffect : IEffect
     public object? Compute(EffectExecutionContext context)
     {
         context.CancellationToken.ThrowIfCancellationRequested();
-        if (context.Input is not bool condition) throw new ArgumentException("IfConditionNode requires a bool input.");
+        if (context.Parameters.GetValueOrDefault(IfConditionNodeEffectProvider.ConditionKey, false) is not bool condition)
+            throw new ArgumentException("IfConditionNode requires a bool condition.");
         return context.Parameters.GetValueOrDefault(condition ? "TrueValue" : "FalseValue");
     }
 }

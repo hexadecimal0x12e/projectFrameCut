@@ -1239,9 +1239,13 @@ namespace projectFrameCut.Render.Compose
         public override EffectTarget Target => EffectTarget.Mixture;
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
+        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() =>
+            new Dictionary<string, EffectArgumentFieldDescriptor>();
+
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {
-            return[Field("AccuracyMode", EffectArgumentFieldType.String, "Accurate", presetOptions: ["Accurate", "Approximate"])];
+            return [Field("AccuracyMode", EffectArgumentFieldType.String | EffectArgumentFieldType.CannotBeDynamic,
+                "Accurate", presetOptions: ["Accurate", "Approximate"])];
         }
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration, EffectImplementType.IPicture];

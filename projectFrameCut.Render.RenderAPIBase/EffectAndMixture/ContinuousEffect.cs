@@ -10,12 +10,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     public interface IContinuousEffect : IEffect
     {
         /// <summary>
-        /// Represents the start point of the effect inside this Clip.
+        /// Represents the inclusive start frame of the effect on the timeline.
         /// Only used when <see cref="IsScoped"/> is true.
         /// </summary>
         public int StartPoint { get; set; }
         /// <summary>
-        /// Represents the end point of the effect inside this Clip.
+        /// Represents the exclusive end frame of the effect on the timeline.
         /// Only used when <see cref="IsScoped"/> is true.
         /// </summary>
         public int EndPoint { get; set; }

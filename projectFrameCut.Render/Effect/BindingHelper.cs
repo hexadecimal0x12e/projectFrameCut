@@ -111,7 +111,8 @@ namespace projectFrameCut.Render.Effect
                             foundProblems.Add(new(p.Id, "DuplicateProviderId", $"Multiple effect providers use id {p.Id}."));
                         continue;
                     }
-                    if (!factories.TryGetValue(p.TypeName, out var factory))
+                    if (!factories.TryGetValue(p.TypeName, out var factory)
+                        && (p.TypeName != "OverlayBlend" || !factories.TryGetValue("BlendModeMixture", out factory)))
                     {
                         foundProblems.Add(new(p.Id, "UnknownProviderType",
                             $"Effect provider type '{p.TypeName}' from plugin '{p.FromPlugin}' is unavailable."));
@@ -121,6 +122,8 @@ namespace projectFrameCut.Render.Effect
                     try
                     {
                         var instance = factory();
+                        if (p.TypeName == "OverlayBlend" && instance.TypeName == "BlendModeMixture")
+                            Logger.LogDiagnostic($"Restored legacy OverlayBlend provider {p.Id} as BlendModeMixture.");
                         instance.Id = p.Id;
                         instance.Enabled = p.Enabled;
                         instance.Name = p.Name;
@@ -154,7 +157,8 @@ namespace projectFrameCut.Render.Effect
 
             foreach (var b in effectBundles)
             {
-                if (!factories.TryGetValue(b.BundleTypeName, out var factory))
+                if (!factories.TryGetValue(b.BundleTypeName, out var factory)
+                    && (b.BundleTypeName != "OverlayBlend" || !factories.TryGetValue("BlendModeMixture", out factory)))
                 {
                     foundProblems.Add(new(b.Id, "UnknownProviderType",
                         $"Legacy effect provider type '{b.BundleTypeName}' from plugin '{b.FromPlugin}' is unavailable."));
@@ -960,6 +964,13 @@ namespace projectFrameCut.Render.Effect
             IDictionary<Guid, IEffectProvider>? effectProviders,
             IEffectProvider newProvider,
             EffectTarget effectTarget)
+            => AutoConnectProviderToOutput(effectProviders, newProvider, effectTarget, null);
+
+        public static void AutoConnectProviderToOutput(
+            IDictionary<Guid, IEffectProvider>? effectProviders,
+            IEffectProvider newProvider,
+            EffectTarget effectTarget,
+            EffectFieldTypeResolution? types)
         {
             if (effectProviders is null) throw new ArgumentNullException(nameof(effectProviders));
             var pipeline = newProvider.GetPipeline();
@@ -968,7 +979,7 @@ namespace projectFrameCut.Render.Effect
             var proposedSource = lastProvider?.GetFinalOutputSourceId() ?? IEffectProvider.InputAnchorGUID.ToString();
             var all = effectProviders.ToDictionary();
             all[newProvider.Id] = newProvider;
-            var types = new EffectFieldTypeResolution(all, new Dictionary<Guid, IReadOnlyDictionary<string, string>>
+            types ??= new EffectFieldTypeResolution(all, new Dictionary<Guid, IReadOnlyDictionary<string, string>>
             {
                 [newProvider.Id] = new Dictionary<string, string>(newProvider.AnchorsBindingState) { [EffectProviderAnchorExtensions.InputKey] = proposedSource },
             });
@@ -1121,12 +1132,12 @@ namespace projectFrameCut.Render.Effect
         public static void SetFinalOutput(IDictionary<Guid, IEffectProvider> providers, Guid? providerId, EffectPipeline pipeline, string? outputId,
             EffectFieldTypeResolution? types = null)
         {
-            types ??= new EffectFieldTypeResolution(providers.ToDictionary());
+            if (providerId.HasValue) types ??= new EffectFieldTypeResolution(providers.ToDictionary());
             if (providerId.HasValue
                 && (!providers.TryGetValue(providerId.Value, out var selected)
-                    || selected.TypeOfEffect == EffectType.Transform
+                    || !DynamicEffectBindings.CanBindOutput(selected)
                     || !selected.TryGetOutputField(outputId, out _)
-                    || !EffectFieldTypes.AreCompatible(types.GetOutputType(selected, outputId), selected.GetPipeline().GetContentType())))
+                    || !EffectFieldTypes.AreCompatible(types!.GetOutputType(selected, outputId), selected.GetPipeline().GetContentType())))
             {
                 throw new ArgumentException($"Provider '{providerId}' cannot be used as the final picture output.", nameof(providerId));
             }

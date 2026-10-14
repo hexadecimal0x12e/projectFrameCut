@@ -164,4 +164,53 @@ public sealed class EffectImplementationRegistryTests
         Assert.IsInstanceOfType<RemoveColorEffect_IPicture>(registry.Create("RemoveColor", EffectImplementType.IPicture, EffectImplementType.HwAcceleration,
             new() { ["R"] = (ushort)0, ["G"] = (ushort)0, ["B"] = (ushort)0, ["A"] = (ushort)65535, ["Tolerance"] = (ushort)0 }));
     }
+
+    [TestMethod]
+    [DataRow("ClassicSpeedVarianceProvider")]
+    [DataRow("ClassicOverlayMixture")]
+    [DataRow("BlendModeMixture")]
+    [DataRow("MultiplyMixture")]
+    public void AuxiliaryProvidersCannotReplaceTheFinalPicture(string typeName)
+    {
+        var provider = new InternalPluginBase().EffectProviderProvider[typeName]();
+        var final = new BlurEffectProvider();
+        final.SetMainInputSource(IEffectProvider.InputAnchorGUID);
+        final.SetFinalOutputSource(true);
+        var gate = new ConditionComputeNodeEffectProvider();
+        var providers = new Dictionary<Guid, IEffectProvider> { [provider.Id] = provider, [final.Id] = final, [gate.Id] = gate };
+        Assert.IsFalse(DynamicEffectBindings.CanBindOutput(provider));
+        Assert.ThrowsExactly<InvalidOperationException>(() => provider.SetMainInputSource(IEffectProvider.InputAnchorGUID));
+        Assert.ThrowsExactly<InvalidOperationException>(() => provider.SetFinalOutputSource(true));
+        Assert.ThrowsExactly<ArgumentException>(() => EffectBindingHelper.SetFinalOutput(providers, provider.Id));
+        Assert.IsTrue(final.IsFinalOutputSource());
+        provider.AnchorsBindingState[EffectProviderAnchorExtensions.InputKey] = IEffectProvider.InputAnchorGUID.ToString();
+        provider.AnchorsBindingState[EffectProviderAnchorExtensions.OutputKey] = IEffectProvider.OutputAnchorGUID.ToString();
+        Assert.IsTrue(DynamicEffectBindings.Validate(providers).Any(d => d.ProviderId == provider.Id && d.Code == "InvalidFinalOutput"));
+        Assert.AreEqual(0, EffectBindingHelper.NormalizeStoredBindings(providers).Count);
+        Assert.AreEqual(IEffectProvider.NoConnectionGUID.ToString(), provider.GetMainInputSource());
+        Assert.IsFalse(provider.IsFinalOutputSource());
+        Assert.IsTrue(final.IsFinalOutputSource());
+        var consumer = new IsUpstreamAvailableOrDefaultEffectProvider();
+        consumer.SetFieldBinding("DefaultValue", provider.Id.ToString());
+        providers[consumer.Id] = consumer;
+        Assert.IsTrue(DynamicEffectBindings.Validate(providers).Any(d => d.ProviderId == consumer.Id && d.Code == "UnsupportedBindingSource"));
+    }
+
+    [TestMethod]
+    public void LegacyMixtureSelectorChangesTheImplementation()
+    {
+        var plugin = new InternalPluginBase();
+        var provider = plugin.EffectProviderProvider["BlendModeMixture"]();
+        var registry = new EffectImplementationRegistry();
+        registry.Register("cpu", plugin.EffectImplementationProvider);
+        Assert.AreEqual("BlendModeMixture", provider.TypeName);
+        Assert.AreEqual("Add", provider.Fields["MixtureType"].GetGetter()());
+        provider.Fields = new() { ["MixtureType"] = new StaticEffectArgumentField("Difference", EffectArgumentFieldType.String) };
+        Assert.AreEqual("DifferenceMixture", registry.Create(provider.TypeName, EffectImplementType.IPicture,
+            EffectImplementType.IPicture, new() { ["MixtureType"] = provider.Fields["MixtureType"].GetGetter()() }).TypeName);
+        Assert.ThrowsExactly<InvalidOperationException>(() => provider.SetFieldBinding("MixtureType", Guid.NewGuid().ToString()));
+        var fixedMode = plugin.EffectProviderProvider["MultiplyMixture"]();
+        Assert.ThrowsExactly<ArgumentException>(() => fixedMode.SetFieldBinding("MixtureType", Guid.NewGuid().ToString()));
+        Assert.IsFalse(EffectBindingHelper.SerializeProvider(fixedMode).StaticFields!.ContainsKey("MixtureType"));
+    }
 }

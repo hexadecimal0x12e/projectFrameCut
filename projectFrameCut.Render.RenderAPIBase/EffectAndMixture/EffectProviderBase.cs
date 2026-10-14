@@ -201,7 +201,21 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         private IEnumerable<EffectArgumentFieldDescriptor> ParameterFields() => DefineFields()
             .Concat(DefineInFields().Where(p => p.Key != PrimaryInputAnchorKey).Select(p => p.Value))
+            .Concat(DefineContinuousEffectFields())
             .DistinctBy(p => p.Id);
+
+        private IReadOnlyList<EffectArgumentFieldDescriptor> DefineContinuousEffectFields()
+        {
+            if (TypeOfEffect != EffectType.ContinuousEffect
+                && !(TypeName == "Crop" && MetaData.ContainsKey(IsContinuousEffectParameterKey))) return [];
+            const EffectArgumentFieldType flags = EffectArgumentFieldType.NotVisibleInEffectPanel | EffectArgumentFieldType.CannotBeDynamic;
+            return
+            [
+                Field(nameof(IContinuousEffect.IsScoped), EffectArgumentFieldType.Boolean | flags, "false"),
+                Field(nameof(IContinuousEffect.StartPoint), EffectArgumentFieldType.Integer | flags, "0", min: "0"),
+                Field(nameof(IContinuousEffect.EndPoint), EffectArgumentFieldType.Integer | flags, "0", min: "0")
+            ];
+        }
 
         /// <summary>
         /// Define the input fields (anchors) of the effect. Defaults to a single IPicture input.
@@ -262,6 +276,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                 var typeName = TypeName == "Crop" && MetaData.ContainsKey(IsContinuousEffectParameterKey)
                     ? "ProgressCrop"
                     : TypeName;
+                if (typeName is "BlendModeMixture" or "OverlayBlend")
+                    typeName = (_fieldValues.GetValueOrDefault("MixtureType")?.ToString()
+                        ?? DefineFields().FirstOrDefault(f => f.Id == "MixtureType")?.DefaultValue ?? "OverlayBlend") + "Mixture";
                 return Plugins.IPluginBase.EffectImplementations.GetImplementTypes(typeName);
             }
         }

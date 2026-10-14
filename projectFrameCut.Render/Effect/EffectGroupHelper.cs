@@ -85,6 +85,13 @@ public static class EffectGroupHelper
 
     public static void EnsureBoundaryPorts(List<EffectGroup> groups, IReadOnlyDictionary<Guid, IEffectProvider> providers)
     {
+        foreach (var port in groups.SelectMany(g => g.Ports))
+            if (port.IsInput && port.FieldId == EffectProviderAnchorExtensions.InputKey
+                && providers.GetValueOrDefault(port.ProviderId) is IfConditionNodeEffectProvider)
+            {
+                port.FieldId = IfConditionNodeEffectProvider.ConditionKey;
+                Logger.LogDiagnostic($"Migrated IfConditionNode group port on provider {port.ProviderId} to '{port.FieldId}'.");
+            }
         // Leaf ports are promoted through every enclosing group.
         foreach (var group in groups.OrderBy(g => Members(g, groups).Count))
             foreach (var port in RequiredPorts(group, groups, providers))

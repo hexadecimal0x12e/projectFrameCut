@@ -143,11 +143,12 @@ namespace projectFrameCut.Render.Effect
 
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
-        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields()
-        {
-            // A value provider has no picture input.
-            return new Dictionary<string, EffectArgumentFieldDescriptor>();
-        }
+        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() =>
+            new Dictionary<string, EffectArgumentFieldDescriptor>
+            {
+                ["A"] = Field("A", EffectArgumentFieldType.Integer, "0"),
+                ["B"] = Field("B", EffectArgumentFieldType.Integer, "0"),
+            };
 
         protected override EffectArgumentFieldDescriptor DefineOutField()
         {
@@ -161,14 +162,7 @@ namespace projectFrameCut.Render.Effect
             };
         }
 
-        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
-        {
-            return
-            [
-                Field("A", EffectArgumentFieldType.Integer, "0"),
-                Field("B", EffectArgumentFieldType.Integer, "0"),
-            ];
-        }
+        protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => [];
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
 

@@ -31,8 +31,11 @@ public sealed class ClipArgumentProvider : IEffectProvider
         if (fields.Any(p => p.Key is EffectProviderAnchorExtensions.InputKey or EffectProviderAnchorExtensions.OutputKey
             || p.Value.FieldType.HasFlag(EffectArgumentFieldType.IPicture)))
             throw new ArgumentException("Clip arguments cannot declare picture anchors.", nameof(fields));
-        descriptors = fields;
-        readValue = read;
+        descriptors = new Dictionary<string, ClipArgumentFieldDescriptor>(fields)
+        {
+            [ClipArgumentHandler.ShouldRenderKey] = ClipArgumentHandler.DefaultFields[ClipArgumentHandler.ShouldRenderKey],
+        };
+        readValue = key => key == ClipArgumentHandler.ShouldRenderKey ? true : read(key);
         ClearRuntimeFields();
     }
 
@@ -54,38 +57,8 @@ public sealed class ClipArgumentProvider : IEffectProvider
     {
         get
         {
-            var result = new Dictionary<string, IEffectArgumentField>();
             var keys = descriptors?.Keys ?? staticValues.Keys.Union(this.EnumerateFieldBindings().Select(p => p.Key));
-            foreach (var key in keys)
-            {
-                var desc = descriptors?.GetValueOrDefault(key);
-                object value = staticValues.TryGetValue(key, out var v) ? v : readValue?.Invoke(key) ?? desc?.DefaultValue ?? "";
-                if (this.TryGetFieldBinding(key, out var source))
-                    result[key] = new DynamicEffectParamField
-                    {
-                        Id = key,
-                        FieldType = desc?.FieldType ?? EffectArgumentFieldType.Unknown,
-                        BoundProviderId = source,
-                        StaticFallbackValue = value,
-                        DefaultValue = desc?.DefaultValue ?? "",
-                        MinValue = desc?.MinValue ?? "",
-                        MaxValue = desc?.MaxValue ?? "",
-                        PresetOptions = desc?.PresetOptions,
-                        Remarks = desc?.Remarks,
-                    };
-                else
-                    result[key] = new ClipArgumentField(value, desc?.FieldType ?? EffectArgumentFieldType.Unknown)
-                    {
-                        Id = key,
-                        UsesClipValue = !staticValues.ContainsKey(key),
-                        DefaultValue = desc?.DefaultValue ?? "",
-                        MinValue = desc?.MinValue ?? "",
-                        MaxValue = desc?.MaxValue ?? "",
-                        PresetOptions = desc?.PresetOptions,
-                        Remarks = desc?.Remarks,
-                    };
-            }
-            return result;
+            return keys.Union([ClipArgumentHandler.ShouldRenderKey]).ToDictionary(key => key, CreateField);
         }
         set
         {
@@ -109,11 +82,52 @@ public sealed class ClipArgumentProvider : IEffectProvider
         }
     }
 
+    private IEffectArgumentField CreateField(string key)
+    {
+        var desc = key == ClipArgumentHandler.ShouldRenderKey
+            ? ClipArgumentHandler.DefaultFields[key] : descriptors?.GetValueOrDefault(key);
+        object value = staticValues.TryGetValue(key, out var v) ? v : readValue?.Invoke(key) ?? desc?.DefaultValue ?? "";
+        if (this.TryGetFieldBinding(key, out var source))
+            return new DynamicEffectParamField
+            {
+                Id = key,
+                FieldType = desc?.FieldType ?? EffectArgumentFieldType.Unknown,
+                BoundProviderId = source,
+                StaticFallbackValue = value,
+                DefaultValue = desc?.DefaultValue ?? "",
+                MinValue = desc?.MinValue ?? "",
+                MaxValue = desc?.MaxValue ?? "",
+                PresetOptions = desc?.PresetOptions,
+                Remarks = desc?.Remarks,
+            };
+        return new ClipArgumentField(value, desc?.FieldType ?? EffectArgumentFieldType.Unknown)
+        {
+            Id = key,
+            UsesClipValue = !staticValues.ContainsKey(key),
+            DefaultValue = desc?.DefaultValue ?? "",
+            MinValue = desc?.MinValue ?? "",
+            MaxValue = desc?.MaxValue ?? "",
+            PresetOptions = desc?.PresetOptions,
+            Remarks = desc?.Remarks,
+        };
+    }
+
+    public bool EvaluateShouldRender()
+    {
+        if (!Enabled || !this.TryGetFieldBinding(ClipArgumentHandler.ShouldRenderKey, out var source)
+            || source == IEffectProvider.NoConnectionGUID.ToString()) return true;
+        object? value = runtimeFields.TryGetValue(ClipArgumentHandler.ShouldRenderKey, out var inline)
+            ? inline.GetGetter()() : CreateField(ClipArgumentHandler.ShouldRenderKey).GetGetter()();
+        if (EffectParamConvert.TryConvertToBool(value, out bool b)) return b;
+        return !EffectParamConvert.TryConvertToBool(staticValues.GetValueOrDefault(ClipArgumentHandler.ShouldRenderKey) ?? true, out b) || b;
+    }
+
     public Dictionary<string, object> Evaluate(IClip clip)
     {
         var values = new Dictionary<string, object>();
         foreach (var (key, field) in Fields)
         {
+            if (key == ClipArgumentHandler.ShouldRenderKey) continue;
             if (!clip.ArgumentFields.ContainsKey(key)) throw new ArgumentException($"Unknown clip argument '{key}'.");
             object fallback = staticValues.GetValueOrDefault(key) ?? clip.ArgumentFields[key].ReadValue(clip);
             object? value = runtimeFields.TryGetValue(key, out var inline) ? inline.GetGetter()() : field.GetGetter()();

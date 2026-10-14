@@ -203,6 +203,7 @@ public static class TransformProcessing
                 var owner = clips.First(c => c.Id == resolved.Owner.Id);
                 var neighbor = resolved.Right is { } r ? clips.First(c => c.Id == r.Id) : null;
                 clip = InitializeInput(clip, frameIndex, pixelMode, initializeClips && preparedSource is null, argumentFrames);
+                if (!ClipArgumentBinding.ShouldRender(clip)) return false;
                 owner = owner.Id == clip.Id ? clip : InitializeInput(owner, ClampFrame(owner, frameIndex), pixelMode, initializeClips, argumentFrames);
                 if (neighbor is not null)
                     neighbor = neighbor.Id == clip.Id ? clip : InitializeInput(neighbor, ClampFrame(neighbor, frameIndex), pixelMode, initializeClips, argumentFrames);
@@ -292,6 +293,7 @@ public static class TransformProcessing
             EffectHelper.ResolveClipEffects(clip);
         }
         clip = ClipArgumentBinding.InitializeFrame(clip, clamped);
+        if (!ClipArgumentBinding.ShouldRender(clip)) return Timeline.CreateTransparentFrame(width, height, pixelMode);
         using var context = ValueProviderFrameContext.PushFrame(clamped,
             Math.Clamp(((float)clamped - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1));
         uint actual = clip.GetRelativeFrameIndex(clamped) ?? 0;
@@ -338,6 +340,7 @@ public static class TransformProcessing
             Math.Clamp(((float)clamped - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1));
         argumentFrames ??= new();
         clip = InitializeInput(clip, clamped, pixelMode, initializeClips && preparedSource is null, argumentFrames);
+        if (!ClipArgumentBinding.ShouldRender(clip)) return Timeline.CreateTransparentFrame(width, height, pixelMode);
         var frames = preparedSource is not null ? new[] { new OneFrame(clamped, clip, CopyPicture(preparedSource), resolveEffects: false) }
             : Timeline.GetFramesInOneFrame([clip], clamped, width, height, pixelMode,
                 projectWidth, projectHeight, applyTransforms: false, initializeClips: false, argumentFrames: argumentFrames).ToArray();

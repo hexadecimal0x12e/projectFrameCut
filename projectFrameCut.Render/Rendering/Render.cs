@@ -1454,6 +1454,7 @@ namespace projectFrameCut.Render.Rendering
             var framesToRender = new List<ClipFrameTuple>(ClipsNeed.Length);
             foreach (var clip in ClipsNeed)
             {
+                if (!ClipArgumentBinding.ShouldRender(clipArgumentFrames.Get(clip, targetFrame))) continue;
                 if (!FrameCache.TryGetValue(clip.Id, out var perClipCache))
                 {
                     Log($"[Render] WARN: Frame cache not found for clip {clip.Id}.");
@@ -1529,6 +1530,7 @@ namespace projectFrameCut.Render.Rendering
                 if (_wsSync is not null) _wsSync.CurrentClip = clip;
 
                 var frame = DecodeClipSourceFrame(clip, targetFrame, syncPpb, cancellationToken: token);
+                if (!ClipArgumentBinding.ShouldRender(clipArgumentFrames.Get(clip, targetFrame))) continue;
                 if (frame == null)
                 {
                     Log($"[Render] WARN: Frame {targetFrame} not found for clip {clip.Id}.");
@@ -1668,9 +1670,12 @@ namespace projectFrameCut.Render.Rendering
 
             var ppb = Use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
             var framesToRender = new List<ClipFrameTuple>(clipsNeed.Count);
+            using var endpoints = ClipValuePassThrough.Open(Clips, frameIndex, TargetWidth, TargetHeight,
+                ProjectRelativeWidth, ProjectRelativeHeight, ppb, token);
 
             foreach (var clip in clipsNeed)
             {
+                if (!ClipArgumentBinding.ShouldRender(clipArgumentFrames.Get(clip, frameIndex))) continue;
                 IPicture? frame = null;
 
                 // 优先从 FrameCache 取已解码的源帧（不干扰原始缓存，clone 副本用于合成）
@@ -1735,6 +1740,7 @@ namespace projectFrameCut.Render.Rendering
                 ProjectRelativeWidth, ProjectRelativeHeight, ppb, cancellationToken);
             using var endpointClip = ClipValueFrameContext.Current?.EnterClip(item.Id, independent: true);
             item = clipArgumentFrames.Get(item, frameIndex);
+            if (!ClipArgumentBinding.ShouldRender(item)) return null;
             using var context = ValueProviderFrameContext.PushFrame(frameIndex,
                 Math.Clamp(((float)frameIndex - item.StartFrame) / Math.Max(1u, item.GetEffectiveDuration()), 0, 1), false, cancellationToken);
             if (item.EffectsInstances?.Any(e => e is DynamicEffectGraph or NativeDynamicEffectGraph) != true && TryLoadDynamicPreviewFrame(item, frameIndex, ppb, out var previewFrame))
@@ -1868,7 +1874,7 @@ namespace projectFrameCut.Render.Rendering
         private Dictionary<string, List<(string Path, int ProjectWidth, int ProjectHeight, int CanvasWidth, int CanvasHeight)>> IndexDynamicPreviewFiles(string directory)
         {
             var files = new Dictionary<string, List<(string Path, int ProjectWidth, int ProjectHeight, int CanvasWidth, int CanvasHeight)>>(StringComparer.Ordinal);
-            const string prefix = "dynamic_v5-vfd_";
+            const string prefix = "dynamic_v6-vfd_";
             foreach (var path in Directory.EnumerateFiles(directory, $"{prefix}*.vfd"))
             {
                 var name = Path.GetFileNameWithoutExtension(path);
@@ -2334,6 +2340,7 @@ namespace projectFrameCut.Render.Rendering
             {
                 if (i >= allClips.Length) break;
                 var clip = allClips[i];
+                if (!ClipArgumentBinding.ShouldRender(clipArgumentFrames.Get(clip, frame))) continue;
 
                 if (!FrameCache.TryGetValue(clip.Id, out var perClipCache)
                     || !perClipCache.TryGetValue(frame, out var pic)

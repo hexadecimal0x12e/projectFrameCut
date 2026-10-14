@@ -28,18 +28,24 @@ public sealed class IfConditionNodeTests
         var effect = new IfConditionNodeEffect();
         Assert.AreSame(value, effect.Compute(new()
         {
-            Input = condition,
             Parameters = new Dictionary<string, object?>
             {
+                [IfConditionNodeEffectProvider.ConditionKey] = condition,
                 ["TrueValue"] = condition ? value : null,
                 ["FalseValue"] = condition ? null : value,
             },
         }));
-        Assert.IsNull(effect.Compute(new() { Input = condition }));
-        Assert.ThrowsExactly<ArgumentException>(() => effect.Compute(new() { Input = 1 }));
+        Assert.IsNull(effect.Compute(new()
+        {
+            Parameters = new Dictionary<string, object?> { [IfConditionNodeEffectProvider.ConditionKey] = condition },
+        }));
+        Assert.ThrowsExactly<ArgumentException>(() => effect.Compute(new()
+        {
+            Parameters = new Dictionary<string, object?> { [IfConditionNodeEffectProvider.ConditionKey] = 1 },
+        }));
         Assert.ThrowsExactly<OperationCanceledException>(() => effect.Compute(new()
         {
-            Input = condition, CancellationToken = new CancellationToken(true),
+            CancellationToken = new CancellationToken(true),
         }));
     }
 
@@ -59,7 +65,7 @@ public sealed class IfConditionNodeTests
         var unselected = new Provider(null, EffectArgumentFieldType.IPicture,
             _ => throw new AssertFailedException("Unselected branch should not be evaluated."));
         var target = new IfConditionNodeEffectProvider();
-        target.SetMainInputSource(source.Id);
+        target.SetFieldBinding(IfConditionNodeEffectProvider.ConditionKey, source.Id.ToString());
         target.SetFieldBinding("TrueValue", (condition ? selected : unselected).Id.ToString());
         target.SetFieldBinding("FalseValue", (condition ? unselected : selected).Id.ToString());
         target.SetFinalOutputSource(true);
@@ -88,7 +94,7 @@ public sealed class IfConditionNodeTests
             Assert.AreSame(value, c.Input);
             return Picture(4);
         });
-        target.SetMainInputSource(condition.Id);
+        target.SetFieldBinding(IfConditionNodeEffectProvider.ConditionKey, condition.Id.ToString());
         target.SetFieldBinding("FalseValue", source.Id.ToString());
         consumer.SetMainInputSource(target.Id);
         consumer.SetFinalOutputSource(true);
@@ -134,10 +140,40 @@ public sealed class IfConditionNodeTests
         var plugin = new InternalPluginBase();
         var provider = plugin.EffectProviderProvider["IfConditionNode"]();
         Assert.AreEqual(EffectArgumentFieldType.Boolean,
-            provider.InFields[EffectProviderBase.PrimaryInputAnchorKey].FieldType.BaseType());
+            provider.Fields[IfConditionNodeEffectProvider.ConditionKey].FieldType.BaseType());
+        Assert.IsFalse(provider.InFields.ContainsKey(IfConditionNodeEffectProvider.ConditionKey));
+        Assert.IsFalse(provider.InFields.ContainsKey(EffectProviderBase.PrimaryInputAnchorKey));
         Assert.AreEqual(EffectArgumentFieldType.Any, provider.InFields["TrueValue"].FieldType.BaseType());
         Assert.AreEqual(EffectArgumentFieldType.Any, provider.InFields["FalseValue"].FieldType.BaseType());
         Assert.IsInstanceOfType<IfConditionNodeEffect>(plugin.EffectImplementationProvider[
             new("IfConditionNode", EffectImplementType.NotSpecified)]());
+    }
+
+    [TestMethod]
+    public void LegacyConditionBindingAndGroupPortAreMigrated()
+    {
+        var source = new Provider(null, EffectArgumentFieldType.Boolean, _ => true);
+        var target = new IfConditionNodeEffectProvider();
+        target.AnchorsBindingState[EffectProviderAnchorExtensions.InputKey] = source.Id.ToString();
+        target.SetFieldBinding("TrueValue", IEffectProvider.InputAnchorGUID.ToString());
+        target.SetFinalOutputSource(true);
+        var providers = Providers(source, target);
+        var port = new EffectGroupPort
+        {
+            ProviderId = target.Id, FieldId = EffectProviderAnchorExtensions.InputKey, IsInput = true, Name = "Condition",
+        };
+        List<EffectGroup> groups = [new() { ProviderIds = [target.Id], Ports = [port] }];
+        Assert.AreEqual(0, EffectBindingHelper.NormalizeStoredBindings(providers).Count);
+        Assert.AreEqual(IEffectProvider.NoConnectionGUID.ToString(), target.GetMainInputSource());
+        Assert.IsTrue(target.TryGetFieldBinding(IfConditionNodeEffectProvider.ConditionKey, out var binding));
+        Assert.AreEqual(source.Id.ToString(), binding);
+        EffectGroupHelper.EnsureBoundaryPorts(groups, providers);
+        EffectGroupHelper.Validate(groups, providers);
+        Assert.AreEqual(IfConditionNodeEffectProvider.ConditionKey, port.FieldId);
+        Assert.AreEqual(0, EffectBindingHelper.NormalizeStoredBindings(providers).Count);
+        using var graph = Graph(target, source);
+        using var input = Picture(7);
+        using var result = Evaluate(graph, input);
+        Assert.AreEqual((byte)7, ((IPicture<byte>)result).r[0]);
     }
 }

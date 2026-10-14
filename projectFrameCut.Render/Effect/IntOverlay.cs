@@ -54,7 +54,7 @@ namespace projectFrameCut.Render.Effect
                 throw new ArgumentException("targetWidth and targetHeight must be positive.");
 
             int value = DynamicParam.Resolve(Parameters.GetValueOrDefault("Value"), 0);
-            Log($"IntOverlayEffect {Id}/{Name}'s value: {value} ({Parameters.GetValueOrDefault("B")?.GetType()?.Name ?? "<null>"})");
+            Log($"IntOverlayEffect {Id}/{Name}'s value: {value} ({Parameters.GetValueOrDefault("Value")?.GetType()?.Name ?? "<null>"})");
             string text = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
             // Layout the number as text on a canvas matching the target size, rasterize it
@@ -162,11 +162,16 @@ namespace projectFrameCut.Render.Effect
 
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
+        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() =>
+            new Dictionary<string, EffectArgumentFieldDescriptor>(base.DefineInFields())
+            {
+                ["Value"] = Field("Value", EffectArgumentFieldType.Integer, "0"),
+            };
+
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {
             return
             [
-                Field("Value", EffectArgumentFieldType.Integer, "0", remarks: "The integer to overlay as text. Can be bound to a value provider."),
                 Field("FontSize", EffectArgumentFieldType.Numeric, "96"),
                 Field("X", EffectArgumentFieldType.Numeric, "40"),
                 Field("Y", EffectArgumentFieldType.Numeric, "40"),

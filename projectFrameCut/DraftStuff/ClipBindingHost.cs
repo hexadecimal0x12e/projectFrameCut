@@ -47,7 +47,7 @@ namespace projectFrameCut.DraftStuff
                 foreach (var (id, bundle) in bundles)
                 {
                     if (id == _provider.Id) continue;
-                    if (bundle is not ClipArgumentProvider and not IClipValueEndpointProvider { IsExport: true } && bundle.TypeOfEffect != EffectType.Transform)
+                    if (DynamicEffectBindings.CanBindOutput(bundle))
                     {
                         foreach (var output in bundle.GetOutputFields().Values)
                             sources.Add(new ValueBindingSource(bundle is IMultipleOutputEffectProvider
@@ -61,11 +61,21 @@ namespace projectFrameCut.DraftStuff
 
         public string? GetSourceDisplayName(string sourceId)
         {
-            foreach (var s in GetBindingSources())
+            switch (sourceId)
             {
-                if (s.Id == sourceId) return s.OutputAnchorName is { Length: > 0 } ? $"{s.DisplayName} ({s.OutputAnchorName})" : s.DisplayName;
+                case ValueProviderFrameContext.BuiltInFrameProviderId:
+                    return LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_FrameIndex;
+                case ValueProviderFrameContext.BuiltInProgressProviderId:
+                    return LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_Progress;
+                case var id when id == IEffectProvider.InputAnchorGUID.ToString():
+                    return $"{LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBind_SourcePicture} (IPicture)";
             }
-            return null;
+            if (!EffectProviderOutputExtensions.TryParseOutputSourceId(sourceId, out var providerId, out var outputId)
+                || providerId == _provider.Id || _clip.EffectProviders?.GetValueOrDefault(providerId) is not { } provider
+                || !DynamicEffectBindings.CanBindOutput(provider)
+                || !provider.TryGetOutputField(outputId, out var output)) return null;
+            var anchor = provider is IMultipleOutputEffectProvider ? output.Id : output.TypeName;
+            return string.IsNullOrEmpty(anchor) ? provider.Name ?? provider.TypeName : $"{provider.Name ?? provider.TypeName} ({anchor})";
         }
 
         public string? AddValueProvider(string providerTypeName)
@@ -159,16 +169,25 @@ namespace projectFrameCut.DraftStuff
             }
 
             AddOption(string.Empty, LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_Disconnect);
-            foreach (var s in GetBindingSources())
+            var sources = GetBindingSources();
+            HashSet<string>? compatible = null;
+            if (_clip.EffectProviders is { } providers)
             {
-                if (_clip.EffectProviders is { } providers)
+                var types = await EffectFieldTypeResolution.ResolveAsync(providers);
+                compatible = await Task.Run(() =>
                 {
-                    var types = await EffectFieldTypeResolution.ResolveAsync(providers, bindingOverrides: new Dictionary<Guid, IReadOnlyDictionary<string, string>>
+                    var ids = new HashSet<string>();
+                    foreach (var source in sources)
                     {
-                        [_provider.Id] = new Dictionary<string, string>(_provider.AnchorsBindingState) { [fieldId] = s.Id },
-                    });
-                    if (!types.AreInputsCompatible(_provider) || types.Diagnostics.Count != 0) continue;
-                }
+                        var candidate = types.ResolveBindingCandidate(_provider, fieldId, source.Id);
+                        if (candidate is not null && candidate.AreInputsCompatible(_provider) && candidate.Diagnostics.Count == 0) ids.Add(source.Id);
+                    }
+                    return ids;
+                });
+            }
+            foreach (var s in sources)
+            {
+                if (compatible is not null && !compatible.Contains(s.Id)) continue;
                 var suffix = s.OutputAnchorName is { Length: > 0 } ? $" ({s.OutputAnchorName})" : string.Empty;
                 AddOption(s.Id, $"{s.DisplayName}{suffix}");
             }

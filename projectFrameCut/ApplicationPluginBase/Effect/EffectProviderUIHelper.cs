@@ -21,7 +21,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             {
                 if (fieldIds is not null && !fieldIds.Contains(kvp.Key)) continue;
                 var field = kvp.Value;
-                if (field is null) continue;
+                if (field is null || field.FieldType.HasFlag(EffectArgumentFieldType.NotVisibleInEffectPanel)) continue;
                 bool isBound = field.IsDynamic;
                 var componentId = ComponentId(provider, field.Id);
                 if (field.FieldType.IsContent() || field.FieldType.HasFlag(EffectArgumentFieldType.Any))
@@ -34,7 +34,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 // Enum-like string fields are rendered as a picker.
                 if (field.PresetOptions is { Length: > 0 })
                 {
-                    var current = GetString(provider, field.Id);
+                    var current = GetString(field);
                     var defaultValue = Array.IndexOf(field.PresetOptions, current) >= 0 ? current : field.PresetOptions[0];
                     panel.AddPicker(componentId, Label(provider.TypeName, field), field.PresetOptions, defaultValue);
                     MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
@@ -45,7 +45,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 switch (baseType)
                 {
                     case EffectArgumentFieldType.Boolean:
-                        panel.AddCheckbox(componentId, Label(provider.TypeName, field), GetBool(provider, field.Id));
+                        panel.AddCheckbox(componentId, Label(provider.TypeName, field), GetBool(field));
                         MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                         break;
                     case EffectArgumentFieldType.UnsignedInteger:
@@ -58,7 +58,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                         MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                         break;
                     case EffectArgumentFieldType.String:
-                        panel.AddEntry(componentId, Label(provider.TypeName, field), GetString(provider, field.Id), field.DefaultValue);
+                        panel.AddEntry(componentId, Label(provider.TypeName, field), GetString(field), field.DefaultValue);
                         MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                         break;
                     default:
@@ -125,7 +125,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             if (TryGetMinMax(field, out var min, out var max))
             {
-                panel.AddSlider(componentId, Label(provider.TypeName, field), min, max, GetDouble(provider, field.Id), eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
+                panel.AddSlider(componentId, Label(provider.TypeName, field), min, max, GetDouble(field), eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
             }
             else
             {
@@ -135,7 +135,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private static void AddNumericEntry(PropertyPanelBuilder panel, IEffectProvider provider, IEffectArgumentField field, string componentId)
         {
-            panel.AddEntry(componentId, Label(provider.TypeName, field), GetString(provider, field.Id), field.DefaultValue, entry => entry.Keyboard = Microsoft.Maui.Keyboard.Numeric);
+            panel.AddEntry(componentId, Label(provider.TypeName, field), GetString(field), field.DefaultValue, entry => entry.Keyboard = Microsoft.Maui.Keyboard.Numeric);
         }
 
         private static bool TryGetMinMax(IEffectArgumentField field, out double min, out double max)
@@ -242,23 +242,14 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             };
         }
 
-        private static bool GetBool(IEffectProvider provider, string id)
-        {
-            if (provider.Fields.TryGetValue(id, out var field) && field is StaticEffectArgumentField sf && sf.Value is bool b)
-                return b;
-            return false;
-        }
+        private static bool GetBool(IEffectArgumentField field) => field is StaticEffectArgumentField { Value: true };
 
-        private static string GetString(IEffectProvider provider, string id)
-        {
-            if (provider.Fields.TryGetValue(id, out var field) && field is StaticEffectArgumentField sf)
-                return sf.Value?.ToString() ?? string.Empty;
-            return string.Empty;
-        }
+        private static string GetString(IEffectArgumentField field) =>
+            field is StaticEffectArgumentField sf ? sf.Value?.ToString() ?? string.Empty : string.Empty;
 
-        private static double GetDouble(IEffectProvider provider, string id)
+        private static double GetDouble(IEffectArgumentField field)
         {
-            if (provider.Fields.TryGetValue(id, out var field) && field is StaticEffectArgumentField sf)
+            if (field is StaticEffectArgumentField sf)
             {
                 if (sf.Value is float f) return f;
                 if (sf.Value is double d) return d;

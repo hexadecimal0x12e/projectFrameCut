@@ -11,6 +11,17 @@ namespace projectFrameCut.Render.Contracts.Tests;
 [TestClass]
 public sealed class AnyEffectTests
 {
+    private sealed class CountingInlineProvider() : Provider(null, EffectArgumentFieldType.Integer, _ => 1,
+        Port("Left", EffectArgumentFieldType.Integer), Port("Right", EffectArgumentFieldType.Integer))
+    {
+        public int InputReads { get; set; }
+        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields()
+        {
+            InputReads++;
+            return base.DefineInFields();
+        }
+    }
+
     private sealed class NativeProvider(params EffectArgumentFieldDescriptor[] fields)
         : Provider(EffectArgumentFieldType.IPicture, EffectArgumentFieldType.IPicture, c => c.Input, fields)
     {
@@ -323,6 +334,77 @@ public sealed class AnyEffectTests
         using var graph = new DynamicEffectGraph(providers, providers.ToDictionary(p => p.Key, p => p.Value.Build()));
         using var input = Picture(0);
         Assert.ThrowsExactly<InvalidOperationException>(() => Evaluate(graph, input));
+    }
+
+    [TestMethod]
+    public void BindingCandidatesReuseUpstreamTypesWithoutEvaluatingEffects()
+    {
+        int resolutions = 0;
+        var source = new Provider(null, EffectArgumentFieldType.Any, _ => throw new AssertFailedException("Candidate evaluated an effect."))
+        {
+            TypeResolver = (_, _, _) => { resolutions++; return EffectArgumentFieldType.Integer; },
+        };
+        var target = new Provider(EffectArgumentFieldType.Any, EffectArgumentFieldType.Any, _ => null)
+        {
+            TypeResolver = (_, _, context) => context.InputTypes.GetValueOrDefault(EffectProviderAnchorExtensions.InputKey, EffectArgumentFieldType.Any),
+        };
+        var types = new EffectFieldTypeResolution(Providers(source, target));
+        var originalInput = target.GetMainInputSource();
+        var candidate = types.ResolveBindingCandidate(target, EffectProviderAnchorExtensions.InputKey, source.Id.ToString());
+        Assert.IsNotNull(candidate);
+        Assert.AreEqual(EffectArgumentFieldType.Integer, candidate.GetInputType(target, EffectProviderAnchorExtensions.InputKey));
+        Assert.AreEqual(EffectArgumentFieldType.Integer, candidate.GetOutputType(target));
+        Assert.IsTrue(candidate.AreInputsCompatible(target));
+        Assert.AreEqual(originalInput, target.GetMainInputSource());
+        Assert.AreEqual(EffectArgumentFieldType.Any, types.GetOutputType(target));
+        Assert.AreEqual(1, resolutions);
+        Assert.AreEqual(0, source.Builds);
+    }
+
+    [TestMethod]
+    public void BindingCandidatesRejectCyclesAndCheckOtherBoundInputs()
+    {
+        var source = new Provider(null, EffectArgumentFieldType.Integer, _ => 1);
+        var boolean = new Provider(null, EffectArgumentFieldType.Boolean, _ => true);
+        var target = new Provider(EffectArgumentFieldType.Any, EffectArgumentFieldType.Integer, _ => 1,
+            Port("Other", EffectArgumentFieldType.Any))
+        {
+            TypeResolver = (_, _, context) => context.InputTypes.GetValueOrDefault(EffectProviderAnchorExtensions.InputKey, EffectArgumentFieldType.Any),
+        };
+        var downstream = new Provider(EffectArgumentFieldType.Integer, EffectArgumentFieldType.Integer, _ => 1);
+        downstream.SetMainInputSource(target.Id);
+        target.SetFieldBinding("Other", boolean.Id.ToString());
+        var providers = Providers(source, boolean, target, downstream);
+        var types = new EffectFieldTypeResolution(providers);
+        Assert.IsNull(types.ResolveBindingCandidate(target, EffectProviderAnchorExtensions.InputKey, downstream.Id.ToString()));
+        Assert.IsNull(types.ResolveBindingCandidate(target, EffectProviderAnchorExtensions.InputKey, target.Id.ToString()));
+        var candidate = types.ResolveBindingCandidate(target, EffectProviderAnchorExtensions.InputKey, source.Id.ToString());
+        Assert.IsNotNull(candidate);
+        Assert.IsFalse(candidate.AreInputsCompatible(target));
+        var full = new EffectFieldTypeResolution(providers, new Dictionary<Guid, IReadOnlyDictionary<string, string>>
+        {
+            [target.Id] = new Dictionary<string, string>(target.AnchorsBindingState) { [EffectProviderAnchorExtensions.InputKey] = source.Id.ToString() },
+        });
+        Assert.AreEqual(full.GetInputType(target, "Other"), candidate.GetInputType(target, "Other"));
+        Assert.AreEqual(full.AreInputsCompatible(target), candidate.AreInputsCompatible(target));
+    }
+
+    [TestMethod]
+    public void InlineValidationVisitsSharedDependenciesOnceAndRejectsCycles()
+    {
+        var nodes = Enumerable.Range(0, 24).Select(_ => new CountingInlineProvider()).ToArray();
+        for (int i = 1; i < nodes.Length; i++)
+        {
+            nodes[i].SetFieldBinding("Left", nodes[i - 1].Id.ToString());
+            nodes[i].SetFieldBinding("Right", nodes[i - 1].Id.ToString());
+        }
+        var providers = nodes.ToDictionary(p => p.Id, p => (IEffectProvider)p);
+        var types = new EffectFieldTypeResolution(providers);
+        foreach (var node in nodes) node.InputReads = 0;
+        Assert.IsTrue(DynamicEffectBindings.CanInlineValue(nodes[^1], providers, types: types));
+        Assert.IsTrue(nodes.Sum(p => p.InputReads) <= nodes.Length * 4);
+        nodes[0].SetFieldBinding("Left", nodes[^1].Id.ToString());
+        Assert.IsFalse(DynamicEffectBindings.CanInlineValue(nodes[^1], providers, types: new(providers)));
     }
 
     [TestMethod]

@@ -58,6 +58,7 @@ namespace projectFrameCut.Render.Effect
         {
             return new ZoomInContinuousEffect
             {
+                Parameters = parameters,
                 TargetX = DynamicParam.ToInt32(parameters.GetValueOrDefault("TargetX")),
                 TargetY = DynamicParam.ToInt32(parameters.GetValueOrDefault("TargetY")),
                 RelativeWidth = this.RelativeWidth,

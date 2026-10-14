@@ -8,29 +8,45 @@ namespace projectFrameCut.Render.Effect;
 
 public static class ClipArgumentBinding
 {
-    private sealed record FrameCopy(IClip Source, uint Frame);
+    private sealed record FrameCopy(IClip Source, uint Frame, bool ShouldRender);
     private static readonly ConditionalWeakTable<IClip, FrameCopy> Copies = new();
 
     public static bool IsFrameCopy(IClip clip) => Copies.TryGetValue(clip, out _);
+
+    public static bool ShouldRender(IClip frameClip) => !Copies.TryGetValue(frameClip, out var copy) || copy.ShouldRender;
+
+    internal static bool TryGetFrame(IClip clip, uint frame, out IClip? result)
+    {
+        result = null;
+        return ClipValueFrameContext.Current?.TryGetComputed((typeof(ClipArgumentBinding), clip.Id, frame), out result) == true;
+    }
 
     public static IClip InitializeFrame(IClip clip, uint frame)
     {
         if (Copies.TryGetValue(clip, out var copy))
         {
-            if (copy.Frame == frame) return clip;
+            if (copy.Frame == frame)
+            {
+                ClipValueFrameContext.Current?.SetComputed((typeof(ClipArgumentBinding), clip.Id, frame), clip);
+                return clip;
+            }
             clip = copy.Source;
         }
+        if (TryGetFrame(clip, frame, out var cached)) return cached!;
         try
         {
             var provider = clip.EffectProvidersInstances?.OfType<ClipArgumentProvider>().SingleOrDefault();
             if (provider is not { Enabled: true }) return clip;
             using var context = ValueProviderFrameContext.PushFrame(frame, clip.GetEffectiveDuration() > 0
                 ? Math.Clamp((float)((long)frame - clip.StartFrame) / clip.GetEffectiveDuration(), 0, 1) : 0);
-            var result = clip.HandleArguments(provider.Evaluate(clip));
+            bool shouldRender = provider.EvaluateShouldRender();
+            var result = shouldRender ? clip.HandleArguments(provider.Evaluate(clip)) : clip.CopyForFrame();
             if (ReferenceEquals(result, clip) || result.Id != clip.Id)
                 throw new InvalidOperationException("The clip argument handler must return a frame copy with the same id.");
-            Copies.Add(result, new(clip, frame));
-            Logger.LogDiagnostic($"Initialized clip arguments for {clip.Id}, frame {frame}.");
+            Copies.Add(result, new(clip, frame, shouldRender));
+            ClipValueFrameContext.Current?.SetComputed((typeof(ClipArgumentBinding), clip.Id, frame), result);
+            Logger.LogDiagnostic(shouldRender ? $"Initialized clip arguments for {clip.Id}, frame {frame}."
+                : $"Skipped clip {clip.Id}, frame {frame}: ShouldRender is false.");
             return result;
         }
         catch (Exception ex)
@@ -46,12 +62,17 @@ public sealed class ClipArgumentFrameCache
 {
     private readonly ConcurrentDictionary<(Guid Clip, uint Frame), Lazy<IClip>> clips = new();
 
-    public IClip Get(IClip clip, uint frame, Action<IClip>? initialize = null) => clips.GetOrAdd((clip.Id, frame),
-        _ => new(() =>
+    public IClip Get(IClip clip, uint frame, Action<IClip>? initialize = null)
+    {
+        var result = clips.GetOrAdd((clip.Id, frame), _ => new(() =>
         {
+            if (ClipArgumentBinding.TryGetFrame(clip, frame, out var cached)) return cached!;
             if (!ClipArgumentBinding.IsFrameCopy(clip)) initialize?.Invoke(clip);
             return ClipArgumentBinding.InitializeFrame(clip, frame);
         })).Value;
+        ClipValueFrameContext.Current?.SetComputed((typeof(ClipArgumentBinding), clip.Id, frame), result);
+        return result;
+    }
 
     public void RemoveFrame(uint frame)
     {

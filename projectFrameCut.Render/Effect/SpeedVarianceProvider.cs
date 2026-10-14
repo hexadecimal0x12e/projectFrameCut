@@ -25,11 +25,14 @@ namespace projectFrameCut.Render.Effect
 
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
+        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() =>
+            new Dictionary<string, EffectArgumentFieldDescriptor>();
+
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {
             return
             [
-                Field("Ratio", EffectArgumentFieldType.Numeric, "1", min: "0.05", max: "8")
+                Field("Ratio", EffectArgumentFieldType.Numeric | EffectArgumentFieldType.CannotBeDynamic, "1", min: "0.05", max: "8")
             ];
         }
 

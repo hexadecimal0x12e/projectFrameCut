@@ -1,5 +1,6 @@
 using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -363,7 +364,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         public static void SetFinalOutputSource(this IEffectProvider provider, bool isFinalOutput, string? outputId, EffectFieldTypeResolution? types)
         {
-            if (isFinalOutput && (provider is ClipArgumentProvider || provider.TypeOfEffect == projectFrameCut.Shared.EffectType.Transform
+            if (isFinalOutput && (provider is ClipArgumentProvider or IClipValueEndpointProvider { IsExport: true }
+                || provider.TypeOfEffect is EffectType.Transform or EffectType.SpeedVarianceProvider or EffectType.MixtureProvider
                 || !provider.TryGetOutputField(outputId, out var field)
                 || !EffectFieldTypes.AreCompatible(types?.GetOutputType(provider, outputId) ?? field.FieldType, provider.GetPipeline().GetContentType())
                     && (types is not null || !field.FieldType.HasFlag(EffectArgumentFieldType.Any))))
@@ -397,8 +399,11 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             ArgumentException.ThrowIfNullOrWhiteSpace(sourceId);
             if (fieldId == InputKey || IsOutputBindingKey(fieldId))
                 throw new ArgumentException($"'{fieldId}' is a reserved anchor key.", nameof(fieldId));
-            if (!provider.Fields.ContainsKey(fieldId) && !provider.InFields.ContainsKey(fieldId))
+            var field = provider.Fields.GetValueOrDefault(fieldId) ?? provider.InFields.GetValueOrDefault(fieldId);
+            if (field is null)
                 throw new ArgumentException($"Provider '{provider.TypeName}' does not own field '{fieldId}'.", nameof(fieldId));
+            if (field.FieldType.HasFlag(EffectArgumentFieldType.CannotBeDynamic))
+                throw new InvalidOperationException($"Field '{fieldId}' on provider '{provider.TypeName}' cannot be bound.");
 
             var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);
             state[fieldId] = sourceId;

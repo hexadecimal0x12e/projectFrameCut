@@ -95,6 +95,7 @@ namespace projectFrameCut.Services
         {
             string GetEffectDisplayName(KeyValuePair<string, Func<IEffectProvider>> e)
             {
+                if (!haveSubFix) return PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);
                 var instance = e.Value();
                 var type = instance.TypeOfEffect switch
                 {
@@ -106,11 +107,7 @@ namespace projectFrameCut.Services
                     Shared.EffectType.ContinuousTextEffect => PPLocalizedResources.Effect_ContinuousTextEffect,
                     _ => PPLocalizedResources.Effect_GeneralEffect,
                 };
-                if (!haveSubFix)
-                {
-                    return PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);
-                }
-                else if (instance.FromPlugin == InternalPluginBase.InternalPluginBaseID || SettingsManager.IsBoolSettingTrue("edit_AlwaysShowEffectsSource"))
+                if (instance.FromPlugin == InternalPluginBase.InternalPluginBaseID || SettingsManager.IsBoolSettingTrue("edit_AlwaysShowEffectsSource"))
                 {
                     var dispName = PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);
                     return $"{dispName}{splitter}({type})";
