@@ -25,6 +25,7 @@ public sealed class ProjectExternalSourceAsset
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public List<ExternalVideoSourceDescriptor> Sources { get; set; } = [];
     public List<ExternalAudioSourceDescriptor> AudioSources { get; set; } = [];
+    public List<ExternalMaskSourceDescriptor> MaskSources { get; set; } = [];
 }
 
 public sealed class ProjectExternalSourceIndex
@@ -70,6 +71,7 @@ public sealed class ProjectExternalSourceStatus
     [ProtoMember(12)] public string Directory { get; set; } = string.Empty;
     [ProtoMember(13)] public DateTime ImportedAt { get; set; }
     [ProtoMember(14)] public List<ExternalAudioSourceDescriptor> AudioSources { get; set; } = [];
+    [ProtoMember(15)] public List<ExternalMaskSourceDescriptor> MaskSources { get; set; } = [];
 }
 
 [ProtoContract]

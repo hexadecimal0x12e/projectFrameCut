@@ -120,6 +120,21 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
         _generation++;
         var hasPreview = false;
 
+        if (previews.FirstOrDefault(p => p.IsCanvasPreview) is { } canvas)
+        {
+            foreach (var existing in _states.Values) existing.Clear();
+            if (!_states.TryGetValue(Guid.Empty, out var state))
+            {
+                state = new PreviewState(Guid.Empty) { IsCanvasPreview = true };
+                _states[Guid.Empty] = state;
+                PreviewCanvas.Children.Add(state.Host);
+            }
+            if (PreviewErrorView.GetView(canvas) is { } canvasView) state.SetView(canvasView);
+            state.Host.IsVisible = state.HasView;
+            LayoutPreview(state);
+            return state.HasView;
+        }
+
         foreach (var preview in previews)
         {
             if (preview.ClipId == Guid.Empty || preview.Source?.ClipType is ClipMode.AudioClip or ClipMode.MarkingClip) continue;
@@ -138,9 +153,9 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
             {
                 state.Host.ZIndex = ClipLayerOrder.GetPreviewZIndex(preview.Source.LayerIndex, preview.Source.SubLayerIndex);
             }
-            if (preview.View is not null)
+            if (PreviewErrorView.GetView(preview) is { } previewView)
             {
-                state.SetView(preview.View);
+                state.SetView(previewView);
             }
 
             state.Host.IsVisible = state.HasView;

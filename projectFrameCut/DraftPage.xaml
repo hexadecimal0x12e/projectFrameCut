@@ -386,7 +386,7 @@
                     <Button Text="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject='&#xf420;', FalseObject='&#xe14e;'}}"  FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding SpiltOrCombineCommand}" IsVisible="True" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" />
                     <Button Text="&#xe14a;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding DeleteCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" />
                     <BoxView WidthRequest="1" Margin="4,0,0,0" BackgroundColor="#80aaaaaa"  />
-                    <Button Text="&#xe9d5;" FontSize="24" Margin="8,0,8,0" FontFamily="Icons" Command="{Binding UnselectCommand}"  SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" />
+                    <Button Text="&#xe9d5;" FontSize="24" Margin="8,0,8,0" FontFamily="Icons" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" />
                 </HorizontalStackLayout>
             </ScrollView>
 

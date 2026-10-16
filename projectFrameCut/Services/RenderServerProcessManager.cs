@@ -410,11 +410,8 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("dataRoot", MauiProgram.BasicDataPath);
                 Add("FFmpegLibraryPath", options.FFmpegLibraryPath);
                 Add("maxParallelThreads", Math.Max(1, options.MaxParallelThreads).ToString());
-                Add("oneByOneRender", options.OneByOneRender.ToString());
                 Add("GCOptions", Math.Clamp(options.GcOption, 0, 2).ToString());
                 Add("enableThreadAffinity", options.EnableThreadAffinity.ToString());
-                Add("prepareInWorker", options.PrepareInWorker.ToString());
-                Add("renderByLayer", options.RenderByLayer.ToString());
                 Add("reuseDynamicPreviewCache", options.ReuseDynamicPreviewCache.ToString());
                 Add("preferHwAccelDecoder", options.UseHwAccelDecoder.ToString());
                 Add("preferHwAccelEncoder", options.UseHwAccelEncoder.ToString());
@@ -776,11 +773,8 @@ internal sealed record CliRenderProcessOptions
     public required string PixelFormat { get; init; }
     public required string Encoder { get; init; }
     public int MaxParallelThreads { get; init; } = Environment.ProcessorCount;
-    public bool OneByOneRender { get; init; }
     public int GcOption { get; init; }
     public bool EnableThreadAffinity { get; init; } = true;
-    public bool PrepareInWorker { get; init; } = true;
-    public bool RenderByLayer { get; init; } = true;
     public bool ReuseDynamicPreviewCache { get; init; }
     public bool ChunkRender { get; init; }
     public uint? ChunkFrames { get; init; }

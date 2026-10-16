@@ -1,6 +1,7 @@
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.PluginIsolation;
 using projectFrameCut.Render.RPCProtocol;
+using projectFrameCut.Render.Sources;
 using System.Buffers.Binary;
 using System.IO.Pipes;
 
@@ -10,6 +11,81 @@ namespace projectFrameCut.Render.Contracts.Tests;
 [DoNotParallelize]
 public sealed class ProjectExternalSourceWorkerTests
 {
+    [TestMethod]
+    [DataRow(IsolationPayloadKind.Inline)]
+    [DataRow(IsolationPayloadKind.SharedMemory)]
+    [DataRow(IsolationPayloadKind.LocalFile)]
+    public async Task MaskOnlyProvidersProcessBackdropsAndReleasePayloads(IsolationPayloadKind kind)
+    {
+        using var files = new ProjectExternalSourceTests.SourceFiles();
+        var provider = new TestMaskSourceProvider();
+        var root = files.Directory("mask-session");
+        await using var worker = await TestWorker.StartAsync(root, provider, kind);
+        var client = new ProjectExternalSourceClient(worker);
+        await client.LoadAsync();
+        Assert.AreEqual(0, client.Sources.Count);
+        Assert.AreEqual(0, client.AudioSources.Count);
+        Assert.AreEqual(1, client.MaskSources.Count);
+        using var backdrop = new projectFrameCut.Drawing.Base.Picture.HDRPicture16bpp(2, 1)
+        {
+            HasAlphaChannel = true, a = [0.5f, 1f], MaximumBrightness = 1200, Brightness = [2f, 3f],
+        };
+        var request = new ExternalMaskSourceProcessRequest
+        {
+            Source = new() { SourceId = "mask" }, Backdrop = ExternalVideoFrameCodec.Encode(backdrop), Scale = 0.5f,
+            Arguments = new() { ["Amount"] = new() { Kind = IsolationValueKind.Single, NumberValue = 4 } },
+        };
+        var result = await client.ProcessMaskAsync(request);
+        Assert.AreEqual((byte)4, result.Red[0]);
+        Assert.AreEqual(0.5f, provider.LastRequest!.Scale);
+        CollectionAssert.AreEqual(request.Backdrop.Alpha, result.Alpha);
+        CollectionAssert.AreEqual(request.Backdrop.Brightness, result.Brightness);
+        Assert.AreEqual(1200f, result.MaximumBrightness);
+        Assert.IsFalse(Directory.EnumerateFiles(Path.Combine(root, "payloads")).Any());
+        provider.Fail = true;
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await client.ProcessMaskAsync(request));
+        Assert.IsNotNull(client.FrameError);
+        Assert.IsFalse(Directory.EnumerateFiles(Path.Combine(root, "payloads")).Any());
+        provider.Fail = false;
+        await client.ProcessMaskAsync(request);
+        Assert.IsNull(client.FrameError);
+        request.Source.SourceId = "unknown";
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await client.ProcessMaskAsync(request));
+        Assert.IsFalse(Directory.EnumerateFiles(Path.Combine(root, "payloads")).Any());
+    }
+
+    [TestMethod]
+    public async Task ProjectMaskSourcesCaptureTheirHostAndPersistTheirCatalog()
+    {
+        using var files = new ProjectExternalSourceTests.SourceFiles();
+        var root = files.Directory("mask-project");
+        var asset = await ProjectExternalSourceDatabase.ImportAsync(root, await files.CreateAsync("mask-package"));
+        var previous = ProjectExternalSourceRuntime.StartWorker;
+        await using var host = new ProjectExternalSourceHost();
+        try
+        {
+            ProjectExternalSourceRuntime.StartWorker = async (_, _, _) => await TestWorker.StartAsync(files.Directory("mask-host"), new TestMaskSourceProvider());
+            var request = new SetProjectExternalSourcesRequest { ProjectRoot = root, AllowedSources = ProjectExternalSourceDatabase.ParseApprovals(root, "all") };
+            var catalog = await host.SetAsync(request);
+            Assert.AreEqual(1, catalog.Sources.Single().MaskSources.Count);
+            Assert.AreEqual(asset.ImportId, ProjectExternalSourceDatabase.Read(root).Assets.Single().MaskSources.Single().ClientId);
+            using var sourceScope = ProjectExternalSourceRuntime.Use(host);
+            var source = MaskSources.Create(ProjectExternalMaskSource.CreatePath(asset.ImportId, catalog.Sources.Single().MaskSources.Single()));
+            Assert.IsTrue(MaskSources.GetAvailable().Any(x => x.TypeName == source.TypeName));
+            using var backdrop = new projectFrameCut.Drawing.Base.Picture.Picture8bpp(2, 1);
+            await using var other = new ProjectExternalSourceHost();
+            using (ProjectExternalSourceRuntime.Use(other))
+            using (var frame = source.Process(backdrop, new Dictionary<string, object>(), 1, CancellationToken.None))
+                Assert.AreEqual((byte)2, ((projectFrameCut.Drawing.Base.IPicture<byte>)frame).r[0]);
+            await host.CloseAsync();
+            Assert.Throws<IOException>(() => source.Process(backdrop, new Dictionary<string, object>(), 1, CancellationToken.None));
+            await host.SetAsync(request);
+            using var restored = source.Process(backdrop, new Dictionary<string, object>(), 1, CancellationToken.None);
+            Assert.AreEqual((byte)2, ((projectFrameCut.Drawing.Base.IPicture<byte>)restored).r[0]);
+        }
+        finally { ProjectExternalSourceRuntime.StartWorker = previous; }
+    }
+
     [TestMethod]
     [DataRow(IsolationPayloadKind.Inline)]
     [DataRow(IsolationPayloadKind.SharedMemory)]

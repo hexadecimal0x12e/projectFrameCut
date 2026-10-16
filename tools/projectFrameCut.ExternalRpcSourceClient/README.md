@@ -1,7 +1,8 @@
 # projectFrameCut.ExternalRpcSourceClient
 
-Connects to a persistent external RPC authorization pipe and registers synthetic video and stereo audio sources.
-The client must stay running while the project reads frames or audio samples. Audio uses 48 kHz float32 PCM and a 440 Hz tone.
+Connects to a persistent external RPC authorization pipe and registers synthetic video, stereo audio and an invert mask source.
+The client must stay running while the project reads frames, audio samples or processes masks. Audio uses 48 kHz float32 PCM and a 440 Hz tone.
+The mask appears in the mask list, accepts an `Enabled` boolean parameter and preserves Alpha/HDR planes.
 
 ```powershell
 dotnet run --project tools/projectFrameCut.ExternalRpcSourceClient -- `

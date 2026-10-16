@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\projectFrameCut.Render.Contracts\projectFrameCut.Render.Contracts.csproj" />
+    <Compile Include="..\projectFrameCut.ExternalSourceExample\ExampleMaskSourceProvider.cs" Link="ExampleMaskSourceProvider.cs" />
   </ItemGroup>
 
 </Project>

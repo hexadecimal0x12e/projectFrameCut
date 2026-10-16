@@ -15,6 +15,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
+using projectFrameCut.Render.Sources;
 using projectFrameCut.Render.Transform;
 using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
@@ -508,6 +509,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     #region command
     public ICommand AddTextClipCommand { get; set; } = null!;
     public ICommand AddSolidColorClipCommand { get; set; } = null!;
+    public ICommand AddEmptyVideoClipCommand { get; set; } = null!;
+    public ICommand AddPassthroughMaskClipCommand { get; set; } = null!;
     public ICommand AddTextClipWithStyleCommand { get; set; } = null!;
     public ICommand GenerateTextPreviewCommand { get; set; } = null!;
     public ICommand AddSubTitleClipCommand { get; set; } = null!;
@@ -537,6 +540,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         InitializeSubtitleCommands();
         AddSolidColorClipCommand = new Command(async () => await AddSolidColorClip());
+        AddEmptyVideoClipCommand = new Command(AddEmptyVideoClip);
+        AddPassthroughMaskClipCommand = new Command(() => AddMaskSource("Passthrough", Localized.DraftPage_AddClipView_PassthroughMaskSource));
         AddTextClipWithStyleCommand = new Command<TextStyleItemViewModel?>(async (style) => await AddTextClipWithStyle(style));
         GenerateTextPreviewCommand = new Command(async () => InitializeTextStyles(string.IsNullOrWhiteSpace(TextToAdd) ? null : TextToAdd));
         AddAlternativeSourceClipCommand = new Command(async () => await AddAlternativeSourceClip());
@@ -739,12 +744,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             foreach (var asset in projectFrameCut.Render.PluginIsolation.ProjectExternalSourceDatabase.Read(_draftPage.WorkingPath).Assets)
             {
                 var status = catalog.Sources.FirstOrDefault(x => x.ImportId == asset.ImportId);
-                if (asset.Sources.Count == 0 && asset.AudioSources.Count == 0)
+                if (asset.Sources.Count == 0 && asset.AudioSources.Count == 0 && asset.MaskSources.Count == 0)
                     sources.Add(new(this, new ExternalVideoSourceDescriptor { Name = asset.Manifest.Name }, asset, status));
                 else
                 {
                     foreach (var source in status?.Sources ?? asset.Sources) sources.Add(new(this, source, asset, status));
                     foreach (var source in status?.AudioSources ?? asset.AudioSources) sources.Add(new(this, source, asset, status));
+                    foreach (var source in status?.MaskSources ?? asset.MaskSources) sources.Add(new(this, source, asset, status));
                 }
             }
         }
@@ -756,6 +762,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 foreach (var source in (await client.ListExternalVideoSourcesAsync()).Sources.OrderBy(x => x.ClientName).ThenBy(x => x.Name))
                     sources.Add(new(this, source));
                 foreach (var source in (await client.ListExternalAudioSourcesAsync()).Sources.OrderBy(x => x.ClientName).ThenBy(x => x.Name))
+                    sources.Add(new(this, source));
+                foreach (var source in (await client.ListExternalMaskSourcesAsync()).Sources.OrderBy(x => x.ClientName).ThenBy(x => x.Name))
                     sources.Add(new(this, source));
             }
             catch (Exception ex)
@@ -826,6 +834,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         if (item is null || !item.CanAdd) return;
         try
         {
+            if (item.MaskSource is { } mask)
+            {
+                AddMaskSource(item.ProjectAsset is null ? RemoteRpcMaskSource.CreatePath(mask)
+                    : ProjectExternalMaskSource.CreatePath(item.ProjectAsset.ImportId, mask), mask.Name);
+                return;
+            }
             var source = item.Source;
             var audio = item.AudioSource;
             var path = audio is not null
@@ -2074,6 +2088,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             if (state.Version != _filterVersion || state.Search != (SearchText ?? "")
                 || state.Order != OrderOption || state.ShowAll != ShowAllTemplates) return;
             FilterVectorComponents();
+            _ = LoadMaskSources();
             FilteredLocalAssets.Clear();
             FilteredSharedAssets.Clear();
             FilteredRpcVideoSources.Clear();
@@ -2321,6 +2336,30 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
 
+
+    public void AddEmptyVideoClip()
+    {
+        BeginTimelineClipPlacement((track, start) =>
+        {
+            var clip = _draftPage.CreateAndAddClip(start,
+                _draftPage.FrameToPixel(Math.Max(1u, _draftPage.ProjectInfo.TargetFrameRate) * 3),
+                track, null, Localized.DraftPage_AddClipView_EmptyVideoSource,
+                new SolidColorBrush(Colors.CornflowerBlue), resolveOverlap: true);
+            clip.ClipType = ClipMode.VideoClip;
+            clip.TypeName = nameof(VideoClip);
+            clip.FromPlugin = InternalPluginBase.InternalPluginBaseID;
+            clip.isInfiniteLength = true;
+            clip.maxFrameCount = 0;
+            clip.sourceSecondPerFrame = 1f / Math.Max(1u, _draftPage.ProjectInfo.TargetFrameRate);
+            clip.TargetWidth = Math.Max(1, _draftPage.ProjectInfo.RelativeWidth);
+            clip.TargetHeight = Math.Max(1, _draftPage.ProjectInfo.RelativeHeight);
+            clip.SourcePath = EmptyVideoSource.CreatePath(clip.TargetWidth, clip.TargetHeight);
+            ClipInfoBuilder.EnsureClipArgumentProvider(clip, _draftPage);
+            Log($"Created empty video clip {clip.Id}, source {clip.SourcePath}.");
+            return clip;
+        }, name: Localized.DraftPage_AddClipView_EmptyVideoSource);
+        ClipAdded?.Invoke(this, EventArgs.Empty);
+    }
 
     public async Task AddAlternativeSourceClip()
     {
@@ -3191,6 +3230,14 @@ public class AssetItemViewModel
 
 public sealed class RpcVideoSourceItemViewModel
 {
+    public RpcVideoSourceItemViewModel(ProjectAddClipViewModel parent, ExternalMaskSourceDescriptor source,
+        ProjectExternalSourceAsset? projectAsset = null, ProjectExternalSourceStatus? status = null)
+        : this(parent, new ExternalVideoSourceDescriptor { ClientId = source.ClientId, ClientName = source.ClientName,
+            SourceId = source.SourceId, Name = source.Name }, projectAsset, status)
+    {
+        MaskSource = source;
+    }
+
     public RpcVideoSourceItemViewModel(ProjectAddClipViewModel parent, ExternalAudioSourceDescriptor source,
         ProjectExternalSourceAsset? projectAsset = null, ProjectExternalSourceStatus? status = null)
         : this(parent, new ExternalVideoSourceDescriptor { ClientId = source.ClientId, ClientName = source.ClientName,
@@ -3210,6 +3257,8 @@ public sealed class RpcVideoSourceItemViewModel
 
     public ExternalVideoSourceDescriptor Source { get; }
     public ExternalAudioSourceDescriptor? AudioSource { get; }
+    public ExternalMaskSourceDescriptor? MaskSource { get; }
+    public bool IsMediaSource => MaskSource is null;
     public ProjectExternalSourceAsset? ProjectAsset { get; }
     private ProjectExternalSourceStatus? LoadStatus { get; }
     public bool CanAdd => !string.IsNullOrWhiteSpace(Source.SourceId);
@@ -3227,7 +3276,8 @@ public sealed class RpcVideoSourceItemViewModel
 
     public string Capabilities => AudioSource is not null ? $"{AudioSource.ChannelCount} ch · {AudioSource.SamplePerSecond} Hz"
         : $"{(Source.HasKnownResultBitsPerPixel ? $"{Source.ResultBitsPerPixel}-bit" : "Variable bit depth")} RGB{(Source.SupportsAlpha ? "A" : "")}{(Source.SupportsHdr ? " (HDR)" : "")}";
-    public string SourceInfoDisplay => AudioSource is not null ? $"{Capabilities} ({Duration})" : $"{Resolution} {FrameRate} ({Duration})";
+    public string SourceInfoDisplay => MaskSource is not null ? Localized.Mask_Title
+        : AudioSource is not null ? $"{Capabilities} ({Duration})" : $"{Resolution} {FrameRate} ({Duration})";
     public Command AddCommand { get; }
 }
 

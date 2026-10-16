@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -18,6 +19,27 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private static int _ffmpegLogHooked = 0;
         private static av_log_set_callback_callback? _ffmpegLogCallback;
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int ScaleFrameCallback(SwsContext* context, byte** source, int* sourceStride,
+            int sourceY, int sourceHeight, byte** target, int* targetStride);
+
+        private static readonly Lazy<ScaleFrameCallback> _scaleFrame = new([MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)] () =>
+        {
+            return Marshal.GetDelegateForFunctionPointer<ScaleFrameCallback>(
+                DynamicallyLoadedBindings.FunctionResolver.GetFunctionPointer("swscale", "sws_scale", true));
+        });
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        internal static int ScaleFrame(SwsContext* context, AVFrame* source, AVFrame* target)
+        {
+            if (context == null || source == null || target == null)
+                throw new ArgumentException("FFmpeg scale context and frames must be allocated.");
+
+            // Avoid the managed array marshaler, which can pass invalid plane/stride pointers on .NET 11.
+            return _scaleFrame.Value(context, (byte**)&source->data, (int*)&source->linesize, 0, source->height,
+                (byte**)&target->data, (int*)&target->linesize);
+        }
 
         public static bool IsPointerAddressesValid<TPointerType>(TPointerType* ptr) where TPointerType : unmanaged => ptr != null;
         public static bool IsPointerAddressesNotValid<TPointerType>(TPointerType* ptr) where TPointerType : unmanaged => ptr == null;

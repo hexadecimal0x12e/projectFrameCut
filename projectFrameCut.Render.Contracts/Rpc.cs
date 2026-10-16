@@ -1,4 +1,5 @@
 using ProtoBuf;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace projectFrameCut.Render.Contracts;
@@ -29,6 +30,14 @@ public interface IExternalVideoSourceProvider
 
 public interface IRenderClient : IAsyncDisposable
 {
+    ValueTask RegisterExternalMaskSourcesAsync(RegisterExternalMaskSourcesRequest request, CancellationToken cancellationToken = default)
+        => ValueTask.FromException(new NotSupportedException("This render client does not support external mask sources."));
+    ValueTask UnregisterExternalMaskSourcesAsync(CancellationToken cancellationToken = default)
+        => ValueTask.FromException(new NotSupportedException("This render client does not support external mask sources."));
+    ValueTask<ExternalMaskSourceCatalog> ListExternalMaskSourcesAsync(CancellationToken cancellationToken = default)
+        => ValueTask.FromException<ExternalMaskSourceCatalog>(new NotSupportedException("This render client does not support external mask sources."));
+    ValueTask<ExternalVideoFrame> ProcessExternalMaskAsync(ExternalMaskSourceProcessRequest request, CancellationToken cancellationToken = default)
+        => ValueTask.FromException<ExternalVideoFrame>(new NotSupportedException("This render client does not support external mask sources."));
     ValueTask RegisterExternalAudioSourcesAsync(RegisterExternalAudioSourcesRequest request, CancellationToken cancellationToken = default)
         => ValueTask.FromException(new NotSupportedException("This render client does not support external audio sources."));
     ValueTask UnregisterExternalAudioSourcesAsync(CancellationToken cancellationToken = default)
@@ -76,6 +85,9 @@ public interface IRenderClient : IAsyncDisposable
     ValueTask<PreviewAudioClock> GetPreviewAudioClockAsync(PreviewAudioClockRequest request, CancellationToken cancellationToken = default);
     ValueTask<RenderArtifact> RenderClipPreviewAsync(ClipPreviewRequest request, CancellationToken cancellationToken = default);
     ValueTask<ClipPreviewBatchResponse> RenderClipPreviewBatchAsync(ClipPreviewBatchRequest request, CancellationToken cancellationToken = default);
+    ValueTask<DynamicPreviewSession> StartDynamicPreviewAsync(StartDynamicPreviewRequest request, CancellationToken cancellationToken = default);
+    ValueTask StopDynamicPreviewAsync(StopDynamicPreviewRequest request, CancellationToken cancellationToken = default);
+    DynamicPreviewClock? GetDynamicPreviewClock(Guid sessionId, Guid playbackId);
     ValueTask<RenderJob> RenderProjectAsync(RenderProjectRequest request, CancellationToken cancellationToken = default);
     ValueTask<RenderJob> GetJobStatusAsync(Guid jobId, CancellationToken cancellationToken = default);
     ValueTask<RenderJob> CancelJobAsync(Guid jobId, CancellationToken cancellationToken = default);
@@ -99,15 +111,27 @@ public interface IRenderClient : IAsyncDisposable
     ValueTask<HeadlessJsonResponse> ApplyHeadlessProjectEditAsync(HeadlessProjectEditRequest request, CancellationToken cancellationToken = default);
 }
 
-public sealed class DirectRenderTransport(IRenderService service) : IRenderTransport
+public sealed class DirectRenderTransport(IRenderService service) : IRenderNotificationTransport
 {
     private readonly IRenderService _service = service ?? throw new ArgumentNullException(nameof(service));
+    public event Action<DynamicPreviewClock>? DynamicPreviewClockReceived;
 
     public async ValueTask<RenderResponseEnvelope> SendAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
     {
         var isolatedRequest = RenderRpcSerializer.Clone(request);
-        var response = await Task.Run(async () => await _service.DispatchAsync(isolatedRequest, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+        var response = await Task.Run(async () =>
+        {
+            using var notifications = RenderRpcNotifications.UseDynamicPreviewClockSender(PublishDynamicPreviewClockAsync);
+            return await _service.DispatchAsync(isolatedRequest, cancellationToken).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
         return RenderRpcSerializer.Clone(response);
+    }
+
+    private ValueTask PublishDynamicPreviewClockAsync(DynamicPreviewClock clock, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        DynamicPreviewClockReceived?.Invoke(RenderRpcSerializer.Clone(clock));
+        return ValueTask.CompletedTask;
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
@@ -119,23 +143,31 @@ public sealed class RenderClient : IRenderClient
     public ValueTask<ProjectExternalSourceCatalog> SetProjectExternalSourcesAsync(SetProjectExternalSourcesRequest request, CancellationToken ct = default) => SendAsync<SetProjectExternalSourcesRequest, ProjectExternalSourceCatalog>(RenderOperation.SetProjectExternalSources, request, ct);
     private readonly IRenderTransport _transport;
     private readonly ExternalSourceCallbackService? _callbackService;
+    private readonly ConcurrentDictionary<Guid, DynamicPreviewClock> _dynamicPreviewClocks = new();
 
     public RenderClient(IRenderTransport transport, string? clientId = null, IExternalVideoSourceProvider? externalVideoSourceProvider = null)
         : this(transport, clientId, externalVideoSourceProvider, null) { }
 
     public RenderClient(IRenderTransport transport, string? clientId, IExternalVideoSourceProvider? externalVideoSourceProvider,
         IExternalAudioSourceProvider? externalAudioSourceProvider)
+        : this(transport, clientId, externalVideoSourceProvider, externalAudioSourceProvider, null) { }
+
+    public RenderClient(IRenderTransport transport, string? clientId, IExternalVideoSourceProvider? externalVideoSourceProvider,
+        IExternalAudioSourceProvider? externalAudioSourceProvider, IExternalMaskSourceProvider? externalMaskSourceProvider)
     {
         _transport = transport ?? throw new ArgumentNullException(nameof(transport));
         ClientId = string.IsNullOrWhiteSpace(clientId) ? $"client-{Guid.NewGuid():N}" : clientId;
         externalAudioSourceProvider ??= externalVideoSourceProvider as IExternalAudioSourceProvider;
-        if (externalVideoSourceProvider is not null || externalAudioSourceProvider is not null)
+        externalMaskSourceProvider ??= externalVideoSourceProvider as IExternalMaskSourceProvider ?? externalAudioSourceProvider as IExternalMaskSourceProvider;
+        if (externalVideoSourceProvider is not null || externalAudioSourceProvider is not null || externalMaskSourceProvider is not null)
         {
             if (transport is not IRenderDuplexTransport duplex)
                 throw new NotSupportedException("External sources require a duplex render transport.");
-            _callbackService = new(externalVideoSourceProvider, externalAudioSourceProvider);
+            _callbackService = new(externalVideoSourceProvider, externalAudioSourceProvider, externalMaskSourceProvider);
             duplex.CallbackService = _callbackService;
         }
+        if (transport is IRenderNotificationTransport notifications)
+            notifications.DynamicPreviewClockReceived += ReceiveDynamicPreviewClock;
     }
 
     public ValueTask<GuiProjectSession> RegisterGuiProjectAsync(GuiProjectSession request, CancellationToken ct = default) => SendAsync<GuiProjectSession, GuiProjectSession>(RenderOperation.RegisterGuiProject, request, ct);
@@ -154,6 +186,10 @@ public sealed class RenderClient : IRenderClient
     public ValueTask<PendingExternalRpcRequest> GetExternalRpcRequestAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, PendingExternalRpcRequest>(RenderOperation.GetExternalRpcRequest, new(), ct);
     public async ValueTask ResolveExternalRpcRequestAsync(ResolveExternalRpcRequest request, CancellationToken ct = default) => _ = await SendAsync<ResolveExternalRpcRequest, EmptyResponse>(RenderOperation.ResolveExternalRpcRequest, request, ct).ConfigureAwait(false);
     public async ValueTask RegisterExternalVideoSourcesAsync(RegisterExternalVideoSourcesRequest request, CancellationToken ct = default) => _ = await SendAsync<RegisterExternalVideoSourcesRequest, EmptyResponse>(RenderOperation.RegisterExternalVideoSources, request, ct).ConfigureAwait(false);
+    public async ValueTask RegisterExternalMaskSourcesAsync(RegisterExternalMaskSourcesRequest request, CancellationToken ct = default) => _ = await SendAsync<RegisterExternalMaskSourcesRequest, EmptyResponse>(RenderOperation.RegisterExternalMaskSources, request, ct).ConfigureAwait(false);
+    public async ValueTask UnregisterExternalMaskSourcesAsync(CancellationToken ct = default) => _ = await SendAsync<EmptyRequest, EmptyResponse>(RenderOperation.UnregisterExternalMaskSources, new(), ct).ConfigureAwait(false);
+    public ValueTask<ExternalMaskSourceCatalog> ListExternalMaskSourcesAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, ExternalMaskSourceCatalog>(RenderOperation.ListExternalMaskSources, new(), ct);
+    public ValueTask<ExternalVideoFrame> ProcessExternalMaskAsync(ExternalMaskSourceProcessRequest request, CancellationToken ct = default) => SendAsync<ExternalMaskSourceProcessRequest, ExternalVideoFrame>(RenderOperation.ExternalMaskSourceProcess, request, ct);
     public async ValueTask UnregisterExternalVideoSourcesAsync(CancellationToken ct = default) => _ = await SendAsync<EmptyRequest, EmptyResponse>(RenderOperation.UnregisterExternalVideoSources, new(), ct).ConfigureAwait(false);
     public ValueTask<ExternalVideoSourceCatalog> ListExternalVideoSourcesAsync(CancellationToken ct = default) => SendAsync<EmptyRequest, ExternalVideoSourceCatalog>(RenderOperation.ListExternalVideoSources, new(), ct);
     public async ValueTask RegisterExternalAudioSourcesAsync(RegisterExternalAudioSourcesRequest request, CancellationToken ct = default) => _ = await SendAsync<RegisterExternalAudioSourcesRequest, EmptyResponse>(RenderOperation.RegisterExternalAudioSources, request, ct).ConfigureAwait(false);
@@ -177,6 +213,12 @@ public sealed class RenderClient : IRenderClient
     public ValueTask<PreviewAudioClock> GetPreviewAudioClockAsync(PreviewAudioClockRequest request, CancellationToken ct = default) => SendAsync<PreviewAudioClockRequest, PreviewAudioClock>(RenderOperation.GetPreviewAudioClock, request, ct);
     public ValueTask<RenderArtifact> RenderClipPreviewAsync(ClipPreviewRequest request, CancellationToken ct = default) => SendAsync<ClipPreviewRequest, RenderArtifact>(RenderOperation.RenderClipPreview, request, ct);
     public ValueTask<ClipPreviewBatchResponse> RenderClipPreviewBatchAsync(ClipPreviewBatchRequest request, CancellationToken ct = default) => SendAsync<ClipPreviewBatchRequest, ClipPreviewBatchResponse>(RenderOperation.RenderClipPreviewBatch, request, ct);
+    public ValueTask<DynamicPreviewSession> StartDynamicPreviewAsync(StartDynamicPreviewRequest request, CancellationToken ct = default) => SendAsync<StartDynamicPreviewRequest, DynamicPreviewSession>(RenderOperation.StartDynamicPreview, request, ct);
+    public async ValueTask StopDynamicPreviewAsync(StopDynamicPreviewRequest request, CancellationToken ct = default) { _ = await SendAsync<StopDynamicPreviewRequest, EmptyResponse>(RenderOperation.StopDynamicPreview, request, ct).ConfigureAwait(false); }
+    public DynamicPreviewClock? GetDynamicPreviewClock(Guid sessionId, Guid playbackId)
+        => _dynamicPreviewClocks.TryGetValue(sessionId, out var clock) && clock.PlaybackId == playbackId ? clock : null;
+
+    private void ReceiveDynamicPreviewClock(DynamicPreviewClock clock) => _dynamicPreviewClocks[clock.SessionId] = clock;
     public ValueTask<RenderJob> RenderProjectAsync(RenderProjectRequest request, CancellationToken ct = default) => SendAsync<RenderProjectRequest, RenderJob>(RenderOperation.RenderProject, request, ct);
     public ValueTask<RenderJob> GetJobStatusAsync(Guid jobId, CancellationToken ct = default) => SendAsync<JobRequest, RenderJob>(RenderOperation.GetJobStatus, new() { JobId = jobId }, ct);
     public ValueTask<RenderJob> CancelJobAsync(Guid jobId, CancellationToken ct = default) => SendAsync<JobRequest, RenderJob>(RenderOperation.CancelJob, new() { JobId = jobId }, ct);
@@ -212,9 +254,15 @@ public sealed class RenderClient : IRenderClient
         return RenderRpcSerializer.Deserialize<TResponse>(response.Payload);
     }
 
-    public ValueTask DisposeAsync() => _transport.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        if (_transport is IRenderNotificationTransport notifications)
+            notifications.DynamicPreviewClockReceived -= ReceiveDynamicPreviewClock;
+        await _transport.DisposeAsync().ConfigureAwait(false);
+        _dynamicPreviewClocks.Clear();
+    }
 
-    private sealed class ExternalSourceCallbackService(IExternalVideoSourceProvider? video, IExternalAudioSourceProvider? audio) : IRenderService
+    private sealed class ExternalSourceCallbackService(IExternalVideoSourceProvider? video, IExternalAudioSourceProvider? audio, IExternalMaskSourceProvider? mask) : IRenderService
     {
         public async ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
         {
@@ -230,6 +278,7 @@ public sealed class RenderClient : IRenderClient
                     RenderOperation.ExternalAudioSourceInitialize when audio is not null => RenderRpcSerializer.Serialize(await audio.InitializeAudioAsync(RenderRpcSerializer.Deserialize<ExternalAudioSourceStateRequest>(request.Payload), cancellationToken).ConfigureAwait(false)),
                     RenderOperation.ExternalAudioSourceReadSamples when audio is not null => await ReadSamplesAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.ExternalAudioSourceRelease when audio is not null => await ReleaseAudioAsync(request, cancellationToken).ConfigureAwait(false),
+                    RenderOperation.ExternalMaskSourceProcess when mask is not null => await ProcessMaskAsync(request, cancellationToken).ConfigureAwait(false),
                     _ => throw new NotSupportedException($"Render callback operation '{request.Operation}' is not supported."),
                 };
                 return new() { RequestId = request.RequestId, Payload = payload };
@@ -264,6 +313,17 @@ public sealed class RenderClient : IRenderClient
         {
             await audio!.ReleaseAudioAsync(RenderRpcSerializer.Deserialize<ExternalAudioSourceStateRequest>(request.Payload), cancellationToken).ConfigureAwait(false);
             return RenderRpcSerializer.Serialize(new EmptyResponse());
+        }
+
+        private async ValueTask<byte[]> ProcessMaskAsync(RenderRequestEnvelope request, CancellationToken cancellationToken)
+        {
+            var process = RenderRpcSerializer.Deserialize<ExternalMaskSourceProcessRequest>(request.Payload);
+            process.Validate();
+            if (!mask!.MaskSources.Any(x => x.SourceId == process.Source.SourceId))
+                throw new UnauthorizedAccessException("Requested mask source is not in this provider's catalog.");
+            var frame = await mask.ProcessMaskAsync(process, cancellationToken).ConfigureAwait(false);
+            process.ValidateResult(frame);
+            return RenderRpcSerializer.Serialize(frame);
         }
     }
 }

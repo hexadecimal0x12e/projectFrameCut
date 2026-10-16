@@ -1,12 +1,9 @@
-using CommunityToolkit.Maui.Storage;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
 using projectFrameCut.Converters;
 using projectFrameCut.Drawing.Base.Picture;
-using projectFrameCut.Drawing.Vector;
-using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.ClipsAndTracks.Text;
@@ -17,23 +14,18 @@ using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
-using projectFrameCut.Render.VectorContent;
-using projectFrameCut.Render.VectorContent.Components;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using GridLength = Microsoft.Maui.GridLength;
 using Thickness = Microsoft.Maui.Thickness;
-using Path = System.IO.Path;
 
 #if WINDOWS
 using Microsoft.UI.Xaml;
@@ -553,174 +545,6 @@ namespace projectFrameCut.DraftStuff
             return false;
         }
 
-        #endregion
-
-        #region vector content props
-        private View BuildVectorComponentTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> changed)
-        {
-            var layout = new VerticalStackLayout { Spacing = 8, Padding = 8 };
-            var components = VectorComponentSerializer.Read(clip.ExtraData);
-            var properties = new VerticalStackLayout { Spacing = 8 };
-            var selector = new Picker { Title = Localized.VectorContentEditorView_Components, ItemsSource = components.Select(c => c.Name).ToList() };
-            bool timedGroup = clip.ExtraData.ContainsKey(VectorComponentClip.ChildrenKey);
-            void Save(bool bounds = false)
-            {
-                VectorClipServices.SetDefinition(page, clip, components, bounds && clip.ClipType == ClipMode.VectorComponentClip);
-                changed.Invoke(this, new PropertyPanelPropertyChangedEventArgs("vectorComponent", null, null));
-            }
-            void ShowComponent()
-            {
-                properties.Children.Clear();
-                if (selector.SelectedIndex < 0 || selector.SelectedIndex >= components.Count) return;
-                var component = components[selector.SelectedIndex];
-                var name = new Entry { Text = component.Name, Placeholder = Localized.VectorContentEditorView_Name };
-                name.Unfocused += (_, _) => { component.Name = name.Text; Save(); };
-                if (components.Count > 1) properties.Children.Add(name);
-                var handler = VectorClipServices.GetHandler(component);
-                if (component is ComponentGroup group)
-                {
-                    var builder = new PropertyPanelBuilder();
-                    foreach (string field in timedGroup ? new[] { "Rotation" } : new[] { "Width", "Height", "Rotation" })
-                        builder.AddEntry(field, field, group.Parameters.GetFloat(field, 0).ToString(CultureInfo.InvariantCulture), "");
-                    builder.PropertyChanged += (_, e) =>
-                    {
-                        if (float.TryParse(e.Value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
-                        { group.Parameters[e.Id] = value; Save(true); }
-                    };
-                    properties.Children.Add(builder.Build());
-                    if (clip.ClipType == ClipMode.VectorCanvasClip)
-                    {
-                        void AddChildren(ComponentGroup parent)
-                        {
-                            foreach (var child in parent.Children)
-                            {
-                                properties.Children.Add(new Label { Text = child.Name });
-                                if (child is ComponentGroup nested) AddChildren(nested);
-                                else if (VectorClipServices.GetHandler(child) is { } childHandler)
-                                {
-                                    var childBuilder = childHandler.CreatePropertyUI(child);
-                                    childBuilder.PropertyChanged += (_, e) => { childHandler.HandlePropertyChange(child, e); Save(); };
-                                    properties.Children.Add(childBuilder.Build());
-                                }
-                            }
-                        }
-                        AddChildren(group);
-                    }
-                }
-                else if (handler is not null)
-                {
-                    var builder = handler.CreatePropertyUI(component);
-                    builder.PropertyChanged += (_, e) => { handler.HandlePropertyChange(component, e); Save(true); };
-                    properties.Children.Add(builder.Build());
-                }
-            }
-            if (components.Count > 0) selector.SelectedIndex = 0;
-
-            if (components.Count > 1)
-            {
-                selector.SelectedIndexChanged += (_, _) => ShowComponent();
-                layout.Children.Add(selector);
-            }
-            else
-            {
-                ShowComponent();
-            }
-            layout.Children.Add(properties);
-            if (clip.ClipType == ClipMode.VectorCanvasClip)
-            {
-                var add = new Button { Text = Localized.VectorContentEditorView_AddShape };
-                add.Clicked += async (_, _) =>
-                {
-                    var component = await VectorClipServices.PickComponent(page);
-                    if (component is null) return;
-                    components.Add(component);
-                    selector.ItemsSource = components.Select(c => c.Name).ToList();
-                    selector.SelectedIndex = components.Count - 1;
-                    Save();
-                };
-                var remove = new Button { Text = Localized._Remove };
-                remove.Clicked += (_, _) =>
-                {
-                    if (selector.SelectedIndex < 0) return;
-                    components.RemoveAt(selector.SelectedIndex);
-                    selector.ItemsSource = components.Select(c => c.Name).ToList();
-                    selector.SelectedIndex = components.Count > 0 ? 0 : -1;
-                    ShowComponent(); Save();
-                };
-                var import = new Button { Text = Localized.VectorContentEditorView_Import };
-                import.Clicked += async (_, _) =>
-                {
-                    try
-                    {
-                        var path = await VectorClipServices.PickFile();
-                        if (path is null) return;
-                        components.Add(VectorClipServices.Import(path));
-                        selector.ItemsSource = components.Select(c => c.Name).ToList();
-                        selector.SelectedIndex = components.Count - 1;
-                        Save();
-                    }
-                    catch (Exception ex) { Log(ex, "Import vector canvas component", this); page.SetStateFail(ex.Message); }
-                };
-                var merge = new Button { Text = Localized.VectorContentEditorView_History_Group };
-                merge.Clicked += (_, _) =>
-                {
-                    if (components.Count < 2) return;
-                    var group = new ComponentGroup { Name = Localized.VectorContentEditorView_Components_GroupProperties };
-                    group.SetChildren(components.OrderBy(c => c.Index));
-                    components.Clear(); components.Add(group);
-                    selector.ItemsSource = components.Select(c => c.Name).ToList();
-                    selector.SelectedIndex = 0; ShowComponent(); Save();
-                };
-                layout.Children.Add(import);
-                layout.Children.Add(merge);
-                layout.Children.Add(add);
-                layout.Children.Add(remove);
-            }
-
-            if (components.Count > 1)
-            {
-                var exportJson = new Button { Text = Localized.VectorContentEditorView_ExportJson };
-                exportJson.Clicked += async (_, _) => await ExportVectorClip(clip, false);
-                var exportSvg = new Button { Text = Localized.VectorContentEditorView_ExportSVG };
-                exportSvg.Clicked += async (_, _) => await ExportVectorClip(clip, true);
-                layout.Children.Add(exportJson);
-                layout.Children.Add(exportSvg);
-            }
-
-            return new ScrollView { Content = layout };
-        }
-
-        private async Task ExportVectorClip(ClipElementUI clip, bool svg)
-        {
-            try
-            {
-                string content;
-                if (svg)
-                {
-                    using var instance = projectFrameCut.Render.Plugin.PluginManager.CreateClip(JsonSerializer.SerializeToElement(DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip))) as VectorCanvasClip;
-                    if (instance is null) return;
-                    instance.ReInit(8);
-                    projectFrameCut.Render.Effect.EffectHelper.ResolveClipEffects(instance);
-                    uint frame = ((IClip)instance).TryGetRelativeFrameIndex((uint)Math.Max(0, page.CurrentFrame), null) ?? clip.relativeStartFrame;
-                    var source = instance.GetVectorPictureRelativeToStartPointOfSource(frame, clip.TargetWidth, clip.TargetHeight);
-                    var picture = clip.ClipType == ClipMode.VectorComponentClip ? new VectorPicture
-                    {
-                        Elements = source.Elements.Select(e => (VectorCanvasElement)new VectorViewportElement(e,
-                            clip.TargetWidth, clip.TargetHeight, -clip.TargetX, -clip.TargetY,
-                            page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight)).ToList()
-                    } : source;
-                    content = SVGToVectorElement.ExportToSvg(picture, page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight);
-                }
-                else content = clip.ExtraData.ContainsKey(VectorComponentClip.ChildrenKey)
-                    ? JsonSerializer.Serialize(DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip))
-                    : VectorComponentSerializer.Serialize(VectorComponentSerializer.Read(clip.ExtraData));
-                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
-                string name = string.Concat(clip.DisplayName.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
-                var result = await FileSaver.Default.SaveAsync(name + (svg ? ".svg" : ".json"), stream);
-                if (!result.IsSuccessful && result.Exception is not null) throw result.Exception;
-            }
-            catch (Exception ex) { Log(ex, $"Export vector clip {clip.Id}", this); page.SetStateFail(ex.Message); }
-        }
         #endregion
 
         #region audio

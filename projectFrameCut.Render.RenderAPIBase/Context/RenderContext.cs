@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 
@@ -81,9 +81,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Context
         /// <summary>
         /// Get the current frame buffer for the rendering operation. This property is used to store the intermediate or final rendered frame as an IPicture object. It is thread-local, meaning each thread has its own value, allowing for safe concurrent rendering operations.
         /// </summary>
-        /// <remarks>
-        /// Note that while Render by layer is enabled, this value maybe not represent the final frame, but rather the current layer's output. Consumers should be aware of this when accessing the frame buffer during rendering.
-        /// </remarks>
         public static IPicture? CurrentFrameBuffer
         {
             get => _frameBuffer.Value;

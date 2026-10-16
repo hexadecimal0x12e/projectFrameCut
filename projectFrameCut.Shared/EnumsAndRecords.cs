@@ -21,6 +21,7 @@ namespace projectFrameCut.Shared
         TransformClip,
         VectorCanvasClip,
         VectorComponentClip,
+        MaskClip,
         Special = -1
     }
 

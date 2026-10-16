@@ -217,7 +217,8 @@ public class DraftSettingPage
                     if (sources.Sources.Count == 0) rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Empty });
                     foreach (var source in sources.Sources.OrderBy(x => x.Name))
                     {
-                        AddCard(source.Name, $"{source.Author} · {source.Version}\n{source.ManifestId}\n{source.Description}", source.Sources.Select(x => x.Name).Concat(source.AudioSources.Select(x => x.Name)),
+                        AddCard(source.Name, $"{source.Author} · {source.Version}\n{source.ManifestId}\n{source.Description}",
+                            source.Sources.Select(x => x.Name).Concat(source.AudioSources.Select(x => x.Name)).Concat(source.MaskSources.Select(x => x.Name)),
                             source.Loaded, source.Error, !IsStandaloneJsonMode, IsStandaloneJsonMode || !parent.IsReadonly,
                             () => ProjectExternalSourceService.SetLoadedAsync(parent.WorkingPath, source.ImportId, true),
                             () => ProjectExternalSourceService.SetLoadedAsync(parent.WorkingPath, source.ImportId, false),
@@ -240,7 +241,9 @@ public class DraftSettingPage
                         var clients = await client.ListExternalVideoSourceClientsAsync();
                         if (clients.Clients.Count == 0) rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Empty });
                         foreach (var rpc in clients.Clients.OrderBy(x => x.ClientName))
-                            AddCard(rpc.ClientName, rpc.ClientId.ToString(), rpc.Sources.Select(x => x.Name).Concat(rpc.AudioSources.Select(x => x.Name)), rpc.Loaded, string.Empty, true, true,
+                            AddCard(rpc.ClientName, rpc.ClientId.ToString(),
+                                rpc.Sources.Select(x => x.Name).Concat(rpc.AudioSources.Select(x => x.Name)).Concat(rpc.MaskSources.Select(x => x.Name)),
+                                rpc.Loaded, string.Empty, true, true,
                                 () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Load),
                                 () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Unload),
                                 () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Remove),

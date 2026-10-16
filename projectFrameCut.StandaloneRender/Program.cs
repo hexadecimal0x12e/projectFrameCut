@@ -29,8 +29,6 @@ using projectFrameCut.Render.Effect;
 
 using projectFrameCut.Drawing.Base.Picture;
 
-
-
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
 using Microsoft.DiagnosticsHub;
 #endif
@@ -107,7 +105,6 @@ namespace projectFrameCut.StandaloneRender
                 MyLoggerExtensions.LoggingDiagnosticInfo = true;
             }
 
-
             if (args.Length == 0 || args.Any(x => x.Equals("-h") || x.Equals("--help")))
             {
                 Console.WriteLine(
@@ -136,7 +133,7 @@ namespace projectFrameCut.StandaloneRender
                         [-pluginRoot=<path to plugin root>]
                         [-maxParallelThreads=<number>]
                         [-maxPendingWriteFrames=<number>]
-                        [-oneByOneRender=<true|false> -renderByLayer=<true|false> -prepareInWorker=<true|false> -enableThreadAffinity=<true|false>]
+                        [-enableThreadAffinity=<true|false>]
                         [-reuseDynamicPreviewCache=<true|false>]
                         [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-multiAccelerator=<true|false>]
@@ -155,8 +152,6 @@ namespace projectFrameCut.StandaloneRender
                         [-chunkResume=<true|false>] [-chunkKeepFiles=<true|false>]
                         [-multiStream=<true|false>]
 
-
-
                     Mode 'bench' [sub-modes]:
                         bench render    - Render pipeline benchmark (default)
                         bench encode    - VideoBuilder cache & encode throughput test
@@ -169,8 +164,7 @@ namespace projectFrameCut.StandaloneRender
                         [-multiAccelerator=<true|false>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
                         [-maxParallelThreads=<number>]
-                        [-maxPendingWriteFrames=<number>]
-                        [-oneByOneRender=<true|false> -renderByLayer=<true|false> -prepareInWorker=<true|false> -enableThreadAffinity=<true|false>]
+                        [-enableThreadAffinity=<true|false>]
                         [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-GCOptions=0,1,2]
                         [-preferHwAccelDecoder=<true|false>]
@@ -225,7 +219,6 @@ namespace projectFrameCut.StandaloneRender
                 Console.WriteLine(GetInfo(true));
                 return 0;
             }
-
 
             ConcurrentDictionary<string, string> switches = new(args
                .Skip(1)
@@ -510,7 +503,6 @@ namespace projectFrameCut.StandaloneRender
                     Log($"Accelerator device #{i}: {devices[i].Name} ({devices[i].AcceleratorType})");
                 }
 
-
                 var multiAccel = bool.TryParse(switches.GetOrAdd("multiAccelerator", "false"), out var ma) ? ma : false;
                 if (!multiAccel)
                 {
@@ -569,7 +561,6 @@ namespace projectFrameCut.StandaloneRender
                 {
                     Log($"Picked accelerator {item.Name} : {item.AcceleratorType}");
                 }
-
 
                 AcceleratorsManager.ConfigureDevices(picked[0].Name, picked.Select(d => d.Name).ToArray(), multiAccel);
                 AcceleratorsManager.IsRendering = true;
@@ -701,7 +692,7 @@ namespace projectFrameCut.StandaloneRender
 
             Log($"GC Option:{GCOption}");
 
-            int maxPendingWriteFrames = 0; // 0 = use Renderer default
+            int maxPendingWriteFrames = 0;
             if (switches.TryGetValue("maxPendingWriteFrames", out var mpwf))
             {
                 if (!int.TryParse(mpwf, out maxPendingWriteFrames) || maxPendingWriteFrames < 0)
@@ -714,7 +705,6 @@ namespace projectFrameCut.StandaloneRender
                     Log($"Max pending write frames: {maxPendingWriteFrames}");
                 }
             }
-            double maxPendingWriteFramesDouble = maxPendingWriteFrames;
 
             ConcurrentDictionary<string, AssetItem> assets = new();
 
@@ -730,12 +720,9 @@ namespace projectFrameCut.StandaloneRender
             string YesNo(bool b) => b ? "Yes" : "No";
 
             int maxParallelThreads = Environment.ProcessorCount;
-            bool oneByOneRender = false, renderByLayer = false, prepareInWorker = false, enableThreadAffinity = true;
-            int[]? renderWorkerAffinityCpuIndexes = null, preparerAffinityCpuIndexes = null;
-            if (!bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out oneByOneRender) && oneByOneRender) oneByOneRender = false;
-            if (!bool.TryParse(switches.GetOrAdd("renderByLayer", "false"), out renderByLayer)) renderByLayer = false;
+            bool enableThreadAffinity = true;
+            int[]? renderWorkerAffinityCpuIndexes = null;
             bool reuseDynamicPreviewCache = bool.TryParse(switches.GetOrAdd("reuseDynamicPreviewCache", "false"), out var reusePreview) && reusePreview;
-            if (!bool.TryParse(switches.GetOrAdd("prepareInWorker", "false"), out prepareInWorker)) prepareInWorker = false;
             if (!bool.TryParse(switches.GetOrAdd("enableThreadAffinity", "true"), out enableThreadAffinity)) enableThreadAffinity = true;
             if (switches.TryGetValue("renderWorkerAffinity", out var renderWorkerAffinityRaw) && !string.IsNullOrWhiteSpace(renderWorkerAffinityRaw))
             {
@@ -758,47 +745,36 @@ namespace projectFrameCut.StandaloneRender
                 Log($"Manual render worker CPU affinity: {string.Join(", ", renderWorkerAffinityCpuIndexes)}");
             }
 
-            if (!oneByOneRender)
+            if (enableThreadAffinity || (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0)
             {
-                if (enableThreadAffinity || (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0)
+                try
                 {
-                    try
+                    var group = ThreadAffinityHelper.GetCpuCoreGroups();
+                    foreach (var item in group)
                     {
-                        var group = ThreadAffinityHelper.GetCpuCoreGroups();
-                        foreach (var item in group)
-                        {
-                            Log($"CPU Cores ({string.Join(",", item.CpuIndexes)})'s Priority:{(item.Capacity ?? 0) + (item.EfficiencyClass ?? 0)}");
-                        }
-                        if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
-                            maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
-                                ? renderWorkerAffinityCpuIndexes!.Length
-                                : group.OrderBy(c => (c.Capacity ?? 0) + (c.EfficiencyClass ?? 0)).LastOrDefault()?.CpuIndexes?.Count ?? Environment.ProcessorCount;
+                        Log($"CPU Cores ({string.Join(",", item.CpuIndexes)})'s Priority:{(item.Capacity ?? 0) + (item.EfficiencyClass ?? 0)}");
+                    }
+                    if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
+                        maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
+                            ? renderWorkerAffinityCpuIndexes!.Length
+                            : group.OrderBy(c => (c.Capacity ?? 0) + (c.EfficiencyClass ?? 0)).LastOrDefault()?.CpuIndexes?.Count ?? Environment.ProcessorCount;
 
-                    }
-                    catch
-                    {
-                        if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
-                            maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0 ? renderWorkerAffinityCpuIndexes!.Length : Environment.ProcessorCount;
-                    }
-                    maxParallelThreads *= 2;
-                    preparerAffinityCpuIndexes = renderWorkerAffinityCpuIndexes.ArrayAny() ? Enumerable.Range(0, Environment.ProcessorCount).Except(renderWorkerAffinityCpuIndexes).ToArray() : [];
                 }
-                else
+                catch
                 {
-                    if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "8", out maxParallelThreads)) maxParallelThreads = Environment.ProcessorCount;
+                    if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
+                        maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0 ? renderWorkerAffinityCpuIndexes!.Length : Environment.ProcessorCount;
                 }
-
-                var workerAffinityLabel = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
-                    ? $"manual({string.Join(",", renderWorkerAffinityCpuIndexes ?? Array.Empty<int>())})"
-                    : (enableThreadAffinity ? "auto" : "disabled");
-                Log($"Working in parallel mode, max {maxParallelThreads} threads, Render in layer:{YesNo(renderByLayer)}, Prepare in worker:{YesNo(prepareInWorker)}, Preparer affinity:{YesNo(enableThreadAffinity)}, Worker affinity:{workerAffinityLabel}");
-
             }
             else
             {
-                Log("Working in serial mode.");
+                if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "8", out maxParallelThreads)) maxParallelThreads = Environment.ProcessorCount;
             }
 
+            var workerAffinityLabel = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
+                ? $"manual({string.Join(",", renderWorkerAffinityCpuIndexes ?? Array.Empty<int>())})"
+                : (enableThreadAffinity ? "auto" : "disabled");
+            Log($"Working in parallel mode, max {maxParallelThreads} threads, Worker affinity:{workerAffinityLabel}");
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
             bool hwAccelEncode = bool.TryParse(switches.GetOrAdd("preferHwAccelEncoder", "false"), out var hwAccelEncodeValue) && hwAccelEncodeValue;
@@ -941,7 +917,7 @@ namespace projectFrameCut.StandaloneRender
                     DisposeFrameAfterEachWrite = true,
                     StartFrame = startFrame,
                     Duration = frameCount,
-                    BlockWrite = oneByOneRender,
+                    BlockWrite = true,
                     EnableDiskCacheRouting = bool.TryParse(switches.GetOrAdd("enableDiskCacheRouting", "false"), out var useDiskCache) && useDiskCache,
                     ForceUseDiskCache = bool.TryParse(switches.GetOrAdd("forceUseDiskCache", "false"), out var forceUseDiskCache) && forceUseDiskCache,
                     DiskCacheMaxPendingFrames = maxPendingWriteFrames > 0 ? maxPendingWriteFrames : 0,
@@ -959,6 +935,8 @@ namespace projectFrameCut.StandaloneRender
                 {
                     builder = localBuilder,
                     Clips = clips,
+                    ProjectRelativeWidth = project.RelativeWidth,
+                    ProjectRelativeHeight = project.RelativeHeight,
                     StartFrame = startFrame,
                     Duration = frameCount,
                     ChunkIndex = chunkIndex,
@@ -970,18 +948,11 @@ namespace projectFrameCut.StandaloneRender
                     LogStaticsData = false,
                     GCOption = GCOption,
                     Use16Bit = use16Bit,
-                    EnableRenderWatchdogForceStart = false,
-                    MaxRenderScheduleTimeout = 0,
-                    MinSchedulePreparedFrames = 1,
                     MaxThreads = Math.Max(1, renderThreads),
-                    MaxPendingWriteFrames = maxPendingWriteFrames > 0 ? maxPendingWriteFrames : 0,
-                    RenderByLayers = renderByLayer,
                     ReuseDynamicPreviewCache = reuseDynamicPreviewCache,
                     DynamicPreviewCacheProjectRoot = workingPath,
                     DynamicPreviewCacheProjectWidth = Math.Max(1, project.RelativeWidth),
                     DynamicPreviewCacheProjectHeight = Math.Max(1, project.RelativeHeight),
-                    PrepareInWorkerThreads = prepareInWorker,
-                    OneByOneRender = oneByOneRender,
                     EnableThreadAffinity = enableThreadAffinity,
                     WorkerCPUCoreIndexs = renderWorkerAffinityCpuIndexes,
                 };
@@ -998,14 +969,13 @@ namespace projectFrameCut.StandaloneRender
                         FrameDoneMark.Emit($"Progress: {s:p0} ({renderer.CurrentFinished}/{renderer.Duration}), ETA: {e:hh\\:mm\\:ss}, FPS: {renderer.CurrentFps:n2}");
 #endif
                         rangeProgress?.Invoke(s, e, localRenderer.CurrentFps);
-                        double writeBufFree = maxPendingWriteFrames > 0 ? localBuilder.PendingWriteCount / maxPendingWriteFramesDouble : 0;
                         if (localRenderer.CurrentSecondPerFrame <= 1.5)
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{localRenderer.CurrentFps:n2}, buffer: {writeBufFree:p2} on ram used and {localBuilder.FramesOnDisk} on disk          \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{localRenderer.CurrentFps:n2}          \r");
                         }
                         else
                         {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / localRenderer.CurrentFps):n2} second per frame, buffer: {writeBufFree:p2} on ram used and {localBuilder.FramesOnDisk} on disk        \r");
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / localRenderer.CurrentFps):n2} second per frame        \r");
                         }
                     };
                 }
@@ -1014,7 +984,6 @@ namespace projectFrameCut.StandaloneRender
                 renderer = localRenderer;
                 activeChunkBuilders[chunkIndex] = localBuilder;
                 activeChunkRenderers[chunkIndex] = localRenderer;
-                localBuilder.Build(preparerAffinityCpuIndexes)?.Start();
                 localRenderer.PrepareRender(cts.Token);
                 Stopwatch sw1 = new();
                 Log("Start render...");
@@ -1080,10 +1049,8 @@ namespace projectFrameCut.StandaloneRender
                 Log("Finish writing video...");
                 try
                 {
-                    localBuilder.Finish(
-                        i => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height),
-                        checked(startFrame + frameCount),
-                        (c, p) => Console.Write($"Frame #{c} added, completed {p:p2}.    \r"));
+                    localBuilder.Writer.Finish();
+                    localBuilder.Dispose();
                 }
                 finally
                 {
@@ -1113,7 +1080,7 @@ namespace projectFrameCut.StandaloneRender
                     timeline.Duration,
                     fps,
                     Path.GetExtension(resultPath),
-                    $"{width}x{height}|{fps}|{outputFormat}|{outputEncoder}|16bit={use16Bit}|bitrate={requestedBitRate}|serial={oneByOneRender}|layers={renderByLayer}|prepare={prepareInWorker}|reusePreview={reuseDynamicPreviewCache}|approx={ClassicOverlayMixture.EnableApproximatePath}|effect={EffectHelper.ForcePreferToType}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}|externalSources={projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken}",
+                    $"{width}x{height}|{fps}|{outputFormat}|{outputEncoder}|16bit={use16Bit}|bitrate={requestedBitRate}|render=clip-cache|reusePreview={reuseDynamicPreviewCache}|approx={ClassicOverlayMixture.EnableApproximatePath}|effect={EffectHelper.ForcePreferToType}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}|externalSources={projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken}",
                     maxParallelThreads,
                     chunkOptions);
                 await coordinator.InitializeAsync(cts.Token).ConfigureAwait(false);
@@ -1163,7 +1130,6 @@ namespace projectFrameCut.StandaloneRender
                     };
                 }
 
-
                 composer.Compose(fps, 96000, 2, 4096, cts.Token);
                 Console.WriteLine();
                 Console.WriteLine();
@@ -1189,10 +1155,8 @@ namespace projectFrameCut.StandaloneRender
 
                 Timer t = new(async (c) =>
                 {
-                    Log($"Time's up! stopAfter's {stopAfter}s timeout reached, exiting...");
+                    Log($"Time's up! stopAfter's {stopAfter}s timeout reached, cancelling render...");
                     await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
-                    foreach (var activeBuilder in activeChunkBuilders.Values) activeBuilder.Interrupt();
-                    Environment.Exit(255);
                 });
 
                 t.Change(stopAfter * 1000, Timeout.Infinite);
@@ -1219,8 +1183,6 @@ namespace projectFrameCut.StandaloneRender
                                         {
                                             Console.WriteLine("Cancel signal receive! try cancelling render...");
                                             await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
-                                            foreach (var activeBuilder in activeChunkBuilders.Values) activeBuilder.Interrupt();
-                                            Environment.Exit(255);
                                         }
                                         else
                                         {
@@ -1252,7 +1214,6 @@ namespace projectFrameCut.StandaloneRender
                     Console.WriteLine($"Render job starts. Hit Escape/Q to cancel, or S to show status.");
                 }
 
-
             }
             else if (!noSigInt)
             {
@@ -1266,8 +1227,6 @@ namespace projectFrameCut.StandaloneRender
                     Console.WriteLine("Hit Ctrl-C again to stop immediately.");
 
                     await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
-                    foreach (var activeBuilder in activeChunkBuilders.Values) activeBuilder.Interrupt();
-                    Environment.Exit(255);
                 };
                 Log("Render job starts. Press Ctrl-C to interrupt render process.");
             }
@@ -1461,30 +1420,12 @@ namespace projectFrameCut.StandaloneRender
                 GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
             }
 
-            int maxPendingWriteFrames = 0; // 0 = use Renderer default
-            if (switches.TryGetValue("maxPendingWriteFrames", out var mpwf))
-            {
-                if (!int.TryParse(mpwf, out maxPendingWriteFrames) || maxPendingWriteFrames < 0)
-                {
-                    Log($"Invalid maxPendingWriteFrames value '{mpwf}', must be a non-negative integer. Default will be used.", "warn");
-                    maxPendingWriteFrames = 0;
-                }
-                else
-                {
-                    Log($"Max pending write frames: {maxPendingWriteFrames}");
-                }
-            }
-
             string YesNo(bool b) => b ? "Yes" : "No";
 
             int maxParallelThreads = Environment.ProcessorCount;
-            bool oneByOneRender = false, renderByLayer = false, prepareInWorker = false, enableThreadAffinity = true;
-            int[]? renderWorkerAffinityCpuIndexes = null, preparerAffinityCpuIndexes = null;
-            if (!bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out oneByOneRender) && oneByOneRender) oneByOneRender = false;
-            if (!bool.TryParse(switches.GetOrAdd("renderByLayer", "false"), out renderByLayer)) renderByLayer = false;
-            if (!bool.TryParse(switches.GetOrAdd("prepareInWorker", "false"), out prepareInWorker)) prepareInWorker = false;
+            bool enableThreadAffinity = true;
+            int[]? renderWorkerAffinityCpuIndexes = null;
             if (!bool.TryParse(switches.GetOrAdd("enableThreadAffinity", "true"), out enableThreadAffinity)) enableThreadAffinity = true;
-            if (!bool.TryParse(switches.GetOrAdd("boostMode", "false"), out var boostMode)) boostMode = false;
             if (switches.TryGetValue("renderWorkerAffinity", out var renderWorkerAffinityRaw) && !string.IsNullOrWhiteSpace(renderWorkerAffinityRaw))
             {
                 if (!TryParseCpuIndexList(renderWorkerAffinityRaw, out renderWorkerAffinityCpuIndexes, out var renderWorkerAffinityError))
@@ -1506,47 +1447,36 @@ namespace projectFrameCut.StandaloneRender
                 Log($"Manual render worker CPU affinity: {string.Join(", ", renderWorkerAffinityCpuIndexes)}");
             }
 
-            if (!oneByOneRender)
+            if (enableThreadAffinity || (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0)
             {
-                if (enableThreadAffinity || (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0)
+                try
                 {
-                    try
+                    var group = ThreadAffinityHelper.GetCpuCoreGroups();
+                    foreach (var item in group)
                     {
-                        var group = ThreadAffinityHelper.GetCpuCoreGroups();
-                        foreach (var item in group)
-                        {
-                            Log($"CPU Cores ({string.Join(",", item.CpuIndexes)})'s Priority:{(item.Capacity ?? 0) + (item.EfficiencyClass ?? 0)}");
-                        }
-                        if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
-                            maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
-                                ? renderWorkerAffinityCpuIndexes!.Length
-                                : group.OrderBy(c => (c.Capacity ?? 0) + (c.EfficiencyClass ?? 0)).LastOrDefault()?.CpuIndexes?.Count ?? Environment.ProcessorCount;
+                        Log($"CPU Cores ({string.Join(",", item.CpuIndexes)})'s Priority:{(item.Capacity ?? 0) + (item.EfficiencyClass ?? 0)}");
+                    }
+                    if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
+                        maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
+                            ? renderWorkerAffinityCpuIndexes!.Length
+                            : group.OrderBy(c => (c.Capacity ?? 0) + (c.EfficiencyClass ?? 0)).LastOrDefault()?.CpuIndexes?.Count ?? Environment.ProcessorCount;
 
-                    }
-                    catch
-                    {
-                        if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
-                            maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0 ? renderWorkerAffinityCpuIndexes!.Length : Environment.ProcessorCount;
-                    }
-                    maxParallelThreads *= 2;
-                    preparerAffinityCpuIndexes = renderWorkerAffinityCpuIndexes.ArrayAny() ? Enumerable.Range(0, Environment.ProcessorCount).Except(renderWorkerAffinityCpuIndexes).ToArray() : [];
                 }
-                else
+                catch
                 {
-                    if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "8", out maxParallelThreads)) maxParallelThreads = Environment.ProcessorCount;
+                    if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "-1", out maxParallelThreads) || maxParallelThreads <= 0)
+                        maxParallelThreads = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0 ? renderWorkerAffinityCpuIndexes!.Length : Environment.ProcessorCount;
                 }
-
-                var workerAffinityLabel = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
-                    ? $"manual({string.Join(",", renderWorkerAffinityCpuIndexes ?? Array.Empty<int>())})"
-                    : (enableThreadAffinity ? "auto" : "disabled");
-                Log($"Working in parallel mode, max {maxParallelThreads} threads, Render in layer:{YesNo(renderByLayer)}, Prepare in worker:{YesNo(prepareInWorker)}, Preparer affinity:{YesNo(enableThreadAffinity)}, Worker affinity:{workerAffinityLabel}, Boost mode:{YesNo(boostMode)}");
-
             }
             else
             {
-                Log("Working in serial mode.");
+                if (!int.TryParse(switches.TryGetValue("maxParallelThreads", out var p) ? p : "8", out maxParallelThreads)) maxParallelThreads = Environment.ProcessorCount;
             }
 
+            var workerAffinityLabel = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
+                ? $"manual({string.Join(",", renderWorkerAffinityCpuIndexes ?? Array.Empty<int>())})"
+                : (enableThreadAffinity ? "auto" : "disabled");
+            Log($"Working in parallel mode, max {maxParallelThreads} threads, Worker affinity:{workerAffinityLabel}");
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
             bool hwAccelEncode = bool.TryParse(switches.GetOrAdd("preferHwAccelEncoding", "false"), out var hwAccelEncodeValue) && hwAccelEncodeValue;
@@ -1564,7 +1494,6 @@ namespace projectFrameCut.StandaloneRender
             Log($"GC Option: {GCOption}");
             Log($"Drawing.Processing.Resizing.PictureResizer: {Drawing.Processing.Resizing.PictureResizer.Default.GetType().Name}");
 
-
             #endregion
 
             var renderer = new Renderer
@@ -1577,25 +1506,13 @@ namespace projectFrameCut.StandaloneRender
                 LogStaticsData = false,
                 GCOption = GCOption,
                 Use16Bit = false,
-                EnableRenderWatchdogForceStart = false,
-                MaxRenderScheduleTimeout = 0,
-                RenderSchedulerIdleDelayMs = 0,
-                MinSchedulePreparedFrames = 0,
-                ThrottleThreshold = (int)(duration * 8),
-                MaxThreads = boostMode ? (int)duration : maxParallelThreads,
-                MaxPendingWriteFrames = maxPendingWriteFrames > 0 ? maxPendingWriteFrames : 0,
-                BlockPreparingBeforeRendering = boostMode,
-                DisableAllThrottleOptions = boostMode,
-                RenderByLayers = renderByLayer,
-                PrepareInWorkerThreads = prepareInWorker,
-                OneByOneRender = oneByOneRender,
+                MaxThreads = Math.Max(1, maxParallelThreads),
                 EnableThreadAffinity = enableThreadAffinity,
                 WorkerCPUCoreIndexs = renderWorkerAffinityCpuIndexes,
                 TargetHeight = height,
                 TargetWidth = width,
                 ProjectRelativeWidth = width,
                 ProjectRelativeHeight = height,
-                AllowReorderEffect = true,
                 AutoSetupRenderContext = false,
                 UseHDR = false,
                 StartFrame = 0
@@ -1622,7 +1539,6 @@ namespace projectFrameCut.StandaloneRender
 
             try
             {
-                builder?.Build()?.Start();
                 renderer.PrepareRender(cts.Token);
                 await renderer.GoRender(cts.Token);
                 sw.Stop();
@@ -2232,7 +2148,6 @@ namespace projectFrameCut.StandaloneRender
                 {
                     Log(ex, $"Failed to encode frame #{i}");
                 }
-
 
             }
             sw.Stop();

@@ -455,42 +455,7 @@ public partial class DraftEffectBindingView : ContentView
 
     private void EnsureClipArgumentProvider()
     {
-        if (_clip is null) return;
-        _clip.EffectProviders ??= new();
-        var provider = _clip.EffectProviders.Values.OfType<ClipArgumentProvider>().FirstOrDefault();
-        if (provider is null)
-        {
-            provider = new ClipArgumentProvider { Name = (string)Resources["ClipArgumentsNodeTitle"] };
-            _clip.EffectProviders.Add(provider.Id, provider);
-            Log($"Created clip argument node for {_clip.Id}.");
-        }
-        IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> fields = ClipArgumentHandler.DefaultFields;
-        var defaults = new Dictionary<string, object>();
-        if (_page is not null)
-        {
-            try
-            {
-                var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(_page, _clip, rebuildEffects: false);
-                using var owner = PluginManager.CreateClip(JsonSerializer.SerializeToElement(dto));
-                fields = owner.ArgumentFields;
-                foreach (var (key, field) in fields) defaults[key] = field.ReadValue(owner);
-            }
-            catch (Exception ex)
-            {
-                Log(ex, $"Read argument fields for clip {_clip.Id}", this);
-            }
-        }
-        var clip = _clip;
-        provider.Attach(fields, key => key switch
-        {
-            nameof(IClip.TargetX) => clip.TargetX,
-            nameof(IClip.TargetY) => clip.TargetY,
-            nameof(IClip.TargetWidth) => clip.TargetWidth,
-            nameof(IClip.TargetHeight) => clip.TargetHeight,
-            nameof(IClip.Rotation) => clip.Rotation,
-            ClipArgumentHandler.ShouldRenderKey => true,
-            _ => defaults.GetValueOrDefault(key) ?? fields[key].DefaultValue,
-        });
+        if (_clip is not null) ClipInfoBuilder.EnsureClipArgumentProvider(_clip, _page);
     }
 
     /// <summary>

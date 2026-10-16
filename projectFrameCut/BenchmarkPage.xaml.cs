@@ -12,7 +12,6 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
 
-
 namespace projectFrameCut;
 
 public partial class BenchmarkPage : ContentPage
@@ -24,7 +23,6 @@ public partial class BenchmarkPage : ContentPage
     private VideoBuilder? _builder;
     private Renderer? _renderer;
     private Stopwatch _benchmarkSw = new();
-    private bool _boostMode;
 
     // ── 日志基础设施（参考 RenderPage 模式） ────────────────
     private readonly StringBuilder _logBuffer = new();
@@ -48,7 +46,6 @@ public partial class BenchmarkPage : ContentPage
         };
         GCOptionPicker.SelectedIndex = 0;
         OutputModePicker.SelectedIndex = 0;
-        BoostModeSwitch.IsToggled = true;
 #if ANDROID
         Render.HwAccelEngine.Platforms.Android.AndroidExecutionHelper.AddPlatformComputeViewHandler = ComputeView.Children.Add;
         Render.HwAccelEngine.Platforms.Android.AndroidExecutionHelper.Init();
@@ -228,6 +225,7 @@ public partial class BenchmarkPage : ContentPage
                 foreach (var clip in _clips) clip?.Dispose();
                 _clips = null;
             }
+            _builder?.Dispose();
             _builder = null;
             _renderer = null;
         }
@@ -239,7 +237,6 @@ public partial class BenchmarkPage : ContentPage
         var sure = await DisplayAlertAsync(Localized._Warn, Localized.BenchmarkPage_CancelBenchmark_Warn, Localized._OK, Localized._Cancel);
         if (sure)
         {
-            _builder?.Interrupt();
             _cts.Cancel();
             Log("Benchmark cancelled by user.", "warn");
         }
@@ -297,7 +294,7 @@ public partial class BenchmarkPage : ContentPage
             {
                 Duration = duration,
                 LogStat = false,
-                BlockWrite = false,
+                BlockWrite = true,
                 DisposeFrameAfterEachWrite = true,
             };
             Log("BlackholeVideoWriter enabled (write to null).");
@@ -315,10 +312,6 @@ public partial class BenchmarkPage : ContentPage
             GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
         }
         Log($"GC Option: {gcOption}");
-
-        // ── 读取 boostMode ─────────────────────────────────
-        _boostMode = BoostModeSwitch.IsToggled;
-        Log($"Boost mode: {_boostMode}");
 
         // ── 设置加速器 ─────────────────────────────────────
 #if WINDOWS || LINUX
@@ -350,22 +343,10 @@ public partial class BenchmarkPage : ContentPage
             LogRenderState = false,
             LogStaticsData = false,
             GCOption = gcOption,
-            AllowReorderEffect = true,
             AutoSetupRenderContext = false,
             UseHDR = false,
             StartFrame = 0,
-            EnableRenderWatchdogForceStart = false,
-            MaxRenderScheduleTimeout = 0,
-            RenderSchedulerIdleDelayMs = 0,
-            MinSchedulePreparedFrames = 0,
-            ThrottleThreshold = (int)(duration * 8),
-            // boostMode：全并行，每帧一线程，禁用所有节流
-            MaxThreads = _boostMode ? (int)duration : SettingsManager.GetSettingAs("render_defaultMaxParallelWorkers", 8, 8),
-            BlockPreparingBeforeRendering = _boostMode,
-            DisableAllThrottleOptions = _boostMode,
-            OneByOneRender = false,
-            RenderByLayers = false,
-            PrepareInWorkerThreads = false,
+            MaxThreads = SettingsManager.GetSettingAs("render_defaultMaxParallelWorkers", 8, 8),
             EnableThreadAffinity = true,
         };
 
@@ -391,7 +372,6 @@ public partial class BenchmarkPage : ContentPage
 
         try
         {
-            _builder?.Build()?.Start();
             await Task.Run(() => _renderer.PrepareRender(ct), ct);
             await Task.Run(() => _renderer.GoRender(ct), ct);
             _benchmarkSw.Stop();

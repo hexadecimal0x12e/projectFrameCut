@@ -68,7 +68,7 @@ internal sealed class NamedPipePluginCommunicationService(string pluginId, Cance
         var descriptor = new PluginChannelDescriptor
         {
             ChannelId = Guid.NewGuid().ToString("N"),
-            PipeName = $"projectFrameCut.PluginChannel.{Guid.NewGuid():N}",
+            PipeName = (OperatingSystem.IsWindows() ? "LOCAL\\" : "") + $"projectFrameCut.PluginChannel.{Guid.NewGuid():N}",
             AuthenticationToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)),
             SourcePluginId = sourcePluginId,
             TargetPluginId = targetPluginId,

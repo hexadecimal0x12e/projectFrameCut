@@ -7,6 +7,7 @@
   "NameOfBaseInterface": "ISimpleLocalizerBase_PropertyPanel",
   "EnableBaseGenerate": true,
   "EnablePseudoLocalization": true,
+  "EnableDynamicGenerate": false,
   "PseudoLocalizationCondition": "DEBUG",
   "PseudoLocalizationLocaleId": "qps-ploc",
   "Values": {
@@ -2885,6 +2886,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "\u6A21\u7CCA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "\u9A6C\u8D5B\u514B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "\u6A21\u7CCA\u5F3A\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "\u9A6C\u8D5B\u514B\u5757\u5927\u5C0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "\u4E0B\u5C42\u753B\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "\u6E90\u5C5E\u6027",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -5740,6 +5789,54 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "Blur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "Mosaic",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "Blur strength",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "Block size",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "Backdrop source",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "Source properties",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -8590,6 +8687,54 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "\u6A21\u7CCA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "\u99AC\u8CFD\u514B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "\u6A21\u7CCA\u5F37\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "\u99AC\u8CFD\u514B\u5340\u584A\u5927\u5C0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "\u4E0B\u5C64\u756B\u9762\u4F86\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "\u4F86\u6E90\u5C6C\u6027",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ja-JP": [
@@ -11439,6 +11584,54 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "Unset localization item:MaskSource_Blur()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "Unset localization item:MaskSource_Mosaic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_Sigma()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_BlockSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "\u4E0B\u5C64\u306E\u6620\u50CF\u30BD\u30FC\u30B9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "\u30BD\u30FC\u30B9\u306E\u30D7\u30ED\u30D1\u30C6\u30A3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -14287,6 +14480,54 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "Unset localization item:MaskSource_Blur()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "Unset localization item:MaskSource_Mosaic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_Sigma()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_BlockSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "\uD558\uC704 \uB808\uC774\uC5B4 \uD654\uBA74 \uC18C\uC2A4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "\uC18C\uC2A4 \uC18D\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -17129,6 +17370,54 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "Unset localization item:MaskSource_Blur()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "Unset localization item:MaskSource_Mosaic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_Sigma()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_BlockSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "Source des calques inf\u00E9rieurs",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "Propri\u00E9t\u00E9s de la source",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -19983,6 +20272,54 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "Unset localization item:MaskSource_Blur()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "Unset localization item:MaskSource_Mosaic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_Sigma()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_BlockSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "\u0645\u0635\u062F\u0631 \u0635\u0648\u0631\u0629 \u0627\u0644\u0637\u0628\u0642\u0627\u062A \u0627\u0644\u0633\u0641\u0644\u064A\u0629",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "\u062E\u0635\u0627\u0626\u0635 \u0627\u0644\u0645\u0635\u062F\u0631",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -22822,6 +23159,54 @@
           }
         ],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "Unset localization item:MaskSource_Blur()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "Unset localization item:MaskSource_Mosaic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_Sigma()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_BlockSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "Quelle aus unteren Ebenen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "Quelleigenschaften",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -25665,6 +26050,54 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "Unset localization item:MaskSource_Blur()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "Unset localization item:MaskSource_Mosaic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_Sigma()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_BlockSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "Fuente de capas inferiores",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "Propiedades de origen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -28515,6 +28948,54 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "Unset localization item:MaskSource_Blur()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "Unset localization item:MaskSource_Mosaic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_Sigma()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_BlockSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "Sorgente dei livelli inferiori",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "Propriet\u00E0 della sorgente",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -31359,6 +31840,54 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "Unset localization item:MaskSource_Blur()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "Unset localization item:MaskSource_Mosaic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_Sigma()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_BlockSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "\u0179r\u00F3d\u0142o obrazu z ni\u017Cszych warstw",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "W\u0142a\u015Bciwo\u015Bci \u017Ar\u00F3d\u0142a",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -34199,6 +34728,54 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "Unset localization item:MaskSource_Blur()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "Unset localization item:MaskSource_Mosaic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_Sigma()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_BlockSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "Fonte das camadas inferiores",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "Propriedades da origem",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -37051,6 +37628,54 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "Unset localization item:MaskSource_Blur()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "Unset localization item:MaskSource_Mosaic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_Sigma()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_BlockSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "\u0418\u0441\u0442\u043E\u0447\u043D\u0438\u043A \u043D\u0438\u0436\u043D\u0438\u0445 \u0441\u043B\u043E\u0451\u0432",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "\u0421\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0430",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -39891,6 +40516,54 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Blur",
+        "Value": "Unset localization item:MaskSource_Blur()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Mosaic",
+        "Value": "Unset localization item:MaskSource_Mosaic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_Sigma",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_Sigma()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClipArguments_Source_BlockSize",
+        "Value": "Unset localization item:Effect_ClipArguments_Source_BlockSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "MaskSource_Passthrough",
+        "Value": "Alt katman g\u00F6r\u00FCnt\u00FC kayna\u011F\u0131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SourceProperties",
+        "Value": "Kaynak \u00F6zellikleri",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ]

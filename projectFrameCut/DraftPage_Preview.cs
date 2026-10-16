@@ -165,8 +165,23 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
+    private bool maskInteractivePreviewApplied;
+
     internal async Task RefreshPreviewFromCurrentProviderAsync()
     {
+        if ((ClipEditor.IsInteractiveManipulationInProgress || maskInteractivePreviewApplied)
+            && Clips.Values.Any(c => c.ClipType == ClipMode.MaskClip))
+        {
+            var draft = await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                var snapshot = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false, rebuildEffects: false);
+                foreach (var clip in snapshot.Clips) ClipEditor.ApplyInteractivePreviewLayout(clip);
+                return snapshot;
+            });
+            await previewer.UpdateDraft(draft);
+            DynamicPreviewProvider.SetClips(previewer.Clips);
+            maskInteractivePreviewApplied = ClipEditor.IsInteractiveManipulationInProgress;
+        }
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var refreshMark = new UserMarkRange("Preview.RefreshProvider", $"frame={_currentFrame}, dynamic={UseDynamicPreview}");
 #endif
@@ -602,6 +617,9 @@ public partial class DraftPage : ContentPage, IDraftPage
         isPlaying = !isPlaying;
         if (isPlaying)
         {
+            _playbackCts?.Cancel();
+            using var cts = new CancellationTokenSource();
+            _playbackCts = cts;
             SwitchPreviewEditorHost();
             SetPlayPauseIconToPause();
             LogDiagnostic("Start playing...");
@@ -621,7 +639,14 @@ public partial class DraftPage : ContentPage, IDraftPage
                 };
                 _isLivePreviewPlayerEventsHooked = true;
             }
-            await Task.Run(PrepareLivePreview);
+            try
+            {
+                await Task.Run(() => PrepareLivePreview(cts.Token));
+            }
+            finally
+            {
+                if (ReferenceEquals(_playbackCts, cts)) _playbackCts = null;
+            }
 
         }
         else
@@ -725,49 +750,21 @@ public partial class DraftPage : ContentPage, IDraftPage
         return host;
     }
 
-    private async Task PrepareLivePreview()
+    private async Task PrepareLivePreview(CancellationToken token)
     {
-        StopNonRealtimePlayheadSyncLoop();
-        Dispatcher.Dispatch(() => ClearSelectionInternal());
-        SetStateBusy(Localized._Processing);
-        if (_playbackCts != null)
-        {
-            _playbackCts.Cancel();
-            _playbackCts.Dispose();
-        }
-        _playbackCts = new CancellationTokenSource();
-        var token = _playbackCts.Token;
-
         try
         {
+            token.ThrowIfCancellationRequested();
+            StopNonRealtimePlayheadSyncLoop();
+            Dispatcher.Dispatch(() => ClearSelectionInternal());
+            SetStateBusy(Localized.DraftPage_LivePreview_Preparing);
             _playbackStartFrame = _currentFrame;
             _nextPlaybackPath = null;
             var continuousAudioReady = false;
             var useWorkerAudio = UseDynamicPreview && !IsRemoteProject;
             _continuousAudioStartFrame = _currentFrame;
-            _correctedDynamicPlaybackFrame = -1;
-            _previewAudioGeneration = 0;
-            _previewAudioClockFailed = false;
 
-            if (useWorkerAudio)
-            {
-                if (previewer.HasAudioSources())
-                {
-                    SetStatusText(Localized.DraftPage_LivePreview_Preparing);
-                    try
-                    {
-                        var clock = await previewer.StartPreviewAudioAsync((uint)_currentFrame, (int)ProjectInfo.TargetFrameRate, token);
-                        _previewAudioGeneration = clock.Generation;
-                        continuousAudioReady = clock.HasAudio;
-                        LogDiagnostic($"Started Worker preview audio generation {clock.Generation} at frame {_currentFrame}.");
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(ex, "Start Worker preview audio; video preview will continue without audio", this);
-                    }
-                }
-            }
-            else
+            if (!useWorkerAudio)
             {
                 await previewer.ResetAudioPlaybackSources();
 
@@ -839,14 +836,18 @@ public partial class DraftPage : ContentPage, IDraftPage
                     LivePreviewPlayer.IsVisible = false;
                 });
 
-                await Dispatcher.DispatchAsync(() =>
+                if (!useWorkerAudio)
                 {
-                    if (continuousAudioReady && !useWorkerAudio)
+                    await Dispatcher.DispatchAsync(() =>
                     {
-                        RemotePreviewAudioPlayer.Play();
-                    }
-                    _continuousAudioStopwatch = Stopwatch.StartNew();
-                });
+                        token.ThrowIfCancellationRequested();
+                        if (continuousAudioReady)
+                        {
+                            RemotePreviewAudioPlayer.Play();
+                        }
+                        _continuousAudioStopwatch = Stopwatch.StartNew();
+                    });
+                }
 
                 await RenderSomeFramesDynamicSynced((int)_currentFrame, token);
                 return;
@@ -892,7 +893,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
                         LogDiagnostic($"Start continue Render from {nextStart}...");
 
-                        _nextPlaybackPath = await RenderSomeFrames(nextStart, _playbackCts.Token, includeAudio: false);
+                        _nextPlaybackPath = await RenderSomeFrames(nextStart, token, includeAudio: false);
                         LogDiagnostic($"Next preview is ready. Path:{_nextPlaybackPath}");
                         while (!playbackDone && !token.IsCancellationRequested) await Task.Delay(100, token);
                         LogDiagnostic("Previewer is ready!");
@@ -922,10 +923,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
 
         }
-        catch (OperationCanceledException)
-        {
-            // Stopped
-        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception ex)
         {
             Log(ex, "LivePreview", this);
@@ -947,7 +945,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         try
         {
             _playbackCts?.Cancel();
-            _playbackCts?.Dispose();
         }
         catch { }
         finally
@@ -958,14 +955,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         _continuousAudioStopwatch?.Stop();
         _continuousAudioStopwatch = null;
 
-        if (_previewAudioGeneration != 0 && !IsRemoteProject)
-        {
-            try { await previewer.StopPreviewAudioAsync(); }
-            catch (Exception ex) { Log(ex, "Stop Worker preview audio", this); }
-            _previewAudioGeneration = 0;
-            _correctedDynamicPlaybackFrame = -1;
-            _previewAudioClockFailed = false;
-        }
+        try { await previewer.StopDynamicPreviewAsync(); }
+        catch (Exception ex) { Log(ex, "Stop dynamic preview cache producer", this); }
 
         await Dispatcher.DispatchAsync(() =>
         {
@@ -1053,11 +1044,59 @@ public partial class DraftPage : ContentPage, IDraftPage
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private async Task RenderSomeFramesDynamicSynced(int startPoint, CancellationToken ct)
     {
+        var projectWidth = Math.Max(1, ProjectInfo.RelativeWidth);
+        var projectHeight = Math.Max(1, ProjectInfo.RelativeHeight);
+        var (width, height) = DynamicPreviewProvider.ResolveDimensions(projectWidth, projectHeight, ClipEditor.Width, ClipEditor.Height);
+        DynamicPreviewCache? cache = null;
+        try
+        {
+            CancelDynamicPreview();
+            DynamicPreviewProvider.CancelClipWarmups();
+            if (!IsRemoteProject)
+            {
+                bool buffering = true;
+                void progressChanged(double progress, TimeSpan _)
+                {
+                    Dispatcher.Dispatch(() =>
+                    {
+                        if (ct.IsCancellationRequested || !Volatile.Read(ref buffering)) return;
+                        StatusLabel.TextColor = Colors.White;
+                        StatusLabel.Text = $"{Localized.DraftPage_LivePreview_Preparing} {progress:P0}";
+                    });
+                }
+
+                SetStateBusy($"{Localized.DraftPage_LivePreview_Preparing} {0:P0}");
+                previewer.OnProgressChanged += progressChanged;
+                try
+                {
+                    cache = await previewer.StartDynamicPreviewAsync((uint)startPoint, width, height, projectWidth, projectHeight,
+                        Math.Max(1d, ProjectInfo.TargetFrameRate), ct).ConfigureAwait(false);
+                }
+                finally
+                {
+                    Volatile.Write(ref buffering, false);
+                    previewer.OnProgressChanged -= progressChanged;
+                    SetStatusText(ct.IsCancellationRequested ? Localized.DraftPage_Tasks_Status_Canceled : Localized._Processing);
+                }
+            }
+            ct.ThrowIfCancellationRequested();
+            _lastDynamicPreviewUIUpdate = DateTime.MinValue;
+            await RenderDynamicPreviewFramesAsync(startPoint, cache, width, height, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (cache is not null) await previewer.StopDynamicPreviewAsync(cache).ConfigureAwait(false);
+        }
+    }
+
+    private async Task RenderDynamicPreviewFramesAsync(int startPoint, DynamicPreviewCache? cache, int canvasWidth, int canvasHeight, CancellationToken ct)
+    {
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var playbackMark = new UserMarkRange("Preview.DynamicPlayback", $"startFrame={startPoint}");
 #endif
         uint lastRenderedFrame = 0, targetFrame = (uint)startPoint;
         bool renderedAnyFrame = false;
+        bool rebuffering = false;
         var totalDisplay = TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame).ToString("mm\\:ss");
         var developerMode = SettingsManager.IsBoolSettingTrue("DeveloperMode");
         int maxFrame = (int)Math.Max(previewer.TotalDuration, ProjectDuration);
@@ -1069,7 +1108,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         IReadOnlyList<projectFrameCut.ApplicationAPIBase.Interaction.PreparedPreview>? preparedPreviews = null!;
         var projectWidth = Math.Max(1, ProjectInfo.RelativeWidth);
         var projectHeight = Math.Max(1, ProjectInfo.RelativeHeight);
-        var (canvasWidth, canvasHeight) = DynamicPreviewProvider.ResolveDimensions(projectWidth, projectHeight, ClipEditor.Width, ClipEditor.Height);
 
         MainThread.BeginInvokeOnMainThread(() =>
         {
@@ -1119,48 +1157,50 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             preparedPreviews = null!;
             var clockStartedAt = Stopwatch.GetTimestamp();
-            targetFrame = await GetDynamicPreviewFrameAsync(ct);
+            targetFrame = cache?.GetFrame() ?? GetContinuousAudioFrame();
             var clockElapsedMs = Stopwatch.GetElapsedTime(clockStartedAt).TotalMilliseconds;
-            if (targetFrame > maxFrame) break;
+            if (targetFrame > maxFrame || cache?.IsCompleted == true) break;
+            if (cache?.IsBuffering == true)
+            {
+                if (!rebuffering)
+                {
+                    rebuffering = true;
+                    SetStatusText(Localized.DraftPage_LivePreview_Preparing);
+                }
+                await Task.Delay(50, ct);
+                continue;
+            }
+            if (rebuffering)
+            {
+                rebuffering = false;
+                SetStatusText(Localized._Processing);
+            }
             if (renderedAnyFrame && targetFrame <= lastRenderedFrame)
             {
-                await Task.Delay(1, ct);
+                await Task.Delay(Math.Max(1, (int)Math.Ceiling(minUiIntervalMs / 2)), ct);
                 continue;
             }
 
             _currentFrame = targetFrame;
 
-            using var frameCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            frameCts.CancelAfter(DynamicPreviewTimeout);
+            using var frameCts = cache is null ? CancellationTokenSource.CreateLinkedTokenSource(ct) : null;
+            frameCts?.CancelAfter(DynamicPreviewTimeout);
 
             try
             {
                 var prepareStartedAt = Stopwatch.GetTimestamp();
-                preparedPreviews = await DynamicPreviewProvider.PrepareRequestsAsync(
-                    DynamicPreviewProvider.ResolveRequests(DynamicPreviewProvider.Clips, targetFrame, projectWidth, projectHeight),
-                    canvasWidth, canvasHeight,
-                    projectWidth, projectHeight,
-                    targetFrame,
-                    true, false,
-                    0,
-                    frameCts.Token).ConfigureAwait(false);
+                preparedPreviews = cache is not null
+                    ? await DynamicPreviewProvider.PrepareCachedFrameAsync(cache, targetFrame, projectWidth, projectHeight, ct).ConfigureAwait(false)
+                    : await DynamicPreviewProvider.PrepareRequestsAsync(
+                        DynamicPreviewProvider.ResolveRequests(DynamicPreviewProvider.Clips, targetFrame, projectWidth, projectHeight),
+                        canvasWidth, canvasHeight, projectWidth, projectHeight, targetFrame,
+                        true, false, 0, frameCts!.Token).ConfigureAwait(false);
                 var prepareElapsedMs = Stopwatch.GetElapsedTime(prepareStartedAt).TotalMilliseconds;
                 if (preparedPreviews is null) continue;
                 lastRenderedFrame = targetFrame;
                 renderedAnyFrame = true;
 
                 now = DateTime.UtcNow;
-
-                // Skip UI update if no previews to render
-                if (preparedPreviews.Count == 0)
-                {
-                    var sinceLast = now - _lastDynamicPreviewUIUpdate;
-                    if (sinceLast.TotalMilliseconds < 30)
-                    {
-                        await Task.Delay(15, ct);
-                        continue;
-                    }
-                }
 
                 // Throttle UI updates based on target frame rate
                 timeSinceLastUi = now - _lastDynamicPreviewUIUpdate;
@@ -1189,6 +1229,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     var dispatchStartedAt = Stopwatch.GetTimestamp();
                     try
                     {
+                        if (ct.IsCancellationRequested) return;
                         UpdatePlayheadPosition(TimelineScrollView.ScrollX);
 
                         // Auto-scroll timeline to keep playhead visible during playback
@@ -1215,7 +1256,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                         FastPreviewEditor.SetCurrentFrame(frameForThisUpdate);
                         ActivePreviewEditor.ApplyPreparedPreviews(previewsForThisFrame);
                         var appliedAt = Stopwatch.GetTimestamp();
-                        appliedFrameTimes.Enqueue(appliedAt);
+                        if (cache is null || previewsForThisFrame.Count > 0) appliedFrameTimes.Enqueue(appliedAt);
                         var cutoff = appliedAt - Stopwatch.Frequency;
                         while (appliedFrameTimes.Count > 2 && appliedFrameTimes.Peek() < cutoff)
                             appliedFrameTimes.Dequeue();
@@ -1261,10 +1302,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     }
                 });
             }
-            catch (TaskCanceledException)
-            {
-                LogDiagnostic($"Frame {targetFrame} cancelled");
-            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
             catch (OperationCanceledException)
             {
                 LogDiagnostic($"Frame {targetFrame} cancelled");
@@ -1277,33 +1315,12 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         }
 
-        await PauseLivePreview();
-        SetStateOK(Localized.DraftPage_EverythingFine);
-
-    }
-
-    private async ValueTask<uint> GetDynamicPreviewFrameAsync(CancellationToken token)
-    {
-        var fallback = GetContinuousAudioFrame();
-        if (_previewAudioGeneration == 0 || IsRemoteProject) return fallback;
-        try
+        if (!ct.IsCancellationRequested)
         {
-            var clock = await previewer.GetPreviewAudioClockAsync(_previewAudioGeneration, token);
-            if (clock.Generation != _previewAudioGeneration || !clock.HasAudio) return fallback;
-            if (!clock.IsRunning && clock.BufferedSamples == 0 && clock.PlayedSamples == 0) return clock.StartFrame;
-            _previewAudioClockFailed = false;
-            return DynamicPreviewProvider.ResolvePlaybackFrame(clock, ProjectInfo.TargetFrameRate, fallback, ref _correctedDynamicPlaybackFrame);
+            await PauseLivePreview();
+            SetStateOK(Localized.DraftPage_EverythingFine);
         }
-        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
-        catch (Exception ex)
-        {
-            if (!_previewAudioClockFailed)
-            {
-                _previewAudioClockFailed = true;
-                Log(ex, "Read Worker preview audio clock; using the local playback clock", this);
-            }
-            return fallback;
-        }
+
     }
 
     private static View CreatePropertiesPlaceholder(string text)

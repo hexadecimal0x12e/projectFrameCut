@@ -3,10 +3,12 @@ using System.Buffers.Binary;
 
 namespace projectFrameCut.ExternalSourceExample;
 
-public sealed class ExampleProvider : IExternalVideoSourceProvider, IExternalAudioSourceProvider
+public sealed class ExampleProvider : IExternalVideoSourceProvider, IExternalAudioSourceProvider, IExternalMaskSourceProvider
 {
     private readonly Dictionary<Guid, ExternalVideoSourceDescriptor> instances = [];
     private readonly HashSet<Guid> audioInstances = [];
+    private readonly ExampleMaskSourceProvider masks = new();
+    public IReadOnlyList<ExternalMaskSourceDescriptor> MaskSources => masks.MaskSources;
     public IReadOnlyList<ExternalAudioSourceDescriptor> AudioSources { get; } = [new() { SourceId = "tone", DecoderName = "ExampleAudio",
         Name = "Example stereo tone", Duration = 10, ChannelCount = 2, SamplePerSecond = 48000 }];
     public IReadOnlyList<ExternalVideoSourceDescriptor> Sources { get; } = new[] { "8bit", "16bit", "alpha", "hdr" }.Select(id => new ExternalVideoSourceDescriptor
@@ -103,4 +105,7 @@ public sealed class ExampleProvider : IExternalVideoSourceProvider, IExternalAud
         audioInstances.Remove(request.InstanceId);
         return ValueTask.CompletedTask;
     }
+
+    public ValueTask<ExternalVideoFrame> ProcessMaskAsync(ExternalMaskSourceProcessRequest request, CancellationToken cancellationToken = default)
+        => masks.ProcessMaskAsync(request, cancellationToken);
 }

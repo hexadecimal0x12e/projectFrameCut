@@ -38,10 +38,10 @@ namespace projectFrameCut.LivePreview
         PreviewPixelFormat TargetPixelFormat,
         bool RequireSwapChain);
 
-    public class LivePreviewer
+    public partial class LivePreviewer
     {
-        private const string StaticFrameCacheVersion = "v4-vfd";
-        private const string ClipPreviewCacheVersion = "v4-vfd";
+        private const string StaticFrameCacheVersion = "v8-mask-vfd";
+        private const string ClipPreviewCacheVersion = "v8-mask-vfd";
         public IClip[]? Clips;
         public ISoundTrack[]? SoundTracks;
         public int targetFrameRate = 60;
@@ -272,6 +272,7 @@ namespace projectFrameCut.LivePreview
 
         private async Task UpdateDraftCoreAsync(DraftStructureJSON json)
         {
+            await StopDynamicPreviewAsync().ConfigureAwait(false);
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
             using var configureMark = new UserMarkRange("Preview.Reconfigure.Work", $"clips={json.Clips?.Length ?? 0}, soundtracks={json.SoundTracks?.Length ?? 0}");
 #endif
@@ -453,9 +454,9 @@ namespace projectFrameCut.LivePreview
         }
 
         public string RenderClipFrame(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token)
-            => MaterializePng(RenderClipFrameVfd(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token));
+            => MaterializePng(RenderClipFrameVfdAsync(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token).GetAwaiter().GetResult());
 
-        private string RenderClipFrameVfd(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
+        private async Task<string> RenderClipFrameVfdAsync(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
         {
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
             using var frameMark = new UserMarkRange("Preview.RenderClipVfd", $"clip={clipId}, frame={frameIndex}, size={canvasWidth}x{canvasHeight}");
@@ -478,7 +479,7 @@ namespace projectFrameCut.LivePreview
                     $"dynamic_{ClipPreviewCacheVersion}_{clipHash}_{Math.Max(1, projectWidth)}x{Math.Max(1, projectHeight)}_{Math.Max(1, canvasWidth)}x{Math.Max(1, canvasHeight)}_vfd8.vfd");
                 if (File.Exists(cachedPath)) return cachedPath;
             }
-            var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
+            var artifact = await (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
             {
                 SessionId = RenderSessionId,
                 ClipId = clipId,
@@ -489,26 +490,29 @@ namespace projectFrameCut.LivePreview
                 ProjectHeight = projectHeight,
                 PreferredPixelFormat = PreviewPixelFormat.EncodedImage,
                 VectorClipJson = vectorClipJson,
-            }, token).AsTask().GetAwaiter().GetResult();
+            }, token).ConfigureAwait(false);
             if (artifact.PixelFormat != PreviewPixelFormat.VfdPicture)
                 throw new InvalidDataException($"The render backend returned unsupported preview format {artifact.PixelFormat}.");
-            return ResolveArtifactPath(artifact, token);
+            return await ResolveArtifactPathAsync(artifact, token).ConfigureAwait(false);
         }
 
         public PreviewFrameSource RenderClipFrameForDisplay(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
+            => RenderClipFrameForDisplayAsync(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson).GetAwaiter().GetResult();
+
+        public async Task<PreviewFrameSource> RenderClipFrameForDisplayAsync(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
         {
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
             using var displayMark = new UserMarkRange("Preview.RenderClipDisplay", $"clip={clipId}, frame={frameIndex}, size={canvasWidth}x{canvasHeight}");
 #endif
             if (DefaultOutputMode == NativePreviewOutputMode.Disabled || !OperatingSystem.IsWindows())
             {
-                var path = RenderClipFrameVfd(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson);
+                var path = await RenderClipFrameVfdAsync(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson).ConfigureAwait(false);
                 return new PreviewFrameSource(path, canvasWidth, canvasHeight, PreviewPixelFormat.EncodedImage, false);
             }
 
             try
             {
-                var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
+                var artifact = await (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
                 {
                     SessionId = RenderSessionId,
                     ClipId = clipId,
@@ -519,17 +523,17 @@ namespace projectFrameCut.LivePreview
                     ProjectHeight = projectHeight,
                     PreferredPixelFormat = PreviewPixelFormat.Rgba16FloatScRgb,
                     VectorClipJson = vectorClipJson,
-                }, token).AsTask().GetAwaiter().GetResult();
+                }, token).ConfigureAwait(false);
                 if (artifact.PixelFormat != PreviewPixelFormat.VfdPicture)
                     throw new NotSupportedException("The render backend did not return a VFD clip-preview artifact.");
 
-                var path = ResolveArtifactPath(artifact, token);
+                var path = await ResolveArtifactPathAsync(artifact, token).ConfigureAwait(false);
                 return new PreviewFrameSource(path, artifact.Width, artifact.Height, PreviewPixelFormat.Rgba16FloatScRgb, false);
             }
             catch (Exception ex) when (ex is not OperationCanceledException && !token.IsCancellationRequested)
             {
                 Log(ex, $"Render native preview for clip {clipId} at frame #{frameIndex}; using standard preview", this);
-                var path = RenderClipFrameVfd(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson);
+                var path = await RenderClipFrameVfdAsync(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson).ConfigureAwait(false);
                 return new PreviewFrameSource(path, canvasWidth, canvasHeight, PreviewPixelFormat.EncodedImage, false);
             }
         }
@@ -540,7 +544,9 @@ namespace projectFrameCut.LivePreview
         }
 
         public bool CanCacheClipFrame(Guid clipId)
-            => _cacheableClipIds.Contains(clipId);
+            => _cacheableClipIds.Contains(clipId)
+                && Clips?.FirstOrDefault(c => c.Id == clipId) is { } clip
+                && !ClipInitializationFailure.IsMarked(clip);
 
         private bool CanCacheFrame(uint frameIndex)
             => Clips is { } clips && clips.Where(clip => clip.ContainsFrame(frameIndex)

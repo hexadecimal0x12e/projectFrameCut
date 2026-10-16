@@ -11,7 +11,6 @@
 
 独立渲染器**不支持MacOS**，因为没有很好的方法在命令行程序里调用Metal API。你可以考虑使用主程序的自动渲染功能。
 
-
 ## 使用方法
 
 ```bash
@@ -151,10 +150,6 @@ bench 模式会使用 `BenchmarkSourceGenerator` 自动生成一个包含多种�
   渲染工作线程的手动 CPU 亲和性设置。支持逗号分隔的 CPU 索引或范围，例如 `0-3,5,7`。  
   启用此参数后会自动设置 `enableThreadAffinity=true`。
 
-- **`-oneByOneRender=<true|false>`**  
-  是否逐帧渲染，并且在每一帧的结果产生之后同步写入输出视频，而不是计划写入。默认：`false`
-  设置此参数为`true`会覆盖参数 **`-maxParallelThreads`** 为1。
-
 - **`-chunkRender=<true|false>`**
   启用分块渲染。默认：`false`。分块缓存保存在`<项目目录>/thumbs/render-chunks/<任务指纹>/`。
   分块使用高码率、速度优先的中间编码；全部完成后由内置视频解码器逐帧读取，并写入目标配置的VideoWriter。
@@ -170,12 +165,6 @@ bench 模式会使用 `BenchmarkSourceGenerator` 自动生成一个包含多种�
 
 - **`-chunkKeepFiles=<true|false>`**
   成功生成最终输出后保留manifest和分块文件。默认：`false`；失败或取消时始终保留。
-
-- **`-renderByLayer=<true|false>`**  
-  是否为每个图层分别渲染（而不是合并所有图层）。默认：`false`
-
-- **`-prepareInWorker=<true|false>`**  
-  是否在工作线程中准备帧（而不是在渲染线程中准备）。默认：`false`
 
 - **`-multiAccelerator=<true|false>`**  
   是否使用多个加速器设备。默认：`false`
@@ -245,21 +234,8 @@ bench 模式不需要 `-project`、`-output` 等渲染参数，它会使用 `Ben
   是否写入空设备（BlackholeVideoWriter）。默认：`true`  
   为 `true` 时渲染结果直接丢弃，消除 I/O 对性能测试的影响；为 `false` 时不创建视频写入器，仅测试渲染管线的帧准备和渲染阶段。
 
-- **`-boostMode=<true|false>`**  
-  是否启用 Boost 压力测试模式。默认：`false`  
-  启用后使用最大并行线程数（等于总帧数）、禁用渲染节流、阻塞准备阶段直到渲染开始，以获得最高吞吐量数据。
-
 - **`-maxParallelThreads=<number>`**  
   最大并行渲染线程数。默认：`8`
-
-- **`-oneByOneRender=<true|false>`**  
-  是否逐帧渲染。默认：`false`
-
-- **`-renderByLayer=<true|false>`**  
-  是否为每个图层分别渲染。默认：`false`
-
-- **`-prepareInWorker=<true|false>`**  
-  是否在工作线程中准备帧。默认：`false`
 
 - **`-enableThreadAffinity=<true|false>`**  
   是否启用线程亲和性。默认：`true`
@@ -367,12 +343,11 @@ projectFrameCut.StandaloneRender bench \
   -acceleratorDeviceId=2
 ```
 
-### 示例 9: 压力测试模式（Boost Mode）
+### 示例 9: 渲染管线基准测试
 
 ```bash
 projectFrameCut.StandaloneRender bench \
   -acceleratorType=cuda \
-  -boostMode=true \
   -writeToNull=true
 ```
 

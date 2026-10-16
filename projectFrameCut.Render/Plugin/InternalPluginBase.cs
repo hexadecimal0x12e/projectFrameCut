@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Sources;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Compose;
@@ -178,7 +179,8 @@ public class InternalPluginBase : IPluginBase
             { "HttpDecoderContext", (AlwaysTrue, new HttpDecoderContext()) },
             { "FFmpegDeviceDecoderContext", (AlwaysTrue, new FFmpegDeviceDecoderContext()) },
             { "RPSVDecoderContext", (AlwaysTrue, new RawPictureSequenceStreamVideoDecoderContext()) },
-            { "DecoderContextPJFCProject", (AlwaysTrue, new DecoderContextPJFCProject()) }
+            { "DecoderContextPJFCProject", (AlwaysTrue, new DecoderContextPJFCProject()) },
+            { nameof(EmptyVideoSource), (AlwaysTrue, new EmptyVideoSource()) }
         }.ComputeCondition();
 
     public IVideoSource VideoSourceCreator(string filePath)
@@ -249,6 +251,7 @@ public class InternalPluginBase : IPluginBase
             ClipMode.TransformClip => throw new NotSupportedException("Standalone transform clips are no longer supported."),
             ClipMode.VectorCanvasClip => element.Deserialize<VectorCanvasClip>() ?? throw new NullReferenceException(),
             ClipMode.VectorComponentClip => element.Deserialize<VectorComponentClip>() ?? throw new NullReferenceException(),
+            ClipMode.MaskClip => element.Deserialize<MaskClip>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };
     }

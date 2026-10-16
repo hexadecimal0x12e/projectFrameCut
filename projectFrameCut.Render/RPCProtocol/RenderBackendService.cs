@@ -11,6 +11,8 @@ using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -19,10 +21,10 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.RPCProtocol;
 
-public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = null, string? stateRoot = null, Action<RenderJob>? completionSink = null, Action<RenderJob>? progressSink = null, IAudioPreviewSinkFactory? previewAudioSinkFactory = null) : IRenderService, IAsyncDisposable
+public sealed partial class RenderBackendService(IRenderArtifactStore? artifactStore = null, string? stateRoot = null, Action<RenderJob>? completionSink = null, Action<RenderJob>? progressSink = null, IAudioPreviewSinkFactory? previewAudioSinkFactory = null) : IRenderService, IAsyncDisposable
 {
-    private const string TimelineFrameCacheVersion = "v6-vfd";
-    private const string ClipPreviewCacheVersion = "v6-vfd";
+    private const string TimelineFrameCacheVersion = "v8-mask-vfd";
+    private const string ClipPreviewCacheVersion = "v8-mask-vfd";
     private const string TimelineSegmentCacheVersion = "v2-audio-source";
     private const string AudioSegmentCacheVersion = "v2-track-source";
     private const string FrameHashIndexVersion = "v2-lazy-frame-clip";
@@ -37,6 +39,11 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private readonly ConcurrentDictionary<Guid, BackendSession> _sessions = new();
     private readonly ConcurrentDictionary<Guid, JobEntry> _jobs = new();
     private readonly ConcurrentDictionary<string, object> _previewCacheGates = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, PreviewCacheManifest> _previewCacheManifests = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _previewCachePersistGate = new();
+    private Timer? _previewCacheTimer;
+    private readonly ConditionalWeakTable<IClip, PreviewClipInitialization> _previewClipInitializations = new();
+    private long _lastSlowPreviewLog;
     private readonly object _persistGate = new();
     private readonly SemaphoreSlim _projectLifecycleGate = new(1, 1);
     private int _disposed;
@@ -76,6 +83,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 RenderOperation.GetPreviewAudioClock => Success(request, GetPreviewAudioClock(Read<PreviewAudioClockRequest>(request))),
                 RenderOperation.RenderClipPreview => Success(request, await RenderClipPreviewAsync(Read<ClipPreviewRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.RenderClipPreviewBatch => Success(request, await RenderClipPreviewBatchAsync(Read<ClipPreviewBatchRequest>(request), cancellationToken).ConfigureAwait(false)),
+                RenderOperation.StartDynamicPreview => Success(request, await StartDynamicPreviewAsync(Read<StartDynamicPreviewRequest>(request), cancellationToken).ConfigureAwait(false)),
+                RenderOperation.StopDynamicPreview => Success(request, await StopDynamicPreviewAsync(Read<StopDynamicPreviewRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.RenderProject => Success(request, StartRenderProject(Read<RenderProjectRequest>(request))),
                 RenderOperation.GetJobStatus => Success(request, GetJob(Read<JobRequest>(request).JobId)),
                 RenderOperation.CancelJob => Success(request, CancelJob(Read<JobRequest>(request).JobId)),
@@ -120,8 +129,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             .ToList(),
         Encoders = ["libx264"],
         Features = _previewAudioSinkFactory is null
-            ? ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "clip-preview-before-layout", "thumbs-cache", "vfd-preview", "png-preview", "render-jobs", "persistent-render-jobs", "artifact-files"]
-            : ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "clip-preview-before-layout", "thumbs-cache", "vfd-preview", "png-preview", "render-jobs", "persistent-render-jobs", "artifact-files", "preview-audio-device-clock"],
+            ? ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "clip-preview-before-layout", "thumbs-cache", "vfd-preview", "png-preview", "render-jobs", "persistent-render-jobs", "artifact-files", "continuous-preview-cache"]
+            : ["direct-transport", "named-pipe", "unix-socket", "timeline-preview", "clip-preview-without-layout", "clip-preview-before-layout", "thumbs-cache", "vfd-preview", "png-preview", "render-jobs", "persistent-render-jobs", "artifact-files", "preview-audio-device-clock", "continuous-preview-cache"],
     };
 
     private async Task<ProjectExternalSourceCatalog> SetProjectExternalSourcesAsync(SetProjectExternalSourcesRequest request, CancellationToken cancellationToken)
@@ -262,12 +271,14 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             ProjectSources = externalSources.CacheToken,
             RpcSources = ExternalVideoSourceRegistry.CacheToken,
             RpcAudioSources = ExternalAudioSourceRegistry.CacheToken,
+            RpcMaskSources = ExternalMaskSourceRegistry.CacheToken,
             Effects = EffectHelper.ConfigurationRevision,
         }, _jsonOptions));
         var reusable = previous is not null && previous.SourceConfiguration == sourceConfiguration && previous.ProjectRoot == root ? previous : null;
         var snapshotHash = ComputeTextHash($"{request.ProjectJson}\n{request.TimelineJson}");
         if (reusable?.SnapshotHash == snapshotHash && reusable.Clips.All(clip => !ClipInitializationFailure.IsMarked(clip)))
             return reusable.ToContract();
+        await StopDynamicPreviewAsync(new() { SessionId = sessionId }, cancellationToken).ConfigureAwait(false);
         var clipSignatures = draft.Clips.Where(dto => dto.ClipType != ClipMode.MarkingClip)
             .ToDictionary(dto => dto.Id, GetClipSignature);
         var trackSignatures = draft.SoundTracks.ToDictionary(dto => dto.Id, dto => JsonSerializer.Serialize(dto, _jsonOptions));
@@ -403,7 +414,9 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         CancelJobsForSession(request.SessionId);
         if (_sessions.TryRemove(request.SessionId, out var session))
         {
+            await StopDynamicPreviewAsync(new() { SessionId = session.Id }, CancellationToken.None).ConfigureAwait(false);
             await session.DisposeAsync().ConfigureAwait(false);
+            FlushPreviewCache(session.ProjectRoot);
             await ReleaseUnusedSourcesAsync(session.ProjectRoot).ConfigureAwait(false);
         }
         if (_sessions.IsEmpty && PluginManager.ProjectPluginIds.Count > 0 && PluginManager.ProjectPluginUnloader is not null)
@@ -555,16 +568,22 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 try
                 {
                     var visualClips = GetVisualClips(session.Clips);
-                    foreach (var clip in visualClips)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        try { clip.ReInit(wantsScRgb ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture); }
-                        catch (OperationCanceledException) { throw; }
-                        catch (Exception ex) { ClipInitializationFailure.Mark(clip, "Source or ResolveEffect", ex); }
-                    }
-                    var layers = Timeline.GetFramesInOneFrame(visualClips, request.FrameIndex, width, height, projectRelativeWidth: session.Width, projectRelativeHeight: session.Height);
-                    picture = Timeline.MixtureLayers(layers, request.FrameIndex, width, height, autoCenterImplicitClip: true, projectRelativeWidth: session.Width, projectRelativeHeight: session.Height);
+                    var pixelMode = wantsScRgb ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
+                    InitializePreviewClips(visualClips, pixelMode, request.FrameIndex, cancellationToken);
+                    var layers = Timeline.GetFramesInOneFrame(visualClips, request.FrameIndex, width, height, pixelMode,
+                        projectRelativeWidth: session.Width, projectRelativeHeight: session.Height, initializeClips: false);
+                    picture = Timeline.MixtureLayers(layers, request.FrameIndex, width, height, (int)pixelMode,
+                        autoCenterImplicitClip: true, projectRelativeWidth: session.Width, projectRelativeHeight: session.Height,
+                        disposeIntermediateFrames: true, cancellationToken: cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
+                    if (allowCaching && !Timeline.CanCacheFrame(visualClips, request.FrameIndex))
+                    {
+                        allowCaching = false;
+                        relativePath = $"thumbs/unCacheablePerClip/{session.Id:N}/frame_{Guid.NewGuid():N}.vfd";
+                        finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
+                        temporaryPath = _artifacts.CreateTemporaryPath(finalPath);
+                        LogDiagnostic($"[RenderRPC] Bypassing timeline preview cache after rendering frame {request.FrameIndex}.");
+                    }
                     picture.SaveToDisk(temporaryPath, Drawing.Base.PictureExtensions.SharedVfdPictureEncoder);
                     cancellationToken.ThrowIfCancellationRequested();
                     _artifacts.CommitTemporaryFile(temporaryPath, finalPath);
@@ -592,13 +611,14 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         }
     }
 
-    private async ValueTask<RenderArtifact> RenderClipPreviewAsync(ClipPreviewRequest request, CancellationToken cancellationToken)
+    private async ValueTask<RenderArtifact> RenderClipPreviewAsync(ClipPreviewRequest request, CancellationToken cancellationToken, bool registerArtifact = true, BackendSession? previewSession = null, IClip[]? previewClips = null)
     {
-        var session = GetSession(request.SessionId);
+        var session = previewSession ?? GetSession(request.SessionId);
         using var operation = session.BeginOperation(cancellationToken);
         cancellationToken = operation.Token;
         using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
-        var savedClip = session.Clips.FirstOrDefault(candidate => candidate.Id == request.ClipId)
+        var sessionClips = previewClips ?? session.Clips;
+        var savedClip = sessionClips.FirstOrDefault(candidate => candidate.Id == request.ClipId)
             ?? throw new KeyNotFoundException($"Clip '{request.ClipId}' was not found in render session '{request.SessionId}'.");
         using var snapshot = string.IsNullOrEmpty(request.VectorClipJson) ? null : CreateVectorPreviewSnapshot(request, savedClip, session);
         var clip = snapshot ?? savedClip;
@@ -611,14 +631,20 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         var previewWidth = ResolveClipPreviewDimension(clip.TargetWidth, projectWidth, canvasWidth);
         var previewHeight = ResolveClipPreviewDimension(clip.TargetHeight, projectHeight, canvasHeight);
 
-        await session.RenderGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        var startedAt = Stopwatch.GetTimestamp();
+        double lookupMs = 0, initializeMs = 0, renderMs = 0, writeMs = 0, trackMs = 0;
+        var previewCacheHit = false;
+        // Playback workers own separate clip runtimes; other requests share the session gate.
+        var renderGate = previewClips is null ? session.RenderGate : null;
+        if (renderGate is not null) await renderGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        var gateMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
             // Use the same full-timeline content hash as static previews. This is
             // important for transform clips whose output depends on bound clips
             // outside the requested clip itself.
-            var clips = snapshot is null ? session.Clips : session.Clips.Select(c => c.Id == clip.Id ? clip : c).ToArray();
+            var clips = snapshot is null ? sessionClips : sessionClips.Select(c => c.Id == clip.Id ? clip : c).ToArray();
             if (request.BeforeLayout && clip.GetRelativeFrameIndex(request.FrameIndex) is null)
                 throw new ArgumentOutOfRangeException(nameof(request.FrameIndex), "The frame is outside the clip's timeline interval.");
             if (!request.BeforeLayout && TransformProcessing.HasActiveTransform(clip, GetVisualClips(clips), request.FrameIndex))
@@ -626,8 +652,8 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 previewWidth = canvasWidth;
                 previewHeight = canvasHeight;
             }
-            var clipHash = snapshot is null ? session.GetClipFrameHash(clip.Id, request.FrameIndex)
-                : Timeline.GetClipFrameHash(clips, clip, request.FrameIndex);
+            var clipHash = snapshot is null && previewClips is null ? session.GetClipFrameHash(clip.Id, request.FrameIndex)
+                : Timeline.GetClipFrameHash(GetVisualClips(clips), clip, request.FrameIndex);
             var namespacePrefix = string.IsNullOrEmpty(session.CacheNamespace) ? string.Empty : $"{session.CacheNamespace}_";
             var wantsScRgb = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb;
             var formatSuffix = wantsScRgb ? "vfd16" : "vfd8";
@@ -638,34 +664,48 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 : $"thumbs/unCacheablePerClip/{session.Id:N}/clip_{clip.Id:N}_{Guid.NewGuid():N}.vfd";
             var finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
             var cacheHit = allowCaching && File.Exists(finalPath);
+            previewCacheHit = cacheHit;
+            lookupMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds - gateMs;
             if (!cacheHit)
             {
                 var temporaryPath = _artifacts.CreateTemporaryPath(finalPath);
                 IPicture? picture = null;
                 try
                 {
-                    if (wantsScRgb)
-                    {
-                        try { clip.ReInit(IPicture.PicturePixelMode.UShortPicture); }
-                        catch (OperationCanceledException) { throw; }
-                        catch (Exception ex) { ClipInitializationFailure.Mark(clip, "Source or ResolveEffect", ex); }
-                    }
+                    var visualClips = GetVisualClips(clips);
+                    var pixelMode = wantsScRgb ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
+                    var stageStartedAt = Stopwatch.GetTimestamp();
+                    InitializePreviewClips([clip, .. Timeline.CollectHashDependencies(visualClips, clip, new HashSet<Guid> { clip.Id })],
+                        pixelMode, request.FrameIndex, cancellationToken);
+                    initializeMs = Stopwatch.GetElapsedTime(stageStartedAt).TotalMilliseconds;
+                    stageStartedAt = Stopwatch.GetTimestamp();
                     picture = ClipPreviewRenderer.Render(
                         clip,
-                        GetVisualClips(clips),
+                        visualClips,
                         canvasWidth,
                         canvasHeight,
                         projectWidth,
                         projectHeight,
                         request.FrameIndex,
                         cancellationToken,
-                        wantsScRgb ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture,
-                        request.BeforeLayout)
+                        pixelMode,
+                        request.BeforeLayout, initializeClips: false)
                         ?? throw new InvalidOperationException($"Clip '{clip.Id}' did not produce a preview frame.");
+                    renderMs = Stopwatch.GetElapsedTime(stageStartedAt).TotalMilliseconds;
                     cancellationToken.ThrowIfCancellationRequested();
+                    if (allowCaching && !Timeline.CanCacheClipFrame(clips, clip))
+                    {
+                        allowCaching = false;
+                        relativePath = $"thumbs/unCacheablePerClip/{session.Id:N}/clip_{clip.Id:N}_{Guid.NewGuid():N}.vfd";
+                        finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
+                        temporaryPath = _artifacts.CreateTemporaryPath(finalPath);
+                        LogDiagnostic($"[RenderRPC] Bypassing clip preview cache after rendering clip {clip.Id} at frame {request.FrameIndex}.");
+                    }
+                    stageStartedAt = Stopwatch.GetTimestamp();
                     picture.SaveToDisk(temporaryPath, Drawing.Base.PictureExtensions.SharedVfdPictureEncoder);
                     cancellationToken.ThrowIfCancellationRequested();
                     _artifacts.CommitTemporaryFile(temporaryPath, finalPath);
+                    writeMs = Stopwatch.GetElapsedTime(stageStartedAt).TotalMilliseconds;
                 }
                 catch
                 {
@@ -686,16 +726,30 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 previewWidth = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(offset, 4));
                 previewHeight = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(offset + 4, 4));
             }
+            var trackStartedAt = Stopwatch.GetTimestamp();
             if (allowCaching)
                 TrackPreviewCacheAccess(session.ProjectRoot, relativePath, clip.Id, request.FrameIndex, $"project:{projectWidth}x{projectHeight};canvas:{canvasWidth}x{canvasHeight};output:{previewWidth}x{previewHeight};format:{formatSuffix}");
+            trackMs = Stopwatch.GetElapsedTime(trackStartedAt).TotalMilliseconds;
             if (request.PreferredPixelFormat == PreviewPixelFormat.PngImage)
                 return MaterializePreviewPng(session, relativePath, clip.Id, request.FrameIndex, previewWidth, previewHeight, cacheHit, allowCaching, cancellationToken);
+            if (!registerArtifact)
+                return new RenderArtifact
+                {
+                    SessionId = session.Id, ProjectRelativePath = relativePath, Width = previewWidth, Height = previewHeight,
+                    PixelFormat = PreviewPixelFormat.VfdPicture, CacheHit = cacheHit, IsPreview = true,
+                };
             return _artifacts.Register(session.Id, session.ProjectRoot, relativePath, "application/x-projectframecut-vfd",
                 cacheHit, isPreview: true, previewWidth, previewHeight, session.FrameRate, PreviewPixelFormat.VfdPicture, 0, "vfd-native");
         }
         finally
         {
-            session.RenderGate.Release();
+            renderGate?.Release();
+            var now = Stopwatch.GetTimestamp();
+            var elapsedMs = Stopwatch.GetElapsedTime(startedAt, now).TotalMilliseconds;
+            var lastLog = Interlocked.Read(ref _lastSlowPreviewLog);
+            if (elapsedMs >= 250 && now - lastLog >= Stopwatch.Frequency * 5
+                && Interlocked.CompareExchange(ref _lastSlowPreviewLog, now, lastLog) == lastLog)
+                LogDiagnostic($"[RenderRPC] Slow clip preview: clip={clip.Id}, frame={request.FrameIndex}, size={canvasWidth}x{canvasHeight}, cacheHit={previewCacheHit}, total={elapsedMs:F1}ms, gate={gateMs:F1}ms, lookup={lookupMs:F1}ms, init={initializeMs:F1}ms, render={renderMs:F1}ms, write={writeMs:F1}ms, track={trackMs:F1}ms.");
         }
     }
 
@@ -974,6 +1028,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                     ProjectRelativeHeight = session.Height,
                 };
                 if (progress is not null) renderer.OnProgressChanged += progress;
+                foreach (var clip in renderer.Clips) _previewClipInitializations.Remove(clip);
                 renderer.PrepareRender(cancellationToken);
                 await renderer.GoRender(cancellationToken).ConfigureAwait(false);
                 if (progress is not null) renderer.OnProgressChanged -= progress;
@@ -1153,6 +1208,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                     clip.ReInit(IPicture.PicturePixelMode.BytePicture);
                     clip.EffectsInstances = EffectHelper.GetClipEffectsInstances(clip);
                     ClipInitializationFailure.Clear(clip);
+                    _previewClipInitializations.GetValue(clip, static _ => new()).PixelMode = IPicture.PicturePixelMode.BytePicture.Value;
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
@@ -1302,6 +1358,38 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     private static IClip[] GetVisualClips(IEnumerable<IClip> clips)
         => clips.Where(static clip => clip.ClipType != ClipMode.AudioClip).ToArray();
 
+    private void InitializePreviewClips(IReadOnlyList<IClip> clips, IPicture.PicturePixelMode pixelMode, uint frameIndex, CancellationToken token)
+    {
+        // Preserve source and effect caches while a clip's output pixel format stays unchanged.
+        foreach (var clip in clips)
+        {
+            token.ThrowIfCancellationRequested();
+            var state = _previewClipInitializations.GetValue(clip, static _ => new());
+            if (state.PixelMode == pixelMode.Value && !ClipInitializationFailure.IsMarked(clip) && !clip.ContainsFrame(frameIndex)) continue;
+            if (clip.NeedFilePath && clip.FilePath is { Length: > 0 } path && path[0] != '#' && !File.Exists(path))
+            {
+                if (!ClipInitializationFailure.IsMarked(clip))
+                    ClipInitializationFailure.Mark(clip, "SourceNotFound", new FileNotFoundException($"Source for clip '{clip.Name}' is not available.", path));
+                state.PixelMode = 0;
+                continue;
+            }
+            if ((state.PixelMode == pixelMode.Value && !ClipInitializationFailure.IsMarked(clip))
+                || ClipInitializationFailure.HasDeferredFailures(clip.ExtraData)) continue;
+            try
+            {
+                ClipInitializationFailure.Clear(clip);
+                clip.ReInit(pixelMode);
+                if (!ClipInitializationFailure.IsMarked(clip)) state.PixelMode = pixelMode.Value;
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                ClipInitializationFailure.Mark(clip, "Source or ResolveEffect", ex);
+                Log(ex, $"Initialize preview clip {clip.Id}", this);
+            }
+        }
+    }
+
     private string ResolveAssetPath(BackendSession session, AssetMetadataRequest request)
     {
         if (!string.IsNullOrWhiteSpace(request.AssetId) && session.Assets.TryGetValue(request.AssetId, out var assetPath))
@@ -1348,8 +1436,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                     ProjectRelativePath = normalizedPath,
                     LastAccessedAtUtc = now,
                 };
-                CleanupPreviewCache(projectRoot, manifest, now);
-                SavePreviewCacheManifest(projectRoot, manifest);
+                manifest.Dirty = true;
             }
         }
         catch (Exception ex)
@@ -1371,8 +1458,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 if (!manifest.Entries.TryGetValue(cacheId, out var entry)) return;
                 var now = DateTimeOffset.UtcNow;
                 entry.LastAccessedAtUtc = now;
-                CleanupPreviewCache(projectRoot, manifest, now);
-                SavePreviewCacheManifest(projectRoot, manifest);
+                manifest.Dirty = true;
             }
         }
         catch (Exception ex)
@@ -1390,8 +1476,11 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 var manifest = LoadPreviewCacheManifest(projectRoot);
                 DiscoverPreviewCacheEntries(projectRoot, manifest);
                 CleanupPreviewCache(projectRoot, manifest, DateTimeOffset.UtcNow);
-                SavePreviewCacheManifest(projectRoot, manifest);
+                manifest.Dirty = true;
             }
+            FlushPreviewCache(projectRoot);
+            lock (_previewCachePersistGate)
+                _previewCacheTimer ??= new Timer(_ => FlushPreviewCaches(), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
         }
         catch (Exception ex)
         {
@@ -1400,20 +1489,72 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
     }
 
     private PreviewCacheManifest LoadPreviewCacheManifest(string projectRoot)
+        => _previewCacheManifests.GetOrAdd(projectRoot, root =>
+        {
+            var path = GetPreviewCacheManifestPath(root);
+            if (!File.Exists(path)) return new();
+            try
+            {
+                var manifest = JsonSerializer.Deserialize<PreviewCacheManifest>(File.ReadAllText(path), PreviewCacheJsonOptions) ?? new();
+                manifest.Entries ??= new(StringComparer.Ordinal);
+                return manifest;
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Read preview cache manifest", this);
+                return new();
+            }
+        });
+
+    private void FlushPreviewCaches()
     {
-        var path = GetPreviewCacheManifestPath(projectRoot);
-        if (!File.Exists(path)) return new();
+        if (!Monitor.TryEnter(_previewCachePersistGate)) return;
         try
         {
-            var manifest = JsonSerializer.Deserialize<PreviewCacheManifest>(File.ReadAllText(path), PreviewCacheJsonOptions) ?? new();
-            manifest.Entries ??= new(StringComparer.Ordinal);
-            return manifest;
+            foreach (var root in _previewCacheManifests.Keys) FlushPreviewCache(root);
         }
-        catch (Exception ex)
+        finally { Monitor.Exit(_previewCachePersistGate); }
+    }
+
+    private void FlushPreviewCache(string projectRoot)
+    {
+        try
         {
-            Log(ex, "Read preview cache manifest", this);
-            return new();
+            lock (_previewCachePersistGate)
+            {
+                var gate = _previewCacheGates.GetOrAdd(projectRoot, static _ => new object());
+                PreviewCacheManifest snapshot;
+                lock (gate)
+                {
+                    if (!_previewCacheManifests.TryGetValue(projectRoot, out var manifest) || !manifest.Dirty) return;
+                    var now = DateTimeOffset.UtcNow;
+                    if (now - manifest.LastCleanupAtUtc >= TimeSpan.FromMinutes(1)) CleanupPreviewCache(projectRoot, manifest, now);
+                    snapshot = new()
+                    {
+                        Version = manifest.Version,
+                        Entries = manifest.Entries.ToDictionary(pair => pair.Key, pair => new PreviewCacheEntry
+                        {
+                            CacheId = pair.Value.CacheId,
+                            ClipId = pair.Value.ClipId,
+                            FrameIndex = pair.Value.FrameIndex,
+                            Configuration = pair.Value.Configuration,
+                            ProjectRelativePath = pair.Value.ProjectRelativePath,
+                            LastAccessedAtUtc = pair.Value.LastAccessedAtUtc,
+                        }, StringComparer.Ordinal),
+                    };
+                    manifest.Dirty = false;
+                }
+                // Keep serialization and disk writes outside the render thread's manifest lock.
+                try { SavePreviewCacheManifest(projectRoot, snapshot); }
+                catch
+                {
+                    lock (gate)
+                        if (_previewCacheManifests.TryGetValue(projectRoot, out var manifest)) manifest.Dirty = true;
+                    throw;
+                }
+            }
         }
+        catch (Exception ex) { Log(ex, "Save preview cache manifest", this); }
     }
 
     private void SavePreviewCacheManifest(string projectRoot, PreviewCacheManifest manifest)
@@ -1443,6 +1584,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 manifest.Entries.Remove(pair.Key);
                 continue;
             }
+            if (pair.Value.LastAccessedAtUtc > cutoff) continue;
             if (!TryResolveTrackedPreviewPath(projectRoot, pair.Value.ProjectRelativePath, out var path))
             {
                 manifest.Entries.Remove(pair.Key);
@@ -1453,7 +1595,6 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 manifest.Entries.Remove(pair.Key);
                 continue;
             }
-            if (pair.Value.LastAccessedAtUtc > cutoff) continue;
             try
             {
                 File.Delete(path);
@@ -1465,6 +1606,7 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
                 Log(ex, $"Delete expired preview cache '{pair.Value.ProjectRelativePath}'", this);
             }
         }
+        manifest.LastCleanupAtUtc = now;
         if (deleted > 0) Log($"[RenderRPC] Deleted {deleted} preview cache file(s) unused for more than {PreviewCacheRetention.TotalHours:0} hours.");
     }
 
@@ -1551,8 +1693,12 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
             if (_disposed != 0) return;
             Volatile.Write(ref _disposed, 1);
             foreach (var job in _jobs.Values) job.Cancellation.Cancel();
+            await StopAllDynamicPreviewsAsync().ConfigureAwait(false);
             foreach (var session in _sessions.Values) await session.DisposeAsync().ConfigureAwait(false);
             _sessions.Clear();
+            if (_previewCacheTimer is not null) await _previewCacheTimer.DisposeAsync().ConfigureAwait(false);
+            FlushPreviewCaches();
+            _previewCacheManifests.Clear();
             foreach (var sources in _externalSources.Values) await sources.CloseAsync().ConfigureAwait(false);
             _externalSources.Clear();
             if (PluginManager.ProjectPluginIds.Count > 0 && PluginManager.ProjectPluginUnloader is not null)
@@ -1562,10 +1708,17 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         finally { _projectLifecycleGate.Release(); }
     }
 
+    private sealed class PreviewClipInitialization
+    {
+        public int PixelMode { get; set; }
+    }
+
     private sealed class PreviewCacheManifest
     {
         public int Version { get; set; } = 1;
         public Dictionary<string, PreviewCacheEntry> Entries { get; set; } = new(StringComparer.Ordinal);
+        [JsonIgnore] public bool Dirty { get; set; }
+        [JsonIgnore] public DateTimeOffset LastCleanupAtUtc { get; set; }
     }
 
     private sealed class PreviewCacheEntry
@@ -1604,8 +1757,9 @@ public sealed class RenderBackendService(IRenderArtifactStore? artifactStore = n
         public IReadOnlyDictionary<string, string> TrackSignatures { get; } = trackSignatures;
         public ProjectExternalSourceHost ExternalSources { get; set; } = null!;
         public string CacheNamespace => string.IsNullOrEmpty(ExternalSources.CacheToken) && string.IsNullOrEmpty(ExternalVideoSourceRegistry.CacheToken)
-            && string.IsNullOrEmpty(ExternalAudioSourceRegistry.CacheToken)
-            ? cacheNamespace : ComputeTextHash(cacheNamespace + ExternalSources.CacheToken + ExternalVideoSourceRegistry.CacheToken + ExternalAudioSourceRegistry.CacheToken);
+            && string.IsNullOrEmpty(ExternalAudioSourceRegistry.CacheToken) && string.IsNullOrEmpty(ExternalMaskSourceRegistry.CacheToken)
+            ? cacheNamespace : ComputeTextHash(cacheNamespace + ExternalSources.CacheToken + ExternalVideoSourceRegistry.CacheToken
+                + ExternalAudioSourceRegistry.CacheToken + ExternalMaskSourceRegistry.CacheToken);
         public SemaphoreSlim RenderGate { get; } = new(1, 1);
         private readonly object _lifetimeGate = new();
         private readonly CancellationTokenSource _lifetime = new();

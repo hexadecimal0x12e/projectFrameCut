@@ -9,6 +9,7 @@ public sealed class ProjectExternalSourceWorkerService(object provider, string t
 
     private readonly IExternalVideoSourceProvider? video = provider as IExternalVideoSourceProvider;
     private readonly IExternalAudioSourceProvider? audio = provider as IExternalAudioSourceProvider;
+    private readonly IExternalMaskSourceProvider? mask = provider as IExternalMaskSourceProvider;
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly HashSet<Guid> instances = [];
     private readonly HashSet<Guid> audioInstances = [];
@@ -37,6 +38,24 @@ public sealed class ProjectExternalSourceWorkerService(object provider, string t
                     return Success(new ExternalVideoSourceCatalog { Sources = video?.Sources.Select(x => RenderRpcSerializer.Clone(x)).ToList() ?? [] });
                 case RenderOperation.IsolationListProjectExternalAudioSources:
                     return Success(new ExternalAudioSourceCatalog { Sources = audio?.AudioSources.Select(x => RenderRpcSerializer.Clone(x)).ToList() ?? [] });
+                case RenderOperation.IsolationListProjectExternalMaskSources:
+                    return Success(new ExternalMaskSourceCatalog { Sources = mask?.MaskSources.Select(x => RenderRpcSerializer.Clone(x)).ToList() ?? [] });
+                case RenderOperation.ExternalMaskSourceProcess:
+                    var process = RenderRpcSerializer.Deserialize<ProjectExternalMaskSourceProcessRequest>(request.Payload);
+                    var descriptor = mask?.MaskSources.SingleOrDefault(x => x.SourceId == process.Request.Source.SourceId)
+                        ?? throw new UnauthorizedAccessException("Requested mask source is not in this provider's catalog.");
+                    await using (var stream = await payloads.OpenReadAsync(process.Backdrop, cancellationToken).ConfigureAwait(false))
+                    {
+                        using var buffer = new MemoryStream();
+                        await stream.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
+                        process.Request.Backdrop = RenderRpcSerializer.Deserialize<ExternalVideoFrame>(buffer.ToArray());
+                    }
+                    process.Request.Validate();
+                    process.Request.Source.Descriptor = RenderRpcSerializer.Clone(descriptor);
+                    var processed = await mask!.ProcessMaskAsync(process.Request, cancellationToken).ConfigureAwait(false);
+                    process.Request.ValidateResult(processed);
+                    var maskLease = await payloads.PublishAsync(RenderRpcSerializer.Serialize(processed), payloadKind, cancellationToken).ConfigureAwait(false);
+                    return Success(new ProjectExternalSourceFrame { Payload = maskLease.Reference });
                 case RenderOperation.ExternalVideoSourceCreate:
                     var create = RenderRpcSerializer.Deserialize<ExternalVideoSourceCreateRequest>(request.Payload);
                     if (video is null || !video.Sources.Any(x => x.SourceId == create.Source.SourceId && x.DecoderName == create.Source.DecoderName))

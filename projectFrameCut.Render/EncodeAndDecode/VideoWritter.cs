@@ -366,14 +366,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
 
 
-            ffmpeg.sws_scale(
-                _sws,
-                _frameSrc->data,
-                _frameSrc->linesize,
-                0,
-                Height,
-                _frameDst->data,
-                _frameDst->linesize);
+            FFmpegHelper.ScaleFrame(_sws, _frameSrc, _frameDst);
 
             _frameDst->pts = _frameIndex++;
 
@@ -475,14 +468,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 }
             }
 
-            ffmpeg.sws_scale(
-            _sws,
-            _frameSrc->data,
-            _frameSrc->linesize,
-            0,
-            Height,
-            _frameDst->data,
-            _frameDst->linesize);
+            FFmpegHelper.ScaleFrame(_sws, _frameSrc, _frameDst);
 
             _frameDst->pts = _frameIndex++;
 

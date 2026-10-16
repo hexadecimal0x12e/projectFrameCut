@@ -403,7 +403,7 @@ public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>,
                 _sws = ffmpeg.sws_getContext(Width, Height, input, Width, Height, _outputFormat, 4, null, null, null);
                 if (_sws == null) throw new InvalidOperationException("Failed to create a multistream conversion context.");
             }
-            FFmpegHelper.Throw(ffmpeg.sws_scale(_sws, _frame->data, _frame->linesize, 0, Height, _output->data, _output->linesize), "convert multistream frame");
+            FFmpegHelper.Throw(FFmpegHelper.ScaleFrame(_sws, _frame, _output), "convert multistream frame");
 
             int channels = _color ? 3 : 1;
             ushort[] result = new ushort[Width * Height * channels];

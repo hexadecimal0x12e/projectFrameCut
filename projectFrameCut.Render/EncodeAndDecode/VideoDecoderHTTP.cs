@@ -320,14 +320,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         found:
             Index++;
-            ffmpeg.sws_scale(
-                                _sws,
-                                _frm->data,
-                                _frm->linesize,
-                                0,
-                                _height,
-                                _rgb->data,
-                                _rgb->linesize);
+            FFmpegHelper.ScaleFrame(_sws, _frm, _rgb);
             if (EnableLock) locker.Exit();
             return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, _url, targetFrame);
         }

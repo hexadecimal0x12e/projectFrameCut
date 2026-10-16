@@ -13,13 +13,14 @@ namespace projectFrameCut.Setting.SettingManager
     public static class SettingsManager
     {
         static string[] protectedSettingsList = ["UserID"];
+        private static ConcurrentDictionary<string, string> settings = null!;
 
         public static ConcurrentDictionary<string, string> Settings
         {
-            get;
+            get => settings;
             set
             {
-                if (field is null) field = value;
+                if (settings is null) settings = value;
                 else if (value is null) value = new();
                 else throw new ArgumentNullException(nameof(Settings), "Settings has been already inited.");
 
@@ -29,7 +30,18 @@ namespace projectFrameCut.Setting.SettingManager
                 }
 
             }
-        } = null!;
+        }
+
+        internal static void InitializeReadOnly(string directory)
+        {
+            if (settings is not null) return;
+            var path = Path.Combine(directory, "settings.json");
+            // Render workers read preferences without starting the GUI's settings saver.
+            settings = File.Exists(path)
+                ? new(JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path)) ?? [])
+                : new();
+            Log($"Loaded {settings.Count} settings for the render runtime from '{path}'.");
+        }
 
         [DebuggerNonUserCode()]
         public static string GetSetting(string key, string defaultValue = "")

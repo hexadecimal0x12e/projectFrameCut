@@ -62,9 +62,7 @@ internal static unsafe class FFmpegFrameCropScaler
             if (scaler == null)
                 throw new InvalidOperationException("FFmpeg failed to create the crop/scale conversion context.");
 
-            int scaledRows = ffmpeg.sws_scale(
-                scaler, cropped->data, cropped->linesize, 0, cropped->height,
-                output->data, output->linesize);
+            int scaledRows = FFmpegHelper.ScaleFrame(scaler, cropped, output);
             if (scaledRows != targetHeight)
                 throw new InvalidDataException($"FFmpeg crop/scale produced {scaledRows}/{targetHeight} rows.");
 

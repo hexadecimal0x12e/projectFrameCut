@@ -20,6 +20,9 @@ public sealed class PreviewAudioSession(IAudioPreviewSinkFactory sinkFactory, IS
     private bool _paused;
     private volatile bool _hasAudio;
 
+    internal bool ProducerCompleted => _producer is { IsCompleted: true };
+    internal long Generation => Interlocked.Read(ref _generation);
+
     public async ValueTask<PreviewAudioState> StartAsync(uint startFrame, int frameRate, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);

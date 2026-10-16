@@ -86,6 +86,8 @@
 		<DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN;DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION;MAUISDK</DefineConstants>
 		<WindowsAppSdkBootstrapInitialize>false</WindowsAppSdkBootstrapInitialize>
 		<WindowsAppSdkDeploymentManagerInitialize>false</WindowsAppSdkDeploymentManagerInitialize>
+		<SandyArchitecture>x64</SandyArchitecture>
+		<SandyArchitecture Condition="'$(RuntimeIdentifier)' == 'win-arm64' or '$(Platform)' == 'ARM64'">arm64</SandyArchitecture>
 		<SelectedPackageManifest>Platforms\Windows\Package.$(PackageFlavor).appxmanifest</SelectedPackageManifest>
 	</PropertyGroup>
 
@@ -165,12 +167,6 @@
 		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.10.0" />
 		<PackageReference Include="OpenAI" Version="2.13.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="$(ExtensionsVersion)" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(ExtensionsConfigurationVersion)" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(ExtensionsVersion)" />
-		<PackageReference Include="Microsoft.Extensions.Diagnostics.Abstractions" Version="$(ExtensionsVersion)" />
-		<PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="$(ExtensionsVersion)" />
-		<PackageReference Include="Microsoft.Extensions.Options" Version="$(ExtensionsVersion)" />
-		<PackageReference Include="Microsoft.Extensions.Primitives" Version="$(ExtensionsConfigurationVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="$(MauiVersion)" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="15.0.1" />
@@ -212,6 +208,9 @@
 		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
 		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<MauiAsset Include="Platforms\Windows\pjfc-cli.exe" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+		<MauiAsset Include="Platforms\Windows\Sandy\win-$(SandyArchitecture)\sandy.exe" LogicalName="sandy.exe" />
+		<MauiAsset Include="Platforms\Windows\Sandy\LICENSE.txt" LogicalName="Sandy-LICENSE.txt" />
+		<MauiAsset Include="Platforms\Windows\Sandy\toml11-LICENSE.txt" LogicalName="toml11-LICENSE.txt" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(BuildingInsideVisualStudio)' != 'true' and '$(TargetFramework)' == 'net11.0-windows10.0.19041.0'">
@@ -235,6 +234,10 @@
 			<AppxManifest Remove="@(AppxManifest)" />
 			<AppxManifest Include="$(SelectedPackageManifest)" />
 		</ItemGroup>
+	</Target>
+
+	<Target Name="ValidateSandyRuntime" BeforeTargets="PrepareForBuild" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows' and '$(DesignTimeBuild)' != 'true'">
+		<Error Condition="!Exists('Platforms\Windows\Sandy\win-$(SandyArchitecture)\sandy.exe')" Text="Missing Sandy $(SandyArchitecture) runtime. Run tools/Prepare-Sandy.ps1 before packaging." />
 	</Target>
 
 

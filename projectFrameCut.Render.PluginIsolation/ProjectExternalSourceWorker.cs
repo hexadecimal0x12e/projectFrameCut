@@ -64,8 +64,9 @@ public static class ProjectExternalSourceWorker
             Environment.CurrentDirectory = options.PluginRoot;
             var type = loadContext.LoadFromAssemblyPath(ProjectExternalSourceDatabase.ResolvePath(options.PluginRoot, validated.Manifest.Assembly)).GetType(validated.Manifest.EntryPoint, true)!;
             if (!type.IsVisible || type.IsAbstract || type.GetConstructor(Type.EmptyTypes) is null
-                || !typeof(IExternalVideoSourceProvider).IsAssignableFrom(type) && !typeof(IExternalAudioSourceProvider).IsAssignableFrom(type))
-                throw new InvalidDataException($"Entry point '{type.FullName}' must publicly implement IExternalVideoSourceProvider or IExternalAudioSourceProvider with a public parameterless constructor.");
+                || !typeof(IExternalVideoSourceProvider).IsAssignableFrom(type) && !typeof(IExternalAudioSourceProvider).IsAssignableFrom(type)
+                    && !typeof(IExternalMaskSourceProvider).IsAssignableFrom(type))
+                throw new InvalidDataException($"Entry point '{type.FullName}' must publicly implement IExternalVideoSourceProvider, IExternalAudioSourceProvider or IExternalMaskSourceProvider with a public parameterless constructor.");
             provider = Activator.CreateInstance(type)!;
             await using var payloads = new SessionPayloadExchange(options.SessionRoot);
             await using var service = new ProjectExternalSourceWorkerService(provider, options.AuthenticationToken, options.ParentProcessId, payloads, lifetime);

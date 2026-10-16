@@ -4,7 +4,7 @@
 		<service android:name="com.hexadecimal0x12e.projectFrameCut.RenderWorkerService" android:exported="false" android:process=":renderworker" android:stopWithTask="false" android:foregroundServiceType="mediaProcessing|mediaPlayback" />
 		<service android:name="com.hexadecimal0x12e.projectFrameCut.RenderRpcService" android:exported="false" android:process=":rpcserver" android:stopWithTask="false" android:foregroundServiceType="mediaProcessing|mediaPlayback" />
 	</application>
-	<uses-sdk android:minSdkVersion="30" android:targetSdkVersion="36" />
+	<uses-sdk android:minSdkVersion="30" android:targetSdkVersion="37" />
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />

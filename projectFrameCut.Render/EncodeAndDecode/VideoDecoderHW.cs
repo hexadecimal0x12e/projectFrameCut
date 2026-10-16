@@ -536,14 +536,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     throw new InvalidOperationException($"Failed to create scale context for '{_path}'.");
             }
 
-            int scaledRows = ffmpeg.sws_scale(
-                _sws,
-                srcFrame->data,
-                srcFrame->linesize,
-                0,
-                _height,
-                _rgb->data,
-                _rgb->linesize);
+            int scaledRows = FFmpegHelper.ScaleFrame(_sws, srcFrame, _rgb);
             if (scaledRows <= 0)
                 throw new InvalidDataException($"Decoder failed to convert frame for '{_path}' (sws_scale returned {scaledRows}).");
             if (scaledRows < _height)

@@ -4,9 +4,9 @@
 
 每次打开编辑或独立导出页面时，Popup 默认不选任何源。选择仅在本次打开期间有效，从编辑进入导出会继承选择。导入的新源立即加载。跳过或加载失败时保留素材、时间线参数和描述快照，显示已有的初始化失败占位画面。
 
-项目设置的“外部源”Tab 管理 Assembly 源和已注册视频或音频源的 RPC 客户端。Assembly 源的加载、卸载会同步本次允许列表与预览后端；卸载保留目录和索引，移除会删除项目副本和索引，时间线引用仍保留。未打开项目的设置页可查看和移除 Assembly 源，加载、卸载需要进入项目。
+项目设置的“外部源”Tab 管理 Assembly 源和已注册视频、音频或蒙版源的 RPC 客户端。Assembly 源的加载、卸载会同步本次允许列表与预览后端；卸载保留目录和索引，移除会删除项目副本和索引，时间线引用仍保留。未打开项目的设置页可查看和移除 Assembly 源，加载、卸载需要进入项目。
 
-RPC 客户端的卸载会释放视频和音频实例并暂时停用源，保留注册目录供重新加载；客户端更新目录不会自动解除卸载状态。移除清除两类源的注册，保留 RPC 连接和授权，客户端可重新注册。RPC 管理操作只接受应用自身的管理连接，外部客户端不能管理其他客户端。
+RPC 客户端的卸载会释放视频和音频实例并暂时停用视频、音频及蒙版源，保留注册目录供重新加载；客户端更新目录不会自动解除卸载状态。移除清除三类源的注册，保留 RPC 连接和授权，客户端可重新注册。RPC 管理操作只接受应用自身的管理连接，外部客户端不能管理其他客户端。
 
 ## 清单版本 1
 
@@ -32,7 +32,7 @@ RPC 客户端的卸载会释放视频和音频实例并暂时停用源，保留�
 
 除 `description` 和 `authorUrl` 外均为必填。`id` 是发布者定义的稳定 ID。路径使用 `/`，相对于源目录，禁止绝对路径、`.`、`..` 和目录链接。`files` 必须覆盖除根部清单自身外的所有文件，包括依赖、原生库、配置、资源和子目录中的文件；文件缺失、多余或哈希不符均拒绝加载。空目录也会复制。修改文件后需要重新生成清单并重新导入。
 
-入口必须公开、非抽象、具有公开无参构造函数，并实现 `projectFrameCut.Render.Contracts.IExternalVideoSourceProvider` 或 `IExternalAudioSourceProvider`，也可以同时实现两者。发布普通 DLL 与依赖即可，不需要项目插件的加密包。Assembly 只会在隔离 Worker 内加载；托管与原生依赖由独立加载上下文解析，契约程序集使用 Worker 的版本。
+入口必须公开、非抽象、具有公开无参构造函数，并实现 `projectFrameCut.Render.Contracts.IExternalVideoSourceProvider`、`IExternalAudioSourceProvider` 或 `IExternalMaskSourceProvider` 中的至少一个接口。发布普通 DLL 与依赖即可，不需要项目插件的加密包。Assembly 只会在隔离 Worker 内加载；托管与原生依赖由独立加载上下文解析，契约程序集使用 Worker 的版本。
 
 ## Provider 契约
 
@@ -58,6 +58,17 @@ RPC 客户端的卸载会释放视频和音频实例并暂时停用源，保留�
 
 跳过或无法初始化的外部音轨保留引用并记录 `ExternalSourceUnavailable`，预览和导出跳过该音轨，其余内容继续处理。重新加载源后刷新项目会重新初始化音轨；读取期间发生的异常仍会上报。
 
+## 蒙版 Provider
+
+`IExternalMaskSourceProvider` 对应 `MaskSource`，可以单独实现，也可以与视频、音频 Provider 组合：
+
+- `MaskSources` 返回 `ExternalMaskSourceDescriptor` 目录，包含稳定的 `SourceId`、显示名称 `Name` 和 `Fields`。
+- `Fields` 使用 `IsolationFieldDescriptor` 描述参数，`FieldType` 对应 `EffectArgumentFieldType` 的数值，保留默认值、范围和预设。参数接入蒙版片段的 `Source.<Id>` 字段，支持现有节点绑定和关键帧。
+- `ProcessMaskAsync` 接收下层合成整帧 `Backdrop`、已经求值的 `Arguments`（`IsolationValue`）和空间缩放比例 `Scale`。返回相同宽高的 `ExternalVideoFrame`，裁剪、定位和旋转由蒙版片段完成。需要保留的 Alpha、HDR Brightness 和 MaximumBrightness 应一并返回。
+- 调用无实例状态，遵守 `CancellationToken`。输入和输出均支持 Inline、SharedMemory、LocalFile 载荷，处理完成后释放。
+
+已加载的源出现在添加素材面板的蒙版列表中。时间线将 `#ProjectExternalMaskSource:<编码引用>` 保存到蒙版片段的 `ExtraData["MaskSourceType"]`；引用内的参数描述可在 Provider 未连接时用于恢复属性界面。索引和 `ProjectExternalSourceStatus.MaskSources` 保存蒙版目录。
+
 ## 隔离与 CLI
 
 GUI 和应用 CLI 在 Windows 使用 AppContainer，其他桌面平台使用进程隔离；StandaloneRender 在所有桌面平台使用进程隔离。Windows 会将源复制到独立运行目录并设置现有 Worker 所需 ACL，沿用包内激活机制。
@@ -71,11 +82,11 @@ GUI 和应用 CLI 在 Windows 使用 AppContainer，其他桌面平台使用进�
 
 默认不加载。允许列表在运行时绑定 ImportId 与当前索引清单哈希。GUI 给自身渲染子进程传递确认时的 ID 和哈希，刷新预览不重复询问，也不会自动允许清单变更。RPC 新增 `ListProjectExternalSources` 和 `SetProjectExternalSources`，请求使用 ProjectRoot，设置请求包含 AllowedSources（ImportId、ManifestSha256）；OpenProject 和 OpenHeadlessProject 也接受 AllowedExternalSources。
 
-管理连接还提供 `ListExternalVideoSourceClients` 和 `ManageExternalVideoSourceClient`；列表的 AudioSources 包含音频目录，后者包含 ClientId 和 Action（Load、Unload、Remove），同时管理该客户端的视频和音频源。
+管理连接还提供 `ListExternalVideoSourceClients` 和 `ManageExternalVideoSourceClient`；列表的 AudioSources、MaskSources 分别包含音频和蒙版目录，后者包含 ClientId 和 Action（Load、Unload、Remove），同时管理该客户端的三类源。
 
 ## 示例及验收
 
-`tools/projectFrameCut.ExternalSourceExample` 提供四个视频源（8 位、16 位、Alpha 和 HDR）及一个 48 kHz 双声道音频源。发布后运行 `Create-Manifest.ps1 -Directory <发布目录>`，将目录导入项目。示例帧随帧号变化，并支持区域读取；音频左右声道分别生成 440 Hz 和 660 Hz 正弦波。
+`tools/projectFrameCut.ExternalSourceExample` 提供四个视频源（8 位、16 位、Alpha 和 HDR）、一个 48 kHz 双声道音频源及一个反色蒙版源。发布后运行 `Create-Manifest.ps1 -Directory <发布目录>`，将目录导入项目。示例帧随帧号变化，并支持区域读取；音频左右声道分别生成 440 Hz 和 660 Hz 正弦波；蒙版通过 `Enabled` 布尔参数控制反色，并保留 Alpha/HDR 数据。
 
 ```powershell
 dotnet publish tools/projectFrameCut.ExternalSourceExample -o artifacts/external-source-example

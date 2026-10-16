@@ -49,10 +49,8 @@ namespace projectFrameCut.Render.Rendering
         {
             IEnumerable<OneFrame> Read() => ReadFramesInOneFrame(video, targetFrame, targetWidth, targetHeight,
                 targetPPB, projectRelativeWidth, projectRelativeHeight, applyTransforms, initializeClips, argumentFrames);
-            return ClipValuePassThrough.HasInputs(video)
-                ? new FrameSequence(video, Read, () => ClipValuePassThrough.Open(video, targetFrame, targetWidth,
-                    targetHeight, projectRelativeWidth, projectRelativeHeight, targetPPB ?? 8, CancellationToken.None))
-                : Read();
+            return new FrameSequence(video, Read, () => ClipValuePassThrough.Open(video, targetFrame, targetWidth,
+                targetHeight, projectRelativeWidth, projectRelativeHeight, targetPPB ?? 8, CancellationToken.None));
         }
 
         private sealed class FrameSequence(IClip[] clips, Func<IEnumerable<OneFrame>> read, Func<IDisposable?> open) : IEnumerable<OneFrame>
@@ -108,19 +106,15 @@ namespace projectFrameCut.Render.Rendering
                         {
                             frame = ClipInitializationFailure.CreateFallbackFrame(clipTargetWidth, clipTargetHeight, ppb, clip.ExtraData);
                         }
-                        else if (applyTransforms && TransformProcessing.TryRender(clip, video, targetFrame, targetWidth, targetHeight,
-                            projectRelativeWidth, projectRelativeHeight, ppb, out var transitionFrame, initializeClips: initializeClips, argumentFrames: argumentFrames))
+                        else if (clip is not MaskClip)
                         {
-                            frame = transitionFrame!;
-                        }
-                        else
-                        {
-                            frame = VideoClipRotation.ReadFrame(clip, actualFrame, clipTargetWidth, clipTargetHeight, ppb);
+                            frame = MaskFrameContext.Current?.ReadSource(clip, targetFrame)
+                                ?? VideoClipRotation.ReadFrame(clip, actualFrame, clipTargetWidth, clipTargetHeight, ppb);
                         }
                     }
                     catch (Exception ex) when (ex is ClipValueBindingException or OperationCanceledException)
                     {
-                        foreach (var item in result) item.Clip.Dispose(true);
+                        foreach (var item in result) item.Clip?.Dispose(true);
                         throw;
                     }
                     catch (Exception ex)
@@ -137,12 +131,12 @@ namespace projectFrameCut.Render.Rendering
                         else if (aiMark is JsonElement je && je.ValueKind == JsonValueKind.True) isAI = true;
                     }
 
-                    if (frame is not null)
+                    if (frame is not null || clip is MaskClip)
                     {
-                        if (isAI && !TransformProcessing.IsCanvasFrame(frame)) frame = EffectProcessing.ProcessAIWatermark(frame, null);
+                        if (frame is not null && isAI && !TransformProcessing.IsCanvasFrame(frame)) frame = EffectProcessing.ProcessAIWatermark(frame, null);
                         try
                         {
-                            result.Add(new OneFrame(targetFrame, clip, frame, resolveEffects: false));
+                            result.Add(new OneFrame(targetFrame, clip, frame, resolveEffects: false) { ApplyTransforms = applyTransforms });
                         }
                         catch (Exception ex)
                         {
@@ -200,11 +194,11 @@ namespace projectFrameCut.Render.Rendering
 
         public static bool CanCacheClipSource(IClip clip)
         {
+            if (ClipInitializationFailure.IsMarked(clip)) return false;
             if (clip is not VideoClip videoClip) return true;
             try
             {
-                if (!videoClip.HasCurrentDecoder || videoClip.Decoder is not { Disposed: false } decoder
-                    || ClipInitializationFailure.IsMarked(clip)) return false;
+                if (!videoClip.HasCurrentDecoder || videoClip.Decoder is not { Disposed: false } decoder) return false;
                 // External providers may refine their catalog descriptor during initialization.
                 if (decoder is EncodeAndDecode.RemoteRpcVideoSource) decoder.Initialize();
                 return decoder.AllowCachingResult;
@@ -244,7 +238,7 @@ namespace projectFrameCut.Render.Rendering
             }
         }
 
-        private static IReadOnlyList<IClip> CollectHashDependencies(IClip[] video, IClip clip, HashSet<Guid> visited)
+        internal static IReadOnlyList<IClip> CollectHashDependencies(IClip[] video, IClip clip, HashSet<Guid> visited)
         {
             var result = new List<IClip>();
             var infos = video.Select(TransformClipInfo.FromClip).ToArray();
@@ -253,6 +247,7 @@ namespace projectFrameCut.Render.Rendering
                 .Where(found => found is not null)
                 .SelectMany(found => new[] { found!.Value.Owner.Id, TransformProcessing.ReadNextClip(found.Value.Provider.MetaData) })
                 .Concat(ClipValuePassThrough.GetSourceClipIds(clip))
+                .Concat(clip is MaskClip ? video.Where(c => ClipLayerOrder.BottomToTop.Compare(c, clip) < 0).Select(c => c.Id) : [])
                 .Where(id => id != Guid.Empty && id != clip.Id).Distinct().ToArray();
 
             if (dependencyIds.Length == 0)
@@ -322,6 +317,8 @@ namespace projectFrameCut.Render.Rendering
                 frames = materialized;
                 allClips = materialized.Select(f => f.ParentClip).DistinctBy(c => c.Id).ToArray();
             }
+            using var maskScope = MaskFrameContext.Open(allClips, frameIndex, targetWidth, targetHeight,
+                projectRelativeWidth, projectRelativeHeight, targetPPB, cancellationToken);
             using var endpoints = ClipValuePassThrough.Open(allClips, frameIndex, targetWidth, targetHeight,
                 projectRelativeWidth, projectRelativeHeight, targetPPB, cancellationToken);
             var temporaryFrames = new HashSet<IPicture>(ReferenceEqualityComparer.Instance);
@@ -349,11 +346,27 @@ namespace projectFrameCut.Render.Rendering
                     var clip = ClipArgumentBinding.InitializeFrame(original.ParentClip, frameIndex);
                     if (!ClipArgumentBinding.ShouldRender(clip))
                     {
-                        Track(original.Clip);
+                        if (original.Clip is not null) Track(original.Clip);
                         continue;
                     }
-                    var srcFrame = ReferenceEquals(clip, original.ParentClip) ? original
-                        : new OneFrame(frameIndex, clip, original.Clip, resolveEffects: false);
+                    if (clip is MaskClip) MaskFrameContext.Current?.Publish(clip, result);
+                    var source = original.Clip;
+                    if (source is null)
+                    {
+                        source = VideoClipRotation.ReadFrame(clip, clip.GetRelativeFrameIndex(frameIndex) ?? 0,
+                            ResolveClipOutputWidth(clip, targetWidth, projectRelativeWidth),
+                            ResolveClipOutputHeight(clip, targetHeight, projectRelativeHeight), targetPPB);
+                        Track(source);
+                    }
+                    if (original.ApplyTransforms && TransformProcessing.TryRender(clip,
+                        allClips, frameIndex, targetWidth, targetHeight,
+                        projectRelativeWidth, projectRelativeHeight, targetPPB, out var transformed,
+                        initializeClips: false, preparedSource: source))
+                    {
+                        Track(source);
+                        source = Track(transformed!);
+                    }
+                    var srcFrame = new OneFrame(frameIndex, clip, source, resolveEffects: false) { Effects = original.Effects };
                     using var endpointClip = ClipValueFrameContext.Current?.EnterClip(srcFrame.ParentClip.Id);
                     if (TransformProcessing.IsCanvasFrame(srcFrame.Clip))
                     {
@@ -363,7 +376,7 @@ namespace projectFrameCut.Render.Rendering
                         Track(result);
                         continue;
                     }
-                    IPicture effected = srcFrame.Clip;
+                    IPicture effected = source;
                     var effectsList = srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
                     // TargetX/Y live in project-relative space. Width/height, however, must already
                     // be converted to the current output space before effects can adjust the rect.
@@ -525,7 +538,6 @@ namespace projectFrameCut.Render.Rendering
                     clipX += (int)Math.Round((clipPos.TargetWidth - effected.Width) / 2d);
                     clipY += (int)Math.Round((clipPos.TargetHeight - effected.Height) / 2d);
                     bool needsPlacement = clipX != 0 || clipY != 0 || effected.Width != targetWidth || effected.Height != targetHeight;
-                    LogDiagnostic($"Clip {srcFrame.ParentClip.Name}: {clipX},{clipY} in ({targetWidth}*{targetHeight}), rotation {clipPos.Rotation} degrees.");
 
                     var mixer = srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default;
                     if (result is null)
@@ -848,16 +860,19 @@ namespace projectFrameCut.Render.Rendering
     public class OneFrame
     {
         public uint FrameNumber { get; init; }
-        public IPicture Clip { get; init; }
+        public IPicture? Clip { get; init; }
+        public bool ApplyTransforms { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
         public IClip ParentClip { get; init; }
-        public OneFrame(uint frameNumber, IClip parent, IPicture pic) : this(frameNumber, parent, pic, true)
+        public OneFrame(uint frameNumber, IClip parent, IPicture? pic) : this(frameNumber, parent, pic, true)
         {
         }
 
-        public OneFrame(uint frameNumber, IClip parent, IPicture pic, bool resolveEffects)
+        public OneFrame(uint frameNumber, IClip parent, IPicture? pic, bool resolveEffects)
         {
+            if (pic is null && parent is not MaskClip)
+                throw new ArgumentNullException(nameof(pic));
             if (ClipArgumentBinding.IsFrameCopy(parent)) resolveEffects = false;
             FrameNumber = frameNumber;
             ParentClip = parent;

@@ -260,7 +260,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private static PropertyPanelItemLabel Label(string provider, IEffectArgumentField field)
         {
-            return PluginManager.GetLocalizationItem($"Effect_{provider}_{field.Id}", field.Id);
+            return PluginManager.GetLocalizationItem($"Effect_{provider}_{field.Id.Replace('.', '_')}", field.Id);
         }
 
         private static string ComponentId(IEffectProvider provider, string fieldId)

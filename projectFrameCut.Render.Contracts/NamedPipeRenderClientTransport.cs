@@ -1,10 +1,11 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO.Pipes;
 using projectFrameCut.Render.Contracts;
 
 namespace projectFrameCut.Render.RPCProtocol;
 
-public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
+public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport, IRenderNotificationTransport
 {
     private readonly string _pipeName;
     private readonly string _token;
@@ -24,6 +25,7 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
     private readonly ConcurrentDictionary<Guid, Task> _callbacks = new();
 
     public IRenderService? CallbackService { get; set; }
+    public event Action<DynamicPreviewClock>? DynamicPreviewClockReceived;
 
     public NamedPipeRenderClientTransport(string pipeName, string token, string clientId, IReadOnlyList<ExternalRpcClientAuthorization>? persistentAuthorizations = null)
     {
@@ -53,6 +55,8 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
     public async ValueTask<RenderResponseEnvelope> SendAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(!TryBeginOperation(), this);
+        var startedAt = Stopwatch.GetTimestamp();
+        var stage = "connect";
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token);
@@ -65,6 +69,7 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
 
             try
             {
+                stage = "write";
                 var payload = RenderRpcSerializer.Serialize(request);
                 await _writeGate.WaitAsync(cts.Token).ConfigureAwait(false);
                 try
@@ -79,7 +84,11 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
                     _writeGate.Release();
                 }
 
-                using var cancelRegistration = cancellationToken.Register(() => { _ = SendCancellationAsync(request.RequestId); });
+                stage = "response";
+                using var cancelRegistration = cancellationToken.Register(() =>
+                {
+                    if (!completion.Task.IsCompleted) _ = SendCancellationAsync(request.RequestId);
+                });
                 return await completion.Task.WaitAsync(cts.Token).ConfigureAwait(false);
             }
             finally
@@ -87,9 +96,18 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
                 _pending.TryRemove(request.RequestId, out _);
             }
         }
-        catch (Exception) when (Volatile.Read(ref _disposed) != 0)
+        catch (OperationCanceledException ex)
         {
-            throw new OperationCanceledException("Render transport is closing.", _lifetime.Token);
+            ex.Data["RenderOperation"] = request.Operation;
+            ex.Data["RenderRequestId"] = request.RequestId;
+            ex.Data["RenderRequestStage"] = stage;
+            ex.Data["RenderElapsedMilliseconds"] = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
+            ex.Data["RenderCancellationSource"] = cancellationToken.IsCancellationRequested ? "caller" : "transport";
+            throw;
+        }
+        catch (Exception ex) when (Volatile.Read(ref _disposed) != 0)
+        {
+            throw new OperationCanceledException("Render transport is closing.", ex, _lifetime.Token);
         }
         finally
         {
@@ -180,6 +198,11 @@ public sealed class NamedPipeRenderClientTransport : IRenderDuplexTransport
                 var bytes = await RenderPipeFrame.ReadAsync(pipe, CancellationToken.None).ConfigureAwait(false);
                 if (bytes is null) break;
                 var response = RenderRpcSerializer.Deserialize<RenderResponseEnvelope>(bytes);
+                if (response.DynamicPreviewClock is { } clock)
+                {
+                    DynamicPreviewClockReceived?.Invoke(clock);
+                    continue;
+                }
                 if (response.CallbackRequest is not null)
                 {
                     var request = response.CallbackRequest;

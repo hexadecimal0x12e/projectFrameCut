@@ -208,14 +208,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                             FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(encFrame), "av_frame_make_writable(encFrame)");
 
-                            ffmpeg.sws_scale(
-                                sws,
-                                decFrame->data,
-                                decFrame->linesize,
-                                0,
-                                decCtx->height,
-                                encFrame->data,
-                                encFrame->linesize);
+                            FFmpegHelper.ScaleFrame(sws, decFrame, encFrame);
 
                             long srcPts = decFrame->best_effort_timestamp;
                             if (srcPts == ffmpeg.AV_NOPTS_VALUE)
@@ -278,14 +271,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     FFmpegHelper.Throw(recv, "avcodec_receive_frame(decoder_flush)");
 
                     FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(encFrame), "av_frame_make_writable(encFrame)");
-                    ffmpeg.sws_scale(
-                        sws,
-                        decFrame->data,
-                        decFrame->linesize,
-                        0,
-                        decCtx->height,
-                        encFrame->data,
-                        encFrame->linesize);
+                    FFmpegHelper.ScaleFrame(sws, decFrame, encFrame);
 
                     long srcPts = decFrame->best_effort_timestamp;
                     if (srcPts == ffmpeg.AV_NOPTS_VALUE)

@@ -358,14 +358,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private IPicture<byte> ConvertCurrentFrame(uint targetFrame)
         {
-            int scaledRows = ffmpeg.sws_scale(
-                _sws,
-                _frm->data,
-                _frm->linesize,
-                0,
-                _height,
-                _rgb->data,
-                _rgb->linesize);
+            int scaledRows = FFmpegHelper.ScaleFrame(_sws, _frm, _rgb);
             if (scaledRows <= 0)
             {
                 throw new InvalidDataException($"Failed to convert frame for '{_sourceSpec}' (sws_scale returned {scaledRows}).");

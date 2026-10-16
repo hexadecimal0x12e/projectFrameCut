@@ -115,7 +115,6 @@ namespace projectFrameCut.Render.Rendering
         /// of this value. E.g. with MaxPendingFrames=120 and Threshold=0.7, disk routing
         /// triggers when ~84 frames are buffered.
         /// When 0 (default), falls back to <see cref="Duration"/> as the comparison base.
-        /// Typically set to the same value as the Renderer's <c>MaxPendingWriteFrames</c>.
         /// </summary>
         public int DiskCacheMaxPendingFrames { get; set; }
         /// <summary>
@@ -155,6 +154,7 @@ namespace projectFrameCut.Render.Rendering
         public int minFrameCountToGeneratePreview { get; set; } = 10;
         private int _framesSinceLastPreview;
         private uint _lastPreviewFrame;
+        private int _hasPreviewFrame;
         private int _previewGenerationInProgress;
         private long _previewGeneration;
         private readonly object _previewFileGate = new();
@@ -492,7 +492,7 @@ namespace projectFrameCut.Render.Rendering
         private bool ShouldRouteToDisk()
         {
             if (!_enableDiskCacheRouting) return false;
-            if (DiskCacheFull) return false; // disk limit reached -> fall back to memory (fills -> Renderer pauses via MaxPendingWriteFrames)
+            if (DiskCacheFull) return false;
             if (DiskCacheMaxPendingFrames > 0)
                 return Cache.Count >= (int)(DiskCacheMaxPendingFrames * _diskCacheThreshold);
             if (Duration > 0)
@@ -660,6 +660,21 @@ namespace projectFrameCut.Render.Rendering
             if (!string.IsNullOrEmpty(logMessage)) Log(logMessage);
         }
 
+        internal void NotifyFrameWritten(uint frameIndex, IPicture frame)
+        {
+            FramePendedToWrite[frameIndex] = true;
+            Interlocked.Increment(ref _totalFramesCount);
+            Interlocked.Increment(ref _writtenFramesCount);
+            index = frameIndex + 1;
+            TryGeneratePreview(frame, frameIndex, requireIncreasingFrame: true);
+            if (DoGCAfterEachWrite) GC.Collect();
+            if (LogStat) Log($"[VideoBuilder] Frame #{frameIndex} wrote.");
+        }
+
+        internal IPicture? CapturePreviewFrame(IPicture frame)
+            => EnablePreview && Volatile.Read(ref _framesSinceLastPreview) + 1 >= Math.Max(1, minFrameCountToGeneratePreview)
+                ? Effect.DynamicEffectGraph.CopyPicture(frame) : null;
+
         private static string FormatFrameRanges(uint[] frameIndexes)
         {
             if (frameIndexes.Length == 0)
@@ -747,14 +762,26 @@ namespace projectFrameCut.Render.Rendering
             try
             {
                 Interlocked.Exchange(ref _framesSinceLastPreview, 0);
-                if (requireIncreasingFrame && frameIndex <= Volatile.Read(ref _lastPreviewFrame)) return;
+                if (requireIncreasingFrame && Volatile.Read(ref _hasPreviewFrame) != 0 && frameIndex <= Volatile.Read(ref _lastPreviewFrame)) return;
 
                 SavePreview(frame);
-                if (requireIncreasingFrame) Volatile.Write(ref _lastPreviewFrame, frameIndex);
+                if (requireIncreasingFrame)
+                {
+                    Volatile.Write(ref _lastPreviewFrame, frameIndex);
+                    Volatile.Write(ref _hasPreviewFrame, 1);
+                }
 
-                var previewGenerated = OnPreviewGenerated;
-                if (previewGenerated is not null)
-                    previewGenerated(this, frame.Clone());
+                if (OnPreviewGenerated is { } previewGenerated)
+                    foreach (EventHandler<IPicture> handler in previewGenerated.GetInvocationList())
+                    {
+                        var picture = Effect.DynamicEffectGraph.CopyPicture(frame);
+                        try { handler(this, picture); }
+                        catch { picture.Dispose(); throw; }
+                    }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Generate render preview");
             }
             finally
             {

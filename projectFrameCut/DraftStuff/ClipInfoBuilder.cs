@@ -73,9 +73,6 @@ namespace projectFrameCut.DraftStuff
         private const string InternalCropID = "__Internal_Crop__";
         private static readonly Guid InternalCropProviderGuid = new("a3a744cc-53b7-4d5e-8dd5-4c66077d9401");
         private static readonly Guid InternalColorAdjustmentProviderGuid = new("dc3cfef8-1782-4428-8862-f9a0995c02d9");
-        private const string SolidColorOutputWidthKey = "SolidColorOutputWidth";
-        private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
-        private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
         private const string AllowFreeScaleResizeKey = "AllowFreeScaleResize";
         private const string DirectCropEnabledKey = "__Internal_DirectCropEnabled__";
         private const string DirectCropWidthKey = "__Internal_DirectCropWidth__";
@@ -128,7 +125,7 @@ namespace projectFrameCut.DraftStuff
             return
             [
                 ("general", Localized.MainSettingsPage_Tab_General),
-                ("vector", Localized.VectorContentEditorView_Properties),
+                ("sourceProperties", r.Tabs_SourceProperties),
                 ("audio", r.General_Audio),
                 ("text", r.TextOption_TabTitle),
                 ("timing", r.Tabs_Timing),
@@ -149,6 +146,7 @@ namespace projectFrameCut.DraftStuff
             var defaults = GetTabOrderOptions().Select(t => t.Tag).ToArray();
             return SettingsManager.GetSetting(TabOrderSettingKey)
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(t => t is "vector" or "mask" ? "sourceProperties" : t)
                 .Where(t => defaults.Contains(t))
                 .Concat(defaults)
                 .Distinct(StringComparer.Ordinal)
@@ -171,15 +169,22 @@ namespace projectFrameCut.DraftStuff
                 Content = BuildGeneralTab(clip, handler),
                 Tag = "general"
             });
-            if (clip.ClipType is ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip)
+            Func<View>? buildSourceProperties = clip.ClipType switch
             {
+                ClipMode.VideoClip => () => BuildVideoSourcePropertiesTab(clip, handler),
+                ClipMode.SolidColorClip => () => BuildSolidColorSourcePropertiesTab(clip, handler),
+                ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => () => BuildVectorSourcePropertiesTab(clip, handler),
+                ClipMode.MaskClip => () => BuildMaskSourcePropertiesTab(clip, handler),
+                ClipMode.TextClip or ClipMode.SubtitleClip => () => BuildVectorAntiAliasProperties(clip, handler, false).BuildWithScrollView(),
+                _ => null
+            };
+            if (buildSourceProperties is not null)
                 tabs.Add(new TabbedViewItem
                 {
-                    Header = Localized.VectorContentEditorView_Properties,
-                    LazyContentFactory = () => BuildVectorComponentTab(clip, handler),
-                    Tag = "vector"
+                    Header = PPLocalizedResources.Tabs_SourceProperties,
+                    LazyContentFactory = buildSourceProperties,
+                    Tag = "sourceProperties"
                 });
-            }
             if (clip.ClipType == ClipMode.AudioClip || (clip.ClipType == ClipMode.VideoClip && page.GetBoundSoundTrack(clip) is not null))
             {
                 tabs.Add(new TabbedViewItem
@@ -208,7 +213,7 @@ namespace projectFrameCut.DraftStuff
                     Tag = "timing"
                 });
             }
-            if (clip.ClipType is ClipMode.VideoClip or ClipMode.PhotoClip or ClipMode.VectorComponentClip or ClipMode.SubtitleClip)
+            if (clip.ClipType is ClipMode.VideoClip or ClipMode.PhotoClip or ClipMode.VectorComponentClip or ClipMode.SubtitleClip or ClipMode.MaskClip)
             {
                 tabs.Add(new TabbedViewItem
                 {
@@ -333,227 +338,102 @@ namespace projectFrameCut.DraftStuff
 
         #region general
 
+        private static string ToArgbHex(Color color)
+        {
+            var a = (int)Math.Round(color.Alpha * 255);
+            var r = (int)Math.Round(color.Red * 255);
+            var g = (int)Math.Round(color.Green * 255);
+            var b = (int)Math.Round(color.Blue * 255);
+            return $"#{a:X2}{r:X2}{g:X2}{b:X2}";
+        }
+
+        private static Color ParseArgbOrFallback(string? value, Color fallback)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return Color.FromArgb(value);
+            }
+            catch
+            {
+                return fallback;
+            }
+        }
+
+        private View BuildColorPropertyView(string value, Color fallback, Action<object> changed, Func<string>? reset = null)
+        {
+            var preview = new BoxView
+            {
+                WidthRequest = 30,
+                HeightRequest = 30,
+                CornerRadius = 5,
+                Color = ParseArgbOrFallback(value, fallback),
+                VerticalOptions = LayoutOptions.Center
+            };
+            var label = new Label { Text = value, WidthRequest = 108, VerticalOptions = LayoutOptions.Center };
+            bool opening = false;
+            var tap = new TapGestureRecognizer();
+            tap.Tapped += async (_, _) =>
+            {
+                if (opening) return;
+                opening = true;
+                try
+                {
+                    var picker = new ColorPicker { SelectedColor = preview.Color };
+                    picker.SelectedColorChanged += (_, color) =>
+                    {
+                        preview.Color = color;
+                        var hex = ToArgbHex(color);
+                        label.Text = hex;
+                        changed(hex);
+                    };
+                    await page.ShowAPopup(new ScrollView
+                    {
+                        Content = new VerticalStackLayout
+                        {
+                            Spacing = 10,
+                            Padding = new Thickness(10, 0),
+                            Children =
+                            {
+                                new Button { Text = Localized._Hide, Command = new Command(async () => await page.HidePopup(true)) },
+                                picker
+                            }
+                        }
+                    }, mode: "dialog");
+                }
+                catch (Exception ex) { Log(ex, "Open clip color picker", this); }
+                finally { opening = false; }
+            };
+            preview.GestureRecognizers.Add(tap);
+            var layout = new HorizontalStackLayout { Spacing = 8, Children = { preview, label } };
+            if (reset is not null)
+            {
+                var button = new Button
+                {
+                    Text = "\ue5d5",
+                    FontFamily = "Icons",
+                    WidthRequest = 40,
+                    HeightRequest = 35,
+                    Padding = 0,
+                    VerticalOptions = LayoutOptions.Center
+                };
+                button.Clicked += (_, _) =>
+                {
+                    label.Text = reset();
+                    preview.Color = ParseArgbOrFallback(label.Text, fallback);
+                };
+                layout.Children.Add(button);
+            }
+            return layout;
+        }
+
         public View BuildGeneralTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             string currentColorHex = clip.ClipColor ?? GetDefaultColorHex(clip.ClipType);
-            var targetVideoClip = page.GetLoadedClipInstance(clip.Id) as VideoClip;
-            ExternalVideoSourceDescriptor? externalSource = null;
-            if (RemoteRpcVideoSource.IsExternalPath(clip.SourcePath)
-                && (ProjectExternalVideoSource.TryGetDescriptor(clip.SourcePath!, out var source)
-                    || RemoteRpcVideoSource.TryGetDescriptor(clip.SourcePath!, out source)))
-                externalSource = source;
-            var mediaResources = PPLocalizedResources.General_VideoCodec_SourceInfo.StartsWith("Unset localization item:", StringComparison.Ordinal)
-                ? ISimpleLocalizerBase_PropertyPanel.GetMapping()["zh-CN"] : PPLocalizedResources;
-            string ToArgbHex(Color color)
-            {
-                var a = (int)Math.Round(color.Alpha * 255);
-                var r = (int)Math.Round(color.Red * 255);
-                var g = (int)Math.Round(color.Green * 255);
-                var b = (int)Math.Round(color.Blue * 255);
-                return $"#{a:X2}{r:X2}{g:X2}{b:X2}";
-            }
-
-            Color ParseArgbOrFallback(string? value, Color fallback)
-            {
-                if (string.IsNullOrWhiteSpace(value))
-                {
-                    return fallback;
-                }
-
-                try
-                {
-                    return Color.FromArgb(value);
-                }
-                catch
-                {
-                    return fallback;
-                }
-            }
-
-            object? GetSolidColorRawValue(string key)
-            {
-                if (clip.ExtraData == null)
-                {
-                    return null;
-                }
-
-                if (clip.ExtraData.TryGetValue(key, out var value))
-                {
-                    return value;
-                }
-
-                return clip.ExtraData.TryGetValue(key.ToLowerInvariant(), out var lowerValue)
-                    ? lowerValue
-                    : null;
-            }
-
-            Color ResolveSolidColorFromExtraData()
-            {
-                int r16 = Math.Clamp(ReadIntValue(GetSolidColorRawValue("R"), ushort.MaxValue), ushort.MinValue, ushort.MaxValue);
-                int g16 = Math.Clamp(ReadIntValue(GetSolidColorRawValue("G"), ushort.MaxValue), ushort.MinValue, ushort.MaxValue);
-                int b16 = Math.Clamp(ReadIntValue(GetSolidColorRawValue("B"), ushort.MaxValue), ushort.MinValue, ushort.MaxValue);
-                float a = Math.Clamp(ReadFloatValue(GetSolidColorRawValue("A"), 1f), 0f, 1f);
-
-                return Color.FromRgba(r16 / 65535.0, g16 / 65535.0, b16 / 65535.0, a);
-            }
-
-            void SaveSolidColorToExtraData(Color color)
-            {
-                clip.ExtraData ??= new Dictionary<string, object>();
-                clip.ExtraData["R"] = (ushort)Math.Clamp((int)Math.Round(color.Red * ushort.MaxValue), ushort.MinValue, ushort.MaxValue);
-                clip.ExtraData["G"] = (ushort)Math.Clamp((int)Math.Round(color.Green * ushort.MaxValue), ushort.MinValue, ushort.MaxValue);
-                clip.ExtraData["B"] = (ushort)Math.Clamp((int)Math.Round(color.Blue * ushort.MaxValue), ushort.MinValue, ushort.MaxValue);
-                clip.ExtraData["A"] = (float)Math.Clamp(color.Alpha, 0f, 1f);
-            }
-
-            object? GetVideoDecoderRawValue()
-            {
-                if (clip.ExtraData == null)
-                {
-                    return null;
-                }
-
-                if (clip.ExtraData.TryGetValue("TargetDecoder", out var value))
-                {
-                    return value;
-                }
-
-                return clip.ExtraData.TryGetValue("targetdecoder", out var lowerValue)
-                    ? lowerValue
-                    : null;
-            }
-
-            string ReadVideoDecoderId()
-            {
-                var raw = GetVideoDecoderRawValue();
-                if (raw is JsonElement je)
-                {
-                    if (je.ValueKind == JsonValueKind.String)
-                    {
-                        return je.GetString() ?? "auto";
-                    }
-
-                    return je.ToString();
-                }
-
-                return raw?.ToString() ?? "auto";
-            }
-
-            string GetVideoSourceText()
-            {
-                if (string.IsNullOrWhiteSpace(clip.SourcePath)) return Localized._Unknown;
-                if (externalSource is { } descriptor)
-                {
-                    var name = string.IsNullOrWhiteSpace(descriptor.Name) ? descriptor.SourceId : descriptor.Name;
-                    if (!string.IsNullOrWhiteSpace(descriptor.ClientName) && descriptor.ClientName != name)
-                        name += $"\n{descriptor.ClientName}";
-                    var info = new List<string>();
-                    if (descriptor.Width > 0 && descriptor.Height > 0) info.Add($"{descriptor.Width}\u00D7{descriptor.Height}");
-                    if (double.IsFinite(descriptor.Fps) && descriptor.Fps > 0) info.Add($"{descriptor.Fps:0.###} fps");
-                    if (descriptor.TotalFrames >= 0) info.Add(mediaResources.General_VideoCodec_FrameCount(descriptor.TotalFrames));
-                    return info.Count == 0 ? name : $"{name}\n{string.Join(" \u00B7 ", info)}";
-                }
-
-                if (clip.SourcePath.StartsWith("$"))
-                {
-                    return AssetDatabase.Assets.TryGetValue(clip.SourcePath.Substring(1), out var asset)
-                        ? $"{Localized.DraftPage_CenterMenuBar_Asset}: {asset.Name}({asset.Path})"
-                        : $"Unknown asset: {clip.SourcePath.Substring(1)}";
-                }
-
-                return System.IO.Path.GetFullPath(clip.SourcePath);
-            }
-
-            string currentSolidColorHex = clip.ClipType == ClipMode.SolidColorClip
-                ? ToArgbHex(ResolveSolidColorFromExtraData())
-                : "#FFFFFFFF";
-
-            int valX = 0, valY = 0;
-            int valW = page.ProjectInfo.RelativeWidth;
-            int valH = page.ProjectInfo.RelativeHeight;
-            valX = clip.TargetX;
-            valY = clip.TargetY;
-            if (clip.TargetWidth > 0) valW = clip.TargetWidth;
-            if (clip.TargetHeight > 0) valH = clip.TargetHeight;
-
-            if (clip.ClipType == ClipMode.SolidColorClip)
-            {
-                if (clip.TargetWidth > 0)
-                {
-                    valW = clip.TargetWidth;
-                }
-                else
-                {
-                    valW = ReadIntExtraData(clip.ExtraData, SolidColorOutputWidthKey, valW);
-                }
-
-                if (clip.TargetHeight > 0)
-                {
-                    valH = clip.TargetHeight;
-                }
-                else
-                {
-                    valH = ReadIntExtraData(clip.ExtraData, SolidColorOutputHeightKey, valH);
-                }
-            }
-
-            string currentVideoDecoderId = ReadVideoDecoderId();
-            if (string.IsNullOrWhiteSpace(currentVideoDecoderId))
-            {
-                currentVideoDecoderId = "auto";
-            }
-
-            var videoDecoderOptionLabelToId = new Dictionary<string, string>
-            {
-                [PPLocalizedResources.General_VideoCodec_TargetMode_Auto] = "auto",
-                [PPLocalizedResources.General_VideoCodec_TargetMode_8bpp] = "DecoderContext8Bit",
-                [PPLocalizedResources.General_VideoCodec_TargetMode_8bppHWaccel] = "DecoderContextHW",
-                [PPLocalizedResources.General_VideoCodec_TargetMode_16bpp] = "DecoderContext16Bit",
-                [PPLocalizedResources.General_VideoCodec_TargetMode_hdr] = "HDRDecoderContext",
-            };
-            var allVideoDecoderOptionLabelToId = new Dictionary<string, string>
-            {
-                [PPLocalizedResources.General_VideoCodec_TargetMode_Auto] = "auto",
-                [PPLocalizedResources.General_VideoCodec_TargetMode_8bpp] = "DecoderContext8Bit",
-                [PPLocalizedResources.General_VideoCodec_TargetMode_8bppHWaccel] = "DecoderContextHW",
-                [PPLocalizedResources.General_VideoCodec_TargetMode_16bpp] = "DecoderContext16Bit",
-                [PPLocalizedResources.General_VideoCodec_TargetMode_hdr] = "HDRDecoderContext",
-                [PPLocalizedResources.General_VideoCodec_TargetMode_http] = "HttpDecoderContext",
-                [PPLocalizedResources.General_VideoCodec_TargetMode_rpsv] = "RawPictureSequenceStreamVideoDecoderContext",
-                [PPLocalizedResources.General_VideoCodec_TargetMode_ffmpegDevices] = "FFmpegDeviceDecoderContext",
-            };
-
-            string GetVideoTargetFormatText()
-            {
-                if (externalSource is null)
-                {
-                    var id = targetVideoClip?.DecoderName ?? (currentVideoDecoderId == "auto" ? null : currentVideoDecoderId);
-                    return id is null ? Localized._Unknown : allVideoDecoderOptionLabelToId.ReverseLookup(id, PPLocalizedResources.General_VideoCodec_TargetMode_Unknown(id));
-                }
-
-                var decoder = targetVideoClip?.Decoder;
-                string format;
-                if (decoder is IHDRVideoSource || decoder is null && externalSource.SupportsHdr)
-                    format = PPLocalizedResources.General_VideoCodec_TargetMode_hdr;
-                else
-                    format = (decoder?.ResultBitPerPixel ?? (externalSource.HasKnownResultBitsPerPixel ? externalSource.ResultBitsPerPixel : 0)) switch
-                    {
-                        8 => PPLocalizedResources.General_VideoCodec_TargetMode_8bpp,
-                        16 => PPLocalizedResources.General_VideoCodec_TargetMode_16bpp,
-                        _ => Localized._Unknown
-                    };
-                return externalSource.SupportsAlpha ? $"{format} \u00B7 Alpha" : format;
-            }
-
-            if (!videoDecoderOptionLabelToId.Values.Contains(currentVideoDecoderId, StringComparer.Ordinal))
-            {
-                videoDecoderOptionLabelToId[PPLocalizedResources.General_VideoCodec_TargetMode_Unknown(currentVideoDecoderId)] = currentVideoDecoderId;
-            }
-
-            string selectedVideoDecoderLabel = videoDecoderOptionLabelToId
-                .FirstOrDefault(kv => string.Equals(kv.Value, currentVideoDecoderId, StringComparison.Ordinal)).Key
-                ?? PPLocalizedResources.General_VideoCodec_TargetMode_Auto;
-
             var ppb = new PropertyPanelBuilder();
             if (ClipInitializationFailure.IsMarked(clip.ExtraData))
             {
@@ -600,413 +480,31 @@ namespace projectFrameCut.DraftStuff
 
             ppb.AddText(new SingleLineLabel(Localized.PropertyPanel_General, 20))
             .AddEntry("displayName", Localized.PropertyPanel_General_DisplayName, clip.DisplayName, clip.DisplayName)
-            .AddCustomChild(PPLocalizedResources.General_DisplayColor, (invoker) =>
+            .AddCustomChild(PPLocalizedResources.General_DisplayColor,
+                invoker => BuildColorPropertyView(currentColorHex, Color.FromArgb(GetDefaultColorHex(clip.ClipType)), invoker, () =>
+                {
+                    invoker(null!);
+                    return clip.ClipColor ?? GetDefaultColorHex(clip.ClipType);
+                }), "clipColor", currentColorHex);
+
+            if (clip.ClipType == ClipMode.MarkingClip)
+                ppb.AddSeparator()
+                    .AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip));
+
+            ppb.PropertyChanged += (s, e) =>
             {
-                var colorPreview = new BoxView
-                {
-                    WidthRequest = 30,
-                    HeightRequest = 30,
-                    CornerRadius = 5,
-                    Color = ParseArgbOrFallback(currentColorHex, Color.FromArgb(GetDefaultColorHex(clip.ClipType))),
-                    VerticalOptions = LayoutOptions.Center,
-                    HorizontalOptions = LayoutOptions.Start
-                };
-
-                var colorHexLabel = new Label
-                {
-                    Text = currentColorHex,
-                    WidthRequest = 108,
-                    VerticalOptions = LayoutOptions.Center,
-                    VerticalTextAlignment = TextAlignment.Center
-                };
-
-                bool isOpeningColorPicker = false;
-                var openPickerTap = new TapGestureRecognizer();
-                openPickerTap.Tapped += async (s, e) =>
-                {
-                    if (isOpeningColorPicker)
-                    {
-                        return;
-                    }
-
-                    isOpeningColorPicker = true;
-                    try
-                    {
-                        var picker = new ColorPicker
-                        {
-                            SelectedColor = colorPreview.Color
-                        };
-
-                        picker.SelectedColorChanged += (sender, selectedColor) =>
-                        {
-                            var hex = ToArgbHex(selectedColor);
-                            colorPreview.Color = selectedColor;
-                            colorHexLabel.Text = hex;
-                            invoker(hex);
-                        };
-
-                        var popupView = new VerticalStackLayout
-                        {
-                            Spacing = 10,
-                            Padding = new Thickness(10, 0),
-                            Children =
-                            {
-                                new Button
-                                {
-                                    Text = Localized._Hide,
-                                    Command = new Command(async () => await page.HidePopup(true))
-                                },
-                                picker,
-
-                            }
-                        };
-
-                        await page.ShowAPopup(new ScrollView { Content = popupView }, mode: "dialog");
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        isOpeningColorPicker = false;
-                    }
-                };
-                colorPreview.GestureRecognizers.Add(openPickerTap);
-
-                var resetButton = new Button
-                {
-                    Text = "\ue5d5",
-                    FontFamily = "Icons",
-                    WidthRequest = 40,
-                    HeightRequest = 35,
-                    Padding = 0,
-                    VerticalOptions = LayoutOptions.Center
-                };
-                resetButton.Clicked += (s, e) =>
-                {
-                    invoker(null!); // Triggers random color generation via ApplyClipColor()
-                    var newColor = clip.ClipColor ?? GetDefaultColorHex(clip.ClipType);
-                    colorHexLabel.Text = newColor;
-                    colorPreview.Color = Color.FromArgb(newColor);
-                };
-
-                var layout = new HorizontalStackLayout
-                {
-                    Spacing = 8,
-                    Children = { colorPreview, colorHexLabel, resetButton }
-                };
-
-                return layout;
-            }, "clipColor", currentColorHex)
-            .AddSeparator(null)
-            .AppendWhen(clip.ClipType == ClipMode.SolidColorClip,
-            (c) =>
-                c.AddText(new SingleLineLabel(PPLocalizedResources.General_SolidColor, 20))
-                .AddCustomChild(PPLocalizedResources.General_Color, (invoker) =>
-                {
-                    var colorPreview = new BoxView
-                    {
-                        WidthRequest = 30,
-                        HeightRequest = 30,
-                        CornerRadius = 5,
-                        Color = ParseArgbOrFallback(currentSolidColorHex, Colors.White),
-                        VerticalOptions = LayoutOptions.Center,
-                        HorizontalOptions = LayoutOptions.Start
-                    };
-
-                    var colorHexLabel = new Label
-                    {
-                        Text = currentSolidColorHex,
-                        WidthRequest = 108,
-                        VerticalOptions = LayoutOptions.Center,
-                        VerticalTextAlignment = TextAlignment.Center
-                    };
-
-                    bool isOpeningColorPicker = false;
-                    var openPickerTap = new TapGestureRecognizer();
-                    openPickerTap.Tapped += async (s, e) =>
-                    {
-                        if (isOpeningColorPicker)
-                        {
-                            return;
-                        }
-
-                        isOpeningColorPicker = true;
-                        try
-                        {
-                            var picker = new ColorPicker
-                            {
-                                SelectedColor = colorPreview.Color
-                            };
-
-                            picker.SelectedColorChanged += (sender, selectedColor) =>
-                            {
-                                var hex = ToArgbHex(selectedColor);
-                                colorPreview.Color = selectedColor;
-                                colorHexLabel.Text = hex;
-                                invoker(hex);
-                            };
-
-                            var popupView = new VerticalStackLayout
-                            {
-                                Spacing = 10,
-                                Padding = new Thickness(10, 0),
-                                Children =
-                                {
-                                    new Button
-                                    {
-                                        Text = Localized._Hide,
-                                        Command = new Command(async () => await page.HidePopup(true))
-                                    },
-                                    picker,
-
-                                }
-                            };
-
-                            await page.ShowAPopup(new ScrollView { Content = popupView }, mode: "dialog");
-                        }
-                        catch
-                        {
-                        }
-                        finally
-                        {
-                            isOpeningColorPicker = false;
-                        }
-                    };
-                    colorPreview.GestureRecognizers.Add(openPickerTap);
-
-                    var layout = new HorizontalStackLayout
-                    {
-                        Spacing = 8,
-                        Children = { colorPreview, colorHexLabel }
-                    };
-
-                    return layout;
-                }, "solidColor", currentSolidColorHex)
-                .AddPositionTupleInputBox("place", new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20), PositionTupleMode.XYWH, (valX, valY, valW, valH), entryWidth: 70)
-                .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, 0))
-            .AppendWhen(clip.ClipType == ClipMode.VideoClip,
-            (c) =>
-                c.AddText(new SingleLineLabel(PPLocalizedResources.General_VideoCodec, 20))
-                 .AppendWhen(!(clip.SourcePath?.StartsWith("#") ?? false),
-                     cc => cc.AddPicker(
-                             "videoTargetDecoderMode",
-                             PPLocalizedResources.General_VideoCodec_TargetMode,
-                             videoDecoderOptionLabelToId.Keys.ToArray(),
-                             selectedVideoDecoderLabel)
-                             .AppendWhen(targetVideoClip?.Decoder?.GetType() == typeof(HDRDecoderContext),
-                                cc1 => cc1.AddSlider("hdrBrightnessOffset", PPLocalizedResources.General_VideoCodec_HDRBrightnessOffset, -1, 1, targetVideoClip?.HDRBrightnessOffset ?? 0, eventCallMode: SliderUpdateEventCallMode.OnMouseUp)),
-                      cc => cc.AddCustomChild(PPLocalizedResources.General_VideoCodec_TargetMode, new Label { Text = GetVideoTargetFormatText() }))
-                 .AppendWhen(
-                    clip is not null && !string.IsNullOrWhiteSpace(clip.SourcePath),
-                        pp => pp.AddCustomChild(externalSource is null ? PPLocalizedResources.General_VideoCodec_Source : mediaResources.General_VideoCodec_SourceInfo, new Label
-                        {
-                            Text = GetVideoSourceText(),
-                            LineBreakMode = LineBreakMode.WordWrap
-                        }),
-                    pp => pp.AddCustomChild(externalSource is null ? PPLocalizedResources.General_VideoCodec_Source : mediaResources.General_VideoCodec_SourceInfo, new Label { Text = Localized._Unknown })
-                )
-            .AppendWhen(clip.ClipType == ClipMode.MarkingClip,
-                c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip)))
-            .AppendWhen(clip.ClipType is ClipMode.TextClip or ClipMode.SubtitleClip or ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip,
-                c =>
-                {
-                    string currentVectorAaLabel = PPLocalizedResources.General_VectorClip_AAMode_None;
-                    if (clip.ExtraData is not null && clip.ExtraData.TryGetValue("VectorAntiAliasMode", out var aaObj))
-                    {
-                        string aaStr = "None";
-                        if (aaObj is JsonElement aaJsonElem)
-                        {
-                            aaStr = aaJsonElem.GetString() ?? "None";
-                        }
-                        else if (aaObj is string s)
-                        {
-                            aaStr = s;
-                        }
-
-                        currentVectorAaLabel = aaStr switch
-                        {
-                            "None" => PPLocalizedResources.General_VectorClip_AAMode_None,
-                            "SSAA2x" => "SSAA 2x",
-                            "SSAA4x" => "SSAA 4x",
-                            "SSAA8x" => "SSAA 8x",
-                            _ => PPLocalizedResources.General_VectorClip_AAMode_None
-                        };
-                    }
-
-                    c.AddText(new SingleLineLabel(PPLocalizedResources.General_VectorClip, 20))
-                     .AddPicker("vectorAntiAliasMode", PPLocalizedResources.General_VectorClip_AAMode, new[] { PPLocalizedResources.General_VectorClip_AAMode_Default, PPLocalizedResources.General_VectorClip_AAMode_None, "SSAA 2x", "SSAA 4x", "SSAA 8x" }, currentVectorAaLabel);
-                }));
-
-            ppb.PropertyChanged += async (s, e) =>
-            {
-                clip.Effects ??= new Dictionary<string, IEffect>();
-                if (e.Id == "clipColor")
-                {
-                    if (e.Value == null || string.IsNullOrWhiteSpace(e.Value?.ToString()))
-                    {
-                        clip.ClipColor = null; // Reset to default
-                    }
-                    else
-                    {
-                        clip.ClipColor = e.Value?.ToString();
-                    }
-                    clip.ApplyClipColor();
-                    handler?.Invoke(s, e);
-                    return;
-                }
-                if (e.Id == "solidColor" && clip.ClipType == ClipMode.SolidColorClip)
-                {
-                    var selectedColor = ParseArgbOrFallback(e.Value?.ToString(), Colors.White);
-                    SaveSolidColorToExtraData(selectedColor);
-                    handler?.Invoke(s, e);
-                    return;
-                }
-                if (e.Id == "videoTargetDecoderMode" && clip.ClipType == ClipMode.VideoClip)
-                {
-                    var selectedLabel = e.Value?.ToString() ?? string.Empty;
-                    if (!videoDecoderOptionLabelToId.TryGetValue(selectedLabel, out var selectedDecoderId))
-                    {
-                        selectedDecoderId = currentVideoDecoderId;
-                    }
-
-                    clip.ExtraData ??= new Dictionary<string, object>();
-                    clip.ExtraData["TargetDecoder"] = selectedDecoderId;
-                    currentVideoDecoderId = selectedDecoderId;
-
-                    handler?.Invoke(s, e);
-                    return;
-                }
-                if (e.Id == "hdrBrightnessOffset" && clip.ClipType == ClipMode.VideoClip)
-                {
-                    var offset = Convert.ToDouble(e?.Value ?? 1d);
-                    clip.ExtraData ??= new Dictionary<string, object>();
-                    clip.ExtraData["HDRBrightnessOffset"] = offset;
-                    handler?.Invoke(s, e);
-                    return;
-                }
-                if (e.Id.StartsWith("place_"))
-                {
-                    clip.Effects ??= new Dictionary<string, IEffect>();
-
-                    switch (e.Id)
-                    {
-                        case "place_X":
-                            clip.TargetX = (int)Math.Round(Convert.ToDouble(e.Value));
-                            break;
-                        case "place_Y":
-                            clip.TargetY = (int)Math.Round(Convert.ToDouble(e.Value));
-                            break;
-                        case "place_W":
-                            {
-                                int w = Math.Max(1, (int)Math.Round(Convert.ToDouble(e.Value)));
-                                if (clip.ClipType == ClipMode.SolidColorClip)
-                                {
-                                    clip.TargetWidth = w;
-                                    clip.ExtraData ??= new Dictionary<string, object>();
-                                    clip.ExtraData[SolidColorOutputWidthKey] = w;
-                                    clip.ExtraData[SolidColorUseFixedOutputSizeKey] = true;
-                                }
-                                else
-                                {
-                                    clip.TargetWidth = w;
-                                }
-                                break;
-                            }
-                        case "place_H":
-                            {
-                                int h = Math.Max(1, (int)Math.Round(Convert.ToDouble(e.Value)));
-                                if (clip.ClipType == ClipMode.SolidColorClip)
-                                {
-                                    clip.TargetHeight = h;
-                                    clip.ExtraData ??= new Dictionary<string, object>();
-                                    clip.ExtraData[SolidColorOutputHeightKey] = h;
-                                    clip.ExtraData[SolidColorUseFixedOutputSizeKey] = true;
-                                }
-                                else
-                                {
-                                    clip.TargetHeight = h;
-                                }
-                                break;
-                            }
-                    }
-
-                    handler?.Invoke(s, e);
-                    return;
-                }
-                if (e.Id == "rotationDeg")
-                {
-                    if (e.Value is double deg)
-                    {
-                        var newR = new RotationEffect_IPicture
-                        {
-                            Angle = (float)deg,
-                            Enabled = true,
-                            Name = InternalRotationID,
-                            Index = int.MinValue + 100,
-                            RelativeWidth = page.ProjectInfo.RelativeWidth,
-                            RelativeHeight = page.ProjectInfo.RelativeHeight,
-                            ExpandCanvas = false,
-                            Parameters = new() { ["Angle"] = (float)deg, ["ExpandCanvas"] = false },
-                            Id = InternalRotationID
-                        };
-                        clip.Effects[InternalRotationID] = newR;
-                    }
-
-                }
-
-                if (e.Id == "clipColor")
-                {
-                    if (e.Value == null || string.IsNullOrWhiteSpace(e.Value?.ToString()))
-                    {
-                        clip.ClipColor = null; // Reset to default
-                    }
-                    else
-                    {
-                        clip.ClipColor = e.Value?.ToString();
-                    }
-                    clip.ApplyClipColor();
-                    handler?.Invoke(s, e);
-                    return;
-                }
-
-                if (e.Id == "vectorAntiAliasMode")
-                {
-                    clip.ExtraData ??= new Dictionary<string, object>();
-                    clip.ExtraData["VectorAntiAliasMode"] = (e.Value?.ToString()) switch
-                    {
-                        var t when t == PPLocalizedResources.General_VectorClip_AAMode_None => "None",
-                        "SSAA 2x" => "SSAA2x",
-                        "SSAA 4x" => "SSAA4x",
-                        "SSAA 8x" => "SSAA8x",
-                        _ => ""
-                    };
-                    handler?.Invoke(s, e);
-                    return;
-                }
-
                 switch (e.Id)
                 {
+                    case "clipColor":
+                        clip.ClipColor = string.IsNullOrWhiteSpace(e.Value?.ToString()) ? null : e.Value?.ToString();
+                        clip.ApplyClipColor();
+                        break;
                     case "displayName":
                         clip.DisplayName = e.Value?.ToString() ?? clip.DisplayName;
                         break;
-                    //case "speedRatio":
-                    //    {
-                    //        if (e.Value is double ratio || double.TryParse(e.Value as string, out ratio))
-                    //        {
-                    //            if (ratio != 0f)
-                    //                clip.SecondPerFrameRatio = (float)ratio;
-                    //        }
-
-                    //        break;
-                    //    }
                     default:
-                        {
-
-                            break;
-                        }
+                        return;
                 }
-
                 handler?.Invoke(s, e);
             };
             return ppb.BuildWithScrollView();

@@ -2,7 +2,7 @@ using projectFrameCut.Render.Contracts;
 
 namespace projectFrameCut.Render.PluginIsolation;
 
-public sealed class ProjectExternalSourceClient(IPluginIsolationSession session) : IExternalVideoSourceProvider, IExternalAudioSourceProvider, IAsyncDisposable
+public sealed class ProjectExternalSourceClient(IPluginIsolationSession session) : IExternalVideoSourceProvider, IExternalAudioSourceProvider, IExternalMaskSourceProvider, IAsyncDisposable
 {
     public bool IsAvailable => !session.Control.Completion.IsCompleted;
     private string? frameError;
@@ -11,10 +11,12 @@ public sealed class ProjectExternalSourceClient(IPluginIsolationSession session)
     public long FrameRevision => Volatile.Read(ref frameRevision);
     public IReadOnlyList<ExternalVideoSourceDescriptor> Sources { get; private set; } = [];
     public IReadOnlyList<ExternalAudioSourceDescriptor> AudioSources { get; private set; } = [];
+    public IReadOnlyList<ExternalMaskSourceDescriptor> MaskSources { get; private set; } = [];
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
         Sources = (await session.InvokeAsync<EmptyRequest, ExternalVideoSourceCatalog>(RenderOperation.IsolationListProjectExternalSources, new(), cancellationToken).ConfigureAwait(false)).Sources;
         AudioSources = (await session.InvokeAsync<EmptyRequest, ExternalAudioSourceCatalog>(RenderOperation.IsolationListProjectExternalAudioSources, new(), cancellationToken).ConfigureAwait(false)).Sources;
+        MaskSources = (await session.InvokeAsync<EmptyRequest, ExternalMaskSourceCatalog>(RenderOperation.IsolationListProjectExternalMaskSources, new(), cancellationToken).ConfigureAwait(false)).Sources;
     }
     public ValueTask<ExternalVideoSourceInstance> CreateAsync(ExternalVideoSourceCreateRequest request, CancellationToken cancellationToken = default) =>
         session.InvokeAsync<ExternalVideoSourceCreateRequest, ExternalVideoSourceInstance>(RenderOperation.ExternalVideoSourceCreate, request, cancellationToken);
@@ -79,4 +81,34 @@ public sealed class ProjectExternalSourceClient(IPluginIsolationSession session)
     public async ValueTask ReleaseAudioAsync(ExternalAudioSourceStateRequest request, CancellationToken cancellationToken = default) =>
         _ = await session.InvokeAsync<ExternalAudioSourceStateRequest, EmptyResponse>(RenderOperation.ExternalAudioSourceRelease, request, cancellationToken).ConfigureAwait(false);
     public ValueTask DisposeAsync() => session.DisposeAsync();
+
+    public async ValueTask<ExternalVideoFrame> ProcessMaskAsync(ExternalMaskSourceProcessRequest request, CancellationToken cancellationToken = default)
+    {
+        ProjectExternalSourceFrame? response = null;
+        try
+        {
+            request.Validate();
+            await using var backdrop = await session.Payloads.PublishAsync(RenderRpcSerializer.Serialize(request.Backdrop), session.PreferredPayloadKind, cancellationToken).ConfigureAwait(false);
+            response = await session.InvokeAsync<ProjectExternalMaskSourceProcessRequest, ProjectExternalSourceFrame>(RenderOperation.ExternalMaskSourceProcess, new()
+            {
+                Request = new() { Source = request.Source, Arguments = request.Arguments, Scale = request.Scale },
+                Backdrop = backdrop.Reference,
+            }, cancellationToken).ConfigureAwait(false);
+            await using var stream = await session.Payloads.OpenReadAsync(response.Payload, cancellationToken).ConfigureAwait(false);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
+            var frame = RenderRpcSerializer.Deserialize<ExternalVideoFrame>(buffer.ToArray());
+            request.ValidateResult(frame);
+            if (Interlocked.Exchange(ref frameError, null) is not null) Interlocked.Increment(ref frameRevision);
+            return frame;
+        }
+        catch (Exception ex)
+        {
+            Volatile.Write(ref frameError, ex.Message);
+            Interlocked.Increment(ref frameRevision);
+            Log(ex, $"Process project external mask source {request.Source.SourceId}.");
+            throw;
+        }
+        finally { if (response is not null) await session.Payloads.ReleaseAsync(response.Payload).ConfigureAwait(false); }
+    }
 }

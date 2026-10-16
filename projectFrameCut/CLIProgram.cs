@@ -89,7 +89,7 @@ namespace projectFrameCut
 
             if (args.Contains("--logDiagnostic"))
             {
-                Log($"Command line args: {Environment.NewLine}{string.Join(Environment.NewLine, args.Select(c => $"- {c}"))}");
+                Log($"Command line args: {Environment.NewLine}{string.Join(Environment.NewLine, args.Select(c => c.StartsWith("--token=", StringComparison.OrdinalIgnoreCase) ? "- --token=<redacted>" : $"- {c}"))}");
             }
 
             if (args.Length == 0 || IsHelpOption(args[0]))
@@ -197,7 +197,7 @@ namespace projectFrameCut
             return InvalidCommandExitCode;
         }
 
-        private static void StartLog(string mode)
+        private static void StartLog(string mode, string? root = null)
         {
             try
             {
@@ -205,7 +205,7 @@ namespace projectFrameCut
                 {
                     return;
                 }
-                var logPath = Path.Combine(AppDataPath, "logging", $"log-{mode}-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log");
+                var logPath = Path.Combine(root ?? AppDataPath, "logging", $"log-{mode}-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log");
                 var logDir = Path.GetDirectoryName(logPath);
                 if (!string.IsNullOrWhiteSpace(logDir) && !Directory.Exists(logDir))
                 {
@@ -240,7 +240,7 @@ namespace projectFrameCut
 
             if (command.Equals("plugin_network_policy", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine("Usage: pjfc plugin_network_policy --target=internet|server|loopback --enabled=true|false --packageFamilyName=<PFN>\nConfigures the isolated-plugin network policy. Windows administrator privileges are required.");
+                Console.WriteLine("Usage: pjfc plugin_network_policy --target=loopback --enabled=true|false --packageFamilyName=<PFN>\nConfigures the isolated-plugin loopback exemption. Windows administrator privileges are required.");
                 return SuccessExitCode;
             }
 
@@ -777,7 +777,7 @@ namespace projectFrameCut
 #if WINDOWS
                 if (args.Contains("--appContainer"))
                 {
-                    Platforms.Windows.WindowsPluginIsolationPlatform.ValidateWorkerProcess();
+                    Platforms.Windows.WindowsPluginIsolationPlatform.ValidateWorkerProcess(GetOption(args, "instancePackageName", true)!);
                 }
 #endif
                 var pluginIdParam = args.FirstOrDefault(arg => arg.StartsWith("--pluginId="));
@@ -789,7 +789,7 @@ namespace projectFrameCut
                         Console.Error.WriteLine("Invalid --pluginId parameter: cannot be empty.");
                         return InvalidCommandExitCode;
                     }
-                    StartLog($"plugin_worker_{pluginId}");
+                    StartLog($"plugin_worker_{pluginId}", args.Contains("--appContainer") ? GetOption(args, "sessionRoot", true) : null);
                 }
                 if (externalSource)
                     projectFrameCut.Render.PluginIsolation.ProjectExternalSourceWorker.RunAsync(args).GetAwaiter().GetResult();
@@ -930,10 +930,7 @@ namespace projectFrameCut
             var target = switches.GetValueOrDefault("target", "all").ToLowerInvariant();
             var gcOption = int.TryParse(switches.GetValueOrDefault("GCOptions", "0"), out var gc) ? Math.Clamp(gc, 0, 2) : 0;
             if (gcOption == 2) GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-            var serial = bool.TryParse(switches.GetValueOrDefault("oneByOneRender", "false"), out var one) && one;
-            var renderByLayers = bool.TryParse(switches.GetValueOrDefault("renderByLayer", "false"), out var layers) && layers;
             var reuseDynamicPreviewCache = bool.TryParse(switches.GetValueOrDefault("reuseDynamicPreviewCache", "false"), out var reusePreview) && reusePreview;
-            var prepareInWorkers = bool.TryParse(switches.GetValueOrDefault("prepareInWorker", "false"), out var prepare) && prepare;
             var affinity = bool.TryParse(switches.GetValueOrDefault("enableThreadAffinity", "true"), out var threadAffinity) && threadAffinity;
             var maxThreads = int.TryParse(switches.GetValueOrDefault("maxParallelThreads", Environment.ProcessorCount.ToString()), out var mt) ? Math.Max(1, mt) : Environment.ProcessorCount;
             var duration = Math.Max(timeline.Duration, timeline.AudioDuration);
@@ -1000,7 +997,7 @@ namespace projectFrameCut
                         PreviewPath = switches.GetValueOrDefault("preview_path"),
                         StartFrame = startFrame,
                         Duration = frameCount,
-                        BlockWrite = serial,
+                        BlockWrite = true,
                         DoGCAfterEachWrite = gcOption > 0,
                         DisposeFrameAfterEachWrite = true
                     };
@@ -1010,6 +1007,8 @@ namespace projectFrameCut
                     Clips = clips,
                     TargetWidth = width,
                     TargetHeight = height,
+                    ProjectRelativeWidth = project.RelativeWidth,
+                    ProjectRelativeHeight = project.RelativeHeight,
                     StartFrame = startFrame,
                     Duration = frameCount,
                     ChunkIndex = chunkIndex,
@@ -1022,15 +1021,11 @@ namespace projectFrameCut
                     SDRClipsBrightnessInHDRMode = sdrBrightnessInHdr,
                     GCOption = gcOption,
                     MaxThreads = Math.Max(1, renderThreads),
-                    OneByOneRender = serial,
-                    RenderByLayers = renderByLayers,
                     ReuseDynamicPreviewCache = reuseDynamicPreviewCache,
                     DynamicPreviewCacheProjectRoot = projectRoot,
                     DynamicPreviewCacheProjectWidth = Math.Max(1, project.RelativeWidth),
                     DynamicPreviewCacheProjectHeight = Math.Max(1, project.RelativeHeight),
-                    PrepareInWorkerThreads = prepareInWorkers,
                     EnableThreadAffinity = affinity,
-                    MinSchedulePreparedFrames = 1
                 };
                 renderer.OnProgressChanged += (value, eta) =>
                 {
@@ -1038,21 +1033,13 @@ namespace projectFrameCut
                 };
                 try
                 {
-                    builder?.Build()?.Start();
                     renderer.PrepareRender(consoleCancellation.Token);
                     await renderer.GoRender(consoleCancellation.Token).ConfigureAwait(false);
                     consoleCancellation.Token.ThrowIfCancellationRequested();
                     if (builder is not null)
                     {
-                        if (serial)
-                        {
-                            builder.Writer?.Finish();
-                            builder.Dispose();
-                        }
-                        else builder.Finish(
-                            i => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height),
-                            checked(startFrame + frameCount),
-                            (_, _) => { });
+                        builder.Writer.Finish();
+                        builder.Dispose();
                     }
                 }
                 catch
@@ -1083,7 +1070,7 @@ namespace projectFrameCut
                     duration,
                     fps,
                     Path.GetExtension(path),
-                    $"{width}x{height}|{fps}|{pixelFormat}|{output[4]}|bpp={bpp}|bitrate={requestedBitRate}|serial={serial}|layers={renderByLayers}|prepare={prepareInWorkers}|reusePreview={reuseDynamicPreviewCache}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}|externalSources={projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken}",
+                    $"{width}x{height}|{fps}|{pixelFormat}|{output[4]}|bpp={bpp}|bitrate={requestedBitRate}|render=clip-cache|reusePreview={reuseDynamicPreviewCache}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}|externalSources={projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken}",
                     maxThreads,
                     chunkOptions);
                 await coordinator.InitializeAsync(consoleCancellation.Token).ConfigureAwait(false);
@@ -1690,6 +1677,7 @@ namespace projectFrameCut
 
         internal static void InitializeRenderRuntime(string dataRoot, string ffmpegRoot = "")
         {
+            SettingsManager.InitializeReadOnly(dataRoot);
             ProjectExternalSourceService.InitializeRuntime();
             PluginManager.ProjectPluginLoader = async (projectRoot, project, cancellationToken) =>
             {
@@ -1846,21 +1834,21 @@ namespace projectFrameCut
                 var target = GetOption(args, "target", false);
                 var enabledText = GetOption(args, "enabled", false);
                 var packageFamilyName = GetOption(args, "packageFamilyName", false);
-                if (string.IsNullOrWhiteSpace(target)
+                if (!string.Equals(target, "loopback", StringComparison.OrdinalIgnoreCase)
                     || string.IsNullOrWhiteSpace(packageFamilyName)
                     || !bool.TryParse(enabledText, out var enabled))
                 {
-                    Console.Error.WriteLine("ERROR: Required options are --target=internet|server|loopback, --enabled=true|false, and --packageFamilyName=<PFN>.");
+                    Console.Error.WriteLine("ERROR: Required options are --target=loopback, --enabled=true|false, and --packageFamilyName=<PFN>.");
                     return InvalidCommandExitCode;
                 }
 
                 Setting.SettingPages.SecuritySettingPage.ConfigureIsolatedPluginNetworkPolicy(target, enabled, packageFamilyName);
-                Console.WriteLine($"Configured isolated plugin network policy '{target}' to '{enabled}'.");
+                Console.WriteLine($"Configured isolated plugin loopback exemption to '{enabled}'.");
                 return SuccessExitCode;
             }
             catch (Exception ex)
             {
-                Log(ex, "configure the isolated plugin network policy", typeof(CLIProgram));
+                Log(ex, "configure the isolated plugin loopback exemption", typeof(CLIProgram));
                 Console.Error.WriteLine($"ERROR: {ex.Message}");
                 return 1;
             }
@@ -2237,7 +2225,7 @@ https://github.com/hexadecimal0x12e/projectFrameCut
 IPluginBase API:      v{IPluginBase.CurrentPluginAPIVersion} 
 {GetApplicationPluginVersionInfo()}
 {renderType.GetName().Name}:  v{renderType.GetName().Version} {renderHash}
-{drawingType.GetName().Name}: v{drawingType.GetName().Version} ({drawingCommit})
+{drawingType.GetName().Name}: v{drawingType.GetName().Version} {drawingHash}
 
 This project is licensed under the Apache License, Version 2.0 for personal/educational and non-commercial use ONLY.
 See the LICENSE and license.md file in the project root for more information.
@@ -2253,8 +2241,7 @@ Usage:
   pjfc render -project=<project directory> -output=<file>
               -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
                 [-target=video|audio|all|void] [-assetDbFile=<database.json>]
-                [-maxParallelThreads=<number>] [-oneByOneRender=true|false]
-                [-renderByLayer=true|false] [-prepareInWorker=true|false]
+                [-maxParallelThreads=<number>]
                 [-reuseDynamicPreviewCache=true|false]
                 [-enableThreadAffinity=true|false] [-GCOptions=0|1|2]
                 [-chunkRender=true|false] [-chunkFrames=<number>|-chunkSeconds=<number>]

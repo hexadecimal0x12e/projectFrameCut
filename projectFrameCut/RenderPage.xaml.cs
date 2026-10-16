@@ -802,11 +802,8 @@ public partial class RenderPage : ContentPage
             Encoder = encoder,
             PixelFormat = pixelFormat,
             MaxParallelThreads = Math.Max(1, (int)Math.Round(MaxParallelThreadsCount.Value)),
-            OneByOneRender = SettingsManager.IsBoolSettingTrue("render_BlockWrite"),
             GcOption = int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var gcOption) ? gcOption : 0,
             EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true),
-            PrepareInWorker = SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorker", true),
-            RenderByLayer = SettingsManager.IsBoolSettingTrueOrDefault("render_RenderByLayer", true),
             ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
             ChunkRender = chunkOptions.Enabled && !writeToVoid,
             ChunkFrames = chunkOptions.ChunkFrames,
@@ -1298,6 +1295,7 @@ public partial class RenderPage : ContentPage
 
     async Task DoCompute(RenderPageViewModel vm, string outputPath, Dictionary<string, string>? metadata = null, string? audioPath = null, string? writerOverride = null)
     {
+        IClip[] clips = [];
         try
         {
             var encoderSelection = ResolveEncoderOptions(vm);
@@ -1340,7 +1338,7 @@ public partial class RenderPage : ContentPage
 
             await SubProgress.ProgressTo(0, 250, Easing.Linear);
 
-            int[] CPUAffinityOverride = Array.Empty<int>(), preparerAffinityCpuIndexes = [];
+            int[] CPUAffinityOverride = [];
             bool EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true);
             if (EnableThreadAffinity)
             {
@@ -1363,13 +1361,12 @@ public partial class RenderPage : ContentPage
                     }
                 }
                 catch { }
-                preparerAffinityCpuIndexes = CPUAffinityOverride.ArrayAny() ? Enumerable.Range(0, Environment.ProcessorCount).Except(CPUAffinityOverride).ToArray() : [];
 
             }
             int parallelThreadCount = CPUAffinityOverride.Length > 0 ? CPUAffinityOverride.Length : (int)MaxParallelThreadsCount.Value;
             if (CPUAffinityOverride.Length > 0 && (DeviceInfo.Idiom == DeviceIdiom.Desktop || OperatingSystem.IsIOS())) parallelThreadCount = (int)(parallelThreadCount * 1.5);
 
-            Log($"Parallel options: Physical core count: {Environment.ProcessorCount}, Enable Thread Affinity: {EnableThreadAffinity}, Prepare in worker: {SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorker", true)}, Worker target cores: {string.Join(",", CPUAffinityOverride)}, parallelThreadCount: {parallelThreadCount}");
+            Log($"Parallel options: Physical core count: {Environment.ProcessorCount}, Enable Thread Affinity: {EnableThreadAffinity}, Worker target cores: {string.Join(",", CPUAffinityOverride)}, parallelThreadCount: {parallelThreadCount}");
 
 #if ANDROID
             AndroidExecutionHelper.AddPlatformComputeViewHandler = new((v) =>
@@ -1390,7 +1387,6 @@ public partial class RenderPage : ContentPage
 
             TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Indeterminate);
 #endif
-            var blockwrite = SettingsManager.IsBoolSettingTrue("render_BlockWrite");
             var draftSrc = _draft ?? throw new NullReferenceException();
 
             Log($"Draft loaded: duration {draftSrc.Duration}, saved on {draftSrc.SavedAt}, {draftSrc.Clips.Length} clips.");
@@ -1403,7 +1399,7 @@ public partial class RenderPage : ContentPage
 
             var duration = Math.Max(draftSrc.Duration, draftSrc.AudioDuration);
 
-            var clips = DraftImportAndExportHelper.JSONToIClips(draftSrc, false).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
+            clips = DraftImportAndExportHelper.JSONToIClips(draftSrc, false).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
 
             if (clips == null || clips.Length == 0)
             {
@@ -1437,7 +1433,7 @@ public partial class RenderPage : ContentPage
                             DisposeFrameAfterEachWrite = true,
                             Duration = duration,
                             LogStat = false,
-                            BlockWrite = blockwrite,
+                            BlockWrite = true,
                             EnableDiskCacheRouting = SettingsManager.IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", true),
                             DiskCacheMaxFrameCount = SettingsManager.GetSettingAs("render_MaxDiskBufferCount", 500, 500),
                             DiskCacheThreshold = SettingsManager.GetSettingAs("render_DiskBufferThreshold", 0.7, 0.7),
@@ -1476,7 +1472,7 @@ public partial class RenderPage : ContentPage
                         DisposeFrameAfterEachWrite = true,
                         Duration = duration,
                         LogStat = false,
-                        BlockWrite = blockwrite
+                        BlockWrite = true
                     };
                 }
                 else
@@ -1491,7 +1487,7 @@ public partial class RenderPage : ContentPage
                         DisposeFrameAfterEachWrite = true,
                         Duration = duration,
                         LogStat = false,
-                        BlockWrite = blockwrite
+                        BlockWrite = true
                     };
                 }
             }
@@ -1516,15 +1512,8 @@ public partial class RenderPage : ContentPage
                 MaxThreads = parallelThreadCount,
                 EnableThreadAffinity = EnableThreadAffinity && ThreadAffinityHelper.GetCpuCoreGroups().Count > 1,
                 WorkerCPUCoreIndexs = CPUAffinityOverride,
-                OneByOneRender = blockwrite,
-                PrepareInWorkerThreads = SettingsManager.IsBoolSettingTrueOrDefault("render_prepareInWorkerThreads", true),
-                AllowReorderEffect = SettingsManager.IsBoolSettingTrueOrDefault("render_allowEffectOutOfOrder", true),
-                RenderByLayers = SettingsManager.IsBoolSettingTrueOrDefault("render_RenderByLayer", true),
                 ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
                 DynamicPreviewCacheProjectRoot = _workingPath,
-                EnableRenderWatchdogForceStart = DeviceInfo.Idiom != DeviceIdiom.Desktop,
-                MinSchedulePreparedFrames = parallelThreadCount,
-                MaxPendingWriteFrames = SettingsManager.GetSettingAs("render_maxPendingWriteFrames", (int)(Environment.WorkingSet / ((width * height * (bpp.Value / 8) * 3) + 32)) / 2, 150),
                 UseHDR = ProjectUsesHDR,
                 MaximumHDRBrightness = _project.Properties.TryGetValue("HdrMaximumBrightness", out var maxHdrBrightness) && int.TryParse(maxHdrBrightness, out var maxHdrBrightnessInt) ? maxHdrBrightnessInt : 1000,
                 SDRClipsBrightnessInHDRMode =
@@ -1559,6 +1548,7 @@ public partial class RenderPage : ContentPage
             {
                 if (!_previewUpdateSemaphore.Wait(0))
                 {
+                    e.Dispose();
                     return;
                 }
 
@@ -1579,12 +1569,12 @@ public partial class RenderPage : ContentPage
                 }
                 finally
                 {
+                    e.Dispose();
                     await Task.Delay(50);
                     _previewUpdateSemaphore.Release();
                 }
             };
 
-            builder?.Build(preparerAffinityCpuIndexes)?.Start();
             await Task.Run(() => renderer.PrepareRender(_cts.Token), _cts.Token);
             if (_cts.IsCancellationRequested) return;
 
@@ -1617,58 +1607,14 @@ public partial class RenderPage : ContentPage
             await Task.Run(async () => await renderer.GoRender(_cts.Token, cover), _cts.Token);
             Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
 
-            if (blockwrite)
-            {
-                SetSubProg("WriteVideo");
-                Log("Closing result video stream...");
-                builder?.Writer?.Finish();
-            }
-            else
-            {
-                SetSubProg("WriteVideo");
-                Log("Finish writing video...");
-                await Task.Run(() =>
-                {
-                    int projectRelativeWidth = Math.Max(1, _project.RelativeWidth);
-                    int projectRelativeHeight = Math.Max(1, _project.RelativeHeight);
-                    builder?.Finish((i) => Timeline.MixtureLayers(
-                        Timeline.GetFramesInOneFrame(
-                            clips,
-                            i,
-                            width,
-                            height,
-                            projectRelativeWidth: projectRelativeWidth,
-                            projectRelativeHeight: projectRelativeHeight),
-                        i,
-                        width,
-                        height,
-                        projectRelativeWidth: projectRelativeWidth,
-                        projectRelativeHeight: projectRelativeHeight),
-                        duration,
-                        (_, p) =>
-                        {
-                            Dispatcher.Dispatch(async () =>
-                            {
-                                await SubProgress.ProgressTo(p, 250, Easing.Linear);
-                                SubProgLabel.Text = $"{_currentSubProgText} ({p:p2})";
-
-                            });
-                        });
-                });
-
-
-            }
-
+            SetSubProg("WriteVideo");
+            Log("Closing result video stream...");
+            builder?.Writer.Finish();
 
             Log($"Releasing resources...");
 
-            foreach (var item in clips)
-            {
-                item?.Dispose();
-            }
-
             // Drop references to large graphs ASAP.
-            builder?.Writer?.Dispose();
+            builder?.Dispose();
             builder = null!;
 #if WINDOWS
             var origMode = GCSettings.LargeObjectHeapCompactionMode;
@@ -1709,10 +1655,17 @@ public partial class RenderPage : ContentPage
 
 
         }
+        catch (OperationCanceledException) when (_cts.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             Log(ex, "Render", this);
             throw;
+        }
+        finally
+        {
+            builder?.Dispose();
+            builder = null;
+            foreach (var clip in clips) clip.Dispose();
         }
 
 
@@ -1971,7 +1924,6 @@ public partial class RenderPage : ContentPage
             {
                 try { await RenderRpcBootstrap.CancelCliRenderAsync(rpcJobId); } catch { }
             }
-            builder?.Interrupt();
             _cts.Cancel();
             _logUpdateTimer?.Stop();
             _screenSaverTimer?.Stop();
@@ -2367,11 +2319,6 @@ public partial class RenderPage : ContentPage
         args.Add($"-maxParallelThreads={maxThreads}");
         args.Add($"-preferHwAccelEncoder={useHardwareAcceleration}");
         args.Add($"-reuseDynamicPreviewCache={SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false)}");
-
-        if (SettingsManager.IsBoolSettingTrue("render_BlockWrite"))
-        {
-            args.Add("-oneByOneRender=true");
-        }
 
         if (int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var gcOption) && gcOption is >= 0 and <= 2)
         {

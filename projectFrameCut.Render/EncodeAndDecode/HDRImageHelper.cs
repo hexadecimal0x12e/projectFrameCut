@@ -144,14 +144,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 if (sws == null)
                     throw new InvalidOperationException("Failed to create swscale context for HDR HEIF conversion.");
 
-                int scaled = ffmpeg.sws_scale(
-                    sws,
-                    srcFrame->data,
-                    srcFrame->linesize,
-                    0,
-                    picture.Height,
-                    dstFrame->data,
-                    dstFrame->linesize);
+                int scaled = FFmpegHelper.ScaleFrame(sws, srcFrame, dstFrame);
 
                 if (scaled <= 0)
                     throw new InvalidOperationException($"sws_scale failed for HDR HEIF conversion (returned {scaled}).");

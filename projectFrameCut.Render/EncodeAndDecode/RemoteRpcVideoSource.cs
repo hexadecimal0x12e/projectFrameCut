@@ -187,7 +187,7 @@ public class RemoteRpcVideoSource : IVideoSource
         return source;
     }
 
-    private static IPicture ToPicture(ExternalVideoFrame frame)
+    internal static IPicture ToPicture(ExternalVideoFrame frame)
     {
         if (frame.BitsPerChannel == 8)
         {
@@ -206,7 +206,7 @@ public class RemoteRpcVideoSource : IVideoSource
         return result;
     }
 
-    protected static HDRPicture16bpp ToHdr(ExternalVideoFrame frame)
+    protected internal static HDRPicture16bpp ToHdr(ExternalVideoFrame frame)
     {
         var result = new HDRPicture16bpp(frame.Width, frame.Height)
         {

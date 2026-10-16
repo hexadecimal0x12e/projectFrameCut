@@ -27,22 +27,26 @@ internal static class ExternalRpcSourceClient
             };
 
             var provider = new TestVideoSourceProvider(options);
+            var masks = new projectFrameCut.ExternalSourceExample.ExampleMaskSourceProvider();
             await using var client = new RenderClient(
                 new NamedPipeRenderClientTransport(options.PipeName, options.ClientId.ToString("D")),
                 options.ClientId.ToString("D"),
-                provider);
+                provider, provider, masks);
 
             var capabilities = await client.GetCapabilitiesAsync(lifetime.Token);
             Console.WriteLine($"Connected: protocol={capabilities.ProtocolVersion}, backend={capabilities.BackendVersion}");
             await client.RegisterExternalVideoSourcesAsync(new() { Sources = provider.Sources.ToList() }, lifetime.Token);
             await client.RegisterExternalAudioSourcesAsync(new() { Sources = provider.AudioSources.ToList() }, lifetime.Token);
+            await client.RegisterExternalMaskSourcesAsync(new() { Sources = masks.MaskSources.ToList() }, lifetime.Token);
             Console.WriteLine(JsonSerializer.Serialize(provider.Sources, new JsonSerializerOptions { WriteIndented = true }));
             Console.WriteLine(JsonSerializer.Serialize(provider.AudioSources, new JsonSerializerOptions { WriteIndented = true }));
+            Console.WriteLine(JsonSerializer.Serialize(masks.MaskSources, new JsonSerializerOptions { WriteIndented = true }));
             Console.WriteLine("External source registered. Add it from the project UI; press Ctrl+C to stop.");
 
             await Task.Delay(options.Duration, lifetime.Token);
             await client.UnregisterExternalVideoSourcesAsync(CancellationToken.None);
             await client.UnregisterExternalAudioSourcesAsync(CancellationToken.None);
+            await client.UnregisterExternalMaskSourcesAsync(CancellationToken.None);
             return 0;
         }
         catch (OperationCanceledException)

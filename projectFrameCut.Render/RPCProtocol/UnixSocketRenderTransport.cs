@@ -9,7 +9,7 @@ namespace projectFrameCut.Render.RPCProtocol;
 /// format intentionally matches the named-pipe transport so Android workers do
 /// not need a second RPC protocol.
 /// </summary>
-public sealed class UnixSocketRenderClientTransport : IRenderTransport
+public sealed class UnixSocketRenderClientTransport : IRenderNotificationTransport
 {
     private readonly string _socketPath;
     private readonly string _token;
@@ -23,6 +23,7 @@ public sealed class UnixSocketRenderClientTransport : IRenderTransport
     private Task? _readerTask;
     private Exception? _connectionError;
     private int _disposed;
+    public event Action<DynamicPreviewClock>? DynamicPreviewClockReceived;
 
     public UnixSocketRenderClientTransport(string socketPath, string token, string clientId, IReadOnlyList<ExternalRpcClientAuthorization>? persistentAuthorizations = null)
     {
@@ -122,6 +123,11 @@ public sealed class UnixSocketRenderClientTransport : IRenderTransport
                 var bytes = await RenderPipeFrame.ReadAsync(stream, CancellationToken.None).ConfigureAwait(false);
                 if (bytes is null) break;
                 var response = RenderRpcSerializer.Deserialize<RenderResponseEnvelope>(bytes);
+                if (response.DynamicPreviewClock is { } clock)
+                {
+                    DynamicPreviewClockReceived?.Invoke(clock);
+                    continue;
+                }
                 if (_pending.TryRemove(response.RequestId, out var completion)) completion.TrySetResult(response);
             }
         }
@@ -228,6 +234,19 @@ public sealed class UnixSocketRenderServer(IRenderService service)
 
     private async Task DispatchAndWriteAsync(Stream stream, SemaphoreSlim writeGate, RenderRequestEnvelope request, CancellationToken cancellationToken)
     {
+        using var notifications = RenderRpcNotifications.UseDynamicPreviewClockSender(async (clock, token) =>
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, cancellationToken);
+            await writeGate.WaitAsync(linked.Token).ConfigureAwait(false);
+            try
+            {
+                await RenderPipeFrame.WriteAsync(stream, RenderRpcSerializer.Serialize(new RenderResponseEnvelope
+                {
+                    DynamicPreviewClock = clock,
+                }), CancellationToken.None).ConfigureAwait(false);
+            }
+            finally { writeGate.Release(); }
+        });
         RenderResponseEnvelope response;
         try { response = await _service.DispatchAsync(request, cancellationToken).ConfigureAwait(false); }
         catch (OperationCanceledException ex)

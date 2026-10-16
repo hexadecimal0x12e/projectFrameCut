@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(ExtensionsVersion)" />
     <PackageReference Include="Watson.Lite" Version="6.6.0" />
   </ItemGroup>
 

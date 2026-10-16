@@ -29,9 +29,6 @@
                         <x:String>BlackholeVideoWriter</x:String>
                     </Picker.Items>
                 </Picker>
-                <Label Text="{l:Localized Key=BenchmarkPage_BoostMode}"
-                       VerticalOptions="Center"/>
-                <Switch x:Name="BoostModeSwitch"/>
             </HorizontalStackLayout>
 
             <!-- 控制按钮 -->

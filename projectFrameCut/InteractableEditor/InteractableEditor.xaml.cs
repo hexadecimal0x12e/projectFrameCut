@@ -2281,7 +2281,7 @@ namespace projectFrameCut.InteractableEditor
 
         public void ApplyCustomHandlePreview(PreparedPreview preview)
         {
-            if (!Clips.ContainsKey(preview.ClipId) || preview.View is not { } view) return;
+            if (!Clips.ContainsKey(preview.ClipId) || PreviewErrorView.GetView(preview) is not { } view) return;
             var state = GetOrCreateClipState(preview.ClipId);
             state.SetPreviewView(view, isTransparentAt: preview.IsTransparentAt);
             state.RefreshPreviewVisibility();
@@ -3036,7 +3036,10 @@ namespace projectFrameCut.InteractableEditor
                 }
                 _previewSourceClips.Clear();
 
-                var canvasView = canvasPreview.View;
+                var canvasView = PreviewErrorView.GetView(canvasPreview);
+                foreach (var preview in preparedPreviews)
+                    if (preview.Source is not null) _previewSourceClips[preview.ClipId] = preview.Source;
+                if (!IsInteractiveManipulationInProgress) UpdateVisuals(reorderClips: false);
                 if (LivePreviewerHost.Content is HdrPreviewView existingHdr && canvasView is HdrPreviewView incomingHdr)
                 {
                     existingHdr.Frame = incomingHdr.Frame;
@@ -3053,6 +3056,8 @@ namespace projectFrameCut.InteractableEditor
                 SetStaticPreviewVisible(false);
                 return canvasView is not null;
             }
+
+            LivePreviewerHost.IsVisible = false;
 
             if (preparedPreviews.Count == 0)
             {
@@ -3133,7 +3138,8 @@ namespace projectFrameCut.InteractableEditor
                     continue;
                 }
 
-                if (prepared.View is not null)
+                var previewView = PreviewErrorView.GetView(prepared);
+                if (previewView is not null)
                 {
                     var shouldDeferViewSwap = ShouldKeepExistingPreviewFrame(prepared.ClipId)
                         && state.HasPreviewView;
@@ -3145,7 +3151,7 @@ namespace projectFrameCut.InteractableEditor
                     }
                     else
                     {
-                        state.SetPreviewView(prepared.View, isTransparentAt: prepared.IsTransparentAt);
+                        state.SetPreviewView(previewView, isTransparentAt: prepared.IsTransparentAt);
                         hasVisiblePreview = true;
                     }
                 }
@@ -3704,6 +3710,7 @@ namespace projectFrameCut.InteractableEditor
                             : 0;
                         var unsnapped = new Rect(newVisualX, newVisualY, _startW, _startH);
                         _panPreviewRect = ApplyClipSnapping(unsnapped, snapThresholdVideo, handle: null);
+                        if (_allClips.Values.Any(c => c.ClipType == ClipMode.MaskClip)) RequestInteractivePreviewRefresh();
 
                         // Snap visual to the snapped preview rect for magnetic feel
                         _activeState.Root.TranslationX = _stateOrigX + (_panPreviewRect.Value.X - _startX) * scale / ZoomScale;
@@ -3866,6 +3873,7 @@ namespace projectFrameCut.InteractableEditor
                         newX = _startX + _startW / 2 + cx * Math.Cos(radians) - cy * Math.Sin(radians) - newW / 2;
                         newY = _startY + _startH / 2 + cx * Math.Sin(radians) + cy * Math.Cos(radians) - newH / 2;
                         _panPreviewRect = new Rect(newX, newY, newW, newH);
+                        if (_allClips.Values.Any(c => c.ClipType == ClipMode.MaskClip)) RequestInteractivePreviewRefresh();
                         _activeState.UpdateLayout(renderRect.X + newX * scale / ZoomScale, renderRect.Y + newY * scale / ZoomScale,
                             newW * scale / ZoomScale, newH * scale / ZoomScale, newW, newH, true, true,
                             $"{Math.Round(newW)} x {Math.Round(newH)}", true, GetClipOverlayStroke(_currentClip));
@@ -3884,6 +3892,7 @@ namespace projectFrameCut.InteractableEditor
                     newW = snapped.Width;
                     newH = snapped.Height;
                     _panPreviewRect = snapped;
+                    if (_allClips.Values.Any(c => c.ClipType == ClipMode.MaskClip)) RequestInteractivePreviewRefresh();
 
 
 
@@ -3974,8 +3983,18 @@ namespace projectFrameCut.InteractableEditor
             }
         }
 
-        private bool IsInteractiveManipulationInProgress
+        public bool IsInteractiveManipulationInProgress
             => _isClipPanInProgress || _isHandleResizeInProgress || _isShapeHandleDragInProgress;
+
+        public void ApplyInteractivePreviewLayout(projectFrameCut.Render.RenderAPIBase.Project.ClipDraftDTO clip)
+        {
+            if (!IsInteractiveManipulationInProgress || _currentClip?.Id != clip.Id) return;
+            GetCurrentRect(true, out double x, out double y, out double w, out double h);
+            clip.TargetX = (int)Math.Round(x);
+            clip.TargetY = (int)Math.Round(y);
+            clip.TargetWidth = Math.Max(1, (int)Math.Round(w));
+            clip.TargetHeight = Math.Max(1, (int)Math.Round(h));
+        }
 
         private bool ShouldKeepExistingPreviewFrame(Guid clipId)
             => _isClipPanInProgress
@@ -4809,7 +4828,7 @@ namespace projectFrameCut.InteractableEditor
 
         private static bool IsAllowFreeScaleResizeEnabled(ClipElementUI clip)
         {
-            if (clip.ClipType == ClipMode.SolidColorClip || clip.AllowFreeScaleResize) return true;
+            if (clip.ClipType is ClipMode.SolidColorClip or ClipMode.MaskClip || clip.AllowFreeScaleResize) return true;
 
             if (clip.ClipType == ClipMode.TextClip)
             {

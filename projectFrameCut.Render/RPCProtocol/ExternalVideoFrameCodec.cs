@@ -1,10 +1,17 @@
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.EncodeAndDecode;
 
 namespace projectFrameCut.Render.RPCProtocol;
 
 public static class ExternalVideoFrameCodec
 {
+    public static IPicture Decode(ExternalVideoFrame frame)
+    {
+        frame.Validate();
+        return frame.Brightness.Length > 0 ? RemoteRpcVideoSource.ToHdr(frame) : RemoteRpcVideoSource.ToPicture(frame);
+    }
+
     public static ExternalVideoFrame Encode(IPicture picture)
     {
         ArgumentNullException.ThrowIfNull(picture);

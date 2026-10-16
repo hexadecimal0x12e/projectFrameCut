@@ -191,6 +191,8 @@ public static class TransformProcessing
     {
         argumentFrames ??= new();
         result = null;
+        using var maskScope = MaskFrameContext.Open(clips, frameIndex, width, height, projectWidth, projectHeight, pixelMode,
+            ValueProviderFrameContext.CancellationToken);
         using var endpointClip = ClipValueFrameContext.Current?.EnterClip(clip.Id);
         var index = new Index(clips.Select(TransformClipInfo.FromClip).ToArray());
         foreach (var side in Enum.GetValues<TransformSide>())
@@ -297,7 +299,9 @@ public static class TransformProcessing
         using var context = ValueProviderFrameContext.PushFrame(clamped,
             Math.Clamp(((float)clamped - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1));
         uint actual = clip.GetRelativeFrameIndex(clamped) ?? 0;
-        var source = preparedSource is null ? VideoClipRotation.ReadFrame(clip, actual, width, height, pixelMode) : CopyPicture(preparedSource);
+        var source = preparedSource is null
+            ? MaskFrameContext.Current?.ReadSource(clip, clamped) ?? VideoClipRotation.ReadFrame(clip, actual, width, height, pixelMode)
+            : CopyPicture(preparedSource);
         try
         {
             if (preparedSource is null && clip.ExtraData.TryGetValue("IsAI", out var ai) && bool.TryParse(ai?.ToString(), out var isAI) && isAI)
@@ -341,6 +345,8 @@ public static class TransformProcessing
         argumentFrames ??= new();
         clip = InitializeInput(clip, clamped, pixelMode, initializeClips && preparedSource is null, argumentFrames);
         if (!ClipArgumentBinding.ShouldRender(clip)) return Timeline.CreateTransparentFrame(width, height, pixelMode);
+        using var cachedSource = preparedSource is null ? MaskFrameContext.Current?.ReadSource(clip, clamped) : null;
+        preparedSource ??= cachedSource;
         var frames = preparedSource is not null ? new[] { new OneFrame(clamped, clip, CopyPicture(preparedSource), resolveEffects: false) }
             : Timeline.GetFramesInOneFrame([clip], clamped, width, height, pixelMode,
                 projectWidth, projectHeight, applyTransforms: false, initializeClips: false, argumentFrames: argumentFrames).ToArray();
@@ -350,7 +356,7 @@ public static class TransformProcessing
             {
                 for (int i = 0; i < frames.Length; i++)
                 {
-                    if (frames[i].Clip is IHDRPicture<ushort>) continue;
+                    if (frames[i].Clip is null or IHDRPicture<ushort>) continue;
                     var source = frames[i].Clip;
                     var hdr = HDRPicture16bpp.ToHDRPictureBySignal(source, Brightness(clip, sdrBrightness));
                     frames[i] = new OneFrame(clamped, clip, hdr, resolveEffects: false);
@@ -363,7 +369,7 @@ public static class TransformProcessing
         }
         finally
         {
-            foreach (var item in frames) item.Clip.Dispose();
+            foreach (var item in frames) item.Clip?.Dispose();
         }
     }
 

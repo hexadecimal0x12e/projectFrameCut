@@ -199,9 +199,6 @@ public partial class DraftPage : ContentPage, IDraftPage
     private string? _fullContinuousAudioPath = null;
     private Stopwatch? _continuousAudioStopwatch = null;
     private double _continuousAudioStartFrame = 0;
-    private long _previewAudioGeneration;
-    private double _correctedDynamicPlaybackFrame = -1;
-    private bool _previewAudioClockFailed;
     private DateTime _lastDynamicPreviewUIUpdate = DateTime.MinValue;
 
     readonly SemaphoreSlim saveLocker = new(1, 1);
@@ -269,7 +266,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         List<CurrentSnapshotRecord> records = [];
         for (int i = 0; i < CurrentSnapshotSlotCount; i++)
         {
-            var path = Path.Combine(projectPath, "savesSlots", $"current-{i}.json");
+            var path = Path.Combine(projectPath, "saveSlots", $"current-{i}.json");
             if (!File.Exists(path)) continue;
             try
             {
@@ -311,7 +308,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         record.Sequence = sequence;
         record.UpdatedAtUtc = DateTime.UtcNow;
         record.IsDirty = isDirty;
-        await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "savesSlots", $"current-{(sequence - 1) % CurrentSnapshotSlotCount}.json"), record);
+        await WriteSnapshotJsonAsync(Path.Combine(WorkingPath, "saveSlots", $"current-{(sequence - 1) % CurrentSnapshotSlotCount}.json"), record);
         _currentSnapshot = record;
         CurrentSnapshotID = PreviousSnapshotID = ProjectInfo.LastSnapshotID = draft.SnapshotID;
         ProjectInfo.NormallyExited = !isDirty;
@@ -1244,7 +1241,18 @@ public partial class DraftPage : ContentPage, IDraftPage
         try
         {
             await ProjectExternalSourceService.SelectAsync(this, WorkingPath);
-            if (!AlreadyDisappeared) await RefreshPreviewFromCurrentProviderAsync();
+            if (!AlreadyDisappeared)
+            {
+                if (ProjectExternalSourceService.GetApprovals(WorkingPath).Count > 0)
+                {
+                    Log("Reinitializing preview after loading project external sources.");
+                    await DraftChangedAsync(this, new ClipUpdateEventArgs { NoSave = true });
+                }
+                else
+                {
+                    await RefreshPreviewFromCurrentProviderAsync();
+                }
+            }
         }
         catch (Exception ex) { Log(ex, "Select project external sources", this); }
     }
@@ -7871,18 +7879,26 @@ public partial class DraftPage : ContentPage, IDraftPage
         Value = field switch { StaticEffectArgumentField f => f.Value, DynamicEffectParamField f => f.StaticFallbackValue, _ => null },
     };
 
-    private static object GuiProvider(IEffectProvider provider, Guid clipId, string? registrationKey = null) => new
+    private static object GuiProvider(IEffectProvider provider, Guid clipId, string? registrationKey = null, EffectFieldTypeResolution? types = null) => new
     {
         ClipId = clipId,
         ProviderId = provider.Id,
         provider.Name,
         TypeName = registrationKey ?? provider.TypeName,
+        provider.FromPlugin,
         provider.Enabled,
         Target = provider.Target.ToString(),
         EffectType = provider.TypeOfEffect.ToString(),
+        Pipeline = provider.GetPipeline().ToString(),
         InputProviderId = provider.InFields.ContainsKey(EffectProviderAnchorExtensions.InputKey) ? provider.GetMainInputSource() : null,
         IsFinalOutput = provider.IsFinalOutputSource(),
-        Fields = provider.Fields.Values.Select(GuiField).ToArray(),
+        OutputFieldId = provider.GetFinalOutputFieldId(),
+        Fields = provider.Fields.Select(f => GuiEffectField(provider, f.Key, f.Value, types)).ToArray(),
+        InFields = provider.InFields.Select(f => GuiEffectField(provider, f.Key, f.Value, types)).ToArray(),
+        OutFields = provider.GetOutputFields().Select(f => GuiEffectField(provider, f.Key, f.Value, types, false)).ToArray(),
+        provider.AnchorsBindingState,
+        provider.MetaData,
+        SupportsImplementTypes = provider.SupportsImplementTypes.Select(t => t.ToString()).ToArray(),
     };
 
     private async Task<object?> ExecuteGuiProjectAsync(GuiProjectRequest request, CancellationToken cancellationToken)
@@ -7895,7 +7911,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         int I(string key, int fallback = 0) => Has(key) ? p.GetProperty(key).GetInt32() : fallback;
         uint U(string key, uint fallback = 0) => Has(key) ? p.GetProperty(key).GetUInt32() : fallback;
         Guid G(string key) => Has(key) ? p.GetProperty(key).GetGuid() : Guid.Empty;
-        bool B(string key, bool fallback = false) => Has(key) ? p.GetProperty(key).GetBoolean() : fallback;
         Dictionary<string, object> Fields() => Has("Fields")
             ? p.GetProperty("Fields").EnumerateObject().ToDictionary(x => x.Name, x => EffectParamConvert.Normalize(x.Value.Clone())!) : new();
         ClipElementUI Clip() => Clips.TryGetValue(G("ClipId"), out var c) ? c : throw new KeyNotFoundException("Clip not found.");
@@ -7925,6 +7940,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         bool write = !operation.ToString().StartsWith("Get", StringComparison.Ordinal);
         if (write && IsReadonly) throw new InvalidOperationException("Project is read-only.");
         object? result;
+        bool deferEffectRendering = false;
         switch (operation)
         {
             case GuiProjectOperation.GetProjectHistory:
@@ -8046,44 +8062,59 @@ public partial class DraftPage : ContentPage, IDraftPage
             case GuiProjectOperation.SetTextClipStyle:
                 TimelineMcpLiveService.SetTextClipStyleFields(this, Clip().Id, Fields(), strictFields: true);
                 result = GuiClipSnapshot(Clip()); break;
+            case GuiProjectOperation.GetVectorComponentType:
+            case GuiProjectOperation.GetVectorClip:
+            case GuiProjectOperation.GetVectorComponent:
+                return ExecuteGuiVectorOperation(operation, p, cancellationToken);
+            case GuiProjectOperation.AddVectorCanvasClip:
+            case GuiProjectOperation.AddVectorComponentClip:
+            case GuiProjectOperation.SetVectorClip:
+            case GuiProjectOperation.AddVectorComponent:
+            case GuiProjectOperation.SetVectorComponent:
+            case GuiProjectOperation.RemoveVectorComponent:
+                result = ExecuteGuiVectorOperation(operation, p, cancellationToken);
+                break;
             case GuiProjectOperation.GetEffectProviderType:
                 return EffectServices.GetAvailableEffectProviders().Select(x => (Key: x.Key, Provider: x.Value()))
                     .Where(x => !Has("Name") || x.Key.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)
                         || x.Provider.Name.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase))
                     .Select(x => GuiProvider(x.Provider, Guid.Empty, x.Key)).ToArray();
             case GuiProjectOperation.GetEffectProviderField: return Factory().Fields.Values.Select(GuiField).ToArray();
+            case GuiProjectOperation.GetClipEffectGraph:
+            case GuiProjectOperation.GetClipEffectBinding:
+            case GuiProjectOperation.GetClipEffectBindingSource:
+            case GuiProjectOperation.GetClipArgument:
+            case GuiProjectOperation.GetClipValueEndpoint:
+            case GuiProjectOperation.GetClipEffectGroup:
+            case GuiProjectOperation.GetClipEffectGroupTemplate:
+            case GuiProjectOperation.GetEffectGroupTemplate:
+                return await ExecuteGuiEffectOperationAsync(operation, p, cancellationToken);
             case GuiProjectOperation.GetClipEffectProvider:
                 return (Clip().EffectProviders?.Values.AsEnumerable() ?? Enumerable.Empty<IEffectProvider>())
                     .Where(x => (!Has("ProviderId") || x.Id == G("ProviderId")) && (!Has("TypeName") || x.TypeName == S("TypeName")))
                     .Select(x => GuiProvider(x, G("ClipId"))).ToArray();
             case GuiProjectOperation.AddClipEffectProvider:
             case GuiProjectOperation.SetClipEffectProvider:
-                {
-                    var c = Clip();
-                    var provider = operation == GuiProjectOperation.AddClipEffectProvider ? Factory()
-                        : c.EffectProviders?.GetValueOrDefault(G("ProviderId")) ?? throw new KeyNotFoundException("Effect provider not found.");
-                    if (!EffectBindingHelper.AreTargetsCompatible(provider.Target, c.GetEffectTarget())) throw new ArgumentException("Effect target is incompatible.");
-                    if (Has("InputProviderId") && !provider.InFields.ContainsKey(EffectProviderAnchorExtensions.InputKey)) throw new ArgumentException("Provider has no primary input.");
-                    ApplyGuiProviderFields(provider, Fields(), B("ResetToDefaults"));
-                    if (Has("Name")) provider.Name = S("Name")!;
-                    if (Has("Enabled")) provider.Enabled = B("Enabled");
-                    if (operation == GuiProjectOperation.AddClipEffectProvider) TimelineMcpLiveService.AddEffectProvider(this, c.Id.ToString(), provider);
-                    if (Has("InputProviderId")) provider.SetMainInputSource(S("InputProviderId")!);
-                    if (Has("IsFinalOutput"))
-                    {
-                        if (B("IsFinalOutput")) EffectBindingHelper.SetFinalOutput(c.EffectProviders!, provider.Id);
-                        else provider.SetFinalOutputSource(false);
-                    }
-                    ClipInfoBuilder.RebuildAllEffects(c);
-                    RefreshPropertyPanel(c);
-                    result = GuiProvider(provider, c.Id); break;
-                }
             case GuiProjectOperation.RemoveClipEffectProvider:
-                if (!TimelineMcpLiveService.RemoveEffectProvider(this, Clip().Id.ToString(), G("ProviderId"))) throw new KeyNotFoundException("Effect provider not found.");
-                result = null; break;
+            case GuiProjectOperation.SetClipEffectBinding:
+            case GuiProjectOperation.RemoveClipEffectBinding:
+            case GuiProjectOperation.ClearClipEffectBinding:
+            case GuiProjectOperation.SetClipEffectOutput:
+            case GuiProjectOperation.SetClipArgument:
+            case GuiProjectOperation.AddClipValueEndpoint:
+            case GuiProjectOperation.SetClipValueEndpoint:
+            case GuiProjectOperation.RemoveClipValueEndpoint:
+            case GuiProjectOperation.AddClipEffectGroup:
+            case GuiProjectOperation.SetClipEffectGroup:
+            case GuiProjectOperation.RemoveClipEffectGroup:
+            case GuiProjectOperation.ImportClipEffectGroup:
+            case GuiProjectOperation.SaveClipEffectGroup:
+                result = await ExecuteGuiEffectOperationAsync(operation, p, cancellationToken, () => deferEffectRendering = true);
+                break;
             default: throw new NotSupportedException("Unknown GUI project operation.");
         }
         var change = CreateGuiProjectChange(request);
+        if (deferEffectRendering) change.DetailInfo = "__EFFECT_BINDING_CHANGED__";
         ForwardClipChangeToWorkspace(this, change);
         await DraftChangedAsync(this, change);
         return result;
@@ -8111,8 +8142,15 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private static void ApplyGuiProviderFields(IEffectProvider provider, Dictionary<string, object> values, bool reset)
     {
-        var fields = new Dictionary<string, IEffectArgumentField>(reset
-            ? EffectServices.GetAvailableEffectProviders()[provider.TypeName]().Fields : provider.Fields);
+        var bindings = reset ? provider.EnumerateFieldBindings().Select(x => x.Key).ToArray() : values.Keys.ToArray();
+        if (reset && provider is ClipArgumentProvider arguments) arguments.RestoreStaticValues(null);
+        var fields = provider.Fields;
+        if (reset && provider is not ClipArgumentProvider)
+        {
+            var defaults = EffectServices.GetAvailableEffectProviders()[provider.TypeName]();
+            defaults.MetaData = new(provider.MetaData);
+            fields = defaults.Fields;
+        }
         foreach (var (id, raw) in values)
         {
             if (!fields.TryGetValue(id, out var f)) throw new ArgumentException($"Unknown effect field '{id}'.");
@@ -8130,20 +8168,10 @@ public partial class DraftPage : ContentPage, IDraftPage
                 _ => value,
             };
             if (f.PresetOptions is { Length: > 0 } && converted is string text && !f.PresetOptions.Contains(text)) throw new ArgumentException($"Invalid option for '{id}'.");
-            fields[id] = new StaticEffectArgumentField
-            {
-                Id = id,
-                FieldType = f.FieldType,
-                Value = converted,
-                DefaultValue = f.DefaultValue,
-                MinValue = f.MinValue,
-                MaxValue = f.MaxValue,
-                PresetOptions = f.PresetOptions,
-                Remarks = f.Remarks
-            };
+            fields[id] = GuiStaticField(id, f, converted);
         }
-        provider.Fields = fields;
-        foreach (var id in (reset ? provider.EnumerateFieldBindings().Select(x => x.Key).ToArray() : values.Keys.ToArray())) provider.ClearFieldBinding(id);
+        provider.Fields = provider is ClipArgumentProvider ? fields.Where(f => values.ContainsKey(f.Key)).ToDictionary() : fields;
+        foreach (var id in bindings) provider.ClearFieldBinding(id);
     }
 
     private async Task MonitorExternalRpcRequestsAsync(CancellationToken ct)
@@ -8220,11 +8248,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             isPlaying = false;
             CancelDynamicPreview();
             try { _playbackCts?.Cancel(); } catch { }
-            if (_previewAudioGeneration != 0 && !IsRemoteProject)
-            {
-                try { await previewer.StopPreviewAudioAsync(); } catch (Exception ex) { Log(ex, "stop preview audio before cache cleanup", this); }
-                _previewAudioGeneration = 0;
-            }
+            await previewer.StopDynamicPreviewAsync();
             foreach (var cts in _perClipThumbCts.Values)
             {
                 try { cts.Cancel(); } catch { }
@@ -8748,7 +8772,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             Log(ex, "Save window layout", this);
         }
-        if (isPlaying || _previewAudioGeneration != 0) await PauseLivePreview();
+        if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview();
         if (leavingProject && !ExitNoSave)
             SaveProjectThumbnailBeforeExit();
         AlreadyDisappeared = true;

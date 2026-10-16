@@ -96,6 +96,7 @@ public sealed class ProjectExternalSourceHost : IAsyncDisposable
                     await client.LoadAsync(cancellationToken).ConfigureAwait(false);
                     asset.Sources = client.Sources.Select(x => RenderRpcSerializer.Clone(x)).ToList();
                     asset.AudioSources = client.AudioSources.Select(x => RenderRpcSerializer.Clone(x)).ToList();
+                    asset.MaskSources = client.MaskSources.Select(x => RenderRpcSerializer.Clone(x)).ToList();
                     if (asset.Sources.Any(x => string.IsNullOrWhiteSpace(x.SourceId) || string.IsNullOrWhiteSpace(x.DecoderName))
                         || asset.Sources.Select(x => x.SourceId).Distinct(StringComparer.Ordinal).Count() != asset.Sources.Count)
                         throw new InvalidDataException("External source provider returned an invalid catalog.");
@@ -105,7 +106,15 @@ public sealed class ProjectExternalSourceHost : IAsyncDisposable
                         || asset.AudioSources.Select(x => x.SourceId).Distinct(StringComparer.Ordinal).Count() != asset.AudioSources.Count)
                         throw new InvalidDataException("External audio source provider returned an invalid catalog.");
                     foreach (var source in asset.AudioSources) { source.ClientId = asset.ImportId; source.ClientName = asset.Manifest.Name; }
-                    await ProjectExternalSourceDatabase.UpdateSourcesAsync(root, asset.ImportId, asset.Sources, asset.AudioSources, cancellationToken).ConfigureAwait(false);
+                    if (asset.MaskSources.Count > 256 || asset.MaskSources.Select(x => x.SourceId).Distinct(StringComparer.Ordinal).Count() != asset.MaskSources.Count)
+                        throw new InvalidDataException("External mask source provider returned an invalid catalog.");
+                    foreach (var source in asset.MaskSources)
+                    {
+                        source.Validate();
+                        source.ClientId = asset.ImportId;
+                        source.ClientName = asset.Manifest.Name;
+                    }
+                    await ProjectExternalSourceDatabase.UpdateSourcesAsync(root, asset.ImportId, asset.Sources, asset.AudioSources, asset.MaskSources, cancellationToken).ConfigureAwait(false);
                     Entries[asset.ImportId] = new(asset, client);
                     Interlocked.Increment(ref generation);
                     client = null;
@@ -139,7 +148,8 @@ public sealed class ProjectExternalSourceHost : IAsyncDisposable
             Description = x.Manifest.Description ?? string.Empty, AuthorUrl = x.Manifest.AuthorUrl ?? string.Empty,
             ManifestSha256 = x.ManifestSha256, Directory = x.Directory, ImportedAt = x.CreatedAt,
             Sources = current && Entries.TryGetValue(x.ImportId, out var entry) ? entry.Asset.Sources : x.Sources,
-            AudioSources = current && Entries.TryGetValue(x.ImportId, out var audioEntry) ? audioEntry.Asset.AudioSources : x.AudioSources }).ToList(),
+            AudioSources = current && Entries.TryGetValue(x.ImportId, out var audioEntry) ? audioEntry.Asset.AudioSources : x.AudioSources,
+            MaskSources = current && Entries.TryGetValue(x.ImportId, out var maskEntry) ? maskEntry.Asset.MaskSources : x.MaskSources }).ToList(),
     };
 
     public async Task CloseAsync()
@@ -170,6 +180,9 @@ public sealed class ProjectExternalSourceHost : IAsyncDisposable
         if (Entries.TryGetValue(importId, out var entry) && entry.Client.IsAvailable) return entry.Client;
         throw new IOException(Errors.GetValueOrDefault(importId) ?? $"Project external source {importId} was skipped, is missing, or its worker has exited.");
     }
+
+    public IEnumerable<ExternalMaskSourceDescriptor> GetMaskSources() => Entries.Values.Where(x => x.Client.IsAvailable)
+        .SelectMany(x => x.Asset.MaskSources).Select(x => RenderRpcSerializer.Clone(x));
 
     private sealed record Entry(ProjectExternalSourceAsset Asset, ProjectExternalSourceClient Client);
 }

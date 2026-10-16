@@ -13,6 +13,8 @@ public static class ClipArgumentBinding
 
     public static bool IsFrameCopy(IClip clip) => Copies.TryGetValue(clip, out _);
 
+    internal static uint GetFrameIndex(IClip clip, uint fallback) => Copies.TryGetValue(clip, out var copy) ? copy.Frame : fallback;
+
     public static bool ShouldRender(IClip frameClip) => !Copies.TryGetValue(frameClip, out var copy) || copy.ShouldRender;
 
     internal static bool TryGetFrame(IClip clip, uint frame, out IClip? result)
@@ -45,8 +47,6 @@ public static class ClipArgumentBinding
                 throw new InvalidOperationException("The clip argument handler must return a frame copy with the same id.");
             Copies.Add(result, new(clip, frame, shouldRender));
             ClipValueFrameContext.Current?.SetComputed((typeof(ClipArgumentBinding), clip.Id, frame), result);
-            Logger.LogDiagnostic(shouldRender ? $"Initialized clip arguments for {clip.Id}, frame {frame}."
-                : $"Skipped clip {clip.Id}, frame {frame}: ShouldRender is false.");
             return result;
         }
         catch (Exception ex)

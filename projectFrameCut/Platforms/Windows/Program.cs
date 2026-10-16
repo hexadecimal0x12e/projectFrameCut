@@ -55,24 +55,41 @@ namespace projectFrameCut.WinUI
                 }
                 string processName = Process.GetCurrentProcess().ProcessName.ToLowerInvariant().Trim();
 
-                Console.WriteLine($"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "projectFrameCut"} {MauiProgram.ProgramCommit}");
+                Console.WriteLine($"{MauiProgram.AssemblyName} {Assembly.GetExecutingAssembly().GetName().Version} {MauiProgram.ProgramConfig}@{MauiProgram.ProgramCommit}");
                 Console.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
 
                 try
                 {
+                    string AC = "unknown";
+                    try
+                    {
+                        AC = WindowsPluginIsolationPlatform.IsInAppContainer().ToString();
+                    }
+                    catch { }
                     // Manually initialize Windows App SDK if running in packaged mode,
                     // to avoid isolated worker blows up as it maybe run without MSIX Identity
-                    if (WinUI.App.IsPackaged())
+                    if (!args.Contains("--workerMode") && WinUI.App.IsPackaged())
                     {
-                        var options = new Microsoft.Windows.ApplicationModel.WindowsAppRuntime.DeploymentInitializeOptions()
+                        try
                         {
-                            OnErrorShowUI = true
-                        };
-                        var deploymentResult = Microsoft.Windows.ApplicationModel.WindowsAppRuntime.DeploymentManager.Initialize(options);
-                        if (deploymentResult.Status != Microsoft.Windows.ApplicationModel.WindowsAppRuntime.DeploymentStatus.Ok)
+                            var options = new Microsoft.Windows.ApplicationModel.WindowsAppRuntime.DeploymentInitializeOptions()
+                            {
+                                OnErrorShowUI = true
+                            };
+                            var deploymentResult = Microsoft.Windows.ApplicationModel.WindowsAppRuntime.DeploymentManager.Initialize(options);
+                            if (deploymentResult.Status != Microsoft.Windows.ApplicationModel.WindowsAppRuntime.DeploymentStatus.Ok)
+                            {
+                                int hr = deploymentResult.ExtendedError.HResult;
+                                Log($"Running under MSIX Identity without Windows App SDK, PFN: {WinUI.App.GetPackageFullName()}, In app container: {AC}.{Environment.NewLine}Windows App SDK fail because:{new Win32Exception(hr).Message}");
+                            }
+                            else
+                            {
+                                Log($"Running under MSIX Identity with Windows App SDK, PFN: {WinUI.App.GetPackageFullName()}, In app container: {AC}.");
+                            }
+                        }
+                        catch (Exception ex)
                         {
-                            int hr = deploymentResult.ExtendedError.HResult;
-                            Log($"Running under MSIX Identity without Windows App SDK, PFN: {WinUI.App.GetPackageFullName()}, In app container: {WindowsPluginIsolationPlatform.IsInAppContainer()}.{Environment.NewLine}Windows App SDK fail because:{new Win32Exception(hr).Message}");
+                            Log($"Running without MSIX Identity and without Windows App SDK, In app container: {AC}.{Environment.NewLine}Windows App SDK fail because:{ex.Message}");
                         }
                     }
                     else if (!args.Contains("--workerMode") && (processName.StartsWith("projectframecut") || args.Contains("--loadWinAppSDK") || args.FirstOrDefault() == "gui"))
@@ -80,12 +97,16 @@ namespace projectFrameCut.WinUI
                         try
                         {
                             Microsoft.Windows.ApplicationModel.DynamicDependency.Bootstrap.Initialize(0x00020005);
-                            Log($"Running without MSIX Identity and (unpackaged) Windows App SDK, In app container: {WindowsPluginIsolationPlatform.IsInAppContainer()}");
+                            Log($"Running without MSIX Identity and (unpackaged) Windows App SDK, In app container: {AC}");
                         }
-                        catch (Exception ex)
+                        catch (Exception ex)    
                         {
-                            Log($"Running without MSIX Identity and without (unpackaged) Windows App SDK, In app container: {WindowsPluginIsolationPlatform.IsInAppContainer()}.{Environment.NewLine}Windows App SDK fail because:{ex.Message}");
+                            Log($"Running without MSIX Identity and without (unpackaged) Windows App SDK, In app container: {AC}.{Environment.NewLine}Windows App SDK fail because:{ex.Message}");
                         }
+                    }
+                    else
+                    {
+                        Log($"Running in headless mode, In app container: {AC}");
                     }
                 }
                 catch (Exception ex)

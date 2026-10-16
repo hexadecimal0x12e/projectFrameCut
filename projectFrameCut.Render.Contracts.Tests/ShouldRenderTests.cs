@@ -247,12 +247,9 @@ public sealed class ShouldRenderTests
     }
 
     [TestMethod]
-    [DataRow(false, false, false)]
-    [DataRow(true, false, false)]
-    [DataRow(false, true, false)]
-    [DataRow(false, false, true)]
-    [DataRow(false, true, true)]
-    public async Task AllHiddenFramesFinishAcrossRenderModes(bool sync, bool layers, bool workerDecode)
+    [DataRow(1)]
+    [DataRow(2)]
+    public async Task AllHiddenFramesFinishWithoutReadingSources(int workers)
     {
         int reads = 0;
         var a = new NumericComparisonNodeEffectProvider();
@@ -262,8 +259,8 @@ public sealed class ShouldRenderTests
         var renderer = new Renderer
         {
             Clips = [left, right], Duration = 2, TargetWidth = 2, TargetHeight = 1, ProjectRelativeWidth = 2, ProjectRelativeHeight = 1,
-            Use16Bit = false, MaxThreads = 2, OneByOneRender = sync, RenderByLayers = layers, PrepareInWorkerThreads = workerDecode,
-            AutoSetupRenderContext = false, DisableAllThrottleOptions = true, MinSchedulePreparedFrames = 1,
+            Use16Bit = false, MaxThreads = workers, RenderAheadFrames = 1,
+            AutoSetupRenderContext = false,
         };
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         renderer.PrepareRender(timeout.Token);

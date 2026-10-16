@@ -18,6 +18,7 @@ public partial class ProjectAddClipView : ContentView
         _page = draftPage;
         _viewModel = new ProjectAddClipViewModel(ref draftPage);
         _viewModel.LoadVectorComponents();
+        _ = _viewModel.LoadMaskSources();
         BindingContext = _viewModel;
         _viewModel.SetDrawingView(DrawingCanvas);
         MainTabView.OnTabSwitched += MainTabView_OnTabSwitched;
@@ -42,6 +43,7 @@ public partial class ProjectAddClipView : ContentView
         SearchContainer.IsVisible = e.Tag is not ("Sketch" or "AIGeneratedContent" or "More");
         if (e.Tag == "RpcSources") _ = _viewModel.LoadRpcVideoSources();
         if (e.Tag == "Graphics") _viewModel.LoadVectorComponents();
+        if (e.Tag == "Masks") _ = _viewModel.LoadMaskSources();
     }
 
     private async void OnAddAssetClicked(object? sender, EventArgs e)

@@ -7,7 +7,6 @@
 	xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
 	xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
-	xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
 	xmlns:uap4="http://schemas.microsoft.com/appx/manifest/uap/windows10/4">
 
 	<Identity Name="0xeeeeeeeeeeee.projectFrameCut" Publisher="CN=0AD263CD-E10E-4A8B-A187-25C0A41C69D7" Version="1.7.0.0" />
@@ -64,28 +63,12 @@
 						</com:ExeServer>
 					</com:ComServer>
 				</com:Extension>
-			</Extensions>
-		</Application>
-
-		<Application Id="projectFrameCutCompatible" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
-			<uap:VisualElements DisplayName="projectFrameCut (DO NOT DISABLE THIS ALIAS, OR YOU WILL BREAK THE APPLICATION)" Description="the entrypoint for the projectFrameCut CLI (version-specific alias), this should be hidden" AppListEntry="none" 
-													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
-			<Extensions>
 				<uap3:Extension Category="windows.appExecutionAlias" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
 					<uap3:AppExecutionAlias>
 						<desktop:ExecutionAlias Alias="projectFrameCutCompatible_0xeeeeeeeeeeee.projectFrameCut_1.7.0.0.exe" />
 					</uap3:AppExecutionAlias>
 				</uap3:Extension>
 			</Extensions>
-		</Application>
-		
-		<Application Id="InSandboxWorkerNoConsole" Executable="projectFrameCut.exe" uap10:TrustLevel="appContainer" uap10:RuntimeBehavior="packagedClassicApp" uap10:SupportsMultipleInstances="true">
-			<uap:VisualElements DisplayName="projectFrameCut Sandbox runner (No Console)" Description="AppContainer isolated environment helper" AppListEntry="none" 
-													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
-		</Application>
-		<Application Id="InSandboxWorkerConsole" Executable="pjfc-cli.exe" uap10:TrustLevel="appContainer" uap10:RuntimeBehavior="packagedClassicApp" uap10:SupportsMultipleInstances="true">
-			<uap:VisualElements DisplayName="projectFrameCut Sandbox runner (Console)" Description="AppContainer isolated environment helper" AppListEntry="none" 
-													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
 		</Application>
 	</Applications>
 

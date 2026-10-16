@@ -93,6 +93,48 @@ Effects/provider graphs:
 - `Set-ProjectClipEffectProvider -ClipId <id> -ProviderId <id> [-Name] [-Enabled] [-Fields <hashtable>] [-ResetToDefaults] [-InputProviderId] [-IsFinalOutput] [-PassThru]`
 - `Remove-ProjectClipEffectProvider -ClipId <id> -ProviderId <id>`
 
+Effect binding graphs:
+
+- `Get-ProjectClipEffectGraph -ClipId <id> [-AsMermaid]`
+- `Get-ProjectClipEffectBinding -ClipId <id> [-ProviderId] [-FieldId]`
+- `Get-ProjectClipEffectBindingSource -ClipId <id> [-ProviderId] [-FieldId] [-Pipeline Picture|NativeContent]`
+- `Set-ProjectClipEffectBinding -ClipId <id> [-ProviderId] -FieldId <field> -SourceId <source>`
+- `Remove-ProjectClipEffectBinding -ClipId <id> [-ProviderId] -FieldId <field>`
+- `Clear-ProjectClipEffectBinding -ClipId <id> [-ProviderId] [-OutputFieldId] [-Pipeline]`
+- `Set-ProjectClipEffectOutput -ClipId <id> [-ProviderId] [-OutputFieldId] [-Pipeline]`
+- `Get-ProjectClipArgument -ClipId <id> [-FieldId]`
+- `Set-ProjectClipArgument -ClipId <id> [-Fields <hashtable>] [-ResetToDefaults]`
+
+Provider snapshots include `InFields`, `OutFields`, `AnchorsBindingState`, `MetaData`, and `Pipeline`. `Add/Set-ProjectClipEffectProvider` also accept `-Pipeline` and `-Metadata`; metadata entries set to null are removed. `Add` accepts `-NoAutoConnect` for a disconnected node. Query the graph's `Diagnostics` while constructing it incrementally.
+
+Binding sources can also be selected with `-SourceProviderId [-SourceOutputFieldId]`, `-ClipInput`, or `-BuiltIn Frame|Progress`. Use a named output on multiple-output providers. Omitting `ProviderId` from binding/field-source commands targets Clip arguments; the argument node is created on the first write. `Get-ProjectClipArgument` returns a null `ProviderId` before that node exists. Setting static fields clears their bindings; resetting Clip arguments restores the Clip's own values.
+
+`Clear-ProjectClipEffectBinding` clears every binding when no provider is specified, all incoming/outgoing connections of one provider when `ProviderId` is given, or just outgoing connections when an `OutputFieldId` is given. `Set-ProjectClipEffectOutput` without a provider clears the chosen pipeline's output (default `Picture`). Final outputs are reported separately in the graph's `Outputs` array.
+
+Cross-Clip endpoints:
+
+- `Get-ProjectClipValueEndpoint -ClipId <id> [-EndpointId] [-Available] [-Pipeline]`
+- `Add-ProjectClipValueEndpoint -ClipId <id> [-Name] [-ValueType Numeric|Integer|UnsignedInteger|Long|UnsignedLong|Boolean|String|Color|Size|Position|SizeAndPosition|IPicture|VectorPicture] [-Pipeline]`
+- `Add-ProjectClipValueEndpoint -ClipId <id> -SourceClipId <id> -SourceEndpointId <id> [-Name] [-Pipeline]`
+- `Set-ProjectClipValueEndpoint -ClipId <id> -EndpointId <id> [-Name] [-Enabled] [-ValueType] [-SourceClipId] [-SourceEndpointId] [-Pipeline]`
+- `Remove-ProjectClipValueEndpoint -ClipId <id> -EndpointId <id>`
+
+Bind an export endpoint's `__Input__` to its value source, and bind consumer fields to the import endpoint's `ProviderId`. Discover sources with `-Available`, then inspect `Enabled` and `Status`. Cross-Clip sources must precede the consumer in layer order and use the same pipeline. Within one Clip, only non-content values may pass from `NativeContent` to `Picture`.
+
+Effect groups and templates:
+
+- `Get-ProjectClipEffectGroup -ClipId <id> [-GroupId]`
+- `Add-ProjectClipEffectGroup -ClipId <id> -Name <name> [-ProviderIds <guid[]>] [-ChildGroupIds <guid[]>] [-Ports <hashtable[]>] [-Collapsed] [-X] [-Y]`
+- `Set-ProjectClipEffectGroup -ClipId <id> -GroupId <id> [-Name] [-Ports] [-Collapsed] [-X] [-Y]`
+- `Remove-ProjectClipEffectGroup -ClipId <id> -GroupId <id> [-RemoveProviders]`
+- `Export-ProjectClipEffectGroup -ClipId <id> -GroupId <id>`
+- `Import-ProjectClipEffectGroup -ClipId <id> -TemplateJson <json> [-X] [-Y]`
+- `Import-ProjectClipEffectGroup -ClipId <id> -Hash <hash> [-X] [-Y]`
+- `Get-ProjectEffectGroupTemplate [-Hash]`
+- `Save-ProjectClipEffectGroup -ClipId <id> -GroupId <id> [-ReplaceHash]`
+
+Group ports are ordered hashtables with `ProviderId`, `FieldId`, `Name`, and `IsInput`. Required boundary ports are added automatically. Group selected nodes with the same parent; Clip arguments, endpoints, and transitions cannot be grouped. Removing a group ungroups its members unless `-RemoveProviders` is used. Export returns JSON for `Set-Content`; import assigns independent IDs and omits external project bindings. Saving a group writes the application's shared group library and does not replace `Save-Project`.
+
 All connected project commands accept `-TimeoutSeconds` (default 60). Write commands support `-WhatIf`, `-Confirm`, `-PassThru`, and `-ChangeReason`. By default write commands do not emit a result.
 
 ## IDs, fields, and history

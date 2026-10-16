@@ -441,15 +441,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                             data, stride, width, height, _path, targetFrame, height));
                 }
 
-                int scaledRows = ffmpeg.sws_scale(
-                    _sws,
-                    _frm->data,
-                    _frm->linesize,
-                    0,
-                    _height,
-                    _rgb->data,
-                    _rgb->linesize
-                );
+                int scaledRows = FFmpegHelper.ScaleFrame(_sws, _frm, _rgb);
                 if (scaledRows <= 0)
                     throw new InvalidDataException($"Decoder failed to convert frame for '{_path}' (sws_scale returned {scaledRows}).");
                 if (scaledRows < _height)
@@ -1037,15 +1029,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                             transferCharacteristic, maximumBrightness, height));
                 }
 
-                int scaledRows = ffmpeg.sws_scale(
-                    _sws,
-                    _frm->data,
-                    _frm->linesize,
-                    0,
-                    _height,
-                    _rgb->data,
-                    _rgb->linesize
-                );
+                int scaledRows = FFmpegHelper.ScaleFrame(_sws, _frm, _rgb);
                 if (scaledRows <= 0)
                     throw new InvalidDataException($"Decoder failed to convert frame for '{_path}' (sws_scale returned {scaledRows}).");
                 if (scaledRows < _height)
@@ -1830,14 +1814,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                             data, stride, width, height, _path, targetFrame, height));
                 }
 
-                int scaledRows = ffmpeg.sws_scale(
-                    _sws,
-                    _frm->data,
-                    _frm->linesize,
-                    0,
-                    _height,
-                    _rgb->data,
-                    _rgb->linesize);
+                int scaledRows = FFmpegHelper.ScaleFrame(_sws, _frm, _rgb);
                 if (scaledRows <= 0)
                     throw new InvalidDataException($"Decoder failed to convert frame for '{_path}' (sws_scale returned {scaledRows}).");
                 if (scaledRows < _height)

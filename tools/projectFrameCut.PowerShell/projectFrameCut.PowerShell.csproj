@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net11.0</TargetFrameworks>
-    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net11.0;net11.0-windows10.0.19041.0</TargetFrameworks>
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net10.0;net10.0-windows10.0.19041.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -15,6 +15,9 @@
     <ProjectReference Include="..\..\projectFrameCut.Render.Contracts\projectFrameCut.Render.Contracts.csproj" />
     <None Update="projectFrameCut.PowerShell.psd1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+		<Using Remove="projectFrameCut.Drawing.Base.IPicture"/>
+		<Using Remove="projectFrameCut.Drawing.Base.PictureExtensions"/>
+		<Using Remove="projectFrameCut.Shared.Logger"/>
   </ItemGroup>
   <Target Name="FilterModulePublish" AfterTargets="ComputeFilesToPublish">
     <ItemGroup>

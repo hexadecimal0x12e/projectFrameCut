@@ -212,7 +212,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (captureThreadStacks)
                 await Task.Run(RenderRpcBootstrap.CaptureThreadStacksBeforeRestart).ConfigureAwait(false);
 #endif
-            if (isPlaying || _previewAudioGeneration != 0) await PauseLivePreview();
+            if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview();
 
             await Dispatcher.DispatchAsync(() =>
             {
@@ -275,7 +275,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 #endif
         CancelGeneratedSoundTrackSync();
         if (AlreadyDisappeared) return;
-        if (isPlaying || _previewAudioGeneration != 0) await PauseLivePreview();
+        if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview();
         if (AlreadyDisappeared) return;
         CancelDynamicPreview();
         DynamicPreviewProvider.CancelClipWarmups();
@@ -364,7 +364,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 #endif
         if (AlreadyDisappeared) return;
 
-        if (isPlaying || _previewAudioGeneration != 0) await PauseLivePreview();
+        if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview();
         if (AlreadyDisappeared) return;
         CancelDynamicPreview();
         DynamicPreviewProvider.CancelClipWarmups();

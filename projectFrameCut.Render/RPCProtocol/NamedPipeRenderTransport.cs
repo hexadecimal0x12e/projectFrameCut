@@ -118,7 +118,7 @@ public sealed class NamedPipeRenderServer(
                             {
                                 try
                                 {
-                                    await DispatchAndWriteAsync(service, pipe, writeGate, request, requestCts.Token).ConfigureAwait(false);
+                                    await DispatchAndWriteAsync(service, pipe, writeGate, request, requestCts.Token, connectionCancellation.Token).ConfigureAwait(false);
                                 }
                                 finally
                                 {
@@ -203,13 +203,27 @@ public sealed class NamedPipeRenderServer(
         }
     }
 
-    private static async Task DispatchAndWriteAsync(IRenderService service, NamedPipeServerStream pipe, SemaphoreSlim writeGate, RenderRequestEnvelope request, CancellationToken cancellationToken)
+    private static async Task DispatchAndWriteAsync(IRenderService service, NamedPipeServerStream pipe, SemaphoreSlim writeGate, RenderRequestEnvelope request, CancellationToken cancellationToken, CancellationToken connectionToken)
     {
+        using var notifications = RenderRpcNotifications.UseDynamicPreviewClockSender(async (clock, token) =>
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, connectionToken);
+            await writeGate.WaitAsync(linked.Token).ConfigureAwait(false);
+            try
+            {
+                await RenderPipeFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(new RenderResponseEnvelope
+                {
+                    DynamicPreviewClock = clock,
+                }), CancellationToken.None).ConfigureAwait(false);
+            }
+            finally { writeGate.Release(); }
+        });
         RenderResponseEnvelope response;
         try
         {
             response = await service.DispatchAsync(request, cancellationToken).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { return; }
         catch (OperationCanceledException ex)
         {
             response = new RenderResponseEnvelope
@@ -235,6 +249,7 @@ public sealed class NamedPipeRenderServer(
             };
         }
 
+        if (cancellationToken.IsCancellationRequested) return;
         try
         {
             await writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -304,6 +319,12 @@ public sealed class NamedPipeRenderServer(
                     if (client is null) clients.Clients.Add(audio);
                     else client.AudioSources = audio.AudioSources;
                 }
+                foreach (var mask in ExternalMaskSourceRegistry.ListClients().Clients)
+                {
+                    var client = clients.Clients.FirstOrDefault(x => x.ClientId == mask.ClientId);
+                    if (client is null) clients.Clients.Add(mask);
+                    else client.MaskSources = mask.MaskSources;
+                }
                 return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(clients) };
             }
             if (request.Operation == RenderOperation.ManageExternalVideoSourceClient)
@@ -311,10 +332,12 @@ public sealed class NamedPipeRenderServer(
                 var manage = RenderRpcSerializer.Deserialize<ManageExternalVideoSourceClientRequest>(request.Payload);
                 if (manage.Action == ExternalVideoSourceClientAction.Load
                     && !ExternalVideoSourceRegistry.ListClients().Clients.Any(x => x.ClientId == manage.ClientId)
-                    && !ExternalAudioSourceRegistry.ListClients().Clients.Any(x => x.ClientId == manage.ClientId))
+                    && !ExternalAudioSourceRegistry.ListClients().Clients.Any(x => x.ClientId == manage.ClientId)
+                    && !ExternalMaskSourceRegistry.ListClients().Clients.Any(x => x.ClientId == manage.ClientId))
                     throw new InvalidOperationException("The client must register sources before loading them.");
                 await ExternalVideoSourceRegistry.ManageAsync(manage, ct).ConfigureAwait(false);
                 await ExternalAudioSourceRegistry.ManageAsync(manage, ct).ConfigureAwait(false);
+                await ExternalMaskSourceRegistry.ManageAsync(manage, ct).ConfigureAwait(false);
                 return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(new EmptyResponse()) };
             }
             if (request.Operation is RenderOperation.RegisterExternalVideoSources or RenderOperation.UnregisterExternalVideoSources or RenderOperation.ListExternalVideoSources)
@@ -337,6 +360,19 @@ public sealed class NamedPipeRenderServer(
                 else await ExternalAudioSourceRegistry.UnregisterAsync(clientId, ct).ConfigureAwait(false);
                 return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(new EmptyResponse()) };
             }
+            if (request.Operation is RenderOperation.RegisterExternalMaskSources or RenderOperation.UnregisterExternalMaskSources or RenderOperation.ListExternalMaskSources)
+            {
+                if (request.Operation == RenderOperation.ListExternalMaskSources)
+                    return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(ExternalMaskSourceRegistry.List()) };
+                if (!Guid.TryParse(request.ClientId, out var clientId)) throw new UnauthorizedAccessException("External mask source client ID is invalid.");
+                if (request.Operation == RenderOperation.RegisterExternalMaskSources)
+                    await ExternalMaskSourceRegistry.RegisterAsync(clientId, RenderRpcSerializer.Deserialize<RegisterExternalMaskSourcesRequest>(request.Payload), ct).ConfigureAwait(false);
+                else await ExternalMaskSourceRegistry.UnregisterAsync(clientId, ct).ConfigureAwait(false);
+                return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(new EmptyResponse()) };
+            }
+            if (request.Operation == RenderOperation.ExternalMaskSourceProcess)
+                return new() { RequestId = request.RequestId, Payload = RenderRpcSerializer.Serialize(await ExternalMaskSourceRegistry.ProcessAsync(
+                    RenderRpcSerializer.Deserialize<ExternalMaskSourceProcessRequest>(request.Payload), ct).ConfigureAwait(false)) };
             if (request.Operation != RenderOperation.CreateAdditionalPipe)
             {
                 var response = await service.DispatchAsync(request, ct).ConfigureAwait(false);
@@ -353,6 +389,8 @@ public sealed class NamedPipeRenderServer(
                         capabilities.Operations.Add(nameof(RenderOperation.ResolveExternalRpcRequest));
                         capabilities.Operations.Add(nameof(RenderOperation.ListExternalVideoSources));
                         capabilities.Operations.Add(nameof(RenderOperation.ListExternalAudioSources));
+                        capabilities.Operations.Add(nameof(RenderOperation.ListExternalMaskSources));
+                        capabilities.Operations.Add(nameof(RenderOperation.ExternalMaskSourceProcess));
                     }
                     response.Payload = RenderRpcSerializer.Serialize(capabilities);
                 }
@@ -421,13 +459,16 @@ public sealed class NamedPipeRenderServer(
                     throw new UnauthorizedAccessException("External RPC client ID does not match its authorization.");
                 return new ExternalSourceConnection(
                     ExternalVideoSourceRegistry.Connect(clientId, clientName, callback, () => host.IsAuthorized(clientId)),
-                    ExternalAudioSourceRegistry.Connect(clientId, clientName, callback, () => host.IsAuthorized(clientId)));
+                    ExternalAudioSourceRegistry.Connect(clientId, clientName, callback, () => host.IsAuthorized(clientId)),
+                    ExternalMaskSourceRegistry.Connect(clientId, clientName, callback, () => host.IsAuthorized(clientId)));
             }
 
             public async ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
             {
                 if (request.Operation is RenderOperation.RegisterExternalVideoSources or RenderOperation.UnregisterExternalVideoSources
-                    or RenderOperation.RegisterExternalAudioSources or RenderOperation.UnregisterExternalAudioSources)
+                    or RenderOperation.RegisterExternalAudioSources or RenderOperation.UnregisterExternalAudioSources
+                    or RenderOperation.RegisterExternalMaskSources or RenderOperation.UnregisterExternalMaskSources
+                    or RenderOperation.ListExternalMaskSources or RenderOperation.ExternalMaskSourceProcess)
                     return await host.DispatchAsync(request, cancellationToken).ConfigureAwait(false);
                 var response = await inner.DispatchAsync(request, cancellationToken).ConfigureAwait(false);
                 if (request.Operation == RenderOperation.GetCapabilities && response.Error is null)
@@ -437,18 +478,26 @@ public sealed class NamedPipeRenderServer(
                     capabilities.Operations.Add(nameof(RenderOperation.UnregisterExternalVideoSources));
                     capabilities.Operations.Add(nameof(RenderOperation.RegisterExternalAudioSources));
                     capabilities.Operations.Add(nameof(RenderOperation.UnregisterExternalAudioSources));
+                    capabilities.Operations.Add(nameof(RenderOperation.RegisterExternalMaskSources));
+                    capabilities.Operations.Add(nameof(RenderOperation.UnregisterExternalMaskSources));
+                    capabilities.Operations.Add(nameof(RenderOperation.ListExternalMaskSources));
+                    capabilities.Operations.Add(nameof(RenderOperation.ExternalMaskSourceProcess));
                     response.Payload = RenderRpcSerializer.Serialize(capabilities);
                 }
                 return response;
             }
         }
 
-        private sealed class ExternalSourceConnection(IDisposable video, IDisposable audio) : IDisposable
+        private sealed class ExternalSourceConnection(IDisposable video, IDisposable audio, IDisposable mask) : IDisposable
         {
             public void Dispose()
             {
-                try { audio.Dispose(); }
-                finally { video.Dispose(); }
+                try { mask.Dispose(); }
+                finally
+                {
+                    try { audio.Dispose(); }
+                    finally { video.Dispose(); }
+                }
             }
         }
 

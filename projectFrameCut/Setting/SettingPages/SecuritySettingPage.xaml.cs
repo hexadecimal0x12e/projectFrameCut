@@ -9,7 +9,7 @@ using static projectFrameCut.Setting.SettingManager.SettingsManager;
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
+using static projectFrameCut.Platforms.Windows.WindowsPluginIsolationPlatform;
 #endif
 
 namespace projectFrameCut.Setting.SettingPages
@@ -17,10 +17,7 @@ namespace projectFrameCut.Setting.SettingPages
     public class SecuritySettingPage : ContentPage
     {
 #if WINDOWS
-        private const string PluginInternetSetting = "Security_IsolatedPlugins_AllowInternet";
-        private const string PluginServerSetting = "Security_IsolatedPlugins_AllowServer";
-        private const string PluginLoopbackSetting = "Security_IsolatedPlugins_AllowLoopback";
-        private static readonly SemaphoreSlim FirewallLock = new(1, 1);
+        private static readonly SemaphoreSlim NetworkPolicyLock = new(1, 1);
         private ScrollView? settingsContent;
         private ActivityIndicator? networkPolicyBusyIndicator;
 #endif
@@ -47,9 +44,9 @@ namespace projectFrameCut.Setting.SettingPages
                 .AddSeparator()
 #if WINDOWS
                 .AddText(new SingleLineLabel(SettingLocalizedResources.Security_IsolatedPlugins, 25))
-                .AddCheckbox(PluginInternetSetting, SettingLocalizedResources.Security_IsolatedPlugins_AllowInternet, IsIsolatedPluginNetworkAccessEnabled(PluginInternetSetting))
-                .AddCheckbox(PluginServerSetting, SettingLocalizedResources.Security_IsolatedPlugins_AllowServer, IsIsolatedPluginNetworkAccessEnabled(PluginServerSetting))
-                .AddCheckbox(PluginLoopbackSetting, SettingLocalizedResources.Security_IsolatedPlugins_AllowLoopback, IsIsolatedPluginLoopbackAccessEnabled())
+                .AddCheckbox(PluginInternetSetting, SettingLocalizedResources.Security_IsolatedPlugins_AllowInternet, IsBoolSettingTrueOrDefault(PluginInternetSetting, true))
+                .AddCheckbox(PluginServerSetting, SettingLocalizedResources.Security_IsolatedPlugins_AllowServer, IsBoolSettingTrueOrDefault(PluginInternetSetting, true) && IsBoolSettingTrueOrDefault(PluginServerSetting, true))
+                .AddCheckbox(PluginLoopbackSetting, SettingLocalizedResources.Security_IsolatedPlugins_AllowLoopback, IsBoolSettingTrueOrDefault(PluginLoopbackSetting, false))
                 .AddSeparator()
 #endif
                 .AddText(new SingleLineLabel(SettingLocalizedResources.Security_AICapabilities, 25))
@@ -97,22 +94,37 @@ namespace projectFrameCut.Setting.SettingPages
                 if (args.Value != null)
                 {
 #if WINDOWS
-                    if (args.Id is PluginInternetSetting or PluginServerSetting or PluginLoopbackSetting)
+                    if (args.Id is PluginInternetSetting or PluginServerSetting)
                     {
-                        await FirewallLock.WaitAsync();
+                        var enabled = Convert.ToBoolean(args.Value);
+                        WriteSetting(args.Id, enabled.ToString());
+                        if (args.Id == PluginInternetSetting && !enabled)
+                            WriteSetting(PluginServerSetting, bool.FalseString);
+                        else if (args.Id == PluginServerSetting && enabled)
+                            WriteSetting(PluginInternetSetting, bool.TrueString);
+                        Log($"Saved isolated plugin capability setting '{args.Id}' to '{enabled}'; restart required.");
+                        BuildPPB();
+                        await MainSettingsPage.RebootApp(this);
+                        return;
+                    }
+                    if (args.Id == PluginLoopbackSetting)
+                    {
+                        await NetworkPolicyLock.WaitAsync();
                         try
                         {
                             SetNetworkPolicyBusy(true);
                             await Task.Delay(50);
                             var enabled = Convert.ToBoolean(args.Value);
-                            await Task.Run(() => SetIsolatedPluginNetworkPolicyElevated(args.Id, enabled));
-                            Log($"Set isolated plugin network policy '{args.Id}' to '{enabled}'.");
+                            await Task.Run(() => SetIsolatedPluginLoopbackAccessElevated(enabled));
+                            WriteSetting(PluginLoopbackSetting, enabled.ToString());
+                            Log($"Set isolated plugin loopback access to '{enabled}'; restart required to update capabilities.");
                         }
                         finally
                         {
                             SetNetworkPolicyBusy(false);
-                            FirewallLock.Release();
+                            NetworkPolicyLock.Release();
                         }
+                        await MainSettingsPage.RebootApp(this);
                         return;
                     }
 #endif
@@ -137,15 +149,9 @@ namespace projectFrameCut.Setting.SettingPages
             networkPolicyBusyIndicator.IsRunning = busy;
         }
 
-        private static void SetIsolatedPluginNetworkPolicyElevated(string setting, bool enabled)
+        private static void SetIsolatedPluginLoopbackAccessElevated(bool enabled)
         {
-            var target = setting switch
-            {
-                PluginInternetSetting => "internet",
-                PluginServerSetting => "server",
-                PluginLoopbackSetting => "loopback",
-                _ => throw new ArgumentOutOfRangeException(nameof(setting)),
-            };
+            WindowsPluginIsolationPlatform.EnsureSandyProfile(WindowsPluginIsolationPlatform.PackageFamilyName);
             var executable = CliProcessLauncher.GetExecutableCandidates().FirstOrDefault(File.Exists)
                 ?? throw new FileNotFoundException("The projectFrameCut CLI entry point was not found.");
             using var process = Process.Start(new ProcessStartInfo
@@ -158,7 +164,7 @@ namespace projectFrameCut.Setting.SettingPages
                 ArgumentList =
                 {
                     "plugin_network_policy",
-                    $"--target={target}",
+                    "--target=loopback",
                     $"--enabled={enabled}",
                     $"--packageFamilyName={WindowsPluginIsolationPlatform.PackageFamilyName}",
                     "--forceRouteToCLI",
@@ -167,126 +173,19 @@ namespace projectFrameCut.Setting.SettingPages
             process.WaitForExit();
             if (process.ExitCode != 0)
                 throw new InvalidOperationException($"The elevated projectFrameCut CLI failed with exit code {process.ExitCode}.");
-
-            var applied = setting == PluginLoopbackSetting
-                ? GetIsolatedPluginLoopbackAccessEnabled(WindowsPluginIsolationPlatform.AppContainerSid.Value)
-                : IsIsolatedPluginNetworkAccessEnabled(setting);
-            if (applied != enabled)
-                throw new InvalidOperationException("The elevated projectFrameCut CLI did not apply the requested network policy.");
+            if (GetIsolatedPluginLoopbackAccessEnabled(WindowsPluginIsolationPlatform.AppContainerSid.Value) != enabled)
+                throw new InvalidOperationException("The elevated projectFrameCut CLI did not apply the requested loopback exemption.");
         }
 
         internal static void ConfigureIsolatedPluginNetworkPolicy(string target, bool enabled, string packageFamilyName)
         {
+            if (!string.Equals(target, "loopback", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentOutOfRangeException(nameof(target), "Target must be loopback.");
             if (string.IsNullOrWhiteSpace(packageFamilyName))
                 throw new ArgumentException("Package family name is required.", nameof(packageFamilyName));
-            var sid = WindowsPluginIsolationPlatform.GetAppContainerSid(packageFamilyName).Value;
-            switch (target.ToLowerInvariant())
-            {
-                case "internet":
-                    SetFirewallRule(PluginInternetSetting, enabled, packageFamilyName, sid);
-                    break;
-                case "server":
-                    SetFirewallRule(PluginServerSetting, enabled, packageFamilyName, sid);
-                    break;
-                case "loopback":
-                    SetIsolatedPluginLoopbackAccess(enabled, packageFamilyName, sid);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(target), "Target must be internet, server, or loopback.");
-            }
-        }
-
-        private static void SetFirewallRule(string setting, bool enabled, string packageFamilyName, string appContainerSid)
-        {
-            var inbound = setting == PluginServerSetting;
-            var ruleName = GetFirewallRuleName(inbound, packageFamilyName);
-            object? policy = null;
-            object? rules = null;
-            object? rule = null;
-            try
-            {
-                policy = Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwPolicy2", throwOnError: true)!);
-                rules = ((dynamic)policy!).Rules;
-                try
-                {
-                    ((dynamic)rules).Remove(ruleName);
-                }
-                catch (COMException ex) when (ex.HResult == unchecked((int)0x80070002))
-                {
-                }
-
-                if (enabled) return;
-
-                rule = Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FWRule", throwOnError: true)!);
-                dynamic r = rule!;
-                r.Name = ruleName;
-                r.Description = inbound
-                    ? "Blocks inbound network connections to isolated projectFrameCut plugins."
-                    : "Blocks outbound network connections from isolated projectFrameCut plugins.";
-                r.Grouping = "projectFrameCut";
-                r.Direction = inbound ? 1 : 2;
-                r.Protocol = 256;
-                r.Profiles = int.MaxValue;
-                r.InterfaceTypes = "All";
-                r.Action = 0;
-                r.LocalAppPackageId = appContainerSid;
-                r.Enabled = true;
-                ((dynamic)rules).Add(r);
-            }
-            finally
-            {
-                if (rule is not null && Marshal.IsComObject(rule)) Marshal.FinalReleaseComObject(rule);
-                if (rules is not null && Marshal.IsComObject(rules)) Marshal.FinalReleaseComObject(rules);
-                if (policy is not null && Marshal.IsComObject(policy)) Marshal.FinalReleaseComObject(policy);
-            }
-        }
-
-        private static bool IsIsolatedPluginNetworkAccessEnabled(string setting)
-        {
-            object? policy = null;
-            object? rules = null;
-            object? rule = null;
-            try
-            {
-                var inbound = setting == PluginServerSetting;
-                var packageFamilyName = WindowsPluginIsolationPlatform.PackageFamilyName;
-                policy = Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwPolicy2", throwOnError: true)!);
-                rules = ((dynamic)policy!).Rules;
-                rule = ((dynamic)rules).Item(GetFirewallRuleName(inbound, packageFamilyName));
-                dynamic r = rule;
-                return !(r.Enabled && r.Action == 0 && r.Direction == (inbound ? 1 : 2));
-            }
-            catch (COMException ex) when (ex.HResult == unchecked((int)0x80070002))
-            {
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "read the isolated plugin firewall policy", typeof(SecuritySettingPage));
-                return true;
-            }
-            finally
-            {
-                if (rule is not null && Marshal.IsComObject(rule)) Marshal.FinalReleaseComObject(rule);
-                if (rules is not null && Marshal.IsComObject(rules)) Marshal.FinalReleaseComObject(rules);
-                if (policy is not null && Marshal.IsComObject(policy)) Marshal.FinalReleaseComObject(policy);
-            }
-        }
-
-        private static string GetFirewallRuleName(bool inbound, string packageFamilyName) =>
-            $"projectFrameCut isolated plugins - {(inbound ? "inbound" : "outbound")} - {packageFamilyName}";
-
-        private static bool IsIsolatedPluginLoopbackAccessEnabled()
-        {
-            try
-            {
-                return GetIsolatedPluginLoopbackAccessEnabled(WindowsPluginIsolationPlatform.AppContainerSid.Value);
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "read the isolated plugin loopback exemption", typeof(SecuritySettingPage));
-                return false;
-            }
+            SetIsolatedPluginLoopbackAccess(enabled,
+                WindowsPluginIsolationPlatform.GetContainerName(packageFamilyName),
+                WindowsPluginIsolationPlatform.GetAppContainerSid(packageFamilyName).Value);
         }
 
         private static bool GetIsolatedPluginLoopbackAccessEnabled(string appContainerSid)
@@ -311,6 +210,7 @@ namespace projectFrameCut.Setting.SettingPages
 
         private static void SetIsolatedPluginLoopbackAccess(bool enabled, string packageFamilyName, string appContainerSid)
         {
+            if (GetIsolatedPluginLoopbackAccessEnabled(appContainerSid) == enabled) return;
             using var process = Process.Start(new ProcessStartInfo
             {
                 FileName = Path.Combine(Environment.SystemDirectory, "CheckNetIsolation.exe"),

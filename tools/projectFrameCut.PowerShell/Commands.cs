@@ -178,6 +178,9 @@ public sealed class AddProjectClipEffectProviderCommand : ProjectWriteCmdlet
     [Parameter] public Hashtable? Fields { get; set; }
     [Parameter(ValueFromPipelineByPropertyName = true)] public Guid? InputProviderId { get; set; }
     [Parameter] public bool? IsFinalOutput { get; set; }
+    [Parameter][ValidateSet("Picture", "NativeContent")] public string? Pipeline { get; set; }
+    [Parameter] public SwitchParameter NoAutoConnect { get; set; }
+    [Parameter] public Hashtable? Metadata { get; set; }
 }
 
 [Cmdlet("Set", "ProjectClipEffectProvider", SupportsShouldProcess = true)]
@@ -192,6 +195,8 @@ public sealed class SetProjectClipEffectProviderCommand : ProjectWriteCmdlet
     [Parameter] public SwitchParameter ResetToDefaults { get; set; }
     [Parameter(ValueFromPipelineByPropertyName = true)] public Guid? InputProviderId { get; set; }
     [Parameter] public bool? IsFinalOutput { get; set; }
+    [Parameter][ValidateSet("Picture", "NativeContent")] public string? Pipeline { get; set; }
+    [Parameter] public Hashtable? Metadata { get; set; }
 }
 
 [Cmdlet("Remove", "ProjectClipEffectProvider", SupportsShouldProcess = true)]

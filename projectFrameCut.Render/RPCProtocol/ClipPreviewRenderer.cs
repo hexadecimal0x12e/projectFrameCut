@@ -13,6 +13,8 @@ internal static class ClipPreviewRenderer
     public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode, bool beforeLayout = false, bool initializeClips = true)
     {
         token.ThrowIfCancellationRequested();
+        using var maskScope = MaskFrameContext.Open(allClips, frameIndex, canvasWidth, canvasHeight,
+            projectWidth, projectHeight, pixelMode, token);
         using var endpoints = ClipValuePassThrough.Open(allClips, frameIndex, canvasWidth, canvasHeight,
             projectWidth, projectHeight, pixelMode, token);
         using var endpointClip = ClipValueFrameContext.Current?.EnterClip(clip.Id, independent: true);
@@ -83,7 +85,7 @@ internal static class ClipPreviewRenderer
             return Timeline.MixtureLayers([oneFrame], frameIndex, canvasWidth, canvasHeight, (int)pixelMode,
                 projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight,
                 transparentBackground: true, disposeIntermediateFrames: true, clipLocalOutput: true, cancellationToken: token,
-                beforeLayoutOutput: beforeLayout);
+                beforeLayoutOutput: beforeLayout, allClips: allClips);
         }
         catch
         {

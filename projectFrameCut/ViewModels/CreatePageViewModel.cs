@@ -11,16 +11,15 @@ public partial class CreatePage
 {
     private sealed class CreatePageViewModel : INotifyPropertyChanged
     {
-        private static readonly string CustomResolutionOption = Localized.DraftPage_PrevResultion_Custom;
+        public sealed record ResolutionOption(string AspectRatio, int Width, int Height);
+
+        private static readonly ResolutionOption DefaultResolution = new("16:9", 1920, 1080);
         private const double PreviewMaxWidth = 320d;
         private const double PreviewMaxHeight = 190d;
 
         private string _projectName = string.Empty;
-        private string _selectedResolution = "1920 × 1080";
-        private string _customRelativeWidthText = "1920";
-        private string _customRelativeHeightText = "1080";
+        private ResolutionOption _selectedResolution = DefaultResolution;
         private string _selectedFrameRate = "60";
-        private bool _isCustomResolutionSelected;
         private double _previewWidth = 320d;
         private double _previewHeight = 180d;
         private string _resolutionDisplay = "1920 × 1080";
@@ -31,15 +30,18 @@ public partial class CreatePage
         private string _statusText = string.Empty;
 
         public ObservableCollection<ProjectTemplateItem> Templates { get; } = new();
-        public ObservableCollection<string> ResolutionOptions { get; } =
+        public ObservableCollection<ResolutionOption> ResolutionOptions { get; } =
         [
-            "3840 × 2160",
-            "2560 × 1440",
-            "1920 × 1080",
-            "1280 × 720",
-            "1080 × 1920",
-            "720 × 1280",
-            CustomResolutionOption
+            DefaultResolution,
+            new("9:16", 1080, 1920),
+            new("1:1", 1080, 1080),
+            new("4:3", 1440, 1080),
+            new("3:4", 1080, 1440),
+            new("3:2", 1620, 1080),
+            new("2:3", 1080, 1620),
+            new("4:5", 1080, 1350),
+            new("5:4", 1350, 1080),
+            new("21:9", 2520, 1080)
         ];
         public ObservableCollection<string> FrameRateOptions { get; } =
         [
@@ -52,8 +54,6 @@ public partial class CreatePage
         ];
 
         public ICommand UseTemplateCommand { get; }
-        public ICommand RotateResolutionCommand { get; }
-        public ICommand ResolutionResetCommand { get; }
         public ICommand CreateProjectCommand { get; }
         public Func<string, int, int, uint, JSONBasedTemplateStructure?, Task>? CreateProjectRequested { get; set; }
 
@@ -63,38 +63,14 @@ public partial class CreatePage
             set => SetProperty(ref _projectName, value);
         }
 
-        public string SelectedResolution
+        public ResolutionOption SelectedResolution
         {
             get => _selectedResolution;
             set
             {
-                if (SetProperty(ref _selectedResolution, value))
+                if (value is not null && SetProperty(ref _selectedResolution, value))
                 {
-                    IsCustomResolutionSelected = IsCustomResolutionValue(value);
-                    UpdatePreview();
-                }
-            }
-        }
-
-        public string CustomRelativeWidthText
-        {
-            get => _customRelativeWidthText;
-            set
-            {
-                if (SetProperty(ref _customRelativeWidthText, value) && IsCustomResolutionSelected)
-                {
-                    UpdatePreview();
-                }
-            }
-        }
-
-        public string CustomRelativeHeightText
-        {
-            get => _customRelativeHeightText;
-            set
-            {
-                if (SetProperty(ref _customRelativeHeightText, value) && IsCustomResolutionSelected)
-                {
+                    LogDiagnostic($"CreatePage: selected {value.AspectRatio} ({value.Width} × {value.Height}).");
                     UpdatePreview();
                 }
             }
@@ -110,12 +86,6 @@ public partial class CreatePage
                     UpdatePreview();
                 }
             }
-        }
-
-        public bool IsCustomResolutionSelected
-        {
-            get => _isCustomResolutionSelected;
-            private set => SetProperty(ref _isCustomResolutionSelected, value);
         }
 
         public double PreviewWidth
@@ -177,15 +147,7 @@ public partial class CreatePage
         public CreatePageViewModel()
         {
             UseTemplateCommand = new Command<ProjectTemplateItem?>(ApplyTemplate);
-            RotateResolutionCommand = new Command(RotateResolution);
-            ResolutionResetCommand = new Command(() =>
-            {
-                SelectedResolution = "1920 × 1080";
-                CustomRelativeWidthText = "1920";
-                CustomRelativeHeightText = "1080";
-            });
             CreateProjectCommand = new Command(async () => await CreateProjectAsync());
-            IsCustomResolutionSelected = IsCustomResolutionValue(SelectedResolution);
             ReloadTemplates();
             UpdatePreview();
         }
@@ -219,6 +181,7 @@ public partial class CreatePage
             OnPropertyChanged(nameof(IsNotBusy));
             try
             {
+                Log($"Creating project '{projectName}' at {width} × {height} ({SelectedResolution.AspectRatio}), {frameRate} fps.");
                 await handler(projectName, width, height, frameRate, template);
             }
             finally
@@ -266,17 +229,13 @@ public partial class CreatePage
                 : template.Structure.Project.ProjectName!;
             var width = Math.Max(1, template.Structure.Project.RelativeWidth);
             var height = Math.Max(1, template.Structure.Project.RelativeHeight);
-            var resolutionOption = BuildResolutionOption(width, height);
-            if (ResolutionOptions.Contains(resolutionOption))
+            var resolutionOption = ResolutionOptions.FirstOrDefault(r => r.Width == width && r.Height == height);
+            if (resolutionOption is null)
             {
-                SelectedResolution = resolutionOption;
+                resolutionOption = new ResolutionOption(BuildAspectRatio(width, height), width, height);
+                ResolutionOptions.Add(resolutionOption);
             }
-            else
-            {
-                CustomRelativeWidthText = width.ToString();
-                CustomRelativeHeightText = height.ToString();
-                SelectedResolution = CustomResolutionOption;
-            }
+            SelectedResolution = resolutionOption;
 
             var frameRateOption = Math.Max(1u, template.Structure.Project.TargetFrameRate).ToString();
             EnsureFrameRateOption(frameRateOption);
@@ -291,40 +250,13 @@ public partial class CreatePage
             var scale = Math.Min(PreviewMaxWidth / width, PreviewMaxHeight / height);
             PreviewWidth = Math.Max(30d, Math.Round(width * scale, 2));
             PreviewHeight = Math.Max(30d, Math.Round(height * scale, 2));
-            ResolutionDisplay = BuildResolutionOption(width, height);
-            AspectRatioText = $"{BuildAspectRatio(width, height)}";
+            ResolutionDisplay = $"{width} × {height}";
+            AspectRatioText = SelectedResolution.AspectRatio;
             FrameRateDisplay = $"{frameRate} fps";
         }
 
-        private void RotateResolution()
-        {
-            var (width, height) = GetCurrentResolution();
-            var rotatedWidth = height;
-            var rotatedHeight = width;
-            var rotatedOption = BuildResolutionOption(rotatedWidth, rotatedHeight);
-
-            if (ResolutionOptions.Contains(rotatedOption))
-            {
-                SelectedResolution = rotatedOption;
-                return;
-            }
-
-            CustomRelativeWidthText = rotatedWidth.ToString();
-            CustomRelativeHeightText = rotatedHeight.ToString();
-            SelectedResolution = CustomResolutionOption;
-        }
-
         private (int width, int height) GetCurrentResolution()
-        {
-            if (IsCustomResolutionSelected)
-            {
-                var width = ParsePositiveInt(CustomRelativeWidthText, 1920);
-                var height = ParsePositiveInt(CustomRelativeHeightText, 1080);
-                return (width, height);
-            }
-
-            return ParseResolution(SelectedResolution, 1920, 1080);
-        }
+            => (SelectedResolution.Width, SelectedResolution.Height);
 
         private void EnsureFrameRateOption(string value)
         {
@@ -334,32 +266,6 @@ public partial class CreatePage
             }
 
             FrameRateOptions.Add(value);
-        }
-
-        private static string BuildResolutionOption(int width, int height) => $"{width} × {height}";
-
-        private static bool IsCustomResolutionValue(string? value)
-            => string.Equals(value, CustomResolutionOption, StringComparison.Ordinal);
-
-        private static (int width, int height) ParseResolution(string? text, int fallbackWidth, int fallbackHeight)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return (fallbackWidth, fallbackHeight);
-            }
-
-            var normalized = text.Replace(" ", string.Empty).Replace("x", "×", StringComparison.OrdinalIgnoreCase);
-            var parts = normalized.Split('×', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (parts.Length != 2
-                || !int.TryParse(parts[0], out var width)
-                || !int.TryParse(parts[1], out var height)
-                || width <= 0
-                || height <= 0)
-            {
-                return (fallbackWidth, fallbackHeight);
-            }
-
-            return (width, height);
         }
 
         private static int ParsePositiveInt(string? text, int fallback)

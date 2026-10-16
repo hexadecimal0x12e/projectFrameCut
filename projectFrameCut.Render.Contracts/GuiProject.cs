@@ -11,6 +11,14 @@ public enum GuiProjectOperation
     AddClipEffectProvider, SetClipEffectProvider, RemoveClipEffectProvider,
     GetProjectHistory, UndoProjectHistory, RedoProjectHistory, RestoreProjectHistory,
     GetFramePreview, GetClipFramePreview,
+    GetClipEffectGraph, GetClipEffectBinding, GetClipEffectBindingSource,
+    SetClipEffectBinding, RemoveClipEffectBinding, ClearClipEffectBinding, SetClipEffectOutput,
+    GetClipArgument, SetClipArgument,
+    GetClipValueEndpoint, AddClipValueEndpoint, SetClipValueEndpoint, RemoveClipValueEndpoint,
+    GetClipEffectGroup, AddClipEffectGroup, SetClipEffectGroup, RemoveClipEffectGroup,
+    GetClipEffectGroupTemplate, ImportClipEffectGroup, GetEffectGroupTemplate, SaveClipEffectGroup,
+    GetVectorComponentType, GetVectorClip, AddVectorCanvasClip, AddVectorComponentClip, SetVectorClip,
+    GetVectorComponent, AddVectorComponent, SetVectorComponent, RemoveVectorComponent,
 }
 
 [ProtoContract]

@@ -3,6 +3,7 @@ using System.Text.Json;
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.RPCProtocol;
+using projectFrameCut.Render.Sources;
 
 namespace projectFrameCut.Render.Contracts.Tests;
 
@@ -68,9 +69,30 @@ public sealed class ExternalRpcRequestTests
 
             var provider = new TestVideoSourceProvider();
             var audioProvider = new TestAudioSourceProvider();
+            var maskProvider = new TestMaskSourceProvider();
             await using var external = new RenderClient(
                 new NamedPipeRenderClientTransport(connection.PipeName, clientId.ToString("D")),
-                clientId.ToString("D"), provider, audioProvider);
+                clientId.ToString("D"), provider, audioProvider, maskProvider);
+            await external.RegisterExternalMaskSourcesAsync(new() { Sources = maskProvider.MaskSources.ToList() }, lifetime.Token);
+            var masks = await owner.ListExternalMaskSourcesAsync(lifetime.Token);
+            Assert.AreEqual(1, masks.Sources.Count);
+            Assert.AreEqual(clientId, masks.Sources[0].ClientId);
+            Assert.AreEqual(1, (await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Single().MaskSources.Count);
+            var mask = new RemoteRpcMaskSource(masks.Sources[0], owner.ProcessExternalMaskAsync);
+            using (var backdrop = new projectFrameCut.Drawing.Base.Picture.Picture8bpp(2, 1))
+            {
+                using (var frame = mask.Process(backdrop, new Dictionary<string, object> { ["Amount"] = 3f }, 0.5f, lifetime.Token))
+                    Assert.AreEqual((byte)3, ((projectFrameCut.Drawing.Base.IPicture<byte>)frame).r[0]);
+                Assert.AreEqual(0.5f, maskProvider.LastRequest!.Scale);
+                await owner.ManageExternalVideoSourceClientAsync(new() { ClientId = clientId, Action = ExternalVideoSourceClientAction.Unload }, lifetime.Token);
+                Assert.AreEqual(0, (await owner.ListExternalMaskSourcesAsync(lifetime.Token)).Sources.Count);
+                Assert.Throws<IOException>(() => mask.Process(backdrop, new Dictionary<string, object>(), 1, lifetime.Token));
+                await external.RegisterExternalMaskSourcesAsync(new() { Sources = maskProvider.MaskSources.ToList() }, lifetime.Token);
+                Assert.IsFalse((await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Single().Loaded);
+                await owner.ManageExternalVideoSourceClientAsync(new() { ClientId = clientId, Action = ExternalVideoSourceClientAction.Load }, lifetime.Token);
+                using var restored = MaskSources.Create(mask.TypeName).Process(backdrop, new Dictionary<string, object>(), 1, lifetime.Token);
+                Assert.AreEqual((byte)2, ((projectFrameCut.Drawing.Base.IPicture<byte>)restored).r[0]);
+            }
             await external.RegisterExternalAudioSourcesAsync(new() { Sources = audioProvider.AudioSources.ToList() }, lifetime.Token);
             var audioCatalog = await owner.ListExternalAudioSourcesAsync(lifetime.Token);
             Assert.AreEqual(1, audioCatalog.Sources.Count);
@@ -120,6 +142,7 @@ public sealed class ExternalRpcRequestTests
                 Assert.IsFalse(unloaded.Loaded);
                 Assert.AreEqual(1, unloaded.Sources.Count);
                 Assert.AreEqual(1, unloaded.AudioSources.Count);
+                Assert.AreEqual(1, unloaded.MaskSources.Count);
                 Assert.Throws<IOException>(() => active.GetFrame(0));
                 await external.RegisterExternalVideoSourcesAsync(new() { Sources = provider.Sources.ToList() }, lifetime.Token);
                 Assert.IsFalse((await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Single().Loaded);
@@ -135,6 +158,7 @@ public sealed class ExternalRpcRequestTests
             await external.RegisterExternalVideoSourcesAsync(new() { Sources = provider.Sources.ToList() }, lifetime.Token);
             await external.RegisterExternalAudioSourcesAsync(new() { Sources = audioProvider.AudioSources.ToList() }, lifetime.Token);
             Assert.IsTrue((await owner.ListExternalVideoSourceClientsAsync(lifetime.Token)).Clients.Single().Loaded);
+            await external.RegisterExternalMaskSourcesAsync(new() { Sources = maskProvider.MaskSources.ToList() }, lifetime.Token);
 
             var second = new ExternalRpcRequest
             {
@@ -159,6 +183,7 @@ public sealed class ExternalRpcRequestTests
             await Task.Delay(1100, lifetime.Token);
             Assert.AreEqual(0, (await owner.ListExternalVideoSourcesAsync(lifetime.Token)).Sources.Count);
             Assert.AreEqual(0, (await owner.ListExternalAudioSourcesAsync(lifetime.Token)).Sources.Count);
+            Assert.AreEqual(0, (await owner.ListExternalMaskSourcesAsync(lifetime.Token)).Sources.Count);
         }
         finally
         {

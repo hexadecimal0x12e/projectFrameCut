@@ -65,6 +65,7 @@ public sealed class DynamicPreview : IDisposable
     private readonly ConcurrentDictionary<string, byte> _missingProviderFallbackLogKeys = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, byte> _effectFallbackLogKeys = new(StringComparer.Ordinal);
     private long _prepareVersion;
+    private long _lastSlowPreparationLog;
     private readonly object _preparedOverlayCacheGate = new();
     private IReadOnlyList<PreparedPreview> _lastPreparedOverlayPreviews = [];
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _clipWarmups = new();
@@ -404,6 +405,11 @@ public sealed class DynamicPreview : IDisposable
     {
         CancelClipWarmup(clipId);
         if (!PreviewWarmupEnabled || _previewer is null || _clips?.FirstOrDefault(c => c.Id == clipId) is not { } clip) return;
+        if (ClipInitializationFailure.IsMarked(clip))
+        {
+            LogDiagnostic($"[DynamicPreview] Skipped warmup for failed clip {clipId}.");
+            return;
+        }
         if (!_previewer.CanCacheClipFrame(clipId))
         {
             LogDiagnostic($"[DynamicPreview] Skipped warmup for changing source in clip {clipId}.");
@@ -414,7 +420,7 @@ public sealed class DynamicPreview : IDisposable
         _clipWarmups[clipId] = cts;
         var previewer = _previewer;
         var seconds = PreviewWarmupSeconds;
-        _ = Task.Run(() =>
+        _ = Task.Run(async () =>
         {
             try
             {
@@ -426,17 +432,19 @@ public sealed class DynamicPreview : IDisposable
                 for (var distance = 0; distance <= radius; distance++)
                 {
                     cts.Token.ThrowIfCancellationRequested();
+                    if (ClipInitializationFailure.IsMarked(clip)) return;
                     var index = (long)playhead + distance;
                     if (index > uint.MaxValue || !clip.ContainsFrame((uint)index)) continue;
-                    previewer.RenderClipFrameForDisplay(clipId, (uint)index, canvasWidth, canvasHeight, projectWidth, projectHeight, cts.Token);
+                    await previewer.RenderClipFrameForDisplayAsync(clipId, (uint)index, canvasWidth, canvasHeight, projectWidth, projectHeight, cts.Token).ConfigureAwait(false);
                     rendered++;
                 }
                 for (var distance = 1; distance <= radius; distance++)
                 {
                     cts.Token.ThrowIfCancellationRequested();
+                    if (ClipInitializationFailure.IsMarked(clip)) return;
                     var index = (long)playhead - distance;
                     if (index < 0 || !clip.ContainsFrame((uint)index)) continue;
-                    previewer.RenderClipFrameForDisplay(clipId, (uint)index, canvasWidth, canvasHeight, projectWidth, projectHeight, cts.Token);
+                    await previewer.RenderClipFrameForDisplayAsync(clipId, (uint)index, canvasWidth, canvasHeight, projectWidth, projectHeight, cts.Token).ConfigureAwait(false);
                     rendered++;
                 }
                 LogDiagnostic($"[DynamicPreview] Warmed {rendered} frames for clip {clipId} around {playhead}.");
@@ -474,15 +482,25 @@ public sealed class DynamicPreview : IDisposable
         var prepared = new PreparedPreview[orderedRequests.Length];
 
         using var semaphore = new SemaphoreSlim(s_maxPreparationParallelism);
-        var tasks = new Task[orderedRequests.Length];
-
-        for (var i = 0; i < orderedRequests.Length; i++)
+        if (_previewer is not null)
         {
-            var index = i;
-            tasks[i] = ThrottledPrepareAsync(index);
+            // The backend shares one render gate; keep waiting clips local instead of queueing RPCs.
+            for (var i = 0; i < orderedRequests.Length; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                if (checkVersion && prepareVersion != Volatile.Read(ref _prepareVersion)) return null;
+                var request = orderedRequests[i];
+                prepared[i] = await Task.Run(() => GenerateClipPreviewPreparedAsync(request, canvasWidth, canvasHeight,
+                    projectWidth, projectHeight, frameIndex, applyClipTargetLayout, token), token).ConfigureAwait(false);
+            }
         }
-
-        await Task.WhenAll(tasks).ConfigureAwait(false);
+        else
+        {
+            var tasks = new Task[orderedRequests.Length];
+            for (var i = 0; i < orderedRequests.Length; i++)
+                tasks[i] = ThrottledPrepareAsync(i);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+        }
         token.ThrowIfCancellationRequested();
 
         if (checkVersion && prepareVersion != Interlocked.Read(ref _prepareVersion))
@@ -500,19 +518,51 @@ public sealed class DynamicPreview : IDisposable
                 if (token.IsCancellationRequested) return;
                 if (checkVersion && prepareVersion != Volatile.Read(ref _prepareVersion)) return;
 
-                prepared[index] = await Task.Run(() =>
-                    GenerateClipPreviewPrepared(orderedRequests[index], canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex, applyClipTargetLayout, token),
-                    token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                // Cancellation is silent — the slot stays null, semaphore released in finally.
+                prepared[index] = await Task.Run(() => GenerateClipPreviewPreparedAsync(orderedRequests[index], canvasWidth, canvasHeight,
+                    projectWidth, projectHeight, frameIndex, applyClipTargetLayout, token), token).ConfigureAwait(false);
             }
             finally
             {
                 semaphore.Release();
             }
         }
+    }
+
+    internal async Task<IReadOnlyList<PreparedPreview>> PrepareCachedFrameAsync(DynamicPreviewCache cache, uint frameIndex,
+        int projectWidth, int projectHeight, CancellationToken token)
+    {
+        using var effectScope = effectRuntime.Enter();
+        return await Task.Run<IReadOnlyList<PreparedPreview>>(() =>
+        {
+            var clips = AcquireClipsSnapshot();
+            try
+            {
+                var requests = ResolveRequests(clips, frameIndex, projectWidth, projectHeight);
+                var frameClips = new IClip[requests.Count];
+                for (var i = 0; i < requests.Count; i++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    frameClips[i] = ClipArgumentBinding.InitializeFrame(requests[requests.Count - i - 1].Clip, frameIndex);
+                }
+
+                var prepared = new PreparedPreview?[frameClips.Length];
+                Parallel.For(0, frameClips.Length, new ParallelOptions
+                {
+                    CancellationToken = token,
+                    MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount, 1, 4),
+                }, i =>
+                {
+                    if (!cache.TryGetClip(frameIndex, frameClips[i].Id, out var source, out var positioned)) return;
+                    try
+                    {
+                        prepared[i] = CreatePreparedClipPreview(frameClips[i], source, positioned);
+                    }
+                    catch (IOException) { }
+                });
+                return prepared.OfType<PreparedPreview>().ToArray();
+            }
+            finally { ReleaseClipsSnapshot(); }
+        }, token).ConfigureAwait(false);
     }
 
     private static int ResolveCanvasSize(double canvasSize, int cachedSize, int fallbackSize)
@@ -621,14 +671,30 @@ public sealed class DynamicPreview : IDisposable
     {
         lock (_preparedOverlayCacheGate)
         {
+            if (!CanCacheOverlayPreparedPreviews(prepared))
+            {
+                _lastPreparedOverlayPreviews = [];
+                LogDiagnostic("[DynamicPreview] Skipped overlay cache for failed clip previews.");
+                return;
+            }
             _lastPreparedOverlayPreviews = prepared.Count == 0 ? [] : prepared.ToArray();
         }
     }
+
+    private bool CanCacheOverlayPreparedPreviews(IReadOnlyList<PreparedPreview> prepared)
+        => !prepared.Any(p => p.ErrorMessage is not null
+            || p.Source is { } source && ClipInitializationFailure.IsMarked(source)
+            || _clips?.Any(c => (p.IsCanvasPreview || c.Id == p.ClipId) && ClipInitializationFailure.IsMarked(c)) == true);
 
     private IReadOnlyList<PreparedPreview> GetCachedOverlayPreparedPreviews()
     {
         lock (_preparedOverlayCacheGate)
         {
+            if (!CanCacheOverlayPreparedPreviews(_lastPreparedOverlayPreviews))
+            {
+                _lastPreparedOverlayPreviews = [];
+                LogDiagnostic("[DynamicPreview] Cleared overlay cache containing failed clip previews.");
+            }
             return _lastPreparedOverlayPreviews;
         }
     }
@@ -666,23 +732,25 @@ public sealed class DynamicPreview : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public Task<PreparedPreview> PrepareVectorClipSnapshotAsync(ClipDraftDTO clip, uint frameIndex, int width, int height, CancellationToken token)
+    public async Task<PreparedPreview> PrepareVectorClipSnapshotAsync(ClipDraftDTO clip, uint frameIndex, int width, int height, CancellationToken token)
     {
         using var effectScope = effectRuntime.Enter();
         var json = JsonSerializer.Serialize(clip);
         var (projectWidth, projectHeight) = ResolveProjectDimensions(width, height);
-        return Task.Run(() =>
+        return await Task.Run(async () =>
         {
             using var document = JsonDocument.Parse(json);
             using var source = PluginManager.CreateClip(document.RootElement);
-            var preview = GenerateClipPreviewPrepared(new PreviewRequest(source), width, height, projectWidth, projectHeight, frameIndex, false, token, json);
+            var preview = await GenerateClipPreviewPreparedAsync(new PreviewRequest(source), width, height, projectWidth, projectHeight, frameIndex, false, token, json).ConfigureAwait(false);
             return new PreparedPreview(preview.ClipId, preview.ViewFactory, preview.ErrorMessage, null, isTransparentAt: preview.IsTransparentAt);
-        }, token);
+        }, token).ConfigureAwait(false);
     }
 
-    private PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, bool _, CancellationToken token, string? vectorClipJson = null)
+    private async Task<PreparedPreview> GenerateClipPreviewPreparedAsync(PreviewRequest request, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, bool _, CancellationToken token, string? vectorClipJson = null)
     {
         var clip = request.Clip;
+        var startedAt = Stopwatch.GetTimestamp();
+        long renderedAt = 0;
         try
         {
             ImageSource source;
@@ -690,37 +758,20 @@ public sealed class DynamicPreview : IDisposable
             if (_previewer is not null)
             {
                 clip = ClipArgumentBinding.InitializeFrame(clip, frameIndex);
-                var displayFrame = _previewer.RenderClipFrameForDisplay(request.Clip.Id, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson);
-#if WINDOWS
-                if (displayFrame.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb || displayFrame.RequireSwapChain)
-                {
-                    return new PreparedPreview(request.Clip.Id, () => new HdrPreviewView
-                    {
-                        Frame = displayFrame,
-                        HorizontalOptions = LayoutOptions.Fill,
-                        VerticalOptions = LayoutOptions.Fill,
-                        AutomationId = $"hdr-clip={request.Clip.ClipType},id={request.Clip.Id}",
-                    }, null, clip, isPositionedClipPreview: canvasPreview, isTransparentAt: CreateVfdTransparencyHitTest(displayFrame.VfdPath));
-                }
-#endif
-                source = PreviewFrameMaterializer.CreateImageSource(displayFrame.VfdPath);
-
-                return new PreparedPreview(request.Clip.Id, () => new Image
-                {
-                    Source = source,
-                    Aspect = Aspect.Fill,
-                    HorizontalOptions = LayoutOptions.Fill,
-                    VerticalOptions = LayoutOptions.Fill,
-                    AutomationId = $"clip={request.Clip.ClipType},id={request.Clip.Id}",
-                }, null, clip, isPositionedClipPreview: canvasPreview, isTransparentAt: CreateVfdTransparencyHitTest(displayFrame.VfdPath));
+                var displayFrame = await _previewer.RenderClipFrameForDisplayAsync(request.Clip.Id, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson).ConfigureAwait(false);
+                renderedAt = Stopwatch.GetTimestamp();
+                return CreatePreparedClipPreview(clip, displayFrame, canvasPreview);
             }
             else
             {
                 // Compatibility fallback for isolated editor surfaces that do not own a project
                 // render session. Normal DraftPage previews always use the RPC/file path above.
-                var rendered = RenderClipPreviewSource(ref clip, canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex, token);
+                var rendered = await Task.Run(() => RenderClipPreviewSource(ref clip, canvasWidth, canvasHeight,
+                    projectWidth, projectHeight, frameIndex, token), token).ConfigureAwait(false);
+                renderedAt = Stopwatch.GetTimestamp();
                 if (rendered is null)
                 {
+                    Log($"No preview source was rendered for clip {clip.Name} ({clip.Id}) at frame {frameIndex}.", "warning");
                     return new PreparedPreview(request.Clip.Id, null, "Failed to render preview source.", clip);
                 }
                 Func<double, double, bool>? isTransparentAt;
@@ -743,16 +794,46 @@ public sealed class DynamicPreview : IDisposable
         }
         catch (OperationCanceledException)
         {
-            return new PreparedPreview(request.Clip.Id, null, null, clip);
+            throw;
         }
         catch (Exception ex)
         {
             Log(ex, $"Render dynamic preview for clip {request.Clip.Name} ({request.Clip.Id})", this);
-            Func<View>? errorFactory = DefaultOutputMode == NativePreviewOutputMode.Required
-                ? () => CreatePreviewErrorView(ex.Message)
-                : null;
-            return new PreparedPreview(request.Clip.Id, errorFactory, ex.Message, clip);
+            return new PreparedPreview(request.Clip.Id, () => new PreviewErrorView(ex.Message), ex.Message, clip);
         }
+        finally
+        {
+            var now = Stopwatch.GetTimestamp();
+            if (renderedAt == 0) renderedAt = now;
+            var elapsedMs = Stopwatch.GetElapsedTime(startedAt, now).TotalMilliseconds;
+            var lastLog = Interlocked.Read(ref _lastSlowPreparationLog);
+            if (!token.IsCancellationRequested && elapsedMs >= 250 && now - lastLog >= Stopwatch.Frequency * 5
+                && Interlocked.CompareExchange(ref _lastSlowPreparationLog, now, lastLog) == lastLog)
+                LogDiagnostic($"[DynamicPreview] Slow preparation: clip={clip.Id}, frame={frameIndex}, size={canvasWidth}x{canvasHeight}, total={elapsedMs:F1}ms, render/RPC={Stopwatch.GetElapsedTime(startedAt, renderedAt).TotalMilliseconds:F1}ms, materialize={Stopwatch.GetElapsedTime(renderedAt, now).TotalMilliseconds:F1}ms.");
+        }
+    }
+
+    private static PreparedPreview CreatePreparedClipPreview(IClip clip, PreviewFrameSource frame, bool positioned)
+    {
+#if WINDOWS
+        if (frame.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb || frame.RequireSwapChain)
+            return new PreparedPreview(clip.Id, () => new HdrPreviewView
+            {
+                Frame = frame,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Fill,
+                AutomationId = $"hdr-clip={clip.ClipType},id={clip.Id}",
+            }, null, clip, isPositionedClipPreview: positioned, isTransparentAt: CreateVfdTransparencyHitTest(frame.VfdPath));
+#endif
+        var source = PreviewFrameMaterializer.CreateImageSource(frame.VfdPath);
+        return new PreparedPreview(clip.Id, () => new Image
+        {
+            Source = source,
+            Aspect = Aspect.Fill,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+            AutomationId = $"clip={clip.ClipType},id={clip.Id}",
+        }, null, clip, isPositionedClipPreview: positioned, isTransparentAt: CreateVfdTransparencyHitTest(frame.VfdPath));
     }
 
     /// <summary>
@@ -764,6 +845,8 @@ public sealed class DynamicPreview : IDisposable
         token.ThrowIfCancellationRequested();
         var previewClip = clip;
         var allClips = (_clips ?? [clip]).Select(c => c.Id == previewClip.Id ? previewClip : c).ToArray();
+        using var maskScope = MaskFrameContext.Open(allClips, frameIndex, canvasWidth, canvasHeight,
+            projectWidth, projectHeight, IPicture.PicturePixelMode.BytePicture, token);
         using var endpoints = ClipValuePassThrough.Open(allClips, frameIndex, canvasWidth, canvasHeight,
             projectWidth, projectHeight, IPicture.PicturePixelMode.BytePicture, token);
 
@@ -846,7 +929,7 @@ public sealed class DynamicPreview : IDisposable
             token.ThrowIfCancellationRequested();
             return Timeline.MixtureLayers([oneFrame], frameIndex, canvasWidth, canvasHeight, (int)pixelMode,
                 projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight,
-                transparentBackground: true, disposeIntermediateFrames: true, clipLocalOutput: true, cancellationToken: token);
+                transparentBackground: true, disposeIntermediateFrames: true, clipLocalOutput: true, cancellationToken: token, allClips: allClips);
         }
         catch
         {
@@ -857,16 +940,21 @@ public sealed class DynamicPreview : IDisposable
 
     private static Func<double, double, bool>? CreateVfdTransparencyHitTest(string path)
     {
-        try
+        // Playback only needs the image; decode the alpha mask when it is first hit-tested.
+        var hitTest = new Lazy<Func<double, double, bool>?>(() =>
         {
-            using var picture = PreviewFrameMaterializer.LoadVfd(path);
-            return CreateTransparencyHitTest(picture);
-        }
-        catch (Exception ex)
-        {
-            Log(ex, $"Read preview transparency from {path}", typeof(DynamicPreview));
-            return null;
-        }
+            try
+            {
+                using var picture = PreviewFrameMaterializer.LoadVfd(path);
+                return CreateTransparencyHitTest(picture);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Read preview transparency from {path}", typeof(DynamicPreview));
+                return null;
+            }
+        });
+        return (x, y) => hitTest.Value?.Invoke(x, y) ?? false;
     }
 
     private static Func<double, double, bool>? CreateTransparencyHitTest(IPicture picture)
@@ -914,23 +1002,6 @@ public sealed class DynamicPreview : IDisposable
             return (mask[i >> 3] & (1 << (i & 7))) != 0;
         };
     }
-
-    private static View CreatePreviewErrorView(string message)
-        => new Border
-        {
-            BackgroundColor = Colors.Black,
-            Stroke = Colors.OrangeRed,
-            StrokeThickness = 1,
-            Padding = 12,
-            Content = new Label
-            {
-                Text = $"Preview failed: {message}",
-                TextColor = Colors.White,
-                HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Center,
-                VerticalTextAlignment = Microsoft.Maui.TextAlignment.Center,
-            },
-        };
-
 
     private static int ResolveClipPreviewDimension(int clipDimension, int projectDimension, int canvasDimension)
     {
