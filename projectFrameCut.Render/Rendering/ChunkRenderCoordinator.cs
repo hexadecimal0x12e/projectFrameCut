@@ -49,6 +49,8 @@ public sealed class ChunkRenderCoordinator
     private readonly string _cacheRoot;
     private readonly SemaphoreSlim _manifestGate = new(1, 1);
     private readonly ConcurrentDictionary<int, double> _runningProgress = new();
+    private readonly Stopwatch _renderStopwatch = new();
+    private double _reusedFrames;
     private ChunkRenderManifest _manifest = null!;
 
     public ChunkRenderCoordinator(
@@ -152,13 +154,16 @@ public sealed class ChunkRenderCoordinator
         if (_manifest is null) await InitializeAsync(cancellationToken).ConfigureAwait(false);
 
         var pending = _manifest.Chunks.Where(chunk => chunk.Status != ChunkStatus.Completed).ToArray();
+        _runningProgress.Clear();
+        _reusedFrames = _manifest.Chunks.Where(chunk => chunk.Status == ChunkStatus.Completed).Sum(chunk => (double)chunk.Duration);
+        _renderStopwatch.Restart();
         foreach (var reused in _manifest.Chunks.Where(chunk => chunk.Status == ChunkStatus.Completed))
         {
-            progress?.Invoke(CreateProgress(reused.Index, 1, TimeSpan.Zero, 0, reused: true));
+            progress?.Invoke(CreateProgress(reused.Index, 1, reused: true));
         }
         if (pending.Length == 0) return;
 
-        int parallelism = Math.Clamp(_options.Parallelism, 1, pending.Length);
+        int parallelism = Math.Clamp(_options.Parallelism, 1, Math.Min(pending.Length, _totalRenderThreads));
         int threadsPerChunk = Math.Max(1, _totalRenderThreads / parallelism);
         await Parallel.ForEachAsync(
             pending,
@@ -175,10 +180,10 @@ public sealed class ChunkRenderCoordinator
                         segment,
                         outputPath,
                         threadsPerChunk,
-                        (value, eta, fps) =>
+                        (value, _, _) =>
                         {
-                            _runningProgress[entry.Index] = Math.Clamp(value, 0, 1);
-                            progress?.Invoke(CreateProgress(entry.Index, value, eta, fps, reused: false));
+                            var state = CreateProgress(entry.Index, value, reused: false);
+                            progress?.Invoke(state);
                         },
                         token).ConfigureAwait(false);
                     token.ThrowIfCancellationRequested();
@@ -188,8 +193,8 @@ public sealed class ChunkRenderCoordinator
                     entry.FileSize = new FileInfo(outputPath).Length;
                     entry.Sha256 = await ComputeFileHashAsync(outputPath, token).ConfigureAwait(false);
                     await UpdateEntryAsync(entry, ChunkStatus.Completed, null, token).ConfigureAwait(false);
-                    _runningProgress[entry.Index] = 1;
-                    progress?.Invoke(CreateProgress(entry.Index, 1, TimeSpan.Zero, 0, reused: false));
+                    var completed = CreateProgress(entry.Index, 1, reused: false);
+                    progress?.Invoke(completed);
                 }
                 catch (OperationCanceledException)
                 {
@@ -384,19 +389,21 @@ public sealed class ChunkRenderCoordinator
         File.Move(temporary, ManifestPath, overwrite: true);
     }
 
-    private ChunkRenderJobProgress CreateProgress(int chunkIndex, double chunkProgress, TimeSpan eta, double fps, bool reused)
+    private ChunkRenderJobProgress CreateProgress(int chunkIndex, double chunkProgress, bool reused)
     {
         _runningProgress[chunkIndex] = Math.Clamp(chunkProgress, 0, 1);
         double completedFrames = _manifest.Chunks.Sum(chunk =>
             chunk.Status == ChunkStatus.Completed
                 ? chunk.Duration
                 : chunk.Duration * _runningProgress.GetValueOrDefault(chunk.Index, 0));
+        double elapsed = _renderStopwatch.Elapsed.TotalSeconds;
+        double fps = elapsed > 0 ? Math.Max(0, completedFrames - _reusedFrames) / elapsed : 0;
         return new ChunkRenderJobProgress(
             chunkIndex,
             _manifest.Chunks.Count,
             Math.Clamp(chunkProgress, 0, 1),
             _totalFrames > 0 ? Math.Clamp(completedFrames / _totalFrames, 0, 1) : 0,
-            eta,
+            Renderer.GetEstimatedRemaining(_totalFrames - completedFrames, fps),
             fps,
             reused);
     }

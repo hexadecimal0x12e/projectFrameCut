@@ -67,6 +67,15 @@ public static class VideoClipRotation
 
     public static IPicture ReadFrame(IClip clip, uint frameIndex, int width, int height, IPicture.PicturePixelMode pixelMode)
     {
+        if (Rendering.FrameHashContext.Current is { } context)
+            return context.ReadPicture((typeof(VideoClipRotation), clip.Id, frameIndex, width, height, pixelMode.Value,
+                Effect.ClipArgumentBinding.GetFrameIndex(clip, frameIndex), clip.TargetX, clip.TargetY, clip.Rotation),
+                () => ReadFrameCore(clip, frameIndex, width, height, pixelMode))!;
+        return ReadFrameCore(clip, frameIndex, width, height, pixelMode);
+    }
+
+    private static IPicture ReadFrameCore(IClip clip, uint frameIndex, int width, int height, IPicture.PicturePixelMode pixelMode)
+    {
         var source = VectorPictureEffectProcessing.ReadFrame(clip, frameIndex, width, height, pixelMode);
         try
         {
@@ -98,6 +107,12 @@ public static class VideoClipRotation
     {
         angle = Normalize(angle);
         if (Math.Abs(angle) < 0.0001f) return source;
+        if (source is IHwAccelPicture gpu)
+        {
+            if (gpu.Context is IHwAccelPictureGeometry geometry) return geometry.Rotate(gpu, angle, true);
+            using var cpu = gpu.Download();
+            return Rotate(cpu, angle);
+        }
         var sw = Stopwatch.StartNew();
         var (width, height) = GetOutputSize(angle, source.Width, source.Height);
         IPicture result = source switch

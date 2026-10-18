@@ -36,6 +36,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     /// </summary>
     public class ClassicSpeedVarianceProvider : ISpeedVarianceProvider
     {
+        public bool IsDeterministic => true;
+
         public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
         public string TypeName => "ClassicSpeedVarianceProvider";
         public string Name { get; set; } = "ClassicSpeedVarianceProvider";

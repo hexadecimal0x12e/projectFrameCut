@@ -15,9 +15,13 @@ internal static class MaskPictureSampler
         foreach (var effect in (clip.EffectsInstances ?? []).Where(e => e.Enabled).OrderBy(e => e.Index))
         {
             ClipPositionTuple position;
-            if (effect is IClipPositionProvider p) position = p.GetPosition(clip, context.Width, context.Height);
+            if (effect is IClipPositionProvider p)
+                position = FrameHashContext.Compute(effect, clip, frame, null, context.Width, context.Height,
+                    context.ProjectWidth, context.ProjectHeight, () => p.GetPosition(clip, context.Width, context.Height));
             else if (effect is IContinuousClipPositionProvider cp)
-                position = cp.GetPosition(clip, frame, context.Width, context.Height, context.ProjectWidth, context.ProjectHeight);
+                position = FrameHashContext.Compute(effect, clip, frame, null, context.Width, context.Height,
+                    context.ProjectWidth, context.ProjectHeight,
+                    () => cp.GetPosition(clip, frame, context.Width, context.Height, context.ProjectWidth, context.ProjectHeight));
             else continue;
             rect = position.IsDelta ? new(rect.TargetX + position.TargetX, rect.TargetY + position.TargetY,
                 rect.TargetWidth + position.TargetWidth, rect.TargetHeight + position.TargetHeight, false, rect.Rotation + position.Rotation) : position;

@@ -6,6 +6,8 @@ namespace projectFrameCut.Render.Effect;
 
 public sealed class IsUpstreamAvailableOrDefaultEffectProvider : EffectProviderBase
 {
+    public override bool IsDeterministic => true;
+
     public IsUpstreamAvailableOrDefaultEffectProvider() => Name = "IsUpstreamAvailableOrDefault";
     public override string TypeName => "IsUpstreamAvailableOrDefault";
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -34,6 +36,9 @@ public sealed class IsUpstreamAvailableOrDefaultEffectProvider : EffectProviderB
 
 public sealed class IsUpstreamAvailableOrDefaultEffect : IEffect
 {
+    public bool IsDeterministic => true;
+    public bool AcceptsHwAccelPictures => true;
+
     public string TypeName => "IsUpstreamAvailableOrDefault";
     public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public EffectType TypeOfEffect => EffectType.NormalEffect;

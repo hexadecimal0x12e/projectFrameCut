@@ -13,6 +13,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
 {
     public partial class FadeOpacityEffect_HwAccel : INormalEffect, IDisposable
     {
+        public bool IsDeterministic => true;
+
         private readonly Lock nativeLock = new();
         private bool disposed;
         public void Dispose()

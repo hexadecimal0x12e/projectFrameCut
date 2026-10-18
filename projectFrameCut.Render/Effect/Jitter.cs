@@ -9,6 +9,8 @@ namespace projectFrameCut.Render.Effect
 {
     public class JitterEffect : IContinuousClipPositionProvider
     {
+        public bool IsDeterministic => false;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Id { get; set; }
@@ -131,6 +133,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class JitterEffectProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => false;
+
         public JitterEffectProvider()
         {
             Name = "Jitter";

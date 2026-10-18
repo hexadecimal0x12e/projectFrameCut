@@ -9,6 +9,8 @@ public sealed class EffectExecutionContext
 {
     public object? Input { get; init; }
     public IReadOnlyDictionary<string, object?> Parameters { get; init; } = new Dictionary<string, object?>();
+    public IReadOnlyDictionary<string, EffectArgumentFieldType> InputTypes { get; init; } = new Dictionary<string, EffectArgumentFieldType>();
+    internal bool PicturesPrepared { get; init; }
     public IClip? Clip { get; init; }
     public uint FrameIndex { get; init; }
     public float Progress { get; init; }
@@ -22,6 +24,9 @@ public sealed class EffectExecutionContext
 
 public static class EffectFieldTypes
 {
+    public static bool IsHwAccelPicture(this EffectArgumentFieldType type) =>
+        !type.HasFlag(EffectArgumentFieldType.Any) && type.HasFlag(EffectArgumentFieldType.HwAccelPicture);
+
     public static bool IsVector(this EffectArgumentFieldType type) =>
         !type.HasFlag(EffectArgumentFieldType.Any) && type.HasFlag(EffectArgumentFieldType.VectorPicture);
 
@@ -34,12 +39,14 @@ public static class EffectFieldTypes
     public static EffectArgumentFieldType BaseType(this EffectArgumentFieldType type) =>
         type.HasFlag(EffectArgumentFieldType.Any) ? EffectArgumentFieldType.Any
             : type.IsVector() ? EffectArgumentFieldType.VectorPicture
+            : type.IsHwAccelPicture() ? EffectArgumentFieldType.HwAccelPicture
             : type.IsPicture() ? EffectArgumentFieldType.IPicture : type & (EffectArgumentFieldType)0xFFFF;
 
     public static bool AreCompatible(EffectArgumentFieldType source, EffectArgumentFieldType target)
     {
         if (source.HasFlag(EffectArgumentFieldType.Any)) return false;
         if (target.HasFlag(EffectArgumentFieldType.Any)) return true;
+        if (source.IsPicture() && target.IsPicture()) return true;
         source = source.BaseType();
         target = target.BaseType();
         if (source == target || source == EffectArgumentFieldType.Unknown || target == EffectArgumentFieldType.Unknown) return true;
@@ -53,7 +60,7 @@ public static class EffectFieldTypes
 
     public static object? DefaultValue(IEffectArgumentField field) => field.FieldType.BaseType() switch
     {
-        EffectArgumentFieldType.IPicture or EffectArgumentFieldType.VectorPicture => null,
+        EffectArgumentFieldType.IPicture or EffectArgumentFieldType.HwAccelPicture or EffectArgumentFieldType.VectorPicture => null,
         EffectArgumentFieldType.Integer => EffectParamConvert.TryConvertToInt(field.DefaultValue, out var i) ? i : 0,
         EffectArgumentFieldType.UnsignedInteger => uint.TryParse(field.DefaultValue, out var u) ? u : 0u,
         EffectArgumentFieldType.Long => long.TryParse(field.DefaultValue, out var l) ? l : 0L,
@@ -70,6 +77,7 @@ public static class EffectFieldTypes
         {
             EffectArgumentFieldType.Unknown or EffectArgumentFieldType.Any => true,
             EffectArgumentFieldType.IPicture => value is IPicture,
+            EffectArgumentFieldType.HwAccelPicture => value is IPicture,
             EffectArgumentFieldType.VectorPicture => value is projectFrameCut.Drawing.Vector.VectorPicture,
             EffectArgumentFieldType.Integer or EffectArgumentFieldType.UnsignedInteger or EffectArgumentFieldType.Long
                 or EffectArgumentFieldType.UnsignedLong or EffectArgumentFieldType.Numeric => value is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal,
@@ -81,9 +89,11 @@ public static class EffectFieldTypes
         };
     }
 
-    public static object? ConvertInput(EffectArgumentFieldType type, object? value)
+    public static object? ConvertInput(EffectArgumentFieldType type, object? value, bool convertPictures = true)
     {
         if (type.HasFlag(EffectArgumentFieldType.Any)) return value;
+        if (convertPictures && type.IsPicture() && value is IPicture picture)
+            return type.IsHwAccelPicture() ? EffectPictureProcessing.Upload(picture) : EffectPictureProcessing.Materialize(picture);
         if (value is JsonElement json) value = json.ValueKind switch
         {
             JsonValueKind.String => json.GetString(),

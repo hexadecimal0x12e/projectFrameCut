@@ -16,6 +16,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     /// </remarks>
     public interface IEffectProvider : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject
     {
+        /// <summary>Whether this node produces identical outputs for identical complete inputs.</summary>
+        public bool IsDeterministic { get; }
+
         /// <summary>
         /// The ID for input anchor.
         /// </summary>

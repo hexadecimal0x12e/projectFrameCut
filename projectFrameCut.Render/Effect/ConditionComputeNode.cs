@@ -6,6 +6,8 @@ namespace projectFrameCut.Render.Effect;
 
 public sealed class ConditionComputeNodeEffectProvider : EffectProviderBase, IMultipleOutputEffectProvider
 {
+    public override bool IsDeterministic => true;
+
     public const string ConditionKey = "Condition";
     public const string TrueOutputKey = "True";
     public const string FalseOutputKey = "False";
@@ -47,6 +49,9 @@ internal static class EffectBranchState
 
 public sealed class ConditionComputeNodeEffect : IEffect, IMultipleOutputEffect
 {
+    public bool IsDeterministic => true;
+    public bool AcceptsHwAccelPictures => true;
+
     public string TypeName => "ConditionComputeNode";
     public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public EffectType TypeOfEffect => EffectType.NormalEffect;

@@ -5,6 +5,8 @@ namespace SomePublisher;
 
 public sealed class ExampleInvertEffectProvider : EffectProviderBase
 {
+    public override bool IsDeterministic => true;
+
     public override string TypeName => "ExampleInvert";
     public override string FromPlugin => ExamplePluginConstants.PluginId;
     public override EffectType TypeOfEffect => EffectType.NormalEffect;

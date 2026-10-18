@@ -16,6 +16,15 @@ namespace projectFrameCut.Render.Contracts.Tests;
 public sealed class AudioTransformTests
 {
     [TestMethod]
+    public void ChunkedMixingPreservesTrackOrderWhenClipping()
+    {
+        ISoundTrack[] tracks = [Track(0, 10, 0.8f), Track(0, 10, 0.8f), Track(0, 10, -0.8f)];
+        var whole = Compose(tracks, 200, duration: 10);
+        CollectionAssert.AreEqual(whole, Compose(tracks, 7, duration: 10));
+        foreach (float value in whole) Assert.AreEqual(0.2f, value, 0.000001f);
+    }
+
+    [TestMethod]
     public void FadeHonorsSideAndPreservesInput()
     {
         var input = new FloatAudioSamples { Channels = [[1, 1, 1], [-1, -1, -1]], SampleCount = 3, SamplePerSecond = 100 };

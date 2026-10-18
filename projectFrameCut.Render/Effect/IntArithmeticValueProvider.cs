@@ -27,6 +27,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class IntArithmeticValueProviderEffect : IValueProviderEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Int Arithmetic";
@@ -125,6 +127,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class IntArithmeticValueProviderProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public IntArithmeticValueProviderProvider()
         {
             Name = "Int Arithmetic";

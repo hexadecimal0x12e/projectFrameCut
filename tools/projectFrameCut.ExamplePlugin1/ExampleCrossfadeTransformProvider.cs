@@ -5,6 +5,8 @@ namespace SomePublisher;
 
 public sealed class ExampleCrossfadeTransformProvider : EffectProviderBase
 {
+    public override bool IsDeterministic => true;
+
     public override string TypeName => "ExampleCrossfade";
     public override string FromPlugin => ExamplePluginConstants.PluginId;
     public override EffectType TypeOfEffect => EffectType.Transform;

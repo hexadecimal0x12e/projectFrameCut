@@ -19,6 +19,8 @@ public sealed class VectorEffectPipelineTests
 {
     private sealed class VectorProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public override string TypeName => "TestVectorPicture";
         public override string FromPlugin => "test";
         public override EffectType TypeOfEffect => EffectType.VectorPictureEffect;
@@ -28,6 +30,8 @@ public sealed class VectorEffectPipelineTests
 
     private sealed class VectorEffect : IVectorPictureEffect
     {
+        public bool IsDeterministic => true;
+
         public string FromPlugin => "test";
         public string TypeName => "TestVectorPicture";
         public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -47,6 +51,8 @@ public sealed class VectorEffectPipelineTests
 
     private sealed class TextEffect(Action called) : ITextEffect
     {
+        public bool IsDeterministic => true;
+
         public string FromPlugin => "test";
         public string TypeName => "TestText";
         public string Id { get; set; } = Guid.NewGuid().ToString();

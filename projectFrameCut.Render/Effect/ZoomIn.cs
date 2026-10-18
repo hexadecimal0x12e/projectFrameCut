@@ -11,6 +11,8 @@ namespace projectFrameCut.Render.Effect
 {
     public class ZoomInContinuousEffect : IContinuousEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
@@ -82,6 +84,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class ZoomInEffectProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public ZoomInEffectProvider()
         {
             Name = "ZoomIn";

@@ -8,6 +8,8 @@ namespace projectFrameCut.Render.Effect
 {
     public class ProgressCropper_IPicture : IContinuousEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Crop";
@@ -87,6 +89,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class ProgressCropProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public ProgressCropProvider()
         {
             Name = "ProgressCrop";

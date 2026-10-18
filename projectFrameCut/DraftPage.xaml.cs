@@ -8551,7 +8551,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         await Save(true);
         var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, true, false);
-        var page = new RenderPage(WorkingPath, ProjectDuration, ProjectInfo, draft);
+        var page = new RenderPage(WorkingPath, ProjectDuration, ProjectInfo, draft, await HomePage.TryGetActiveRenderJobAsync(WorkingPath));
         // The export page belongs to the same project: mark the navigation so
         // OnNavigatingFrom does not tear down this project's render backend.
         _navigatingToRenderPage = true;

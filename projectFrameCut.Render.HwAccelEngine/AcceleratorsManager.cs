@@ -1,6 +1,7 @@
 #if WINDOWS || LINUX || HEADLESS
 using ILGPU;
 using ILGPU.Runtime;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Shared;
 using System.Text.Json;
 
@@ -166,6 +167,28 @@ namespace projectFrameCut.Render.HwAccelEngine
             }
         }
 
+        // Settings and workers resolve the same selection without creating local accelerators.
+        public static AcceleratorsStore GetConfiguration(AcceleratorDeviceInfo[] devices)
+        {
+            lock (InitializationLock)
+            {
+                var store = ReadConfiguration();
+                var main = devices.FirstOrDefault(d => d.Name == store?.MainAcceleratorName)
+                    ?? devices.FirstOrDefault(d => d.Type != "CPU");
+                var names = store is { EnableMultiAccel: true } && store.RenderingAcceleratorNames.Length > 0
+                    ? store.RenderingAcceleratorNames.Where(name => devices.Any(d => d.Name == name)).Distinct().ToArray()
+                    : Array.Empty<string>();
+                if (names.Length == 0 && main is not null)
+                    names = [main.Name];
+                return new AcceleratorsStore
+                {
+                    MainAcceleratorName = main?.Name ?? "",
+                    RenderingAcceleratorNames = names,
+                    EnableMultiAccel = store?.EnableMultiAccel ?? false
+                };
+            }
+        }
+
         private static void EnsureInitialized(bool forRendering = false)
         {
             if (useExternalBackend || (forRendering ? areRenderingAcceleratorsInitialized : isDefaultInitialized))
@@ -195,10 +218,14 @@ namespace projectFrameCut.Render.HwAccelEngine
         {
             try
             {
-                var store = ReadConfiguration();
                 context ??= Context.Create(builder => builder.Default().EnableAlgorithms());
                 var allDevices = context.Devices.ToList();
-                var nonCpuDevices = allDevices.Where(c => c.AcceleratorType != AcceleratorType.CPU).ToArray();
+                var store = GetConfiguration(allDevices.Select((d, i) => new AcceleratorDeviceInfo
+                {
+                    Index = i,
+                    Name = d.Name,
+                    Type = d.AcceleratorType.ToString()
+                }).ToArray());
                 Accelerator GetOrCreateAccelerator(ILGPU.Runtime.Device device)
                 {
                     var existing = ownedAccelerators.FirstOrDefault(a => a.Name == device.Name);
@@ -211,21 +238,27 @@ namespace projectFrameCut.Render.HwAccelEngine
 
                 if (!isDefaultInitialized)
                 {
-                    var mainDevice = store is not null ? allDevices.FirstOrDefault(c => c.Name == store.MainAcceleratorName) : null;
-                    mainDevice ??= nonCpuDevices.FirstOrDefault();
+                    var mainDevice = allDevices.FirstOrDefault(c => c.Name == store.MainAcceleratorName);
                     defaultAccelerator = mainDevice is not null ? GetOrCreateAccelerator(mainDevice) : null;
                     isDefaultInitialized = true;
-                    Logger.Log($"[AcceleratorsManager] Initialized default accelerator: {defaultAccelerator?.Name ?? "none"}.");
+                    Logger.Log($"[AcceleratorsManager] Initialized default accelerator: {defaultAccelerator?.Name ?? "none"} ({defaultAccelerator?.AcceleratorType.ToString() ?? "none"}).");
                 }
 
                 if (initializeRendering && !areRenderingAcceleratorsInitialized)
                 {
-                    var enableMultiAccel = store is not null && store.EnableMultiAccel && store.RenderingAcceleratorNames.Length > 0;
-                    acceleratorsForRendering = enableMultiAccel ? store!.RenderingAcceleratorNames.Select(name => allDevices.FirstOrDefault(c => c.Name == name)).Where(device => device is not null).Select(device => GetOrCreateAccelerator(device!)).Distinct().ToArray() : defaultAccelerator is not null ? [defaultAccelerator] : Array.Empty<Accelerator>();
-                    enableMultiAccel = acceleratorsForRendering.Length > 1;
-                    IsMultiAccelEnabled = enableMultiAccel;
+                    if (store.EnableMultiAccel)
+                    {
+                        acceleratorsForRendering = store.RenderingAcceleratorNames
+                            .Select(name => allDevices.First(c => c.Name == name))
+                            .Select(GetOrCreateAccelerator).Distinct().ToArray();
+                    }
+                    else
+                    {
+                        acceleratorsForRendering = defaultAccelerator is not null ? [defaultAccelerator] : Array.Empty<Accelerator>();
+                    }
+                    IsMultiAccelEnabled = acceleratorsForRendering.Length > 1;
                     areRenderingAcceleratorsInitialized = true;
-                    Logger.Log($"[AcceleratorsManager] Initialized {acceleratorsForRendering.Length} rendering accelerator(s).");
+                    Logger.Log($"[AcceleratorsManager] Initialized {acceleratorsForRendering.Length} rendering accelerator(s): {string.Join(", ", acceleratorsForRendering.Select(a => $"{a.Name} ({a.AcceleratorType})"))}.");
                 }
             }
             catch (Exception ex)
@@ -240,8 +273,12 @@ namespace projectFrameCut.Render.HwAccelEngine
         {
             if (configurationOverride is not null)
                 return configurationOverride;
-#if WINDOWS || LINUX
+#if HEADLESS
+            var plugin = GlobalPluginHelper.PluginGetter?.Invoke("projectFrameCut.Render.HwAccelEngine");
+            var dataPath = plugin is not null ? Path.Combine(plugin.GetPluginDataRoot(), "accels.json") : null;
+#else
             var dataPath = HwAccelEnginePlugin.dataRootPath is not null ? Path.Combine(HwAccelEnginePlugin.dataRootPath, "accels.json") : null;
+#endif
             if (dataPath is null || !File.Exists(dataPath))
                 return null;
             try
@@ -253,9 +290,6 @@ namespace projectFrameCut.Render.HwAccelEngine
                 Logger.Log(ex, "read ILGPU accelerator configuration");
                 return null;
             }
-#else
-            return null;
-#endif
         }
 
         private static void DisposeOwnedResources()
@@ -299,22 +333,22 @@ namespace projectFrameCut.Render.HwAccelEngine
         {
 #if WINDOWS || LINUX
             if (HwAccelEnginePlugin.dataRootPath is null)
-                return;
+                throw new InvalidOperationException("The hardware accelerator configuration directory is not initialized.");
             var dataPath = Path.Combine(HwAccelEnginePlugin.dataRootPath, "accels.json");
             var store = new AcceleratorsStore
             {
                 MainAcceleratorName = mainDeviceName,
-                RenderingAcceleratorNames = renderingDeviceNames,
+                RenderingAcceleratorNames = renderingDeviceNames.ToArray(),
                 EnableMultiAccel = enableMultiAccel
             };
-            var dir = Path.GetDirectoryName(dataPath);
-            if (dir is not null)
-                Directory.CreateDirectory(dir);
-            File.WriteAllText(dataPath, JsonSerializer.Serialize(store));
             lock (InitializationLock)
             {
+                Directory.CreateDirectory(HwAccelEnginePlugin.dataRootPath);
+                File.WriteAllText(dataPath, JsonSerializer.Serialize(store));
+                configurationOverride = null;
                 DisposeOwnedResources();
             }
+            Logger.Log($"[AcceleratorsManager] Saved accelerator configuration to '{dataPath}': main={mainDeviceName}, rendering={string.Join(", ", renderingDeviceNames)}, multi={enableMultiAccel}.");
 #endif
         }
 
@@ -346,7 +380,7 @@ namespace projectFrameCut.Render.HwAccelEngine
             }
         }
 
-        private class AcceleratorsStore
+        public sealed class AcceleratorsStore
         {
             public string MainAcceleratorName { get; set; } = "";
             public string[] RenderingAcceleratorNames { get; set; } = Array.Empty<string>();

@@ -259,7 +259,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
 #endif
     }
 
-    public bool TryReconnectCliRender(string projectRoot)
+    public bool TryReconnectCliRender(string? projectRoot)
     {
         if (_client is not null || !SupportsCliRenderProcess) return false;
 #if ANDROID
@@ -271,11 +271,11 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             var registration = System.Text.Json.JsonSerializer.Deserialize<WorkerRegistration>(File.ReadAllText(RegistrationPath));
             if (registration is null || !string.Equals(registration.Kind, "cli-render", StringComparison.Ordinal)) return false;
             if (registration.JobId == Guid.Empty || string.IsNullOrWhiteSpace(registration.ProjectRoot)) return false;
-            if (!SamePath(registration.ProjectRoot, projectRoot)) return false;
+            if (projectRoot is not null && !SamePath(registration.ProjectRoot, projectRoot)) return false;
             using var process = Process.GetProcessById(registration.ProcessId);
             if (process.HasExited) return false;
 
-            _projectRoot = Path.GetFullPath(projectRoot);
+            _projectRoot = Path.GetFullPath(registration.ProjectRoot);
             _independentWorker = true;
             _jobId = registration.JobId;
             CliPreviewPath = registration.PreviewPath;
@@ -351,7 +351,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
         }
     }
 
-    private bool TryReconnectAndroidRenderTask(string projectRoot)
+    private bool TryReconnectAndroidRenderTask(string? projectRoot)
     {
         try
         {
@@ -361,11 +361,12 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             if (registration.JobId == Guid.Empty || string.IsNullOrWhiteSpace(registration.ProjectRoot)) return false;
             if (string.IsNullOrWhiteSpace(registration.PipeName) || string.IsNullOrWhiteSpace(registration.Token)) return false;
             if (!File.Exists(registration.PipeName)) return false;
-            if (!SamePath(registration.ProjectRoot, projectRoot)) return false;
+            if (projectRoot is not null && !SamePath(registration.ProjectRoot, projectRoot)) return false;
 
-            _projectRoot = Path.GetFullPath(projectRoot);
+            _projectRoot = Path.GetFullPath(registration.ProjectRoot);
             _independentWorker = true;
             _jobId = registration.JobId;
+            CliPreviewPath = registration.PreviewPath;
             _pipeName = registration.PipeName;
             _token = registration.Token;
             ConnectAndroidTransport();
@@ -410,9 +411,11 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("dataRoot", MauiProgram.BasicDataPath);
                 Add("FFmpegLibraryPath", options.FFmpegLibraryPath);
                 Add("maxParallelThreads", Math.Max(1, options.MaxParallelThreads).ToString());
+                Add("allowWorkerOversubscription", options.AllowWorkerOversubscription.ToString());
                 Add("GCOptions", Math.Clamp(options.GcOption, 0, 2).ToString());
                 Add("enableThreadAffinity", options.EnableThreadAffinity.ToString());
                 Add("reuseDynamicPreviewCache", options.ReuseDynamicPreviewCache.ToString());
+                Add("frameHashMode", options.FrameHashMode.ToString());
                 Add("preferHwAccelDecoder", options.UseHwAccelDecoder.ToString());
                 Add("preferHwAccelEncoder", options.UseHwAccelEncoder.ToString());
                 Add("chunkRender", options.ChunkRender.ToString());
@@ -773,8 +776,10 @@ internal sealed record CliRenderProcessOptions
     public required string PixelFormat { get; init; }
     public required string Encoder { get; init; }
     public int MaxParallelThreads { get; init; } = Environment.ProcessorCount;
+    public bool AllowWorkerOversubscription { get; init; } = true;
     public int GcOption { get; init; }
     public bool EnableThreadAffinity { get; init; } = true;
+    public FrameHashMode FrameHashMode { get; init; } = FrameHashMode.Dynamic;
     public bool ReuseDynamicPreviewCache { get; init; }
     public bool ChunkRender { get; init; }
     public uint? ChunkFrames { get; init; }

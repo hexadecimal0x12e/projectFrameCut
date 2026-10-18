@@ -14,7 +14,15 @@
     },
     "Benchmark": {
       "commandName": "Project",
-      "commandLineArgs": " bench -multiAccelerator=true -acceleratorDeviceIds=all -boostMode=true -enableThreadAffinity=false -maxParallelThreads=32"
+      "commandLineArgs": " bench -multiAccelerator=false -acceleratorDeviceId=2 -enableThreadAffinity=false -maxParallelThreads=32"
+    },
+    "Bemchmark Instrumentation": {
+      "commandName": "Project",
+      "commandLineArgs": "bench render -enableThreadAffinity=false -maxParallelThreads=1 -duration=10 -startFrame=50 --wait"
+    },
+    "Bemchmark Instrumentation 2": {
+      "commandName": "Project",
+      "commandLineArgs": "bench render -enableThreadAffinity=false -maxParallelThreads=1 -duration=10 -startFrame=50 "
     }
   }
 }

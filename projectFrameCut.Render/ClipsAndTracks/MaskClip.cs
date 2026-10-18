@@ -84,6 +84,15 @@ public sealed class MaskClip : IRotatableClip
 
     public IPicture GetUnrotatedFrame(uint frameIndex, int width, int height, IPicture.PicturePixelMode pixelMode)
     {
+        if (FrameHashContext.Current is { } hashes)
+            return hashes.ReadPicture((typeof(MaskClip), Id, frameIndex, width, height, pixelMode.Value,
+                ClipArgumentBinding.GetFrameIndex(this, MaskFrameContext.Current?.Frame ?? frameIndex)),
+                () => RenderMask(frameIndex, width, height, pixelMode))!;
+        return RenderMask(frameIndex, width, height, pixelMode);
+    }
+
+    private IPicture RenderMask(uint frameIndex, int width, int height, IPicture.PicturePixelMode pixelMode)
+    {
         var context = MaskFrameContext.Current ?? throw new InvalidOperationException("A mask source requires a timeline render scope.");
         uint frame = ClipArgumentBinding.GetFrameIndex(this,
             ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) is float f && f >= 0 && f < uint.MaxValue

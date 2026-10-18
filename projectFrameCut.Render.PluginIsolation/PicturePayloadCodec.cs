@@ -10,6 +10,11 @@ public static class PicturePayloadCodec
     public static async ValueTask<IsolationPayloadLease> WriteAsync(IPicture picture, IIsolationPayloadExchange exchange, IsolationPayloadKind preferredKind = IsolationPayloadKind.SharedMemory, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(picture);
+        if (picture is RenderAPIBase.EffectAndMixture.IHwAccelPicture gpu)
+        {
+            using var cpu = gpu.Download();
+            return await WriteAsync(cpu, exchange, preferredKind, cancellationToken).ConfigureAwait(false);
+        }
         int pixels = ValidateDimensions(picture.Width, picture.Height);
         var descriptor = CreateDescriptor(picture, pixels);
         long length = checked(descriptor.RedLength + descriptor.GreenLength + descriptor.BlueLength + descriptor.AlphaLength + descriptor.BrightnessLength);

@@ -215,6 +215,8 @@ public sealed class ClipTransformTests
 
     private sealed class DisposableTransformProvider : FadeTransformProvider, IEffectProvider
     {
+        public bool IsDeterministic => true;
+
         IEffect[] IEffectProvider.Build() => [new DisposableTransform()];
     }
 
@@ -283,6 +285,8 @@ public sealed class ClipTransformTests
 
     private sealed class SquareEffect : INormalEffect
     {
+        public bool IsDeterministic => true;
+
         public int Calls { get; private set; }
         public string FromPlugin => "test";
         public string TypeName => "Square";

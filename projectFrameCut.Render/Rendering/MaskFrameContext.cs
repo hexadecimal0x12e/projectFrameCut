@@ -69,7 +69,10 @@ public sealed class MaskFrameContext : IDisposable
         if (!reading.Add(clip.Id)) throw new InvalidOperationException($"Recursive mask dependency for {clip.Id}.");
         try
         {
-            var picture = readBelow is not null ? readBelow(clip) : RenderBelow(clip);
+            var picture = FrameHashContext.Current is { } context
+                ? context.ReadPicture((typeof(MaskFrameContext), clip.Id, Frame, Width, Height, ProjectWidth, ProjectHeight, PixelMode.Value),
+                    () => readBelow is not null ? readBelow(clip) : RenderBelow(clip))!
+                : readBelow is not null ? readBelow(clip) : RenderBelow(clip);
             backdrops[clip.Id] = picture;
             return DynamicEffectGraph.CopyPicture(picture);
         }

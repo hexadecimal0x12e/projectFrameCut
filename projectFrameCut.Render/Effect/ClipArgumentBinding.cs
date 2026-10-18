@@ -25,6 +25,13 @@ public static class ClipArgumentBinding
 
     public static IClip InitializeFrame(IClip clip, uint frame)
     {
+        if (Rendering.FrameHashContext.Current is { } context)
+            return context.Evaluate((typeof(ClipArgumentBinding), clip.Id, frame), () => InitializeFrameCore(clip, frame), c => c, _ => { });
+        return InitializeFrameCore(clip, frame);
+    }
+
+    private static IClip InitializeFrameCore(IClip clip, uint frame)
+    {
         if (Copies.TryGetValue(clip, out var copy))
         {
             if (copy.Frame == frame)
@@ -49,6 +56,7 @@ public static class ClipArgumentBinding
             ClipValueFrameContext.Current?.SetComputed((typeof(ClipArgumentBinding), clip.Id, frame), result);
             return result;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             ClipInitializationFailure.Mark(clip, "ClipArguments", ex);
@@ -64,6 +72,12 @@ public sealed class ClipArgumentFrameCache
 
     public IClip Get(IClip clip, uint frame, Action<IClip>? initialize = null)
     {
+        if (Rendering.FrameHashContext.Current is { } context)
+            return context.Evaluate((typeof(ClipArgumentFrameCache), clip.Id, frame), () =>
+            {
+                if (!ClipArgumentBinding.IsFrameCopy(clip)) initialize?.Invoke(clip);
+                return ClipArgumentBinding.InitializeFrame(clip, frame);
+            }, c => c, _ => { });
         var result = clips.GetOrAdd((clip.Id, frame), _ => new(() =>
         {
             if (ClipArgumentBinding.TryGetFrame(clip, frame, out var cached)) return cached!;

@@ -26,7 +26,7 @@ public sealed class EffectRuntimeContext : IDisposable
 
     public IDisposable Enter() => EffectRuntimeDefaults.Enter(this);
 
-    internal T Execute<T>(string key, string typeName, EffectImplementType type, Dictionary<string, object> parameters, Func<IEffect, T> execute)
+    internal T Execute<T>(string key, string typeName, EffectImplementType type, EffectImplementType defaultType, Dictionary<string, object> parameters, Func<IEffect, T> execute)
     {
         Cache cache;
         using (lifetime.EnterScope())
@@ -44,12 +44,8 @@ public sealed class EffectRuntimeContext : IDisposable
             cache.Clear();
             cache.Configuration = configuration;
         }
-        if (!cache.Effects.TryGetValue(key, out var effect) || effect.ImplementType != type)
-        {
-            cache.Effects.Remove(key);
-            if (effect is IDisposable d) d.Dispose();
-            cache.Effects[key] = effect = registry.Create(typeName, type, type, parameters);
-        }
+        if (!cache.Effects.TryGetValue(key, out var effect))
+            cache.Effects[key] = effect = registry.Create(typeName, type, defaultType, parameters);
         return execute(effect);
     }
 
@@ -94,10 +90,10 @@ public static class EffectRuntimeDefaults
             ? EffectHelper.ForcePreferToType ?? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{Plugin.InternalPluginBase.InternalPluginBaseID}.{typeName}", defaultType)
             : requestedType;
         if (type == EffectImplementType.NotSpecified) type = defaultType;
-        key = $"{key}/{typeName}/{type}";
-        if (current.Value is { } context) return context.Execute(key, typeName, type, parameters, execute);
+        key = $"{key}/{typeName}/{type}/{defaultType}";
+        if (current.Value is { } context) return context.Execute(key, typeName, type, defaultType, parameters, execute);
         using var temporary = new EffectRuntimeContext();
-        return temporary.Execute(key, typeName, type, parameters, execute);
+        return temporary.Execute(key, typeName, type, defaultType, parameters, execute);
     }
 
     public static IPicture Place(IPicture source, int width, int height, int x = 0, int y = 0) => Execute(
@@ -106,17 +102,29 @@ public static class EffectRuntimeDefaults
         {
             e.Parameters["StartX"] = x;
             e.Parameters["StartY"] = y;
-            return ((INormalEffect)e).Render(source, width, height);
+            return HwAccelPictureScope.Current is null ? ((INormalEffect)e).Render(source, width, height)
+                : EffectPictureProcessing.Render(e, source, width, height);
         });
 
-    private sealed class DefaultMixture : ClassicOverlayMixture
+    private sealed class DefaultMixture : ClassicOverlayMixture, IMixture
     {
+        public bool AcceptsHwAccelPictures => true;
+
         public override IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB) => Execute(
             "Mixture", "ClassicOverlayMixture", EffectImplementType.HwAcceleration, [],
-            e => ((IMixture)e).Mix(basePicture, topPicture, targetPPB));
+            e =>
+            {
+                if (HwAccelPictureScope.Current is null) return ((IMixture)e).Mix(basePicture, topPicture, targetPPB);
+                using var resized = topPicture.Width != basePicture.Width || topPicture.Height != basePicture.Height
+                    ? EffectPictureProcessing.Resize(topPicture, basePicture.Width, basePicture.Height, false) : null;
+                var result = EffectPictureProcessing.Mix((IMixture)e, basePicture, resized ?? topPicture, targetPPB, 0, 0, basePicture.Width, basePicture.Height);
+                return ReferenceEquals(result, resized) ? EffectPictureProcessing.Copy(result) : result;
+            });
 
         public override IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB, int topStartX, int topStartY, int targetWidth, int targetHeight) => Execute(
             "Mixture", "ClassicOverlayMixture", EffectImplementType.HwAcceleration, [],
-            e => ((IMixture)e).Mix(basePicture, topPicture, targetPPB, topStartX, topStartY, targetWidth, targetHeight));
+            e => HwAccelPictureScope.Current is null
+                ? ((IMixture)e).Mix(basePicture, topPicture, targetPPB, topStartX, topStartY, targetWidth, targetHeight)
+                : EffectPictureProcessing.Mix((IMixture)e, basePicture, topPicture, targetPPB, topStartX, topStartY, targetWidth, targetHeight));
     }
 }

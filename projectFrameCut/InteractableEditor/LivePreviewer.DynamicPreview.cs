@@ -21,12 +21,13 @@ public partial class LivePreviewer
             var client = RpcClient ?? RenderRpcBootstrap.Client;
             var sessionId = RenderSessionId;
             var playbackId = Guid.NewGuid();
+            var mode = RenderHashSettings.Mode;
             try
             {
                 OnProgressChanged?.Invoke(0, TimeSpan.Zero);
                 var startup = client.StartDynamicPreviewAsync(new()
                 {
-                    SessionId = sessionId, PlaybackId = playbackId, StartFrame = startFrame, CanvasWidth = canvasWidth, CanvasHeight = canvasHeight,
+                    FrameHashMode = mode, SessionId = sessionId, PlaybackId = playbackId, StartFrame = startFrame, CanvasWidth = canvasWidth, CanvasHeight = canvasHeight,
                     ProjectWidth = projectWidth, ProjectHeight = projectHeight, FrameRate = frameRate, StartAudio = HasAudioSources(),
                     PreferredPixelFormat = OperatingSystem.IsWindows() && DefaultOutputMode != NativePreviewOutputMode.Disabled
                         ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage,
@@ -42,7 +43,7 @@ public partial class LivePreviewer
                     await Task.WhenAny(startup, Task.Delay(200, token)).ConfigureAwait(false);
                 }
                 var session = await startup.ConfigureAwait(false);
-                _dynamicPreviewCache = new DynamicPreviewCache(client, ProjectRoot, session);
+                _dynamicPreviewCache = new DynamicPreviewCache(client, ProjectRoot, session, mode);
                 token.ThrowIfCancellationRequested();
                 OnProgressChanged?.Invoke(1, TimeSpan.Zero);
                 return _dynamicPreviewCache;
@@ -87,12 +88,14 @@ internal sealed class DynamicPreviewCache
 
     public IRenderClient Client { get; }
     public DynamicPreviewSession Session { get; }
+    public FrameHashMode Mode { get; }
     public bool IsCompleted => _stopped || _clock.IsCompleted;
     public bool IsRunning => _clock.IsRunning;
     public bool IsBuffering => _clock.BufferingProgress.HasValue;
 
-    public DynamicPreviewCache(IRenderClient client, string projectRoot, DynamicPreviewSession session)
+    public DynamicPreviewCache(IRenderClient client, string projectRoot, DynamicPreviewSession session, FrameHashMode mode)
     {
+        Mode = mode;
         Client = client;
         Session = session;
         _projectRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(projectRoot)) + Path.DirectorySeparatorChar;

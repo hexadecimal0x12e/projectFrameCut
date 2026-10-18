@@ -8,6 +8,8 @@ namespace projectFrameCut.Render.Effect;
 
 public sealed class PictureChannelAverageEffectProvider : EffectProviderBase, IMultipleOutputEffectProvider
 {
+    public override bool IsDeterministic => true;
+
     public PictureChannelAverageEffectProvider() => Name = "Picture Channel Average";
 
     public override string TypeName => "PictureChannelAverage";
@@ -33,6 +35,8 @@ public sealed class PictureChannelAverageEffectProvider : EffectProviderBase, IM
 
 public sealed class PictureChannelAverageEffect : IEffect, IMultipleOutputEffect
 {
+    public bool IsDeterministic => true;
+
     public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public string TypeName => "PictureChannelAverage";
     public EffectType TypeOfEffect => EffectType.NormalEffect;

@@ -10,6 +10,8 @@ namespace projectFrameCut.Render.Effect
 {
     public class BlurEffect_IPicture : INormalEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Blur";
@@ -69,6 +71,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class BlurEffectProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public BlurEffectProvider()
         {
             Name = "Blur";

@@ -7,8 +7,10 @@ using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Render.ClipsAndTracks.Text;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace projectFrameCut.Render.ClipsAndTracks;
@@ -37,6 +39,8 @@ public static class ClipInitializationFailure
     /// 资源按需懒加载并常驻内存（图标尺寸小、数量少，可接受）；加载失败缓存 null 以免重复尝试。
     /// </summary>
     private static readonly ConcurrentDictionary<string, IPicture?> IconCache = new();
+    private static readonly object FallbackFrameGate = new();
+    private static readonly FrameHashCache FallbackFrames = new();
 
     /// <summary>
     /// Stage → 图标资源名。目前所有 Stage 均使用 ErrorSign；
@@ -98,6 +102,15 @@ public static class ClipInitializationFailure
         extraData.Remove(FailedKey);
         extraData.Remove(StageKey);
         extraData.Remove(MessageKey);
+    }
+
+    public static void ClearRecovered(IClip clip, params string[] stages)
+    {
+        var stage = GetStage(clip.ExtraData);
+        if (!IsMarked(clip) || HasDeferredFailures(clip.ExtraData)
+            || stage is null || !stages.Contains(stage)) return;
+        Clear(clip);
+        Log($"[Clip] Recovered {stage} for clip {clip.Name} ({clip.Id}).");
     }
 
     public static bool IsMarked(IClip clip) => IsMarked(clip.ExtraData);
@@ -173,6 +186,25 @@ public static class ClipInitializationFailure
     {
         width = Math.Max(1, width);
         height = Math.Max(1, height);
+        string key = $"{width}:{height}:{pixelMode.Value}:{IVectorContentClip.GlobalDefaultAntiAliasMode}:" +
+            $"{RuntimeHelpers.GetHashCode(IVectorContentClip.GlobalDefaultRasterizer)}:{stage?.Length ?? 0}:{stage}:{description}";
+        lock (FallbackFrameGate)
+        {
+            if (FallbackFrames.TryRead(key, out var cached) && cached is IPicture picture) return picture;
+            var frame = RenderFallbackFrame(width, height, pixelMode, stage, description);
+            try { FallbackFrames.Write(key, frame); }
+            catch
+            {
+                frame.Dispose();
+                throw;
+            }
+            return frame;
+        }
+    }
+
+    private static IPicture RenderFallbackFrame(int width, int height, IPicture.PicturePixelMode pixelMode,
+        string? stage, string? description)
+    {
         // 暗红背景（RGB 58,22,22），与红色系图标、白字黑描边文字协调且不刺眼
         IPicture picture = (int)pixelMode switch
         {

@@ -1,4 +1,4 @@
-Sandy v0.9996 (`c14ac771708a003df84cdf1fb978235dcab40cc3`), MIT:
+    //Sandy v0.9996 (`c14ac771708a003df84cdf1fb978235dcab40cc3`), MIT:
 https://github.com/ahrvoje/sandy_cli
 
 `win-x64/sandy.exe` is the upstream release, SHA-256:

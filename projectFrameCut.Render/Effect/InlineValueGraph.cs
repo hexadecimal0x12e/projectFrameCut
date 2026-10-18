@@ -1,4 +1,5 @@
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 
@@ -6,6 +7,7 @@ namespace projectFrameCut.Render.Effect;
 
 internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider> providers, EffectFieldTypeResolution? resolvedTypes = null)
 {
+    public bool IsDeterministic => providers.Values.All(p => !p.Enabled || p.IsDeterministic) && Effects.All(e => e.IsDeterministic);
     public EffectFieldTypeResolution Types { get; } = resolvedTypes ?? new(providers);
     private sealed record Node(IEffectProvider Provider, Dictionary<string, IEffectArgumentField> Fields,
         Dictionary<string, string> Bindings, IEffect[] Effects, bool Enabled);
@@ -122,13 +124,16 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
                     DynamicEffectParamField f => f.StaticFallbackValue,
                     _ => EffectFieldTypes.DefaultValue(field),
                 };
-                parameters[key] = EffectFieldTypes.ConvertInput(field.FieldType, binding is null ? fallback : Resolve(binding) ?? fallback);
+                parameters[key] = EffectFieldTypes.ConvertInput(field.FieldType, binding is null ? fallback : Resolve(binding) ?? fallback, false);
                 if (parameters[key] is null && field.FieldType.HasFlag(EffectArgumentFieldType.Mandatory)
                     || !EffectFieldTypes.Accepts(Types.GetInputType(node.Provider, key), parameters[key]))
                     throw new InvalidOperationException($"Invalid input '{key}' on provider {node.Provider.Id}.");
                 if (binding is not null) values[binding] = parameters[key];
             }
             using var scope = ValueProviderFrameContext.PushValues(values);
+            var inputTypes = node.Fields.ToDictionary(p => p.Key, p => p.Value.FieldType);
+            foreach (var field in node.Fields)
+                if (node.Bindings.TryGetValue(field.Key, out var binding)) inputTypes[binding] = field.Value.FieldType;
             object? value = null;
             foreach (var effect in node.Effects)
             {
@@ -144,15 +149,21 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
                 var context = new EffectExecutionContext
                 {
                     Input = value, Parameters = parameters, FrameIndex = frame, Progress = nodeProgress, ClipProgress = progress,
+                    InputTypes = inputTypes,
                 };
                 if (effect is IMultipleOutputEffect multiple)
                 {
-                    var outputs = multiple.ComputeOutputs(context) ?? throw new InvalidOperationException($"Provider {node.Provider.Id} returned no output map.");
+                    var outputs = (FrameHashContext.Current is { } hashes
+                        ? hashes.ComputeEffect(effect, context, () => EffectPictureProcessing.Compute(effect, context, values), node.Provider.IsDeterministic, node.Provider)
+                        : EffectPictureProcessing.Compute(effect, context, values)) as IReadOnlyDictionary<string, object?>
+                        ?? throw new InvalidOperationException($"Provider {node.Provider.Id} returned no output map.");
                     foreach (var picture in outputs.Values.OfType<IPicture>()) pictures.Add(picture);
                     DynamicEffectBindings.ValidateOutputValues(node.Provider, outputs, Types, frame);
                     return outputs;
                 }
-                value = effect.Compute(context);
+                value = FrameHashContext.Current is { } frameHashes
+                    ? frameHashes.ComputeEffect(effect, context, () => EffectPictureProcessing.Compute(effect, context, values), node.Provider.IsDeterministic, node.Provider)
+                    : EffectPictureProcessing.Compute(effect, context, values);
                 if (value is IPicture p) pictures.Add(p);
             }
             var result = new Dictionary<string, object?> { [Types.GetOutputField(node.Provider).Id] = value };
@@ -173,6 +184,8 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
     private sealed class ValueField(InlineValueGraph graph, string source, string fieldId,
         EffectArgumentFieldDescriptor output, object? fallback) : IValueProviderEffect
     {
+        public bool IsDeterministic => graph.IsDeterministic;
+
         public string Id { get; set; } = fieldId;
         public string TypeName => "__InlineOutputField__";
         public string FromPlugin => output.FromPlugin;

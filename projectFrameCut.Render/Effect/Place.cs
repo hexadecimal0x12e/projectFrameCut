@@ -18,6 +18,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class PlaceEffect_IPicture : INormalEffect
     {
+        public bool IsDeterministic => true;
+
 
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -101,6 +103,8 @@ namespace projectFrameCut.Render.Effect
 
     public class PlaceEffectProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public PlaceEffectProvider()
         {
             Name = "Place";

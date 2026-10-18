@@ -20,6 +20,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     /// </remarks>
     public abstract class EffectProviderBase : IEffectProvider
     {
+        public abstract bool IsDeterministic { get; }
+
         /// <summary>
         /// The parameter key used to pass the desired <see cref="EffectImplementType"/> into <see cref="Build()"/>.
         /// It is stored in provider metadata.

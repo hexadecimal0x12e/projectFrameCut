@@ -16,6 +16,8 @@ public sealed class DynamicEffectGraphTests
     internal class Provider(EffectArgumentFieldType? input, EffectArgumentFieldType output,
         Func<EffectExecutionContext, object?> compute, params EffectArgumentFieldDescriptor[] fields) : EffectProviderBase, IEffectProvider
     {
+        public override bool IsDeterministic => true;
+
         public override string TypeName => "TestGraph";
         public override string FromPlugin => "test.graph";
         public override EffectType TypeOfEffect => output.IsPicture() ? EffectType.NormalEffect : EffectType.NonIPictureOutputValueProvider;
@@ -41,6 +43,8 @@ public sealed class DynamicEffectGraphTests
 
     internal class TestEffect(Func<EffectExecutionContext, object?> compute) : INormalEffect, IDisposable
     {
+        public bool IsDeterministic => true;
+
         public string FromPlugin => "test.graph";
         public string TypeName => "TestGraph";
         public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -93,6 +97,8 @@ public sealed class DynamicEffectGraphTests
 
     private sealed class InlineSource : IntConstantValueProviderProvider, IEffectProvider
     {
+        public bool IsDeterministic => true;
+
         public new IEffect[] Build() => [new IntConstantValueProviderEffect { Parameters = BuildDynamicParameters() }];
     }
 

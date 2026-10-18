@@ -8,6 +8,8 @@ namespace projectFrameCut.Render.Effect
 {
     public class TextFadeInContinuousEffect : IContinuousTextEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
@@ -64,6 +66,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class TextFadeInEffectProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public TextFadeInEffectProvider()
         {
             Name = "TextFadeIn";

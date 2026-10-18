@@ -12,6 +12,19 @@ internal static class ClipPreviewRenderer
 {
     public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode, bool beforeLayout = false, bool initializeClips = true)
     {
+        if (FrameHashContext.Current is { } context)
+            return context.ReadPicture((typeof(ClipPreviewRenderer), clip.Id, frameIndex, canvasWidth, canvasHeight,
+                projectWidth, projectHeight, pixelMode.Value, beforeLayout),
+                () => RenderCore(clip, allClips, canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex,
+                    token, pixelMode, beforeLayout, initializeClips));
+        return RenderCore(clip, allClips, canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex,
+            token, pixelMode, beforeLayout, initializeClips);
+    }
+
+    private static IPicture? RenderCore(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight,
+        int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode,
+        bool beforeLayout, bool initializeClips)
+    {
         token.ThrowIfCancellationRequested();
         using var maskScope = MaskFrameContext.Open(allClips, frameIndex, canvasWidth, canvasHeight,
             projectWidth, projectHeight, pixelMode, token);

@@ -14,7 +14,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 {
     public class VideoClip : IRotatableClip
     {
-        private const int MaxDecoderPoolSize = 128;
+        private static readonly int MaxDecoderPoolSize = 12;
 
         private static readonly object DecoderPoolRegistryLock = new();
         private static readonly Dictionary<string, VideoDecoderPool> DecoderPools = new(StringComparer.OrdinalIgnoreCase);
@@ -190,7 +190,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 if (_decoderPool is not null && string.Equals(_decoderPoolKey, poolKey, StringComparison.OrdinalIgnoreCase) && !_decoderPool.Disposed)
                 {
                     Decoder = _decoderPool.RepresentativeDecoder;
-                   EffectHelper.ResolveClipEffects(this);
+                    ClipInitializationFailure.ClearRecovered(this, "SourceReading", "SourceNotFound", "SourceNotMatch", "ExternalSourceUnavailable");
                     return;
                 }
 
@@ -200,6 +200,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 _decoderPoolKey = poolKey;
                 _decoderPool = pool;
                 Decoder = pool.RepresentativeDecoder;
+                ClipInitializationFailure.ClearRecovered(this, "SourceReading", "SourceNotFound", "SourceNotMatch", "ExternalSourceUnavailable");
             }
             catch (Exception ex)
             {
@@ -310,6 +311,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
                 var representative = CreateDecoder();
                 _decoders.Add(new PooledDecoderEntry(representative));
+                LogDiagnostic($"[DecoderPool] Created '{_poolKey}', limit={MaxDecoderPoolSize}.");
             }
 
             public IVideoSource RepresentativeDecoder
@@ -362,6 +364,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
 
                     _disposed = true;
+                    Monitor.PulseAll(_sync);
                     foreach (var entry in _decoders)
                     {
                         if (!entry.InUse)
@@ -376,33 +379,32 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             public DecoderLease Rent(uint targetFrame)
             {
+                var token = ValueProviderFrameContext.CancellationToken;
                 lock (_sync)
                 {
-                    if (_disposed)
+                    while (true)
                     {
-                        throw new ObjectDisposedException(nameof(VideoDecoderPool), $"Decoder pool '{_poolKey}' is already disposed.");
-                    }
-
-                    var bestEntry = GetBestFreeEntry(targetFrame);
-                    if (bestEntry is not null)
-                    {
-                        bestEntry.InUse = true;
-                        return new DecoderLease(this, bestEntry);
-                    }
-
-                    if (_decoders.Count < MaxDecoderPoolSize)
-                    {
-                        var decoder = CreateDecoder();
-                        var entry = new PooledDecoderEntry(decoder)
+                        token.ThrowIfCancellationRequested();
+                        if (_disposed)
+                            throw new ObjectDisposedException(nameof(VideoDecoderPool), $"Decoder pool '{_poolKey}' is already disposed.");
+                        _decoders.RemoveAll(e => !e.InUse && e.Decoder.Disposed);
+                        var entry = GetBestFreeEntry(targetFrame);
+                        if (entry is null && _decoders.Count < MaxDecoderPoolSize)
                         {
-                            InUse = true
-                        };
-                        _decoders.Add(entry);
-                        return new DecoderLease(this, entry);
+                            entry = new PooledDecoderEntry(CreateDecoder());
+                            _decoders.Add(entry);
+                        }
+                        if (entry is not null)
+                        {
+                            entry.InUse = true;
+                            entry.OwnerThread = Environment.CurrentManagedThreadId;
+                            return new DecoderLease(this, entry);
+                        }
+                        if (_decoders.Any(e => e.InUse && e.OwnerThread == Environment.CurrentManagedThreadId))
+                            throw new InvalidOperationException($"Recursive decoding exhausted the decoder pool '{_poolKey}'.");
+                        Monitor.Wait(_sync, 50);
                     }
                 }
-
-                return new DecoderLease(CreateDecoder());
             }
 
             private PooledDecoderEntry? GetBestFreeEntry(uint targetFrame)
@@ -424,7 +426,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
                         continue;
                     }
 
-                    long distance = Math.Abs((long)entry.LastSuccessfulFrame - targetFrame);
+                    long distance = (long)targetFrame - entry.LastSuccessfulFrame;
+                    if (distance < 0) distance = (1L << 32) - distance;
                     if (distance < bestDistance)
                     {
                         bestDistance = distance;
@@ -432,7 +435,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
                 }
 
-                return bestEntry ?? unpositionedEntry;
+                return bestDistance >= (1L << 32) ? unpositionedEntry ?? bestEntry : bestEntry ?? unpositionedEntry;
             }
 
             private IVideoSource CreateDecoder()
@@ -446,14 +449,14 @@ namespace projectFrameCut.Render.ClipsAndTracks
             {
                 lock (_sync)
                 {
+                    entry.InUse = false;
+                    entry.OwnerThread = 0;
+                    Monitor.PulseAll(_sync);
                     if (_disposed)
                     {
-                        entry.InUse = false;
                         entry.Dispose();
                         return;
                     }
-
-                    entry.InUse = false;
                 }
             }
 
@@ -479,6 +482,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     }
 
                     _disposed = true;
+                    Monitor.PulseAll(_sync);
                     foreach (var entry in _decoders)
                     {
                         if (!entry.InUse)
@@ -498,6 +502,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
                 public IVideoSource Decoder { get; }
                 public bool InUse { get; set; }
+                public int OwnerThread { get; set; }
                 public uint LastSuccessfulFrame { get; set; }
                 public bool HasSuccessfulPosition { get; set; }
 
@@ -509,9 +514,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             internal sealed class DecoderLease : IDisposable
             {
-                private readonly VideoDecoderPool? _pool;
-                private readonly PooledDecoderEntry? _entry;
-                private readonly IVideoSource? _temporaryDecoder;
+                private readonly VideoDecoderPool _pool;
+                private readonly PooledDecoderEntry _entry;
                 private bool _disposed;
 
                 internal DecoderLease(VideoDecoderPool pool, PooledDecoderEntry entry)
@@ -521,18 +525,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     Decoder = entry.Decoder;
                 }
 
-                internal DecoderLease(IVideoSource temporaryDecoder)
-                {
-                    _temporaryDecoder = temporaryDecoder;
-                    Decoder = temporaryDecoder;
-                }
-
                 public IVideoSource Decoder { get; }
 
                 public void MarkPosition(uint frameIndex)
                 {
-                    if (_entry is not null && _pool is not null)
-                        _pool.MarkPosition(_entry, frameIndex);
+                    _pool.MarkPosition(_entry, frameIndex);
                 }
 
                 public void Dispose()
@@ -544,13 +541,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
                     _disposed = true;
 
-                    if (_entry is not null && _pool is not null)
-                    {
-                        _pool.Return(_entry);
-                        return;
-                    }
-
-                    _temporaryDecoder?.Dispose();
+                    _pool.Return(_entry);
                 }
             }
         }

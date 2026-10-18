@@ -8,6 +8,8 @@ namespace projectFrameCut.Render.Effect;
 
 public sealed class MergePictureChannelsEffectProvider : EffectProviderBase, IMultipleOutputEffectProvider
 {
+    public override bool IsDeterministic => true;
+
     public MergePictureChannelsEffectProvider() => Name = "Merge Picture Channels";
 
     public override string TypeName => "MergePictureChannels";
@@ -37,6 +39,8 @@ public sealed class MergePictureChannelsEffectProvider : EffectProviderBase, IMu
 
 public sealed class MergePictureChannelsEffect : IEffect, IMultipleOutputEffect
 {
+    public bool IsDeterministic => true;
+
     public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public string TypeName => "MergePictureChannels";
     public EffectType TypeOfEffect => EffectType.NormalEffect;

@@ -9,6 +9,8 @@ namespace projectFrameCut.Render.Effect
 {
     public class ColorAdjustmentEffect_IPicture : IColorAdjustEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public string Name { get; set; } = "ColorAdjustment";
         public int RelativeWidth { get; set; }
@@ -542,6 +544,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class ColorAdjustmentEffectProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public ColorAdjustmentEffectProvider()
         {
             Name = "ColorAdjustment";

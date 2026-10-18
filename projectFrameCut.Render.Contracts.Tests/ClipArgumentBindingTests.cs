@@ -36,6 +36,8 @@ public sealed class ClipArgumentBindingTests
 
     private sealed class ValueSource : IntConstantValueProviderProvider, IEffectProvider
     {
+        public bool IsDeterministic => true;
+
         public new IEffect[] Build() => [new IntConstantValueProviderEffect { Parameters = BuildDynamicParameters() }];
     }
 

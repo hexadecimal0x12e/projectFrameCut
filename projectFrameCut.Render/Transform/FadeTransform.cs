@@ -29,6 +29,8 @@ public class FadeTransformProvider : TransformEffectProviderBase
 
 public abstract class TransformEffectProviderBase : EffectProviderBase
 {
+    public override bool IsDeterministic => true;
+
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public override EffectType TypeOfEffect => EffectType.Transform;
     public override EffectTarget Target => EffectTarget.Video | EffectTarget.Transform | EffectTarget.IsNotVisibleInNewEffectSelector;

@@ -179,11 +179,11 @@ internal static class RenderRpcBootstrap
         }
     }
 
-    public static bool TryReconnectCliRender(string projectRoot, out Guid jobId)
+    public static bool TryReconnectCliRender(string? projectRoot, out Guid jobId)
     {
         lock (Gate)
         {
-            if (_manager?.JobId is Guid active && SameProjectRoot(_manager.ProjectRoot, projectRoot))
+            if (_manager?.JobId is Guid active && (projectRoot is null || SameProjectRoot(_manager.ProjectRoot, projectRoot)))
             {
                 jobId = active;
                 return true;

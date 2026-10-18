@@ -11,6 +11,8 @@ namespace projectFrameCut.Render.Effect;
 
 public sealed class SplitPictureChannelsEffectProvider : EffectProviderBase, IMultipleOutputEffectProvider
 {
+    public override bool IsDeterministic => true;
+
     private static readonly string[] ChannelIds = ["R", "G", "B", "A", "Brightness"];
 
     public SplitPictureChannelsEffectProvider() => Name = "Split Picture Channels";
@@ -32,6 +34,8 @@ public sealed class SplitPictureChannelsEffectProvider : EffectProviderBase, IMu
 
 public sealed class SplitPictureChannelsEffect : IEffect, IMultipleOutputEffect
 {
+    public bool IsDeterministic => true;
+
     public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public string TypeName => "SplitPictureChannels";
     public EffectType TypeOfEffect => EffectType.NormalEffect;

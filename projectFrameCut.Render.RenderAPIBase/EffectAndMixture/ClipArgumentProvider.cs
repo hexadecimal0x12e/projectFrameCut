@@ -5,6 +5,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
 public sealed class ClipArgumentProvider : IEffectProvider
 {
+    public bool IsDeterministic => true;
+
     public const string ProviderTypeName = "ClipArguments";
     private readonly Dictionary<string, object> staticValues = new();
     private readonly Dictionary<string, IValueProviderEffect> runtimeFields = new();

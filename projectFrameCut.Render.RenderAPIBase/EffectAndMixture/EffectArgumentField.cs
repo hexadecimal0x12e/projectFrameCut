@@ -179,6 +179,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         VectorPicture = IPicture | (1 << 13),
 
+        /// <summary>A device-resident image represented by <see cref="IHwAccelPicture"/>.</summary>
+        HwAccelPicture = IPicture | (1 << 14),
+
         /// <summary>
         /// Indicate that the field is a mandatory field, which means it must be set before the effect can be applied.
         /// </summary>

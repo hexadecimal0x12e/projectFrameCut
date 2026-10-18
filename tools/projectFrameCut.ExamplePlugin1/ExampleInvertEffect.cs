@@ -7,6 +7,8 @@ namespace SomePublisher;
 
 public sealed class ExampleInvertEffect : INormalEffect
 {
+    public bool IsDeterministic => true;
+
     private readonly float _amount;
 
     public ExampleInvertEffect(float amount = 1f)

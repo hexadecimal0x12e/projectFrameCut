@@ -6,7 +6,7 @@ using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.HwAccelEngine.Effect;
 
-public sealed class FadeTransform_HwAccel : FadeTransform, IDisposable
+public sealed partial class FadeTransform_HwAccel : FadeTransform, IDisposable
 {
     private readonly Lock nativeLock = new();
     private readonly FadeOpacityEffect_HwAccel opacity = new();

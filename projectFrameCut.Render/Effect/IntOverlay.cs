@@ -19,6 +19,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class IntOverlayEffect : INormalEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Int Overlay";
@@ -141,6 +143,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class IntOverlayEffectProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public IntOverlayEffectProvider()
         {
             Name = "Int Overlay";

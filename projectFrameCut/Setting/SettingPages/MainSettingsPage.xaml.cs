@@ -176,7 +176,7 @@ namespace projectFrameCut
                 {
                     MyLoggerExtensions.SaveDiagResult = false;
                 }
-                if (IsBoolSettingTrue("render_forceImpType_ForceHwAccel"))
+                if (IsBoolSettingTrueOrDefault("render_forceImpType_ForceHwAccel", true))
                 {
                     EffectHelper.ForcePreferToType = EffectImplementType.HwAcceleration;
                 }
@@ -242,14 +242,14 @@ namespace projectFrameCut
             catch (Exception ex)
             {
                 Log(ex, "Setup modules");
+            }
+
+            static NativePreviewOutputMode ParsePreviewOutputMode(string value)
+                => Enum.TryParse<NativePreviewOutputMode>(value, ignoreCase: true, out var mode) && mode == NativePreviewOutputMode.Disabled
+                    ? NativePreviewOutputMode.Disabled
+                    : NativePreviewOutputMode.Required;
+
         }
-
-        static NativePreviewOutputMode ParsePreviewOutputMode(string value)
-            => Enum.TryParse<NativePreviewOutputMode>(value, ignoreCase: true, out var mode) && mode == NativePreviewOutputMode.Disabled
-                ? NativePreviewOutputMode.Disabled
-                : NativePreviewOutputMode.Required;
-
-    }
         int count = 0;
         private async void TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)
         {

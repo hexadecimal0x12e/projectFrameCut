@@ -13,6 +13,8 @@ namespace projectFrameCut.Render.Effect
 
     public class ResizeEffect_IPicture : INormalEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
@@ -117,6 +119,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class ResizeEffectProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public ResizeEffectProvider()
         {
             Name = "Resize";

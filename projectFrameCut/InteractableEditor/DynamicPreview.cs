@@ -40,6 +40,7 @@ namespace projectFrameCut.InteractableEditor;
 public sealed class DynamicPreview : IDisposable
 {
     private readonly EffectRuntimeContext effectRuntime = new();
+    private readonly FrameHashCache nodeCache = new();
     private const int ParallelPreparationThreshold = 2;
     private const int MaxCachedFallbackFrames = 120;
     private const int MaxDiskCachedFallbackFrames = 1500;
@@ -380,6 +381,7 @@ public sealed class DynamicPreview : IDisposable
     public void Dispose()
     {
         effectRuntime.Dispose();
+        nodeCache.Dispose();
         CancelClipWarmups();
         Interlocked.Increment(ref _renderVersion);
         Interlocked.Increment(ref _prepareVersion);
@@ -843,6 +845,13 @@ public sealed class DynamicPreview : IDisposable
     private IPicture? RenderClipPreviewSource(ref IClip clip, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
+        using var hashContext = new FrameHashContext(new()
+        {
+            Mode = RenderHashSettings.Mode, Width = canvasWidth, Height = canvasHeight,
+            ProjectWidth = projectWidth, ProjectHeight = projectHeight,
+            FrameRate = _previewer?.targetFrameRate ?? 30, PixelMode = 8,
+        }, token, nodeCache);
+        using var hashScope = hashContext.Enter();
         var previewClip = clip;
         var allClips = (_clips ?? [clip]).Select(c => c.Id == previewClip.Id ? previewClip : c).ToArray();
         using var maskScope = MaskFrameContext.Open(allClips, frameIndex, canvasWidth, canvasHeight,

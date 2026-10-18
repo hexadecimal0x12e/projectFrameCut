@@ -173,10 +173,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 ? sourcePicture.ToBitPerPixel(targetPPB)
                 : sourcePicture;
             if (!ReferenceEquals(sourcePicture, resultPicture)) sourcePicture.Dispose();
-            resultPicture.CanBeDisposed = false;
-            if (cacheable) CacheRenderedFrame(cacheKey, resultPicture);
-            else resultPicture.CanBeDisposed = true;
-            return resultPicture;
+            resultPicture.CanBeDisposed = true;
+            if (!cacheable) return resultPicture;
+            try { return CacheRenderedFrame(cacheKey, resultPicture); }
+            finally { resultPicture.Dispose(); }
         }
 
         public TextClip()
@@ -292,7 +292,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 {
                     if (!cachedFrame.Disposed)
                     {
-                        picture = cachedFrame.Clone();
+                        picture = EffectPictureProcessing.Copy(cachedFrame);
                         return true;
                     }
                     textFrameCache.Remove(cacheKey);
@@ -303,20 +303,20 @@ namespace projectFrameCut.Render.ClipsAndTracks
             return false;
         }
 
-        private void CacheRenderedFrame(long cacheKey, IPicture picture)
+        private IPicture CacheRenderedFrame(long cacheKey, IPicture picture)
         {
             lock (textFrameCacheLock)
             {
-                if (!textFrameCache.ContainsKey(cacheKey) && textFrameCache.Count >= MaxTextFrameCacheEntries)
-                    ClearFrameCacheUnsafe();
-
-                if (textFrameCache.TryGetValue(cacheKey, out var oldFrame))
+                if (textFrameCache.TryGetValue(cacheKey, out var existing))
                 {
-                    try { oldFrame.Dispose(force: false); } catch { }
+                    if (!existing.Disposed) return EffectPictureProcessing.Copy(existing);
+                    textFrameCache.Remove(cacheKey);
+                    try { existing.Dispose(); } catch { }
                 }
-
-                picture.CanBeDisposed = false;
-                textFrameCache[cacheKey] = picture;
+                if (textFrameCache.Count >= MaxTextFrameCacheEntries) ClearFrameCacheUnsafe();
+                var snapshot = EffectPictureProcessing.Copy(picture);
+                textFrameCache[cacheKey] = snapshot;
+                return EffectPictureProcessing.Copy(snapshot);
             }
         }
 

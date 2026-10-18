@@ -32,6 +32,8 @@ public sealed class ClipValueFrameContext : IDisposable
     private readonly Action<IClip> evaluate;
     private readonly Func<IPicture, IPicture> copyPicture;
     private readonly Func<IClip, bool>? isAvailable;
+    private readonly Func<Guid, Guid, object?>? readPublished;
+    private readonly Action<Guid, Guid, object>? publish;
     private readonly Dictionary<(Guid Clip, Guid Endpoint), object> values = new();
     private readonly Dictionary<object, object> computed = new();
     private readonly HashSet<Guid> evaluating = [];
@@ -44,13 +46,16 @@ public sealed class ClipValueFrameContext : IDisposable
     public bool IsTransformInput => transformInputDepth > 0;
 
     public ClipValueFrameContext(IReadOnlyList<IClip> clips, uint frame, Action<IClip> evaluate,
-        Func<IPicture, IPicture> copyPicture, Func<IClip, bool>? isAvailable = null)
+        Func<IPicture, IPicture> copyPicture, Func<IClip, bool>? isAvailable = null,
+        Func<Guid, Guid, object?>? readPublished = null, Action<Guid, Guid, object>? publish = null)
     {
         this.clips = clips.ToDictionary(c => c.Id);
         FrameIndex = frame;
         this.evaluate = evaluate;
         this.copyPicture = copyPicture;
         this.isAvailable = isAvailable;
+        this.readPublished = readPublished;
+        this.publish = publish;
         previous = current;
         current = this;
     }
@@ -76,6 +81,7 @@ public sealed class ClipValueFrameContext : IDisposable
             || publishingClip is { } owner && owner != clip.Id
             || values.ContainsKey((clip.Id, endpoint))) return;
         values[(clip.Id, endpoint)] = Snapshot(value);
+        publish?.Invoke(clip.Id, endpoint, value);
     }
 
     public bool TryGetComputed<T>(object key, out T? result) where T : class
@@ -127,8 +133,10 @@ public sealed class ClipValueFrameContext : IDisposable
             throw Error("The source endpoint does not exist.");
         if (!output.Enabled) throw Error("The source endpoint is disabled.");
         if (!output.CanPassTo(input.GetPipeline(), sameClip)) throw Error("The endpoint pipeline has changed or does not precede the input stage.");
-        if (output.ValueType.BaseType() != input.ValueType.BaseType()) throw Error("The endpoint type has changed.");
+        if (output.ValueType.BaseType() != input.ValueType.BaseType() && !(output.ValueType.IsPicture() && input.ValueType.IsPicture())) throw Error("The endpoint type has changed.");
         if (output.GetMainInputSource() == IEffectProvider.NoConnectionGUID.ToString()) throw Error("The source endpoint is disconnected.");
+        if (!values.ContainsKey((source.Id, output.Id)) && readPublished?.Invoke(source.Id, output.Id) is { } shared)
+            values[(source.Id, output.Id)] = shared;
         if (!values.ContainsKey((source.Id, output.Id)) && !evaluated.Contains(source.Id))
         {
             if (!evaluating.Add(source.Id)) throw Error("The endpoint dependency contains a cycle.");
@@ -136,6 +144,8 @@ public sealed class ClipValueFrameContext : IDisposable
             {
                 evaluate(source);
                 evaluated.Add(source.Id);
+                if (!values.ContainsKey((source.Id, output.Id)) && readPublished?.Invoke(source.Id, output.Id) is { } published)
+                    values[(source.Id, output.Id)] = published;
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) { throw new ClipValueBindingException(Error(ex.Message).Message, ex); }

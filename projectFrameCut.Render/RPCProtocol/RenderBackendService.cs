@@ -23,12 +23,12 @@ namespace projectFrameCut.Render.RPCProtocol;
 
 public sealed partial class RenderBackendService(IRenderArtifactStore? artifactStore = null, string? stateRoot = null, Action<RenderJob>? completionSink = null, Action<RenderJob>? progressSink = null, IAudioPreviewSinkFactory? previewAudioSinkFactory = null) : IRenderService, IAsyncDisposable
 {
-    private const string TimelineFrameCacheVersion = "v8-mask-vfd";
-    private const string ClipPreviewCacheVersion = "v8-mask-vfd";
-    private const string TimelineSegmentCacheVersion = "v2-audio-source";
-    private const string AudioSegmentCacheVersion = "v2-track-source";
-    private const string FrameHashIndexVersion = "v2-lazy-frame-clip";
-    private const string PreviewCacheManifestFileName = "render-preview-cache.json";
+    public const string ClipPreviewCacheVersion = "v8-mask-vfd";
+    public const string TimelineSegmentCacheVersion = "v2-audio-source";
+    public const string AudioSegmentCacheVersion = "v2-track-source";
+    public const string FrameHashIndexVersion = "v2-lazy-frame-clip";
+    public const string PreviewCacheManifestFileName = "render-preview-cache.json";
+    public const string TimelineFrameCacheVersion = ClipPreviewCacheVersion;
     private static readonly TimeSpan PreviewCacheRetention = TimeSpan.FromHours(48);
     private static readonly JsonSerializerOptions PreviewCacheJsonOptions = new() { PropertyNameCaseInsensitive = true, WriteIndented = true };
     private readonly IRenderArtifactStore _artifacts = artifactStore ?? new RenderArtifactStore();
@@ -546,15 +546,38 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         var width = Math.Max(1, request.Width);
         var height = Math.Max(1, request.Height);
         await session.RenderGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        IPicture? renderedPicture = null;
         try
         { 
             cancellationToken.ThrowIfCancellationRequested();
-            var frameHash = session.GetFrameHash(request.FrameIndex);
+            var visualClips = GetVisualClips(session.Clips);
+            var pixelMode = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb
+                ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
+            InitializePreviewClips(visualClips, pixelMode, request.FrameIndex, cancellationToken);
+            var hashOptions = new FrameHashOptions
+            {
+                Mode = request.FrameHashMode, Width = width, Height = height, ProjectWidth = session.Width,
+                ProjectHeight = session.Height, FrameRate = session.FrameRate, PixelMode = pixelMode.Value,
+                Stage = "timeline", ProcessFromCanvas = Timeline.ProcessEffectFromCanvas, AutoCenter = true,
+            };
+            using var hashContext = new FrameHashContext(hashOptions, cancellationToken, session.NodeCache);
+            using var hashScope = hashContext.Enter();
+            IPicture RenderTimeline()
+            {
+                if (renderedPicture is not null) return renderedPicture;
+                var layers = Timeline.GetFramesInOneFrame(visualClips, request.FrameIndex, width, height, pixelMode,
+                    projectRelativeWidth: session.Width, projectRelativeHeight: session.Height, initializeClips: false);
+                return renderedPicture = Timeline.MixtureLayers(layers, request.FrameIndex, width, height, (int)pixelMode,
+                    autoCenterImplicitClip: true, projectRelativeWidth: session.Width, projectRelativeHeight: session.Height,
+                    disposeIntermediateFrames: true, cancellationToken: cancellationToken);
+            }
+            var identity = FrameHashHelper.GetFrameHash(visualClips, request.FrameIndex, hashOptions, () => RenderTimeline(), cancellationToken);
+            var frameHash = identity.Hash;
             var namespacePrefix = string.IsNullOrEmpty(session.CacheNamespace) ? string.Empty : $"{session.CacheNamespace}_";
             var wantsScRgb = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb;
             var formatSuffix = wantsScRgb ? "vfd16" : "vfd8";
             var cacheKey = $"{TimelineFrameCacheVersion}_{namespacePrefix}{frameHash}_{width}x{height}_{formatSuffix}";
-            var allowCaching = Timeline.CanCacheFrame(GetVisualClips(session.Clips), request.FrameIndex);
+            var allowCaching = identity.CanReuse;
             if (!allowCaching)
                 LogDiagnostic($"[RenderRPC] Bypassing timeline preview cache at frame {request.FrameIndex}.");
             var relativePath = allowCaching ? $"thumbs/projectFrameCut_Render_{cacheKey}.vfd"
@@ -567,16 +590,10 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 IPicture? picture = null;
                 try
                 {
-                    var visualClips = GetVisualClips(session.Clips);
-                    var pixelMode = wantsScRgb ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
-                    InitializePreviewClips(visualClips, pixelMode, request.FrameIndex, cancellationToken);
-                    var layers = Timeline.GetFramesInOneFrame(visualClips, request.FrameIndex, width, height, pixelMode,
-                        projectRelativeWidth: session.Width, projectRelativeHeight: session.Height, initializeClips: false);
-                    picture = Timeline.MixtureLayers(layers, request.FrameIndex, width, height, (int)pixelMode,
-                        autoCenterImplicitClip: true, projectRelativeWidth: session.Width, projectRelativeHeight: session.Height,
-                        disposeIntermediateFrames: true, cancellationToken: cancellationToken);
+                    picture = RenderTimeline();
+                    renderedPicture = null;
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (allowCaching && !Timeline.CanCacheFrame(visualClips, request.FrameIndex))
+                    if (allowCaching && visualClips.Any(ClipInitializationFailure.IsMarked))
                     {
                         allowCaching = false;
                         relativePath = $"thumbs/unCacheablePerClip/{session.Id:N}/frame_{Guid.NewGuid():N}.vfd";
@@ -607,6 +624,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         }
         finally
         {
+            renderedPicture?.Dispose();
             session.RenderGate.Release();
         }
     }
@@ -632,8 +650,9 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         var previewHeight = ResolveClipPreviewDimension(clip.TargetHeight, projectHeight, canvasHeight);
 
         var startedAt = Stopwatch.GetTimestamp();
-        double lookupMs = 0, initializeMs = 0, renderMs = 0, writeMs = 0, trackMs = 0;
+        double lookupMs = 0, initializeMs = 0, hashMs = 0, renderMs = 0, writeMs = 0, trackMs = 0;
         var previewCacheHit = false;
+        IPicture? renderedPicture = null;
         // Playback workers own separate clip runtimes; other requests share the session gate.
         var renderGate = previewClips is null ? session.RenderGate : null;
         if (renderGate is not null) await renderGate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -652,12 +671,45 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 previewWidth = canvasWidth;
                 previewHeight = canvasHeight;
             }
-            var clipHash = snapshot is null && previewClips is null ? session.GetClipFrameHash(clip.Id, request.FrameIndex)
-                : Timeline.GetClipFrameHash(GetVisualClips(clips), clip, request.FrameIndex);
+            var visualClips = GetVisualClips(clips);
+            var pixelMode = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb
+                ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
+            var hashOptions = new FrameHashOptions
+            {
+                Mode = request.FrameHashMode, Width = canvasWidth, Height = canvasHeight,
+                ProjectWidth = projectWidth, ProjectHeight = projectHeight, FrameRate = session.FrameRate,
+                PixelMode = pixelMode.Value, Stage = request.BeforeLayout ? "before-layout" : "clip",
+                ProcessFromCanvas = Timeline.ProcessEffectFromCanvas,
+            };
+            using var ownedHashContext = FrameHashContext.Current is null
+                ? new FrameHashContext(hashOptions, cancellationToken, session.NodeCache) : null;
+            using var hashScope = ownedHashContext?.Enter();
+            var stageStarted = Stopwatch.GetTimestamp();
+            InitializePreviewClips([clip, .. Timeline.CollectHashDependencies(visualClips, clip, new HashSet<Guid> { clip.Id })],
+                pixelMode, request.FrameIndex, cancellationToken);
+            initializeMs = Stopwatch.GetElapsedTime(stageStarted).TotalMilliseconds;
+            IPicture RenderPreview()
+            {
+                if (renderedPicture is not null) return renderedPicture;
+                long started = Stopwatch.GetTimestamp();
+                try
+                {
+                    return renderedPicture = ClipPreviewRenderer.Render(clip, visualClips, canvasWidth,
+                        canvasHeight, projectWidth, projectHeight, request.FrameIndex, cancellationToken, pixelMode,
+                        request.BeforeLayout, initializeClips: false)
+                        ?? throw new InvalidOperationException($"Clip '{clip.Id}' did not produce a preview frame.");
+                }
+                finally { renderMs += Stopwatch.GetElapsedTime(started).TotalMilliseconds; }
+            }
+            var hashStarted = Stopwatch.GetTimestamp();
+            var identity = FrameHashHelper.GetClipHash(visualClips, clip, request.FrameIndex, hashOptions, () => RenderPreview(), cancellationToken);
+            hashMs = Math.Max(0, Stopwatch.GetElapsedTime(hashStarted).TotalMilliseconds - renderMs);
+            var lookupStarted = Stopwatch.GetTimestamp();
+            var clipHash = identity.Hash;
             var namespacePrefix = string.IsNullOrEmpty(session.CacheNamespace) ? string.Empty : $"{session.CacheNamespace}_";
             var wantsScRgb = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb;
             var formatSuffix = wantsScRgb ? "vfd16" : "vfd8";
-            var allowCaching = Timeline.CanCacheClipFrame(clips, clip);
+            var allowCaching = identity.CanReuse;
             var layoutPrefix = request.BeforeLayout ? "before-layout_" : string.Empty;
             var relativePath = allowCaching
                 ? $"thumbs/perClip/{clip.Id}/dynamic/dynamic_{ClipPreviewCacheVersion}_{layoutPrefix}{namespacePrefix}{clipHash}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}_{formatSuffix}.vfd"
@@ -665,35 +717,18 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             var finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
             var cacheHit = allowCaching && File.Exists(finalPath);
             previewCacheHit = cacheHit;
-            lookupMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds - gateMs;
+            lookupMs = Stopwatch.GetElapsedTime(lookupStarted).TotalMilliseconds;
             if (!cacheHit)
             {
                 var temporaryPath = _artifacts.CreateTemporaryPath(finalPath);
                 IPicture? picture = null;
                 try
                 {
-                    var visualClips = GetVisualClips(clips);
-                    var pixelMode = wantsScRgb ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
-                    var stageStartedAt = Stopwatch.GetTimestamp();
-                    InitializePreviewClips([clip, .. Timeline.CollectHashDependencies(visualClips, clip, new HashSet<Guid> { clip.Id })],
-                        pixelMode, request.FrameIndex, cancellationToken);
-                    initializeMs = Stopwatch.GetElapsedTime(stageStartedAt).TotalMilliseconds;
-                    stageStartedAt = Stopwatch.GetTimestamp();
-                    picture = ClipPreviewRenderer.Render(
-                        clip,
-                        visualClips,
-                        canvasWidth,
-                        canvasHeight,
-                        projectWidth,
-                        projectHeight,
-                        request.FrameIndex,
-                        cancellationToken,
-                        pixelMode,
-                        request.BeforeLayout, initializeClips: false)
-                        ?? throw new InvalidOperationException($"Clip '{clip.Id}' did not produce a preview frame.");
-                    renderMs = Stopwatch.GetElapsedTime(stageStartedAt).TotalMilliseconds;
+                    picture = RenderPreview();
+                    renderedPicture = null;
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (allowCaching && !Timeline.CanCacheClipFrame(clips, clip))
+                    if (allowCaching && (ClipInitializationFailure.IsMarked(clip)
+                        || Timeline.CollectHashDependencies(visualClips, clip, new HashSet<Guid> { clip.Id }).Any(ClipInitializationFailure.IsMarked)))
                     {
                         allowCaching = false;
                         relativePath = $"thumbs/unCacheablePerClip/{session.Id:N}/clip_{clip.Id:N}_{Guid.NewGuid():N}.vfd";
@@ -701,7 +736,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                         temporaryPath = _artifacts.CreateTemporaryPath(finalPath);
                         LogDiagnostic($"[RenderRPC] Bypassing clip preview cache after rendering clip {clip.Id} at frame {request.FrameIndex}.");
                     }
-                    stageStartedAt = Stopwatch.GetTimestamp();
+                    var stageStartedAt = Stopwatch.GetTimestamp();
                     picture.SaveToDisk(temporaryPath, Drawing.Base.PictureExtensions.SharedVfdPictureEncoder);
                     cancellationToken.ThrowIfCancellationRequested();
                     _artifacts.CommitTemporaryFile(temporaryPath, finalPath);
@@ -743,13 +778,14 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         }
         finally
         {
+            renderedPicture?.Dispose();
             renderGate?.Release();
             var now = Stopwatch.GetTimestamp();
             var elapsedMs = Stopwatch.GetElapsedTime(startedAt, now).TotalMilliseconds;
             var lastLog = Interlocked.Read(ref _lastSlowPreviewLog);
             if (elapsedMs >= 250 && now - lastLog >= Stopwatch.Frequency * 5
                 && Interlocked.CompareExchange(ref _lastSlowPreviewLog, now, lastLog) == lastLog)
-                LogDiagnostic($"[RenderRPC] Slow clip preview: clip={clip.Id}, frame={request.FrameIndex}, size={canvasWidth}x{canvasHeight}, cacheHit={previewCacheHit}, total={elapsedMs:F1}ms, gate={gateMs:F1}ms, lookup={lookupMs:F1}ms, init={initializeMs:F1}ms, render={renderMs:F1}ms, write={writeMs:F1}ms, track={trackMs:F1}ms.");
+                LogDiagnostic($"[RenderRPC] Slow clip preview: clip={clip.Id}, frame={request.FrameIndex}, size={canvasWidth}x{canvasHeight}, cacheHit={previewCacheHit}, total={elapsedMs:F1}ms, gate={gateMs:F1}ms, lookup={lookupMs:F1}ms, init={initializeMs:F1}ms, hash={hashMs:F1}ms, render={renderMs:F1}ms, write={writeMs:F1}ms, track={trackMs:F1}ms; {session.NodeCache.GetStatusInfo()}.");
         }
     }
 
@@ -843,8 +879,10 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         using var operation = session.BeginOperation(cancellationToken);
         cancellationToken = operation.Token;
         using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
-        var keySource = $"{TimelineSegmentCacheVersion}|{session.CacheNamespace}|{session.SnapshotHash}|{request.StartFrame}|{request.Length}|{request.Width}|{request.Height}|{request.FrameRate}|{request.IncludeAudio}";
-        var relativePath = GetVisualClips(session.Clips).All(Timeline.CanCacheClipSource)
+        var clips = GetVisualClips(session.Clips);
+        var hashes = clips.Select(c => FrameHashHelper.GetClipHash(clips, c, request.StartFrame)).ToArray();
+        var keySource = $"frame-content|{TimelineSegmentCacheVersion}|{session.CacheNamespace}|{session.SnapshotHash}|{request.FrameHashMode}|{request.StartFrame}|{request.Length}|{request.Width}|{request.Height}|{request.FrameRate}|{request.IncludeAudio}|{string.Join(',', hashes.Select(h => h.Hash))}";
+        var relativePath = hashes.All(h => h.CanReuse)
             ? $"thumbs/projectFrameCut_Render_segment_{ComputeTextHash(keySource)}.mp4"
             : $"thumbs/unCacheablePerClip/{session.Id:N}/segment_{Guid.NewGuid():N}.mp4";
         return await RenderSegmentInternalAsync(session, request, relativePath, isPreview: true, cancellationToken).ConfigureAwait(false);
@@ -940,6 +978,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             var relativePath = $"cache/render/{entry.JobId:N}/{safeName}";
             var segment = new TimelineSegmentRequest
             {
+                FrameHashMode = request.FrameHashMode,
                 SessionId = request.SessionId,
                 StartFrame = 0,
                 Length = session.Duration,
@@ -1017,6 +1056,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 };
                 var renderer = new Renderer
                 {
+                    FrameHashMode = request.FrameHashMode,
                     StartFrame = request.StartFrame,
                     Duration = length,
                     builder = builder,
@@ -1761,6 +1801,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             ? cacheNamespace : ComputeTextHash(cacheNamespace + ExternalSources.CacheToken + ExternalVideoSourceRegistry.CacheToken
                 + ExternalAudioSourceRegistry.CacheToken + ExternalMaskSourceRegistry.CacheToken);
         public SemaphoreSlim RenderGate { get; } = new(1, 1);
+        public FrameHashCache NodeCache { get; } = new();
         private readonly object _lifetimeGate = new();
         private readonly CancellationTokenSource _lifetime = new();
         private readonly TaskCompletionSource _operationsCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -1852,6 +1893,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 catch (Exception ex) { Log(ex, $"Dispose preview audio for render session {Id}"); }
             }
             DisposeResources(Clips, SoundTracks, retained);
+            NodeCache.Dispose();
             RenderGate.Dispose();
             _lifetime.Dispose();
             var materializedRoot = Path.Combine(ProjectRoot, "thumbs", "unCacheablePerClip", Id.ToString("N"));

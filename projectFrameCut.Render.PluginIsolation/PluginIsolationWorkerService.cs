@@ -562,6 +562,8 @@ internal sealed class PluginIsolationWorkerService(
 
     private async ValueTask<RenderResponseEnvelope> ComputeEffectAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
     {
+        using var gpuScope = new HwAccelPictureScope();
+        using var gpuEntry = gpuScope.Enter();
         var request = Read<IsolationEffectComputeRequest>(envelope);
         var frame = request.Frame;
         var effect = Require<IEffect>(frame.ObjectId);
@@ -598,8 +600,9 @@ internal sealed class PluginIsolationWorkerService(
                     Clip = clip, FrameIndex = frame.TargetFrame, Progress = frame.Progress, ClipProgress = frame.ClipProgress,
                     TargetWidth = frame.TargetWidth, TargetHeight = frame.TargetHeight, CancellationToken = cancellationToken,
                     RelativeWidth = request.RelativeWidth, RelativeHeight = request.RelativeHeight,
+                    InputTypes = request.InputTypes.ToDictionary(p => p.Key, p => (EffectArgumentFieldType)p.Value),
                 };
-                result = effect is IMultipleOutputEffect multiple ? multiple.ComputeOutputs(context) : effect.Compute(context);
+                result = EffectPictureProcessing.Compute(effect, context, values);
             }
             if (effect is IMultipleOutputEffect)
             {
@@ -1286,6 +1289,7 @@ internal sealed class PluginIsolationWorkerService(
             TypeName = provider.TypeName,
             FromPlugin = provider.FromPlugin,
             EffectType = (int)provider.TypeOfEffect,
+            IsDeterministic = provider.IsDeterministic,
             Target = (int)provider.Target,
             Enabled = provider.Enabled,
             InstanceId = provider.Id.ToString(),
@@ -1327,6 +1331,7 @@ internal sealed class PluginIsolationWorkerService(
         FromPlugin = effect.FromPlugin,
         TypeName = effect.TypeName,
         EffectType = (int)effect.TypeOfEffect,
+        IsDeterministic = effect.IsDeterministic,
         ImplementType = (int)effect.ImplementType,
         Name = effect.Name,
         InstanceId = effect.Id,

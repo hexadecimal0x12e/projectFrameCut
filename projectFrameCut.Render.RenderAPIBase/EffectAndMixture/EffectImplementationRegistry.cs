@@ -16,6 +16,8 @@ public sealed class EffectImplementationRegistry
 
     public ConcurrentDictionary<EffectImplementationKey, string> PreferredPlugins { get; } = new();
 
+    public EffectImplementType? ForcePreferToType { get; set; }
+
     public void Register(string pluginId, IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> factories)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
@@ -62,7 +64,13 @@ public sealed class EffectImplementationRegistry
     {
         typeName = ResolveTypeName(typeName, parameters);
         var type = requestedType == EffectImplementType.NotSpecified ? defaultType : requestedType;
-        if (!TryGetFactory(new(typeName, type), out var factory) || factory is null)
+        if (!TryGetFactory(new(typeName, type), out var factory) && type == ForcePreferToType && type != defaultType)
+        {
+            type = defaultType;
+            if (TryGetFactory(new(typeName, type), out factory))
+                Logger.Log($"Effect '{typeName}' has no implementation for forced type '{requestedType}'; using default '{type}'.", "warn");
+        }
+        if (factory is null)
             throw new NotSupportedException($"No effect implementation is registered for '{typeName}' with type '{type}'.");
 
         var blank = factory() ?? throw new InvalidOperationException($"Effect implementation factory returned null for '{typeName}/{type}'.");

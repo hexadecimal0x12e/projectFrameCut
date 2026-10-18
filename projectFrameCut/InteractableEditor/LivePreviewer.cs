@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Controls.PlatformConfiguration;
+using Microsoft.Maui.Controls.PlatformConfiguration;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Base;
@@ -15,6 +15,7 @@ using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -40,8 +41,6 @@ namespace projectFrameCut.LivePreview
 
     public partial class LivePreviewer
     {
-        private const string StaticFrameCacheVersion = "v8-mask-vfd";
-        private const string ClipPreviewCacheVersion = "v8-mask-vfd";
         public IClip[]? Clips;
         public ISoundTrack[]? SoundTracks;
         public int targetFrameRate = 60;
@@ -59,25 +58,18 @@ namespace projectFrameCut.LivePreview
         public event Action<double, TimeSpan>? OnProgressChanged;
         public Guid RenderSessionId { get; set; } = Guid.NewGuid();
         public FrameHashIndex HashIndex { get; private set; } = new();
-        private IReadOnlyDictionary<uint, string> FrameHashLookup { get; set; } = new Dictionary<uint, string>();
-        private IReadOnlyDictionary<Guid, IReadOnlyDictionary<uint, string>> ClipHashLookup { get; set; }
-            = new Dictionary<Guid, IReadOnlyDictionary<uint, string>>();
+        private readonly ConcurrentDictionary<uint, (FrameHashOptions Options, string Hash, string Path)> renderedFrames = new();
         private readonly SemaphoreSlim _updateDraftGate = new(1, 1);
         private HashSet<Guid> _cacheableClipIds = [];
         public string ProjectRoot => string.IsNullOrWhiteSpace(TempPath) ? string.Empty : Directory.GetParent(Path.GetFullPath(TempPath))?.FullName ?? string.Empty;
         public string ProjectName { get; set; } = "Untitled Project";
         public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Required;
-        private bool HasExternalSources => Clips?.Any(x => RemoteRpcVideoSource.IsExternalPath(x.FilePath)) == true;
-
         public bool IsFrameRendered(uint frameIndex)
         {
-            if (Clips == null || HasExternalSources || !CanCacheFrame(frameIndex)) return false;
-            if (frameIndex >= TotalDuration) return false;
-            var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash)
-                ? indexedHash
-                : Timeline.GetFrameHash(Clips, frameIndex);
-            return Directory.Exists(TempPath)
-                && Directory.EnumerateFiles(TempPath, $"projectFrameCut_Render_{StaticFrameCacheVersion}_{frameHash}_*.vfd", SearchOption.TopDirectoryOnly).Any();
+            if (Clips is null || frameIndex >= TotalDuration || !renderedFrames.TryGetValue(frameIndex, out var saved)
+                || saved.Options.Mode != RenderHashSettings.Mode || !File.Exists(saved.Path)) return false;
+            var identity = FrameHashHelper.GetFrameHash(Clips, frameIndex, saved.Options);
+            return identity.CanReuse && identity.Hash == saved.Hash;
         }
 
         public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token = default)
@@ -126,13 +118,15 @@ namespace projectFrameCut.LivePreview
             using var renderMark = new UserMarkRange("Preview.RenderTimelineFrame", $"frame={frameIndex}, size={targetWidth}x{targetHeight}");
 #endif
             ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
-            var frameHash = FrameHashLookup.TryGetValue(frameIndex, out var indexedHash)
-                ? indexedHash
-                : Timeline.GetFrameHash(Clips, frameIndex);
-            var cachedPath = Path.Combine(ProjectRoot, "thumbs", $"projectFrameCut_Render_{StaticFrameCacheVersion}_{frameHash}_{targetWidth}x{targetHeight}_vfd8.vfd");
-            if (!HasExternalSources && CanCacheFrame(frameIndex) && File.Exists(cachedPath)) return cachedPath;
+            var hashOptions = new FrameHashOptions
+            {
+                Mode = RenderHashSettings.Mode, Width = targetWidth, Height = targetHeight,
+                ProjectWidth = ProjectRelativeWidth, ProjectHeight = ProjectRelativeHeight,
+                FrameRate = targetFrameRate, Stage = "timeline", ProcessFromCanvas = Timeline.ProcessEffectFromCanvas, AutoCenter = true,
+            };
             var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineFrameAsync(new TimelineFrameRequest
             {
+                FrameHashMode = hashOptions.Mode,
                 SessionId = RenderSessionId,
                 FrameIndex = frameIndex,
                 Width = targetWidth,
@@ -144,6 +138,8 @@ namespace projectFrameCut.LivePreview
                 throw new InvalidDataException($"The render backend returned unsupported preview format {artifact.PixelFormat}.");
             if (!File.Exists(path))
                 throw new FileNotFoundException("The render backend returned an artifact that does not exist.", path);
+            var identity = FrameHashHelper.GetFrameHash(Clips, frameIndex, hashOptions);
+            if (identity.CanReuse) renderedFrames[frameIndex] = (hashOptions, identity.Hash, path);
             return path;
         }
 
@@ -158,6 +154,7 @@ namespace projectFrameCut.LivePreview
                 var artifact = clipId is { } id
                     ? await client.RenderClipPreviewAsync(new ClipPreviewRequest
                     {
+                        FrameHashMode = RenderHashSettings.Mode,
                         SessionId = RenderSessionId, ClipId = id, FrameIndex = frameIndex,
                         CanvasWidth = width, CanvasHeight = height,
                         ProjectWidth = ProjectRelativeWidth, ProjectHeight = ProjectRelativeHeight,
@@ -165,6 +162,7 @@ namespace projectFrameCut.LivePreview
                     }, cancellationToken).ConfigureAwait(false)
                     : await client.RenderTimelineFrameAsync(new TimelineFrameRequest
                     {
+                        FrameHashMode = RenderHashSettings.Mode,
                         SessionId = RenderSessionId, FrameIndex = frameIndex, Width = width, Height = height,
                         PreferredPixelFormat = PreviewPixelFormat.PngImage,
                     }, cancellationToken).ConfigureAwait(false);
@@ -233,6 +231,7 @@ namespace projectFrameCut.LivePreview
             {
                 var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineFrameAsync(new TimelineFrameRequest
                 {
+                FrameHashMode = RenderHashSettings.Mode,
                     SessionId = RenderSessionId,
                     FrameIndex = frameIndex,
                     Width = targetWidth,
@@ -440,14 +439,7 @@ namespace projectFrameCut.LivePreview
             var session = await (RpcClient ?? RenderRpcBootstrap.Client).OpenProjectAsync(request).ConfigureAwait(false);
             _cacheableClipIds = session.CacheableClipIds.ToHashSet();
             HashIndex = session.HashIndex ?? new();
-            FrameHashLookup = HashIndex.FrameHashes
-                .GroupBy(entry => entry.FrameIndex)
-                .ToDictionary(group => group.Key, group => group.Last().Hash);
-            ClipHashLookup = HashIndex.ClipHashes.ToDictionary(
-                entry => entry.ClipId,
-                entry => (IReadOnlyDictionary<uint, string>)entry.FrameHashes
-                    .GroupBy(frame => frame.FrameIndex)
-                    .ToDictionary(group => group.Key, group => group.Last().Hash));
+            renderedFrames.Clear();
             TotalDuration = session.Duration;
 
             Log($"[LiveRender] Updated {Clips.Length} clips and {SoundTracks.Length} soundtracks in {sw.ElapsedMilliseconds}ms.");
@@ -461,26 +453,9 @@ namespace projectFrameCut.LivePreview
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
             using var frameMark = new UserMarkRange("Preview.RenderClipVfd", $"clip={clipId}, frame={frameIndex}, size={canvasWidth}x{canvasHeight}");
 #endif
-            string? clipHash = null;
-            if (ClipHashLookup.TryGetValue(clipId, out var clipHashes))
-                clipHashes.TryGetValue(frameIndex, out clipHash);
-            if (clipHash is null && Clips is { } clips && clips.FirstOrDefault(clip => clip.Id == clipId) is { } clip)
-                clipHash = Timeline.GetClipFrameHash(clips, clip, frameIndex);
-            if (!HasExternalSources && clipHash is not null && vectorClipJson is null
-                && Clips is { } cacheClips && cacheClips.FirstOrDefault(c => c.Id == clipId) is { } cacheClip
-                && CanCacheClipFrame(cacheClip.Id))
-            {
-                var cachedPath = Path.Combine(
-                    ProjectRoot,
-                    "thumbs",
-                    "perClip",
-                    clipId.ToString(),
-                    "dynamic",
-                    $"dynamic_{ClipPreviewCacheVersion}_{clipHash}_{Math.Max(1, projectWidth)}x{Math.Max(1, projectHeight)}_{Math.Max(1, canvasWidth)}x{Math.Max(1, canvasHeight)}_vfd8.vfd");
-                if (File.Exists(cachedPath)) return cachedPath;
-            }
             var artifact = await (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
             {
+                FrameHashMode = RenderHashSettings.Mode,
                 SessionId = RenderSessionId,
                 ClipId = clipId,
                 FrameIndex = frameIndex,
@@ -514,6 +489,7 @@ namespace projectFrameCut.LivePreview
             {
                 var artifact = await (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
                 {
+                    FrameHashMode = RenderHashSettings.Mode,
                     SessionId = RenderSessionId,
                     ClipId = clipId,
                     FrameIndex = frameIndex,
@@ -544,13 +520,9 @@ namespace projectFrameCut.LivePreview
         }
 
         public bool CanCacheClipFrame(Guid clipId)
-            => _cacheableClipIds.Contains(clipId)
-                && Clips?.FirstOrDefault(c => c.Id == clipId) is { } clip
-                && !ClipInitializationFailure.IsMarked(clip);
-
-        private bool CanCacheFrame(uint frameIndex)
-            => Clips is { } clips && clips.Where(clip => clip.ContainsFrame(frameIndex)
-                || clip.ExtendToWholeDraft && clip.LayerIndex > Renderer.SubTrackOffset).All(clip => CanCacheClipFrame(clip.Id));
+            => Clips?.FirstOrDefault(c => c.Id == clipId) is { } clip
+                && !ClipInitializationFailure.IsMarked(clip)
+                && (RenderHashSettings.Mode == FrameHashMode.Dynamic || Timeline.CanCacheClipFrame(Clips, clip));
 
         public Task ResetAudioPlaybackSources() => Task.CompletedTask;
 
@@ -610,6 +582,7 @@ namespace projectFrameCut.LivePreview
             (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
             var artifact = await (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineSegmentAsync(new TimelineSegmentRequest
             {
+                FrameHashMode = RenderHashSettings.Mode,
                 SessionId = RenderSessionId,
                 StartFrame = checked((uint)startIndex),
                 Length = checked((uint)length),
@@ -697,7 +670,5 @@ namespace projectFrameCut.LivePreview
             return (normalizedWidth, normalizedHeight);
         }
 
-        private static string BuildFrameCacheKey(string frameHash, int width, int height)
-            => $"{StaticFrameCacheVersion}_{frameHash}_{width}x{height}";
     }
 }

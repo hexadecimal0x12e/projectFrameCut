@@ -1,3 +1,4 @@
+using projectFrameCut.Render.Contracts;
 using FFmpeg.AutoGen;
 using ILGPU;
 using ILGPU.Runtime;
@@ -40,6 +41,10 @@ namespace projectFrameCut.StandaloneRender
         const int PluginAPIVersion = IPluginBase.CurrentPluginAPIVersion;
 
         static readonly JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
+        static readonly object consoleLogGate = new();
+
+        private static string FormatEta(TimeSpan eta)
+            => $"{eta.Ticks / TimeSpan.TicksPerHour:00}:{eta.Minutes:00}:{eta.Seconds:00}";
 
         public static async Task<int> Main(string[] args)
         {
@@ -58,30 +63,33 @@ namespace projectFrameCut.StandaloneRender
                 Console.ForegroundColor = ConsoleColor.White;
                 MyLoggerExtensions.OnLog += (m, l) =>
                 {
-                    if (l.Equals("info", StringComparison.InvariantCultureIgnoreCase))
+                    lock (consoleLogGate)
                     {
-                        Console.WriteLine(m);
-                        return;
-                    }
+                        if (l.Equals("info", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            Console.WriteLine(m);
+                            return;
+                        }
 
-                    var oldColor = Console.ForegroundColor;
-                    try
-                    {
-                        Console.ForegroundColor = l.Equals("error", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Red :
-                                              l.Equals("stat", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Green :
-                                              (l.Equals("warning", StringComparison.InvariantCultureIgnoreCase) || l.Equals("warn", StringComparison.InvariantCultureIgnoreCase)) ? ConsoleColor.Yellow :
-                                              (l.Equals("debug", StringComparison.InvariantCultureIgnoreCase) || l.Equals("diag", StringComparison.InvariantCultureIgnoreCase)) ? ConsoleColor.Cyan :
-                                              l.StartsWith("FFmpeg", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Magenta :
-                                              ConsoleColor.Gray;
+                        var oldColor = Console.ForegroundColor;
+                        try
+                        {
+                            Console.ForegroundColor = l.Equals("error", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Red :
+                                                  l.Equals("stat", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Green :
+                                                  (l.Equals("warning", StringComparison.InvariantCultureIgnoreCase) || l.Equals("warn", StringComparison.InvariantCultureIgnoreCase)) ? ConsoleColor.Yellow :
+                                                  (l.Equals("debug", StringComparison.InvariantCultureIgnoreCase) || l.Equals("diag", StringComparison.InvariantCultureIgnoreCase)) ? ConsoleColor.Cyan :
+                                                  l.StartsWith("FFmpeg", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Magenta :
+                                                  ConsoleColor.Gray;
 
-                        Console.Write($"[{l}]");
-                    }
-                    finally
-                    {
-                        Console.ForegroundColor = oldColor;
-                    }
+                            Console.Write($"[{l}]");
+                        }
+                        finally
+                        {
+                            Console.ForegroundColor = oldColor;
+                        }
 
-                    Console.WriteLine($" {m}");
+                        Console.WriteLine($" {m}");
+                    }
                 };
                 try
                 {
@@ -119,11 +127,12 @@ namespace projectFrameCut.StandaloneRender
 
                     Available modes:
                         - render: Render video/audio/all from the given project file.
+                        - diagnostic: Render frames serially and log detailed per-frame stage timings.
                         - bench: Benchmark hardware accelerators for rendering.
                         - reencode: Decode an existing video and re-encode it. Useful for codec testing.
 
                     Arguments:
-                    Mode 'render':
+                    Modes 'render' / 'diagnostic':
                         -project=<project dir>
                         -output=<output file>
                         -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
@@ -132,9 +141,12 @@ namespace projectFrameCut.StandaloneRender
                         [-assetDbFile=<path to database.json file>]
                         [-pluginRoot=<path to plugin root>]
                         [-maxParallelThreads=<number>]
+                        [-diagnostic=<true|false>]                      (default: false; detailed per-frame timings)
+                        [-allowWorkerOversubscription=<true|false>]      (default: true)
                         [-maxPendingWriteFrames=<number>]
                         [-enableThreadAffinity=<true|false>]
                         [-reuseDynamicPreviewCache=<true|false>]
+                        [-frameHashMode=<Dynamic|Static>]
                         [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-multiAccelerator=<true|false>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
@@ -152,6 +164,9 @@ namespace projectFrameCut.StandaloneRender
                         [-chunkResume=<true|false>] [-chunkKeepFiles=<true|false>]
                         [-multiStream=<true|false>]
 
+                    Mode 'diagnostic' uses one render thread, disables chunk rendering and frame lookahead,
+                    and waits for GPU stages to complete before recording their timings.
+
                     Mode 'bench' [sub-modes]:
                         bench render    - Render pipeline benchmark (default)
                         bench encode    - VideoBuilder cache & encode throughput test
@@ -164,6 +179,7 @@ namespace projectFrameCut.StandaloneRender
                         [-multiAccelerator=<true|false>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
                         [-maxParallelThreads=<number>]
+                        [-allowWorkerOversubscription=<true|false>]      (default: true)
                         [-enableThreadAffinity=<true|false>]
                         [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-GCOptions=0,1,2]
@@ -312,118 +328,132 @@ namespace projectFrameCut.StandaloneRender
             Log($"{PluginManager.LoadedPlugins.Count} plugins loaded.");
             #endregion
 
-            switch (runningMode)
+            try
             {
-                case "render":
-                    var accelResult = InitAccel(switches);
-                    if (accelResult != 0)
-                    {
-                        return accelResult;
-                    }
-                    try
-                    {
-                        return await GoRender(switches);
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        Log("Render task was canceled.");
-                        return 255;
-                    }
-                    catch { throw; }
-                case "bench":
-                    // ── 解析子模式（render / encode / decode）──────────
-                    var benchSubMode = "render";
-                    if (args.Length > 1 && !args[1].StartsWith('-') && !args[1].Contains('='))
-                    {
-                        benchSubMode = args[1].ToLowerInvariant();
-                    }
-                    else if (switches.TryGetValue("benchMode", out var switchBenchMode))
-                    {
-                        benchSubMode = switchBenchMode.ToLowerInvariant();
-                    }
-
-                    if (benchSubMode != "render" && benchSubMode != "encode" && benchSubMode != "decode")
-                    {
-                        Log($"ERROR: Unknown bench sub-mode '{benchSubMode}'. Available: render, encode, decode.", "error");
-                        return 1;
-                    }
-
-                    Log($"Bench sub-mode: {benchSubMode}");
-
-                    // 只有 render（渲染管线测试）需要 GPU 加速器
-                    if (benchSubMode == "render" || switches.ContainsKey("preferHwAccelDecoder"))
-                    {
-                        var accelResult1 = InitAccel(switches);
-                        if (accelResult1 != 0)
+                switch (runningMode)
+                {
+                    case "render":
+                    case "diagnostic":
+                        var accelResult = InitAccel(switches);
+                        if (accelResult != 0)
                         {
-                            return accelResult1;
+                            return accelResult;
                         }
-                    }
-
-                    try
-                    {
-                        return benchSubMode switch
+                        try
                         {
-                            "encode" => await GoBenchEncode(switches),
-                            "decode" => await GoBenchDecode(switches),
-                            _ => await GoBenchRender(switches),
-                        };
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        Log("Benchmark task was canceled.");
-                        return 255;
-                    }
-                case "reencode":
-                    // 初始化 FFmpeg（与 render 和 bench 使用相同的模式）
-                    Log("Initializing FFmpeg for reencode...");
-                    DynamicallyLoadedBindings.EnableAutoInitialization = false;
-                    FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
-                    ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", AppContext.BaseDirectory);
-                    if (FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
-                    {
-                        FFmpegHelper.SetupFFmpegLogging(ffmpeg.AV_LOG_INFO);
-                        Log($"FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}");
-                    }
-                    else
-                    {
-                        Log($"FFmpeg library failed to load.", "error");
-                        return 1;
-                    }
-                    FFmpegHelper.SetupFFmpegLogging();
+                            return await GoRender(switches, runningMode == "diagnostic");
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            Log("Render task was canceled.");
+                            return 255;
+                        }
+                        catch { throw; }
+                    case "bench":
+                        // ── 解析子模式（render / encode / decode）──────────
+                        var benchSubMode = "render";
+                        if (args.Length > 1 && !args[1].StartsWith('-') && !args[1].Contains('='))
+                        {
+                            benchSubMode = args[1].ToLowerInvariant();
+                        }
+                        else if (switches.TryGetValue("benchMode", out var switchBenchMode))
+                        {
+                            benchSubMode = switchBenchMode.ToLowerInvariant();
+                        }
 
-                    if (switches.ContainsKey("preferHwAccelDecoder"))
-                    {
-                        var accelResult1 = InitAccel(switches);
-                        if (accelResult1 != 0) return accelResult1;
-                    }
+                        if (benchSubMode != "render" && benchSubMode != "encode" && benchSubMode != "decode")
+                        {
+                            Log($"ERROR: Unknown bench sub-mode '{benchSubMode}'. Available: render, encode, decode.", "error");
+                            return 1;
+                        }
 
-                    try
-                    {
-                        return await GoReencode(switches);
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        Log("Reencode task was canceled.");
-                        return 255;
-                    }
-                case "list_accels":
-                    Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
-                    var devices = context.Devices.ToList();
-                    List<AcceleratorInfo> listAccels = new();
-                    for (uint i = 0; i < devices.Count; i++)
-                    {
-                        var item = devices[(int)i];
-                        listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
-                    }
-                    Console.Error.WriteLine(JsonSerializer.Serialize(listAccels, new JsonSerializerOptions { WriteIndented = true }));
-                    return 0;
-                default:
-                    Log($"ERROR: Mode {runningMode} doesn't defined.");
-                    return 16;
+                        Log($"Bench sub-mode: {benchSubMode}");
 
+                        // 只有 render（渲染管线测试）需要 GPU 加速器
+                        if (benchSubMode == "render" || switches.ContainsKey("preferHwAccelDecoder"))
+                        {
+                            var accelResult1 = InitAccel(switches);
+                            if (accelResult1 != 0)
+                            {
+                                return accelResult1;
+                            }
+                        }
+
+                        try
+                        {
+                            return benchSubMode switch
+                            {
+                                "encode" => await GoBenchEncode(switches),
+                                "decode" => await GoBenchDecode(switches),
+                                _ => await GoBenchRender(switches),
+                            };
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            Log("Benchmark task was canceled.");
+                            return 255;
+                        }
+                    case "reencode":
+                        // 初始化 FFmpeg（与 render 和 bench 使用相同的模式）
+                        Log("Initializing FFmpeg for reencode...");
+                        DynamicallyLoadedBindings.EnableAutoInitialization = false;
+                        FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+                        ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", AppContext.BaseDirectory);
+                        if (FFmpeg.AutoGen.DynamicallyLoadedBindings.TryInitialize())
+                        {
+                            FFmpegHelper.SetupFFmpegLogging(ffmpeg.AV_LOG_INFO);
+                            Log($"FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}");
+                        }
+                        else
+                        {
+                            Log($"FFmpeg library failed to load.", "error");
+                            return 1;
+                        }
+                        FFmpegHelper.SetupFFmpegLogging();
+
+                        if (switches.ContainsKey("preferHwAccelDecoder"))
+                        {
+                            var accelResult1 = InitAccel(switches);
+                            if (accelResult1 != 0) return accelResult1;
+                        }
+
+                        try
+                        {
+                            return await GoReencode(switches);
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            Log("Reencode task was canceled.");
+                            return 255;
+                        }
+                    case "list_accels":
+                        Context context = Context.Create(builder => builder.Default().EnableAlgorithms());
+                        var devices = context.Devices.ToList();
+                        List<AcceleratorInfo> listAccels = new();
+                        for (uint i = 0; i < devices.Count; i++)
+                        {
+                            var item = devices[(int)i];
+                            listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
+                        }
+                        Console.Error.WriteLine(JsonSerializer.Serialize(listAccels, new JsonSerializerOptions { WriteIndented = true }));
+                        return 0;
+                    default:
+                        Log($"ERROR: Mode {runningMode} doesn't defined.");
+                        return 16;
+
+                }
             }
-
+            catch (Exception ex)
+            {
+                Console.WriteLine("*** FATAL ERROR ***");
+                Log(ex, "Unhandled exception");
+                Console.CursorVisible = true;
+                throw;
+            }
+            finally
+            {
+                Console.CursorVisible = true;
+            }
         }
 
         private static bool TryParseCpuIndexList(string value, out int[] cpuIndexes, out string error)
@@ -576,8 +606,15 @@ namespace projectFrameCut.StandaloneRender
             }
         }
 
-        private static async Task<int> GoRender(ConcurrentDictionary<string, string> switches)
+        private static async Task<int> GoRender(ConcurrentDictionary<string, string> switches, bool diagnosticRender = false)
         {
+            if (!bool.TryParse(switches.GetValueOrDefault("diagnostic", "false"), out var logFrameTimings))
+            {
+                Log("Invalid diagnostic value: expected true or false.", "error");
+                return 1;
+            }
+            logFrameTimings |= diagnosticRender;
+
             #region init encoder
             bool trace = Environment.GetCommandLineArgs().Contains("--trace");
             Log("Initiliazing FFmpeg...");
@@ -627,7 +664,7 @@ namespace projectFrameCut.StandaloneRender
             bool multiStream = bool.TryParse(switches.GetOrAdd("multiStream", "false"), out var multiStreamValue) && multiStreamValue;
 
             var bpp = use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
-            var chunkOptions = ParseChunkRenderOptions(switches, fps);
+            var chunkOptions = diagnosticRender ? new ChunkRenderOptions() : ParseChunkRenderOptions(switches, fps);
             long? requestedBitRate = switches.TryGetValue("bitRate", out var bitRateText)
                 && long.TryParse(bitRateText, out var parsedBitRate) && parsedBitRate > 0
                     ? parsedBitRate
@@ -722,7 +759,14 @@ namespace projectFrameCut.StandaloneRender
             int maxParallelThreads = Environment.ProcessorCount;
             bool enableThreadAffinity = true;
             int[]? renderWorkerAffinityCpuIndexes = null;
+            if (!Enum.TryParse<FrameHashMode>(switches.GetValueOrDefault("frameHashMode", "Dynamic"), true, out var frameHashMode)
+                || !Enum.IsDefined(frameHashMode))
+            {
+                Log("Invalid frameHashMode: expected Dynamic or Static.", "error");
+                return 1;
+            }
             bool reuseDynamicPreviewCache = bool.TryParse(switches.GetOrAdd("reuseDynamicPreviewCache", "false"), out var reusePreview) && reusePreview;
+            if (!bool.TryParse(switches.GetOrAdd("allowWorkerOversubscription", "true"), out var allowWorkerOversubscription)) allowWorkerOversubscription = true;
             if (!bool.TryParse(switches.GetOrAdd("enableThreadAffinity", "true"), out enableThreadAffinity)) enableThreadAffinity = true;
             if (switches.TryGetValue("renderWorkerAffinity", out var renderWorkerAffinityRaw) && !string.IsNullOrWhiteSpace(renderWorkerAffinityRaw))
             {
@@ -774,7 +818,10 @@ namespace projectFrameCut.StandaloneRender
             var workerAffinityLabel = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
                 ? $"manual({string.Join(",", renderWorkerAffinityCpuIndexes ?? Array.Empty<int>())})"
                 : (enableThreadAffinity ? "auto" : "disabled");
-            Log($"Working in parallel mode, max {maxParallelThreads} threads, Worker affinity:{workerAffinityLabel}");
+            if (diagnosticRender) maxParallelThreads = 1;
+            Log(diagnosticRender
+                ? $"Diagnostic rendering: serial frames, no lookahead or chunk rendering, Worker affinity:{workerAffinityLabel}"
+                : $"Working in parallel mode, max {maxParallelThreads} threads, Worker affinity:{workerAffinityLabel}");
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
             bool hwAccelEncode = bool.TryParse(switches.GetOrAdd("preferHwAccelEncoder", "false"), out var hwAccelEncodeValue) && hwAccelEncodeValue;
@@ -802,10 +849,15 @@ namespace projectFrameCut.StandaloneRender
 
             Log($"ClassicOverlayMixture approximate path: {YesNo(ClassicOverlayMixture.EnableApproximatePath)}");
 
-            if (Enum.TryParse<EffectImplementType>(switches.GetOrAdd("ForcePreferToType", "NotSpecified"), out var forcePreferToType) && forcePreferToType != EffectImplementType.NotSpecified)
+            if (Enum.TryParse<EffectImplementType>(switches.GetOrAdd("ForcePreferToType", "InvalidEnumOptionForDefaultFallback"), out var forcePreferToType) && Enum.IsDefined(forcePreferToType))
             {
                 EffectHelper.ForcePreferToType = forcePreferToType;
-                Log($"Using forced effect implement type: {forcePreferToType}");
+                Log($"Using forced preferred effect implement type: {forcePreferToType}");
+            }
+            else
+            {
+                EffectHelper.ForcePreferToType = EffectImplementType.HwAcceleration;
+                Log($"Using default preferred effect implement type: {EffectHelper.ForcePreferToType}");
             }
 
             #endregion
@@ -892,6 +944,7 @@ namespace projectFrameCut.StandaloneRender
 
             var noSigInt = !Environment.GetCommandLineArgs().Contains("--noSigInt");
             var keyboardInterrupt = !Environment.GetCommandLineArgs().Contains("--keyboardInterrupt");
+            bool logProgress = !Environment.GetCommandLineArgs().Contains("--nolog");
             async Task composeVideoRange(
                 string resultPath,
                 uint startFrame,
@@ -946,9 +999,13 @@ namespace projectFrameCut.StandaloneRender
                     LogProcessStack = !string.IsNullOrWhiteSpace(diagReportPath),
                     LogRenderState = (bool.TryParse(switches.TryGetValue("LogState", out var ls2) ? ls2 : "false", out var lsbool) && lsbool),
                     LogStaticsData = false,
+                    DiagnosticRender = diagnosticRender,
+                    LogFrameTimings = logFrameTimings,
                     GCOption = GCOption,
                     Use16Bit = use16Bit,
                     MaxThreads = Math.Max(1, renderThreads),
+                    AllowWorkerOversubscription = allowWorkerOversubscription,
+                    FrameHashMode = frameHashMode,
                     ReuseDynamicPreviewCache = reuseDynamicPreviewCache,
                     DynamicPreviewCacheProjectRoot = workingPath,
                     DynamicPreviewCacheProjectWidth = Math.Max(1, project.RelativeWidth),
@@ -961,30 +1018,33 @@ namespace projectFrameCut.StandaloneRender
                 var FrameDoneMark = new UserMarks("ProgressMark");
 #endif
 
-                if (!Environment.GetCommandLineArgs().Contains("--nolog"))
+                localRenderer.OnProgressChanged += (s, e) =>
                 {
-                    localRenderer.OnProgressChanged += (s, e) =>
-                    {
+                    double currentFps = localRenderer.CurrentFps;
+                    rangeProgress?.Invoke(s, e, currentFps);
+                    if (!logProgress) return;
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
-                        FrameDoneMark.Emit($"Progress: {s:p0} ({renderer.CurrentFinished}/{renderer.Duration}), ETA: {e:hh\\:mm\\:ss}, FPS: {renderer.CurrentFps:n2}");
+                    FrameDoneMark.Emit($"Chunk {chunkIndex + 1}/{chunkCount}, progress: {s:p1} ({localRenderer.CurrentFinished}/{localRenderer.Duration}), ETA: {FormatEta(e)}, FPS: {currentFps:n2}");
 #endif
-                        rangeProgress?.Invoke(s, e, localRenderer.CurrentFps);
-                        if (localRenderer.CurrentSecondPerFrame <= 1.5)
-                        {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{localRenderer.CurrentFps:n2}          \r");
-                        }
-                        else
-                        {
-                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / localRenderer.CurrentFps):n2} second per frame        \r");
-                        }
-                    };
-                }
+                    if (chunkOptions.Enabled || logFrameTimings) return;
+                    if (localRenderer.CurrentSecondPerFrame <= 1.5)
+                    {
+                        Console.Write($"Rendering finished {s:p1}, ETA:{FormatEta(e)}, FPS:{currentFps:n2}          \r");
+                    }
+                    else
+                    {
+                        Console.Write($"Rendering finished {s:p1}, ETA:{FormatEta(e)}, {(1 / currentFps):n2} second per frame        \r");
+                    }
+                };
 
                 builder = localBuilder;
                 renderer = localRenderer;
                 activeChunkBuilders[chunkIndex] = localBuilder;
                 activeChunkRenderers[chunkIndex] = localRenderer;
+                long prepareStarted = logFrameTimings ? Stopwatch.GetTimestamp() : 0;
                 localRenderer.PrepareRender(cts.Token);
+                if (logFrameTimings)
+                    Log($"[Render diagnostic] Renderer initialization: {Stopwatch.GetElapsedTime(prepareStarted).TotalMilliseconds:F3} ms", "diag");
                 Stopwatch sw1 = new();
                 Log("Start render...");
                 sw1.Restart();
@@ -1011,7 +1071,8 @@ namespace projectFrameCut.StandaloneRender
                         Log(ex, "Load cover");
                     }
                     await localRenderer.GoRender(cts.Token, cover);
-                    Log($"Render done,total elapsed {sw1}, avg elapsed {localRenderer.EachElapsedForPreparing.DefaultIfEmpty().Average(t => t.TotalSeconds)} spf to prepare and {localRenderer.EachElapsed.DefaultIfEmpty().Average(t => t.TotalSeconds)} spf to render");
+                    sw1.Stop();
+                    Log($"Render done,total elapsed {sw1.Elapsed}, avg elapsed {localRenderer.EachElapsedForPreparing.DefaultIfEmpty().Average(t => t.TotalSeconds)} spf to prepare and {localRenderer.EachElapsed.DefaultIfEmpty().Average(t => t.TotalSeconds)} spf to render");
                 }
                 catch (TaskCanceledException)
                 {
@@ -1047,6 +1108,7 @@ namespace projectFrameCut.StandaloneRender
                 }
 
                 Log("Finish writing video...");
+                long finishStarted = logFrameTimings ? Stopwatch.GetTimestamp() : 0;
                 try
                 {
                     localBuilder.Writer.Finish();
@@ -1054,6 +1116,8 @@ namespace projectFrameCut.StandaloneRender
                 }
                 finally
                 {
+                    if (logFrameTimings)
+                        Log($"[Render diagnostic] Encoder finish/dispose: {Stopwatch.GetElapsedTime(finishStarted).TotalMilliseconds:F3} ms", "diag");
                     ReleaseLocalResources();
                 }
 
@@ -1080,19 +1144,27 @@ namespace projectFrameCut.StandaloneRender
                     timeline.Duration,
                     fps,
                     Path.GetExtension(resultPath),
-                    $"{width}x{height}|{fps}|{outputFormat}|{outputEncoder}|16bit={use16Bit}|bitrate={requestedBitRate}|render=clip-cache|reusePreview={reuseDynamicPreviewCache}|approx={ClassicOverlayMixture.EnableApproximatePath}|effect={EffectHelper.ForcePreferToType}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}|externalSources={projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken}",
+                    $"{width}x{height}|{fps}|{outputFormat}|{outputEncoder}|16bit={use16Bit}|bitrate={requestedBitRate}|render=clip-cache|frameHashMode={frameHashMode}|reusePreview={reuseDynamicPreviewCache}|approx={ClassicOverlayMixture.EnableApproximatePath}|effect={EffectHelper.ForcePreferToType}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}|externalSources={projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken}",
                     maxParallelThreads,
                     chunkOptions);
                 await coordinator.InitializeAsync(cts.Token).ConfigureAwait(false);
                 await coordinator.RenderPendingChunksAsync(
                     (segment, chunkPath, chunkThreads, report, token) =>
                         composeVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads, segment.Index, coordinator.ChunkCount, report, intermediateChunk: true),
-                    state => Console.Write($"Chunk {state.ChunkIndex + 1}/{state.ChunkCount}, {state.GlobalProgress:P1} complete{(state.Reused ? " (reused)" : string.Empty)}       \r"),
+                    state =>
+                    {
+                        if (logProgress && !logFrameTimings)
+                            Console.Write($"Chunk {state.ChunkIndex + 1}/{state.ChunkCount}, {state.GlobalProgress:P1} complete, ETA: {FormatEta(state.EstimatedRemaining)}, FPS: {state.FramesPerSecond:N2}{(state.Reused ? " (reused)" : string.Empty)}       \r");
+                    },
                     cts.Token).ConfigureAwait(false);
                 string merged = await coordinator.MergeAsync(
                     path => CreateConfiguredWriter(path, intermediateChunk: false),
                     CreateChunkVideoSource,
-                    (mergeProgress, mergeEta) => Console.Write($"Merging chunks by frame: {mergeProgress:P1} complete, ETA {mergeEta:hh\\:mm\\:ss}       \r"),
+                    (mergeProgress, mergeEta) =>
+                    {
+                        if (logProgress)
+                            Console.Write($"Merging chunks by frame: {mergeProgress:P1} complete, ETA {FormatEta(mergeEta)}       \r");
+                    },
                     cts.Token).ConfigureAwait(false);
                 if (publishChunkedResult)
                     await ChunkRenderCoordinator.PublishAsync(merged, resultPath, cts.Token).ConfigureAwait(false);
@@ -1122,11 +1194,11 @@ namespace projectFrameCut.StandaloneRender
                     SoundTracks = tracks.ToArray(),
                     Writer = writer
                 };
-                if (!Environment.GetCommandLineArgs().Contains("--nolog"))
+                if (logProgress)
                 {
                     composer.OnProgressChanged += (s, e) =>
                     {
-                        Console.Write($"Composing finished {s:p0}, ETA:{e:mm\\:ss} \r");
+                        Console.Write($"Composing finished {s:p1}, ETA:{FormatEta(e)} \r");
                     };
                 }
 
@@ -1370,22 +1442,22 @@ namespace projectFrameCut.StandaloneRender
                 Log("ERROR: Benchmark structure is empty.", "error");
                 return 1;
             }
-            Log($"Generated {clips.Length} test clips.");
 
             uint duration = 0;
-            foreach (var clip in clips)
+            if(!switches.TryGetValue("duration", out var d) || !uint.TryParse(d, out duration) || duration == 0)
             {
-                duration = Math.Max(clip.StartFrame + clip.Duration, duration);
+                foreach (var clip in clips)
+                {
+                    duration = Math.Max(clip.StartFrame + clip.Duration, duration);
+                }
             }
 
-            Log($"Running benchmark with duration: {duration} frames, resolution: {width}x{height}, fps: {fps}.");
-
-            Log("Initializing clips...");
+            Log("Initializing...");
             foreach (var clip in clips)
             {
                 clip.ExtraData ??= new Dictionary<string, object>();
                 clip.ReInit(IPicture.PicturePixelMode.BytePicture);
-                Log($"Clip {clip.Name} initialized: {clip.ClipType}, StartFrame: {clip.StartFrame}, Duration: {clip.Duration}");
+                //Log($"Clip {clip.Name} initialized: {clip.ClipType}, StartFrame: {clip.StartFrame}, Duration: {clip.Duration}");
             }
             VideoBuilder? builder = null;
 
@@ -1395,12 +1467,14 @@ namespace projectFrameCut.StandaloneRender
                 {
                     Duration = duration,
                 };
-                Log("Write to /dev/null (BlackholeVideoWriter) enabled.");
             }
-            else
+            
+            if(!switches.TryGetValue("startFrame", out var startFrameStr) || !uint.TryParse(startFrameStr, out var startFrame) || startFrame == 0)
             {
-                Log("Write to /dev/null (BlackholeVideoWriter) disabled.");
+                startFrame = 0;
             }
+
+            Log($"Running benchmark with {clips.Length} test clips, start frame: {startFrame}, {duration} frames, resolution: {width}x{height}, fps: {fps}, use builder: {builder != null}.");
 
             var cts = new CancellationTokenSource();
 
@@ -1425,6 +1499,7 @@ namespace projectFrameCut.StandaloneRender
             int maxParallelThreads = Environment.ProcessorCount;
             bool enableThreadAffinity = true;
             int[]? renderWorkerAffinityCpuIndexes = null;
+            if (!bool.TryParse(switches.GetOrAdd("allowWorkerOversubscription", "true"), out var allowWorkerOversubscription)) allowWorkerOversubscription = true;
             if (!bool.TryParse(switches.GetOrAdd("enableThreadAffinity", "true"), out enableThreadAffinity)) enableThreadAffinity = true;
             if (switches.TryGetValue("renderWorkerAffinity", out var renderWorkerAffinityRaw) && !string.IsNullOrWhiteSpace(renderWorkerAffinityRaw))
             {
@@ -1476,23 +1551,27 @@ namespace projectFrameCut.StandaloneRender
             var workerAffinityLabel = (renderWorkerAffinityCpuIndexes?.Length ?? 0) > 0
                 ? $"manual({string.Join(",", renderWorkerAffinityCpuIndexes ?? Array.Empty<int>())})"
                 : (enableThreadAffinity ? "auto" : "disabled");
-            Log($"Working in parallel mode, max {maxParallelThreads} threads, Worker affinity:{workerAffinityLabel}");
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
             bool hwAccelEncode = bool.TryParse(switches.GetOrAdd("preferHwAccelEncoding", "false"), out var hwAccelEncodeValue) && hwAccelEncodeValue;
             InternalPluginBase.HWAccelEncodeOptionGetter = new(() => hwAccelEncode);
             InternalPluginBase.HWAccelDecodeOptionGetter = new(() => hwAccelDecode);
             ClassicOverlayMixture.EnableApproximatePath = bool.TryParse(switches.GetOrAdd("ApproximateMixture", "false"), out var approximateMixture) && approximateMixture;
-            if (Enum.TryParse<EffectImplementType>(switches.GetOrAdd("ForcePreferToType", "NotSpecified"), out var forcePreferToType) && forcePreferToType != EffectImplementType.NotSpecified)
-            {
-                EffectHelper.ForcePreferToType = forcePreferToType;
-                Log($"Using forced effect implement type: {forcePreferToType}");
-            }
-
+            Log($"Working with max {maxParallelThreads} threads, Worker affinity:{workerAffinityLabel}");
             Log($"ClassicOverlayMixture approximate path: {YesNo(ClassicOverlayMixture.EnableApproximatePath)}");
             Log($"Prefer to HwAccel decode: {YesNo(hwAccelDecode)}");
             Log($"GC Option: {GCOption}");
             Log($"Drawing.Processing.Resizing.PictureResizer: {Drawing.Processing.Resizing.PictureResizer.Default.GetType().Name}");
+            if (Enum.TryParse<EffectImplementType>(switches.GetOrAdd("ForcePreferToType", "InvalidEnumOptionForDefaultFallback"), out var forcePreferToType) && Enum.IsDefined(forcePreferToType))
+            {
+                EffectHelper.ForcePreferToType = forcePreferToType;
+                Log($"Using forced preferred effect implement type: {forcePreferToType}");
+            }
+            else
+            {
+                EffectHelper.ForcePreferToType = EffectImplementType.HwAcceleration;
+                Log($"Using default preferred effect implement type: {EffectHelper.ForcePreferToType}");
+            }
 
             #endregion
 
@@ -1507,6 +1586,7 @@ namespace projectFrameCut.StandaloneRender
                 GCOption = GCOption,
                 Use16Bit = false,
                 MaxThreads = Math.Max(1, maxParallelThreads),
+                AllowWorkerOversubscription = allowWorkerOversubscription,
                 EnableThreadAffinity = enableThreadAffinity,
                 WorkerCPUCoreIndexs = renderWorkerAffinityCpuIndexes,
                 TargetHeight = height,
@@ -1521,7 +1601,7 @@ namespace projectFrameCut.StandaloneRender
             // ── 进度回调 ─────────────────────────────────────
             renderer.OnProgressChanged += (progress, eta) =>
             {
-                Console.Write($"\rRendering: {progress:P1}  ETA: {eta:hh\\:mm\\:ss}  FPS: {renderer.CurrentFps:N2}  Frame: {renderer.CurrentFinished}/{renderer.Duration}      ");
+                Console.Write($"\rRendering: {progress:P1}  ETA: {FormatEta(eta)}  FPS: {renderer.CurrentFps:N2}  Frame: {renderer.CurrentFinished}/{renderer.Duration}      ");
             };
 
             // ── Ctrl+C 处理 ──────────────────────────────────
@@ -1540,9 +1620,14 @@ namespace projectFrameCut.StandaloneRender
             try
             {
                 renderer.PrepareRender(cts.Token);
+                if (Environment.GetCommandLineArgs().Contains("--wait"))
+                {
+                    Console.WriteLine("Press Enter to start benchmark render...");
+                    Console.ReadLine();
+                }
                 await renderer.GoRender(cts.Token);
                 sw.Stop();
-                Log($"Render done,total elapsed {sw}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
+                Log($"Render done,total elapsed {sw.Elapsed}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
             }
             catch (TaskCanceledException)
             {
@@ -2142,7 +2227,7 @@ namespace projectFrameCut.StandaloneRender
 
                     var elapsed = sw.Elapsed.TotalSeconds;
                     var fps = (i + 1) / Math.Max(elapsed, 0.001);
-                    Console.Write($"\rReencoding: {((double)(i + 1) / decodeCount):P1}, {fps:F1} FPS， ETA: {TimeSpan.FromSeconds((decodeCount - (i + 1)) / Math.Max(fps, 0.001)):mm\\:ss} ");
+                    Console.Write($"\rReencoding: {((double)(i + 1) / decodeCount):P1}, {fps:F1} FPS， ETA: {FormatEta(TimeSpan.FromSeconds((decodeCount - (i + 1)) / Math.Max(fps, 0.001)))} ");
                 }
                 catch (Exception ex)
                 {

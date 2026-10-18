@@ -881,6 +881,8 @@ namespace projectFrameCut.DraftStuff
 
         private class DummyEffectProvider : IEffectProvider
         {
+            public bool IsDeterministic => false;
+
             public Guid Id { get; set; }
             public string TypeName => "Dummy";
             public string Name { get => "Dummy Effect Provider"; set { } }

@@ -16,6 +16,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class IntConstantValueProviderEffect : IValueProviderEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Int Constant";
@@ -101,6 +103,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class IntConstantValueProviderProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public IntConstantValueProviderProvider()
         {
             Name = "Int Constant";

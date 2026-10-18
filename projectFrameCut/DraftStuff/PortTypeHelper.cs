@@ -12,7 +12,7 @@ namespace projectFrameCut.DraftStuff
         /// Strip high-bit flags (HasMinValue, HasMaxValue, Mandatory, etc.) to get the base type.
         /// </summary>
         public static EffectArgumentFieldType GetBaseType(EffectArgumentFieldType ft)
-            => ft.BaseType();
+            => ft.IsHwAccelPicture() ? EffectArgumentFieldType.IPicture : ft.BaseType();
 
         /// <summary>
         /// Get the display color for a port type.

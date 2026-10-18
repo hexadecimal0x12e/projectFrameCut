@@ -847,6 +847,7 @@ namespace projectFrameCut.Render.Rendering
         {
             try
             {
+                if (!File.Exists(statePath)) return string.Empty;
                 using var stream = new FileStream(statePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 using var reader = new StreamReader(stream);
                 var value = reader.ReadToEnd().Trim();

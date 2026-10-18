@@ -14,6 +14,8 @@ public sealed class MultipleOutputEffectTests
         EffectArgumentFieldDescriptor[] outputs, Func<EffectExecutionContext, IReadOnlyDictionary<string, object?>> compute,
         params EffectArgumentFieldDescriptor[] fields) : EffectProviderBase, IEffectProvider, IMultipleOutputEffectProvider
     {
+        public override bool IsDeterministic => true;
+
         public override string TypeName => "TestMultipleOutput";
         public override string FromPlugin => "test.multiple";
         public override EffectType TypeOfEffect => EffectType.NormalEffect;

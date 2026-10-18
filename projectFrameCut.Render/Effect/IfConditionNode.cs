@@ -6,6 +6,8 @@ namespace projectFrameCut.Render.Effect;
 
 public sealed class IfConditionNodeEffectProvider : EffectProviderBase
 {
+    public override bool IsDeterministic => true;
+
     public const string ConditionKey = "Condition";
 
     public IfConditionNodeEffectProvider() => Name = "IfConditionNode";
@@ -39,6 +41,9 @@ public sealed class IfConditionNodeEffectProvider : EffectProviderBase
 
 public sealed class IfConditionNodeEffect : IEffect
 {
+    public bool IsDeterministic => true;
+    public bool AcceptsHwAccelPictures => true;
+
     public string TypeName => "IfConditionNode";
     public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public EffectType TypeOfEffect => EffectType.NormalEffect;

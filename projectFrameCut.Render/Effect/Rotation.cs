@@ -7,6 +7,8 @@ namespace projectFrameCut.Render.Effect
 {
     public class RotationEffect_IPicture : INormalEffect
     {
+        public bool IsDeterministic => true;
+
         private TimeSpan? _elapsed;
 
         public bool Enabled { get; set; } = true;
@@ -112,6 +114,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class RotationEffectProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public RotationEffectProvider()
         {
             Name = "Rotation";

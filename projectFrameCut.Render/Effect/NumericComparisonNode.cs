@@ -6,6 +6,8 @@ namespace projectFrameCut.Render.Effect;
 
 public sealed class NumericComparisonNodeEffectProvider : EffectProviderBase
 {
+    public override bool IsDeterministic => true;
+
     public NumericComparisonNodeEffectProvider() => Name = "NumericComparisonNode";
     public override string TypeName => "NumericComparisonNode";
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -30,6 +32,8 @@ public sealed class NumericComparisonNodeEffectProvider : EffectProviderBase
 
 public sealed class NumericComparisonNodeEffect : IEffect
 {
+    public bool IsDeterministic => true;
+
     public string TypeName => "NumericComparisonNode";
     public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public EffectType TypeOfEffect => EffectType.NormalEffect;

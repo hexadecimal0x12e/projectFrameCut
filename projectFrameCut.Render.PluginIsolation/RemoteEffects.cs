@@ -280,6 +280,9 @@ internal static class RemoteEffectInvoke
 
 internal abstract class RemoteEffectBase : IEffect, IDisposable
 {
+    public bool IsDeterministic { get; }
+    public bool IsPictureTransportBoundary => true;
+
     private int disposed;
 
     public void Dispose()
@@ -304,6 +307,7 @@ internal abstract class RemoteEffectBase : IEffect, IDisposable
         DynamicProviderIds = descriptor.DynamicProviderIds;
         FromPlugin = descriptor.FromPlugin;
         TypeName = descriptor.TypeName;
+        IsDeterministic = descriptor.IsDeterministic;
         TypeOfEffect = (EffectType)descriptor.EffectType;
         ImplementType = (EffectImplementType)descriptor.ImplementType;
         Name = descriptor.Name;
@@ -375,6 +379,7 @@ internal abstract class RemoteEffectBase : IEffect, IDisposable
             },
             ParameterNames = context.Parameters.Keys.ToList(),
             RelativeWidth = context.RelativeWidth, RelativeHeight = context.RelativeHeight,
+            InputTypes = context.InputTypes.ToDictionary(p => p.Key, p => (int)p.Value),
         };
         IsolationPayloadReference Publish(IPicture picture)
         {

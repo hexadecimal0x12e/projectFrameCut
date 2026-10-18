@@ -208,6 +208,7 @@ public partial class DraftPage
         double scale = Math.Min(320d / request.ProjectWidth, 180d / request.ProjectHeight);
         var segment = new TimelineSegmentRequest
         {
+            FrameHashMode = Services.RenderHashSettings.Mode,
             SessionId = request.SessionId,
             StartFrame = checked((uint)resolved.Start), Length = resolved.Duration,
             Width = Math.Max(2, (int)Math.Round(request.ProjectWidth * scale / 2) * 2),

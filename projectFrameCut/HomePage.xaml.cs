@@ -128,8 +128,11 @@ public partial class HomePage : ContentPage
             await ShowManyAlertsAsync();
             try
             {
-                if (!HasAlreadyLaunchedFromFile) await LaunchFromFile();
-                HasAlreadyLaunchedFromFile = true;
+                if (!HasAlreadyLaunchedFromFile)
+                {
+                    HasAlreadyLaunchedFromFile = true;
+                    if (!await TryRestoreActiveRenderAsync()) await LaunchFromFile();
+                }
             }
             catch (Exception ex)
             {
@@ -1851,7 +1854,6 @@ public partial class HomePage : ContentPage
     UserActivitySession? _previousSession;
 #endif
     DraftPage? lastPage = null;
-    private bool _renderRecoveryAttempted;
 
     protected override async void OnAppearing()
     {
@@ -1893,7 +1895,6 @@ public partial class HomePage : ContentPage
                     await DisplayAlertAsync(Localized._Info, Localized.HomePage_DraftLoadFailed(), Localized._OK);
 
                 }
-                await TryRestoreActiveRenderAsync();
             }
         }
         catch (Exception ex)
@@ -1928,32 +1929,35 @@ public partial class HomePage : ContentPage
 #endif
     }
 
-    private async Task TryRestoreActiveRenderAsync()
+    private async Task<bool> TryRestoreActiveRenderAsync()
     {
-        if (_renderRecoveryAttempted || !RenderRpcBootstrap.SupportsCliRenderProcess) return;
-        _renderRecoveryAttempted = true;
+        var job = await TryGetActiveRenderJobAsync();
+        if (job is null) return false;
+        Log($"Restoring render job {job.JobId} for project '{job.ProjectRoot}'.");
+        if (await GoRender(job.ProjectRoot, job)) return true;
+        RenderRpcBootstrap.DetachActiveCliRender();
+        return false;
+    }
 
-        foreach (var project in _viewModel.Projects.ToArray())
+    internal static async Task<RenderJob?> TryGetActiveRenderJobAsync(string? projectRoot = null)
+    {
+        if (!RenderRpcBootstrap.SupportsCliRenderProcess) return null;
+        try
         {
-            try
-            {
-                if (!RenderRpcBootstrap.TryReconnectCliRender(project._projectPath, out var jobId)) continue;
-                var job = await RenderRpcBootstrap.Client.GetJobStatusAsync(jobId);
-                if (job.State is RenderJobState.Queued or RenderJobState.Running)
-                {
-                    await GoRender(project);
-                    return;
-                }
+            if (!RenderRpcBootstrap.TryReconnectCliRender(projectRoot, out var jobId)) return null;
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            var job = await RenderRpcBootstrap.Client.GetJobStatusAsync(jobId, timeout.Token);
+            if (job.State is RenderJobState.Queued or RenderJobState.Running) return job;
 
-                try { await RenderRpcBootstrap.Client.CloseProjectAsync(Guid.Empty); } catch { }
-                await RenderRpcBootstrap.DisposeAsync();
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Restore background render after application restart", this);
-                try { await RenderRpcBootstrap.DisposeAsync(); } catch { }
-            }
+            try { await RenderRpcBootstrap.Client.CloseProjectAsync(Guid.Empty); } catch { }
+            await RenderRpcBootstrap.DisposeAsync();
         }
+        catch (Exception ex)
+        {
+            Log(ex, "Restore background render");
+            RenderRpcBootstrap.DetachActiveCliRender();
+        }
+        return null;
     }
 
     protected override void OnNavigatedTo(NavigatedToEventArgs args)
@@ -2195,9 +2199,11 @@ public partial class HomePage : ContentPage
 
 
     private async Task GoRender(ProjectsViewModel vmItem)
-        => await GoRender(vmItem._projectPath);
+    {
+        await GoRender(vmItem._projectPath);
+    }
 
-    private async Task GoRender(string draftSourcePath)
+    private async Task<bool> GoRender(string draftSourcePath, RenderJob? renderJob = null)
     {
         try
         {
@@ -2209,14 +2215,15 @@ public partial class HomePage : ContentPage
             if (tml is null || project is null)
             {
                 await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
-                return;
+                return false;
             }
-            if (!await LoadProjectPluginsForProjectAsync(draftSourcePath, project)) return;
+            if (!await LoadProjectPluginsForProjectAsync(draftSourcePath, project)) return false;
             foreach (var clip in tml.Clips)
                 DraftImportAndExportHelper.MigrateLegacyPlaceResizeToTargetRect(clip, project);
             if (Directory.Exists(draftSourcePath)) Environment.CurrentDirectory = draftSourcePath;
             Log($"Project loaded: {draftSourcePath}, {tml.Clips.Length} clips, {tml.SoundTracks.Length} soundtracks.");
-            var renderPage = new RenderPage(draftSourcePath, tml.Duration, project, tml);
+            renderJob ??= await TryGetActiveRenderJobAsync(draftSourcePath);
+            var renderPage = new RenderPage(draftSourcePath, tml.Duration, project, tml, renderJob);
             await Dispatcher.DispatchAsync(async () =>
             {
                 App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {project.ProjectName}";
@@ -2228,14 +2235,14 @@ public partial class HomePage : ContentPage
 #endif
                 await Navigation.PushAsync(renderPage);
             });
-
+            return true;
         }
         catch (Exception ex)
         {
             await ProjectPluginService.UnloadProjectPluginsAsync();
             Log(ex, "open render page", this);
             await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n({ex.Message})", Localized._OK);
-            return;
+            return false;
         }
 
     }

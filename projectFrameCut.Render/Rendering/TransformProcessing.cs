@@ -87,7 +87,7 @@ public static class TransformProcessing
     public static bool IsCanvasFrame(IPicture frame) => CanvasFrames.TryGetValue(frame, out _);
     public static void MarkCanvasFrame(IPicture frame) => CanvasFrames.GetValue(frame, static _ => new object());
 
-    private static IPicture CopyPicture(IPicture picture) => picture is IHDRPicture<ushort> hdr
+    private static IPicture CopyPicture(IPicture picture) => picture is IHwAccelPicture gpu ? gpu.Retain() : picture is IHDRPicture<ushort> hdr
         ? new HDRPicture16bpp(hdr.Width, hdr.Height)
         {
             r = hdr.r.Take(hdr.Pixels).ToArray(), g = hdr.g.Take(hdr.Pixels).ToArray(), b = hdr.b.Take(hdr.Pixels).ToArray(),
@@ -187,8 +187,10 @@ public static class TransformProcessing
     public static bool TryRender(IClip clip, IReadOnlyList<IClip> clips, uint frameIndex, int width, int height,
         int projectWidth, int projectHeight, IPicture.PicturePixelMode pixelMode, out IPicture? result,
         int sdrBrightness = 203, bool autoCenterImplicitClip = true, bool initializeClips = true, IPicture? preparedSource = null,
-        ClipArgumentFrameCache? argumentFrames = null)
+        ClipArgumentFrameCache? argumentFrames = null, bool keepHwAccelPicture = false)
     {
+        using var gpuScope = HwAccelPictureScope.Current is null ? new HwAccelPictureScope() : null;
+        using var gpuEntry = gpuScope?.Enter();
         argumentFrames ??= new();
         result = null;
         using var maskScope = MaskFrameContext.Open(clips, frameIndex, width, height, projectWidth, projectHeight, pixelMode,
@@ -242,7 +244,7 @@ public static class TransformProcessing
                 {
                     result = Timeline.MixtureLayers([new OneFrame(frameIndex, clip, transformed, resolveEffects: false)],
                         frameIndex, width, height, (int)pixelMode, autoCenterImplicitClip: autoCenterImplicitClip,
-                        projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight, transparentBackground: true, disposeIntermediateFrames: true);
+                        projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight, transparentBackground: true, disposeIntermediateFrames: true, keepHwAccelPicture: true);
                     if (!ReferenceEquals(result, transformed)) transformed.Dispose();
                     transformed = null;
                 }
@@ -256,6 +258,11 @@ public static class TransformProcessing
                     var marked = EffectProcessing.ProcessAIWatermark(result, frameIndex);
                     if (!ReferenceEquals(marked, result)) result.Dispose();
                     result = marked;
+                }
+                if (!keepHwAccelPicture && result is IHwAccelPicture gpu)
+                {
+                    try { result = gpu.Download(); }
+                    finally { gpu.Dispose(); }
                 }
                 MarkCanvasFrame(result);
                 return true;
@@ -310,13 +317,13 @@ public static class TransformProcessing
                 if (!ReferenceEquals(marked, source)) source.Dispose();
                 source = marked;
             }
-            var resized = !align || source.Width == width && source.Height == height ? source : source is IHDRPicture<ushort> hdrSource
-                ? hdrSource.Resize(width, height, false) : source.Resize(width, height, false);
+            var resized = !align || source.Width == width && source.Height == height ? source
+                : EffectPictureProcessing.Resize(source, width, height, false);
             if (!ReferenceEquals(resized, source)) source.Dispose();
             source = resized;
-            if (pixelMode == IPicture.PicturePixelMode.UShortPicture && source is not IHDRPicture<ushort>)
+            if (pixelMode == IPicture.PicturePixelMode.UShortPicture && source is not IHDRPicture<ushort> and not IHwAccelPicture { IsHdr: true })
             {
-                var hdr = HDRPicture16bpp.ToHDRPictureBySignal(source, Brightness(clip, sdrBrightness));
+                var hdr = EffectPictureProcessing.ToHdr(source, Brightness(clip, sdrBrightness));
                 if (!ReferenceEquals(hdr, source)) source.Dispose();
                 source = hdr;
             }
@@ -356,15 +363,15 @@ public static class TransformProcessing
             {
                 for (int i = 0; i < frames.Length; i++)
                 {
-                    if (frames[i].Clip is null or IHDRPicture<ushort>) continue;
+                    if (frames[i].Clip is null or IHDRPicture<ushort> or IHwAccelPicture { IsHdr: true }) continue;
                     var source = frames[i].Clip;
-                    var hdr = HDRPicture16bpp.ToHDRPictureBySignal(source, Brightness(clip, sdrBrightness));
+                    var hdr = EffectPictureProcessing.ToHdr(source, Brightness(clip, sdrBrightness));
                     frames[i] = new OneFrame(clamped, clip, hdr, resolveEffects: false);
                     if (!ReferenceEquals(source, hdr)) source.Dispose();
                 }
             }
             var result = Timeline.MixtureLayers(frames, clamped, width, height, (int)pixelMode, autoCenterImplicitClip: autoCenterImplicitClip,
-                projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight, transparentBackground: true, disposeIntermediateFrames: true);
+                projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight, transparentBackground: true, disposeIntermediateFrames: true, keepHwAccelPicture: true);
             return frames.Any(item => ReferenceEquals(item.Clip, result)) ? CopyPicture(result) : result;
         }
         finally
@@ -383,7 +390,11 @@ public static class TransformProcessing
         if (!transform.Definition.HasFlag(TransformDefinition.Clip) || !transform.Definition.HasFlag(flag))
             throw new NotSupportedException($"Transform {transform.TypeName} does not support {mode} pictures.");
         if (mode == TransformInputMode.TwoInput) ArgumentNullException.ThrowIfNull(right);
-        return transform.Render(left, mode == TransformInputMode.OneInput ? null : right, Math.Clamp(progress, 0, 1), side, width, height);
+        var result = EffectPictureProcessing.Transform(transform, left, mode == TransformInputMode.OneInput ? null : right,
+            Math.Clamp(progress, 0, 1), side, width, height);
+        if (HwAccelPictureScope.Current is not null || result is not IHwAccelPicture gpu) return result;
+        try { return gpu.Download(); }
+        finally { gpu.Dispose(); }
     }
 
     public static IAudioSamples ProcessSamples(IAudioSamples left, IAudioSamples? right, ITransform transform,

@@ -7,6 +7,8 @@ namespace projectFrameCut.Render.Effect;
 
 public sealed class EqualityComparisonNodeEffectProvider : EffectProviderBase
 {
+    public override bool IsDeterministic => true;
+
     public EqualityComparisonNodeEffectProvider() => Name = "EqualityComparisonNode";
     public override string TypeName => "EqualityComparisonNode";
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -26,6 +28,8 @@ public sealed class EqualityComparisonNodeEffectProvider : EffectProviderBase
 
 public sealed class EqualityComparisonNodeEffect : IEffect
 {
+    public bool IsDeterministic => true;
+
     public string TypeName => "EqualityComparisonNode";
     public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public EffectType TypeOfEffect => EffectType.NormalEffect;

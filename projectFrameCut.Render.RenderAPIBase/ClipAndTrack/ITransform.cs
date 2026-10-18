@@ -21,6 +21,8 @@ public interface ITransform : IEffect
 
 public abstract class TransformEffectBase : ITransform
 {
+    public virtual bool IsDeterministic => true;
+
     public abstract string FromPlugin { get; }
     public abstract string TypeName { get; }
     public abstract TransformDefinition Definition { get; }

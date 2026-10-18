@@ -106,6 +106,7 @@ public partial class RenderPage : ContentPage
     private bool _backgroundRenderRequested;
     private bool _keepRenderInBackground;
     private bool _renderDetached;
+    private RenderJob? _renderJobToRestore;
     private CancellationTokenSource? _countdownCts;
     private RenderSleepRequest? _renderSleepRequest;
 #if !WINDOWS && !MACCATALYST && !MACOS
@@ -142,12 +143,13 @@ public partial class RenderPage : ContentPage
         ScreenSaverOverlay.CascadeInputTransparent = true;
     }
 
-    public RenderPage(string path, uint projectDuration, ProjectJSONStructure projectInfo, DraftStructureJSON draft)
+    public RenderPage(string path, uint projectDuration, ProjectJSONStructure projectInfo, DraftStructureJSON draft, RenderJob? renderJob = null)
     {
         InitializeComponent();
         _workingPath = path;
         _duration = projectDuration;
         _project = projectInfo;
+        _renderJobToRestore = renderJob;
         OnPropertyChanged(nameof(ProjectUsesHDR));
         HDRHintLabel.IsVisible = ProjectUsesHDR;
 
@@ -535,11 +537,15 @@ public partial class RenderPage : ContentPage
             await DisplayAlertAsync(Localized._Info, Localized.RenderPage_NoDraft, Localized._OK);
             return;
         }
+        if (_cts.IsCancellationRequested || running) return;
+        if (_renderJobToRestore is RenderJob job)
+        {
+            _renderJobToRestore = null;
+            await RestoreRenderJobAsync(job);
+            return;
+        }
         try { await ProjectExternalSourceService.SelectAsync(this, _workingPath); }
         catch (Exception ex) { Log(ex, "Select project external sources", this); }
-        if (_cts.IsCancellationRequested) return;
-        if (RenderRpcBootstrap.SupportsCliRenderProcess)
-            await RestoreRenderJobAsync();
     }
 
     internal Task ShowAPopup(View content)
@@ -802,8 +808,10 @@ public partial class RenderPage : ContentPage
             Encoder = encoder,
             PixelFormat = pixelFormat,
             MaxParallelThreads = Math.Max(1, (int)Math.Round(MaxParallelThreadsCount.Value)),
+            AllowWorkerOversubscription = SettingsManager.IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true),
             GcOption = int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var gcOption) ? gcOption : 0,
             EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true),
+            FrameHashMode = RenderHashSettings.Mode,
             ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
             ChunkRender = chunkOptions.Enabled && !writeToVoid,
             ChunkFrames = chunkOptions.ChunkFrames,
@@ -841,7 +849,7 @@ public partial class RenderPage : ContentPage
                 await RefreshCliPreviewAsync();
                 var eta = TimeSpan.FromTicks(Math.Max(0, job.EstimatedRemainingTicks));
                 var fpsText = job.CurrentFps > 0 ? $", {job.CurrentFps:N2} FPS" : string.Empty;
-                SubProgLabel.Text = $"{_currentSubProgText} ({job.Progress:P1}, ETA {eta:hh\\:mm\\:ss}{fpsText})";
+                SubProgLabel.Text = $"{_currentSubProgText} ({job.Progress:P1}, ETA {FormatRenderEta(eta)}{fpsText})";
                 await Task.Delay(500, _cts.Token);
                 job = await TryGetCliRenderJobStatusAsync(job.JobId, _cts.Token) ?? job;
             }
@@ -948,17 +956,13 @@ public partial class RenderPage : ContentPage
         }
     }
 
-    private async Task RestoreRenderJobAsync()
+    private async Task RestoreRenderJobAsync(RenderJob job)
     {
         try
         {
-            if (!RenderRpcBootstrap.TryReconnectCliRender(_workingPath, out var jobId)) return;
             _activeCliPreviewPath = RenderRpcBootstrap.ActiveCliPreviewPath;
             _activeCliPreviewStateToken = null;
             _cliStatusRequestTimedOut = false;
-            var job = await TryGetCliRenderJobStatusAsync(jobId, _cts.Token)
-                ?? new RenderJob { JobId = jobId, State = RenderJobState.Queued };
-
             _activeRenderRpcJobId = job.JobId;
             _currentCliRenderStage = string.Empty;
             _backgroundRenderRequested = job.Background;
@@ -1015,11 +1019,14 @@ public partial class RenderPage : ContentPage
             await SubProgress.ProgressTo(Math.Clamp(job.Progress, 0, 1), 100, Easing.Linear);
             var eta = TimeSpan.FromTicks(Math.Max(0, job.EstimatedRemainingTicks));
             var fpsText = job.CurrentFps > 0 ? $", {job.CurrentFps:N2} FPS" : string.Empty;
-            SubProgLabel.Text = $"{_currentSubProgText} ({job.Progress:P1}, ETA {eta:hh\\:mm\\:ss}{fpsText})";
+            SubProgLabel.Text = $"{_currentSubProgText} ({job.Progress:P1}, ETA {FormatRenderEta(eta)}{fpsText})";
             if (job.State == RenderJobState.Failed && job.Error is not null)
                 LoggingBox.Text = job.Error.Message;
         });
     }
+
+    private static string FormatRenderEta(TimeSpan eta)
+        => $"{eta.Ticks / TimeSpan.TicksPerHour:00}:{eta.Minutes:00}:{eta.Seconds:00}";
 
     private async void RenderToVoidButton_Clicked(object sender, EventArgs e)
     {
@@ -1510,8 +1517,10 @@ public partial class RenderPage : ContentPage
                 GCOption = gcOption,
                 Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
                 MaxThreads = parallelThreadCount,
+                AllowWorkerOversubscription = SettingsManager.IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true),
                 EnableThreadAffinity = EnableThreadAffinity && ThreadAffinityHelper.GetCpuCoreGroups().Count > 1,
                 WorkerCPUCoreIndexs = CPUAffinityOverride,
+                FrameHashMode = RenderHashSettings.Mode,
                 ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
                 DynamicPreviewCacheProjectRoot = _workingPath,
                 UseHDR = ProjectUsesHDR,
@@ -1528,7 +1537,7 @@ public partial class RenderPage : ContentPage
             renderer.OnProgressChanged += (p, etr) =>
             {
                 string fpsStr = renderer.CurrentFps > 0 ? $"{renderer.CurrentFps:n2}" : "--";
-                var timeStr = etr.TotalSeconds >= 5 ? (etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss")) : "--";
+                var timeStr = etr.TotalSeconds >= 5 ? (etr.TotalHours >= 1 ? FormatRenderEta(etr) : etr.ToString(@"mm\:ss")) : "--";
                 Dispatcher.Dispatch(async () =>
                 {
                     await SubProgress.ProgressTo(p, 250, Easing.Linear);
@@ -1714,7 +1723,7 @@ public partial class RenderPage : ContentPage
                 string timeStr = "";
                 if (etr.TotalSeconds > 0)
                 {
-                    timeStr = (etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss"));
+                    timeStr = (etr.TotalHours >= 1 ? FormatRenderEta(etr) : etr.ToString(@"mm\:ss"));
                     SubProgLabel.Text = $"{_currentSubProgText} ({timeStr})";
                 }
                 await SubProgress.ProgressTo(p, 25, Easing.Linear);
@@ -2317,7 +2326,9 @@ public partial class RenderPage : ContentPage
         var allowedSources = ProjectExternalSourceService.GetApprovals(_workingPath);
         if (allowedSources.Count > 0) args.Add("--allowExternalSources=" + string.Join(',', allowedSources.Select(x => x.ImportId)));
         args.Add($"-maxParallelThreads={maxThreads}");
+        args.Add($"-allowWorkerOversubscription={SettingsManager.IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true)}");
         args.Add($"-preferHwAccelEncoder={useHardwareAcceleration}");
+        args.Add($"-frameHashMode={RenderHashSettings.Mode}");
         args.Add($"-reuseDynamicPreviewCache={SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false)}");
 
         if (int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var gcOption) && gcOption is >= 0 and <= 2)

@@ -11,6 +11,8 @@ namespace projectFrameCut.Render.Effect
 {
     public class FlipEffect_IPicture : INormalEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Flip";
@@ -71,6 +73,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class FlipEffectProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public FlipEffectProvider()
         {
             Name = "Flip";

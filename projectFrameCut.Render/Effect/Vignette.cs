@@ -11,6 +11,8 @@ namespace projectFrameCut.Render.Effect
 {
     public class VignetteEffect_IPicture : INormalEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Vignette";
@@ -69,6 +71,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class VignetteEffectProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public VignetteEffectProvider()
         {
             Name = "Vignette";

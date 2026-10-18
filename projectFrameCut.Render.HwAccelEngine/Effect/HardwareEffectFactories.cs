@@ -5,8 +5,11 @@ using projectFrameCut.Shared;
 namespace projectFrameCut.Render.HwAccelEngine;
 public static class HardwareEffectFactories
 {
-    public static IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> Create() => new Dictionary<EffectImplementationKey, Func<IEffect>>
+    public static IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> Create()
     {
+        HwAccelPictureScope.CreateContext ??= ResidentPictureOperations.CreateContext;
+        return new Dictionary<EffectImplementationKey, Func<IEffect>>
+        {
 #if WINDOWS || LINUX || HEADLESS || ANDROID || IOS || MACCATALYST
         [new("Blur", EffectImplementType.HwAcceleration)] = () => new BlurEffect_HwAccel(),
         [new("Crop", EffectImplementType.HwAcceleration)] = () => new CropEffect_HwAccel(),
@@ -32,5 +35,6 @@ public static class HardwareEffectFactories
         [new("LightenMixture", EffectImplementType.HwAcceleration)] = () => new LightenMixture_HwAccel(),
         [new("DifferenceMixture", EffectImplementType.HwAcceleration)] = () => new DifferenceMixture_HwAccel(),
 #endif
-    };
+        };
+    }
 }

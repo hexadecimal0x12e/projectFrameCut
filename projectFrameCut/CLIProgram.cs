@@ -7,6 +7,7 @@ using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Vector.ImportExport;
 using projectFrameCut.IntegratedAPIServer;
 using projectFrameCut.IntegratedAPIServer.Headless;
 using projectFrameCut.IntegratedAPIServer.MCP;
@@ -930,7 +931,14 @@ namespace projectFrameCut
             var target = switches.GetValueOrDefault("target", "all").ToLowerInvariant();
             var gcOption = int.TryParse(switches.GetValueOrDefault("GCOptions", "0"), out var gc) ? Math.Clamp(gc, 0, 2) : 0;
             if (gcOption == 2) GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            if (!Enum.TryParse<FrameHashMode>(switches.GetValueOrDefault("frameHashMode", "Dynamic"), true, out var frameHashMode)
+                || !Enum.IsDefined(frameHashMode))
+            {
+                Log("Invalid frameHashMode: expected Dynamic or Static.", "error");
+                return 1;
+            }
             var reuseDynamicPreviewCache = bool.TryParse(switches.GetValueOrDefault("reuseDynamicPreviewCache", "false"), out var reusePreview) && reusePreview;
+            if (!bool.TryParse(switches.GetValueOrDefault("allowWorkerOversubscription", "true"), out var allowWorkerOversubscription)) allowWorkerOversubscription = true;
             var affinity = bool.TryParse(switches.GetValueOrDefault("enableThreadAffinity", "true"), out var threadAffinity) && threadAffinity;
             var maxThreads = int.TryParse(switches.GetValueOrDefault("maxParallelThreads", Environment.ProcessorCount.ToString()), out var mt) ? Math.Max(1, mt) : Environment.ProcessorCount;
             var duration = Math.Max(timeline.Duration, timeline.AudioDuration);
@@ -1021,6 +1029,8 @@ namespace projectFrameCut
                     SDRClipsBrightnessInHDRMode = sdrBrightnessInHdr,
                     GCOption = gcOption,
                     MaxThreads = Math.Max(1, renderThreads),
+                    AllowWorkerOversubscription = allowWorkerOversubscription,
+                    FrameHashMode = frameHashMode,
                     ReuseDynamicPreviewCache = reuseDynamicPreviewCache,
                     DynamicPreviewCacheProjectRoot = projectRoot,
                     DynamicPreviewCacheProjectWidth = Math.Max(1, project.RelativeWidth),
@@ -1070,7 +1080,7 @@ namespace projectFrameCut
                     duration,
                     fps,
                     Path.GetExtension(path),
-                    $"{width}x{height}|{fps}|{pixelFormat}|{output[4]}|bpp={bpp}|bitrate={requestedBitRate}|render=clip-cache|reusePreview={reuseDynamicPreviewCache}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}|externalSources={projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken}",
+                    $"{width}x{height}|{fps}|{pixelFormat}|{output[4]}|bpp={bpp}|bitrate={requestedBitRate}|render=clip-cache|frameHashMode={frameHashMode}|reusePreview={reuseDynamicPreviewCache}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}|externalSources={projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken}",
                     maxThreads,
                     chunkOptions);
                 await coordinator.InitializeAsync(consoleCancellation.Token).ConfigureAwait(false);
@@ -1700,6 +1710,35 @@ namespace projectFrameCut
 #endif
                 ]);
             }
+            EffectHelper.ForcePreferToType = SettingsManager.IsBoolSettingTrue("render_forceImpType_ForceHwAccel")
+                ? EffectImplementType.HwAcceleration
+                : SettingsManager.IsBoolSettingTrue("render_forceImpType_ForceIPicture") ? EffectImplementType.IPicture : null;
+            EffectHelper.DefaultImplementsType = new();
+            try
+            {
+                var path = Path.Combine(dataRoot, "EffectImplement.json");
+                if (File.Exists(path))
+                    EffectHelper.DefaultImplementsType = JsonSerializer.Deserialize<Dictionary<string, EffectImplementType>>(File.ReadAllText(path)) ?? new();
+            }
+            catch (Exception ex) { Log(ex, "Load render effect implementation preferences"); }
+            var resizeType = EffectHelper.ForcePreferToType
+                ?? (SettingsManager.IsBoolSettingTrueOrDefault("render_preferHwAccelResizeProvider", true)
+                    ? EffectImplementType.HwAcceleration : EffectImplementType.IPicture);
+            Drawing.Processing.Resizing.PictureResizer.Default = new EffectPictureResizer(resizeType);
+            IPicture.AllowPixelModeDowngrade = !SettingsManager.IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
+            ClassicOverlayMixture.EnableApproximatePath = SettingsManager.IsBoolSettingTrue("render_preferApproximateMixture");
+            IVectorContentClip.GlobalDefaultAntiAliasMode = SettingsManager.GetSetting("render_preferredAntiAliasMode", "ssaa4x") switch
+            {
+                "ssaa8x" => AntiAliasMode.SSAA8x,
+                "ssaa4x" => AntiAliasMode.SSAA4x,
+                "ssaa2x" => AntiAliasMode.SSAA2x,
+                _ => AntiAliasMode.None,
+            };
+            IVectorContentClip.GlobalDefaultRasterizer = SettingsManager.IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true)
+                ? new Render.HwAccelEngine.VectorRasterizer.VectorToPictureHwAccel()
+                : new Render.RenderAPIBase.VectorContent.CpuVectorPictureRasterizer();
+            EffectHelper.InvalidateImplementations();
+            Log($"[Render] Effect preference: {EffectHelper.ForcePreferToType?.ToString() ?? "per effect"}, configured defaults: {EffectHelper.DefaultImplementsType.Count}, resize: {resizeType}, vector rasterizer: {IVectorContentClip.GlobalDefaultRasterizer.GetType().Name}.");
             if (!ffmpeg.Ready)
             {
                 try
@@ -2242,7 +2281,9 @@ Usage:
               -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
                 [-target=video|audio|all|void] [-assetDbFile=<database.json>]
                 [-maxParallelThreads=<number>]
+                [-allowWorkerOversubscription=true|false] (default: true)
                 [-reuseDynamicPreviewCache=true|false]
+                [-frameHashMode=Dynamic|Static]
                 [-enableThreadAffinity=true|false] [-GCOptions=0|1|2]
                 [-chunkRender=true|false] [-chunkFrames=<number>|-chunkSeconds=<number>]
                 [-chunkParallelism=<number>] [-chunkResume=true|false]

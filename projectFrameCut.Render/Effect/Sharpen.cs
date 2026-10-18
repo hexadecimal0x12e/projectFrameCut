@@ -11,6 +11,8 @@ namespace projectFrameCut.Render.Effect
 {
     public class SharpenEffect_IPicture : INormalEffect
     {
+        public bool IsDeterministic => true;
+
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "Sharpen";
@@ -65,6 +67,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class SharpenEffectProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public SharpenEffectProvider()
         {
             Name = "Sharpen";

@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render;
+using projectFrameCut.Render;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
     public interface IEffect : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject
     {
+        /// <summary>Whether identical complete inputs always produce identical outputs.</summary>
+        public bool IsDeterministic { get; }
+
         /// <summary>
         /// Indicates which plugin this effect comes from.
         /// </summary>
@@ -39,6 +42,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Get how this effect is implemented.
         /// </summary>
         public EffectImplementType ImplementType { get; }
+
+        public bool AcceptsHwAccelPictures => this is IHwAccelPictureEffect;
+        public bool IsPictureTransportBoundary => false;
 
         /// <summary>
         /// Name of this effect. Most for display purpose.
@@ -142,6 +148,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public virtual object? Compute(EffectExecutionContext context)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
+            if (!context.PicturesPrepared && (this is IHwAccelPictureEffect && context.Input is IPicture
+                || !AcceptsHwAccelPictures && (context.Input is IHwAccelPicture || context.Parameters.Values.Any(v => v is IHwAccelPicture))))
+                return EffectPictureProcessing.Compute(this, context);
             return this switch
             {
                 IMultipleOutputEffect multiple => multiple.ComputeOutputs(context),

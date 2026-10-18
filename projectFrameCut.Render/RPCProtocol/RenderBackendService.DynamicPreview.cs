@@ -283,7 +283,8 @@ public sealed partial class RenderBackendService
                 if (clips.TryGetValue(dto.Id, out var clip)) dto.FilePath = clip.FilePath;
             }
 
-            _renderClips = new IClip[Math.Clamp(Environment.ProcessorCount, 1, 4)][];
+            _renderClips = new IClip[RenderMemoryBudget.LimitWorkers(Math.Clamp(Environment.ProcessorCount, 1, 4),
+                RenderMemoryBudget.EstimateClipBytes(_request.CanvasWidth, _request.CanvasHeight), RenderMemoryBudget.DefaultBytes)][];
             await Task.WhenAll(Enumerable.Range(0, _renderClips.Length).Select(i => Task.Run(() =>
             {
                 try
@@ -293,6 +294,7 @@ public sealed partial class RenderBackendService
                 }
                 catch { Cancel(); throw; }
             }, token))).ConfigureAwait(false);
+            Log($"[DynamicPreview] Using {_renderClips.Length} render workers. Effect implementations: {Effect.EffectHelper.GetImplementationSummary(_renderClips[0])}.");
         }
 
         private async Task RenderFramesAsync(CancellationToken token, long? bufferStart = null)
@@ -342,6 +344,14 @@ public sealed partial class RenderBackendService
 
         private async Task RenderFrameAsync(IClip[] clips, uint frame, CancellationToken token)
         {
+            using var context = new FrameHashContext(new()
+            {
+                Mode = _request.FrameHashMode, Width = _request.CanvasWidth, Height = _request.CanvasHeight,
+                ProjectWidth = _request.ProjectWidth, ProjectHeight = _request.ProjectHeight,
+                FrameRate = _session.FrameRate,
+                PixelMode = _request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb ? 16 : 8,
+            }, token, _session.NodeCache);
+            using var hashScope = context.Enter();
             foreach (var clip in clips.Where(c => c.ClipType != ClipMode.AudioClip && c.ContainsFrame(frame)))
             {
                 token.ThrowIfCancellationRequested();
@@ -350,7 +360,7 @@ public sealed partial class RenderBackendService
                     SessionId = _session.Id, ClipId = clip.Id, FrameIndex = frame,
                     CanvasWidth = _request.CanvasWidth, CanvasHeight = _request.CanvasHeight,
                     ProjectWidth = _request.ProjectWidth, ProjectHeight = _request.ProjectHeight,
-                    PreferredPixelFormat = _request.PreferredPixelFormat,
+                    PreferredPixelFormat = _request.PreferredPixelFormat, FrameHashMode = _request.FrameHashMode,
                 }, token, registerArtifact: false, previewSession: _session, previewClips: clips).ConfigureAwait(false);
                 var path = Path.Combine(_cacheRoot, $"{frame:D10}_{clip.Id:N}.json");
                 _entries.Enqueue((frame, path, artifact.ProjectRelativePath.StartsWith("thumbs/unCacheablePerClip/", StringComparison.Ordinal)

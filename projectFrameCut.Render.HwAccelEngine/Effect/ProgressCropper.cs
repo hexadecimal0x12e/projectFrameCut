@@ -13,6 +13,8 @@ namespace projectFrameCut.Render.HwAccelEngine.Effect
 {
     public partial class ProgressCropper_HwAccel : IContinuousEffect, IDisposable
     {
+        public bool IsDeterministic => true;
+
         private readonly Lock nativeLock = new();
         private bool disposed;
         public void Dispose()

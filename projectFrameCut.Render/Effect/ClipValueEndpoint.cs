@@ -6,6 +6,8 @@ namespace projectFrameCut.Render.Effect;
 
 public abstract class ClipValueEndpointProvider : EffectProviderBase, IClipValueEndpointProvider, IEffectProvider
 {
+    public override bool IsDeterministic => true;
+
     public abstract bool IsExport { get; }
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public override EffectType TypeOfEffect => EffectType.NormalEffect;
@@ -52,6 +54,9 @@ public sealed class ClipValueImportProvider : ClipValueEndpointProvider
 
 public sealed class ClipValueEndpointEffect(string typeName, bool isExport) : IEffect
 {
+    public bool IsDeterministic => true;
+    public bool AcceptsHwAccelPictures => true;
+
     public string TypeName => typeName;
     public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public EffectType TypeOfEffect => EffectType.NormalEffect;

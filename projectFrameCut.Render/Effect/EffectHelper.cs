@@ -21,7 +21,11 @@ namespace projectFrameCut.Render.Effect
             return (double)(index - startPoint) / (endPoint - startPoint);
         }
 
-        public static EffectImplementType? ForcePreferToType = null;
+        public static EffectImplementType? ForcePreferToType
+        {
+            get => EffectImplementationRegistry.Shared.ForcePreferToType;
+            set => EffectImplementationRegistry.Shared.ForcePreferToType = value;
+        }
 
         private static long configurationRevision;
         public static long ConfigurationRevision => Volatile.Read(ref configurationRevision);
@@ -44,6 +48,16 @@ namespace projectFrameCut.Render.Effect
                 ? type : null;
 
         public static Dictionary<string, EffectImplementType> DefaultImplementsType = new();
+
+        public static string GetImplementationSummary(IEnumerable<IClip> clips)
+        {
+            var summary = string.Join(", ", clips.SelectMany(c => (c.EffectsInstances ?? [])
+                    .Concat(new IEffect?[] { c.MixtureInstance, c.AlternativeSource }).OfType<IEffect>())
+                .SelectMany(e => e is DynamicEffectGraph graph ? graph.NodeEffects : new[] { e })
+                .GroupBy(e => (e.TypeName, e.ImplementType)).OrderBy(g => g.Key.TypeName)
+                .Select(g => $"{g.Key.TypeName}={g.Key.ImplementType} ({g.Count()})"));
+            return summary.Length > 0 ? summary : "none";
+        }
 
         public static void ResolveClipEffects(IClip target)
         {
@@ -217,6 +231,8 @@ namespace projectFrameCut.Render.Effect
             target.SpeedVarianceProviderInstance = speed;
             target.MixtureInstance = mixture;
             target.AlternativeSource = alternative;
+            ClipInitializationFailure.ClearRecovered(target, "ResolveEffect", "ResolveEffectProvider", "ResolveBinding",
+                "Effect initialization", "Effect graph initialization");
         }
 
         public static (IEffect[] Effects, ISpeedVarianceProvider? SpeedVarianceProvider) GetEffectsInstancesAndSpeedVariance(EffectAndMixtureJSONStructure[]? Effects)

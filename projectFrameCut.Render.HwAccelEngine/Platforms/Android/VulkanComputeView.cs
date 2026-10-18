@@ -16,7 +16,7 @@ using VulkanDevice = Silk.NET.Vulkan.Device;
 
 namespace projectFrameCut.Render.HwAccelEngine.Platforms.Android
 {
-    public unsafe class VulkanComputeView : AndroidView
+    public unsafe partial class VulkanComputeView : AndroidView
     {
         private const uint ComputeQueueFlag = 0x2;
         private const uint StorageBufferUsageFlag = 0x20;

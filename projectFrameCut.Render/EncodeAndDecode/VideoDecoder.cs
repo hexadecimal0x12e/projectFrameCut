@@ -66,6 +66,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private int _height = -1;
         private double _fps = -1.0;
         private int _currentFrameNumber = 0;
+        private uint? _lastDecodedFrame;
         private bool _eof = false;
         private bool flushSent = false;
         private bool _packetPending = false;
@@ -298,15 +299,16 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 EnsureDecoderReady(targetFrame);
 
-                if (VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps))
+                bool frameFound = _lastDecodedFrame == targetFrame;
+                if (!frameFound)
                 {
-                    
-                    SmartSeekTo(targetFrame);
+                    _lastDecodedFrame = null;
+                    if (VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps))
+                        SmartSeekTo(targetFrame);
                 }
 
-                bool frameFound = false;
-                int decodedFrameNumber = _currentFrameNumber;
-                while (true)
+                int decodedFrameNumber = frameFound ? (int)targetFrame : _currentFrameNumber;
+                while (!frameFound)
                 {
                     if (!_eof && !_packetPending)
                     {
@@ -425,6 +427,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");
                 }
 
+                _lastDecodedFrame = targetFrame;
                 Index++;
                 if (_frm->width != _width || _frm->height != _height)
                     Log($"[VideoDecoder] Frame dimensions mismatch in '{_path}': expected {_width}x{_height}, got {_frm->width}x{_frm->height}.", "warning");
@@ -643,6 +646,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private int _height = -1;
         private double _fps = -1.0;
         private int _currentFrameNumber = 0;
+        private uint? _lastDecodedFrame;
         private bool _eof = false;
         private bool flushSent = false;
         private bool _packetPending = false;
@@ -885,15 +889,16 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 EnsureDecoderReady(targetFrame);
 
-                if (VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps))
+                bool frameFound = _lastDecodedFrame == targetFrame;
+                if (!frameFound)
                 {
-                    
-                    SmartSeekTo(targetFrame);
+                    _lastDecodedFrame = null;
+                    if (VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps))
+                        SmartSeekTo(targetFrame);
                 }
 
-                bool frameFound = false;
-                int decodedFrameNumber = _currentFrameNumber;
-                while (true)
+                int decodedFrameNumber = frameFound ? (int)targetFrame : _currentFrameNumber;
+                while (!frameFound)
                 {
                     if (!_eof && !_packetPending)
                     {
@@ -1012,6 +1017,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");
                 }
 
+                _lastDecodedFrame = targetFrame;
                 Index++;
                 float maximumBrightness = ResolveFrameMaximumBrightness(_frm);
                 AVColorTransferCharacteristic transferCharacteristic = _frm->color_trc;
@@ -1425,6 +1431,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private int _height = -1;
         private double _fps = 0.0;
         private int _currentFrameNumber = 0;
+        private uint? _lastDecodedFrame;
         private bool flushSent = false;
         private bool _packetPending = false;
         private bool _needsTimestampCalibration = false;
@@ -1671,15 +1678,16 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 EnsureDecoderReady(targetFrame);
 
-                if (VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps))
+                bool frameFound = _lastDecodedFrame == targetFrame;
+                if (!frameFound)
                 {
-                    
-                    SmartSeekTo(targetFrame);
+                    _lastDecodedFrame = null;
+                    if (VideoDecoderTimestamp.ShouldSeek(targetFrame, _currentFrameNumber, _fps))
+                        SmartSeekTo(targetFrame);
                 }
 
-                bool frameFound = false;
-                int decodedFrameNumber = _currentFrameNumber;
-                while (true)
+                int decodedFrameNumber = frameFound ? (int)targetFrame : _currentFrameNumber;
+                while (!frameFound)
                 {
                     if (!_eof && !_packetPending)
                     {
@@ -1798,6 +1806,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");
                 }
 
+                _lastDecodedFrame = targetFrame;
                 Index++;
                 if (_frm->width != _width || _frm->height != _height)
                     Log($"[VideoDecoder] Frame dimensions mismatch in '{_path}': expected {_width}x{_height}, got {_frm->width}x{_frm->height}.", "warning");

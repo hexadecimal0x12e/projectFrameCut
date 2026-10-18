@@ -6,6 +6,8 @@ namespace projectFrameCut.Render.Effect;
 
 public class JellyEffect : IContinuousClipPositionProvider
 {
+    public bool IsDeterministic => true;
+
     private static readonly (double Progress, double Deformation)[] BounceSteps =
     [
         (0, 0), (0.12, 1), (0.30, -0.8), (0.48, 0.35),
@@ -91,6 +93,8 @@ public class JellyEffect : IContinuousClipPositionProvider
 
 public class JellyEffectProvider : EffectProviderBase
 {
+    public override bool IsDeterministic => true;
+
     public JellyEffectProvider()
     {
         Name = "Jelly";

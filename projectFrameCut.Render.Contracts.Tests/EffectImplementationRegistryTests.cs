@@ -13,6 +13,8 @@ public sealed class EffectImplementationRegistryTests
 {
     private sealed class TestEffect(string typeName = "Test", EffectImplementType type = EffectImplementType.IPicture) : INormalEffect, IDisposable
     {
+        public bool IsDeterministic => true;
+
         public string TypeName => typeName;
         public EffectImplementType ImplementType => type;
         public string FromPlugin => "test";

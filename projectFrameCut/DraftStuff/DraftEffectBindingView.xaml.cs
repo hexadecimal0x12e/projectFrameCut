@@ -2003,6 +2003,7 @@ public partial class DraftEffectBindingView : ContentView
                 if (previews.GetValueOrDefault(node) is IPicture old) old.Dispose();
                 previews[node] = value switch
                 {
+                    IHwAccelPicture gpu => gpu.Download(),
                     IPicture picture => DynamicEffectGraph.CopyPicture(picture),
                     projectFrameCut.Drawing.Vector.VectorPicture vector => IVectorContentClip.GlobalDefaultRasterizer.Convert(vector, w, h, true,
                         cancellationToken: cts.Token),

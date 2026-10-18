@@ -16,6 +16,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class RemoveColorEffect_IPicture : INormalEffect
     {
+        public bool IsDeterministic => true;
+
 
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -244,6 +246,8 @@ namespace projectFrameCut.Render.Effect
 
     public class RemoveColorEffectProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public RemoveColorEffectProvider()
         {
             Name = string.Empty;

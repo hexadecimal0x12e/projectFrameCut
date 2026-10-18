@@ -12,6 +12,8 @@ namespace projectFrameCut.Render.Effect
 {
     public class ProgressPlacer : IContinuousClipPositionProvider
     {
+        public bool IsDeterministic => true;
+
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
         public string TypeName => "ProgressPlacer";
@@ -211,6 +213,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class ProgressPlacerProvider : EffectProviderBase
     {
+        public override bool IsDeterministic => true;
+
         public ProgressPlacerProvider()
         {
             Name = "ProgressPlacer";

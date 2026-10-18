@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Controls.Shapes;
+using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
 using Microsoft.Maui.Storage;
 using System.Collections.Concurrent;
@@ -1081,7 +1081,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
             ct.ThrowIfCancellationRequested();
             _lastDynamicPreviewUIUpdate = DateTime.MinValue;
-            await RenderDynamicPreviewFramesAsync(startPoint, cache, width, height, ct).ConfigureAwait(false);
+            await RenderDynamicPreviewFramesAsync(startPoint, cache, width, height, ct, c => cache = c).ConfigureAwait(false);
         }
         finally
         {
@@ -1089,7 +1089,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private async Task RenderDynamicPreviewFramesAsync(int startPoint, DynamicPreviewCache? cache, int canvasWidth, int canvasHeight, CancellationToken ct)
+    private async Task RenderDynamicPreviewFramesAsync(int startPoint, DynamicPreviewCache? cache, int canvasWidth, int canvasHeight,
+        CancellationToken ct, Action<DynamicPreviewCache>? onRestart = null)
     {
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var playbackMark = new UserMarkRange("Preview.DynamicPlayback", $"startFrame={startPoint}");
@@ -1159,6 +1160,13 @@ public partial class DraftPage : ContentPage, IDraftPage
             var clockStartedAt = Stopwatch.GetTimestamp();
             targetFrame = cache?.GetFrame() ?? GetContinuousAudioFrame();
             var clockElapsedMs = Stopwatch.GetElapsedTime(clockStartedAt).TotalMilliseconds;
+            if (cache is not null && cache.Mode != RenderHashSettings.Mode)
+            {
+                await previewer.StopDynamicPreviewAsync(cache).ConfigureAwait(false);
+                cache = await previewer.StartDynamicPreviewAsync(targetFrame, canvasWidth, canvasHeight, projectWidth, projectHeight,
+                    Math.Max(1d, ProjectInfo.TargetFrameRate), ct).ConfigureAwait(false);
+                onRestart?.Invoke(cache);
+            }
             if (targetFrame > maxFrame || cache?.IsCompleted == true) break;
             if (cache?.IsBuffering == true)
             {

@@ -7,6 +7,8 @@ namespace projectFrameCut.Render.PluginIsolation;
 
 public class RemoteEffectProvider : IEffectProvider
 {
+    public bool IsDeterministic { get; }
+
     private readonly IPluginIsolationSession _session;
     private readonly long _objectId;
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<EffectFieldTypeContext, IsolationResolvedFieldTypes> _fieldTypes = new();
@@ -16,6 +18,7 @@ public class RemoteEffectProvider : IEffectProvider
         _session = session;
         _objectId = descriptor.ObjectId;
         TypeName = descriptor.TypeName;
+        IsDeterministic = descriptor.IsDeterministic;
         FromPlugin = descriptor.FromPlugin;
         TypeOfEffect = (EffectType)descriptor.EffectType;
         Target = (EffectTarget)descriptor.Target;
