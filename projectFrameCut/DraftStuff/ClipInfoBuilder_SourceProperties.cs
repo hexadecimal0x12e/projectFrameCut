@@ -18,6 +18,8 @@ using projectFrameCut.Render.VectorContent;
 using projectFrameCut.Render.VectorContent.Components;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
+using projectFrameCut.Render.RenderAPIBase.Text;
+using projectFrameCut.Render.Text;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -481,9 +483,78 @@ public partial class ClipInfoBuilder
             nameof(IClip.TargetHeight) => clip.TargetHeight,
             nameof(IClip.Rotation) => clip.Rotation,
             ClipArgumentHandler.ShouldRenderKey => true,
-            _ => defaults.GetValueOrDefault(key) ?? fields[key].DefaultValue,
+            _ => key.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal)
+                && TextClipStyles.Restore(clip.ExtraData) is { } style
+                ? TextClipStyles.ReadValue(style, key[TextClipStyles.ArgumentPrefix.Length..])
+                : defaults.GetValueOrDefault(key) ?? fields[key].DefaultValue,
         });
+        if (clip.ClipType == ClipMode.TextClip && TextClipStyles.Restore(clip.ExtraData) is { } textStyle)
+            SyncTextStyleClipArguments(clip, textStyle, updateValues: false);
         return provider;
+    }
+
+    internal static void SyncTextStyleClipArguments(ClipElementUI clip, ITextClipStyleProvider style, bool updateValues = true)
+    {
+        var provider = clip.EffectProviders?.Values.OfType<ClipArgumentProvider>().SingleOrDefault();
+        if (provider is null) return;
+        provider.MetaData[TextClipStyles.FromKey] = style.FromPlugin;
+        provider.MetaData[TextClipStyles.TypeKey] = style.TypeName;
+        var descriptors = style.SettableFields;
+        var previous = provider.InFields;
+        bool Compatible(string key) => descriptors.TryGetValue(key[TextClipStyles.ArgumentPrefix.Length..], out var field)
+            && !field.FieldType.HasFlag(EffectArgumentFieldType.InternalUseOnly)
+            && (!previous.TryGetValue(key, out var old) || old.FieldType.BaseType() == field.FieldType.BaseType());
+        provider.RestoreStaticValues(provider.StaticValues
+            .Where(p => !p.Key.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal) || Compatible(p.Key))
+            .ToDictionary(p => p.Key, p => updateValues && p.Key.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal)
+                ? TextClipStyles.ReadValue(style, p.Key[TextClipStyles.ArgumentPrefix.Length..]) : p.Value));
+        provider.AnchorsBindingState = provider.AnchorsBindingState
+            .Where(p => !p.Key.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal)
+                || Compatible(p.Key) && !descriptors[p.Key[TextClipStyles.ArgumentPrefix.Length..]].FieldType.HasFlag(EffectArgumentFieldType.CannotBeDynamic))
+            .ToDictionary();
+        var fields = new Dictionary<string, ClipArgumentFieldDescriptor>(ClipArgumentHandler.DefaultFields);
+        foreach (var (key, descriptor) in descriptors)
+        {
+            if (descriptor.FieldType.HasFlag(EffectArgumentFieldType.InternalUseOnly)) continue;
+            fields[TextClipStyles.ArgumentPrefix + key] = new()
+            {
+                Id = TextClipStyles.ArgumentPrefix + key, FieldType = descriptor.FieldType,
+                DefaultValue = descriptor.DefaultValue, MinValue = descriptor.MinValue, MaxValue = descriptor.MaxValue,
+                PresetOptions = descriptor.PresetOptions, Remarks = descriptor.Remarks,
+                ReadValue = _ => TextClipStyles.ReadValue(style, key),
+            };
+        }
+        provider.Attach(fields, key => key switch
+        {
+            nameof(IClip.TargetX) => clip.TargetX,
+            nameof(IClip.TargetY) => clip.TargetY,
+            nameof(IClip.TargetWidth) => clip.TargetWidth,
+            nameof(IClip.TargetHeight) => clip.TargetHeight,
+            nameof(IClip.Rotation) => clip.Rotation,
+            ClipArgumentHandler.ShouldRenderKey => true,
+            _ => TextClipStyles.ReadValue(TextClipStyles.Restore(clip.ExtraData) ?? style,
+                key[TextClipStyles.ArgumentPrefix.Length..]),
+        });
+    }
+
+    internal static void SaveTextStyleClipArguments(ClipElementUI clip)
+    {
+        if (clip.ClipType != ClipMode.TextClip || TextClipStyles.Restore(clip.ExtraData) is not { } style) return;
+        var provider = clip.EffectProviders?.Values.OfType<ClipArgumentProvider>().SingleOrDefault();
+        if (provider is null) return;
+        var values = new Dictionary<string, object>(provider.StaticValues);
+        foreach (var (key, value) in provider.StaticValues)
+        {
+            if (!key.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal)) continue;
+            string id = key[TextClipStyles.ArgumentPrefix.Length..];
+            if (!style.SettableFields.TryGetValue(id, out var descriptor)) continue;
+            if (!style.HandleSettableFieldsChange(descriptor, value, out var feedback))
+                Log($"Text style field '{id}': {feedback}", "warn");
+            values[key] = TextClipStyles.ReadValue(style, id);
+        }
+        provider.RestoreStaticValues(values);
+        TextClipStyles.Save(style, clip.ExtraData);
+        clip.ExtraData["TextEntries"] = style.BuildEntries().ToList();
     }
 
     private View BuildMaskSourcePropertiesTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> changed)

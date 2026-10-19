@@ -4,6 +4,7 @@ using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RPCProtocol;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -48,6 +49,21 @@ public static class FrameHashHelper
         "AlternativeSource", "ArgumentFields", "Decoder", "VirtualSource", "HasCurrentDecoder",
         "NodeEffects", "ParametersNeeded", "ParametersType", "BindedEffectProvidingSystemID",
     };
+
+    public static string CreateRenderResumeSignature(ProjectJSONStructure project, DraftStructureJSON timeline, IEnumerable<AssetItem> assets)
+        => HashValue(new
+        {
+            Project = new
+            {
+                project.ProjectUniqueId, project.ProjectName, project.RelativeWidth, project.RelativeHeight,
+                project.TargetFrameRate, project.Properties, project.UserDefinedProperties,
+                Plugins = project.ProjectPlugins.Select(p => new { Reference = p, Source = SourceFingerprint(p.PackagePath) }).ToArray(),
+                Cover = SourceFingerprint(project.ThumbPath),
+            },
+            Timeline = new { timeline.Clips, timeline.SoundTracks, timeline.Duration, timeline.AudioDuration },
+            Assets = assets.OrderBy(a => a.AssetId, StringComparer.Ordinal)
+                .Select(a => new { Asset = a, Source = SourceFingerprint(a.Path) }).ToArray(),
+        });
 
     public static FrameHashResult GetClipHash(IReadOnlyList<IClip> clips, IClip clip, uint frame,
         FrameHashOptions? options = null, Func<object?>? render = null, CancellationToken token = default)
@@ -208,7 +224,7 @@ public static class FrameHashHelper
             && p.GetCustomAttribute<JsonIgnoreAttribute>()?.Condition != JsonIgnoreCondition.Always)
         .GroupBy(p => p.Name).ToDictionary(g => g.Key, g => g.First().GetValue(value));
 
-    private static object? SourceFingerprint(string? path)
+    internal static object? SourceFingerprint(string? path)
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
         if (Uri.TryCreate(path, UriKind.Absolute, out var uri) && !uri.IsFile)

@@ -90,7 +90,7 @@ public partial class DraftPage
         _transformMenuActivatedHandle == "left", _transformMenuActivatedHandle == "right");
 
     internal bool SetClipTransform(ClipElementUI center, TransformSide side, TransformInputMode mode, IEffectProvider provider,
-        uint duration, bool isAI = false, TransformRenderOrder? order = null)
+        uint duration, bool isAI = false, TransformRenderOrder? order = null, bool notify = true)
     {
         bool audio = center.ClipType == ClipMode.AudioClip;
         var neighbors = FindTransformNeighbors(center, audio);
@@ -127,7 +127,12 @@ public partial class DraftPage
         owner.EffectProviders[provider.Id] = provider;
         provider.MetaData[TransformProcessing.DurationKey] = resolved.Duration;
         Log($"Set {mode} transform {provider.Id} ({provider.TypeName}), {owner.Id} -> {TransformProcessing.ReadNextClip(provider.MetaData)}, {resolved.Duration} frames, {order ?? TransformServices.DefaultRenderOrder}.");
-        _ = NotifyTransformChanged(owner);
+        if (notify) _ = NotifyTransformChanged(owner);
+        else
+        {
+            ClipInfoBuilder.RebuildAllEffects(owner);
+            RefreshTransformShadows();
+        }
         return true;
     }
 
@@ -165,10 +170,12 @@ public partial class DraftPage
         if (!SupportsPictureTransform(center) || mode == TransformInputMode.TwoInput &&
             (neighbor is null || !SupportsPictureTransform(neighbor))) return Task.FromResult<string?>(null);
         var owner = mode == TransformInputMode.TwoInput && side == TransformSide.Left ? neighbor! : center;
+        uint duration = TransformProcessing.ReadDuration(provider.MetaData);
+        var order = TransformProcessing.ReadEnum(provider.MetaData, TransformProcessing.OrderKey, TransformServices.DefaultRenderOrder);
         TransformProcessing.Configure(provider, mode == TransformInputMode.TwoInput ? TransformSide.Right : side, mode,
-            Math.Max(1u, (uint)Math.Round(ProjectInfo.TargetFrameRate / 2d)),
+            duration > 0 ? duration : Math.Max(1u, (uint)Math.Round(ProjectInfo.TargetFrameRate / 2d)),
             mode == TransformInputMode.TwoInput ? (side == TransformSide.Left ? center.Id : neighbor!.Id) : Guid.Empty,
-            TransformServices.DefaultRenderOrder);
+            order);
         var infos = GetTransformClipInfos();
         var replaced = new HashSet<Guid>();
         if (TransformProcessing.Find(infos, center.Id, side) is { } old) replaced.Add(old.Provider.Id);

@@ -1,3 +1,5 @@
+﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
@@ -54,7 +56,7 @@ public static class TimelineMcpLiveService
 
     public static IEnumerable GetAllAvailableTextStyles()
     {
-        return PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(c => c.TextClipStyleProvider).Select(c => c.Value()).Select(c => new { id = c.TypeName, fromPlugin = c.FromPlugin, typeName = c.TypeName, displayName = PluginManager.GetLocalizationItem("DisplayName_TextStyle_" + c.TypeName, c.TypeName), settableFields = c.SettableFields });    
+        return PluginManager.LoadedPlugins.Values.SelectMany(c => c.TextClipStyleProvider).Select(c => c.Value()).Select(c => new { id = c.TypeName, fromPlugin = c.FromPlugin, typeName = c.TypeName, displayName = PluginManager.GetLocalizationItem("DisplayName_TextStyle_" + c.TypeName, c.TypeName), settableFields = c.SettableFields });
     }
 
     public static IEnumerable<AssetItem> GetAllAvailableAssets(DraftPage? page, bool includeDraftWide, bool includeGlobal, bool includeRemote, bool searchWithRegex = false, string filter = "")
@@ -176,7 +178,6 @@ public static class TimelineMcpLiveService
     internal static ITextClipStyleProvider? ResolveTextStyleProvider(string styleId)
     {
         var pvd = PluginManager.LoadedPlugins.Values
-            .OfType<IApplicationPluginBase>()
             .SelectMany(c => c.TextClipStyleProvider)
             .FirstOrDefault(C => C.Key == styleId);
         return pvd.Value?.Invoke();
@@ -247,8 +248,7 @@ public static class TimelineMcpLiveService
             throw new KeyNotFoundException($"Cannot find text style provider with id {styleId}.");
         }
 
-        var provider = TextStyleServices.RestoreTextStyleProvider(providerItem.FromPlugin, providerItem.TypeName, providerItem.Parameters) ?? providerItem;
-        provider.Parameters = new Dictionary<string, string>(providerItem.Parameters);
+        var provider = TextClipStyles.Copy(providerItem);
         provider.BasicText = text;
 
         ApplyTextStyleFields(provider, fields);
@@ -279,7 +279,7 @@ public static class TimelineMcpLiveService
             element.ExtraData["TextEntries"] = entries.ToList();
             element.ExtraData["TextStyleProvider_FromPlugin"] = provider.FromPlugin;
             element.ExtraData["TextStyleProvider_TypeName"] = provider.TypeName;
-            element.ExtraData["TextStyleProvider_Parameters"] = new Dictionary<string, string>(provider.Parameters);
+            TextClipStyles.Save(provider, element.ExtraData);
         });
     }
 
@@ -294,8 +294,7 @@ public static class TimelineMcpLiveService
             throw new KeyNotFoundException($"Cannot find text style provider with id {styleId}.");
         }
 
-        var provider = TextStyleServices.RestoreTextStyleProvider(providerItem.FromPlugin, providerItem.TypeName, providerItem.Parameters) ?? providerItem;
-        provider.Parameters = new Dictionary<string, string>(providerItem.Parameters);
+        var provider = TextClipStyles.Copy(providerItem);
         provider.BasicText = text;
 
         ApplyTextStyleFields(provider, fields, strict: strictFields);
@@ -322,53 +321,14 @@ public static class TimelineMcpLiveService
         element.ExtraData["TextEntries"] = entries.ToList();
         element.ExtraData["TextStyleProvider_FromPlugin"] = provider.FromPlugin;
         element.ExtraData["TextStyleProvider_TypeName"] = provider.TypeName;
-        element.ExtraData["TextStyleProvider_Parameters"] = new Dictionary<string, string>(provider.Parameters);
+        TextClipStyles.Save(provider, element.ExtraData);
 
         return element;
     }
 
     internal static ITextClipStyleProvider? RestoreTextStyleProviderFromClip(ClipElementUI clip)
     {
-        if (clip.ExtraData is null) return null;
-
-        string? ReadStringValue(object? raw)
-        {
-            if (raw is string s) return s;
-            if (raw is JsonElement elem && elem.ValueKind == JsonValueKind.String) return elem.GetString();
-            return raw?.ToString();
-        }
-
-        Dictionary<string, string>? ReadParameters(object? raw)
-        {
-            if (raw is Dictionary<string, string> dict) return new Dictionary<string, string>(dict);
-            if (raw is Dictionary<string, object> objDict)
-                return objDict.ToDictionary(k => k.Key, v => v.Value?.ToString() ?? string.Empty);
-            if (raw is JsonElement elem)
-            {
-                try { return JsonSerializer.Deserialize<Dictionary<string, string>>(elem); }
-                catch { return null; }
-            }
-            if (raw is string json && !string.IsNullOrWhiteSpace(json))
-            {
-                try { return JsonSerializer.Deserialize<Dictionary<string, string>>(json); }
-                catch { return null; }
-            }
-            return null;
-        }
-
-        var fromPlugin = clip.ExtraData.TryGetValue("TextStyleProvider_FromPlugin", out var fromObj) ? ReadStringValue(fromObj) : null;
-        var typeName = clip.ExtraData.TryGetValue("TextStyleProvider_TypeName", out var typeObj) ? ReadStringValue(typeObj) : null;
-        var parameters = clip.ExtraData.TryGetValue("TextStyleProvider_Parameters", out var paramsObj) ? ReadParameters(paramsObj) : null;
-
-        if (string.IsNullOrWhiteSpace(fromPlugin) || string.IsNullOrWhiteSpace(typeName))
-            return null;
-
-        var provider = TextStyleServices.RestoreTextStyleProvider(fromPlugin, typeName, parameters);
-        if (provider is null) return null;
-        if (parameters is not null)
-            provider.Parameters = new Dictionary<string, string>(parameters);
-
-        return provider;
+        return TextClipStyles.Restore(clip.ExtraData);
     }
 
     internal static List<string> SetTextClipStyleFields(DraftPage page, Guid clipId, Dictionary<string, object> fields, bool strictFields = false)
@@ -396,7 +356,8 @@ public static class TimelineMcpLiveService
 
         clip.ExtraData ??= new Dictionary<string, object>();
         clip.ExtraData["TextEntries"] = entries.ToList();
-        clip.ExtraData["TextStyleProvider_Parameters"] = new Dictionary<string, string>(provider.Parameters);
+        TextClipStyles.Save(provider, clip.ExtraData);
+        ClipInfoBuilder.SyncTextStyleClipArguments(clip, provider);
         clip.IsMoveable = true;
         clip.IsHorizontalResizable = provider.IsHorizontalResizable;
         clip.IsVerticalResizable = provider.IsVerticalResizable;

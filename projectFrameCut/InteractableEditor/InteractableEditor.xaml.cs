@@ -1,3 +1,5 @@
+﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Interaction;
 using projectFrameCut.ApplicationPluginBase.Text;
 using projectFrameCut.Asset;
@@ -26,6 +28,17 @@ namespace projectFrameCut.InteractableEditor
 {
     public partial class InteractableEditor : ContentView, IInteractableEditor
     {
+        public bool IsPreviewBusy
+        {
+            get;
+            set
+            {
+                if (field == value) return;
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+
         #region types
 
         public enum ResizeHandle
@@ -65,10 +78,8 @@ namespace projectFrameCut.InteractableEditor
         private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
         private const string AllowFreeScaleResizeKey = "AllowFreeScaleResize";
         private const string TextClipStyleAllowFreeResizeKey = "TextClipStyleAllowFreeResize";
-        private const string TextStyleParametersKey = "TextStyleProvider_Parameters";
         private const string TextStyleProviderFromKey = "TextStyleProvider_FromPlugin";
         private const string TextStyleProviderTypeKey = "TextStyleProvider_TypeName";
-        private const string TextStyleProviderParametersKey = "TextStyleProvider_Parameters";
 
         private const string DisableMoveKey = "InteractableEditor_DisableMove";
         private const string DisableHorizontalResizeKey = "InteractableEditor_DisableHorizontalResize";
@@ -4777,35 +4788,26 @@ namespace projectFrameCut.InteractableEditor
                 return false;
             }
 
-            var parameters = ReadTextStyleParameters(clip.ExtraData);
-            var provider = projectFrameCut.Services.TextStyleServices.RestoreTextStyleProvider(providerFrom, providerType, parameters);
+            var provider = TextClipStyles.Restore(clip.ExtraData);
             if (provider is null)
             {
                 return false;
             }
 
-            if (parameters is not null)
-            {
-                provider.Parameters = new Dictionary<string, string>(parameters);
-            }
 
-            var updated = provider.HandleClipResize(
+            provider.HandleClipResize(
                 isInRatio: isInRatio,
                 TargetX: clip.TargetX,
                 TargetY: clip.TargetY,
                 TargetWidth: Math.Max(1, targetWidth),
                 TargetHeight: Math.Max(1, targetHeight));
 
-            if (updated is { Count: > 0 })
-            {
-                provider.Parameters = new Dictionary<string, string>(updated);
-            }
 
             // Editor resize overrides any previously-set manual font size.
-            provider.Parameters.Remove(BasicTextStyleProvider.ManualSizeKey);
+            provider.GetParameters().Remove(BasicTextStyleProvider.ManualSizeKey);
 
-            clip.ExtraData[TextStyleParametersKey] = new Dictionary<string, string>(provider.Parameters);
-            clip.ExtraData[TextStyleProviderParametersKey] = new Dictionary<string, string>(provider.Parameters);
+            TextClipStyles.Save(provider, clip.ExtraData);
+            ClipInfoBuilder.SyncTextStyleClipArguments(clip, provider);
 
             var entries = provider.BuildEntries();
             if (entries.Length > 0)
@@ -4860,13 +4862,8 @@ namespace projectFrameCut.InteractableEditor
                 || !TryReadExtraDataString(extraData, TextStyleProviderTypeKey, out var providerType))
                 return false;
 
-            var parameters = ReadTextStyleParameters(extraData);
-            var provider = Services.TextStyleServices.RestoreTextStyleProvider(
-                providerFrom, providerType, parameters);
+            var provider = TextClipStyles.Restore(extraData);
             if (provider is null) return false;
-
-            if (parameters is not null)
-                provider.Parameters = new Dictionary<string, string>(parameters);
 
             allowFree = provider.AllowFreeRatioResize;
             return true;
@@ -5027,17 +5024,12 @@ namespace projectFrameCut.InteractableEditor
                 return false;
             }
 
-            var parameters = ReadTextStyleParameters(data);
-            var provider = projectFrameCut.Services.TextStyleServices.RestoreTextStyleProvider(providerFrom, providerType, parameters);
+            var provider = TextClipStyles.Restore(data);
             if (provider is null)
             {
                 return false;
             }
 
-            if (parameters is not null)
-            {
-                provider.Parameters = new Dictionary<string, string>(parameters);
-            }
 
             // The provider builds entries in *project-pixel space*, where lengths
             // are interpreted against the clip's own bounding box. Ask
@@ -5093,20 +5085,7 @@ namespace projectFrameCut.InteractableEditor
             return !string.IsNullOrWhiteSpace(value);
         }
 
-        private static Dictionary<string, string>? ReadTextStyleParameters(Dictionary<string, object>? data)
-        {
-            if (TryReadStringDictionary(data, TextStyleParametersKey, out var parameters))
-            {
-                return parameters;
-            }
 
-            if (TryReadStringDictionary(data, TextStyleProviderParametersKey, out var providerParameters))
-            {
-                return providerParameters;
-            }
-
-            return null;
-        }
 
         private static bool TryReadStringDictionary(Dictionary<string, object>? data, string key, out Dictionary<string, string> values)
         {

@@ -1,4 +1,4 @@
-using projectFrameCut.Services;
+﻿using projectFrameCut.Services;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.HwAccelEngine;
@@ -47,6 +47,13 @@ public partial class RenderSettingPage : ContentPage
         { "SSAA 2x", "ssaa2x" },
         { "SSAA 4x", "ssaa4x" },
         { "SSAA 8x", "ssaa8x" },
+    };
+
+    Dictionary<string, string> OutputCacheBehaviors = new()
+    {
+        { SettingLocalizedResources.Render_OutputCacheBehavior_Chunk, "chunk" },
+        { SettingLocalizedResources.Render_OutputCacheBehavior_Frame, "frame" },
+        { SettingLocalizedResources.Render_OutputCacheBehavior_Disabled, "disabled" },
     };
 
     Dictionary<string, string> ChunkSizeModeMapping = new Dictionary<string, string>
@@ -128,6 +135,10 @@ public partial class RenderSettingPage : ContentPage
     private void BuildPPB()
     {
         var scrollY = (Content as ScrollView)?.ScrollY ?? 0;
+        string cacheBehavior = IsBoolSettingTrueOrDefault("render_enableDeferredComposition", false) ? "frame"
+            : IsBoolSettingTrueOrDefault("render_enableChunkRender", false) ? "chunk" : "disabled";
+        if (cacheBehavior == "frame" && IsBoolSettingTrueOrDefault("render_enableChunkRender", false))
+            WriteSetting("render_enableChunkRender", "False");
         var isCPUBigLittleCore = ThreadAffinityHelper.GetCpuCoreGroups().Count > 1;
         if (!isCPUBigLittleCore && !Settings.ContainsKey("render_enableThreadAffinity")) WriteSetting("render_enableThreadAffinity", "False");
         var suggestedMaxPendingFrame = ((int)(Environment.WorkingSet / ((1920 * 1080 * 3) + 32)) / 2 + 5) / 10 * 10;
@@ -151,7 +162,10 @@ public partial class RenderSettingPage : ContentPage
             .AddCheckbox("render_enableHwAccelRasterizer", SettingLocalizedResources.Render_EnableHwAccelRasterizer, IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true))
             .AddCheckbox("render_preferApproximateMixture", SettingLocalizedResources.Render_PreferApproximateMixture, IsBoolSettingTrueOrDefault("render_preferApproximateMixture", true))
             .AddSeparator()
-            .AddCheckbox("render_enableChunkRender", SettingLocalizedResources.Render_ChunkRender_Enable, IsBoolSettingTrueOrDefault("render_enableChunkRender", false))
+            .AddPicker("render_outputCacheBehavior", SettingLocalizedResources.Render_OutputCacheBehavior, OutputCacheBehaviors.Keys.ToArray(),
+                OutputCacheBehaviors.ReverseLookup(cacheBehavior, SettingLocalizedResources.Render_OutputCacheBehavior_Disabled))
+            .AppendWhen(cacheBehavior != "disabled",
+                p => p.AddCheckbox("render_chunkResume", SettingLocalizedResources.Render_ChunkRender_Resume, IsBoolSettingTrueOrDefault("render_chunkResume", true)))
             .AddCheckbox("render_enableThreadAffinity", SettingLocalizedResources.Render_EnableAutoThreadAffinity, IsBoolSettingTrueOrDefault("render_enableThreadAffinity", isCPUBigLittleCore), p => p.IsEnabled = isCPUBigLittleCore)
             .AppendWhen(!isCPUBigLittleCore, c => c.AddCustomChild(new Label { Text = SettingLocalizedResources.Render_EnableAutoThreadAffinity_Unsupported, TextColor = Colors.Gray, FontSize = 12 }))
             .AddSeparator()
@@ -219,9 +233,8 @@ public partial class RenderSettingPage : ContentPage
         {
             rootPPB
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle))
-                .AppendWhen(IsBoolSettingTrueOrDefault("render_enableChunkRender", false),
-                p => p.AddCheckbox("render_chunkResume", SettingLocalizedResources.Render_ChunkRender_Resume, IsBoolSettingTrueOrDefault("render_chunkResume", true))
-                .AddPicker("render_chunkSizeMode", SettingLocalizedResources.Render_ChunkRender_SizeMode, ChunkSizeModeMapping.Keys.ToArray(), ChunkSizeModeMapping.ReverseLookup(GetSetting("render_chunkSizeMode", "frames"), SettingLocalizedResources.Render_ChunkRender_SizeMode_Frames), null)
+                .AppendWhen(cacheBehavior == "chunk",
+                p => p.AddPicker("render_chunkSizeMode", SettingLocalizedResources.Render_ChunkRender_SizeMode, ChunkSizeModeMapping.Keys.ToArray(), ChunkSizeModeMapping.ReverseLookup(GetSetting("render_chunkSizeMode", "frames"), SettingLocalizedResources.Render_ChunkRender_SizeMode_Frames), null)
                 .AddEntry("render_chunkFrames", SettingLocalizedResources.Render_ChunkRender_Frames, GetSetting("render_chunkFrames", "3600"), SettingLocalizedResources.Render_ChunkRender_Frames_Desc, c => c.Keyboard = Keyboard.Numeric)
                 .AddEntry("render_chunkSeconds", SettingLocalizedResources.Render_ChunkRender_Seconds, GetSetting("render_chunkSeconds", "60"), SettingLocalizedResources.Render_ChunkRender_Seconds_Desc, c => c.Keyboard = Keyboard.Numeric)
                 .AddEntry("render_chunkParallelism", SettingLocalizedResources.Render_ChunkRender_Parallelism, GetSetting("render_chunkParallelism", "1"), SettingLocalizedResources.Render_ChunkRender_Parallelism_Desc, c => c.Keyboard = Keyboard.Numeric)
@@ -433,9 +446,16 @@ public partial class RenderSettingPage : ContentPage
                         WriteSetting(args.Id, mode);
                         break;
                     }
+                case "render_outputCacheBehavior":
+                    if (args.Value is string selected && OutputCacheBehaviors.TryGetValue(selected, out var behavior))
+                    {
+                        WriteSetting("render_enableChunkRender", (behavior == "chunk").ToString());
+                        WriteSetting("render_enableDeferredComposition", (behavior == "frame").ToString());
+                        BuildPPB();
+                    }
+                    break;
                 case "render_enableThreadAffinity":
                 case "render_enableDiskCacheRouting":
-                case "render_enableChunkRender":
                     if (args.Value != null)
                     {
                         WriteSetting(args.Id, args.Value?.ToString() ?? "");

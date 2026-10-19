@@ -91,7 +91,7 @@ Save-Project
 Disconnect-ProjectFrameCut
 ```
 
-时间参数均为项目帧；尺寸和位置分别用 `WidthPixels/HeightPixels/XPixels/YPixels`。查询名称按不区分大小写的子串匹配。动态字段用 `-Fields @{ FieldId = Value }`，先用 `Get-ProjectEffectProviderField -TypeName ...` 或 `Get-ProjectTextStyleField -StyleId ...` 查询字段。
+时间参数均为项目帧，字幕条目的 `StartMilliseconds/EndMilliseconds/OffsetMilliseconds` 使用源内容内的毫秒。尺寸和位置分别用 `WidthPixels/HeightPixels/XPixels/YPixels`。查询名称按不区分大小写的子串匹配。动态字段用 `-Fields @{ FieldId = Value }`，先用 `Get-ProjectEffectProviderField -TypeName ...` 或 `Get-ProjectTextStyleField -StyleId ...` 查询字段。
 
 `Add-ProjectClip` 必须指定已有 `TrackId`，可选 FilePath、AssetId，或不指定来源创建空片段；默认起点 0，空片段默认长度 300 帧。文件路径相对 PowerShell 当前文件系统位置解析；素材导入复制到项目 assets 目录，移除素材记录不会删除源文件。复制片段默认放到源片段末尾，使用独立的效果实例。
 
@@ -100,6 +100,165 @@ Disconnect-ProjectFrameCut
 `-ChangeReason` 可用于记录更详细的更新原因。此原因会在用户的UI上显示，也可以在历史记录里查询到。如果不指定此参数，将使用默认的预设值。
 
 `Get-ProjectHistory` 返回当前快照状态和完整历史节点列表。历史节点包含前后继快照、保存时间、变更原因和操作者。Undo、Redo 和 Restore 只切换当前 GUI 项目的历史状态，不会隐式调用 `Save-Project`；Redo 遇到多个分支时选择保存时间最新的后继。
+
+## 片段属性和几何
+
+`Get/Set-ProjectClipProperties -ClipId ...` 管理常规、来源和音频属性：
+
+| 参数 | 用途 |
+| --- | --- |
+| `Name/ClipColor` | 名称、时间线显示颜色；颜色用 `#RRGGBB` 或 `#AARRGGBB`，空字符串重新生成默认颜色 |
+| `AllowFreeScaleResize` | 自由缩放开关 |
+| `ExtendToWholeDraft` | 自动延展至整个草稿；启用时要求无限长度片段独占副轨 |
+| `TargetDecoder/HDRBrightnessOffset` | 视频解码器 ID、HDR 亮度偏移（-1 到 1） |
+| `AudioEnabled/AudioVolume/DetachAudio` | 音频开关、音量（0 到 1）、视频生成音轨解绑 |
+| `Red/Green/Blue/Alpha` | 纯色片段的颜色；RGB 为 0–65535，Alpha 为 0–1 |
+| `MaskSourceType/SourceArguments` | 遮罩来源和参数；参数使用不带 `Source.` 前缀的 Hashtable |
+| `AntiAliasMode` | 文本、字幕和矢量来源的 `Default/None/SSAA2x/SSAA4x/SSAA8x` 抗锯齿设置 |
+
+只修改显式传入的属性。查询返回 `AudioClipId`、音频状态和来源参数；解绑的返回值另包含 `DetachedAudioClipId`。属性只接受适用的片段类型。
+
+```powershell
+Get-ProjectClipProperties -ClipId $clip.ClipId
+Set-ProjectClipProperties -ClipId $clip.ClipId -ClipColor '#FF6699CC' -AudioVolume 0.5
+Set-ProjectClipProperties -ClipId $clip.ClipId -TargetDecoder HDRDecoderContext -HDRBrightnessOffset 0.2
+$properties = Set-ProjectClipProperties -ClipId $clip.ClipId -DetachAudio -PassThru
+```
+
+`Get/Set-ProjectClipGeometry -ClipId ...` 统一管理显示几何，适用于视频、图片、文本、字幕、纯色、矢量和遮罩片段：
+
+- `WidthPixels/HeightPixels/XPixels/YPixels/RotationDegrees`：尺寸、位置和旋转角度。
+- `CropEnabled/CropXPixels/CropYPixels/CropWidthPixels/CropHeightPixels/CropRotationDegrees`：裁切开关、矩形和旋转角度。
+
+裁切坐标为非负像素，宽高为正像素；传入裁切矩形时，用 `-CropEnabled $true` 启用。裁切默认将输出尺寸设为裁切尺寸，同一次调用可用 `WidthPixels/HeightPixels` 指定最终显示尺寸。静态几何写入会清除对应 Clip 参数节点的覆盖值和绑定。裁切与属性面板共享内部 Crop 状态。
+
+查询按项目尺寸解析尚未显式设置的宽高，并通过 `AutomaticWidth/AutomaticHeight` 标识。只修改位置或旋转时保留这些自动尺寸。
+
+`Set-ProjectClip` 和 `Set-ProjectVectorClip` 的显示尺寸、位置、旋转参数已迁移到 `Set-ProjectClipGeometry`；创建命令仍接受初始几何参数。`Set-ProjectClip` 继续设置名称、轨道、时间和文件来源，矢量画布/视口等内容参数继续使用 `Set-ProjectVectorClip`。
+
+```powershell
+Get-ProjectClipGeometry -ClipId $clip.ClipId
+Set-ProjectClipGeometry -ClipId $clip.ClipId -WidthPixels 640 -HeightPixels 360 -XPixels 100 -YPixels 80 -RotationDegrees 15
+Set-ProjectClipGeometry -ClipId $clip.ClipId -CropEnabled $true -CropXPixels 20 -CropYPixels 10 -CropWidthPixels 600 -CropHeightPixels 320
+```
+
+## 文字和字幕参数
+
+`Get/Set-ProjectTextClipArgument` 和 `Get/Set-ProjectSubtitleClipArgument` 使用片段的 `ArgumentFields`，并校验对应片段类型。查询支持 `-FieldId`，返回的 `Fields` 包含字段类型、当前静态值、范围、选项和绑定来源。
+
+```powershell
+(Get-ProjectTextClipArgument -ClipId $text.ClipId).Fields
+Set-ProjectTextClipArgument -ClipId $text.ClipId -Fields @{
+    'TextStyle.Text' = '新的标题'
+    'TextStyle.FontSize' = 96
+}
+
+(Get-ProjectSubtitleClipArgument -ClipId $subtitle.ClipId).Fields
+Set-ProjectSubtitleClipArgument -ClipId $subtitle.ClipId -Fields @{
+    'SubtitleStyle.FontSize' = 48
+    'SubtitleStyle.FillR' = 65535
+    'SubtitleStyle.FillG' = 65535
+    'SubtitleStyle.FillB' = 0
+    'SubtitleStyle.Alignment' = 'Center'
+    'SubtitleStyle.BottomMargin' = 80
+}
+Set-ProjectSubtitleClipArgument -ClipId $subtitle.ClipId -ResetToDefaults
+Save-Project
+```
+
+文字字段使用 `TextStyle.` 前缀，具体字段随样式 provider 变化，以查询结果为准。字幕字段使用 `SubtitleStyle.` 前缀，支持 `FontName/FontStyle/FontSize`、`FillR/FillG/FillB/FillA`、`StrokeR/StrokeG/StrokeB/StrokeA/StrokeThickness`、`X/Y/Rotation`、`CharacterSpacing/WordSpacing/LineSpacing`、`Alignment/BottomMargin/WrappingWidth`。RGB 通道为 0–65535，透明度为 0–1，尺寸和偏移使用像素，旋转使用角度；`WrappingWidth = 0` 恢复自动换行宽度。
+
+设置会保存 Clip 参数节点的静态覆盖，并清除所设字段的输入绑定；`-ResetToDefaults` 清除该节点全部覆盖和绑定，恢复片段自身的值。设置命令支持 `-WhatIf/-ChangeReason/-PassThru`。动态绑定继续使用 `Set-ProjectClipEffectBinding -ClipId ... -FieldId ...`，省略 `ProviderId` 即操作同一个 Clip 参数节点。
+
+## 特殊片段
+
+以下创建命令均要求已有 `TrackId`，支持 `Name/StartFrame/DurationFrames/WidthPixels/HeightPixels`，默认第 0 帧开始、持续 300 帧、使用项目尺寸。
+
+```powershell
+$solid = Add-ProjectSolidColorClip -TrackId $track.TrackId -Red 65535 -Green 0 -Blue 0 -Alpha 0.8 -PassThru
+Add-ProjectEmptyVideoClip -TrackId $track.TrackId
+Get-ProjectMaskSourceType
+$mask = Add-ProjectMaskClip -TrackId $track.TrackId -SourceType Blur -SourceArguments @{ Sigma = 8 } -PassThru
+Set-ProjectClipProperties -ClipId $mask.ClipId -SourceArguments @{ Sigma = 12 }
+```
+
+纯色默认为不透明白色。空视频源为透明画面。`Get-ProjectMaskSourceType` 返回可用来源及字段，遮罩的几何通过 `Set-ProjectClipGeometry` 调整。
+
+## 字幕内容和时间
+
+| 命令 | 用途 |
+| --- | --- |
+| `Get-ProjectSubtitleClip [-ClipId ...] [-TrackId ...]` | 查询字幕片段及条目，不返回样式 |
+| `Add-ProjectSubtitleClip -TrackId ... [-FilePath ...] [-Cues ...]` | 创建空字幕、导入字幕文件或从条目数组创建 |
+| `Set-ProjectSubtitleClip -ClipId ... [-FilePath ...] [-Cues ...] [-OffsetMilliseconds ...] [-FitLength]` | 替换条目、整体偏移和适配片段长度 |
+| `Get-ProjectSubtitleCue -ClipId ... [-CueId ...]` | 查询条目 ID、起止毫秒和 Markdown 内容 |
+| `Add-ProjectSubtitleCue -ClipId ... -StartMilliseconds ... -EndMilliseconds ... -Markdown ...` | 添加条目 |
+| `Set-ProjectSubtitleCue -ClipId ... -CueId ...` | 修改 `StartMilliseconds/EndMilliseconds/Markdown` |
+| `Remove-ProjectSubtitleCue -ClipId ... -CueId ...` | 删除条目 |
+
+`FilePath` 支持 SRT、VTT、ASS、SSA；可用 `EncodingName` 指定文件编码。`Cues` 为 Hashtable 数组，字段为 `StartMilliseconds/EndMilliseconds/Markdown` 和可选 `CueId`，不能与 `FilePath` 同时使用。条目时间位于源内容内，要求起点非负、结束晚于开始且条目互不重叠；条目 ID 必须唯一。导入现有片段时保留其样式；创建时使用默认样式。`OffsetMilliseconds` 可为负值，最终时间仍须非负。
+
+```powershell
+$sub = Add-ProjectSubtitleClip -TrackId $track.TrackId -FilePath './captions.srt' -PassThru
+$cue = Add-ProjectSubtitleCue -ClipId $sub.ClipId -StartMilliseconds 5000 -EndMilliseconds 7000 -Markdown '**开场**' -PassThru
+Set-ProjectSubtitleCue -ClipId $sub.ClipId -CueId $cue.CueId -EndMilliseconds 7500
+Set-ProjectSubtitleClip -ClipId $sub.ClipId -OffsetMilliseconds 500 -FitLength
+```
+
+## 时间线编辑
+
+```powershell
+$parts = Split-ProjectClip -ClipId $clip.ClipId -FrameIndex 60 -PassThru
+$group = Join-ProjectClip -ClipIds $parts.ClipId -Name '片段组' -PassThru
+Split-ProjectClipGroup -ClipId $group.ClipId
+Remove-ProjectTrack -TrackId $track.TrackId -WhatIf
+```
+
+拆分位置使用项目时间线帧号，并按变速后的源位置拆分、迁移边缘转场，返回左右两个片段。组合遵循界面行为：全部为矢量组件片段时合并为矢量组，其余片段生成分组标记；主轨和副轨不能混合组合。拆组支持分组标记及时间线矢量组。删除轨道会同时删除轨道内的片段并重新编号；完成后重新查询轨道 ID。
+
+## 外部来源
+
+```powershell
+$source = Add-ProjectExternalSource -FilePath './external-source' -PassThru
+Get-ProjectExternalSource
+Set-ProjectExternalSource -ImportId $source.ImportId -Loaded $false
+Set-ProjectExternalSource -ImportId $source.ImportId -Loaded $true
+$external = Add-ProjectExternalSourceClip -ImportId $source.ImportId -SourceId 'main' -SourceKind Video -TrackId $track.TrackId -PassThru
+Remove-ProjectExternalSource -ImportId $source.ImportId -WhatIf
+```
+
+`FilePath` 接受来源目录或 `external-source.json` 清单路径。`Add` 默认加载来源，可用 `-Loaded $false` 只导入；`-ReplaceImportId` 显式替换同清单 ID 的已有来源。`Get` 返回 `Kind=Project/Rpc`、加载状态、错误，以及 `VideoSources/AudioSources/MaskSources`。RPC 来源使用 `ClientId` 代替 `ImportId` 来加载、卸载、移除或创建片段。
+
+`Add-ProjectExternalSourceClip` 必须指定 `SourceId`、`SourceKind Video/Audio/Mask`，支持初始几何、时间和 `SourceStartFrame`；遮罩还支持 `SourceArguments`。来源必须已成功加载。加载状态属于当前会话，来源导入和移除会更新项目中的来源索引。
+
+## 转场
+
+```powershell
+Get-ProjectTransformType
+Get-ProjectTransformType -Audio
+Get-ProjectClipTransform -ClipId $clip.ClipId
+Set-ProjectClipTransform -ClipId $clip.ClipId -Side Right -TypeName Fade -InputMode OneInput -DurationFrames 30
+Set-ProjectClipTransform -ClipId $clip.ClipId -Side Right -Enabled $false
+Get-ProjectClipTransformPreview -ClipId $clip.ClipId -Side Right
+Remove-ProjectClipTransform -ClipId $clip.ClipId -Side Right
+```
+
+具体 `TypeName` 以查询结果为准。`Set` 支持 `InputMode OneInput/TwoInput`、`DurationFrames`、`RenderOrder BeforeEffects/AfterEffects`、`Enabled`、`Fields` 和 `ResetToDefaults`。创建时必须指定类型；修改时可省略类型并保留已有字段。省略输入模式时沿用已有模式，创建时优先使用可用的双输入模式。双输入转场自动匹配同层相邻片段，并按可用时长裁定最终长度。
+
+查询返回实际拥有转场的 `OwnerClipId`、邻接片段、provider、配置时长和解析时长。画面转场预览返回视频文件 `Path`；支持通过 `TypeName/Fields/InputMode` 预览尚未应用的配置。
+
+## 项目设置
+
+```powershell
+Get-ProjectSettings
+Set-ProjectSettings -FrameRate 60 -WidthPixels 1920 -HeightPixels 1080 -EnableHDR $true -HdrMaximumBrightness 1000 -SdrClipBrightness 100
+Set-ProjectSettings -CoverFilePath './cover.png' -WriteCoverAsFirstFrame $true
+Set-ProjectSettings -UserDefinedProperties @{ Author = 'Me'; ObsoleteKey = $null }
+Set-ProjectSettings -ClearCover
+Save-Project
+```
+
+封面导入项目的 `assets/covers` 目录；清除封面时同时关闭封面写入首帧。自定义属性按键更新，null 删除键。帧率修改沿用界面设置行为，片段时间线位置仍以项目帧表示。所有编辑命令通过项目历史流程记录修改，最后显式调用 `Save-Project`。
 
 ## 矢量剪辑与组件
 
@@ -112,13 +271,13 @@ Disconnect-ProjectFrameCut
 | `Add-ProjectVectorCanvasClip -TrackId ... [-Components ...]` | 创建空画布或带初始组件的画布 |
 | `Add-ProjectVectorComponentClip -TrackId ... -TypeName ... [-Parameters ...]` | 创建独立组件剪辑 |
 | `Add-ProjectVectorComponentClip -TrackId ... -FilePath ...` | 从 SVG 或组件 JSON 创建组件剪辑 |
-| `Set-ProjectVectorClip -ClipId ...` | 设置名称、轨道、时间、显示位置尺寸、旋转、抗锯齿，以及组件剪辑的画布和视口 |
+| `Set-ProjectVectorClip -ClipId ...` | 设置名称、轨道、时间、抗锯齿，以及组件剪辑的画布和视口 |
 | `Get-ProjectVectorComponent -ClipId ... [-ComponentId ...] [-ParentComponentId ...] [-TypeName ...]` | 递归查询组件，返回所属剪辑、父组和组件 ID |
 | `Add-ProjectVectorComponent -ClipId ... -TypeName ... [-Parameters ...] [-ParentComponentId ...] [-Index ...]` | 添加组件或分组；省略父组时添加到根列表 |
 | `Set-ProjectVectorComponent -ClipId ... -ComponentId ... [-Name ...] [-Parameters ...] [-Index ...] [-ResetToDefaults]` | 修改组件参数、名称和同级顺序，或恢复默认参数 |
 | `Remove-ProjectVectorComponent -ClipId ... -ComponentId ...` | 删除组件；删除分组时同时删除组内组件 |
 
-创建剪辑必须指定已有 `TrackId`，默认从第 0 帧开始、持续 300 帧。创建和设置剪辑都支持 `Name/StartFrame/DurationFrames/SourceStartFrame/WidthPixels/HeightPixels/XPixels/YPixels/RotationDegrees/AntiAliasMode`。`AntiAliasMode` 可选 `Default/None/SSAA2x/SSAA4x/SSAA8x`。
+创建剪辑必须指定已有 `TrackId`，默认从第 0 帧开始、持续 300 帧。创建命令支持初始 `WidthPixels/HeightPixels/XPixels/YPixels/RotationDegrees`；后续显示几何使用 `Set-ProjectClipGeometry`。创建和设置剪辑都支持 `Name/StartFrame/DurationFrames/SourceStartFrame/AntiAliasMode`。`AntiAliasMode` 可选 `Default/None/SSAA2x/SSAA4x/SSAA8x`。
 
 组件剪辑另支持 `CanvasWidthPixels/CanvasHeightPixels/SourceLengthFrames/Viewport`。`Viewport` 为 `@(x, y, width, height)`，宽高必须为正；`SourceLengthFrames` 是源内容长度，独立于时间线上的剪辑长度。`Set-ProjectVectorClip -UpdateBounds` 根据组件重新计算视口，不能同时指定 `Viewport`。修改组件时默认更新组件剪辑的边界，可通过 `-UpdateBounds $false` 保留当前视口；画布尺寸由剪辑自身的宽高控制。
 
@@ -144,7 +303,8 @@ Get-ProjectVectorComponent -ClipId $canvas.ClipId
 $shape = Add-ProjectVectorComponentClip -TrackId $track.TrackId -TypeName RoundedRectangle `
   -Name '圆角矩形' -Parameters @{ Width = 0.25; Height = 0.15; CornerRadius = 0.02 } -PassThru
 Set-ProjectVectorClip -ClipId $shape.ClipId -StartFrame 120 -DurationFrames 90 `
-  -XPixels 100 -YPixels 80 -WidthPixels 480 -HeightPixels 270 -RotationDegrees 15 -AntiAliasMode SSAA4x
+  -AntiAliasMode SSAA4x
+Set-ProjectClipGeometry -ClipId $shape.ClipId -XPixels 100 -YPixels 80 -WidthPixels 480 -HeightPixels 270 -RotationDegrees 15
 Get-ProjectVectorClip -ClipId $shape.ClipId
 
 Add-ProjectVectorComponentClip -TrackId $track.TrackId -FilePath './logo.svg' -StartFrame 210
@@ -192,6 +352,17 @@ Get-ProjectClipEffectGraph -ClipId $clipId
 ```
 
 `Add/Set-ProjectClipEffectProvider` 新增 `-Pipeline Picture/NativeContent` 和 `-Metadata @{ ... }`，metadata 值为 null 时删除对应键，可配置实现类型、连续效果和节点位置等 provider 元数据。`Add` 的 `-NoAutoConnect` 保留未连线的节点；默认仍自动接入输出链。静态 `-Fields` 写入会解除对应字段绑定。`Set-ProjectClipArgument -ResetToDefaults` 同时清除静态覆盖和参数绑定。
+
+关键帧通过独立 step 字段编辑；字段均为静态值，`Progress` 范围为 0～1。修改进度后索引会重新排序，请使用返回的列表更新索引。
+
+```powershell
+$effect = Add-ProjectClipEffectProvider -ClipId $clipId -TypeName ProgressPlacer -PassThru
+Get-ProjectClipEffectStep -ClipId $clipId -ProviderId $effect.ProviderId
+Add-ProjectClipEffectStep -ClipId $clipId -ProviderId $effect.ProviderId -Fields @{ Progress = 0; TargetX = 100 } -PassThru
+Set-ProjectClipEffectStep -ClipId $clipId -ProviderId $effect.ProviderId -StepIndex 0 -Fields @{ Progress = 0.5; Rotation = 30 } -PassThru
+Remove-ProjectClipEffectStep -ClipId $clipId -ProviderId $effect.ProviderId -StepIndex 0 -PassThru
+```
+
 
 字段和管线不兼容、循环依赖及无效分组会拒绝写入。允许逐步建立尚未接完的图；使用图快照的 `Diagnostics` 检查剩余问题，图完整后重新生成运行时效果。写命令沿用 `-WhatIf/-Confirm`、`-PassThru`、`-ChangeReason` 和项目历史流程。
 

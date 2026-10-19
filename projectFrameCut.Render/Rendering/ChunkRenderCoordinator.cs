@@ -76,6 +76,7 @@ public sealed class ChunkRenderCoordinator
     public string ManifestPath => Path.Combine(JobDirectory, "manifest.json");
     public string MergedPath => Path.Combine(JobDirectory, $"merged{_extension}");
     public int ChunkCount => _manifest?.Chunks.Count ?? 0;
+    public event Action<ChunkRenderSegment>? OnChunkCompleted;
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -195,6 +196,7 @@ public sealed class ChunkRenderCoordinator
                     await UpdateEntryAsync(entry, ChunkStatus.Completed, null, token).ConfigureAwait(false);
                     var completed = CreateProgress(entry.Index, 1, reused: false);
                     progress?.Invoke(completed);
+                    OnChunkCompleted?.Invoke(segment);
                 }
                 catch (OperationCanceledException)
                 {

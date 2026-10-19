@@ -75,7 +75,7 @@ public sealed class SetProjectClipEffectOutputCommand : ProjectWriteCmdlet
 }
 
 [Cmdlet("Get", "ProjectClipArgument")]
-public sealed class GetProjectClipArgumentCommand : ProjectCmdlet
+public class GetProjectClipArgumentCommand : ProjectCmdlet
 {
     protected override GuiProjectOperation Operation => GuiProjectOperation.GetClipArgument;
     [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)] public Guid ClipId { get; set; }
@@ -83,7 +83,7 @@ public sealed class GetProjectClipArgumentCommand : ProjectCmdlet
 }
 
 [Cmdlet("Set", "ProjectClipArgument", SupportsShouldProcess = true)]
-public sealed class SetProjectClipArgumentCommand : ProjectWriteCmdlet
+public class SetProjectClipArgumentCommand : ProjectWriteCmdlet
 {
     protected override GuiProjectOperation Operation => GuiProjectOperation.SetClipArgument;
     [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)] public Guid ClipId { get; set; }

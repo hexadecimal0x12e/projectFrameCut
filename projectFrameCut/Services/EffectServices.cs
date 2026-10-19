@@ -91,6 +91,23 @@ namespace projectFrameCut.Services
             }
         }
 
+        public static IKeyFramedEffectUIProvider GetStepUIProvider(IKeyFramedEffectProvider provider)
+        {
+            var factory = PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>()
+                .SelectMany(p => p.EffectProviderUIProvider)
+                .FirstOrDefault(p => p.Key == provider.TypeName + "_Step").Value;
+            if (factory is not null)
+            {
+                try
+                {
+                    return factory(provider) as IKeyFramedEffectUIProvider
+                        ?? throw new InvalidOperationException("A step UI must implement IKeyFramedEffectUIProvider.");
+                }
+                catch (Exception ex) { projectFrameCut.Shared.Logger.Log(ex, $"Create step UI for '{provider.TypeName}'", typeof(EffectServices)); }
+            }
+            return new ApplicationPluginBase.Effect.KeyFramedEffectUI(provider);
+        }
+
         public static Dictionary<string, string> GetLocalizedEffectProviderNames(string splitter = " ", bool haveSubFix = true)
         {
             string GetEffectDisplayName(KeyValuePair<string, Func<IEffectProvider>> e)

@@ -112,7 +112,7 @@ public class RemoteEffectProvider : IEffectProvider
         return Build().First();
     }
 
-    private IsolationProviderState CreateState(List<IsolationPayloadLease> leases)
+    protected IsolationProviderState CreateState(List<IsolationPayloadLease> leases)
     {
         var fields = new List<IsolationFieldDescriptor>();
         foreach (var item in Fields)
@@ -156,7 +156,7 @@ public class RemoteEffectProvider : IEffectProvider
         };
     }
 
-    private TResponse Invoke<TRequest, TResponse>(RenderOperation operation, TRequest request)
+    protected TResponse Invoke<TRequest, TResponse>(RenderOperation operation, TRequest request)
         => _session.InvokeAsync<TRequest, TResponse>(operation, request).AsTask().GetAwaiter().GetResult();
 
     private static EffectArgumentFieldDescriptor ToDescriptor(IsolationFieldDescriptor value) => new()
@@ -173,7 +173,7 @@ public class RemoteEffectProvider : IEffectProvider
         IsDynamic = value.IsDynamic,
     };
 
-    private static IEffectArgumentField ToField(IsolationFieldDescriptor value)
+    internal static IEffectArgumentField ToField(IsolationFieldDescriptor value)
     {
         var type = (EffectArgumentFieldType)value.FieldType;
         var fieldValue = IsolationValueConverter.ToObject(value.Value) ?? value.DefaultValue;
@@ -191,7 +191,7 @@ public class RemoteEffectProvider : IEffectProvider
     }
 }
 
-public sealed class RemoteMultipleOutputEffectProvider : RemoteEffectProvider, IMultipleOutputEffectProvider
+public class RemoteMultipleOutputEffectProvider : RemoteEffectProvider, IMultipleOutputEffectProvider
 {
     public RemoteMultipleOutputEffectProvider(IPluginIsolationSession session, IsolationProviderDescriptor descriptor) : base(session, descriptor)
         => OutFields = descriptor.OutputFields.ToDictionary(x => x.Id, x => new EffectArgumentFieldDescriptor

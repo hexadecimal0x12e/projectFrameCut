@@ -1,3 +1,5 @@
+﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Interaction;
@@ -44,7 +46,6 @@ public sealed class DynamicPreview : IDisposable
     private const int ParallelPreparationThreshold = 2;
     private const int MaxCachedFallbackFrames = 120;
     private const int MaxDiskCachedFallbackFrames = 1500;
-    private const string TextStyleParametersKey = "TextStyleProvider_Parameters";
     private const string TextStyleProviderFromKey = "TextStyleProvider_FromPlugin";
     private const string TextStyleProviderTypeKey = "TextStyleProvider_TypeName";
     private static readonly int s_maxPreparationParallelism = Math.Max(1, Environment.ProcessorCount / 2);
@@ -1078,14 +1079,8 @@ public sealed class DynamicPreview : IDisposable
                 var styleProvider = ResolveTextClipStyleProvider(clip);
                 if (styleProvider is not null)
                 {
-                    var savedParams = ReadTextStyleParameters(clip.ExtraData);
-                    if (savedParams is not null)
-                    {
-                        styleProvider.Parameters = savedParams;
-                    }
-
+                    styleProvider = TextClipStyles.Restore(clip.ExtraData) ?? styleProvider;
                     clip.ExtraData ??= new Dictionary<string, object>(StringComparer.Ordinal);
-                    clip.ExtraData[TextStyleParametersKey] = new Dictionary<string, string>(styleProvider.Parameters);
                     var resolvedEntries = TextServices.ResolveEntries(textClip);
                     if (resolvedEntries.Count == 0)
                     {
@@ -1577,7 +1572,7 @@ public sealed class DynamicPreview : IDisposable
     private static IClipDynamicPreviewProvider? ResolveProvider(IClip clip)
     {
         if (PluginManager.LoadedPlugins.TryGetValue(clip.FromPlugin, out var ownerPlugin)
-            && ownerPlugin is IApplicationPluginBase appPlugin)
+            && ownerPlugin is { } appPlugin)
         {
             var provider = ResolveProviderFromDictionary(appPlugin.ClipDynamicPreviewProvider, clip);
             if (provider is not null)
@@ -1599,14 +1594,14 @@ public sealed class DynamicPreview : IDisposable
         if (!string.IsNullOrWhiteSpace(providerFrom)
             && !string.IsNullOrWhiteSpace(providerType)
             && PluginManager.LoadedPlugins.TryGetValue(providerFrom, out var ownerPlugin)
-            && ownerPlugin is IApplicationPluginBase appPlugin
+            && ownerPlugin is { } appPlugin
             && appPlugin.TextClipStyleProvider.TryGetValue(providerType, out var factory))
         {
             return factory();
         }
 
         if (PluginManager.LoadedPlugins.TryGetValue(clip.FromPlugin, out var clipOwner)
-            && clipOwner is IApplicationPluginBase clipPlugin)
+            && clipOwner is { } clipPlugin)
         {
             return ResolveTextClipStyleProviderFromDictionary(clipPlugin.TextClipStyleProvider, clip);
         }
@@ -1662,20 +1657,7 @@ public sealed class DynamicPreview : IDisposable
         return raw.ToString();
     }
 
-    private static Dictionary<string, string>? ReadTextStyleParameters(Dictionary<string, object>? data)
-    {
-        if (TryReadStringDictionary(data, TextStyleParametersKey, out var parameters))
-        {
-            return parameters;
-        }
 
-        if (TryReadStringDictionary(data, TextStyleParametersKey, out var providerParameters))
-        {
-            return providerParameters;
-        }
-
-        return null;
-    }
 
     private static bool TryReadStringDictionary(Dictionary<string, object>? data, string key, out Dictionary<string, string> values)
     {
@@ -1912,7 +1894,7 @@ public sealed class DynamicPreview : IDisposable
     private static IEffectDynamicPreviewProvider? ResolveEffectProvider(IEffect effect, Type typeOfInput)
     {
         if (PluginManager.LoadedPlugins.TryGetValue(effect.FromPlugin, out var ownerPlugin)
-            && ownerPlugin is IApplicationPluginBase appPlugin)
+            && ownerPlugin is { } appPlugin)
         {
             var provider = ResolveEffectProviderFromDictionary(appPlugin.EffectDynamicPreviewProvider, effect, typeOfInput);
             if (provider is not null)

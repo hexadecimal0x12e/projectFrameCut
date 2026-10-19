@@ -123,7 +123,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private AVBufferRef* _hwDeviceCtx;
         private AVHWDeviceType _hwDeviceType = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
         private string? _resolvedEncoderName;
-        private List<string>? _hwEncoderCandidates;
+        private List<string>? _encoderCandidates;
 
         public bool IsOpened => _fmtCtx != null;
 
@@ -137,6 +137,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public IPicture.PicturePixelMode? TargetPPB => _colorDepth;
 
         public bool PreferToSpeed { get; set; }
+
+        public bool UseExactEncoder { get; set; }
 
         // ────────────────────────── Codec detection ──────────────────────────
 
@@ -180,7 +182,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             // ── 2. Resolve encoder ──
             AVCodec* codec = ResolveEncoder(CodecName);
             if (codec == null)
-                throw new EntryPointNotFoundException($"Could not find any hardware encoder for '{CodecName}'. Disable hardware acceleration and try again, or try install codec extension-pack, or reinstall projectFrameCut.");
+                throw new EntryPointNotFoundException($"Could not find a video encoder for '{CodecName}'.");
 
             // ── 3. Create stream ──
             _videoStream = ffmpeg.avformat_new_stream(_fmtCtx, codec);
@@ -211,7 +213,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             // After setting hw_device_ctx, query the encoder's supported pixel formats
             // and pick the best one that is compatible with our input.
-            _pixelFormat = SelectHardwarePixelFormat(codec) ?? _pixelFormat;
+            _pixelFormat = FFmpegHelper.IsHardwareVideoEncoder(_resolvedEncoderName ?? string.Empty)
+                ? SelectHardwarePixelFormat(codec, _pixelFormat) ?? _pixelFormat
+                : RestoreOriginalPixelFormat();
 
             _codecCtx->pix_fmt = _pixelFormat;
 
@@ -227,31 +231,30 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 ffmpeg.av_dict_free(&opts);
 
-                // ── Try remaining HW encoders in order ──
-                if (_hwEncoderCandidates != null)
+                if (_encoderCandidates != null)
                 {
                     int currentIndex = _resolvedEncoderName != null
-                        ? _hwEncoderCandidates.IndexOf(_resolvedEncoderName)
+                        ? _encoderCandidates.IndexOf(_resolvedEncoderName)
                         : -1;
 
-                    for (int i = currentIndex + 1; i < _hwEncoderCandidates.Count; i++)
+                    for (int i = currentIndex + 1; i < _encoderCandidates.Count; i++)
                     {
-                        string nextHwName = _hwEncoderCandidates[i];
+                        string nextEncoderName = _encoderCandidates[i];
 
-                        // Tear down old HW state
                         TeardownHardware();
 
-                        AVCodec* nextHwCodec = ffmpeg.avcodec_find_encoder_by_name(nextHwName);
-                        if (nextHwCodec == null) continue;
+                        AVCodec* nextCodec = ffmpeg.avcodec_find_encoder_by_name(nextEncoderName);
+                        if (nextCodec == null) continue;
+                        if (!FFmpegHelper.IsHardwareVideoEncoder(nextEncoderName))
+                            Log($"[VideoWriterHWAccel] Encoder '{_resolvedEncoderName}' failed: {FFmpegHelper.GetErrorString(ret)}. Trying software encoder '{nextEncoderName}'.", "warn");
 
-                        _resolvedEncoderName = nextHwName;
+                        _resolvedEncoderName = nextEncoderName;
 
-                        // Recreate codec context for this encoder
                         fixed (AVCodecContext** pCodecCtx = &_codecCtx) { ffmpeg.avcodec_free_context(pCodecCtx); }
-                        _codecCtx = ffmpeg.avcodec_alloc_context3(nextHwCodec);
+                        _codecCtx = ffmpeg.avcodec_alloc_context3(nextCodec);
                         if (_codecCtx == null) continue;
 
-                        _codecCtx->codec_id = nextHwCodec->id;
+                        _codecCtx->codec_id = nextCodec->id;
                         _codecCtx->codec_type = AVMediaType.AVMEDIA_TYPE_VIDEO;
                         _codecCtx->width = Width;
                         _codecCtx->height = Height;
@@ -259,41 +262,38 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         _videoStream->time_base = _codecCtx->time_base;
                         _codecCtx->framerate = new AVRational { num = FramePerSecond, den = 1 };
                         _codecCtx->gop_size = Math.Max(FramePerSecond * 3, 30);
-                        _codecCtx->max_b_frames = nextHwName.Contains("mediacodec", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+                        _codecCtx->max_b_frames = nextEncoderName.Contains("mediacodec", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
                         _codecCtx->bit_rate = _bitRate;
                         _codecCtx->rc_max_rate = _bitRate * 2;
                         _codecCtx->rc_buffer_size = _bitRate > int.MaxValue / 2 ? int.MaxValue / 2 : (int)(_bitRate * 2);
 
-                        // Setup HW device for this encoder
-                        SetupHardwareDevice(nextHwCodec);
+                        SetupHardwareDevice(nextCodec);
 
-                        // Select pixel format supported by this encoder
-                        AVPixelFormat? hwPixFmt = SelectHardwarePixelFormat(nextHwCodec);
-                        _pixelFormat = hwPixFmt ?? RestoreOriginalPixelFormat();
+                        _pixelFormat = FFmpegHelper.IsHardwareVideoEncoder(nextEncoderName)
+                            ? SelectHardwarePixelFormat(nextCodec, RestoreOriginalPixelFormat()) ?? RestoreOriginalPixelFormat()
+                            : RestoreOriginalPixelFormat();
                         _codecCtx->pix_fmt = _pixelFormat;
 
                         if ((_fmtCtx->oformat->flags & ffmpeg.AVFMT_GLOBALHEADER) != 0)
                             _codecCtx->flags |= ffmpeg.AV_CODEC_FLAG_GLOBAL_HEADER;
 
-                        // Configure HW encoder options
                         AVDictionary* hwOpts = null;
-                        ConfigureHardwareEncoderOptions(nextHwCodec, &hwOpts);
+                        ConfigureHardwareEncoderOptions(nextCodec, &hwOpts);
 
-                        ret = ffmpeg.avcodec_open2(_codecCtx, nextHwCodec, &hwOpts);
+                        ret = ffmpeg.avcodec_open2(_codecCtx, nextCodec, &hwOpts);
                         ffmpeg.av_dict_free(&hwOpts);
 
                         if (ret >= 0)
                         {
-                            Log($"[VideoWriterHWAccel] Successfully opened hardware encoder '{nextHwName}' for codec '{CodecName}'.");
+                            Log($"[VideoWriterHWAccel] Opened encoder '{nextEncoderName}' for codec '{CodecName}'.");
                             break;
                         }
                     }
                 }
 
-                // ── If all HW encoders failed, throw ──
                 if (ret < 0)
                 {
-                    throw new InvalidOperationException($"All hardware encoders failed for '{CodecName}', try disable 'Use hardware accelerated encoding' option in Settings -> General. Last error: {FFmpegHelper.GetErrorString(ret) ?? $"error code {ret}"}(code: 0x{ret:x8}).")
+                    throw new InvalidOperationException($"All video encoders failed for '{CodecName}'. Last error: {FFmpegHelper.GetErrorString(ret) ?? $"error code {ret}"}(code: 0x{ret:x8}).")
                     {
                         HResult = ret
                     };
@@ -337,11 +337,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _framePoolIndex = 0;
 
             // Source frame: always RGBA / RGBA64LE in system memory
-            var srcPixFmt =
-                (_pixelFormat == AVPixelFormat.AV_PIX_FMT_GBRP16LE ||
-                 _pixelFormat == AVPixelFormat.AV_PIX_FMT_YUV420P16LE ||
-                 _pixelFormat == AVPixelFormat.AV_PIX_FMT_RGBA64LE ||
-                 _pixelFormat == AVPixelFormat.AV_PIX_FMT_BGRA64LE)
+            var srcPixFmt = FFmpegHelper.GetAVPixelFormatBitsPerPixel(_pixelFormat) > 8
                 ? AVPixelFormat.AV_PIX_FMT_RGBA64LE
                 : AVPixelFormat.AV_PIX_FMT_RGBA;
 
@@ -360,8 +356,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             if (_sws == null) throw new InvalidOperationException("Couldn't get the SWS context.");
 
+            _codecName = _resolvedEncoderName ?? _codecName;
             _inited = true;
-            Log($"[VideoWriterHWAccel] Initialized successfully for video '{OutputPath}' using hardware acceleration '{_resolvedEncoderName}'.");
+            Log($"[VideoWriterHWAccel] Initialized video '{OutputPath}' with encoder '{_resolvedEncoderName}'.");
         }
 
         // ────────────────────────── Append ──────────────────────────
@@ -914,30 +911,32 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
         /// <summary>
-        /// Resolve which hardware encoder to use.
+        /// Try hardware encoders first, then software encoders for the same format.
         /// </summary>
         private AVCodec* ResolveEncoder(string codecName)
         {
             if (string.IsNullOrWhiteSpace(codecName))
                 return null;
 
-            // Try hardware encoder
             if (_resolvedEncoderName == null)
             {
-                _hwEncoderCandidates = GetAllHardwareEncoderNames(codecName);
-                if (_hwEncoderCandidates.Count > 0)
+                _encoderCandidates = UseExactEncoder ? [codecName] : GetAllHardwareEncoderNames(codecName);
+                foreach (string name in UseExactEncoder ? Array.Empty<string>() : FFmpegHelper.GetSoftwareVideoEncoders(codecName))
                 {
-                    string hwName = _hwEncoderCandidates[0];
-                    AVCodec* codec = ffmpeg.avcodec_find_encoder_by_name(hwName);
+                    if (!_encoderCandidates.Contains(name)) _encoderCandidates.Add(name);
+                }
+                if (_encoderCandidates.Count > 0)
+                {
+                    string encoderName = _encoderCandidates[0];
+                    AVCodec* codec = ffmpeg.avcodec_find_encoder_by_name(encoderName);
                     if (codec != null)
                     {
-                        _resolvedEncoderName = hwName;
+                        _resolvedEncoderName = encoderName;
                         return codec;
                     }
                 }
             }
 
-            // No hardware encoder found
             return null;
         }
 
@@ -946,6 +945,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         /// </summary>
         private void SetupHardwareDevice(AVCodec* codec)
         {
+            if (!FFmpegHelper.IsHardwareVideoEncoder(_resolvedEncoderName ?? string.Empty)) return;
             // Try encoder-specific device type first, then fall back to best available
             _hwDeviceType = GetDeviceTypeForEncoder(_resolvedEncoderName ?? string.Empty);
             if (_hwDeviceType == AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
@@ -983,7 +983,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         /// Select the best pixel format supported by the HW encoder.
         /// Falls back to the original pixel format if no suitable format is found.
         /// </summary>
-        private static AVPixelFormat? SelectHardwarePixelFormat(AVCodec* codec)
+        private static AVPixelFormat? SelectHardwarePixelFormat(AVCodec* codec, AVPixelFormat requested)
         {
             if (codec == null) return null;
 
@@ -1011,6 +1011,19 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
 
             if (supported.Count == 0) return null;
+
+            int depth = FFmpegHelper.GetAVPixelFormatBitsPerPixel(requested);
+            if (depth > 8)
+            {
+                foreach (var format in new[] { requested, AVPixelFormat.AV_PIX_FMT_P010LE,
+                    AVPixelFormat.AV_PIX_FMT_YUV420P10LE, AVPixelFormat.AV_PIX_FMT_P016LE, AVPixelFormat.AV_PIX_FMT_YUV444P10LE })
+                {
+                    if (supported.Contains(format)
+                        && FFmpegHelper.GetAVPixelFormatBitsPerPixel(format) >= depth)
+                        return format;
+                }
+                return null;
+            }
 
             // Preferred order: NV12 > YUV420P > P010 (10-bit) > other YUV
             AVPixelFormat[] preferred =
@@ -1080,6 +1093,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 // sufficient, so avoid optional device-dependent rate-control
                 // and quality options here.
                 ffmpeg.av_dict_set(opts, "ndk_codec", "0", 0);
+            }
+            else if (name == "libx264" || name == "libx265")
+            {
+                ffmpeg.av_dict_set(opts, "preset", PreferToSpeed ? "veryfast" : "medium", 0);
             }
         }
 

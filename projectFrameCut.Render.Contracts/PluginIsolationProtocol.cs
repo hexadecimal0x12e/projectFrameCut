@@ -412,6 +412,7 @@ public sealed class IsolationProviderDescriptor
     [ProtoMember(14)] public bool HasMultipleOutputs { get; set; }
     [ProtoMember(15)] public List<IsolationFieldDescriptor> OutputFields { get; set; } = [];
     [ProtoMember(16)] public bool IsDeterministic { get; set; }
+    [ProtoMember(17)] public bool HasKeyFrames { get; set; }
 }
 
 [ProtoContract]
@@ -430,6 +431,41 @@ public sealed class IsolationProviderState
 public sealed class IsolationBuildProviderRequest
 {
     [ProtoMember(1)] public IsolationProviderState Provider { get; set; } = new();
+}
+
+[ProtoContract]
+public enum IsolationKeyFrameOperation
+{
+    [ProtoEnum] Get = 0,
+    [ProtoEnum] Create = 1,
+    [ProtoEnum] Add = 2,
+    [ProtoEnum] Update = 3,
+    [ProtoEnum] Remove = 4,
+}
+
+[ProtoContract]
+public sealed class IsolationKeyFrameStep
+{
+    [ProtoMember(1)] public double Progress { get; set; }
+    [ProtoMember(2)] public List<IsolationFieldDescriptor> Fields { get; set; } = [];
+}
+
+[ProtoContract]
+public sealed class IsolationKeyFrameRequest
+{
+    [ProtoMember(1)] public IsolationProviderState Provider { get; set; } = new();
+    [ProtoMember(2)] public IsolationKeyFrameOperation Operation { get; set; }
+    [ProtoMember(3)] public int Index { get; set; }
+    [ProtoMember(4)] public double Progress { get; set; }
+    [ProtoMember(5)] public IsolationKeyFrameStep? Step { get; set; }
+}
+
+[ProtoContract]
+public sealed class IsolationKeyFrameResult
+{
+    [ProtoMember(1)] public IsolationProviderState Provider { get; set; } = new();
+    [ProtoMember(2)] public List<IsolationKeyFrameStep> Steps { get; set; } = [];
+    [ProtoMember(3)] public IsolationKeyFrameStep? Step { get; set; }
 }
 
 [ProtoContract]

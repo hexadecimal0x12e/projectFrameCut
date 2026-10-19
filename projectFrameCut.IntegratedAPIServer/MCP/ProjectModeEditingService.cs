@@ -52,6 +52,7 @@ internal static class ProjectModeEditingService
             "vectorComponentTypes" => new { types = BuiltInVectorTypes, count = BuiltInVectorTypes.Length },
             "vectorComponents" => QueryVectorComponents(FindClip(draft, arguments), arguments),
             "clipEffectProviders" => QueryProviders(FindClip(draft, arguments)),
+            "clipEffectSteps" => QueryEffectSteps(FindClip(draft, arguments), arguments),
             "validateEffectProviderGraph" => ValidateProviderGraph(FindClip(draft, arguments)),
             _ => throw new ArgumentException($"Unknown ProjectMode query '{kind}'.", nameof(arguments)),
         };
@@ -75,6 +76,7 @@ internal static class ProjectModeEditingService
             "addEffectProvider" => AddEffectProvider(workspace, arguments),
             "updateEffectProvider" => UpdateEffectProvider(workspace, arguments),
             "removeEffectProvider" => RemoveEffectProvider(workspace, arguments),
+            "addEffectStep" or "setEffectStep" or "removeEffectStep" => EditEffectStep(workspace, arguments),
             "connectEffectProviderInput" => ConnectEffectProviderInput(workspace, arguments),
             "setEffectProviderOutput" => SetEffectProviderOutput(workspace, arguments),
             "bindEffectProviderField" => BindEffectProviderField(workspace, arguments),
@@ -290,6 +292,59 @@ internal static class ProjectModeEditingService
         EnsureUniqueComponentIds(components);
         WriteVectorComponents(clip, components);
         return new { clipId = clip.Id, components, count = components.Count };
+    }
+
+    private static object QueryEffectSteps(ClipDraftDTO clip, JsonElement arguments)
+    {
+        var providers = RestoreProviders(clip, out _);
+        var provider = FindProvider(providers, RequiredGuid(arguments, "providerId")) as IKeyFramedEffectProvider
+            ?? throw new ArgumentException("Provider does not support keyframes.");
+        return DescribeEffectSteps(clip.Id, provider, OptionalInt32(arguments, "stepIndex"));
+    }
+
+    private static object DescribeEffectSteps(Guid clipId, IKeyFramedEffectProvider provider, int? index = null)
+    {
+        object Field(IEffectArgumentField field) => new
+        {
+            field.Id, fieldType = field.FieldType.ToString(), value = field.GetGetter()(),
+            field.DefaultValue, field.MinValue, field.MaxValue, field.PresetOptions, field.Remarks,
+        };
+        var steps = provider.Steps;
+        if (index is { } i && (i < 0 || i >= steps.Count)) throw new ArgumentOutOfRangeException(nameof(index));
+        return new
+        {
+            clipId, providerId = provider.Id,
+            defaultFields = provider.CreateStep(0).Fields.Values.Select(Field).ToArray(),
+            steps = steps.Select((step, i) => new
+            {
+                stepIndex = i, step.Progress, fields = step.Fields.Values.Select(Field).ToArray(),
+            }).Where(s => index is null || s.stepIndex == index).ToArray(),
+        };
+    }
+
+    private static object EditEffectStep(TimelineProjectWorkspace workspace, JsonElement arguments)
+    {
+        var clip = FindClip(workspace.Draft, arguments);
+        var providers = RestoreProviders(clip, out _);
+        var provider = FindProvider(providers, RequiredGuid(arguments, "providerId")) as IKeyFramedEffectProvider
+            ?? throw new ArgumentException("Provider does not support keyframes.");
+        string kind = RequiredString(arguments, "kind");
+        if (kind == "removeEffectStep") provider.RemoveStep(RequiredProperty(arguments, "stepIndex").GetInt32());
+        else
+        {
+            bool add = kind == "addEffectStep";
+            int index = add ? 0 : RequiredProperty(arguments, "stepIndex").GetInt32();
+            var step = add ? provider.CreateStep(provider.Steps.Count == 0 ? 0
+                : Math.Min(1, provider.Steps.Max(s => s.Progress) + 0.1)) : provider.Steps[index];
+            var fields = OptionalObject(arguments, "fields");
+            if (fields is not null) step.SetValues(fields.ToDictionary(p => p.Key, p => (object)p.Value));
+            step.ValidateStatic();
+            if (add) provider.AddStep(step);
+            else provider.UpdateStep(index, step);
+        }
+        CommitProviders(clip, providers);
+        Logger.Log($"{kind} updated keyframes on provider {provider.Id}, clip {clip.Id}.", "info");
+        return DescribeEffectSteps(clip.Id, provider);
     }
 
     private static object AddEffectProvider(TimelineProjectWorkspace workspace, JsonElement arguments)
@@ -532,9 +587,20 @@ internal static class ProjectModeEditingService
         ValidateNormalizedIndexes(keyframes);
         List<ProgressData> normalized = keyframes.Deserialize<List<ProgressData>>(JsonOptions)
             ?? throw new ArgumentException("Invalid position keyframes.");
-        return UpsertConvenienceProvider(workspace, arguments, "ProgressPlacer", new Dictionary<string, object?>
+        return UpsertConvenienceProvider(workspace, arguments, "ProgressPlacer", new Dictionary<string, object?>(), updateSteps: provider =>
         {
-            ["ProgressList"] = JsonSerializer.Serialize(normalized),
+            var steps = normalized.Select(item =>
+            {
+                var step = provider.CreateStep(item.Index);
+                step.SetValues(new Dictionary<string, object>
+                {
+                    ["TargetX"] = item.Position.TargetX, ["TargetY"] = item.Position.TargetY,
+                    ["TargetWidth"] = item.Position.TargetWidth, ["TargetHeight"] = item.Position.TargetHeight,
+                    ["IsDelta"] = item.Position.IsDelta, ["Rotation"] = item.Position.Rotation,
+                });
+                return step;
+            }).ToArray();
+            ReplaceSteps(provider, steps);
         });
     }
 
@@ -551,8 +617,26 @@ internal static class ProjectModeEditingService
             ["Width"] = OptionalInt32(arguments, "width") ?? workspace.ProjectInfo.RelativeWidth,
             ["Height"] = OptionalInt32(arguments, "height") ?? workspace.ProjectInfo.RelativeHeight,
             ["Angle"] = OptionalSingle(arguments, "angle") ?? 0f,
-            ["CropList"] = JsonSerializer.Serialize(normalized),
+        }, updateSteps: provider =>
+        {
+            var steps = normalized.Select(item =>
+            {
+                var step = provider.CreateStep(item.Index);
+                step.SetValues(new Dictionary<string, object>
+                {
+                    ["StartX"] = item.StartX, ["StartY"] = item.StartY,
+                    ["Width"] = item.Width, ["Height"] = item.Height, ["Angle"] = item.Angle,
+                });
+                return step;
+            }).ToArray();
+            ReplaceSteps(provider, steps);
         });
+    }
+
+    private static void ReplaceSteps(IKeyFramedEffectProvider provider, IReadOnlyList<IKeyFrameStep> steps)
+    {
+        for (int i = provider.Steps.Count - 1; i >= 0; i--) provider.RemoveStep(i);
+        foreach (var step in steps) provider.AddStep(step);
     }
 
     private static object UpsertConvenienceProvider(
@@ -560,7 +644,8 @@ internal static class ProjectModeEditingService
         JsonElement arguments,
         string typeName,
         IReadOnlyDictionary<string, object?> fields,
-        bool autoConnect = true)
+        bool autoConnect = true,
+        Action<IKeyFramedEffectProvider>? updateSteps = null)
     {
         ClipDraftDTO clip = FindClip(workspace.Draft, arguments);
         Dictionary<Guid, IEffectProvider> providers = RestoreProviders(clip, out _);
@@ -589,6 +674,8 @@ internal static class ProjectModeEditingService
             providers.Add(provider.Id, provider);
         }
         ApplyProviderFields(provider, fields.Where(item => item.Value is not null).ToDictionary(item => item.Key, item => JsonSerializer.SerializeToElement(item.Value, JsonOptions)));
+        if (updateSteps is not null) updateSteps(provider as IKeyFramedEffectProvider
+            ?? throw new ArgumentException("Provider does not support keyframes."));
         if (isNew && autoConnect) EffectBindingHelper.AutoConnectProviderToOutput(providers, provider, ClipTarget(clip));
         CommitProviders(clip, providers);
         return DescribeProvider(provider.TypeName, provider, providers);
@@ -888,6 +975,7 @@ internal static class ProjectModeEditingService
             available = true,
             provider.Id, typeName, provider.Name, provider.FromPlugin, provider.Enabled,
             effectType = provider.TypeOfEffect.ToString(), target = provider.Target.ToString(),
+            supportsKeyFrames = provider is IKeyFramedEffectProvider,
             implementationType = provider.GetType().FullName,
             supportedImplementTypes = provider.SupportsImplementTypes.Select(item => item.ToString()).ToArray(),
             defaultImplementType = provider.DefaultImplementType.ToString(),

@@ -1,5 +1,7 @@
-using projectFrameCut.Render.RenderAPIBase.Project;
+﻿using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -57,6 +59,15 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Dictionary<string, string>> LocalizationProvider => new Dictionary<string, Dictionary<string, string>>
     {
 
+    };
+
+    public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => new()
+    {
+        ["Basic"] = () => new BasicTextStyleProvider(),
+        ["Title"] = () => new TitleTextStyleProvider(),
+        ["Pinyin"] = () => new PinyinTextStyleProvider(),
+        ["LlmTranslate"] = () => new LlmTranslateTextStyleProvider(),
+        ["OldTextClipEntry"] = () => new OldTextClipEntryTextStyleProvider(),
     };
 
     public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider => new Dictionary<string, Func<IEffectProvider>>

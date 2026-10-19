@@ -1,3 +1,6 @@
+﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Text;
@@ -532,9 +535,13 @@ namespace projectFrameCut.DraftStuff
 
         private async Task<View> BuildTextOptionTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
+            SaveTextStyleClipArguments(clip);
             string providerFrom = "";
             ITextClipStyleProvider? styleProvider;
             GetAndUpdateTextClipEntries(clip, out providerFrom, out styleProvider);
+
+            if (styleProvider is null && !string.IsNullOrWhiteSpace(providerFrom))
+                return new Label { Text = PPLocalizedResources.TextOption_StyleProvider_NotFound(providerFrom) };
 
             if (styleProvider == null)
             {
@@ -570,9 +577,8 @@ namespace projectFrameCut.DraftStuff
                         return $"#FF{rb:X2}{gb:X2}{bb:X2}";
                     }
 
-                    var basic = new projectFrameCut.ApplicationPluginBase.Text.BasicTextStyleProvider
-                    {
-                        Parameters = new Dictionary<string, string>
+                    var basic = new projectFrameCut.Render.Text.BasicTextStyleProvider();
+                    basic.RestoreParameters(new Dictionary<string, string>
                         {
                             ["Text"] = entry.text ?? string.Empty,
                             ["FontFamily"] = entry.fontFamily ?? "Arial",
@@ -591,24 +597,23 @@ namespace projectFrameCut.DraftStuff
                             ["UseVerticalLayout"] = entry.UseVerticalLayout.ToString(),
                             ["KeepNonCJKTextAsHorizontal"] = entry.KeepNonCJKTextAsHorizontal.ToString(),
                             ["LayoutMode"] = "FillClip"
-                        }
-                    };
+                        });
                     styleProvider = basic;
                 }
                 else
                 {
-                    var fallback = new projectFrameCut.ApplicationPluginBase.Text.OldTextClipEntryTextStyleProvider();
+                    var fallback = new projectFrameCut.Render.Text.OldTextClipEntryTextStyleProvider();
                     if (clip.ExtraData != null && clip.ExtraData.TryGetValue("TextEntries", out var teObj2))
                     {
                         try
                         {
                             if (teObj2 is System.Text.Json.JsonElement je)
                             {
-                                fallback.Parameters["TextEntriesJson"] = je.GetRawText();
+                                fallback.GetParameters()["TextEntriesJson"] = je.GetRawText();
                             }
                             else
                             {
-                                fallback.Parameters["TextEntriesJson"] = System.Text.Json.JsonSerializer.Serialize(teObj2);
+                                fallback.GetParameters()["TextEntriesJson"] = System.Text.Json.JsonSerializer.Serialize(teObj2);
                             }
                         }
                         catch { }
@@ -618,7 +623,8 @@ namespace projectFrameCut.DraftStuff
                 }
             }
 
-            var providerPpb = styleProvider.BuildPropertyPanel();
+            var styleUI = TextStyleServices.GetUIProvider(styleProvider);
+            var providerPpb = styleUI.CreateUI(styleProvider);
             var providerHost = new PropertyPanelBuilder();
             var fontItems = TextServices.LoadedFonts
                             .Select(x => x.Value)
@@ -632,7 +638,7 @@ namespace projectFrameCut.DraftStuff
             //    page,
             //    "FontFamily",
             //   ,
-            //    styleProvider.Parameters.TryGetValue("FontFamily", out var selectedFontName) ? selectedFontName : null,
+            //    styleProvider.GetParameters().TryGetValue("FontFamily", out var selectedFontName) ? selectedFontName : null,
             //   ,
             //    ,
             //    PPLocalizedResources.TextOption_Font);
@@ -645,7 +651,7 @@ namespace projectFrameCut.DraftStuff
                 { PPLocalizedResources.TextOption_LayoutMode_FixedSize, TextClipLayoutMode.FixedSize },
             }; //FixedHeight mode is buggy so hide now
             providerHost
-            .AppendWhen(styleProvider.ShowLayoutModePicker,
+            .AppendWhen(styleUI.ShowLayoutModePicker,
                 c => c.AddPicker("LayoutMode", PPLocalizedResources.TextOption_LayoutMode, LocalizedLayoutOptionKVP.Keys.ToArray(), LocalizedLayoutOptionKVP.ReverseLookup(styleProvider.LayoutMode, PPLocalizedResources.TextOption_LayoutMode_FixedWidth), picker =>
                 {
 #if iDevices
@@ -655,7 +661,7 @@ namespace projectFrameCut.DraftStuff
                         {
                             if (LocalizedLayoutOptionKVP.TryGetValue(modeStr, out var parsedMode))
                                 styleProvider.LayoutMode = parsedMode;
-                            HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("LayoutMode", modeStr, styleProvider.Parameters.TryGetValue("LayoutMode", out var m) ? m : "FillClip"));
+                            HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("LayoutMode", styleProvider.LayoutMode.ToString(), null));
                         }
                     };
 #else
@@ -665,13 +671,13 @@ namespace projectFrameCut.DraftStuff
                         {
                             if (LocalizedLayoutOptionKVP.TryGetValue(modeStr, out var parsedMode))
                                 styleProvider.LayoutMode = parsedMode;
-                            HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("LayoutMode", modeStr, styleProvider.Parameters.TryGetValue("LayoutMode", out var m) ? m : "FillClip"));
+                            HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("LayoutMode", styleProvider.LayoutMode.ToString(), null));
                         }
                     };
 #endif
                 })
             )
-            .AppendWhen(styleProvider.ShowDefaultTextEditor,
+            .AppendWhen(styleUI.ShowDefaultTextEditor,
                 c => c.AddCustomChild(
                 (c) =>
                 {
@@ -689,12 +695,12 @@ namespace projectFrameCut.DraftStuff
                 "Text", styleProvider.BasicText)
                 .AddButton(Localized._Apply, (_, _) => { })
             )
-            .AppendWhen(styleProvider.ShowFontPicker,
+            .AppendWhen(styleUI.ShowFontPicker,
                 c => c.AddDialogFontPicker(
                 "FontFamily",
                 PPLocalizedResources.TextOption_Font,
                 PPLocalizedResources.TextOption_Font,
-                styleProvider.Parameters.TryGetValue("FontFamily", out var selectedFontName) ? selectedFontName : null,
+                styleProvider.GetParameters().TryGetValue("FontFamily", out var selectedFontName) ? selectedFontName : null,
                 fontItems,
                 page,
                 font =>
@@ -704,7 +710,7 @@ namespace projectFrameCut.DraftStuff
                     else if (!string.IsNullOrWhiteSpace(font.Path))
                         TextClipFontRegistry.AddFont(font.Path);
 
-                    HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("FontFamily", font.FontName, styleProvider.Parameters.TryGetValue("FontFamily", out var f) ? f : string.Empty));
+                    HandlePanelChange(styleProvider, new PropertyPanelPropertyChangedEventArgs("FontFamily", font.FontName, styleProvider.GetParameters().TryGetValue("FontFamily", out var f) ? f : string.Empty));
                 },
                 TextServices.RenderFontPreviewAsync)
             )
@@ -724,14 +730,20 @@ namespace projectFrameCut.DraftStuff
                 if (!available.TryGetValue(picked, out var factory)) return;
 
                 var newProvider = factory();
+                foreach (var (key, argument) in styleProvider.Fields)
+                {
+                    if (newProvider.SettableFields.TryGetValue(key, out var descriptor)
+                        && descriptor.FieldType.BaseType() == argument.FieldType.BaseType())
+                        newProvider.HandleSettableFieldsChange(descriptor, argument.GetGetter()(), out _);
+                }
                 // 保留基础文本
                 newProvider.BasicText = styleProvider.BasicText;
                 // 保留布局模式和换行宽度
-                newProvider.Parameters["LayoutMode"] = styleProvider.LayoutMode.ToString();
-                if (styleProvider.Parameters.TryGetValue("WrappingWidth", out var ww) && !string.IsNullOrWhiteSpace(ww))
-                    newProvider.Parameters["WrappingWidth"] = ww;
-                if (styleProvider.Parameters.TryGetValue("TextStyleManualSize", out var ms) && !string.IsNullOrWhiteSpace(ms))
-                    newProvider.Parameters["TextStyleManualSize"] = ms;
+                newProvider.GetParameters()["LayoutMode"] = styleProvider.LayoutMode.ToString();
+                if (styleProvider.GetParameters().TryGetValue("WrappingWidth", out var ww) && !string.IsNullOrWhiteSpace(ww))
+                    newProvider.GetParameters()["WrappingWidth"] = ww;
+                if (styleProvider.GetParameters().TryGetValue("TextStyleManualSize", out var ms) && !string.IsNullOrWhiteSpace(ms))
+                    newProvider.GetParameters()["TextStyleManualSize"] = ms;
 
                 // 测量新样式的自然尺寸
                 var newEntries = newProvider.BuildEntries();
@@ -743,9 +755,9 @@ namespace projectFrameCut.DraftStuff
                 clip.ExtraData ??= new();
                 clip.ExtraData[TextStyleProviderFromKey] = newProvider.FromPlugin;
                 clip.ExtraData[TextStyleProviderTypeKey] = newProvider.TypeName;
-                clip.ExtraData[TextStyleProviderParamsKey] = new Dictionary<string, string>(newProvider.Parameters);
-                if (newEntries.Length > 0)
-                    clip.ExtraData["TextEntries"] = newEntries.ToList();
+                TextClipStyles.Save(newProvider, clip.ExtraData);
+                SyncTextStyleClipArguments(clip, newProvider);
+                clip.ExtraData["TextEntries"] = newEntries.ToList();
 
                 clip.TargetWidth = newW;
                 clip.TargetHeight = newH;
@@ -759,9 +771,9 @@ namespace projectFrameCut.DraftStuff
             .AddButton(PPLocalizedResources.TextOption_ReLayout, (_, _) =>
             {
                 // 清除所有布局约束，强制重新测量文本的自然尺寸
-                styleProvider.Parameters.Remove("WrappingWidth");
-                styleProvider.Parameters.Remove("TextStyleManualSize");
-                styleProvider.Parameters.Remove("FixedHeightValue");
+                styleProvider.GetParameters().Remove("WrappingWidth");
+                styleProvider.GetParameters().Remove("TextStyleManualSize");
+                styleProvider.GetParameters().Remove("FixedHeightValue");
                 styleProvider.LayoutMode = TextClipLayoutMode.FillClip;
 
                 // 重新测量文本的自然宽高
@@ -779,7 +791,8 @@ namespace projectFrameCut.DraftStuff
 
                 clip.ExtraData ??= new();
                 // 持久化更新后的参数
-                clip.ExtraData[TextStyleProviderParamsKey] = new Dictionary<string, string>(styleProvider.Parameters);
+                TextClipStyles.Save(styleProvider, clip.ExtraData);
+                SyncTextStyleClipArguments(clip, styleProvider);
 
                 if (resetEntries.Length > 0)
                 {
@@ -814,15 +827,12 @@ namespace projectFrameCut.DraftStuff
                 if (e.Id == "Text")
                 {
                     provider.BasicText = e.Value?.ToString() ?? string.Empty;
-                    provider.Parameters["Text"] = provider.BasicText;
+                    provider.GetParameters()["Text"] = provider.BasicText;
                 }
 
-                (var updated, var newW, var newH) = provider.HandlePropertyPanelChange(e);
-                if (updated != null)
-                {
-                    provider.Parameters = updated;
-                    clip.ExtraData[TextStyleProviderParamsKey] = updated;
-                }
+                (var newW, var newH) = styleUI.HandlePropertyPanelChange(provider, e);
+                TextClipStyles.Save(provider, clip.ExtraData);
+                SyncTextStyleClipArguments(clip, provider);
                 clip.TargetWidth = newW > 0 ? newW : clip.TargetWidth;
                 clip.TargetHeight = newH > 0 ? newH : clip.TargetHeight;
                 clip.IsMoveable = true;
@@ -830,11 +840,8 @@ namespace projectFrameCut.DraftStuff
                 clip.IsVerticalResizable = provider.IsVerticalResizable;
                 clip.CanSnapWhileResizing = provider.CanSnapWhileResizing;
                 var updatedEntries = provider.BuildEntries();
-                if (updatedEntries.Length > 0)
-                {
-                    clip.ExtraData["TextEntries"] = updatedEntries.ToList();
-                    handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", updatedEntries, updatedEntries));
-                }
+                clip.ExtraData["TextEntries"] = updatedEntries.ToList();
+                handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", updatedEntries, updatedEntries));
             }
             ;
             providerHost.PropertyChanged += (_, e) => HandlePanelChange(styleProvider, e);
@@ -865,36 +872,13 @@ namespace projectFrameCut.DraftStuff
                 return raw?.ToString();
             }
 
-            Dictionary<string, string>? ReadParameters(object? raw)
-            {
-                if (raw is Dictionary<string, string> dict) return new Dictionary<string, string>(dict);
-                if (raw is Dictionary<string, object> objDict)
-                    return objDict.ToDictionary(k => k.Key, v => v.Value?.ToString() ?? string.Empty);
-                if (raw is JsonElement elem)
-                {
-                    try { return JsonSerializer.Deserialize<Dictionary<string, string>>(elem); }
-                    catch { return null; }
-                }
-                if (raw is string json && !string.IsNullOrWhiteSpace(json))
-                {
-                    try { return JsonSerializer.Deserialize<Dictionary<string, string>>(json); }
-                    catch { return null; }
-                }
-                return null;
-            }
-
             providerFrom = clip.ExtraData.TryGetValue(TextStyleProviderFromKey, out var providerFromObj) ? ReadStringValue(providerFromObj) : null;
             var providerType = clip.ExtraData.TryGetValue(TextStyleProviderTypeKey, out var providerTypeObj) ? ReadStringValue(providerTypeObj) : null;
-            var providerParameters = clip.ExtraData.TryGetValue(TextStyleProviderParamsKey, out var providerParamsObj) ? ReadParameters(providerParamsObj) : null;
 
             styleProvider = null;
             if (!string.IsNullOrWhiteSpace(providerFrom) && !string.IsNullOrWhiteSpace(providerType))
             {
-                styleProvider = TextStyleServices.RestoreTextStyleProvider(providerFrom, providerType, providerParameters);
-                if (styleProvider != null && providerParameters != null)
-                {
-                    styleProvider.Parameters = new Dictionary<string, string>(providerParameters);
-                }
+                styleProvider = TextClipStyles.Restore(clip.ExtraData);
 
                 var rebuiltEntries = styleProvider?.BuildEntries();
                 if (rebuiltEntries is { Length: > 0 })

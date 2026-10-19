@@ -1,8 +1,10 @@
-using projectFrameCut.Render.Contracts;
+﻿using projectFrameCut.Render.Contracts;
 using FFmpeg.AutoGen;
 using ILGPU;
 using ILGPU.Runtime;
 using projectFrameCut.Drawing.Base;
+using projectFrameCut.Drawing.Base.ReadWriteConvert;
+using System.IO.Compression;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.ClipsAndTracks;
@@ -42,9 +44,258 @@ namespace projectFrameCut.StandaloneRender
 
         static readonly JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
         static readonly object consoleLogGate = new();
+        static RenderProgressDisplay? renderProgressDisplay;
 
         private static string FormatEta(TimeSpan eta)
             => $"{eta.Ticks / TimeSpan.TicksPerHour:00}:{eta.Minutes:00}:{eta.Seconds:00}";
+
+        private static void WriteConsoleLine(string message)
+        {
+            lock (consoleLogGate)
+            {
+                if (renderProgressDisplay?.TryQueueLog(message) == true) return;
+                Console.WriteLine(message);
+            }
+        }
+
+        private static ConsoleColor GetLogColor(string level)
+            => level.Equals("error", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Red :
+               level.Equals("stat", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Green :
+               (level.Equals("warning", StringComparison.InvariantCultureIgnoreCase) || level.Equals("warn", StringComparison.InvariantCultureIgnoreCase)) ? ConsoleColor.Yellow :
+               (level.Equals("debug", StringComparison.InvariantCultureIgnoreCase) || level.Equals("diag", StringComparison.InvariantCultureIgnoreCase)) ? ConsoleColor.Cyan :
+               level.StartsWith("FFmpeg", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Magenta : ConsoleColor.Gray;
+
+        private sealed class RenderProgressDisplay : IDisposable
+        {
+            private readonly Func<Renderer[]> getRenderers;
+            private readonly Timer timer;
+            private readonly Queue<(string Message, string? Level)> pendingLogs = new();
+            private readonly IntPtr outputHandle;
+            private readonly uint originalConsoleMode;
+            private bool restoreConsoleMode;
+            private bool interactive = !Console.IsOutputRedirected;
+            private bool disposed, cursorHidden;
+            private string[] drawnLines = [];
+            private int drawnWidth;
+            private long lastSnapshot = Environment.TickCount64 - 5000;
+            private string? summary;
+            private double projectProgress = -1;
+
+            [DllImport("kernel32.dll")]
+            private static extern IntPtr GetStdHandle(int handle);
+
+            [DllImport("kernel32.dll")]
+            private static extern bool GetConsoleMode(IntPtr handle, out uint mode);
+
+            [DllImport("kernel32.dll")]
+            private static extern bool SetConsoleMode(IntPtr handle, uint mode);
+
+            public RenderProgressDisplay(Func<Renderer[]> getRenderers)
+            {
+                this.getRenderers = getRenderers;
+                lock (consoleLogGate)
+                {
+                    if (interactive && OperatingSystem.IsWindows())
+                    {
+                        outputHandle = GetStdHandle(-11);
+                        interactive = GetConsoleMode(outputHandle, out var mode) && SetConsoleMode(outputHandle, mode | 0x0004);
+                        originalConsoleMode = mode;
+                        restoreConsoleMode = interactive && (mode & 0x0004) == 0;
+                    }
+                    renderProgressDisplay = this;
+                }
+                timer = new Timer(_ => Refresh(), null, 0, 250);
+            }
+
+            public bool TryQueueLog(string message, string? level = null)
+            {
+                if (!interactive || disposed) return false;
+                pendingLogs.Enqueue((message, level));
+                return true;
+            }
+
+            public void SetProjectProgress(double progress, TimeSpan eta, double fps)
+            {
+                lock (consoleLogGate)
+                {
+                    if (progress < projectProgress) return;
+                    projectProgress = progress;
+                    summary = $"Project: {progress:P1}, ETA: {(fps > 0 || progress >= 1 ? FormatEta(eta) : "--:--:--")}, FPS: {fps:N2}";
+                }
+            }
+
+            private void Refresh()
+            {
+                string? projectSummary;
+                lock (consoleLogGate)
+                {
+                    if (disposed) return;
+                    projectSummary = summary;
+                }
+                var lines = new List<string>();
+                var compositorLines = new List<string>();
+                if (projectSummary is not null) lines.Add(projectSummary);
+                foreach (var renderer in getRenderers().OrderBy(r => r.ChunkIndex))
+                {
+                    if (renderer.ChunkCount > 1)
+                        lines.Add($"Chunk {renderer.ChunkIndex + 1}/{renderer.ChunkCount}:");
+                    else if (projectSummary is null)
+                        lines.Add($"Project: {renderer.Progress:P1}, ETA: {(renderer.CurrentFps > 0 || renderer.Progress >= 1 ? FormatEta(renderer.EstimatedRemaining) : "--:--:--")}, " +
+                            $"FPS: {renderer.CurrentFps:N2}, frames: {renderer.CurrentFinished}/{renderer.Duration}");
+                    foreach (var p in renderer.GetThreadProgress())
+                    {
+                        bool cacheWriter = p.Name == "VFD cache writer";
+                        string name = p.Name switch
+                        {
+                            "Render scheduler" => "Scheduler",
+                            "VFD cache writer" => "VFD writer",
+                            "Render worker/compositor" => "Worker/compositor",
+                            _ => p.IsCompositor ? "Compositor" : "Worker"
+                        };
+                        string state = p.State switch
+                        {
+                            RenderThreadState.Working => cacheWriter ? "Writing" : p.IsCompositor ? "Working" : "Rendering",
+                            RenderThreadState.Paused => p.IsCompositor || cacheWriter ? "Waiting" : "Paused",
+                            RenderThreadState.Completed => "Completed",
+                            _ => "Stopped"
+                        };
+                        string line = $"  {$"{name} #{p.ThreadId}",-30} | {state,-9} | {p.Progress:P1} | frame {p.CurrentFrame?.ToString() ?? "-",10} | avg {p.FramesPerSecond:N2} FPS | {p.CompletedFrames} frames";
+                        if (p.IsCompositor || cacheWriter) compositorLines.Add(line);
+                        else lines.Add(line);
+                    }
+                }
+                lines.AddRange(compositorLines);
+                lock (consoleLogGate)
+                {
+                    if (disposed) return;
+                    if (!interactive && Environment.TickCount64 - lastSnapshot < 5000) return;
+                    try
+                    {
+                        if (!interactive)
+                        {
+                            if (lines.Count > 0) Console.WriteLine(string.Join(Environment.NewLine, lines));
+                            lastSnapshot = Environment.TickCount64;
+                            return;
+                        }
+
+                        int width = Math.Max(1, Console.WindowWidth - 1);
+                        var output = new StringBuilder();
+                        if (pendingLogs.Count > 0 || width != drawnWidth) AppendClear(output);
+                        AppendLogs(output);
+                        drawnWidth = width;
+
+                        // Cursor movement cannot reach rows above the visible terminal window.
+                        if (lines.Count >= Console.WindowHeight || width == 1)
+                        {
+                            AppendClear(output);
+                            if (cursorHidden) output.Append("\x1b[?25h");
+                            cursorHidden = false;
+                            if (lines.Count > 0 && Environment.TickCount64 - lastSnapshot >= 5000)
+                            {
+                                output.AppendJoin("\r\n", lines).Append("\r\n");
+                                lastSnapshot = Environment.TickCount64;
+                            }
+                        }
+                        else
+                        {
+                            if (!cursorHidden && lines.Count > 0)
+                            {
+                                output.Append("\x1b[?25l");
+                                cursorHidden = true;
+                            }
+                            AppendFrame(output, lines.Select(line => line.Length > width ? line[..width] : line).ToArray());
+                        }
+                        if (output.Length > 0) Console.Write(output.ToString());
+                    }
+                    catch (Exception ex) when (ex is IOException or ArgumentOutOfRangeException or PlatformNotSupportedException)
+                    {
+                        if (!interactive) disposed = true;
+                        interactive = false;
+                        drawnLines = [];
+                    }
+                }
+            }
+
+            private void AppendFrame(StringBuilder output, string[] lines)
+            {
+                int row = drawnLines.Length;
+                for (int i = 0; i < Math.Max(lines.Length, drawnLines.Length); i++)
+                {
+                    string line = i < lines.Length ? lines[i] : string.Empty;
+                    if (i < drawnLines.Length && line == drawnLines[i]) continue;
+                    MoveToRow(output, ref row, i);
+                    output.Append('\r').Append(line).Append("\x1b[K");
+                    if (i >= drawnLines.Length)
+                    {
+                        output.Append("\r\n");
+                        row++;
+                    }
+                }
+                MoveToRow(output, ref row, lines.Length);
+                drawnLines = lines;
+            }
+
+            private static void MoveToRow(StringBuilder output, ref int row, int target)
+            {
+                if (row != target) output.Append("\x1b[").Append(Math.Abs(target - row)).Append(target < row ? 'A' : 'B').Append('\r');
+                row = target;
+            }
+
+            private void AppendClear(StringBuilder output)
+            {
+                if (drawnLines.Length == 0) return;
+                output.Append("\r\x1b[").Append(drawnLines.Length).Append("A\x1b[J");
+                drawnLines = [];
+            }
+
+            private void AppendLogs(StringBuilder output)
+            {
+                while (pendingLogs.TryDequeue(out var log))
+                {
+                    if (log.Level is not null && !log.Level.Equals("info", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        output.Append(GetLogColor(log.Level) switch
+                        {
+                            ConsoleColor.Red => "\x1b[91m",
+                            ConsoleColor.Green => "\x1b[92m",
+                            ConsoleColor.Yellow => "\x1b[93m",
+                            ConsoleColor.Cyan => "\x1b[96m",
+                            ConsoleColor.Magenta => "\x1b[95m",
+                            _ => "\x1b[37m"
+                        }).Append('[').Append(log.Level).Append("]\x1b[0m ");
+                    }
+                    output.Append(log.Message.ReplaceLineEndings("\r\n")).Append("\r\n");
+                }
+            }
+
+            public void Dispose()
+            {
+                timer.Dispose();
+                lock (consoleLogGate)
+                {
+                    disposed = true;
+                    try
+                    {
+                        var output = new StringBuilder();
+                        AppendClear(output);
+                        AppendLogs(output);
+                        if (cursorHidden) output.Append("\x1b[?25h");
+                        cursorHidden = false;
+                        if (output.Length > 0) Console.Write(output.ToString());
+                    }
+                    catch (Exception ex) when (ex is IOException or PlatformNotSupportedException) { }
+                    finally
+                    {
+                        if (restoreConsoleMode)
+                        {
+                            SetConsoleMode(outputHandle, originalConsoleMode);
+                            restoreConsoleMode = false;
+                        }
+                        if (renderProgressDisplay == this) renderProgressDisplay = null;
+                    }
+                }
+            }
+        }
 
         public static async Task<int> Main(string[] args)
         {
@@ -65,6 +316,7 @@ namespace projectFrameCut.StandaloneRender
                 {
                     lock (consoleLogGate)
                     {
+                        if (renderProgressDisplay?.TryQueueLog(m, l) == true) return;
                         if (l.Equals("info", StringComparison.InvariantCultureIgnoreCase))
                         {
                             Console.WriteLine(m);
@@ -74,12 +326,7 @@ namespace projectFrameCut.StandaloneRender
                         var oldColor = Console.ForegroundColor;
                         try
                         {
-                            Console.ForegroundColor = l.Equals("error", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Red :
-                                                  l.Equals("stat", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Green :
-                                                  (l.Equals("warning", StringComparison.InvariantCultureIgnoreCase) || l.Equals("warn", StringComparison.InvariantCultureIgnoreCase)) ? ConsoleColor.Yellow :
-                                                  (l.Equals("debug", StringComparison.InvariantCultureIgnoreCase) || l.Equals("diag", StringComparison.InvariantCultureIgnoreCase)) ? ConsoleColor.Cyan :
-                                                  l.StartsWith("FFmpeg", StringComparison.InvariantCultureIgnoreCase) ? ConsoleColor.Magenta :
-                                                  ConsoleColor.Gray;
+                            Console.ForegroundColor = GetLogColor(l);
 
                             Console.Write($"[{l}]");
                         }
@@ -146,6 +393,11 @@ namespace projectFrameCut.StandaloneRender
                         [-maxPendingWriteFrames=<number>]
                         [-enableThreadAffinity=<true|false>]
                         [-reuseDynamicPreviewCache=<true|false>]
+                        [-deferredComposition=<true|false>]
+                        [-vfdCompression=<None|Deflate|GZip|Brotli|Zstandard|Lzma2>] (default: Zstandard)
+                        [-vfdCompressionLevel=<level>]
+                          Zstandard: -131072..22 (default: 1); Lzma2: 1..10 (default: 6).
+                          Deflate/GZip/Brotli: Fastest|Optimal|SmallestSize|NoCompression (default: Fastest).
                         [-frameHashMode=<Dynamic|Static>]
                         [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-multiAccelerator=<true|false>]
@@ -157,11 +409,13 @@ namespace projectFrameCut.StandaloneRender
                         [-preferHwAccelDecoder=<true|false>]
                         [-ApproximateMixture=<true|false>]
                         [-PictureResizer=<cpu|hwaccel>]
+                        [-renderAheadFrames=<number>] [-enableMemoryBudget=<true|false>] [-maxBufferedBytes=<bytes>]
                         [-enableDiskCacheRouting=<true|false> or -forceUseDiskCache=<true|false>]
                         [-diskCacheThreshold=<0.1-0.95>] [-diskCacheMaxFrameCount=<number>] [-videoBuilderDiskCacheRoot=<path>]
                         [-chunkRender=<true|false>]
                         [-chunkFrames=<number> | -chunkSeconds=<number>] [-chunkParallelism=<number>]
                         [-chunkResume=<true|false>] [-chunkKeepFiles=<true|false>]
+                          chunkResume also restores deferred composition when chunkRender=false.
                         [-multiStream=<true|false>]
 
                     Mode 'diagnostic' uses one render thread, disables chunk rendering and frame lookahead,
@@ -171,6 +425,15 @@ namespace projectFrameCut.StandaloneRender
                         bench render    - Render pipeline benchmark (default)
                         bench encode    - VideoBuilder cache & encode throughput test
                         bench decode    - IVideoSource decode performance test
+                        bench schedule  - Full render scheduling search with real video output
+
+                    Sub-mode 'schedule' arguments:
+                        [-reportDirectory=<path>] [-encoder=<exact encoder name>]
+                        [-frameHashMode=<Dynamic|Static>]                (default: Dynamic; fixed during search)
+                        [-pixelFormat=<AVPixelFormat name>]             (default: AV_PIX_FMT_YUV420P)
+                        [-scheduleCandidates=<number>] [-scheduleSeed=<number>] (defaults: 120, 42)
+                        Uses hardware H.264 with software fallback unless -encoder is specified.
+                        Writes complete 300-frame projects; keeps reports only.
 
                     Common arguments (all sub-modes):
                         [-writeToNull=<true|false>]
@@ -211,6 +474,7 @@ namespace projectFrameCut.StandaloneRender
                         [-preferHwAccelDecoder=<true|false>]
                         [-preferHwAccelEncoder=<true|false>]
                         [-bitRate=<bitrate in bps>]                 (optional, encoder bitrate)
+                        [-finalVideoBitRate=<bitrate in bps>]       (optional, final output only)
                         [-multiStream=<true|false>]
 
                     ---
@@ -361,16 +625,15 @@ namespace projectFrameCut.StandaloneRender
                             benchSubMode = switchBenchMode.ToLowerInvariant();
                         }
 
-                        if (benchSubMode != "render" && benchSubMode != "encode" && benchSubMode != "decode")
+                        if (benchSubMode != "render" && benchSubMode != "encode" && benchSubMode != "decode" && benchSubMode != "schedule")
                         {
-                            Log($"ERROR: Unknown bench sub-mode '{benchSubMode}'. Available: render, encode, decode.", "error");
+                            Log($"ERROR: Unknown bench sub-mode '{benchSubMode}'. Available: render, encode, decode, schedule.", "error");
                             return 1;
                         }
 
                         Log($"Bench sub-mode: {benchSubMode}");
 
-                        // 只有 render（渲染管线测试）需要 GPU 加速器
-                        if (benchSubMode == "render" || switches.ContainsKey("preferHwAccelDecoder"))
+                        if (benchSubMode is "render" or "schedule" || switches.ContainsKey("preferHwAccelDecoder"))
                         {
                             var accelResult1 = InitAccel(switches);
                             if (accelResult1 != 0)
@@ -385,6 +648,7 @@ namespace projectFrameCut.StandaloneRender
                             {
                                 "encode" => await GoBenchEncode(switches),
                                 "decode" => await GoBenchDecode(switches),
+                                "schedule" => await GoBenchSchedule(switches),
                                 _ => await GoBenchRender(switches),
                             };
                         }
@@ -669,6 +933,10 @@ namespace projectFrameCut.StandaloneRender
                 && long.TryParse(bitRateText, out var parsedBitRate) && parsedBitRate > 0
                     ? parsedBitRate
                     : null;
+            long? finalVideoBitRate = switches.TryGetValue("finalVideoBitRate", out var finalBitRateText)
+                && long.TryParse(finalBitRateText, out var parsedFinalBitRate) && parsedFinalBitRate > 0
+                    ? parsedFinalBitRate
+                    : null;
 
             if (!switches.ContainsKey("output"))
             {
@@ -698,7 +966,7 @@ namespace projectFrameCut.StandaloneRender
                 Log("No project file specified. Use -project=<project root dir> to specify the project file.", "error");
                 return 1;
             }
-            var workingPath = switches["project"];
+            var workingPath = Path.GetFullPath(switches["project"]);
             if (string.IsNullOrWhiteSpace(workingPath) || !Directory.Exists(workingPath))
             {
                 Log("Invalid project path.", "error");
@@ -766,6 +1034,21 @@ namespace projectFrameCut.StandaloneRender
                 return 1;
             }
             bool reuseDynamicPreviewCache = bool.TryParse(switches.GetOrAdd("reuseDynamicPreviewCache", "false"), out var reusePreview) && reusePreview;
+            bool deferredComposition = bool.TryParse(switches.GetValueOrDefault("deferredComposition", "false"), out var deferred) && deferred;
+            if (!int.TryParse(switches.GetValueOrDefault("renderAheadFrames", "0"), out var renderAheadFrames) || renderAheadFrames < 0
+                || !bool.TryParse(switches.GetValueOrDefault("enableMemoryBudget", "false"), out var enableMemoryBudget)
+                || !long.TryParse(switches.GetValueOrDefault("maxBufferedBytes", "0"), out var maxBufferedBytes) || maxBufferedBytes < 0)
+            {
+                Log("Invalid renderAheadFrames, enableMemoryBudget or maxBufferedBytes.", "error");
+                return 1;
+            }
+            var vfdEncoder = ParseVfdEncoder(switches);
+            if (deferredComposition && chunkOptions.Enabled)
+            {
+                Log("Deferred composition and chunk rendering cannot be enabled together.", "error");
+                return 1;
+            }
+
             if (!bool.TryParse(switches.GetOrAdd("allowWorkerOversubscription", "true"), out var allowWorkerOversubscription)) allowWorkerOversubscription = true;
             if (!bool.TryParse(switches.GetOrAdd("enableThreadAffinity", "true"), out enableThreadAffinity)) enableThreadAffinity = true;
             if (switches.TryGetValue("renderWorkerAffinity", out var renderWorkerAffinityRaw) && !string.IsNullOrWhiteSpace(renderWorkerAffinityRaw))
@@ -905,6 +1188,7 @@ namespace projectFrameCut.StandaloneRender
             Environment.CurrentDirectory = workingPath;
             await using var externalSources = await projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.OpenAsync(sourceProjectRoot,
                 projectFrameCut.Render.PluginIsolation.ProjectExternalSourceDatabase.ParseApprovals(sourceProjectRoot, switches.GetValueOrDefault("allowExternalSources")));
+            var renderResumeSignature = deferredComposition ? FrameHashHelper.CreateRenderResumeSignature(project, timeline, assets.Values) : null;
             #endregion
 
             CancellationTokenSource cts = new();
@@ -912,6 +1196,7 @@ namespace projectFrameCut.StandaloneRender
             Renderer renderer = null!;
             ConcurrentDictionary<int, VideoBuilder> activeChunkBuilders = new();
             ConcurrentDictionary<int, Renderer> activeChunkRenderers = new();
+            ConcurrentDictionary<int, Action> completedChunkCleanup = new();
             IVideoWriter CreateConfiguredWriter(string path, bool intermediateChunk)
             {
                 IVideoWriter writer = multiStream
@@ -1005,8 +1290,15 @@ namespace projectFrameCut.StandaloneRender
                     Use16Bit = use16Bit,
                     MaxThreads = Math.Max(1, renderThreads),
                     AllowWorkerOversubscription = allowWorkerOversubscription,
+                    RenderAheadFrames = renderAheadFrames,
+                    EnableMemoryBudget = enableMemoryBudget,
+                    MaxBufferedBytes = maxBufferedBytes,
                     FrameHashMode = frameHashMode,
                     ReuseDynamicPreviewCache = reuseDynamicPreviewCache,
+                    EnableDeferredComposition = deferredComposition,
+                    VfdEncoder = vfdEncoder,
+                    ResumeInterruptedRender = !bool.TryParse(switches.GetValueOrDefault("chunkResume", "true"), out var resume) || resume,
+                    RenderResumeSignature = renderResumeSignature,
                     DynamicPreviewCacheProjectRoot = workingPath,
                     DynamicPreviewCacheProjectWidth = Math.Max(1, project.RelativeWidth),
                     DynamicPreviewCacheProjectHeight = Math.Max(1, project.RelativeHeight),
@@ -1026,15 +1318,6 @@ namespace projectFrameCut.StandaloneRender
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
                     FrameDoneMark.Emit($"Chunk {chunkIndex + 1}/{chunkCount}, progress: {s:p1} ({localRenderer.CurrentFinished}/{localRenderer.Duration}), ETA: {FormatEta(e)}, FPS: {currentFps:n2}");
 #endif
-                    if (chunkOptions.Enabled || logFrameTimings) return;
-                    if (localRenderer.CurrentSecondPerFrame <= 1.5)
-                    {
-                        Console.Write($"Rendering finished {s:p1}, ETA:{FormatEta(e)}, FPS:{currentFps:n2}          \r");
-                    }
-                    else
-                    {
-                        Console.Write($"Rendering finished {s:p1}, ETA:{FormatEta(e)}, {(1 / currentFps):n2} second per frame        \r");
-                    }
                 };
 
                 builder = localBuilder;
@@ -1113,6 +1396,8 @@ namespace projectFrameCut.StandaloneRender
                 {
                     localBuilder.Writer.Finish();
                     localBuilder.Dispose();
+                    if (intermediateChunk && localRenderer.EnableDeferredComposition)
+                        completedChunkCleanup[chunkIndex] = localRenderer.CleanupCreatedDeferredCache;
                 }
                 finally
                 {
@@ -1135,6 +1420,7 @@ namespace projectFrameCut.StandaloneRender
             {
                 if (!chunkOptions.Enabled)
                 {
+                    using var progress = logProgress ? new RenderProgressDisplay(() => activeChunkRenderers.Values.ToArray()) : null;
                     await composeVideoRange(resultPath, 0, timeline.Duration, maxParallelThreads, 0, 1).ConfigureAwait(false);
                     return null;
                 }
@@ -1148,15 +1434,19 @@ namespace projectFrameCut.StandaloneRender
                     maxParallelThreads,
                     chunkOptions);
                 await coordinator.InitializeAsync(cts.Token).ConfigureAwait(false);
-                await coordinator.RenderPendingChunksAsync(
-                    (segment, chunkPath, chunkThreads, report, token) =>
-                        composeVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads, segment.Index, coordinator.ChunkCount, report, intermediateChunk: true),
-                    state =>
-                    {
-                        if (logProgress && !logFrameTimings)
-                            Console.Write($"Chunk {state.ChunkIndex + 1}/{state.ChunkCount}, {state.GlobalProgress:P1} complete, ETA: {FormatEta(state.EstimatedRemaining)}, FPS: {state.FramesPerSecond:N2}{(state.Reused ? " (reused)" : string.Empty)}       \r");
-                    },
-                    cts.Token).ConfigureAwait(false);
+                coordinator.OnChunkCompleted += segment =>
+                {
+                    if (completedChunkCleanup.TryRemove(segment.Index, out var cleanup)) cleanup();
+                };
+                using (var progress = logProgress ? new RenderProgressDisplay(() => activeChunkRenderers.Values.ToArray()) : null)
+                {
+                    progress?.SetProjectProgress(0, TimeSpan.Zero, 0);
+                    await coordinator.RenderPendingChunksAsync(
+                        (segment, chunkPath, chunkThreads, report, token) =>
+                            composeVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads, segment.Index, coordinator.ChunkCount, report, intermediateChunk: true),
+                        state => progress?.SetProjectProgress(state.GlobalProgress, state.EstimatedRemaining, state.FramesPerSecond),
+                        cts.Token).ConfigureAwait(false);
+                }
                 string merged = await coordinator.MergeAsync(
                     path => CreateConfiguredWriter(path, intermediateChunk: false),
                     CreateChunkVideoSource,
@@ -1253,12 +1543,12 @@ namespace projectFrameCut.StandaloneRender
                                         KeyQPressCount++;
                                         if (KeyQPressCount > 5)
                                         {
-                                            Console.WriteLine("Cancel signal receive! try cancelling render...");
+                                            WriteConsoleLine("Cancel signal receive! try cancelling render...");
                                             await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
                                         }
                                         else
                                         {
-                                            Console.WriteLine($"Hit Escape/Q again to cancel render.");
+                                            WriteConsoleLine("Hit Escape/Q again to cancel render.");
                                         }
                                         break;
 
@@ -1295,8 +1585,8 @@ namespace projectFrameCut.StandaloneRender
                     e.Cancel = true;
                     if (cancelled) Process.GetCurrentProcess().Kill();
                     cancelled = true;
-                    Console.WriteLine("You hit Ctrl-C! try cancelling render...");
-                    Console.WriteLine("Hit Ctrl-C again to stop immediately.");
+                    WriteConsoleLine("You hit Ctrl-C! try cancelling render...");
+                    WriteConsoleLine("Hit Ctrl-C again to stop immediately.");
 
                     await cts.CancelAsync().WaitAsync(TimeSpan.FromSeconds(10));
                 };
@@ -1311,6 +1601,8 @@ namespace projectFrameCut.StandaloneRender
             {
                 case "video":
                     var videoChunkJob = await composeVideo(outputPath);
+                    if (finalVideoBitRate is long bitRate)
+                        VideoResizer.ReencodeToBitRate(outputPath, outputPath, outputEncoder, bitRate, cts.Token);
                     if (videoChunkJob is not null && !chunkOptions.KeepChunkFiles) videoChunkJob.Cleanup();
                     break;
                 case "audio":
@@ -1326,14 +1618,15 @@ namespace projectFrameCut.StandaloneRender
                     if (allChunkJob is not null) vidOutputPath = allChunkJob.MergedPath;
                     composeAudio(audOutputPath);
                     Console.WriteLine("Composing audio and video... this may take a few seconds.");
-                    if (!File.Exists(audOutputPath))
+                    if (!File.Exists(audOutputPath) && !finalVideoBitRate.HasValue)
                     {
                         if (allChunkJob is null) File.Move(vidOutputPath, outputPath, overwrite: true);
                         else await ChunkRenderCoordinator.PublishAsync(vidOutputPath, outputPath, cts.Token).ConfigureAwait(false);
                     }
                     else if (allChunkJob is null)
                     {
-                        VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, outputPath, true);
+                        VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, outputPath, true,
+                            finalVideoBitRate: finalVideoBitRate, videoEncoder: outputEncoder, cancellationToken: cts.Token);
                     }
                     else
                     {
@@ -1341,7 +1634,8 @@ namespace projectFrameCut.StandaloneRender
                         string atomicOutput = Path.Combine(outputDirectory, $".{Path.GetFileNameWithoutExtension(outputPath)}.{Guid.NewGuid():N}{Path.GetExtension(outputPath)}");
                         try
                         {
-                            VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, atomicOutput, true);
+                            VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, atomicOutput, true,
+                                finalVideoBitRate: finalVideoBitRate, videoEncoder: outputEncoder, cancellationToken: cts.Token);
                             File.Move(atomicOutput, outputPath, overwrite: true);
                         }
                         finally
@@ -1366,6 +1660,44 @@ namespace projectFrameCut.StandaloneRender
             Environment.SetEnvironmentVariable("projectFrameCut_LastOutput", outputPath, EnvironmentVariableTarget.Process);
             Environment.SetEnvironmentVariable("projectFrameCut_RenderFinished", "1", EnvironmentVariableTarget.Process);
             return 0;
+        }
+
+        private static VfdV2PictureEncoder ParseVfdEncoder(ConcurrentDictionary<string, string> switches)
+        {
+            if (!Enum.TryParse<VfdCompression>(switches.GetValueOrDefault("vfdCompression", "Zstandard"), true, out var compression)
+                || !Enum.IsDefined(compression))
+                throw new ArgumentException("-vfdCompression must be None, Deflate, GZip, Brotli, Zstandard or Lzma2.");
+            string? level = switches.GetValueOrDefault("vfdCompressionLevel");
+            VfdV2PictureEncoder encoder;
+            switch (compression)
+            {
+                case VfdCompression.Zstandard:
+                    level ??= "1";
+                    if (!int.TryParse(level, out var zstd) || zstd is < -131072 or > 22)
+                        throw new ArgumentException("-vfdCompressionLevel for Zstandard must be an integer from -131072 to 22.");
+                    encoder = new(compression, zstandardLevel: zstd);
+                    break;
+                case VfdCompression.Lzma2:
+                    level ??= "6";
+                    if (!int.TryParse(level, out var lzma) || lzma is < 1 or > 10)
+                        throw new ArgumentException("-vfdCompressionLevel for Lzma2 must be an integer from 1 to 10.");
+                    encoder = new(compression, lzma2Level: lzma);
+                    break;
+                case VfdCompression.None:
+                    if (level is not null)
+                        throw new ArgumentException("-vfdCompressionLevel is not supported when -vfdCompression=None.");
+                    encoder = new(compression);
+                    break;
+                default:
+                    level ??= "Fastest";
+                    if (!Enum.TryParse<CompressionLevel>(level, true, out var codecLevel) || !Enum.IsDefined(codecLevel))
+                        throw new ArgumentException("-vfdCompressionLevel for Deflate/GZip/Brotli must be Fastest, Optimal, SmallestSize or NoCompression.");
+                    encoder = new(compression, compressionLevel: codecLevel);
+                    break;
+            }
+            if (bool.TryParse(switches.GetValueOrDefault("deferredComposition", "false"), out var deferred) && deferred)
+                Log($"[Render] VFD compression={compression}, level={level ?? "none"}.");
+            return encoder;
         }
 
         private static ChunkRenderOptions ParseChunkRenderOptions(ConcurrentDictionary<string, string> switches, int frameRate)
@@ -1422,6 +1754,67 @@ namespace projectFrameCut.StandaloneRender
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return string.Empty;
             var info = new FileInfo(path);
             return $"{Path.GetFullPath(path)}|{info.Length}|{info.LastWriteTimeUtc.Ticks}";
+        }
+
+        private static async Task<int> GoBenchSchedule(ConcurrentDictionary<string, string> switches)
+        {
+            if (!Enum.TryParse<FrameHashMode>(switches.GetValueOrDefault("frameHashMode", "Dynamic"), true, out var frameHashMode)
+                || !Enum.IsDefined(frameHashMode))
+            {
+                Log("Invalid frameHashMode: expected Dynamic or Static.", "error");
+                return 1;
+            }
+            if (!int.TryParse(switches.GetValueOrDefault("scheduleCandidates", "120"), out var candidates) || candidates < 1
+                || !int.TryParse(switches.GetValueOrDefault("scheduleSeed", "42"), out var seed))
+            {
+                Log("Invalid scheduleCandidates or scheduleSeed.", "error");
+                return 1;
+            }
+            if (switches.ContainsKey("writeToNull"))
+            {
+                Log("bench schedule always writes real video; omit writeToNull.", "error");
+                return 1;
+            }
+            DynamicallyLoadedBindings.EnableAutoInitialization = false;
+            DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+            ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", AppContext.BaseDirectory);
+            if (!DynamicallyLoadedBindings.TryInitialize())
+            {
+                Log("FFmpeg library failed to load.", "error");
+                return 1;
+            }
+            FFmpegHelper.SetupFFmpegLogging();
+            if (Enum.TryParse<EffectImplementType>(switches.GetValueOrDefault("ForcePreferToType"), out var type) && Enum.IsDefined(type))
+                EffectHelper.ForcePreferToType = type;
+            else EffectHelper.ForcePreferToType = EffectImplementType.HwAcceleration;
+
+            using var cts = new CancellationTokenSource();
+            ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; cts.Cancel(); };
+            Console.CancelKeyPress += cancel;
+            try
+            {
+                await RenderScheduleBenchmark.RunAsync(new()
+                {
+                    OutputDirectory = switches.GetValueOrDefault("reportDirectory", Path.Combine(Environment.CurrentDirectory, "benchmark-reports")),
+                    Encoder = switches.TryGetValue("encoder", out var encoder) ? encoder : null,
+                    PixelFormat = switches.GetValueOrDefault("pixelFormat", "AV_PIX_FMT_YUV420P"),
+                    FFmpegVersion = ffmpeg.av_version_info(),
+                    Accelerators = EffectHelper.ForcePreferToType == EffectImplementType.IPicture
+                        ? [] : AcceleratorsManager.AcceleratorsForRendering.Select(a => a.Name).ToArray(),
+                    CandidateCount = candidates,
+                    Seed = seed,
+                    FrameHashMode = frameHashMode,
+                }, cts.Token, renderer => !Environment.GetCommandLineArgs().Contains("--nolog")
+                    ? new RenderProgressDisplay(() => [renderer]) : null);
+                return 0;
+            }
+            catch (OperationCanceledException) when (cts.IsCancellationRequested) { return 255; }
+            catch (Exception ex)
+            {
+                Log(ex, "Render scheduling benchmark failed");
+                return 1;
+            }
+            finally { Console.CancelKeyPress -= cancel; }
         }
 
         /// <summary>
@@ -1598,12 +1991,6 @@ namespace projectFrameCut.StandaloneRender
                 StartFrame = 0
             };
 
-            // ── 进度回调 ─────────────────────────────────────
-            renderer.OnProgressChanged += (progress, eta) =>
-            {
-                Console.Write($"\rRendering: {progress:P1}  ETA: {FormatEta(eta)}  FPS: {renderer.CurrentFps:N2}  Frame: {renderer.CurrentFinished}/{renderer.Duration}      ");
-            };
-
             // ── Ctrl+C 处理 ──────────────────────────────────
             Console.CancelKeyPress += (sender, e) =>
             {
@@ -1625,7 +2012,8 @@ namespace projectFrameCut.StandaloneRender
                     Console.WriteLine("Press Enter to start benchmark render...");
                     Console.ReadLine();
                 }
-                await renderer.GoRender(cts.Token);
+                using (var progress = !Environment.GetCommandLineArgs().Contains("--nolog") ? new RenderProgressDisplay(() => [renderer]) : null)
+                    await renderer.GoRender(cts.Token);
                 sw.Stop();
                 Log($"Render done,total elapsed {sw.Elapsed}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
             }

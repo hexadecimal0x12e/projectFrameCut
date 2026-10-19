@@ -26,7 +26,11 @@ public sealed class ClipArgumentProvider : IEffectProvider
     public EffectArgumentFieldDescriptor OutField => new();
     public IReadOnlyDictionary<string, object> StaticValues => staticValues;
 
-    public void Attach(IClip clip) => Attach(clip.ArgumentFields, key => clip.ArgumentFields[key].ReadValue(clip));
+    public void Attach(IClip clip)
+    {
+        var fields = clip.ArgumentFields;
+        Attach(fields, key => fields[key].ReadValue(clip));
+    }
 
     public void Attach(IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> fields, Func<string, object> read)
     {
@@ -127,11 +131,12 @@ public sealed class ClipArgumentProvider : IEffectProvider
     public Dictionary<string, object> Evaluate(IClip clip)
     {
         var values = new Dictionary<string, object>();
+        var fields = clip.ArgumentFields;
         foreach (var (key, field) in Fields)
         {
             if (key == ClipArgumentHandler.ShouldRenderKey) continue;
-            if (!clip.ArgumentFields.ContainsKey(key)) throw new ArgumentException($"Unknown clip argument '{key}'.");
-            object fallback = staticValues.GetValueOrDefault(key) ?? clip.ArgumentFields[key].ReadValue(clip);
+            if (!fields.TryGetValue(key, out var descriptor)) throw new ArgumentException($"Unknown clip argument '{key}'.");
+            object fallback = staticValues.GetValueOrDefault(key) ?? descriptor.ReadValue(clip);
             object? value = runtimeFields.TryGetValue(key, out var inline) ? inline.GetGetter()() : field.GetGetter()();
             values[key] = (field.FieldType & (EffectArgumentFieldType)0xFFFF) switch
             {

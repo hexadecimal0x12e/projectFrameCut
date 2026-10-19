@@ -73,6 +73,7 @@ internal sealed class PluginIsolationWorkerService(
                     RenderOperation.IsolationLoadPlugin => await LoadPluginAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationCreateProvider => CreateProvider(request),
                     RenderOperation.IsolationBuildProvider => await BuildProviderAsync(request, cancellationToken).ConfigureAwait(false),
+                    RenderOperation.IsolationEditKeyFrames => await EditKeyFramesAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationResolveFieldTypes => await ResolveFieldTypesAsync(request, cancellationToken).ConfigureAwait(false),
                     RenderOperation.IsolationCloneEffect => CloneEffect(request),
                     RenderOperation.IsolationReleaseObject => ReleaseObject(request),
@@ -352,6 +353,58 @@ internal sealed class PluginIsolationWorkerService(
         {
             if (!retained)
                 foreach (var picture in pictures.Values) picture.Dispose();
+        }
+    }
+
+    private async ValueTask<RenderResponseEnvelope> EditKeyFramesAsync(RenderRequestEnvelope envelope, CancellationToken cancellationToken)
+    {
+        var request = Read<IsolationKeyFrameRequest>(envelope);
+        var provider = Require<IEffectProvider>(request.Provider.ObjectId) as IKeyFramedEffectProvider
+            ?? throw new ArgumentException("Provider does not support keyframes.");
+        var pictures = new Dictionary<string, IPicture>();
+        try
+        {
+            foreach (var field in request.Provider.Fields.Where(f => f.PictureValue is not null))
+                pictures[field.Id] = await PicturePayloadCodec.ReadAsync(field.PictureValue!, _payloads, cancellationToken).ConfigureAwait(false);
+            ApplyProviderState(provider, request.Provider, pictures);
+            IKeyFrameStep? created = null;
+            switch (request.Operation)
+            {
+                case IsolationKeyFrameOperation.Get: break;
+                case IsolationKeyFrameOperation.Create:
+                    created = provider.CreateStep(request.Progress);
+                    break;
+                case IsolationKeyFrameOperation.Add:
+                case IsolationKeyFrameOperation.Update:
+                    var input = IsolationKeyFrameCodec.Read(request.Step ?? throw new ArgumentException("Step is required."));
+                    var step = request.Operation == IsolationKeyFrameOperation.Add
+                        ? provider.CreateStep(input.Progress) : provider.Steps[request.Index];
+                    step.SetValues(input.Fields.ToDictionary(p => p.Key, p => p.Value.GetGetter()()));
+                    step.Progress = input.Progress;
+                    step.ValidateStatic();
+                    if (request.Operation == IsolationKeyFrameOperation.Add) provider.AddStep(step);
+                    else provider.UpdateStep(request.Index, step);
+                    break;
+                case IsolationKeyFrameOperation.Remove:
+                    provider.RemoveStep(request.Index);
+                    break;
+                default: throw new ArgumentException("Unknown keyframe operation.");
+            }
+            return Success(envelope, new IsolationKeyFrameResult
+            {
+                Provider = new IsolationProviderState
+                {
+                    ObjectId = request.Provider.ObjectId, Enabled = provider.Enabled, InstanceId = provider.Id.ToString(), Name = provider.Name,
+                    AnchorBindings = new(provider.AnchorsBindingState), Fields = provider.Fields.Values.Select(DescribeField).ToList(),
+                    Metadata = provider.MetaData.ToDictionary(p => p.Key, p => IsolationValueConverter.FromObject(p.Value)),
+                },
+                Steps = request.Operation == IsolationKeyFrameOperation.Create ? [] : provider.Steps.Select(IsolationKeyFrameCodec.Write).ToList(),
+                Step = created is null ? null : IsolationKeyFrameCodec.Write(created),
+            });
+        }
+        finally
+        {
+            foreach (var picture in pictures.Values) picture.Dispose();
         }
     }
 
@@ -1298,6 +1351,7 @@ internal sealed class PluginIsolationWorkerService(
             Fields = provider.Fields.Values.Select(DescribeField).ToList(),
             OutputField = provider is IMultipleOutputEffectProvider ? new() : DescribeField(provider.OutField),
             HasMultipleOutputs = provider is IMultipleOutputEffectProvider,
+            HasKeyFrames = provider is IKeyFramedEffectProvider,
             OutputFields = provider.GetOutputFields().Values.Select(DescribeField).ToList(),
             SupportedImplementTypes = provider.SupportsImplementTypes.Select(x => (int)x).ToList(),
             DefaultImplementType = (int)provider.DefaultImplementType,

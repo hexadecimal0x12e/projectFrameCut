@@ -1,26 +1,20 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.RenderPage"
              Loaded="ContentPage_Loaded"
              xmlns:l="clr-namespace:LocalizedResources"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:vm="clr-namespace:projectFrameCut"
              x:DataType="vm:RenderPageViewModel"
              Title="RenderPage">
     <ContentPage.ToolbarItems>
         <ToolbarItem Order="Secondary" Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/>
-        <ToolbarItem Order="Secondary" Text="{l:Localized Key=RenderPage_ToolBar_AdvancedEncodingOption}" x:Name="AdvancedEncoderOverride" Clicked="AdvancedEncoderOverride_Clicked" />
-        <ToolbarItem Order="Secondary" Text="{l:Localized Key=RenderPage_ToolBar_ExportVideoWithAlpha}" x:Name="ExportAlphaHdr" Clicked="ExportAlphaHdr_Clicked" />
-        <ToolbarItem Order="Secondary" Text="{l:Localized Key=RenderPage_ToolBar_ExportAudioOnly}" x:Name="ExportAudioOnly" Clicked="ExportAudioOnly_Clicked" />
-        <ToolbarItem Order="Secondary" Text="{l:Localized Key=RenderPage_ToolBar_ExportVideoOnly}" x:Name="ExportVideoOnly" Clicked="ExportVideoOnly_Clicked" />
-        <ToolbarItem Order="Secondary" Text="{l:Localized Key=RenderPage_ToolBar_Export16bitRawVideo}" x:Name="Export16bitRawVideo" Clicked="Export16bitRawVideo_Clicked"/>
-        <ToolbarItem Order="Secondary" x:Name="GenerateStandaloneArgsButton" Text="{l:Localized Key=RenderPage_ToolBar_GenerateStandaloneArgs}" Clicked="GenerateStandaloneArgs_Clicked" IsEnabled="{OnPlatform WinUI=True, Default=False}" />
-
     </ContentPage.ToolbarItems>
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition x:Name="PreviewRowDefinition" Height="Auto"/>
-            <RowDefinition x:Name="ProgressRowDefinition" Height="*"/>
+            <RowDefinition x:Name="PreviewRowDefinition" Height="*"/>
+            <RowDefinition x:Name="ProgressRowDefinition" Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0" Grid.RowSpan="2" BackgroundColor="#80000000" IsVisible="{Binding IsCountdownVisible}" ZIndex="1000">
@@ -52,90 +46,123 @@
                    HorizontalTextAlignment="Center"
                    FontSize="Large"/>
         </Grid>
-        <Grid Grid.Row="0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1*"/>
-            </Grid.ColumnDefinitions>
-            <ScrollView  Orientation="Vertical">
-                <VerticalStackLayout Grid.Column="1" Padding="24" x:Name="RenderOptionPanel" >
-                    <Picker
-                    x:Name="resoultionPicker"
-                    Title="{l:Localized Key=RenderPage_SelectResolution}"
-                    ItemsSource="{Binding ExportOptions_Resolution}"
-                    SelectedItem="{Binding Resoultion, Mode=TwoWay}" />
-                    <HorizontalStackLayout x:Name="CustomResolutionBox" Margin="0,8,0,8"
-                                        IsVisible="{Binding IsCustomResolutionVisible}">
-                        <Entry Placeholder="Width" HeightRequest="25" WidthRequest="70" Margin="8,0,8,0"
-                            Keyboard="Numeric"
-                            Text="{Binding Width, Mode=TwoWay}" />
-                        <Entry Placeholder="Height" HeightRequest="25" WidthRequest="70"
-                            Keyboard="Numeric"
-                            Text="{Binding Height, Mode=TwoWay}" />
-                    </HorizontalStackLayout>
+        <ScrollView Grid.Row="0" Orientation="Vertical" x:Name="RenderOptionPanel">
+            <VerticalStackLayout Padding="24">
+                <Picker
+                x:Name="resoultionPicker"
+                Title="{l:Localized Key=RenderPage_SelectResolution}"
+                ItemsSource="{Binding ExportOptions_Resolution}"
+                SelectedItem="{Binding Resoultion, Mode=TwoWay}" />
+                <HorizontalStackLayout x:Name="CustomResolutionBox" Margin="0,8,0,8"
+                                    IsVisible="{Binding IsCustomResolutionVisible}">
+                    <Entry Placeholder="Width" HeightRequest="25" WidthRequest="70" Margin="8,0,8,0"
+                        Keyboard="Numeric"
+                        Text="{Binding Width, Mode=TwoWay}" />
+                    <Entry Placeholder="Height" HeightRequest="25" WidthRequest="70"
+                        Keyboard="Numeric"
+                        Text="{Binding Height, Mode=TwoWay}" />
+                </HorizontalStackLayout>
 
-                    <Picker
-                    Margin="0,8,0,0"
-                    x:Name="frameratePicker"
-                    Title="{l:Localized Key=RenderPage_SelectFrameRate}"
-                    ItemsSource="{Binding ExportOptions_Framerate}"
-                    SelectedItem="{Binding FramerateDisplay, Mode=TwoWay}" />
-                    <HorizontalStackLayout x:Name="CustomFramerateBox" Margin="0,8,0,8"
-                                        IsVisible="{Binding IsCustomFramerateVisible}">
-                        <Entry Placeholder="Framerate" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
-                            Keyboard="Numeric"
-                            Text="{Binding Framerate, Mode=TwoWay}" />
-                    </HorizontalStackLayout>
+                <Picker
+                Margin="0,8,0,0"
+                x:Name="frameratePicker"
+                Title="{l:Localized Key=RenderPage_SelectFrameRate}"
+                ItemsSource="{Binding ExportOptions_Framerate}"
+                SelectedItem="{Binding FramerateDisplay, Mode=TwoWay}" />
+                <HorizontalStackLayout x:Name="CustomFramerateBox" Margin="0,8,0,8"
+                                    IsVisible="{Binding IsCustomFramerateVisible}">
+                    <Entry Placeholder="Framerate" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
+                        Keyboard="Numeric"
+                        Text="{Binding Framerate, Mode=TwoWay}" />
+                </HorizontalStackLayout>
 
-                    <Picker
-                    Margin="0,8,0,0"
-                    x:Name="bitDepthPicker"
-                    Title="{l:Localized Key=RenderPage_SelectBitdepth}"
-                    ItemsSource="{Binding ExportOptions_BitDepth}"
-                    SelectedItem="{Binding BitDepthDisplay, Mode=TwoWay}" />
-                    <HorizontalStackLayout x:Name="CustomBitDepthBox" Margin="0,8,0,8"
-                                        IsVisible="{Binding IsCustomBitDepthVisible}">
-                        <Entry Placeholder="BitDepth" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
-                            Keyboard="Text"
-                            Text="{Binding BitDepth, Mode=TwoWay}" />
-                    </HorizontalStackLayout>
-                    <Picker
-                    Margin="0,8,0,0"
-                    x:Name="PostRenderActionPicker"
-                    IsVisible="{OnPlatform WinUI=True,Default=False}"
-                    Title="{l:Localized Key=RenderPage_PostRenderAction}"
-                    ItemsSource="{Binding PostRenderActions}"
-                    SelectedItem="{Binding SelectedPostRenderAction, Mode=TwoWay}" />
+                <Picker x:Name="BitRatePicker"
+                        Title="{l:Localized Key=RenderPage_BitRate}"
+                        ItemsSource="{Binding ExportOptions_BitRate}"
+                        SelectedItem="{Binding BitRateDisplay, Mode=TwoWay}" />
+                <Entry Keyboard="Numeric" IsVisible="{Binding IsCustomBitRateVisible}"
+                       Placeholder="{l:Localized Key=RenderPage_BitRateAuto}"
+                       Text="{Binding CustomBitRateMbps, Mode=TwoWay}" />
 
+                <Picker
+                Margin="0,8,0,0"
+                x:Name="PostRenderActionPicker"
+                IsVisible="{OnPlatform WinUI=True,Default=False}"
+                Title="{l:Localized Key=RenderPage_PostRenderAction}"
+                ItemsSource="{Binding PostRenderActions}"
+                SelectedItem="{Binding SelectedPostRenderAction, Mode=TwoWay}" />
+                <Label x:Name="HDRHintLabel" Text="{l:Localized Key=RenderPage_HDREnabledNotAvailable}" FontSize="12" TextColor="Gray" IsVisible="False"/>
+                <Button Margin="0,8,0,8" x:Name="StartRender" Text="{l:Localized Key=RenderPage_StartRender}" Clicked="StartRender_Clicked" />
 
-                    <Label x:Name="MaxParallelThreadsCountLabel"  Margin="0,8,0,0" Text="RenderPage_MaxParallelThreadsCount" />
-                    <Slider x:Name="MaxParallelThreadsCount" Minimum="1" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
-                    <Label x:Name="HDRHintLabel" Text="{l:Localized Key=RenderPage_HDREnabledNotAvailable}" FontSize="12" TextColor="Gray" IsVisible="False"/>
-                            <Button Margin="0,8,0,8"  x:Name="StartRender" Text="{l:Localized Key=RenderPage_StartRender}" Clicked="StartRender_Clicked" />
-                    <Border x:Name="DebugView" Padding="4">
-                        <VerticalStackLayout>
-                            <Label Text="DEBUG Options" />
-                            <Button x:Name="RenderToVoidButton" Text="Render video, but don't write result to file (benchmarking)" Clicked="RenderToVoidButton_Clicked" />
-                            <Button x:Name="RenderNoWritingButton" Text="Render video to void (testing)" Clicked="RenderNoWritingButton_Clicked" />
-                            <Button x:Name="ExportProjectJSONButton" Text="Export final timeline JSON" Clicked="ExportProjectJSONButton_Clicked" />
-                            <Button x:Name="PerformPostRenderActionNowTestButton" Text="Perform Post-Render Action Now" Clicked="PerformPostRenderActionNowTestButton_Clicked" />
-                            <Editor x:Name="DraftJSONViewer" IsReadOnly="True" HeightRequest="250" IsVisible="False"></Editor>
+                <Border Margin="0,8,0,0" Padding="12">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="8"/>
+                    </Border.StrokeShape>
+                    <toolkit:Expander x:Name="AdvancedOptionsExpander" IsExpanded="False">
+                        <toolkit:Expander.Header>
+                            <Grid ColumnDefinitions="*,Auto" Padding="0,4" ColumnSpacing="12">
+                                <Label Text="{l:Localized Key=MainSettingsPage_Tab_Advanced}" FontAttributes="Bold" FontSize="16" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="›" FontSize="24" VerticalOptions="Center">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsExpanded, Source={x:Reference AdvancedOptionsExpander}, x:DataType=toolkit:Expander}" Value="True">
+                                            <Setter Property="Rotation" Value="90" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </Grid>
+                        </toolkit:Expander.Header>
+                        <VerticalStackLayout Padding="0,12,0,0" Spacing="8">
+                            <Picker
+                                x:Name="bitDepthPicker"
+                                Title="{l:Localized Key=RenderPage_SelectBitdepth}"
+                                ItemsSource="{Binding ExportOptions_BitDepth}"
+                                SelectedItem="{Binding BitDepthDisplay, Mode=TwoWay}" />
+                            <HorizontalStackLayout x:Name="CustomBitDepthBox"
+                                                   IsVisible="{Binding IsCustomBitDepthVisible}">
+                                <Entry Placeholder="BitDepth" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
+                                       Keyboard="Text"
+                                       Text="{Binding BitDepth, Mode=TwoWay}" />
+                            </HorizontalStackLayout>
+                            <Label x:Name="MaxParallelThreadsCountLabel" Text="RenderPage_MaxParallelThreadsCount" />
+                            <Slider x:Name="MaxParallelThreadsCount" Minimum="1" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
+                            <Picker x:Name="EncodingPicker"
+                                    Title="{l:Localized Key=RenderPage_ToolBar_AdvancedEncodingOption}"
+                                    ItemsSource="{Binding ExportOptions_Encoding}"
+                                    SelectedItem="{Binding EncodingDisplay, Mode=TwoWay}" />
+                            <Entry Placeholder="libx264 / hevc_nvenc"
+                                   IsVisible="{Binding IsCustomEncodingVisible}"
+                                   Text="{Binding CustomEncoding, Mode=TwoWay}" />
+                            <Button Text="{l:Localized Key=RenderPage_ToolBar_ExportVideoWithAlpha}" x:Name="ExportAlphaHdr" Clicked="ExportAlphaHdr_Clicked" />
+                            <Button Text="{l:Localized Key=RenderPage_ToolBar_ExportAudioOnly}" x:Name="ExportAudioOnly" Clicked="ExportAudioOnly_Clicked" />
+                            <Button Text="{l:Localized Key=RenderPage_ToolBar_ExportVideoOnly}" x:Name="ExportVideoOnly" Clicked="ExportVideoOnly_Clicked" />
+                            <Button Text="{l:Localized Key=RenderPage_ToolBar_Export16bitRawVideo}" x:Name="Export16bitRawVideo" Clicked="Export16bitRawVideo_Clicked" />
+                            <Button x:Name="GenerateStandaloneArgsButton" Text="{l:Localized Key=RenderPage_ToolBar_GenerateStandaloneArgs}" Clicked="GenerateStandaloneArgs_Clicked" IsEnabled="{OnPlatform WinUI=True, Default=False}" />
+                            <Border x:Name="DebugView" Padding="8" IsVisible="False">
+                                <VerticalStackLayout Spacing="8">
+                                    <Label Text="DEBUG Options" />
+                                    <Button x:Name="RenderToVoidButton" Text="Render video, but don't write result to file (benchmarking)" Clicked="RenderToVoidButton_Clicked" />
+                                    <Button x:Name="RenderNoWritingButton" Text="Render video to void (testing)" Clicked="RenderNoWritingButton_Clicked" />
+                                    <Button x:Name="ExportProjectJSONButton" Text="Export final timeline JSON" Clicked="ExportProjectJSONButton_Clicked" />
+                                    <Button x:Name="PerformPostRenderActionNowTestButton" Text="Perform Post-Render Action Now" Clicked="PerformPostRenderActionNowTestButton_Clicked" />
+                                    <Editor x:Name="DraftJSONViewer" IsReadOnly="True" HeightRequest="250" IsVisible="False" />
+                                </VerticalStackLayout>
+                            </Border>
                         </VerticalStackLayout>
-                    </Border>
-
-                </VerticalStackLayout>
-            </ScrollView>
-
-            <Grid x:Name="PreviewLayout" IsVisible="False" Grid.Column="1" Padding="32,0" VerticalOptions="Fill" IsClippedToBounds="True" RowSpacing="8">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <Label Grid.Row="0" Text="{l:Localized Key=RenderPage_PreviewLabel}" Margin="0,12,0,0"/>
-                <Border x:Name="PreviewBorder" Grid.Row="1" StrokeThickness="5" Padding="4" HorizontalOptions="Center" VerticalOptions="Fill" HeightRequest="-1" MinimumHeightRequest="180">
-                    <Image x:Name="PreviewImage" Aspect="AspectFit" HorizontalOptions="Center" VerticalOptions="Fill" MinimumHeightRequest="160" Background="Black" />
+                    </toolkit:Expander>
                 </Border>
-            </Grid>
 
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Grid x:Name="PreviewLayout" IsVisible="False" Grid.Row="0" Padding="32,0" VerticalOptions="Fill" IsClippedToBounds="True" RowSpacing="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Label Grid.Row="0" Text="{l:Localized Key=RenderPage_PreviewLabel}" Margin="0,12,0,0"/>
+            <Border x:Name="PreviewBorder" Grid.Row="1" StrokeThickness="5" Padding="4" HorizontalOptions="Center" VerticalOptions="Fill" HeightRequest="-1" MinimumHeightRequest="180">
+                <Image x:Name="PreviewImage" Aspect="AspectFit" HorizontalOptions="Center" VerticalOptions="Fill" MinimumHeightRequest="160" Background="Black" />
+            </Border>
         </Grid>
 
         <Grid Grid.Row="1" Padding="32" x:Name="ProgressBox" IsVisible="False">

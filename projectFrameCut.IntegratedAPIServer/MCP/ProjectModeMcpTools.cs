@@ -693,6 +693,21 @@ internal static class ProjectModeEditingTools
                 "implementType":{"type":"string","enum":["None","NotSpecified","IPicture","HwAcceleration","Custom1","Custom2","Custom3","Custom4","Custom5"]},
                 "autoConnect":{"type":"string","enum":["output","input","none"],"default":"output"}
                 """, "clipId", "typeName"), Edit(controller, "addEffectProvider"), requireAuthorization),
+            Tool("get_clip_effect_steps", "Read keyframe steps and editable static field metadata. Indexes follow progress order.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},
+                "stepIndex":{"type":"integer","minimum":0}
+                """, "clipId", "providerId"), Query(controller, "clipEffectSteps"), requireAuthorization),
+            Tool("add_effect_step", "Add a keyframe using typed static fields, including Progress. Returns the sorted step list.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},"fields":{"type":"object"}
+                """, "clipId", "providerId"), Edit(controller, "addEffectStep"), requireAuthorization),
+            Tool("set_effect_step", "Update a keyframe by its current index. Fields cannot be bound. Returns the sorted step list.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},
+                "stepIndex":{"type":"integer","minimum":0},"fields":{"type":"object"}
+                """, "clipId", "providerId", "stepIndex", "fields"), Edit(controller, "setEffectStep"), requireAuthorization),
+            Tool("remove_effect_step", "Remove a keyframe by its current index. Returns the remaining sorted step list.", ObjectSchema("""
+                "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},
+                "stepIndex":{"type":"integer","minimum":0}
+                """, "clipId", "providerId", "stepIndex"), Edit(controller, "removeEffectStep"), requireAuthorization),
             Tool("update_effect_provider", "Update an EffectProvider's name, enabled state, typed static fields, or metadata.", ObjectSchema("""
                 "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},
                 "name":{"type":"string"},"enabled":{"type":"boolean"},"fields":{"type":"object"},"metadata":{"type":"object"},
@@ -735,7 +750,7 @@ internal static class ProjectModeEditingTools
                 """, "clipId", "targetProviderId", "fieldId", "fromValue", "toValue"), Edit(controller, "setLinearEffectAnimation"), requireAuthorization),
             Tool("set_position_keyframes", "Add or update ProgressPlacer position/size keyframes with normalized indexes.", ObjectSchema("""
                 "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},
-                "keyframes":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"index":{"type":"number","minimum":0,"maximum":1},"position":{"type":"object","additionalProperties":false,"properties":{"targetX":{"type":"integer"},"targetY":{"type":"integer"},"targetWidth":{"type":"integer"},"targetHeight":{"type":"integer"},"isDelta":{"type":"boolean"}},"required":["targetX","targetY","targetWidth","targetHeight"]}},"required":["index","position"]}}
+                "keyframes":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"index":{"type":"number","minimum":0,"maximum":1},"position":{"type":"object","additionalProperties":false,"properties":{"targetX":{"type":"integer"},"targetY":{"type":"integer"},"targetWidth":{"type":"integer","minimum":1},"targetHeight":{"type":"integer","minimum":1},"isDelta":{"type":"boolean"},"rotation":{"type":"number"}},"required":["targetX","targetY","targetWidth","targetHeight"]}},"required":["index","position"]}}
                 """, "clipId", "keyframes"), Edit(controller, "setPositionKeyframes"), requireAuthorization),
             Tool("set_crop_keyframes", "Add or update ProgressCrop keyframes with normalized indexes.", ObjectSchema("""
                 "clipId":{"type":"string","format":"uuid"},"providerId":{"type":"string","format":"uuid"},

@@ -94,6 +94,15 @@
 
             </AbsoluteLayout>
         </Grid>
+        <ActivityIndicator IsVisible="{Binding IsPreviewBusy}"
+                           IsRunning="{Binding IsPreviewBusy}"
+                           WidthRequest="40"
+                           HeightRequest="40"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           InputTransparent="True"
+                           ZIndex="10001" />
+
         <VerticalStackLayout x:Name="LeftControlsHost"
                              HorizontalOptions="Start"
                              VerticalOptions="End"

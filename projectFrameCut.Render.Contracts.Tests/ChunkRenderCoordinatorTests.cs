@@ -45,6 +45,16 @@ public sealed class ChunkRenderCoordinatorTests
             var resumed = CreateCoordinator(projectRoot, totalFrames: 12, chunkFrames: 4);
             await resumed.InitializeAsync();
             var rendered = new List<int>();
+            var completed = new List<int>();
+            resumed.OnChunkCompleted += segment =>
+            {
+                using var manifest = JsonDocument.Parse(File.ReadAllText(resumed.ManifestPath));
+                var entry = manifest.RootElement.GetProperty("Chunks").EnumerateArray()
+                    .Single(chunk => chunk.GetProperty("Index").GetInt32() == segment.Index);
+                Assert.AreEqual("completed", entry.GetProperty("Status").GetString());
+                Assert.IsFalse(string.IsNullOrWhiteSpace(entry.GetProperty("Sha256").GetString()));
+                completed.Add(segment.Index);
+            };
             await resumed.RenderPendingChunksAsync(async (segment, path, threads, report, token) =>
             {
                 rendered.Add(segment.Index);
@@ -52,6 +62,7 @@ public sealed class ChunkRenderCoordinatorTests
             });
 
             CollectionAssert.AreEqual(new[] { 1 }, rendered);
+            CollectionAssert.AreEqual(new[] { 1 }, completed);
         }
         finally
         {

@@ -73,9 +73,37 @@ Clips and assets:
 - `Add-ProjectAsset -FilePath <path> [-Name] [-PassThru]`
 - `Remove-ProjectAsset -AssetId <id>`
 - `Add-ProjectClip -TrackId <id> [-FilePath] [-AssetId] [-Name] [-StartFrame] [-DurationFrames] [-SourceStartFrame] [-WidthPixels] [-HeightPixels] [-PassThru]`
-- `Set-ProjectClip -ClipId <id> [-Name] [-TrackId] [-StartFrame] [-DurationFrames] [-SourceStartFrame] [-FilePath] [-WidthPixels] [-HeightPixels] [-XPixels] [-YPixels] [-PassThru]`
+- `Set-ProjectClip -ClipId <id> [-Name] [-TrackId] [-StartFrame] [-DurationFrames] [-SourceStartFrame] [-FilePath] [-PassThru]`
 - `Copy-ProjectClip -ClipId <id> [-Name] [-TrackId] [-StartFrame] [-PassThru]`
 - `Remove-ProjectClip -ClipId <id>`
+
+Clip properties and geometry:
+
+- `Get-ProjectClipProperties -ClipId <id>`
+- `Set-ProjectClipProperties -ClipId <id> [-Name] [-ClipColor] [-AllowFreeScaleResize] [-ExtendToWholeDraft] [-TargetDecoder] [-HDRBrightnessOffset] [-AudioEnabled] [-AudioVolume] [-DetachAudio]`
+- Solid-color channels (`Red/Green/Blue/Alpha`), mask sources (`MaskSourceType/SourceArguments`), and `AntiAliasMode` also use `Set-ProjectClipProperties`.
+- `Get-ProjectClipGeometry -ClipId <id>`
+- `Set-ProjectClipGeometry -ClipId <id> [-WidthPixels] [-HeightPixels] [-XPixels] [-YPixels] [-RotationDegrees] [-CropEnabled] [-CropXPixels] [-CropYPixels] [-CropWidthPixels] [-CropHeightPixels] [-CropRotationDegrees]`
+
+Display geometry has moved from `Set-ProjectClip` and `Set-ProjectVectorClip` to `Set-ProjectClipGeometry`. Creation commands still accept initial dimensions. Setting static geometry clears the corresponding Clip-argument overrides and bindings. Crop rectangles use pixels; rotation uses degrees.
+
+Additional editing commands:
+
+- `Add-ProjectSolidColorClip`, `Add-ProjectEmptyVideoClip`, `Get-ProjectMaskSourceType`, `Add-ProjectMaskClip`
+- `Get-ProjectSubtitleClip`, `Add-ProjectSubtitleClip`, `Set-ProjectSubtitleClip`
+- `Get-ProjectSubtitleCue`, `Add-ProjectSubtitleCue`, `Set-ProjectSubtitleCue`, `Remove-ProjectSubtitleCue`
+- `Split-ProjectClip -ClipId <id> -FrameIndex <frame>`, `Join-ProjectClip -ClipIds <ids>`, `Split-ProjectClipGroup -ClipId <id>`
+- `Remove-ProjectTrack -TrackId <id>` removes its clips and reindexes tracks; query IDs again afterward.
+- `Get-ProjectExternalSource`, `Add-ProjectExternalSource -FilePath <folder-or-manifest>`, `Set-ProjectExternalSource`, `Remove-ProjectExternalSource`
+- `Add-ProjectExternalSourceClip -ImportId <id> -SourceId <source> -SourceKind Video|Audio|Mask -TrackId <id>`; RPC clients use `ClientId` instead of `ImportId`.
+- `Get-ProjectTransformType [-Audio]`, `Get-ProjectClipTransform`, `Set-ProjectClipTransform`, `Remove-ProjectClipTransform`, `Get-ProjectClipTransformPreview`
+- `Get-ProjectSettings`, `Set-ProjectSettings`
+
+Subtitle cue times and offsets use milliseconds relative to the subtitle source, independently of project-frame clip timing. Cue writes validate unique IDs, positive intervals and non-overlapping times. File imports support SRT/VTT/ASS/SSA and optional `EncodingName`; importing into an existing clip preserves its style.
+
+Transitions use `Side Left|Right`, `InputMode OneInput|TwoInput`, `DurationFrames`, `RenderOrder BeforeEffects|AfterEffects`, and provider `Fields`. Neighbor selection and shared ownership follow the GUI. Picture-transition previews return a video path. External-source loading is session state; import/removal updates the project index.
+
+Project settings include frame rate, resolution, HDR brightness, imported covers, cover-as-first-frame and `UserDefinedProperties` (null removes a key). Keep using the standard `ChangeReason/WhatIf/PassThru` workflow and save explicitly when finished.
 
 Text:
 

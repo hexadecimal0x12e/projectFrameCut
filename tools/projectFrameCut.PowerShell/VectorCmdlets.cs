@@ -27,16 +27,20 @@ public abstract class ProjectVectorClipWriteCmdlet : ProjectWriteCmdlet
     [Parameter][ValidateRange(0, int.MaxValue)] public uint? StartFrame { get; set; }
     [Parameter][ValidateRange(1, int.MaxValue)] public uint? DurationFrames { get; set; }
     [Parameter][ValidateRange(0, int.MaxValue)] public uint? SourceStartFrame { get; set; }
+    [Parameter][ValidateSet("Default", "None", "SSAA2x", "SSAA4x", "SSAA8x")] public string? AntiAliasMode { get; set; }
+}
+
+public abstract class ProjectVectorClipCreateCmdlet : ProjectVectorClipWriteCmdlet
+{
     [Parameter][ValidateRange(1, int.MaxValue)] public int? WidthPixels { get; set; }
     [Parameter][ValidateRange(1, int.MaxValue)] public int? HeightPixels { get; set; }
     [Parameter] public int? XPixels { get; set; }
     [Parameter] public int? YPixels { get; set; }
     [Parameter] public float? RotationDegrees { get; set; }
-    [Parameter][ValidateSet("Default", "None", "SSAA2x", "SSAA4x", "SSAA8x")] public string? AntiAliasMode { get; set; }
 }
 
 [Cmdlet("Add", "ProjectVectorCanvasClip", SupportsShouldProcess = true)]
-public sealed class AddProjectVectorCanvasClipCommand : ProjectVectorClipWriteCmdlet
+public sealed class AddProjectVectorCanvasClipCommand : ProjectVectorClipCreateCmdlet
 {
     protected override GuiProjectOperation Operation => GuiProjectOperation.AddVectorCanvasClip;
     [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)][ValidateRange(0, int.MaxValue)] public int TrackId { get; set; }
@@ -44,7 +48,7 @@ public sealed class AddProjectVectorCanvasClipCommand : ProjectVectorClipWriteCm
 }
 
 [Cmdlet("Add", "ProjectVectorComponentClip", SupportsShouldProcess = true, DefaultParameterSetName = "Component")]
-public sealed class AddProjectVectorComponentClipCommand : ProjectVectorClipWriteCmdlet
+public sealed class AddProjectVectorComponentClipCommand : ProjectVectorClipCreateCmdlet
 {
     protected override GuiProjectOperation Operation => GuiProjectOperation.AddVectorComponentClip;
     [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)][ValidateRange(0, int.MaxValue)] public int TrackId { get; set; }

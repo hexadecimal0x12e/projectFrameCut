@@ -1,3 +1,5 @@
+﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
 #if !HEADLESS
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
@@ -56,6 +58,7 @@ internal class IsolatedPluginProxy : IPluginBase, IAIProviderPlugin
     public IReadOnlyDictionary<string, string> Properties => Inner.Properties;
     public Dictionary<string, Dictionary<string, string>> LocalizationProvider => Inner.LocalizationProvider;
     public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
+    public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => Inner.TextClipStyleProvider;
     public IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider { get; }
     public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
     public Dictionary<string, IVideoSource> VideoSourceProvider { get; }
@@ -222,7 +225,8 @@ internal sealed class IsolatedApplicationPluginProxy : IsolatedPluginProxy, IApp
 
     public int AppLevelPluginAPIVersion => _app.AppLevelPluginAPIVersion;
     public Dictionary<string, Func<IEffectProvider, IEffectProviderUIProvider>> EffectProviderUIProvider => _app.EffectProviderUIProvider;
-    public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => _app.TextClipStyleProvider;
+    public Dictionary<string, Func<ITextClipStyleProvider, ITextClipStyleUIProvider>> TextClipStyleUIProvider => _app.TextClipStyleUIProvider;
+    public ITextClipStyleUIProvider? GetDefaultTextClipStyleUIProvider(ITextClipStyleProvider source) => _app.GetDefaultTextClipStyleUIProvider(source);
     public Dictionary<string, Func<IVectorComponentHandler>> VectorComponentHandlerProvider => _app.VectorComponentHandlerProvider;
     public IEffectProviderUIProvider? GetDefaultEffectProviderUIProvider(IEffectProvider source) => _app.GetDefaultEffectProviderUIProvider(source);
     public View? SettingPageProvider(ref IApplicationPluginBase instance)

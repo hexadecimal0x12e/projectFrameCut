@@ -87,7 +87,7 @@ namespace projectFrameCut.Render.Effect
     /// <summary>
     /// The Render-side provider of the ProgressCrop keyframed crop provider.
     /// </summary>
-    public class ProgressCropProvider : EffectProviderBase
+    public class ProgressCropProvider : KeyFramedEffectProviderBase<CropData>
     {
         public override bool IsDeterministic => true;
 
@@ -119,11 +119,38 @@ namespace projectFrameCut.Render.Effect
                 Field("Width", EffectArgumentFieldType.Integer, "1280", min: "1"),
                 Field("Height", EffectArgumentFieldType.Integer, "720", min: "1"),
                 Field("Angle", EffectArgumentFieldType.Numeric, "0", min: "-180", max: "180"),
-                Field("CropList", EffectArgumentFieldType.String, "[]", remarks: "Serialized CropData array as JSON string")
+                Field("CropList", EffectArgumentFieldType.String | EffectArgumentFieldType.NotVisibleInEffectPanel | EffectArgumentFieldType.CannotBeDynamic, "[]", remarks: "Serialized CropData array as JSON string")
             ];
         }
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration, EffectImplementType.IPicture];
+
+        protected override string StepListFieldId => "CropList";
+
+        public override IKeyFrameStep CreateStep(double progress)
+        {
+            var fields = Fields;
+            return ReadStep(new CropData(progress,
+                Convert.ToInt32(fields["StartX"].GetGetter()()), Convert.ToInt32(fields["StartY"].GetGetter()()),
+                Math.Max(1, Convert.ToInt32(fields["Width"].GetGetter()())), Math.Max(1, Convert.ToInt32(fields["Height"].GetGetter()())),
+                Convert.ToSingle(fields["Angle"].GetGetter()())));
+        }
+
+        protected override IKeyFrameStep ReadStep(CropData item)
+        {
+            var step = new KeyFrameStep(item.Index);
+            step.Fields["StartX"] = KeyFrameStep.Field("StartX", EffectArgumentFieldType.Integer, item.StartX);
+            step.Fields["StartY"] = KeyFrameStep.Field("StartY", EffectArgumentFieldType.Integer, item.StartY);
+            step.Fields["Width"] = KeyFrameStep.Field("Width", EffectArgumentFieldType.Integer, item.Width, "1");
+            step.Fields["Height"] = KeyFrameStep.Field("Height", EffectArgumentFieldType.Integer, item.Height, "1");
+            step.Fields["Angle"] = KeyFrameStep.Field("Angle", EffectArgumentFieldType.Numeric, item.Angle, "-180", "180");
+            return step;
+        }
+
+        protected override CropData WriteStep(IKeyFrameStep step) => new(step.Progress,
+            Convert.ToInt32(step.Fields["StartX"].GetGetter()()), Convert.ToInt32(step.Fields["StartY"].GetGetter()()),
+            Convert.ToInt32(step.Fields["Width"].GetGetter()()), Convert.ToInt32(step.Fields["Height"].GetGetter()()),
+            Convert.ToSingle(step.Fields["Angle"].GetGetter()()));
 
 
     }

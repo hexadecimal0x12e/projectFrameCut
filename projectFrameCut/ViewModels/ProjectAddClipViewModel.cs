@@ -1,4 +1,6 @@
-﻿using ITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
+﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
+using ITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using CommunityToolkit.Maui.Core;
 using Microsoft.Maui.Storage;
@@ -1665,7 +1667,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
         var provider = TextStyleServices.RestoreTextStyleProvider(providerItem.FromPlugin, providerItem.Id, providerItem.Parameters)
             ?? providerItem.Provider;
-        provider.Parameters = new Dictionary<string, string>(providerItem.Parameters);
+        provider.RestoreParameters(new Dictionary<string, string>(providerItem.Parameters));
         provider.BasicText = text;
 
         var entries = provider.BuildEntries();
@@ -1707,7 +1709,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             element.ExtraData["TextEntries"] = entries.ToList();
             element.ExtraData["TextStyleProvider_FromPlugin"] = provider.FromPlugin;
             element.ExtraData["TextStyleProvider_TypeName"] = provider.TypeName;
-            element.ExtraData["TextStyleProvider_Parameters"] = new Dictionary<string, string>(provider.Parameters);
+            TextClipStyles.Save(provider, element.ExtraData);
 
             return element;
         }, TextClipInSubTrack, name: "Text");
@@ -1837,7 +1839,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     Name = provider.TypeName,
                     Provider = provider,
                     FromPlugin = provider.FromPlugin,
-                    Parameters = new Dictionary<string, string>(provider.Parameters),
+                    Parameters = new Dictionary<string, string>(provider.GetParameters()),
                     BasicText = provider.BasicText
                 });
             }

@@ -139,24 +139,15 @@ namespace projectFrameCut.DraftStuff
                     directFields["Angle"] = new StaticEffectArgumentField(0f, EffectArgumentFieldType.Numeric);
                     currentCropProvider.Fields = directFields;
                 }
-                else if (currentCropProvider.Enabled
+                else if (currentCropProvider.Enabled && SupportsDirectCrop(clip)
                     && Math.Abs(ReadProviderFieldFloat(currentCropProvider.Fields, "Angle", 0f)) < 0.0001f)
                 {
                     int directWidth = Math.Max(1, ReadProviderFieldInt(currentCropProvider.Fields, "Width", page.ProjectInfo.RelativeWidth));
                     int directHeight = Math.Max(1, ReadProviderFieldInt(currentCropProvider.Fields, "Height", page.ProjectInfo.RelativeHeight));
-                    clip.StartingX = Math.Max(0, ReadProviderFieldInt(currentCropProvider.Fields, "StartX", 0));
-                    clip.StartingY = Math.Max(0, ReadProviderFieldInt(currentCropProvider.Fields, "StartY", 0));
-                    clip.TargetWidth = directWidth;
-                    clip.TargetHeight = directHeight;
+                    SetCropGeometry(clip, new(true, Math.Max(0, ReadProviderFieldInt(currentCropProvider.Fields, "StartX", 0)),
+                        Math.Max(0, ReadProviderFieldInt(currentCropProvider.Fields, "StartY", 0)), directWidth, directHeight, 0));
                     valW = directWidth;
                     valH = directHeight;
-                    clip.ExtraData ??= new Dictionary<string, object>();
-                    clip.ExtraData[DirectCropEnabledKey] = true;
-                    clip.ExtraData[DirectCropWidthKey] = directWidth;
-                    clip.ExtraData[DirectCropHeightKey] = directHeight;
-                    clip.EffectProviders.Remove(InternalCropProviderGuid);
-                    RemoveInternalCropEffects(clip);
-                    RebuildAllEffects(clip);
                 }
                 IEffectProvider previousCropPayload = currentCropProvider;
 
@@ -198,44 +189,17 @@ namespace projectFrameCut.DraftStuff
 
                     var normalized = NormalizeCropProvider(bundle, existingCropEffect);
                     currentCropProvider = normalized;
-                    bool useDirectCrop = normalized.Enabled
-                        && Math.Abs(ReadProviderFieldFloat(normalized.Fields, "Angle", 0f)) < 0.0001f;
-
-                    if (useDirectCrop)
+                    int width = Math.Max(1, ReadProviderFieldInt(normalized.Fields, "Width", page.ProjectInfo.RelativeWidth));
+                    int height = Math.Max(1, ReadProviderFieldInt(normalized.Fields, "Height", page.ProjectInfo.RelativeHeight));
+                    SetCropGeometry(clip, new(normalized.Enabled,
+                        Math.Max(0, ReadProviderFieldInt(normalized.Fields, "StartX", 0)),
+                        Math.Max(0, ReadProviderFieldInt(normalized.Fields, "StartY", 0)), width, height,
+                        ReadProviderFieldFloat(normalized.Fields, "Angle", 0)));
+                    if (normalized.Enabled)
                     {
-                        int startX = Math.Max(0, ReadProviderFieldInt(normalized.Fields, "StartX", 0));
-                        int startY = Math.Max(0, ReadProviderFieldInt(normalized.Fields, "StartY", 0));
-                        int width = Math.Max(1, ReadProviderFieldInt(normalized.Fields, "Width", page.ProjectInfo.RelativeWidth));
-                        int height = Math.Max(1, ReadProviderFieldInt(normalized.Fields, "Height", page.ProjectInfo.RelativeHeight));
-
-                        clip.StartingX = startX;
-                        clip.StartingY = startY;
-                        clip.ExtraData ??= new Dictionary<string, object>();
-                        clip.ExtraData[DirectCropEnabledKey] = true;
-                        clip.ExtraData[DirectCropWidthKey] = width;
-                        clip.ExtraData[DirectCropHeightKey] = height;
-                        clip.EffectProviders.Remove(InternalCropProviderGuid);
-                        RemoveInternalCropEffects(clip);
-                        ApplyResizeToModelWithCurrentMode(width, height);
                         SetTransformEntryText("place_W", width);
                         SetTransformEntryText("place_H", height);
                     }
-                    else
-                    {
-                        clip.StartingX = 0;
-                        clip.StartingY = 0;
-                        clip.ExtraData?.Remove(DirectCropEnabledKey);
-                        clip.ExtraData?.Remove(DirectCropWidthKey);
-                        clip.ExtraData?.Remove(DirectCropHeightKey);
-
-                        var isNewProvider = !clip.EffectProviders.ContainsKey(InternalCropProviderGuid);
-                        clip.EffectProviders[InternalCropProviderGuid] = normalized;
-                        if (isNewProvider)
-                            EffectBindingHelper.AutoConnectProviderToInput(clip.EffectProviders, normalized);
-                    }
-
-                    clip.Effects.Remove(InternalCropID);
-                    RebuildAllEffects(clip);
 
                     if (TryFindInternalCropEffect(clip, out var rebuiltCrop))
                     {
@@ -521,7 +485,7 @@ namespace projectFrameCut.DraftStuff
             foreach (var eb in clip.EffectProviders.Values)
             {
                 if (string.Equals(eb.TypeName, "ProgressPlacer", StringComparison.Ordinal)
-                    && EffectServices.GetUIProvider(eb) is IKeyFramedEffectProvider kfp)
+                    && eb is IKeyFramedEffectProvider kfp)
                 {
                     provider = kfp;
                     bundle = eb;
@@ -536,7 +500,7 @@ namespace projectFrameCut.DraftStuff
                 EffectBindingHelper.AutoConnectProviderToOutput(clip.EffectProviders, newProvider, clip.GetEffectTarget());
                 RebuildAllEffects(clip);
                 bundle = newProvider;
-                provider = EffectServices.GetUIProvider(newProvider) as IKeyFramedEffectProvider;
+                provider = newProvider;
                 return true;
             }
 
@@ -592,5 +556,95 @@ namespace projectFrameCut.DraftStuff
         }
 
         #endregion
+
+        #region geometry
+        internal sealed record CropGeometry(bool Enabled, int X, int Y, int Width, int Height, float Rotation);
+
+        private static bool SupportsDirectCrop(ClipElementUI clip) =>
+            (clip.ClipType is ClipMode.VideoClip or ClipMode.PhotoClip) && !clip.SupportsNativeEffects
+            && !EffectGroupHelper.Read(clip.ExtraData).Any(g => g.ProviderIds.Contains(InternalCropProviderGuid));
+
+        internal static CropGeometry GetCropGeometry(ClipElementUI clip, int width, int height)
+        {
+            if (ReadBoolExtraData(clip.ExtraData, DirectCropEnabledKey, false))
+                return new(true, clip.StartingX, clip.StartingY,
+                    ReadIntExtraData(clip.ExtraData, DirectCropWidthKey, width),
+                    ReadIntExtraData(clip.ExtraData, DirectCropHeightKey, height), 0);
+            if (clip.EffectProviders?.GetValueOrDefault(InternalCropProviderGuid) is { } provider)
+                return new(provider.Enabled, ReadProviderFieldInt(provider.Fields, "StartX", 0),
+                    ReadProviderFieldInt(provider.Fields, "StartY", 0),
+                    ReadProviderFieldInt(provider.Fields, "Width", width),
+                    ReadProviderFieldInt(provider.Fields, "Height", height),
+                    ReadProviderFieldFloat(provider.Fields, "Angle", 0));
+            if (TryFindInternalCropEffect(clip, out var effect))
+                return new(effect.Enabled, ReadEffectIntParameter(effect, "StartX", 0), ReadEffectIntParameter(effect, "StartY", 0),
+                    ReadEffectIntParameter(effect, "Width", width), ReadEffectIntParameter(effect, "Height", height),
+                    ReadEffectFloatParameter(effect, "Angle", 0));
+            return new(false, 0, 0, width, height, 0);
+        }
+
+        internal static void SetCropGeometry(ClipElementUI clip, CropGeometry crop)
+        {
+            if (crop.X < 0 || crop.Y < 0 || crop.Width <= 0 || crop.Height <= 0 || !float.IsFinite(crop.Rotation))
+                throw new ArgumentException("Invalid crop geometry.");
+            clip.EffectProviders ??= new();
+            clip.ExtraData ??= new();
+            if (crop.Enabled && SupportsDirectCrop(clip) && Math.Abs(VideoClipRotation.Normalize(crop.Rotation)) < 0.0001f)
+            {
+                clip.StartingX = crop.X;
+                clip.StartingY = crop.Y;
+                clip.TargetWidth = crop.Width;
+                clip.TargetHeight = crop.Height;
+                clip.ExtraData[DirectCropEnabledKey] = true;
+                clip.ExtraData[DirectCropWidthKey] = crop.Width;
+                clip.ExtraData[DirectCropHeightKey] = crop.Height;
+                if (clip.EffectProviders.Remove(InternalCropProviderGuid, out var previous))
+                {
+                    string source = previous.GetMainInputSource();
+                    bool Matches(string value) => value == previous.Id.ToString()
+                        || EffectProviderOutputExtensions.TryParseOutputSourceId(value, out var providerId, out _) && providerId == previous.Id;
+                    foreach (var provider in clip.EffectProviders.Values)
+                    {
+                        if (Matches(provider.GetMainInputSource())) provider.SetMainInputSource(source);
+                        foreach (var binding in provider.EnumerateFieldBindings().Where(b => Matches(b.Value)).ToArray())
+                            provider.SetFieldBinding(binding.Key, source);
+                    }
+                    if (previous.IsFinalOutputSource())
+                        EffectBindingHelper.SetFinalOutput(clip.EffectProviders, Guid.TryParse(source, out var id)
+                            && clip.EffectProviders.ContainsKey(id) ? id : null, previous.GetPipeline());
+                }
+            }
+            else
+            {
+                clip.StartingX = clip.StartingY = 0;
+                clip.ExtraData.Remove(DirectCropEnabledKey);
+                clip.ExtraData.Remove(DirectCropWidthKey);
+                clip.ExtraData.Remove(DirectCropHeightKey);
+                bool add = !clip.EffectProviders.TryGetValue(InternalCropProviderGuid, out var provider);
+                provider ??= EffectServices.GetAvailableEffectProviders()["Crop"]();
+                provider.Id = InternalCropProviderGuid;
+                provider.Name = InternalCropID;
+                provider.Enabled = crop.Enabled;
+                var fields = provider.Fields;
+                foreach (var (key, value) in new (string, object)[]
+                    { ("StartX", crop.X), ("StartY", crop.Y), ("Width", crop.Width), ("Height", crop.Height), ("Angle", crop.Rotation) })
+                {
+                    fields[key] = new StaticEffectArgumentField(value, key == "Angle" ? EffectArgumentFieldType.Numeric : EffectArgumentFieldType.Integer);
+                    provider.ClearFieldBinding(key);
+                }
+                provider.Fields = fields;
+                clip.EffectProviders[provider.Id] = provider;
+                if (add) EffectBindingHelper.AutoConnectProviderToInput(clip.EffectProviders, provider);
+                if (crop.Enabled)
+                {
+                    clip.TargetWidth = crop.Width;
+                    clip.TargetHeight = crop.Height;
+                }
+            }
+            RemoveInternalCropEffects(clip);
+            RebuildAllEffects(clip);
+        }
+        #endregion
+
     }
 }

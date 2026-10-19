@@ -148,7 +148,16 @@ namespace projectFrameCut.DraftStuff
             set => SubLayerIndex = value;
         }
 
-        public string? ClipColor { get; set; } = null;
+        public string? ClipColor
+        {
+            get => ExtraData?.GetValueOrDefault("ClipColor")?.ToString();
+            set
+            {
+                ExtraData ??= new();
+                if (string.IsNullOrWhiteSpace(value)) ExtraData.Remove("ClipColor");
+                else ExtraData["ClipColor"] = value;
+            }
+        }
 
         /// <summary>
         /// Indicates whether this clip is a temporary "ghost" overlay used during drag-and-drop operations.

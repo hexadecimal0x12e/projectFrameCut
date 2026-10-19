@@ -1,4 +1,6 @@
-﻿using projectFrameCut.Drawing.Text.Entry;
+﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
+using projectFrameCut.Drawing.Text.Entry;
 using projectFrameCut.Drawing.Vector;
 using projectFrameCut.Render.ClipsAndTracks.Text;
 using projectFrameCut.Render.Plugin;

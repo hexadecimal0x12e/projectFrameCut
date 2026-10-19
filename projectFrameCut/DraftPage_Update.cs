@@ -273,6 +273,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var changeMark = new UserMarkRange("Draft.ApplyChanges", $"reason={e.Reason}, clip={e.SourceId}");
 #endif
+        using var busy = new PreviewBusyScope(this);
         CancelGeneratedSoundTrackSync();
         if (AlreadyDisappeared) return;
         if (isPlaying || previewer.HasDynamicPreview) await PauseLivePreview();
@@ -359,6 +360,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task OnClipEditorUpdate()
     {
+        using var busy = new PreviewBusyScope(this);
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var editorMark = new UserMarkRange("Draft.EditorUpdate");
 #endif
@@ -1274,4 +1276,5 @@ public partial class DraftPage : ContentPage, IDraftPage
 
 
     #endregion
+
 }

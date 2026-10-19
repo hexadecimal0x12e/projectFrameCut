@@ -509,6 +509,10 @@ public partial class DraftPage
             throw new KeyNotFoundException("Clip not found.");
         }
 
+        if (operation is GuiProjectOperation.GetClipArgument or GuiProjectOperation.SetClipArgument
+            && HasParameter("RequiredClipType") && clip.ClipType.ToString() != GetString("RequiredClipType"))
+            throw new ArgumentException($"Clip is not a {GetString("RequiredClipType")}.");
+
         string GetGraphState()
         {
             return JsonSerializer.Serialize(new
@@ -563,6 +567,10 @@ public partial class DraftPage
 
         switch (operation)
         {
+            case GuiProjectOperation.GetClipEffectStep:
+                return GuiEffectSteps(clip.Id, GetProvider(GetGuid("ProviderId")) as IKeyFramedEffectProvider
+                    ?? throw new ArgumentException("Provider does not support keyframes."),
+                    HasParameter("StepIndex") ? parameters.GetProperty("StepIndex").GetInt32() : null);
             case GuiProjectOperation.GetClipEffectGraph:
                 if (GetBoolean("AsMermaid"))
                 {
@@ -689,9 +697,32 @@ public partial class DraftPage
 
         var before = GuiBindingErrors(providers, await EffectFieldTypeResolution.ResolveAsync(providers, ct)).ToHashSet();
         Guid resultProvider = Guid.Empty, resultGroup = Guid.Empty;
-        bool endpointResult = false;
+        bool endpointResult = false, stepResult = false;
         switch (operation)
         {
+            case GuiProjectOperation.AddClipEffectStep:
+            case GuiProjectOperation.SetClipEffectStep:
+            case GuiProjectOperation.RemoveClipEffectStep:
+                {
+                    var provider = GetProvider(GetGuid("ProviderId")) as IKeyFramedEffectProvider
+                        ?? throw new ArgumentException("Provider does not support keyframes.");
+                    if (operation == GuiProjectOperation.RemoveClipEffectStep)
+                        provider.RemoveStep(parameters.GetProperty("StepIndex").GetInt32());
+                    else
+                    {
+                        bool add = operation == GuiProjectOperation.AddClipEffectStep;
+                        int index = add ? 0 : parameters.GetProperty("StepIndex").GetInt32();
+                        var step = add ? provider.CreateStep(provider.Steps.Count == 0 ? 0
+                            : Math.Min(1, provider.Steps.Max(s => s.Progress) + 0.1)) : provider.Steps[index];
+                        step.SetValues(GetFields());
+                        step.ValidateStatic();
+                        if (add) provider.AddStep(step);
+                        else provider.UpdateStep(index, step);
+                    }
+                    resultProvider = provider.Id;
+                    stepResult = true;
+                    break;
+                }
             case GuiProjectOperation.AddClipEffectProvider:
             case GuiProjectOperation.SetClipEffectProvider:
                 {
@@ -809,7 +840,16 @@ public partial class DraftPage
             case GuiProjectOperation.SetClipArgument:
                 {
                     var arguments = GetClipArguments();
-                    ApplyGuiProviderFields(arguments, GetFields(), GetBoolean("ResetToDefaults"));
+                    var values = GetFields();
+                    foreach (var id in values.Keys.ToArray())
+                    {
+                        if (!id.StartsWith(Render.ClipsAndTracks.SubtitleClip.ArgumentPrefix, StringComparison.Ordinal)) continue;
+                        if (!arguments.InFields.TryGetValue(id, out var descriptor)) throw new ArgumentException($"Unknown clip argument '{id}'.");
+                        if (!Render.RenderAPIBase.Text.TextStyleFieldHelper.TryNormalizeValue(descriptor, values[id], out var value, out var error))
+                            throw new ArgumentException($"Invalid clip argument '{id}': {error}");
+                        values[id] = value;
+                    }
+                    ApplyGuiProviderFields(arguments, values, GetBoolean("ResetToDefaults"));
                     resultProvider = arguments.Id;
                     break;
                 }
@@ -1178,6 +1218,7 @@ public partial class DraftPage
         }
         var effects = errors.Count == 0 ? EffectBindingHelper.RebuildAllEffects(providers, clip.Effects) : null;
         clip.EffectProviders = providers;
+        ClipInfoBuilder.SaveTextStyleClipArguments(clip);
         if (effects is not null)
         {
             clip.Effects = effects;
@@ -1214,6 +1255,7 @@ public partial class DraftPage
         RefreshPropertyPanel(clip);
         if (resultProvider != Guid.Empty)
         {
+            if (stepResult) return GuiEffectSteps(clip.Id, (IKeyFramedEffectProvider)providers[resultProvider]);
             if (endpointResult)
             {
                 return GuiEndpoint(clip, (IClipValueEndpointProvider)providers[resultProvider], providers);

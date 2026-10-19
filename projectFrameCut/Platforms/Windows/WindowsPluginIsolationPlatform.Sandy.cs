@@ -3,6 +3,7 @@ using Microsoft.Win32;
 using Microsoft.Win32.SafeHandles;
 using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.Shared;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -111,7 +112,7 @@ internal sealed partial class WindowsPluginIsolationPlatform
                 GrantSandyDirectory(SessionDirectory, FileSystemRights.ReadAndExecute, recursive: false);
                 Directory.CreateDirectory(ProjectPluginDirectory);
                 GrantSandyDirectory(ProjectPluginDirectory, FileSystemRights.ReadAndExecute);
-                LogDiagnostic($"Sandy profile '{profile}' ready ({RuntimeInformation.ProcessArchitecture}, SID {GetAppContainerSid(familyName).Value}, capabilities {capabilityList}).");
+                LogDiagnostic($"Sandy profile '{profile}' ({familyName}) ready ({RuntimeInformation.ProcessArchitecture}, SID {GetAppContainerSid(familyName).Value}, capabilities {capabilityList}).");
             }
             finally { mutex.ReleaseMutex(); }
         }
@@ -181,7 +182,7 @@ internal sealed partial class WindowsPluginIsolationPlatform
             info.ArgumentList.Add(arg);
         foreach (var arg in args) info.ArgumentList.Add(arg);
         var process = Process.Start(info) ?? throw new InvalidOperationException("Unable to start the Sandy worker launcher.");
-        if (!showConsole)
+        if (!showConsole && MyLoggerExtensions.LoggingDiagnosticInfo)
         {
             // Sandy's own log contains the launch command; only forward child output here.
             process.OutputDataReceived += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) Log(e.Data, "IsolatedWorker Stdout"); };

@@ -1,4 +1,6 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
@@ -34,6 +36,8 @@ namespace projectFrameCut.ApplicationPluginBase
             { "TextFadeIn", p => new TextFadeInUI(p) },
             { "ProgressPlacer", p => new ProgressPlacerUI(p) },
             { "ProgressCrop", p => new ProgressCropUI(p) },
+            { "ProgressPlacer_Step", p => new ProgressPlacerUI(p) },
+            { "ProgressCrop_Step", p => new ProgressCropUI(p) },
             { "ColorAdjustment", p => new ColorAdjustmentUI(p) },
         };
 
@@ -42,13 +46,13 @@ namespace projectFrameCut.ApplicationPluginBase
             return new EffectProviderUI(source);
         }
 
-        public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => new Dictionary<string, Func<ITextClipStyleProvider>>
+        public Dictionary<string, Func<ITextClipStyleProvider, ITextClipStyleUIProvider>> TextClipStyleUIProvider => new()
         {
-            { "Basic", () => new BasicTextStyleProvider() },
-            { "Title", () => new TitleTextStyleProvider() },
-            { "Pinyin", () => new PinyinTextStyleProvider() },
-            { "LlmTranslate", () => new LlmTranslateTextStyleProvider() },
+            ["LlmTranslate"] = p => new LlmTranslateTextStyleUIProvider(),
+            ["OldTextClipEntry"] = p => new OldTextClipEntryTextStyleUIProvider(),
         };
+
+        public ITextClipStyleUIProvider? GetDefaultTextClipStyleUIProvider(ITextClipStyleProvider source) => new TextClipStyleUIProvider();
 
         public Dictionary<string, Func<IVectorComponentHandler>> VectorComponentHandlerProvider => new()
         {

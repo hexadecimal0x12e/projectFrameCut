@@ -1,4 +1,7 @@
-﻿using projectFrameCut.ApplicationAPIBase.Text;
+﻿using System.Text.Json;
+using projectFrameCut.Render.Text;
+using projectFrameCut.Render.RenderAPIBase.Text;
+using projectFrameCut.ApplicationAPIBase.Text;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.ClipsAndTracks.Text;
 using projectFrameCut.Render.RenderAPIBase.VectorContent;
@@ -79,21 +82,22 @@ public class TextComponentHandler : BaseVectorComponentHandler
         if (provider is null) return; // no provider → no text panel
 
         SyncComponentToProvider(textComponent, provider);
-        var providerPanel = provider.BuildPropertyPanel();
+        var styleUI = TextStyleServices.GetUIProvider(provider);
+        var providerPanel = styleUI.CreateUI(provider);
 
         // ── Auto-provided options (same layout as ClipInfoBuilder.BuildTextOptionTab) ──
         builder.AddCollapsibleSection(PPLocalizedResources.VectorContentHandler_Section_Text, b =>
         {
             // ── Layout mode picker ──
-            if (provider.ShowLayoutModePicker)
+            if (styleUI.ShowLayoutModePicker)
             {
-                string[] layoutOptions = { "FillClip", "FixedWidth", "FixedSize" };
+                string[] layoutOptions = { "FillClip", "FixedWidth", "FixedHeight", "FixedSize" };
                 string currentLayout = provider.LayoutMode.ToString();
                 b.AddPicker("LayoutMode", PPLocalizedResources.VectorContentHandler_LayoutMode, layoutOptions, currentLayout);
             }
 
             // ── Text content editor (multi-line, like BuildTextOptionTab) ──
-            if (provider.ShowDefaultTextEditor)
+            if (styleUI.ShowDefaultTextEditor)
             {
                 b.AddCustomChild(PPLocalizedResources.VectorContentHandler_Content, invoker =>
                 {
@@ -111,7 +115,7 @@ public class TextComponentHandler : BaseVectorComponentHandler
             }
 
             // ── Font picker (dropdown from loaded fonts) ──
-            if (provider.ShowFontPicker)
+            if (styleUI.ShowFontPicker)
             {
                 var fontNames = TextServices.LoadedFonts.Values
                     .Where(f => f is not null && !string.IsNullOrWhiteSpace(f.FontName))
@@ -122,7 +126,7 @@ public class TextComponentHandler : BaseVectorComponentHandler
 
                 if (fontNames.Length > 0)
                 {
-                    var currentFont = provider.Parameters.TryGetValue("FontFamily", out var fn) ? fn : null;
+                    var currentFont = provider.GetParameters().TryGetValue("FontFamily", out var fn) ? fn : null;
                     b.AddPicker("FontFamily", PPLocalizedResources.VectorContentHandler_Font, fontNames, currentFont);
                 }
             }
@@ -155,7 +159,7 @@ public class TextComponentHandler : BaseVectorComponentHandler
             if (RestoreProvider(textComponent) is { } style)
             {
                 SyncComponentToProvider(textComponent, style);
-                textComponent.Parameters["TextStyleProvider_Parameters"] = new Dictionary<string, string>(style.Parameters);
+                TextClipStyles.Save(style, textComponent.Parameters);
             }
             return;
         }
@@ -168,9 +172,8 @@ public class TextComponentHandler : BaseVectorComponentHandler
             if (syncProvider != null)
             {
                 syncProvider.BasicText = args.Value?.ToString() ?? string.Empty;
-                syncProvider.Parameters["Text"] = syncProvider.BasicText;
-                textComponent.Parameters["TextStyleProvider_Parameters"] =
-                    new Dictionary<string, string>(syncProvider.Parameters);
+                syncProvider.GetParameters()["Text"] = syncProvider.BasicText;
+                TextClipStyles.Save(syncProvider, textComponent.Parameters);
             }
             return;
         }
@@ -211,19 +214,19 @@ public class TextComponentHandler : BaseVectorComponentHandler
                 provider.LayoutMode = mode;
             }
             SyncProviderToComponent(textComponent, provider);
-            textComponent.Parameters["TextStyleProvider_Parameters"] =
-                new Dictionary<string, string>(provider.Parameters);
+            TextClipStyles.Save(provider, textComponent.Parameters);
             return;
         }
 
-        provider.HandlePropertyPanelChange(args);
+        if (args.Id.StartsWith("EffectProviderField|", StringComparison.Ordinal))
+            args = new PropertyPanelPropertyChangedEventArgs(args.Id[(args.Id.LastIndexOf('|') + 1)..], args.Value, null);
+        TextStyleServices.GetUIProvider(provider).HandlePropertyPanelChange(provider, args);
 
         // ── Sync provider params back to component params ──
         SyncProviderToComponent(textComponent, provider);
 
         // Store updated provider parameters for persistence.
-        textComponent.Parameters["TextStyleProvider_Parameters"] =
-            new Dictionary<string, string>(provider.Parameters);
+        TextClipStyles.Save(provider, textComponent.Parameters);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -233,40 +236,9 @@ public class TextComponentHandler : BaseVectorComponentHandler
     /// <summary>Read provider metadata and restore the style provider.</summary>
     internal static ITextClipStyleProvider? RestoreProvider(TextComponent component)
     {
-        string? fromPlugin = component.Parameters.TryGetValue("TextStyleProvider_FromPlugin", out var fp)
-            ? fp?.ToString()
-            : null;
-        string? typeName = component.Parameters.TryGetValue("TextStyleProvider_TypeName", out var tn)
-            ? tn?.ToString()
-            : null;
-
-        if (string.IsNullOrWhiteSpace(fromPlugin) || string.IsNullOrWhiteSpace(typeName))
-            return null;
-
-        Dictionary<string, string>? providerParams = null;
-        if (component.Parameters.TryGetValue("TextStyleProvider_Parameters", out var raw))
-        {
-            if (raw is Dictionary<string, string> dict)
-                providerParams = dict;
-            else if (raw is System.Text.Json.JsonElement je && je.ValueKind == System.Text.Json.JsonValueKind.Object)
-            {
-                try { providerParams = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(je.GetRawText()); }
-                catch { }
-            }
-            else if (raw is string json && !string.IsNullOrWhiteSpace(json))
-            {
-                try { providerParams = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json); }
-                catch { }
-            }
-        }
-
-        return TextStyleServices.RestoreTextStyleProvider(fromPlugin, typeName, providerParams);
+        return TextClipStyles.Restore(component.Parameters);
     }
 
-    /// <summary>
-    /// Copy the component's typed text parameters into the provider's
-    /// string-keyed parameters so the provider sees current values.
-    /// </summary>
     internal static void SyncComponentToProvider(TextComponent component, ITextClipStyleProvider provider)
     {
         var p = component.Parameters;
@@ -274,19 +246,21 @@ public class TextComponentHandler : BaseVectorComponentHandler
         if (p.TryGetValue("Text", out var text) && text is string s)
             provider.BasicText = s;
 
-        // Fill colour – convert from (R,G,B) ushort channels to hex.
-        var fillR = (int)Math.Round(p.GetFloat("FillR", ushort.MaxValue) / ushort.MaxValue * 255f);
-        var fillG = (int)Math.Round(p.GetFloat("FillG", ushort.MaxValue) / ushort.MaxValue * 255f);
-        var fillB = (int)Math.Round(p.GetFloat("FillB", ushort.MaxValue) / ushort.MaxValue * 255f);
-        provider.Parameters["Color"] = $"#{fillR:X2}{fillG:X2}{fillB:X2}";
+        provider.GetParameters()["Color"] = JsonSerializer.Serialize(new
+        {
+            r = (ushort)Math.Clamp(p.GetFloat("FillR", ushort.MaxValue), 0, ushort.MaxValue),
+            g = (ushort)Math.Clamp(p.GetFloat("FillG", ushort.MaxValue), 0, ushort.MaxValue),
+            b = (ushort)Math.Clamp(p.GetFloat("FillB", ushort.MaxValue), 0, ushort.MaxValue),
+            a = p.GetFloat("FillA", 1f),
+        });
 
         // FontSize
         var fontSize = p.GetFloat("FontSize", 120f);
-        provider.Parameters["Size"] = fontSize.ToString("F1", CultureInfo.InvariantCulture);
+        provider.GetParameters()["FontSize"] = fontSize.ToString("F1", CultureInfo.InvariantCulture);
 
         // Alignment
         var align = (int)p.GetFloat("TextAlignment", 0);
-        provider.Parameters["HorizontalAlignment"] = align switch
+        provider.GetParameters()["HorizontalAlignment"] = align switch
         {
             0 => "Left",
             1 => "Center",
@@ -296,23 +270,25 @@ public class TextComponentHandler : BaseVectorComponentHandler
 
         // Line spacing
         var lineSpacing = p.GetFloat("LineSpacing", 0.3f);
-        provider.Parameters["LineSpacing"] = lineSpacing.ToString("F2", CultureInfo.InvariantCulture);
+        provider.GetParameters()["LineSpacing"] = lineSpacing.ToString("F2", CultureInfo.InvariantCulture);
 
         // Stroke thickness
         var strokeThickness = p.GetFloat("StrokeThickness", 2f);
-        provider.Parameters["StrokeWidth"] = strokeThickness.ToString("F1", CultureInfo.InvariantCulture);
+        provider.GetParameters()["StrokeWidth"] = strokeThickness.ToString("F1", CultureInfo.InvariantCulture);
 
-        // Stroke colour
-        var strokeR = (int)Math.Round(p.GetFloat("StrokeR", 0f) / ushort.MaxValue * 255f);
-        var strokeG = (int)Math.Round(p.GetFloat("StrokeG", 0f) / ushort.MaxValue * 255f);
-        var strokeB = (int)Math.Round(p.GetFloat("StrokeB", 0f) / ushort.MaxValue * 255f);
-        provider.Parameters["StrokeColor"] = $"#{strokeR:X2}{strokeG:X2}{strokeB:X2}";
+        provider.GetParameters()["StrokeColor"] = JsonSerializer.Serialize(new
+        {
+            r = (ushort)Math.Clamp(p.GetFloat("StrokeR", 0), 0, ushort.MaxValue),
+            g = (ushort)Math.Clamp(p.GetFloat("StrokeG", 0), 0, ushort.MaxValue),
+            b = (ushort)Math.Clamp(p.GetFloat("StrokeB", 0), 0, ushort.MaxValue),
+            a = p.GetFloat("StrokeA", 1f),
+        });
 
         // Font name & style
         if (p.TryGetValue("FontName", out var fn) && fn is string fontName && !string.IsNullOrEmpty(fontName))
-            provider.Parameters["FontFamily"] = fontName;
+            provider.GetParameters()["FontFamily"] = fontName;
         if (p.TryGetValue("FontStyle", out var fst) && fst is string fontStyle && !string.IsNullOrEmpty(fontStyle))
-            provider.Parameters["FontStyle"] = fontStyle;
+            provider.GetParameters()["FontStyle"] = fontStyle;
     }
 
     /// <summary>
@@ -322,7 +298,7 @@ public class TextComponentHandler : BaseVectorComponentHandler
     /// </summary>
     private static void SyncProviderToComponent(TextComponent component, ITextClipStyleProvider provider)
     {
-        var p = provider.Parameters;
+        var p = provider.GetParameters();
 
         // Text
         if (p.TryGetValue("Text", out var text))
@@ -337,7 +313,7 @@ public class TextComponentHandler : BaseVectorComponentHandler
             component.Parameters["FontStyle"] = fontStyle ?? "Regular";
 
         // FontSize – string → float
-        if (p.TryGetValue("Size", out var sizeStr) &&
+        if (p.TryGetValue("FontSize", out var sizeStr) &&
             float.TryParse(sizeStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var size))
         {
             component.Parameters["FontSize"] = Math.Clamp(size, 1f, 5000f);
@@ -390,6 +366,18 @@ public class TextComponentHandler : BaseVectorComponentHandler
         r = g = b = 0f;
         if (string.IsNullOrWhiteSpace(hex)) return false;
 
+        if (hex.StartsWith('{'))
+        {
+            try
+            {
+                using var json = JsonDocument.Parse(hex);
+                r = json.RootElement.GetProperty("r").GetUInt16();
+                g = json.RootElement.GetProperty("g").GetUInt16();
+                b = json.RootElement.GetProperty("b").GetUInt16();
+                return true;
+            }
+            catch (JsonException) { return false; }
+        }
         hex = hex.TrimStart('#');
         if (hex.Length != 6 && hex.Length != 8) return false;
 

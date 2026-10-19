@@ -1,4 +1,4 @@
-using FFmpeg.AutoGen;
+﻿using FFmpeg.AutoGen;
 using Microsoft.Maui.ApplicationModel;
 using projectFrameCut.Shared;
 using System;
@@ -84,7 +84,6 @@ public partial class RenderPage : ContentPage
     private readonly SemaphoreSlim _previewUpdateSemaphore = new SemaphoreSlim(1, 1);
     private ToolbarItem? _toggleLogToolbarItem;
     private bool _isLogPanelVisible;
-    private bool? _hardwareAccelerationOverride;
 
     private System.Timers.Timer? _screenSaverTimer;
     private System.Timers.Timer? _moveHintTimer;
@@ -134,7 +133,7 @@ public partial class RenderPage : ContentPage
         }
         catch { }
         BindingContext = vmDefault;
-        InitializeAdvancedCodecOptions();
+        DebugView.IsVisible = SettingsManager.IsBoolSettingTrue("DeveloperMode");
         SizeChanged += (_, _) => UpdatePreviewViewportSizing();
         InitializeLogTimer();
         InitializeLogPanel();
@@ -189,7 +188,6 @@ public partial class RenderPage : ContentPage
         }
         catch { }
         BindingContext = vm;
-        InitializeAdvancedCodecOptions();
         SizeChanged += (_, _) => UpdatePreviewViewportSizing();
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)MaxParallelThreadsCount.Value);
         CancelRender.IsEnabled = false;
@@ -218,64 +216,6 @@ public partial class RenderPage : ContentPage
         UpdateLogPanelToggleText();
     }
 
-    private void InitializeAdvancedCodecOptions()
-    {
-        UpdateAdvancedCodecOptionText();
-    }
-
-    private void UpdateAdvancedCodecOptionText()
-    {
-        var vm = BindingContext as RenderPageViewModel;
-        var encoder = string.IsNullOrWhiteSpace(vm?.Encoding)
-            ? SettingsManager.SettingLocalizedResources.RenderEffectImplement_NotSpecified
-            : vm.Encoding;
-        var hardware = _hardwareAccelerationOverride switch
-        {
-            true => SettingsManager.SettingLocalizedResources.Plugin_Enable(SettingsManager.SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding),
-            false => SettingsManager.SettingLocalizedResources.Plugin_Disable(SettingsManager.SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding),
-            _ => SettingsManager.SettingLocalizedResources.RenderEffectImplement_NotSpecified
-        };
-
-    }
-
-    private async void AdvancedEncoderOverride_Clicked(object? sender, EventArgs e)
-    {
-        if (running || BindingContext is not RenderPageViewModel vm) return;
-
-        var input = await DisplayPromptAsync(
-            Localized.RenderPage_SelectEncoding,
-            SettingsManager.SettingLocalizedResources.GeneralCodec_SubTitle,
-            Localized._OK,
-            Localized._Cancel,
-            initialValue: vm.Encoding);
-        if (input is null) return;
-
-        vm.Encoding = input.Trim();
-        await PromptHardwareAccelerationAsync();
-        UpdateAdvancedCodecOptionText();
-    }
-
-    private async Task PromptHardwareAccelerationAsync()
-    {
-        if (running) return;
-
-        var automatic = SettingsManager.SettingLocalizedResources.RenderEffectImplement_NotSpecified;
-        var enabled = SettingsManager.SettingLocalizedResources.Plugin_Enable(SettingsManager.SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding);
-        var disabled = SettingsManager.SettingLocalizedResources.Plugin_Disable(SettingsManager.SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding);
-        var selected = await DisplayActionSheetAsync(
-            SettingsManager.SettingLocalizedResources.GeneralCodec_PreferredHWAccelEncoding,
-            Localized._Cancel,
-            null,
-            automatic,
-            enabled,
-            disabled);
-
-        if (selected == automatic) _hardwareAccelerationOverride = null;
-        else if (selected == enabled) _hardwareAccelerationOverride = true;
-        else if (selected == disabled) _hardwareAccelerationOverride = false;
-        else return;
-    }
-
     private void ToggleLogPanel_Clicked(object? sender, EventArgs e)
     {
         SetLogPanelVisible(!_isLogPanelVisible);
@@ -301,8 +241,8 @@ public partial class RenderPage : ContentPage
     {
         if (!running)
         {
-            PreviewRowDefinition.Height = GridLength.Auto;
-            ProgressRowDefinition.Height = GridLength.Star;
+            PreviewRowDefinition.Height = RenderOptionPanel.IsVisible ? GridLength.Star : GridLength.Auto;
+            ProgressRowDefinition.Height = RenderOptionPanel.IsVisible ? GridLength.Auto : GridLength.Star;
             PreviewLayout.VerticalOptions = LayoutOptions.Start;
             if (PreviewLayout.RowDefinitions.Count > 1)
             {
@@ -583,6 +523,12 @@ public partial class RenderPage : ContentPage
 
     private async void StartRender_Clicked(object sender, EventArgs e)
     {
+        if (BindingContext is not RenderPageViewModel options) return;
+        if (!options.TryGetFinalVideoBitRate(out var finalBitRate))
+        {
+            await DisplayAlertAsync(Localized._Error, Localized.RenderPage_InvalidBitRate, Localized._OK);
+            return;
+        }
         try
         {
             var cacheDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
@@ -630,7 +576,7 @@ public partial class RenderPage : ContentPage
 
                 if (!vm.UseAlphaBrightnessPackage && RenderRpcBootstrap.SupportsCliRenderProcess && !string.IsNullOrWhiteSpace(_workingPath))
                 {
-                    var detached = await RenderProjectViaCliAsync(vm, resultPath, enc, fmt, encoderSelection.UseHardwareAcceleration);
+                    var detached = await RenderProjectViaCliAsync(vm, resultPath, enc, fmt, encoderSelection.UseHardwareAcceleration, finalVideoBitRate: finalBitRate);
                     if (detached) return;
 #if ANDROID
                     var savedPath = await MediaStoreSaver.SaveMediaFileAsync(resultPath, Path.GetFileName(resultPath), "video/mp4", subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
@@ -707,17 +653,21 @@ public partial class RenderPage : ContentPage
                     {
                         if (vm.UseAlphaBrightnessPackage)
                         {
-                            File.Move(vidOutputPath, resultPath, true);
+                            if (finalBitRate is long bitRate)
+                                VideoResizer.ReencodeToBitRate(vidOutputPath, resultPath, enc, bitRate, _cts.Token);
+                            else
+                                File.Move(vidOutputPath, resultPath, true);
                         }
                         else
                         {
-                            VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, resultPath, true, mtdDict);
+                            VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, resultPath, true, mtdDict,
+                                finalBitRate, enc, _cts.Token);
                         }
                         if (!SettingsManager.IsBoolSettingTrue("DeveloperMode"))
                         {
                             try
                             {
-                                if (!vm.UseAlphaBrightnessPackage) File.Delete(vidOutputPath);
+                                if (!vm.UseAlphaBrightnessPackage || finalBitRate.HasValue) File.Delete(vidOutputPath);
                                 File.Delete(audOutputPath);
                             }
                             catch { }
@@ -786,7 +736,7 @@ public partial class RenderPage : ContentPage
 
     }
 
-    private async Task<bool> RenderProjectViaCliAsync(RenderPageViewModel vm, string resultPath, string encoder, string pixelFormat, bool useHardwareAcceleration, bool writeToVoid = false)
+    private async Task<bool> RenderProjectViaCliAsync(RenderPageViewModel vm, string resultPath, string encoder, string pixelFormat, bool useHardwareAcceleration, bool writeToVoid = false, long? finalVideoBitRate = null)
     {
         SetSubProg("PrepareDraft");
         _currentCliRenderStage = string.Empty;
@@ -806,6 +756,7 @@ public partial class RenderPage : ContentPage
             Height = int.Parse(vm.Height),
             FrameRate = (int)Math.Round(double.Parse(vm.Framerate)),
             Encoder = encoder,
+            FinalVideoBitRate = finalVideoBitRate,
             PixelFormat = pixelFormat,
             MaxParallelThreads = Math.Max(1, (int)Math.Round(MaxParallelThreadsCount.Value)),
             AllowWorkerOversubscription = SettingsManager.IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true),
@@ -813,6 +764,7 @@ public partial class RenderPage : ContentPage
             EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true),
             FrameHashMode = RenderHashSettings.Mode,
             ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
+            EnableDeferredComposition = SettingsManager.IsBoolSettingTrueOrDefault("render_enableDeferredComposition", false),
             ChunkRender = chunkOptions.Enabled && !writeToVoid,
             ChunkFrames = chunkOptions.ChunkFrames,
             ChunkSeconds = chunkOptions.ChunkSeconds,
@@ -1127,8 +1079,7 @@ public partial class RenderPage : ContentPage
         var width = ParseDimension(vm.Width, 3840);
         var height = ParseDimension(vm.Height, 2160);
         var hdr = vm.HDREnabled || (_project is not null && ProjectUsesHDR);
-        var preferHardware = (_hardwareAccelerationOverride
-            ?? SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelEncoding", true))
+        var preferHardware = SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelEncoding", true)
             && (hdr || (!OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS()));
         var available = GetAvailableVideoEncoders();
 
@@ -1522,6 +1473,10 @@ public partial class RenderPage : ContentPage
                 WorkerCPUCoreIndexs = CPUAffinityOverride,
                 FrameHashMode = RenderHashSettings.Mode,
                 ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
+                EnableDeferredComposition = SettingsManager.IsBoolSettingTrueOrDefault("render_enableDeferredComposition", false),
+                ResumeInterruptedRender = SettingsManager.IsBoolSettingTrueOrDefault("render_chunkResume", true),
+                RenderResumeSignature = SettingsManager.IsBoolSettingTrueOrDefault("render_enableDeferredComposition", false)
+                    ? FrameHashHelper.CreateRenderResumeSignature(_project, draftSrc, Asset.AssetDatabase.Assets.Values) : null,
                 DynamicPreviewCacheProjectRoot = _workingPath,
                 UseHDR = ProjectUsesHDR,
                 MaximumHDRBrightness = _project.Properties.TryGetValue("HdrMaximumBrightness", out var maxHdrBrightness) && int.TryParse(maxHdrBrightness, out var maxHdrBrightnessInt) ? maxHdrBrightnessInt : 1000,
@@ -1946,6 +1901,7 @@ public partial class RenderPage : ContentPage
             MoreOptions.IsEnabled = true;
             PreviewLayout.IsVisible = false;
             running = false;
+            UpdateRenderLayoutForLogPanel();
             UpdateLogRefreshState();
         }
     }
@@ -1963,7 +1919,8 @@ public partial class RenderPage : ContentPage
             return;
         }
 
-        if (!TryParseRenderSettings(vm, out var width, out var height, out var fps))
+        if (!TryParseRenderSettings(vm, out var width, out var height, out var fps)
+            || !vm.TryGetFinalVideoBitRate(out var finalBitRate))
         {
             await DisplayAlertAsync(Localized._Error, "Invalid render settings.", Localized._OK);
             return;
@@ -1981,7 +1938,7 @@ public partial class RenderPage : ContentPage
 #endif
 
 
-        var args = BuildStandaloneRenderArgs(width, height, fps, pixelFormat, encoder, outputPath, encoderSelection.UseHardwareAcceleration);
+        var args = BuildStandaloneRenderArgs(width, height, fps, pixelFormat, encoder, outputPath, encoderSelection.UseHardwareAcceleration, finalBitRate);
         await DisplayPromptAsync(Localized._Info, "Copy the args below:", Localized._OK, null, initialValue: args);
     }
 
@@ -2111,6 +2068,11 @@ public partial class RenderPage : ContentPage
     private async void ExportVideoOnly_Clicked(object sender, EventArgs e)
     {
         if (BindingContext is not RenderPageViewModel vm) return;
+        if (!vm.TryGetFinalVideoBitRate(out var finalBitRate))
+        {
+            await DisplayAlertAsync(Localized._Error, Localized.RenderPage_InvalidBitRate, Localized._OK);
+            return;
+        }
         var ext = ResolveEncoderOptions(vm).Extension;
 #if WINDOWS
         var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", MauiProgram.DataPath);
@@ -2122,6 +2084,12 @@ public partial class RenderPage : ContentPage
         {
             await PrepareUIForRender();
             await DoCompute(vm, resultPath);
+            if (finalBitRate is long bitRate)
+            {
+                SetSubProg("FinalEncoding");
+                await Task.Run(() => VideoResizer.ReencodeToBitRate(resultPath, resultPath,
+                    ResolveEncoderOptions(vm).Encoder, bitRate, _cts.Token), _cts.Token);
+            }
         }
         catch (Exception ex)
         {
@@ -2154,6 +2122,11 @@ public partial class RenderPage : ContentPage
     private async void ExportAlphaHdr_Clicked(object sender, EventArgs e)
     {
         if (BindingContext is not RenderPageViewModel vm) return;
+        if (!vm.TryGetFinalVideoBitRate(out var finalBitRate))
+        {
+            await DisplayAlertAsync(Localized._Error, Localized.RenderPage_InvalidBitRate, Localized._OK);
+            return;
+        }
 #if WINDOWS
         var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mkv", MauiProgram.DataPath);
         if (string.IsNullOrWhiteSpace(resultPath)) return;
@@ -2173,6 +2146,12 @@ public partial class RenderPage : ContentPage
                 PreserveAlpha = true,
                 PreserveHdrBrightness = ProjectUsesHDR
             }, resultPath);
+            if (finalBitRate is long bitRate)
+            {
+                SetSubProg("FinalEncoding");
+                await Task.Run(() => VideoResizer.ReencodeToBitRate(resultPath, resultPath,
+                    ResolveEncoderOptions(vm).Encoder, bitRate, _cts.Token), _cts.Token);
+            }
         }
         catch (Exception ex)
         {
@@ -2244,11 +2223,7 @@ public partial class RenderPage : ContentPage
         UpdateRenderLayoutForLogPanel();
         CancelRender.IsEnabled = true;
         MoreOptions.IsEnabled = false;
-        AdvancedEncoderOverride.IsEnabled = false;
-        ExportAudioOnly.IsEnabled = false;
-        ExportVideoOnly.IsEnabled = false;
-        ExportAlphaHdr.IsEnabled = false;
-        Export16bitRawVideo.IsEnabled = false;
+        AdvancedOptionsExpander.IsEnabled = false;
         await SubProgress.ProgressTo(0, 250, Easing.Linear);
 
         _logBuffer.Clear();
@@ -2289,7 +2264,7 @@ public partial class RenderPage : ContentPage
         running = false;
         UpdateRenderLayoutForLogPanel();
         CancelRender.IsEnabled = false;
-        AdvancedEncoderOverride.IsEnabled = true;
+        AdvancedOptionsExpander.IsEnabled = true;
         UpdateLogRefreshState();
 
         StopScreenSaverTimer();
@@ -2311,7 +2286,7 @@ public partial class RenderPage : ContentPage
 #endif
     }
 
-    private string BuildStandaloneRenderArgs(int width, int height, int fps, string pixelFormat, string encoder, string outputPath, bool useHardwareAcceleration)
+    private string BuildStandaloneRenderArgs(int width, int height, int fps, string pixelFormat, string encoder, string outputPath, bool useHardwareAcceleration, long? finalVideoBitRate)
     {
         var args = new List<string>
         {
@@ -2328,8 +2303,10 @@ public partial class RenderPage : ContentPage
         args.Add($"-maxParallelThreads={maxThreads}");
         args.Add($"-allowWorkerOversubscription={SettingsManager.IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true)}");
         args.Add($"-preferHwAccelEncoder={useHardwareAcceleration}");
+        if (finalVideoBitRate is long bitRate) args.Add($"-finalVideoBitRate={bitRate}");
         args.Add($"-frameHashMode={RenderHashSettings.Mode}");
         args.Add($"-reuseDynamicPreviewCache={SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false)}");
+        args.Add($"-deferredComposition={SettingsManager.IsBoolSettingTrueOrDefault("render_enableDeferredComposition", false)}");
 
         if (int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var gcOption) && gcOption is >= 0 and <= 2)
         {
@@ -2363,7 +2340,8 @@ public partial class RenderPage : ContentPage
 
     private static ChunkRenderOptions GetConfiguredChunkRenderOptions(int frameRate)
     {
-        bool enabled = SettingsManager.IsBoolSettingTrueOrDefault("render_enableChunkRender", false);
+        bool enabled = SettingsManager.IsBoolSettingTrueOrDefault("render_enableChunkRender", false)
+            && !SettingsManager.IsBoolSettingTrueOrDefault("render_enableDeferredComposition", false);
         string mode = SettingsManager.GetSetting("render_chunkSizeMode", "frames");
         uint? frames = null;
         double? seconds = null;
@@ -2591,11 +2569,97 @@ public class RenderPageViewModel : INotifyPropertyChanged
         }
     }
 
-    string _encoding = "";
+    private readonly Dictionary<string, string> _encodingOptions = new()
+    {
+        [Localized._Default] = "",
+        ["H.264 (AVC)"] = "h264",
+        ["H.265 (HEVC)"] = "hevc",
+        ["AV1"] = "av1",
+        ["VP9"] = "libvpx-vp9"
+    };
+    public string[] ExportOptions_Encoding => [.. _encodingOptions.Keys, Localized.RenderPage_CustomOption];
+
+    string _encodingDisplay = Localized._Default;
+    public string EncodingDisplay
+    {
+        get => _encodingDisplay;
+        set
+        {
+            if (!ExportOptions_Encoding.Contains(value) || !SetProperty(ref _encodingDisplay, value)) return;
+            OnPropertyChanged(nameof(IsCustomEncodingVisible));
+            OnPropertyChanged(nameof(Encoding));
+        }
+    }
+
+    string _customEncoding = "";
+    public string CustomEncoding
+    {
+        get => _customEncoding;
+        set
+        {
+            if (SetProperty(ref _customEncoding, value ?? "")) OnPropertyChanged(nameof(Encoding));
+        }
+    }
+
+    public bool IsCustomEncodingVisible => EncodingDisplay == Localized.RenderPage_CustomOption;
+
     public string Encoding
     {
-        get => _encoding;
-        set => SetProperty(ref _encoding, value);
+        get => IsCustomEncodingVisible ? CustomEncoding.Trim() : _encodingOptions.GetValueOrDefault(EncodingDisplay, "");
+        set
+        {
+            foreach (var option in _encodingOptions)
+            {
+                if (option.Value == (value?.Trim() ?? ""))
+                {
+                    EncodingDisplay = option.Key;
+                    return;
+                }
+            }
+            CustomEncoding = value;
+            EncodingDisplay = Localized.RenderPage_CustomOption;
+        }
+    }
+
+    public string[] ExportOptions_BitRate { get; } =
+        [Localized.RenderPage_BitRateAuto, "2 Mbps", "4 Mbps", "6 Mbps", "8 Mbps", "10 Mbps", "12 Mbps",
+         "16 Mbps", "20 Mbps", "30 Mbps", "50 Mbps", "80 Mbps", "100 Mbps", Localized.RenderPage_CustomOption];
+
+    string _bitRateDisplay = Localized.RenderPage_BitRateAuto;
+    public string BitRateDisplay
+    {
+        get => _bitRateDisplay;
+        set
+        {
+            if (!ExportOptions_BitRate.Contains(value) || !SetProperty(ref _bitRateDisplay, value)) return;
+            OnPropertyChanged(nameof(IsCustomBitRateVisible));
+            OnPropertyChanged(nameof(FinalBitRateMbps));
+        }
+    }
+
+    string _customBitRateMbps = "";
+    public string CustomBitRateMbps
+    {
+        get => _customBitRateMbps;
+        set
+        {
+            if (SetProperty(ref _customBitRateMbps, value ?? "")) OnPropertyChanged(nameof(FinalBitRateMbps));
+        }
+    }
+
+    public bool IsCustomBitRateVisible => BitRateDisplay == Localized.RenderPage_CustomOption;
+    public string FinalBitRateMbps => BitRateDisplay == Localized.RenderPage_BitRateAuto
+        ? "" : IsCustomBitRateVisible ? CustomBitRateMbps : BitRateDisplay[..^5];
+
+    public bool TryGetFinalVideoBitRate(out long? bitRate)
+    {
+        bitRate = null;
+        if (string.IsNullOrWhiteSpace(FinalBitRateMbps)) return true;
+        if (!decimal.TryParse(FinalBitRateMbps.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.CurrentCulture, out var value)
+            && !decimal.TryParse(FinalBitRateMbps.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out value)) return false;
+        if (value < 0.000001m || value > long.MaxValue / 1_000_000m) return false;
+        bitRate = (long)(value * 1_000_000m);
+        return true;
     }
 
     string _bitDepth = "8bit";
@@ -2655,7 +2719,7 @@ public class RenderPageViewModel : INotifyPropertyChanged
     public bool IsCustomBitDepthVisible => !ExportOptions_BitDepth.Where((x) => x != Localized.RenderPage_CustomOption).Any((x) => x == _bitDepth);
 
     public string BuildSummary() =>
-        $"{_width}x{_height} @ {_framerate} fps\nEncoder override: {(_encoding is { Length: > 0 } ? _encoding : "auto")}\nBitDepth: {_bitDepth}";
+        $"{_width}x{_height} @ {_framerate} fps\nEncoder override: {(string.IsNullOrWhiteSpace(Encoding) ? "auto" : Encoding)}\nBitDepth: {_bitDepth}";
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)

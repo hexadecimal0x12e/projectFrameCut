@@ -2492,6 +2492,7 @@ public partial class DraftEffectBindingView : ContentView
         if (_clip?.EffectProviders == null) return;
         var providers = _clip.EffectProviders;
         if (!SynchronizeGroupBindings()) return;
+        ClipInfoBuilder.SaveTextStyleClipArguments(_clip);
         EffectBindingHelper.MaterializeFields(providers.Values);
         _fieldTypes = null;
         RefreshFieldTypes();

@@ -1740,7 +1740,17 @@ public partial class DraftPage : ContentPage, IDraftPage
         {
             element.ClipType = sourceElement.ClipType;
             element.FromPlugin = sourceElement.FromPlugin;
+            element.TypeName = sourceElement.TypeName;
             element.SourcePath = sourceElement.SourcePath;
+            element.sourceSecondPerFrame = sourceElement.sourceSecondPerFrame;
+            element.TargetX = sourceElement.TargetX;
+            element.TargetY = sourceElement.TargetY;
+            element.TargetWidth = sourceElement.TargetWidth;
+            element.TargetHeight = sourceElement.TargetHeight;
+            element.Rotation = sourceElement.Rotation;
+            element.StartingX = sourceElement.StartingX;
+            element.StartingY = sourceElement.StartingY;
+            element.AllowFreeScaleResize = sourceElement.AllowFreeScaleResize;
             element.maxFrameCount = sourceElement.maxFrameCount;
             element.isInfiniteLength = sourceElement.isInfiniteLength;
             element.ExtraData = new Dictionary<string, object>(sourceElement.ExtraData);
@@ -2234,7 +2244,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         track.ExtraData[SoundTrackMetadata.EnabledKey] = enabled;
     }
 
-    public async Task UnbindClipAudioAsync(ClipElementUI video)
+    public async Task UnbindClipAudioAsync(ClipElementUI video, bool notify = true)
     {
         if (video.ClipType != ClipMode.VideoClip) return;
         SyncGeneratedSoundTrack(video);
@@ -2256,7 +2266,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         await UpdateAdjacencyForTrack();
         UpdateTimelineWidth();
-        OnClipChanged?.Invoke(this, new ClipUpdateEventArgs
+        if (notify) OnClipChanged?.Invoke(this, new ClipUpdateEventArgs
         {
             SourceId = video.Id,
             SourceName = video.DisplayName,
@@ -2409,31 +2419,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
         try
         {
-            var range = GetClipFrameRange(clip);
-            uint frame = ClipTiming.RoundFrame(Math.Max(0, _currentFrame));
-            if (frame <= range.Start || (ulong)frame >= (ulong)range.Start + range.Duration || clip.lengthInFrame < 2)
-            {
-                SetStatusText("Playhead not inside selected clip");
-                return;
-            }
-            uint consumed = Math.Clamp(ClipTiming.SourceOffset(frame - range.Start, clip.lengthInFrame, clip.SpeedProvider), 1u, clip.lengthInFrame - 1);
-            uint remaining = clip.lengthInFrame - consumed;
-            uint sourceStart = clip.relativeStartFrame;
-            clip.lengthInFrame = consumed;
-            clip.ProjectTiming();
-            var rightClip = CreateAndAddClip(
-                startX: FrameToPixel((uint)clip.TimelineEnd),
-                width: FrameToPixel(remaining),
-                trackIndex: clip.origTrack ?? 0,
-                labelText: $"{clip.DisplayName} (2)",
-                background: clip.Clip.Background,
-                resolveOverlap: false,
-                maxFrames: clip.maxFrameCount,
-                relativeStart: sourceStart + consumed,
-                sourceElement: clip);
-            rightClip.SubLayerIndex = clip.SubLayerIndex;
-            TransferSplitTransforms(clip, rightClip);
-            Log($"Split clip {clip.Id} into {consumed}+{remaining} source frames, joined at {clip.TimelineEnd} with {rightClip.Id}.");
+            SplitClipAtFrame(clip, ClipTiming.RoundFrame(Math.Max(0, _currentFrame)));
             OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
             {
                 SourceId = clip.Id,
@@ -5098,6 +5084,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     private async Task RefreshPreviewAfterPropertyChangeAsync()
     {
         if (_propertyPreviewTimedOut || AlreadyDisappeared) return;
+        using var busy = new PreviewBusyScope(this);
         var version = Interlocked.Increment(ref _propertyPreviewVersion);
         await _propertyPreviewLock.WaitAsync();
         try
@@ -5821,7 +5808,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private async Task CombineSelection()
+    private async Task CombineSelection(bool notify = true)
     {
         var selected = _selectedClipIds
             .Select(id => Clips.TryGetValue(id, out var clip) ? clip : null)
@@ -5832,7 +5819,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         if (selected.Count >= 2 && selected.All(c => c.ClipType == ClipMode.VectorComponentClip))
         {
-            await CombineVectorClipsAsync(selected);
+            await CombineVectorClipsAsync(selected, notify);
             return;
         }
 
@@ -5935,7 +5922,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         await RefreshSelectionUiAsync();
         string markerName = GetClipNameForChangeReason(marker, marker.Id.ToString());
 
-        OnClipChanged?.Invoke(marker.Id, new ClipUpdateEventArgs
+        if (notify) OnClipChanged?.Invoke(marker.Id, new ClipUpdateEventArgs
         {
             SourceId = marker.Id,
             SourceName = markerName,
@@ -5961,6 +5948,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         switch (groupedObj)
         {
+            case IEnumerable<Guid> ids:
+                result.AddRange(ids.Select(id => id.ToString("D")));
+                break;
             case string[] strArray:
                 result.AddRange(strArray.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()));
                 break;
@@ -5989,7 +5979,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         return result.Distinct().ToList();
     }
 
-    public async Task UnbindGroupingMarkerAsync(ClipElementUI marker)
+    public async Task UnbindGroupingMarkerAsync(ClipElementUI marker, bool notify = true)
     {
         if (marker == null)
         {
@@ -6050,7 +6040,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             restoredCount++;
             string groupedClipName = GetClipNameForChangeReason(groupedClip, groupedClip.Id.ToString());
 
-            OnClipChanged?.Invoke(groupedClip.Id, new ClipUpdateEventArgs
+            if (notify) OnClipChanged?.Invoke(groupedClip.Id, new ClipUpdateEventArgs
             {
                 SourceId = groupedClip.Id,
                 SourceName = groupedClipName,
@@ -7582,11 +7572,11 @@ public partial class DraftPage : ContentPage, IDraftPage
 
         clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
 
-        IKeyFramedEffectProvider? provider = null;
+        ProgressPlacerProvider? provider = null;
         foreach (var eb in clip.EffectProviders.Values)
         {
             if (string.Equals(eb.TypeName, "ProgressPlacer", StringComparison.Ordinal)
-                && EffectServices.GetUIProvider(eb) is IKeyFramedEffectProvider kfp)
+                && eb is ProgressPlacerProvider kfp)
             {
                 provider = kfp;
                 break;
@@ -7600,7 +7590,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             EffectBindingHelper.SetFinalOutput(clip.EffectProviders, null);
             newProvider.SetFinalOutputSource(true);
             clip.EffectProviders[newProvider.Id] = newProvider;
-            provider = EffectServices.GetUIProvider(newProvider) as IKeyFramedEffectProvider;
+            provider = newProvider;
             ClipInfoBuilder.RebuildAllEffects(clip);
         }
 
@@ -7759,467 +7749,6 @@ public partial class DraftPage : ContentPage, IDraftPage
         return (leftNeighbor, rightNeighbor);
     }
 
-    #endregion
-
-    #region rpc/remote
-    private readonly SemaphoreSlim _guiRegistrationGate = new(1, 1);
-    private Guid _guiSessionId;
-    private IRenderClient? _guiClient;
-
-    #region external RPC
-    private async Task<Guid> EnsureGuiRpcSessionAsync(IRenderClient client, CancellationToken ct)
-    {
-        await _guiRegistrationGate.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            if (AlreadyDisappeared) throw new InvalidOperationException("Project is closed.");
-            if (ReferenceEquals(_guiClient, client) && _guiSessionId != Guid.Empty) return _guiSessionId;
-            var id = Guid.NewGuid();
-            await client.RegisterGuiProjectAsync(new() { SessionId = id }, ct).ConfigureAwait(false);
-            _guiClient = client;
-            _guiSessionId = id;
-            Log($"Registered GUI RPC session {id}.");
-            return id;
-        }
-        finally { _guiRegistrationGate.Release(); }
-    }
-
-    private async Task MonitorGuiRpcAsync(CancellationToken ct)
-    {
-        if (!RenderRpcBootstrap.SupportsCliRenderProcess) return;
-        try
-        {
-            while (!ct.IsCancellationRequested)
-            {
-                try
-                {
-                    if (!RenderRpcBootstrap.TryGetClient(out var client) || client is null)
-                    { await Task.Delay(1000, ct); continue; }
-                    var id = await EnsureGuiRpcSessionAsync(client, ct).ConfigureAwait(false);
-                    var work = await client.GetGuiProjectWorkAsync(new() { SessionId = id }, ct).ConfigureAwait(false);
-                    if (!string.IsNullOrWhiteSpace(work.ConnectedClientName))
-                    {
-                        SetStatusText($"External RPC client connected: {work.ConnectedClientName}");
-                        continue;
-                    }
-                    if (work.Request is null) continue;
-                    var result = new GuiProjectResult { SessionId = id, RequestId = work.Request.RequestId };
-                    try
-                    {
-                        ct.ThrowIfCancellationRequested();
-                        result.Json = await MainThread.InvokeOnMainThreadAsync(async () =>
-                        {
-                            if (AlreadyDisappeared || id != _guiSessionId || ct.IsCancellationRequested)
-                                throw new InvalidOperationException("Project session is closed.");
-                            Log($"GUI RPC {work.Request.Operation}, request {work.Request.RequestId}.");
-                            return JsonSerializer.Serialize(await ExecuteGuiProjectAsync(work.Request, ct));
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(ex, $"GUI RPC {work.Request.Operation}", this);
-                        result.Error = new RemoteError(ex);
-                    }
-                    await client.CompleteGuiProjectWorkAsync(result, ct).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
-                catch (Exception ex)
-                {
-                    Log(ex, "GUI RPC request loop", this);
-                    await Task.Delay(1000, ct).ConfigureAwait(false);
-                }
-            }
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-        finally
-        {
-            if (_guiClient is not null && _guiSessionId != Guid.Empty)
-            {
-                try
-                {
-                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                    await _guiClient.UnregisterGuiProjectAsync(new() { SessionId = _guiSessionId }, timeout.Token).ConfigureAwait(false);
-                }
-                catch (Exception ex) { Log(ex, "Unregister GUI RPC session", this); }
-                _guiSessionId = Guid.Empty;
-                _guiClient = null;
-            }
-        }
-    }
-
-    private object GuiClipSnapshot(ClipElementUI clip)
-    {
-        var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, clip, false);
-        return new
-        {
-            ClipId = dto.Id,
-            dto.Name,
-            Type = dto.ClipType.ToString(),
-            TrackId = dto.LayerIndex,
-            dto.StartFrame,
-            DurationFrames = dto.Duration,
-            SourceStartFrame = dto.RelativeStartFrame,
-            dto.FilePath,
-            WidthPixels = dto.TargetWidth,
-            HeightPixels = dto.TargetHeight,
-            XPixels = dto.TargetX,
-            YPixels = dto.TargetY
-        };
-    }
-
-    private static object GuiField(IEffectArgumentField field) => new
-    {
-        FieldId = field.Id,
-        FieldType = field.FieldType.ToString(),
-        field.DefaultValue,
-        field.MinValue,
-        field.MaxValue,
-        field.PresetOptions,
-        field.Remarks,
-        Value = field switch { StaticEffectArgumentField f => f.Value, DynamicEffectParamField f => f.StaticFallbackValue, _ => null },
-    };
-
-    private static object GuiProvider(IEffectProvider provider, Guid clipId, string? registrationKey = null, EffectFieldTypeResolution? types = null) => new
-    {
-        ClipId = clipId,
-        ProviderId = provider.Id,
-        provider.Name,
-        TypeName = registrationKey ?? provider.TypeName,
-        provider.FromPlugin,
-        provider.Enabled,
-        Target = provider.Target.ToString(),
-        EffectType = provider.TypeOfEffect.ToString(),
-        Pipeline = provider.GetPipeline().ToString(),
-        InputProviderId = provider.InFields.ContainsKey(EffectProviderAnchorExtensions.InputKey) ? provider.GetMainInputSource() : null,
-        IsFinalOutput = provider.IsFinalOutputSource(),
-        OutputFieldId = provider.GetFinalOutputFieldId(),
-        Fields = provider.Fields.Select(f => GuiEffectField(provider, f.Key, f.Value, types)).ToArray(),
-        InFields = provider.InFields.Select(f => GuiEffectField(provider, f.Key, f.Value, types)).ToArray(),
-        OutFields = provider.GetOutputFields().Select(f => GuiEffectField(provider, f.Key, f.Value, types, false)).ToArray(),
-        provider.AnchorsBindingState,
-        provider.MetaData,
-        SupportsImplementTypes = provider.SupportsImplementTypes.Select(t => t.ToString()).ToArray(),
-    };
-
-    private async Task<object?> ExecuteGuiProjectAsync(GuiProjectRequest request, CancellationToken cancellationToken)
-    {
-        using var document = JsonDocument.Parse(request.ParametersJson);
-        var p = document.RootElement;
-        if (p.ValueKind != JsonValueKind.Object) throw new ArgumentException("Parameters must be an object.");
-        bool Has(string key) => p.TryGetProperty(key, out _);
-        string? S(string key) => Has(key) ? p.GetProperty(key).GetString() : null;
-        int I(string key, int fallback = 0) => Has(key) ? p.GetProperty(key).GetInt32() : fallback;
-        uint U(string key, uint fallback = 0) => Has(key) ? p.GetProperty(key).GetUInt32() : fallback;
-        Guid G(string key) => Has(key) ? p.GetProperty(key).GetGuid() : Guid.Empty;
-        Dictionary<string, object> Fields() => Has("Fields")
-            ? p.GetProperty("Fields").EnumerateObject().ToDictionary(x => x.Name, x => EffectParamConvert.Normalize(x.Value.Clone())!) : new();
-        ClipElementUI Clip() => Clips.TryGetValue(G("ClipId"), out var c) ? c : throw new KeyNotFoundException("Clip not found.");
-        IEffectProvider Factory() => EffectServices.GetAvailableEffectProviders().TryGetValue(S("TypeName") ?? "", out var f)
-            ? f() : throw new KeyNotFoundException("Effect provider type not found.");
-        object Info() => new
-        {
-            SessionId = _guiSessionId,
-            Name = ProjectInfo.ProjectName,
-            WidthPixels = ProjectInfo.RelativeWidth,
-            HeightPixels = ProjectInfo.RelativeHeight,
-            FrameRate = ProjectInfo.TargetFrameRate,
-            DurationFrames = ProjectDuration,
-            ClipCount = Clips.Count,
-            TrackCount = Tracks.Count,
-            AssetCount = Assets.Count,
-            WorkingPath,
-            CurrentFrame,
-            CurrentSnapshotId = CurrentSnapshotID,
-        };
-        foreach (var key in new[] { "StartFrame", "SourceStartFrame", "DurationFrames", "TrackId" })
-            if (Has(key) && (U(key) > int.MaxValue || (key == "DurationFrames" && U(key) == 0)))
-                throw new ArgumentException($"Invalid {key}.");
-        foreach (var key in new[] { "WidthPixels", "HeightPixels" })
-            if (Has(key) && I(key) <= 0) throw new ArgumentException($"Invalid {key}.");
-        var operation = request.Operation;
-        bool write = !operation.ToString().StartsWith("Get", StringComparison.Ordinal);
-        if (write && IsReadonly) throw new InvalidOperationException("Project is read-only.");
-        object? result;
-        bool deferEffectRendering = false;
-        switch (operation)
-        {
-            case GuiProjectOperation.GetProjectHistory:
-                return GetProjectHistory();
-            case GuiProjectOperation.UndoProjectHistory:
-                return await ApplyProjectHistorySnapshotAsync(GetPreviousSlot()?.SnapshotID
-                    ?? throw new InvalidOperationException("No earlier project history snapshot is available."), true);
-            case GuiProjectOperation.RedoProjectHistory:
-                {
-                    var next = GetNextSlots().Where(x => FindSlotDirectory(x.SnapshotID) is not null)
-                        .OrderByDescending(x => x.SavedAtUtc).FirstOrDefault()
-                        ?? throw new InvalidOperationException("No later project history snapshot is available.");
-                    return await ApplyProjectHistorySnapshotAsync(next.SnapshotID, true);
-                }
-            case GuiProjectOperation.RestoreProjectHistory:
-                return await ApplyProjectHistorySnapshotAsync(G("SnapshotId"), false);
-            case GuiProjectOperation.GetInfo: return Info();
-            case GuiProjectOperation.GetFramePreview:
-            case GuiProjectOperation.GetClipFramePreview:
-                return await GetGuiPreviewAsync(request, p, cancellationToken);
-            case GuiProjectOperation.Save:
-                await Save(args: CreateGuiProjectChange(request), throwOnFailure: true);
-                return Info();
-            case GuiProjectOperation.GetClip:
-                return Clips.Values.Where(c => (!Has("ClipId") || c.Id == G("ClipId"))
-                    && (!Has("TrackId") || c.origTrack == I("TrackId"))
-                    && (!Has("Name") || c.DisplayName.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)))
-                    .Select(GuiClipSnapshot).ToArray();
-            case GuiProjectOperation.AddClip:
-                {
-                    if (!Tracks.ContainsKey(I("TrackId"))) throw new ArgumentException("Track not found.");
-                    if (Has("FilePath") && Has("AssetId")) throw new ArgumentException("Choose FilePath or AssetId.");
-                    ClipElementUI c;
-                    if (Has("AssetId"))
-                    {
-                        if (!Assets.TryGetValue(S("AssetId")!, out var asset)) throw new KeyNotFoundException("Asset not found.");
-                        c = CreateFromAsset(asset, I("TrackId"), FrameToPixel(U("StartFrame")));
-                    }
-                    else
-                    {
-                        var path = S("FilePath");
-                        if (path is not null && !File.Exists(path)) throw new FileNotFoundException("Source file not found.", path);
-                        c = CreateAndAddClip(FrameToPixel(U("StartFrame")), FrameToPixel(U("DurationFrames", 300)), I("TrackId"),
-                            labelText: S("Name") ?? "New Clip", relativeStart: U("SourceStartFrame"));
-                        if (path is not null)
-                        {
-                            c.SourcePath = path;
-                            c.ClipType = ClipElementUI.DetermineClipMode(path);
-                            if (c.ClipType is ClipMode.VideoClip or ClipMode.AudioClip) c.UpdateSourceDuration();
-                            if (c.ClipType == ClipMode.VideoClip) EnsureGeneratedSoundTrack(c);
-                        }
-                    }
-                    result = GuiClipSnapshot(ApplyGuiClipParameters(c, p));
-                    break;
-                }
-            case GuiProjectOperation.SetClip: result = GuiClipSnapshot(ApplyGuiClipParameters(Clip(), p)); break;
-            case GuiProjectOperation.CopyClip:
-                {
-                    var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, Clip(), false);
-                    dto.Id = Guid.NewGuid();
-                    dto.BindedSoundTrack = string.Empty;
-                    dto.EffectProviders = TransformProcessing.CopySingleInputs(dto.EffectProviders);
-                    dto.MetaData?.Remove(SoundTrackMetadata.ProbeSourceKey);
-                    dto.MetaData?.Remove(SoundTrackMetadata.ProbeHasStreamKey);
-                    dto.Name = S("Name") ?? $"Copy of {dto.Name}";
-                    dto.StartFrame = U("StartFrame", checked(dto.StartFrame + dto.Duration));
-                    dto.LayerIndex = U("TrackId", dto.LayerIndex);
-                    result = GuiClipSnapshot(TimelineMcpLiveService.ReplaceClip(this, dto));
-                    break;
-                }
-            case GuiProjectOperation.RemoveClip:
-                if (!TimelineMcpLiveService.DeleteClip(this, Clip().Id)) throw new InvalidOperationException("Clip could not be removed.");
-                result = null; break;
-            case GuiProjectOperation.GetTrack:
-                return Tracks.Keys.OrderBy(x => x).Where(x => !Has("TrackId") || x == I("TrackId"))
-                    .Select(x => new { TrackId = x, ClipCount = Clips.Values.Count(c => c.origTrack == x) }).ToArray();
-            case GuiProjectOperation.AddTrack:
-                {
-                    int id = I("TrackId", Tracks.Keys.DefaultIfEmpty(-1).Max() + 1);
-                    if (id < 0 || Tracks.ContainsKey(id)) throw new ArgumentException("Invalid or duplicate track.");
-                    AddATrack(id); result = new { TrackId = id }; break;
-                }
-            case GuiProjectOperation.GetAsset:
-                return Assets.Where(a => (!Has("AssetId") || a.Key == S("AssetId")) && (!Has("Name") || (a.Value.Name ?? "").Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)))
-                    .Select(a => new { AssetId = a.Key, a.Value.Name, a.Value.Path, Type = a.Value.AssetType.ToString(), a.Value.Width, a.Value.Height, a.Value.Duration }).ToArray();
-            case GuiProjectOperation.AddAsset:
-                {
-                    var source = S("FilePath") ?? throw new ArgumentException("FilePath is required.");
-                    if (!File.Exists(source)) throw new FileNotFoundException("Asset file not found.", source);
-                    var directory = Path.Combine(WorkingPath, "assets");
-                    Directory.CreateDirectory(directory);
-                    var destination = Path.Combine(directory, Guid.NewGuid() + Path.GetExtension(source));
-                    File.Copy(source, destination);
-                    try
-                    {
-                        var asset = AssetDatabase.Create(destination, S("Name") ?? Path.GetFileNameWithoutExtension(source), AssetItem.GetAssetType(destination))
-                            ?? throw new InvalidOperationException("Cannot import asset.");
-                        if (!Assets.TryAdd(asset.AssetId, asset)) throw new InvalidOperationException("Duplicate asset ID.");
-                        result = new { asset.AssetId, asset.Name, asset.Path }; break;
-                    }
-                    catch { File.Delete(destination); throw; }
-                }
-            case GuiProjectOperation.RemoveAsset:
-                if (!Assets.TryRemove(S("AssetId") ?? "", out _)) throw new KeyNotFoundException("Asset not found.");
-                result = null; break;
-            case GuiProjectOperation.GetTextStyle:
-                return PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().SelectMany(x => x.TextClipStyleProvider)
-                    .Select(x => new { StyleId = x.Key, FromPlugin = x.Value().FromPlugin }).ToArray();
-            case GuiProjectOperation.GetTextStyleField:
-                return (TimelineMcpLiveService.ResolveTextStyleProvider(S("StyleId") ?? "") ?? throw new KeyNotFoundException("Text style not found."))
-                    .SettableFields.Values.Select(f => new { FieldId = f.Id, FieldType = f.FieldType.ToString(), f.DefaultValue, f.MinValue, f.MaxValue, f.PresetOptions, f.Remarks }).ToArray();
-            case GuiProjectOperation.AddTextClip:
-                {
-                    if (!Tracks.ContainsKey(I("TrackId"))) throw new ArgumentException("Track not found.");
-                    var c = TimelineMcpLiveService.AddTextClipToPage(this, S("StyleId") ?? "", S("Text") ?? "",
-                        0, I("TrackId"), Fields(), strictFields: true);
-                    result = GuiClipSnapshot(ApplyGuiClipParameters(c, p)); break;
-                }
-            case GuiProjectOperation.SetTextClipStyle:
-                TimelineMcpLiveService.SetTextClipStyleFields(this, Clip().Id, Fields(), strictFields: true);
-                result = GuiClipSnapshot(Clip()); break;
-            case GuiProjectOperation.GetVectorComponentType:
-            case GuiProjectOperation.GetVectorClip:
-            case GuiProjectOperation.GetVectorComponent:
-                return ExecuteGuiVectorOperation(operation, p, cancellationToken);
-            case GuiProjectOperation.AddVectorCanvasClip:
-            case GuiProjectOperation.AddVectorComponentClip:
-            case GuiProjectOperation.SetVectorClip:
-            case GuiProjectOperation.AddVectorComponent:
-            case GuiProjectOperation.SetVectorComponent:
-            case GuiProjectOperation.RemoveVectorComponent:
-                result = ExecuteGuiVectorOperation(operation, p, cancellationToken);
-                break;
-            case GuiProjectOperation.GetEffectProviderType:
-                return EffectServices.GetAvailableEffectProviders().Select(x => (Key: x.Key, Provider: x.Value()))
-                    .Where(x => !Has("Name") || x.Key.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)
-                        || x.Provider.Name.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase))
-                    .Select(x => GuiProvider(x.Provider, Guid.Empty, x.Key)).ToArray();
-            case GuiProjectOperation.GetEffectProviderField: return Factory().Fields.Values.Select(GuiField).ToArray();
-            case GuiProjectOperation.GetClipEffectGraph:
-            case GuiProjectOperation.GetClipEffectBinding:
-            case GuiProjectOperation.GetClipEffectBindingSource:
-            case GuiProjectOperation.GetClipArgument:
-            case GuiProjectOperation.GetClipValueEndpoint:
-            case GuiProjectOperation.GetClipEffectGroup:
-            case GuiProjectOperation.GetClipEffectGroupTemplate:
-            case GuiProjectOperation.GetEffectGroupTemplate:
-                return await ExecuteGuiEffectOperationAsync(operation, p, cancellationToken);
-            case GuiProjectOperation.GetClipEffectProvider:
-                return (Clip().EffectProviders?.Values.AsEnumerable() ?? Enumerable.Empty<IEffectProvider>())
-                    .Where(x => (!Has("ProviderId") || x.Id == G("ProviderId")) && (!Has("TypeName") || x.TypeName == S("TypeName")))
-                    .Select(x => GuiProvider(x, G("ClipId"))).ToArray();
-            case GuiProjectOperation.AddClipEffectProvider:
-            case GuiProjectOperation.SetClipEffectProvider:
-            case GuiProjectOperation.RemoveClipEffectProvider:
-            case GuiProjectOperation.SetClipEffectBinding:
-            case GuiProjectOperation.RemoveClipEffectBinding:
-            case GuiProjectOperation.ClearClipEffectBinding:
-            case GuiProjectOperation.SetClipEffectOutput:
-            case GuiProjectOperation.SetClipArgument:
-            case GuiProjectOperation.AddClipValueEndpoint:
-            case GuiProjectOperation.SetClipValueEndpoint:
-            case GuiProjectOperation.RemoveClipValueEndpoint:
-            case GuiProjectOperation.AddClipEffectGroup:
-            case GuiProjectOperation.SetClipEffectGroup:
-            case GuiProjectOperation.RemoveClipEffectGroup:
-            case GuiProjectOperation.ImportClipEffectGroup:
-            case GuiProjectOperation.SaveClipEffectGroup:
-                result = await ExecuteGuiEffectOperationAsync(operation, p, cancellationToken, () => deferEffectRendering = true);
-                break;
-            default: throw new NotSupportedException("Unknown GUI project operation.");
-        }
-        var change = CreateGuiProjectChange(request);
-        if (deferEffectRendering) change.DetailInfo = "__EFFECT_BINDING_CHANGED__";
-        ForwardClipChangeToWorkspace(this, change);
-        await DraftChangedAsync(this, change);
-        return result;
-    }
-
-    private static ClipUpdateEventArgs CreateGuiProjectChange(GuiProjectRequest request) => new()
-    {
-        ChangeReason = string.IsNullOrWhiteSpace(request.ChangeReason) ? $"RPC {request.Operation}" : request.ChangeReason.Trim(),
-        DetailInfo = $"RPC {request.Operation}",
-        Operator = ClipChangeOperatorKind.ExternalRPC,
-        OperatorDetailName = string.IsNullOrWhiteSpace(request.ClientName) ? "RPC client" : request.ClientName.Trim(),
-    };
-
-    private ClipElementUI ApplyGuiClipParameters(ClipElementUI clip, JsonElement parameters)
-    {
-        var node = JsonSerializer.SerializeToNode(DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, clip, false))!;
-        foreach (var (source, target) in new[] { ("Name", "Name"), ("StartFrame", "StartFrame"), ("DurationFrames", "Duration"),
-            ("SourceStartFrame", "RelativeStartFrame"), ("TrackId", "LayerIndex"), ("FilePath", "FilePath"),
-            ("WidthPixels", "TargetWidth"), ("HeightPixels", "TargetHeight"), ("XPixels", "TargetX"), ("YPixels", "TargetY") })
-            if (parameters.TryGetProperty(source, out var value)) node[target] = JsonNode.Parse(value.GetRawText());
-        var dto = node.Deserialize<ClipDraftDTO>()!;
-        if (dto.Duration == 0 || dto.LayerIndex > int.MaxValue || !Tracks.ContainsKey((int)dto.LayerIndex)) throw new ArgumentException("Invalid duration or track.");
-        return TimelineMcpLiveService.ReplaceClip(this, dto);
-    }
-
-    private static void ApplyGuiProviderFields(IEffectProvider provider, Dictionary<string, object> values, bool reset)
-    {
-        var bindings = reset ? provider.EnumerateFieldBindings().Select(x => x.Key).ToArray() : values.Keys.ToArray();
-        if (reset && provider is ClipArgumentProvider arguments) arguments.RestoreStaticValues(null);
-        var fields = provider.Fields;
-        if (reset && provider is not ClipArgumentProvider)
-        {
-            var defaults = EffectServices.GetAvailableEffectProviders()[provider.TypeName]();
-            defaults.MetaData = new(provider.MetaData);
-            fields = defaults.Fields;
-        }
-        foreach (var (id, raw) in values)
-        {
-            if (!fields.TryGetValue(id, out var f)) throw new ArgumentException($"Unknown effect field '{id}'.");
-            var value = f.FieldType.HasFlag(EffectArgumentFieldType.Any) ? raw : EffectParamConvert.Normalize(raw);
-            if (f.FieldType.HasFlag(EffectArgumentFieldType.Any) && value is JsonElement json) value = json.Clone();
-            object? converted = f.FieldType.BaseType() switch
-            {
-                EffectArgumentFieldType.Integer => Convert.ToInt32(value, CultureInfo.InvariantCulture),
-                EffectArgumentFieldType.UnsignedInteger => Convert.ToUInt16(value, CultureInfo.InvariantCulture),
-                EffectArgumentFieldType.Numeric => Convert.ToSingle(value, CultureInfo.InvariantCulture),
-                EffectArgumentFieldType.Boolean => Convert.ToBoolean(value, CultureInfo.InvariantCulture),
-                EffectArgumentFieldType.Long => Convert.ToInt64(value, CultureInfo.InvariantCulture),
-                EffectArgumentFieldType.UnsignedLong => Convert.ToUInt64(value, CultureInfo.InvariantCulture),
-                EffectArgumentFieldType.String => value?.ToString(),
-                _ => value,
-            };
-            if (f.PresetOptions is { Length: > 0 } && converted is string text && !f.PresetOptions.Contains(text)) throw new ArgumentException($"Invalid option for '{id}'.");
-            fields[id] = GuiStaticField(id, f, converted);
-        }
-        provider.Fields = provider is ClipArgumentProvider ? fields.Where(f => values.ContainsKey(f.Key)).ToDictionary() : fields;
-        foreach (var id in bindings) provider.ClearFieldBinding(id);
-    }
-
-    private async Task MonitorExternalRpcRequestsAsync(CancellationToken ct)
-    {
-        IRenderClient? checkedClient = null;
-        var supported = false;
-        while (!ct.IsCancellationRequested)
-        {
-            try
-            {
-                await Task.Delay(1000, ct).ConfigureAwait(false);
-                if (AlreadyDisappeared || !RenderRpcBootstrap.SupportsCliRenderProcess ||
-                    !RenderRpcBootstrap.TryGetClient(out var client) || client is null) continue;
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                timeout.CancelAfter(TimeSpan.FromSeconds(5));
-                if (!ReferenceEquals(checkedClient, client))
-                {
-                    supported = (await client.GetCapabilitiesAsync(timeout.Token).ConfigureAwait(false))
-                        .Operations.Contains(nameof(RenderOperation.GetExternalRpcRequest));
-                    checkedClient = client;
-                }
-                if (!supported) continue;
-                var sessionId = await EnsureGuiRpcSessionAsync(client, timeout.Token).ConfigureAwait(false);
-                var pending = await client.GetExternalRpcRequestAsync(timeout.Token).ConfigureAwait(false);
-                if (pending.ClaimId == Guid.Empty) continue;
-                var request = JsonSerializer.Deserialize<ExternalRpcRequest>(pending.Json)!;
-                var approved = request.IsPersistent || await MainThread.InvokeOnMainThreadAsync(async () =>
-                    {
-                        if (AlreadyDisappeared || ct.IsCancellationRequested) return false;
-                        return await DisplayAlertAsync(Localized.DraftPage_ExternalRpcAuthorization_Title(request.AppName),
-                            Localized.DraftPage_ExternalRpcAuthorization(request.AppName, request.Author, request.Purpose),
-                            Localized._OK, Localized._Cancel);
-                    }).WaitAsync(ct).ConfigureAwait(false);
-                if (AlreadyDisappeared || ct.IsCancellationRequested) return;
-                using var responseTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                responseTimeout.CancelAfter(TimeSpan.FromSeconds(10));
-                await client.ResolveExternalRpcRequestAsync(new() { ClaimId = pending.ClaimId, Approved = approved, GuiSessionId = sessionId }, responseTimeout.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
-            catch (Exception ex)
-            {
-                Log(ex, "Authorize external RPC request", this);
-                try { await Task.Delay(5000, ct).ConfigureAwait(false); }
-                catch (OperationCanceledException) { return; }
-            }
-        }
-    }
-    #endregion
     #endregion
 
     #region misc

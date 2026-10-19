@@ -120,6 +120,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 // Crop the source region before scaling to the requested output size.
                 int sourceWidth = Math.Max(1, decoder.Width - sourceX);
                 int sourceHeight = Math.Max(1, decoder.Height - sourceY);
+                if (SoundTrackMetadata.ReadBool(ExtraData, "__Internal_DirectCropEnabled__"))
+                {
+                    if (EffectParamConvert.TryConvertToInt(ExtraData.GetValueOrDefault("__Internal_DirectCropWidth__"), out int cropWidth) && cropWidth > 0)
+                        sourceWidth = Math.Min(sourceWidth, cropWidth);
+                    if (EffectParamConvert.TryConvertToInt(ExtraData.GetValueOrDefault("__Internal_DirectCropHeight__"), out int cropHeight) && cropHeight > 0)
+                        sourceHeight = Math.Min(sourceHeight, cropHeight);
+                }
                 IPicture result;
                 if (decoder is IHDRVideoSource h)
                 {

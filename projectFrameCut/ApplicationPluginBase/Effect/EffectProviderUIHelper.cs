@@ -1,6 +1,9 @@
-using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.Text;
+using projectFrameCut.Services;
+using System.Text.Json;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Collections.Generic;
@@ -15,18 +18,20 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
     /// </summary>
     internal static class EffectProviderUIHelper
     {
-        public static void BuildUI(IEffectProvider provider, PropertyPanelBuilder panel, IEffectBindingHost? bindingHost, IEnumerable<string>? fieldIds = null)
+        public static void BuildUI(IEffectProvider provider, PropertyPanelBuilder panel, IEffectBindingHost? bindingHost, IEnumerable<string>? fieldIds = null,
+            IReadOnlyDictionary<string, IEffectArgumentField>? fields = null)
         {
-            foreach (var kvp in provider.Fields)
+            foreach (var kvp in fields ?? provider.Fields)
             {
                 if (fieldIds is not null && !fieldIds.Contains(kvp.Key)) continue;
                 var field = kvp.Value;
-                if (field is null || field.FieldType.HasFlag(EffectArgumentFieldType.NotVisibleInEffectPanel)) continue;
+                if (field is null || field.FieldType.HasFlag(EffectArgumentFieldType.NotVisibleInEffectPanel)
+                    || field.FieldType.HasFlag(EffectArgumentFieldType.InternalUseOnly)) continue;
                 bool isBound = field.IsDynamic;
                 var componentId = ComponentId(provider, field.Id);
                 if (field.FieldType.IsContent() || field.FieldType.HasFlag(EffectArgumentFieldType.Any))
                 {
-                    panel.AddText(Label(provider.TypeName, field), componentId);
+                    panel.AddText(Label(provider, field), componentId);
                     MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                     continue;
                 }
@@ -36,7 +41,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 {
                     var current = GetString(field);
                     var defaultValue = Array.IndexOf(field.PresetOptions, current) >= 0 ? current : field.PresetOptions[0];
-                    panel.AddPicker(componentId, Label(provider.TypeName, field), field.PresetOptions, defaultValue);
+                    panel.AddPicker(componentId, Label(provider, field), field.PresetOptions, defaultValue);
                     MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                     continue;
                 }
@@ -45,7 +50,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 switch (baseType)
                 {
                     case EffectArgumentFieldType.Boolean:
-                        panel.AddCheckbox(componentId, Label(provider.TypeName, field), GetBool(field));
+                        panel.AddCheckbox(componentId, Label(provider, field), GetBool(field));
                         MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                         break;
                     case EffectArgumentFieldType.UnsignedInteger:
@@ -58,7 +63,47 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                         MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                         break;
                     case EffectArgumentFieldType.String:
-                        panel.AddEntry(componentId, Label(provider.TypeName, field), GetString(field), field.DefaultValue);
+                        panel.AddEntry(componentId, Label(provider, field), GetString(field), field.DefaultValue);
+                        MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
+                        break;
+                    case EffectArgumentFieldType.Color:
+                        panel.AddCustomChild(Label(provider, field), invoker =>
+                        {
+                            var input = new Microsoft.Maui.Controls.Entry { Text = GetString(field), Placeholder = field.DefaultValue };
+                            input.Unfocused += (_, _) => invoker(input.Text);
+                            var button = new Button { Text = "…", WidthRequest = 34 };
+                            button.Clicked += async (_, _) =>
+                            {
+                                if (App.GetCurrentPage() is not DraftPage page) return;
+                                var picker = new projectFrameCut.ApplicationAPIBase.Views.Pickers.ColorPicker();
+                                try
+                                {
+                                    if (input.Text?.StartsWith('{') == true)
+                                    {
+                                        using var colorJson = JsonDocument.Parse(input.Text);
+                                        var colorValue = colorJson.RootElement;
+                                        picker.SelectedColor = Microsoft.Maui.Graphics.Color.FromRgba(
+                                            colorValue.GetProperty("r").GetUInt16() / 65535d,
+                                            colorValue.GetProperty("g").GetUInt16() / 65535d,
+                                            colorValue.GetProperty("b").GetUInt16() / 65535d,
+                                            colorValue.GetProperty("a").GetSingle());
+                                    }
+                                    else picker.SelectedColor = Microsoft.Maui.Graphics.Color.FromArgb(input.Text);
+                                }
+                                catch (FormatException) { }
+                                catch (JsonException) { }
+                                picker.SelectedColorChanged += (_, color) =>
+                                {
+                                    input.Text = $"#{(byte)Math.Round(color.Alpha * 255):X2}{(byte)Math.Round(color.Red * 255):X2}{(byte)Math.Round(color.Green * 255):X2}{(byte)Math.Round(color.Blue * 255):X2}";
+                                    invoker(input.Text);
+                                };
+                                await page.ShowAPopup(picker, null, null, "dialog");
+                            };
+                            var row = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) } };
+                            row.Add(input);
+                            row.Add(button, 1);
+                            return row;
+                        }, componentId, GetString(field));
                         MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                         break;
                     default:
@@ -75,7 +120,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         /// </summary>
         private static void MaybeWrapWithBind(PropertyPanelBuilder panel, IEffectProvider provider, IEffectArgumentField field, string componentId, IEffectBindingHost? bindingHost, bool isBound)
         {
-            if (bindingHost is null) return;
+            if (bindingHost is null || field.FieldType.HasFlag(EffectArgumentFieldType.CannotBeDynamic)) return;
             if (!panel.Components.TryGetValue(componentId, out var control) || control is null) return;
 
             if (isBound && control is Microsoft.Maui.Controls.View view)
@@ -125,7 +170,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             if (TryGetMinMax(field, out var min, out var max))
             {
-                panel.AddSlider(componentId, Label(provider.TypeName, field), min, max, GetDouble(field), eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
+                panel.AddSlider(componentId, Label(provider, field), min, max, GetDouble(field), eventCallMode: SliderUpdateEventCallMode.OnMouseUp);
             }
             else
             {
@@ -135,7 +180,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         private static void AddNumericEntry(PropertyPanelBuilder panel, IEffectProvider provider, IEffectArgumentField field, string componentId)
         {
-            panel.AddEntry(componentId, Label(provider.TypeName, field), GetString(field), field.DefaultValue, entry => entry.Keyboard = Microsoft.Maui.Keyboard.Numeric);
+            panel.AddEntry(componentId, Label(provider, field), GetString(field), field.DefaultValue, entry => entry.Keyboard = Microsoft.Maui.Keyboard.Numeric);
         }
 
         private static bool TryGetMinMax(IEffectArgumentField field, out double min, out double max)
@@ -258,9 +303,16 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             return 0f;
         }
 
-        private static PropertyPanelItemLabel Label(string provider, IEffectArgumentField field)
+        private static PropertyPanelItemLabel Label(IEffectProvider provider, IEffectArgumentField field)
         {
-            return PluginManager.GetLocalizationItem($"Effect_{provider}_{field.Id.Replace('.', '_')}", field.Id);
+            string id = field.Id.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal)
+                ? field.Id[TextClipStyles.ArgumentPrefix.Length..] : field.Id;
+            if (provider.MetaData.TryGetValue(TextClipStyles.FromKey, out var from)
+                && provider.MetaData.TryGetValue(TextClipStyles.TypeKey, out var type)
+                && TextClipStyles.Create(from.ToString()!, type.ToString()!) is { } style
+                && style.SettableFields.ContainsKey(id))
+                return TextStyleServices.GetUIProvider(style).GetLocalizedFieldInfo(style, id, PluginManager.CurrentLocale).name;
+            return PluginManager.GetLocalizationItem($"Effect_{provider.TypeName}_{field.Id.Replace('.', '_')}", field.Id);
         }
 
         private static string ComponentId(IEffectProvider provider, string fieldId)
@@ -268,7 +320,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             return $"EffectProviderField|{provider.Id:N}|{fieldId}";
         }
 
-        private static string FieldId(IEffectProvider provider, string componentId)
+        internal static string FieldId(IEffectProvider provider, string componentId)
         {
             var prefix = $"EffectProviderField|{provider.Id:N}|";
             return componentId.StartsWith(prefix, StringComparison.Ordinal)

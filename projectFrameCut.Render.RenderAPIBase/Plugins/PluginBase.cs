@@ -1,6 +1,7 @@
 // For agents: ****NEVER change CurrentPluginAPIVersion****, even if you are adding new features to the plugin API.
 // This version number will changes at new major version of the plugin API, and will be used to check for compatibility between the plugin and the host application.
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.Text;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
@@ -105,6 +106,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// (<see cref="IEffectProvider.RestoreInstance(EffectImplementType, Dictionary{string, object})"/>).
         /// </summary>
         public Dictionary<string, Func<IEffectProvider>> EffectProviderProvider { get; }
+
+        /// <summary>
+        /// Gets a collection of text clip style provider factories keyed by name.
+        /// </summary>
+        public virtual Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider => new();
 
         public virtual IReadOnlyDictionary<EffectImplementationKey, Func<IEffect>> EffectImplementationProvider
             => new Dictionary<EffectImplementationKey, Func<IEffect>>();

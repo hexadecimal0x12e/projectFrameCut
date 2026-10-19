@@ -926,14 +926,6 @@ namespace projectFrameCut.DraftStuff
                 root.Children.Add(section);
             }
 
-            // Also check ProgressPlacer which may exist as its own bundle
-            if (TryGetProgressPlacerProvider(clip, out var placerProvider, out _, false) && !hasAnyProvider)
-            {
-                hasAnyProvider = true;
-                var section = BuildKeyframeProviderSectionUI(placerProvider, clip, GetCurrentClipPosition, handler);
-                root.Children.Add(section);
-            }
-
             if (!hasAnyProvider)
             {
 
@@ -1049,6 +1041,7 @@ namespace projectFrameCut.DraftStuff
 
             var listHost = new VerticalStackLayout { Spacing = 8 };
             section.Children.Add(listHost);
+            var stepUI = EffectServices.GetStepUIProvider(provider);
 
             bool isCollapsed = false;
             var collapseTap = new TapGestureRecognizer();
@@ -1085,8 +1078,8 @@ namespace projectFrameCut.DraftStuff
                         Text = PPLocalizedResources.EffectProp_Remove,
                         Command = new Command(() =>
                         {
-                            if (provider is IEffectProvider bud && clip.EffectProviders is { } providers)
-                                EffectBindingHelper.RemoveProvider(providers, bud.Id);
+                            if (clip.EffectProviders is { } providers)
+                                EffectBindingHelper.RemoveProvider(providers, provider.Id);
                             handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
                             RebuildList();
                         }),
@@ -1144,16 +1137,22 @@ namespace projectFrameCut.DraftStuff
                     header.Add(deleteButton, 1, 0);
                     stack.Children.Add(header);
 
-                    var stepPpb = provider.CreateStepUI(idx);
+                    var stepPpb = stepUI.CreateStepUI(stepInfo);
                     var stepView = stepPpb.Build();
                     stepPpb.PropertyChanged += (s, args) =>
                     {
-                        if (provider.HandleStepUIChange(idx, args))
+                        try
                         {
-                            RebuildAllEffects(clip);
-                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
-                            RebuildList();
+                            if (clip.EffectProviders?.GetValueOrDefault(provider.Id) != provider) return;
+                            if (stepUI.HandleStepUIChange(stepInfo, args))
+                            {
+                                provider.UpdateStep(idx, stepInfo);
+                                RebuildAllEffects(clip);
+                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
+                                RebuildList();
+                            }
                         }
+                        catch (Exception ex) { Log(ex, $"Edit {provider.TypeName} keyframe", this); }
                     };
                     stack.Children.Add(stepView);
                     card.Content = stack;
@@ -1169,7 +1168,19 @@ namespace projectFrameCut.DraftStuff
                     collapseButton.Text = isCollapsed ? "▶" : "▼";
                     listHost.IsVisible = !isCollapsed;
                 }
-                provider.AddStep(getDefaultPosition());
+                var steps = provider.Steps;
+                var step = provider.CreateStep(steps.Count == 0 ? 0 : Math.Min(1, steps.Max(s => s.Progress) + 0.1));
+                if (provider.TypeName == "ProgressPlacer")
+                {
+                    var position = getDefaultPosition();
+                    step.SetValues(new Dictionary<string, object>
+                    {
+                        ["TargetX"] = position.TargetX, ["TargetY"] = position.TargetY,
+                        ["TargetWidth"] = Math.Max(1, position.TargetWidth), ["TargetHeight"] = Math.Max(1, position.TargetHeight),
+                        ["Rotation"] = position.Rotation,
+                    });
+                }
+                provider.AddStep(step);
                 RebuildAllEffects(clip);
                 handler?.Invoke(this, new PropertyPanelPropertyChangedEventArgs(listParamName, null, null));
                 RebuildList();

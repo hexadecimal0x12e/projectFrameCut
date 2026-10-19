@@ -165,6 +165,7 @@ public enum RenderOperation
     [ProtoEnum] IsolationResolveFieldTypes = 2064,
     [ProtoEnum] IsolationListProjectExternalAudioSources = 2065,
     [ProtoEnum] IsolationListProjectExternalMaskSources = 2066,
+    [ProtoEnum] IsolationEditKeyFrames = 2067,
 }
 
 [ProtoContract]

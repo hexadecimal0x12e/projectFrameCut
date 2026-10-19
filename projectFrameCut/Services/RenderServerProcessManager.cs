@@ -163,9 +163,6 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
             startInfo.ArgumentList.Add($"--locale={Localized._LocaleId_}");
             startInfo.ArgumentList.Add($"--preferHwAccelDecoder={SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelDecoding", true)}");
             startInfo.ArgumentList.Add($"--preferHwAccelEncoder={SettingsManager.IsBoolSettingTrueOrDefault("codec_PreferredHWAccelEncoding", true)}");
-            if (MyLoggerExtensions.LoggingDiagnosticInfo) startInfo.ArgumentList.Add($"--logDiagnostic");
-            if (!noConsole) startInfo.ArgumentList.Add($"--consoleLog");
-
             if (withHttp)
             {
                 var portSetting = SettingsManager.GetSetting("render_RpcServerHttpPort", "");
@@ -406,6 +403,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("externalSourceApprovals", Convert.ToBase64String(RenderRpcSerializer.Serialize(new SetProjectExternalSourcesRequest { AllowedSources = options.AllowedExternalSources })));
                 Add("output", options.OutputPath);
                 Add("output_options", $"{options.Width},{options.Height},{options.FrameRate},{options.PixelFormat},{options.Encoder}");
+                if (options.FinalVideoBitRate is long bitRate) Add("finalVideoBitRate", bitRate.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 Add("target", options.WriteToVoid ? "void" : "all");
                 Add("assetDbFile", options.AssetDatabasePath);
                 Add("dataRoot", MauiProgram.BasicDataPath);
@@ -415,6 +413,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("GCOptions", Math.Clamp(options.GcOption, 0, 2).ToString());
                 Add("enableThreadAffinity", options.EnableThreadAffinity.ToString());
                 Add("reuseDynamicPreviewCache", options.ReuseDynamicPreviewCache.ToString());
+                Add("deferredComposition", options.EnableDeferredComposition.ToString());
                 Add("frameHashMode", options.FrameHashMode.ToString());
                 Add("preferHwAccelDecoder", options.UseHwAccelDecoder.ToString());
                 Add("preferHwAccelEncoder", options.UseHwAccelEncoder.ToString());
@@ -775,12 +774,14 @@ internal sealed record CliRenderProcessOptions
     public required int FrameRate { get; init; }
     public required string PixelFormat { get; init; }
     public required string Encoder { get; init; }
+    public long? FinalVideoBitRate { get; init; }
     public int MaxParallelThreads { get; init; } = Environment.ProcessorCount;
     public bool AllowWorkerOversubscription { get; init; } = true;
     public int GcOption { get; init; }
     public bool EnableThreadAffinity { get; init; } = true;
     public FrameHashMode FrameHashMode { get; init; } = FrameHashMode.Dynamic;
     public bool ReuseDynamicPreviewCache { get; init; }
+    public bool EnableDeferredComposition { get; init; }
     public bool ChunkRender { get; init; }
     public uint? ChunkFrames { get; init; }
     public double? ChunkSeconds { get; init; }

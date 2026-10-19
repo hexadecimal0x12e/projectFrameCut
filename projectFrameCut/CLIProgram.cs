@@ -1,4 +1,4 @@
-using FFmpeg.AutoGen;
+﻿using FFmpeg.AutoGen;
 using LocalizedResources;
 #if !HEADLESS
 using projectFrameCut.ApplicationAPIBase.Plugins;
@@ -865,6 +865,7 @@ namespace projectFrameCut
             using var sleepRequest = RenderSleepRequest.Acquire();
             if (!switches.TryGetValue("project", out var projectRoot) || !Directory.Exists(projectRoot))
                 throw new DirectoryNotFoundException("-project must point to a project directory.");
+            projectRoot = Path.GetFullPath(projectRoot);
             if (!switches.TryGetValue("output", out var outputPath) || string.IsNullOrWhiteSpace(outputPath))
                 throw new ArgumentException("-output is required.");
             if (!switches.TryGetValue("output_options", out var outputSpec))
@@ -938,16 +939,29 @@ namespace projectFrameCut
                 return 1;
             }
             var reuseDynamicPreviewCache = bool.TryParse(switches.GetValueOrDefault("reuseDynamicPreviewCache", "false"), out var reusePreview) && reusePreview;
+            var deferredComposition = bool.TryParse(switches.GetValueOrDefault("deferredComposition", "false"), out var deferred) && deferred;
+
+            var renderResumeSignature = deferredComposition ? FrameHashHelper.CreateRenderResumeSignature(project, timeline, assets.Values) : null;
             if (!bool.TryParse(switches.GetValueOrDefault("allowWorkerOversubscription", "true"), out var allowWorkerOversubscription)) allowWorkerOversubscription = true;
             var affinity = bool.TryParse(switches.GetValueOrDefault("enableThreadAffinity", "true"), out var threadAffinity) && threadAffinity;
             var maxThreads = int.TryParse(switches.GetValueOrDefault("maxParallelThreads", Environment.ProcessorCount.ToString()), out var mt) ? Math.Max(1, mt) : Environment.ProcessorCount;
             var duration = Math.Max(timeline.Duration, timeline.AudioDuration);
             var chunkOptions = ParseChunkRenderOptions(switches, fps);
+            if (deferredComposition && chunkOptions.Enabled)
+            {
+                Log("Deferred composition and chunk rendering cannot be enabled together.", "error");
+                return 1;
+            }
             long? requestedBitRate = switches.TryGetValue("bitRate", out var bitRateText)
                 && long.TryParse(bitRateText, out var parsedBitRate) && parsedBitRate > 0
                     ? parsedBitRate
                     : null;
+            long? finalVideoBitRate = switches.TryGetValue("finalVideoBitRate", out var finalBitRateText)
+                && long.TryParse(finalBitRateText, out var parsedFinalBitRate) && parsedFinalBitRate > 0
+                    ? parsedFinalBitRate
+                    : null;
             using var consoleCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var completedChunkCleanup = new ConcurrentDictionary<int, Action>();
 #if WINDOWS || LINUX || HEADLESS
             Console.CancelKeyPress += (_, e) => { e.Cancel = true; consoleCancellation.Cancel(); };
 #endif
@@ -1032,6 +1046,9 @@ namespace projectFrameCut
                     AllowWorkerOversubscription = allowWorkerOversubscription,
                     FrameHashMode = frameHashMode,
                     ReuseDynamicPreviewCache = reuseDynamicPreviewCache,
+                    EnableDeferredComposition = deferredComposition,
+                    ResumeInterruptedRender = chunkOptions.Resume,
+                    RenderResumeSignature = renderResumeSignature,
                     DynamicPreviewCacheProjectRoot = projectRoot,
                     DynamicPreviewCacheProjectWidth = Math.Max(1, project.RelativeWidth),
                     DynamicPreviewCacheProjectHeight = Math.Max(1, project.RelativeHeight),
@@ -1050,6 +1067,8 @@ namespace projectFrameCut
                     {
                         builder.Writer.Finish();
                         builder.Dispose();
+                        if (intermediateChunk && renderer.EnableDeferredComposition)
+                            completedChunkCleanup[chunkIndex] = renderer.CleanupCreatedDeferredCache;
                     }
                 }
                 catch
@@ -1084,6 +1103,10 @@ namespace projectFrameCut
                     maxThreads,
                     chunkOptions);
                 await coordinator.InitializeAsync(consoleCancellation.Token).ConfigureAwait(false);
+                coordinator.OnChunkCompleted += segment =>
+                {
+                    if (completedChunkCleanup.TryRemove(segment.Index, out var cleanup)) cleanup();
+                };
                 await coordinator.RenderPendingChunksAsync(
                     (segment, chunkPath, chunkThreads, report, token) =>
                         RenderVideoRange(chunkPath, segment.StartFrame, segment.Duration, chunkThreads, report, chunkIndex: segment.Index, chunkCount: coordinator.ChunkCount, intermediateChunk: true),
@@ -1134,6 +1157,8 @@ namespace projectFrameCut
                 case "video":
                     {
                         var chunkJob = await RenderVideo(outputPath);
+                        if (finalVideoBitRate is long bitRate)
+                            VideoResizer.ReencodeToBitRate(outputPath, outputPath, output[4], bitRate, consoleCancellation.Token);
                         if (chunkJob is not null && !chunkOptions.KeepChunkFiles) chunkJob.Cleanup();
                         break;
                     }
@@ -1149,11 +1174,12 @@ namespace projectFrameCut
                     RenderAudio(audio);
                     progress?.Invoke(0.97, TimeSpan.Zero, 0);
                     stageChanged?.Invoke("FinalEncoding");
-                    if (File.Exists(audio))
+                    if (File.Exists(audio) || finalVideoBitRate.HasValue)
                     {
                         if (allChunkJob is null)
                         {
-                            VideoAudioMuxer.MuxFromFiles(video, audio, outputPath, true);
+                            VideoAudioMuxer.MuxFromFiles(video, audio, outputPath, true,
+                                finalVideoBitRate: finalVideoBitRate, videoEncoder: output[4], cancellationToken: consoleCancellation.Token);
                         }
                         else
                         {
@@ -1161,7 +1187,8 @@ namespace projectFrameCut
                             string atomicOutput = Path.Combine(outputDirectory, $".{Path.GetFileNameWithoutExtension(outputPath)}.{Guid.NewGuid():N}{Path.GetExtension(outputPath)}");
                             try
                             {
-                                VideoAudioMuxer.MuxFromFiles(video, audio, atomicOutput, true);
+                                VideoAudioMuxer.MuxFromFiles(video, audio, atomicOutput, true,
+                                    finalVideoBitRate: finalVideoBitRate, videoEncoder: output[4], cancellationToken: consoleCancellation.Token);
                                 File.Move(atomicOutput, outputPath, overwrite: true);
                             }
                             finally
@@ -2280,13 +2307,16 @@ Usage:
   pjfc render -project=<project directory> -output=<file>
               -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
                 [-target=video|audio|all|void] [-assetDbFile=<database.json>]
+                [-finalVideoBitRate=<bps>] (final output only)
                 [-maxParallelThreads=<number>]
                 [-allowWorkerOversubscription=true|false] (default: true)
                 [-reuseDynamicPreviewCache=true|false]
+                [-deferredComposition=true|false]
                 [-frameHashMode=Dynamic|Static]
                 [-enableThreadAffinity=true|false] [-GCOptions=0|1|2]
                 [-chunkRender=true|false] [-chunkFrames=<number>|-chunkSeconds=<number>]
                 [-chunkParallelism=<number>] [-chunkResume=true|false]
+                  chunkResume also restores deferred composition when chunkRender=false.
                 [-chunkKeepFiles=true|false]
                 [--allowExternalSources=all|<ImportId,ImportId,...>]
 

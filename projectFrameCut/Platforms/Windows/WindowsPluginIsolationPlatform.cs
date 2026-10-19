@@ -168,6 +168,7 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
                     $"--pluginRoot={pluginDirectory}",
                     $"--instancePackageName={familyName}",
                     "--forceRouteToCLI",
+                    "--consoleLog",
                     "--workerMode",
                     "--appContainer",
                 ];
@@ -177,10 +178,6 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
                 args.Add("--logDiagnostic");
             }
             var showConsole = SettingsManager.Settings is not null && SettingsManager.IsBoolSettingTrue("plugin_IsolationShowConsole");
-            if (showConsole)
-            {
-                args.Add("--consoleLog");
-            }
             var executable = Path.Combine(AppContext.BaseDirectory, showConsole ? "pjfc-cli.exe" : "projectFrameCut.exe");
             launcher = StartSandyWorker(familyName, sessionRoot, executable, args, showConsole);
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

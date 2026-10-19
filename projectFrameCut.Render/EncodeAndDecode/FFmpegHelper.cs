@@ -352,6 +352,47 @@ namespace projectFrameCut.Render.EncodeAndDecode
             return -1; // Unknown or unsupported pixel format
         }
 
+        internal static bool IsHardwareVideoEncoder(string encoder)
+            => encoder.EndsWith("_nvenc", StringComparison.OrdinalIgnoreCase)
+                || encoder.EndsWith("_amf", StringComparison.OrdinalIgnoreCase)
+                || encoder.EndsWith("_qsv", StringComparison.OrdinalIgnoreCase)
+                || encoder.EndsWith("_vaapi", StringComparison.OrdinalIgnoreCase)
+                || encoder.EndsWith("_videotoolbox", StringComparison.OrdinalIgnoreCase)
+                || encoder.EndsWith("_mediacodec", StringComparison.OrdinalIgnoreCase)
+                || encoder.EndsWith("_mf", StringComparison.OrdinalIgnoreCase);
+
+        internal static string[] GetSoftwareVideoEncoders(string encoder)
+        {
+            AVCodec* codec = ffmpeg.avcodec_find_encoder_by_name(encoder);
+            string name = encoder.Trim().ToLowerInvariant();
+            AVCodecID id = codec != null ? codec->id : name switch
+            {
+                "h264" or "avc" or "avc1" or "x264" => AVCodecID.AV_CODEC_ID_H264,
+                "h265" or "hevc" or "h265/hevc" or "x265" => AVCodecID.AV_CODEC_ID_HEVC,
+                "av1" => AVCodecID.AV_CODEC_ID_AV1,
+                "vp9" => AVCodecID.AV_CODEC_ID_VP9,
+                "vp8" => AVCodecID.AV_CODEC_ID_VP8,
+                "mpeg4" => AVCodecID.AV_CODEC_ID_MPEG4,
+                _ when name.StartsWith("h264_") => AVCodecID.AV_CODEC_ID_H264,
+                _ when name.StartsWith("hevc_") || name.StartsWith("h265_") => AVCodecID.AV_CODEC_ID_HEVC,
+                _ when name.StartsWith("av1_") => AVCodecID.AV_CODEC_ID_AV1,
+                _ when name.StartsWith("vp9_") => AVCodecID.AV_CODEC_ID_VP9,
+                _ when name.StartsWith("vp8_") => AVCodecID.AV_CODEC_ID_VP8,
+                _ => AVCodecID.AV_CODEC_ID_NONE
+            };
+            string[] candidates = id switch
+            {
+                AVCodecID.AV_CODEC_ID_H264 => ["libx264", "libopenh264", "h264"],
+                AVCodecID.AV_CODEC_ID_HEVC => ["libx265", "hevc"],
+                AVCodecID.AV_CODEC_ID_AV1 => ["libaom-av1", "libsvtav1", "svtav1", "librav1e", "rav1e", "av1"],
+                AVCodecID.AV_CODEC_ID_VP9 => ["libvpx-vp9", "vp9"],
+                AVCodecID.AV_CODEC_ID_VP8 => ["libvpx", "vp8"],
+                AVCodecID.AV_CODEC_ID_MPEG4 => ["mpeg4"],
+                _ => []
+            };
+            return candidates.Where(candidate => ffmpeg.avcodec_find_encoder_by_name(candidate) != null).ToArray();
+        }
+
         public static int DetectVideoBitDepth(string path)
         {
             if (string.IsNullOrWhiteSpace(path))

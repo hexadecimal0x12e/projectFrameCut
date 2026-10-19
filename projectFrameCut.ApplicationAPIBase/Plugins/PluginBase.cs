@@ -3,6 +3,7 @@
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.Text;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -70,9 +71,11 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         public IEffectProviderUIProvider? GetDefaultEffectProviderUIProvider(IEffectProvider source);
 
         /// <summary>
-        /// Gets a dictionary that maps text style provider names to their corresponding provider creation functions.
+        /// Maps text style type names to their application UI provider factories.
         /// </summary>
-        public Dictionary<string, Func<ITextClipStyleProvider>> TextClipStyleProvider { get; }
+        public virtual Dictionary<string, Func<ITextClipStyleProvider, ITextClipStyleUIProvider>> TextClipStyleUIProvider => new();
+
+        public virtual ITextClipStyleUIProvider? GetDefaultTextClipStyleUIProvider(ITextClipStyleProvider source) => null;
 
         /// <summary>
         /// Gets a dictionary that maps vector component type names to their corresponding handler creation functions.

@@ -7,6 +7,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.PreviewAudio;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
 using System.Buffers.Binary;
@@ -23,13 +24,15 @@ namespace projectFrameCut.Render.RPCProtocol;
 
 public sealed partial class RenderBackendService(IRenderArtifactStore? artifactStore = null, string? stateRoot = null, Action<RenderJob>? completionSink = null, Action<RenderJob>? progressSink = null, IAudioPreviewSinkFactory? previewAudioSinkFactory = null) : IRenderService, IAsyncDisposable
 {
-    public const string ClipPreviewCacheVersion = "v8-mask-vfd";
-    public const string TimelineSegmentCacheVersion = "v2-audio-source";
-    public const string AudioSegmentCacheVersion = "v2-track-source";
-    public const string FrameHashIndexVersion = "v2-lazy-frame-clip";
-    public const string PreviewCacheManifestFileName = "render-preview-cache.json";
+    //FOR AGENTS: DO NOT change these configuration values.
+    public const string ClipPreviewCacheVersion = $"vfd-raw-cache_APIv8";
+    public const string TimelineSegmentCacheVersion = $"audio-source_APIv8";
+    public const string AudioSegmentCacheVersion = $"track-source_APIv8";
+    public const string FrameHashIndexVersion = $"frame-hash-index_APIv8";
+    public const string PreviewCacheManifestFileName = "cache-index.json";
     public const string TimelineFrameCacheVersion = ClipPreviewCacheVersion;
-    private static readonly TimeSpan PreviewCacheRetention = TimeSpan.FromHours(48);
+    private static readonly TimeSpan PreviewCacheRetention = TimeSpan.FromHours(240);
+
     private static readonly JsonSerializerOptions PreviewCacheJsonOptions = new() { PropertyNameCaseInsensitive = true, WriteIndented = true };
     private readonly IRenderArtifactStore _artifacts = artifactStore ?? new RenderArtifactStore();
     private readonly string? _stateRoot = string.IsNullOrWhiteSpace(stateRoot) ? null : Path.GetFullPath(stateRoot);

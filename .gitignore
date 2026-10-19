@@ -364,10 +364,9 @@ FodyWeavers.xsd
 
 #####
 projectFrameCut/0x12e.keystore
-/projectFrameCut.Benchmarker/Generated
-/memories/repo
 .stfolder
 /.stignore
 /.stversions
 /.idea/.idea.projectFrameCut/.idea
 /.idea/.idea.projectFrameCut/.idea
+/projectFrameCut.StandaloneRender/benchmark-reports/

@@ -38,7 +38,7 @@ public sealed unsafe class AlphaBrightnessVideoWriter : IVideoWriter
     public IPicture.PicturePixelMode? TargetPPB => IPicture.PicturePixelMode.UShortPicture;
     public AuxiliaryVideoChannels Channels { get; set; }
 
-    private VideoWriter? _main;
+    private IVideoWriter? _main;
     private VideoWriter? _alpha;
     private VideoWriter? _brightness;
     private string? _workDirectory;
@@ -64,11 +64,16 @@ public sealed unsafe class AlphaBrightnessVideoWriter : IVideoWriter
         _workDirectory = Path.Combine(GlobalPluginHelper.GetCacheRoot(), "pjfc_multistream", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_workDirectory);
         _mainPath = Path.Combine(_workDirectory, "main.mkv");
-        _main = new VideoWriter
-        {
-            Width = Width, Height = Height, FramePerSecond = FramePerSecond, OutputPath = _mainPath,
-            CodecName = CodecName, PixelFormat = PixelFormat, BitRate = BitRate, PreferToSpeed = PreferToSpeed, Metadata = Metadata
-        };
+        _main = FFmpegHelper.IsHardwareVideoEncoder(CodecName) ? new VideoWriterHWAccel() : new VideoWriter();
+        _main.Width = Width;
+        _main.Height = Height;
+        _main.FramePerSecond = FramePerSecond;
+        _main.OutputPath = _mainPath;
+        _main.CodecName = CodecName;
+        _main.PixelFormat = PixelFormat;
+        _main.BitRate = BitRate;
+        _main.PreferToSpeed = PreferToSpeed;
+        _main.Metadata = Metadata;
         _main.Initialize();
 
         if (Channels.HasFlag(AuxiliaryVideoChannels.Alpha))

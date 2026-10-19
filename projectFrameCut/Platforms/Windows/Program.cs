@@ -106,7 +106,7 @@ namespace projectFrameCut.WinUI
                     }
                     else
                     {
-                        Log($"Running in headless mode, In app container: {AC}");
+                        Log($"Running in headless mode, In app container: {AC}, PFN: {WinUI.App.GetPackageFullName()}");
                     }
                 }
                 catch (Exception ex)

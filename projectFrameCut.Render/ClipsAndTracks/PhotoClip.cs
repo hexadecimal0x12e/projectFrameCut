@@ -70,11 +70,19 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     || bool.TryParse(directCropRaw?.ToString(), out var parsedDirectCrop) && parsedDirectCrop);
             if (directCropEnabled || StartingX > 0 || StartingY > 0)
             {
+                int cropWidth = targetWidth, cropHeight = targetHeight;
+                if (directCropEnabled)
+                {
+                    if (EffectParamConvert.TryConvertToInt(ExtraData?.GetValueOrDefault("__Internal_DirectCropWidth__"), out int width) && width > 0)
+                        cropWidth = width;
+                    if (EffectParamConvert.TryConvertToInt(ExtraData?.GetValueOrDefault("__Internal_DirectCropHeight__"), out int height) && height > 0)
+                        cropHeight = height;
+                }
                 return EffectRuntimeDefaults.Execute("PhotoCrop", "Crop", EffectImplementType.IPicture,
-                    new() { ["Width"] = targetWidth, ["Height"] = targetHeight, ["StartX"] = StartingX, ["StartY"] = StartingY }, e =>
+                    new() { ["Width"] = cropWidth, ["Height"] = cropHeight, ["StartX"] = StartingX, ["StartY"] = StartingY }, e =>
                     {
-                        e.Parameters["Width"] = targetWidth;
-                        e.Parameters["Height"] = targetHeight;
+                        e.Parameters["Width"] = cropWidth;
+                        e.Parameters["Height"] = cropHeight;
                         e.Parameters["StartX"] = StartingX;
                         e.Parameters["StartY"] = StartingY;
                         return ((INormalEffect)e).Render(source, targetWidth, targetHeight).ToBitPerPixel(targetPPB);

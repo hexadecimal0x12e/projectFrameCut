@@ -51,10 +51,6 @@ public sealed class SetProjectClipCommand : ProjectWriteCmdlet
     [Parameter] public uint? SourceStartFrame { get; set; }
     [Parameter(ValueFromPipelineByPropertyName = true)][ValidateRange(0, int.MaxValue)] public int? TrackId { get; set; }
     [Parameter] public string? FilePath { get; set; }
-    [Parameter][ValidateRange(1, int.MaxValue)] public int? WidthPixels { get; set; }
-    [Parameter][ValidateRange(1, int.MaxValue)] public int? HeightPixels { get; set; }
-    [Parameter] public int? XPixels { get; set; }
-    [Parameter] public int? YPixels { get; set; }
 }
 
 [Cmdlet("Remove", "ProjectClip", SupportsShouldProcess = true)]

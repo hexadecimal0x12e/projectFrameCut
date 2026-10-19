@@ -22,7 +22,7 @@ namespace projectFrameCut;
 public partial class DraftPage
 {
     #region componment
-    private Task CombineVectorClipsAsync(List<ClipElementUI> selected)
+    private Task CombineVectorClipsAsync(List<ClipElementUI> selected, bool notify = true)
     {
         var children = selected.Select(c => DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, c))
             .OrderBy(c => c.LayerIndex).ThenBy(c => c.SubLayerIndex).ToList();
@@ -53,12 +53,12 @@ public partial class DraftPage
         AddAClip(clip);
         ClearSelectionInternal();
         AddClipToSelection(clip);
-        OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.PropertyChanged, ChangedClipID = clip.Id, DetailInfo = Localized.VectorContentEditorView_History_Group });
+        if (notify) OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.PropertyChanged, ChangedClipID = clip.Id, DetailInfo = Localized.VectorContentEditorView_History_Group });
         Log($"Merged {children.Count} vector clips into {clip.Id}, start={start}, duration={end - start}.");
         return RefreshSelectionUiAsync();
     }
 
-    internal async Task UngroupVectorClipAsync(ClipElementUI clip)
+    internal async Task UngroupVectorClipAsync(ClipElementUI clip, bool notify = true)
     {
         var group = VectorComponentSerializer.Read(clip.ExtraData).OfType<ComponentGroup>().FirstOrDefault();
         if (group is null) return;
@@ -157,7 +157,7 @@ public partial class DraftPage
             RegisterClip(imported, false);
             AddAClip(imported);
         }
-        OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.PropertyChanged, DetailInfo = Localized.VectorContentEditorView_History_Ungroup });
+        if (notify) OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.PropertyChanged, DetailInfo = Localized.VectorContentEditorView_History_Ungroup });
         Log($"Ungrouped vector clip {clip.Id} into {children.Count} clips; group effects discarded.");
         await RefreshSelectionUiAsync();
     }

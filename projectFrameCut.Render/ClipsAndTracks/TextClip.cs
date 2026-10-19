@@ -8,6 +8,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Shared;
+using projectFrameCut.Render.RenderAPIBase.Text;
+using projectFrameCut.Render.Text;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
@@ -83,6 +85,57 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public string FontPath { get; set; } = string.Empty;
+        private ITextClipStyleProvider? textStyle;
+        private bool textStyleLoaded;
+
+        [JsonIgnore]
+        public virtual IReadOnlyDictionary<string, ClipArgumentFieldDescriptor> ArgumentFields
+        {
+            get
+            {
+                var fields = new Dictionary<string, ClipArgumentFieldDescriptor>(ClipArgumentHandler.DefaultFields);
+                if (ClipType != ClipMode.TextClip || GetTextStyle() is not { } style) return fields;
+                foreach (var (key, descriptor) in style.SettableFields)
+                {
+                    if (descriptor.FieldType.HasFlag(EffectArgumentFieldType.InternalUseOnly)) continue;
+                    fields.Add(TextClipStyles.ArgumentPrefix + key, new()
+                    {
+                        Id = TextClipStyles.ArgumentPrefix + key, FieldType = descriptor.FieldType,
+                        DefaultValue = descriptor.DefaultValue, MinValue = descriptor.MinValue, MaxValue = descriptor.MaxValue,
+                        PresetOptions = descriptor.PresetOptions, Remarks = descriptor.Remarks,
+                        ReadValue = c => TextClipStyles.ReadValue(((TextClip)c).GetTextStyle()!, key),
+                    });
+                }
+                return fields;
+            }
+        }
+
+        private ITextClipStyleProvider? GetTextStyle()
+        {
+            if (textStyleLoaded) return textStyle;
+            try { textStyle = TextClipStyles.Restore(ExtraData); }
+            catch (Exception ex) { Logger.Log(ex, $"Restore text style for clip {Id}", typeof(TextClip)); }
+            textStyleLoaded = true;
+            return textStyle;
+        }
+
+        public virtual IClip HandleArguments(IReadOnlyDictionary<string, object> arguments)
+        {
+            var copy = (TextClip)ClipArgumentHandler.Handle(this,
+                arguments.Where(p => !p.Key.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal)).ToDictionary());
+            if (GetTextStyle() is not { } style || ClipType != ClipMode.TextClip) return copy;
+            copy.textStyle = TextClipStyles.Copy(style);
+            copy.textStyleLoaded = true;
+            foreach (var (key, value) in arguments.Where(p => p.Key.StartsWith(TextClipStyles.ArgumentPrefix, StringComparison.Ordinal)))
+            {
+                string id = key[TextClipStyles.ArgumentPrefix.Length..];
+                var descriptor = copy.textStyle.SettableFields[id];
+                if (!copy.textStyle.HandleSettableFieldsChange(descriptor, value, out _))
+                    copy.textStyle.Fields[id] = new StaticEffectArgumentField(TextClipStyles.ReadValue(style, id), descriptor.FieldType) { Id = id };
+            }
+            return copy;
+        }
+
         private const int MaxTextFrameCacheEntries = 1024;
         private readonly object textFrameCacheLock = new();
         private readonly Dictionary<long, IPicture> textFrameCache = new();
@@ -186,6 +239,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public virtual void ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            textStyle = null;
+            textStyleLoaded = false;
             ClearFrameCache();
             if (!string.IsNullOrWhiteSpace(FontPath))
                 TextClipFontRegistry.AddFont(FontPath);
@@ -363,6 +418,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         protected virtual IReadOnlyList<TextEntry> GetRawEntries(uint frameIndex)
         {
+            if (GetTextStyle() is { } style) return style.BuildEntries();
             if (ExtraData?.TryGetValue("TextEntries", out var rawEntries) == true)
             {
                 // Try new format (TextEntry) first

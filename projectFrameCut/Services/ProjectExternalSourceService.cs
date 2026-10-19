@@ -186,7 +186,7 @@ public static class ProjectExternalSourceService
     }
 
 #if !HEADLESS
-    public static async Task RemoveAsync(DraftPage page, Guid importId)
+    public static async Task RemoveAsync(DraftPage page, Guid importId, bool save = true)
     {
         if (page.IsReadonly) throw new InvalidOperationException("Project is read-only.");
         var previous = GetApprovals(page.WorkingPath);
@@ -200,7 +200,7 @@ public static class ProjectExternalSourceService
             throw;
         }
         await ApplyAsync(page.WorkingPath);
-        await page.Save(true);
+        if (save) await page.Save(true);
     }
 
     public static async Task ManageRpcClientAsync(Guid clientId, ExternalVideoSourceClientAction action)
@@ -235,6 +235,21 @@ public static class ProjectExternalSourceService
             if (choice is null || choice == Localized._Cancel || choice == Localized.DraftPage_DuplicatedAsset_Skip) return;
             if (choice == Localized.DraftPage_DuplicatedAsset_Relpace) replace = duplicate.ImportId;
         }
+        await ImportAsync(page, directory, replace);
+        await page.Save(true);
+    }
+
+    public static async Task<ProjectExternalSourceAsset> ImportAsync(DraftPage page, string directory, Guid? replace = null,
+        bool loaded = true, CancellationToken cancellationToken = default)
+    {
+        if (page.IsReadonly) throw new InvalidOperationException("Project is read-only.");
+        if (File.Exists(directory))
+        {
+            if (!string.Equals(Path.GetFileName(directory), ProjectExternalSourceDatabase.ManifestFileName, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"Expected an external source folder or '{ProjectExternalSourceDatabase.ManifestFileName}'.");
+            directory = Path.GetDirectoryName(directory)!;
+        }
+        await ProjectExternalSourceDatabase.ValidateAsync(directory, cancellationToken: cancellationToken);
         var previous = GetApprovals(page.WorkingPath);
         if (replace.HasValue)
         {
@@ -242,7 +257,7 @@ public static class ProjectExternalSourceService
             await ApplyAsync(page.WorkingPath);
         }
         ProjectExternalSourceAsset asset;
-        try { asset = await ProjectExternalSourceDatabase.ImportAsync(page.WorkingPath, directory, replace); }
+        try { asset = await ProjectExternalSourceDatabase.ImportAsync(page.WorkingPath, directory, replace, cancellationToken); }
         catch
         {
             lock (Selections) Selections[Path.TrimEndingDirectorySeparator(Path.GetFullPath(page.WorkingPath))] = previous;
@@ -251,12 +266,13 @@ public static class ProjectExternalSourceService
         }
         lock (Selections)
         {
-            var approved = GetApprovals(page.WorkingPath);
-            approved.Add(new() { ImportId = asset.ImportId, ManifestSha256 = asset.ManifestSha256 });
+            var approved = GetApprovals(page.WorkingPath).Where(x => x.ImportId != asset.ImportId).ToList();
+            if (loaded) approved.Add(new() { ImportId = asset.ImportId, ManifestSha256 = asset.ManifestSha256 });
             Selections[Path.TrimEndingDirectorySeparator(Path.GetFullPath(page.WorkingPath))] = approved;
         }
         await ApplyAsync(page.WorkingPath);
-        await page.Save(true);
+        Log($"Imported project external source {asset.ImportId}, loaded={loaded}.");
+        return asset;
     }
 
 #endif

@@ -96,6 +96,26 @@ public partial class DraftPage : ContentPage, IDraftPage
     private const int InitialStaticPreviewLongEdge = 240;
     private const int MaxConcurrentStaticPreviewRenders = 3;
 
+    private int _previewBusyCount;
+
+    private sealed class PreviewBusyScope : IDisposable
+    {
+        private readonly DraftPage _page;
+
+        public PreviewBusyScope(DraftPage page)
+        {
+            _page = page;
+            Interlocked.Increment(ref page._previewBusyCount);
+            page.Dispatcher.Dispatch(() => page.ClipEditor.IsPreviewBusy = Volatile.Read(ref page._previewBusyCount) > 0);
+        }
+
+        public void Dispose()
+        {
+            Interlocked.Decrement(ref _page._previewBusyCount);
+            _page.Dispatcher.Dispatch(() => _page.ClipEditor.IsPreviewBusy = Volatile.Read(ref _page._previewBusyCount) > 0);
+        }
+    }
+
     private CancellationToken ResetDynamicPreviewToken()
     {
         lock (_dynamicPreviewCtsLock)
@@ -365,6 +385,7 @@ public partial class DraftPage : ContentPage, IDraftPage
 
     private async Task RenderOneFrame(uint duration, int? width = null, int? height = null)
     {
+        using var busy = new PreviewBusyScope(this);
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
         using var frameMark = new UserMarkRange("Preview.StaticFrame", $"frame={duration}");
 #endif

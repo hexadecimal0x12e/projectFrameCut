@@ -211,7 +211,7 @@ namespace projectFrameCut.Render.Effect
     /// <summary>
     /// The Render-side provider of the ProgressPlacer keyframed clip-position provider.
     /// </summary>
-    public class ProgressPlacerProvider : EffectProviderBase
+    public class ProgressPlacerProvider : KeyFramedEffectProviderBase<ProgressData>
     {
         public override bool IsDeterministic => true;
 
@@ -233,11 +233,45 @@ namespace projectFrameCut.Render.Effect
         {
             return
             [
-                Field("ProgressList", EffectArgumentFieldType.String, "[]", remarks: "Serialized ProgressData array as JSON string")
+                Field("ProgressList", EffectArgumentFieldType.String | EffectArgumentFieldType.NotVisibleInEffectPanel | EffectArgumentFieldType.CannotBeDynamic, "[]", remarks: "Serialized ProgressData array as JSON string")
             ];
         }
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.NotSpecified];
+
+        protected override string StepListFieldId => "ProgressList";
+
+        public override IKeyFrameStep CreateStep(double progress) => ReadStep(new ProgressData(progress,
+            new ClipPositionTuple(0, 0, 1920, 1080, false)));
+
+        protected override IKeyFrameStep ReadStep(ProgressData item)
+        {
+            var step = new KeyFrameStep(item.Index);
+            step.Fields["TargetX"] = KeyFrameStep.Field("TargetX", EffectArgumentFieldType.Integer, item.Position.TargetX);
+            step.Fields["TargetY"] = KeyFrameStep.Field("TargetY", EffectArgumentFieldType.Integer, item.Position.TargetY);
+            step.Fields["TargetWidth"] = KeyFrameStep.Field("TargetWidth", EffectArgumentFieldType.Integer, item.Position.TargetWidth, "1");
+            step.Fields["TargetHeight"] = KeyFrameStep.Field("TargetHeight", EffectArgumentFieldType.Integer, item.Position.TargetHeight, "1");
+            step.Fields["Rotation"] = KeyFrameStep.Field("Rotation", EffectArgumentFieldType.Numeric, item.Position.Rotation);
+            step.Fields["IsDelta"] = KeyFrameStep.Field("IsDelta", EffectArgumentFieldType.Boolean, item.Position.IsDelta);
+            return step;
+        }
+
+        protected override ProgressData WriteStep(IKeyFrameStep step) => new(step.Progress, new ClipPositionTuple(
+            Convert.ToInt32(step.Fields["TargetX"].GetGetter()()), Convert.ToInt32(step.Fields["TargetY"].GetGetter()()),
+            Convert.ToInt32(step.Fields["TargetWidth"].GetGetter()()), Convert.ToInt32(step.Fields["TargetHeight"].GetGetter()()),
+            Convert.ToBoolean(step.Fields["IsDelta"].GetGetter()()), Convert.ToSingle(step.Fields["Rotation"].GetGetter()())));
+
+        public void UpsertStep(double progress, ClipPositionTuple position)
+        {
+            progress = Math.Clamp(progress, 0, 1);
+            var step = ReadStep(new ProgressData(progress, position with
+            {
+                TargetWidth = Math.Max(1, position.TargetWidth), TargetHeight = Math.Max(1, position.TargetHeight), IsDelta = false,
+            }));
+            int index = Steps.ToList().FindIndex(s => Math.Abs(s.Progress - progress) <= 0.000001d);
+            if (index >= 0) UpdateStep(index, step);
+            else AddStep(step);
+        }
 
 
     }

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
@@ -23,6 +23,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="FFmpeg_droidFix.AutoGen" Version="8.1.0.2" />
+		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
+		<PackageReference Include="Kawazu" Version="1.1.4" ExcludeAssets="contentFiles" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -44,6 +46,7 @@
 
 	<ItemGroup>
 	  <None Remove="Resource\*.png" />
+      <EmbeddedResource Include="..\projectFrameCut\Resources\Raw\JapaneseDictionary\JapaneseDictionary.zip" LogicalName="projectFrameCut.Render.JapaneseDictionary.zip" />
 	  <EmbeddedResource Include="Resource\Error.png" LogicalName="projectFrameCut.Render.Resource.Error.png" />
 	  <EmbeddedResource Include="Resource\Error_SourceFail.png" LogicalName="projectFrameCut.Render.Resource.Error_SourceFail.png" />
 	  <EmbeddedResource Include="Resource\Error_BindingFail.png" LogicalName="projectFrameCut.Render.Resource.Error_BindingFail.png" />

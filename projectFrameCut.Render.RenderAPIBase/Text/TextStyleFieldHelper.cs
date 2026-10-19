@@ -1,13 +1,12 @@
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Services;
 using System.Globalization;
 using System.Text.Json;
 
-namespace projectFrameCut.ApplicationPluginBase.Text;
+namespace projectFrameCut.Render.RenderAPIBase.Text;
 
-internal static class TextStyleProviderSettableFieldHelper
+public static class TextStyleFieldHelper
 {
-    internal static EffectArgumentFieldDescriptor StringField(
+    public static EffectArgumentFieldDescriptor StringField(
         string id,
         string displayName,
         string description,
@@ -22,7 +21,7 @@ internal static class TextStyleProviderSettableFieldHelper
             Remarks = description
         };
 
-    internal static EffectArgumentFieldDescriptor NumericField(
+    public static EffectArgumentFieldDescriptor NumericField(
         string id,
         string displayName,
         string description,
@@ -48,7 +47,7 @@ internal static class TextStyleProviderSettableFieldHelper
         };
     }
 
-    internal static EffectArgumentFieldDescriptor IntegerField(
+    public static EffectArgumentFieldDescriptor IntegerField(
         string id,
         string displayName,
         string description,
@@ -74,7 +73,7 @@ internal static class TextStyleProviderSettableFieldHelper
         };
     }
 
-    internal static EffectArgumentFieldDescriptor BooleanField(
+    public static EffectArgumentFieldDescriptor BooleanField(
         string id,
         string displayName,
         string description,
@@ -89,7 +88,7 @@ internal static class TextStyleProviderSettableFieldHelper
             Remarks = description
         };
 
-    internal static EffectArgumentFieldDescriptor EnumField(
+    public static EffectArgumentFieldDescriptor EnumField(
         string id,
         string displayName,
         string description,
@@ -106,7 +105,7 @@ internal static class TextStyleProviderSettableFieldHelper
             Remarks = description
         };
 
-    internal static EffectArgumentFieldDescriptor ColorField(
+    public static EffectArgumentFieldDescriptor ColorField(
         string id,
         string displayName,
         string description,
@@ -121,15 +120,7 @@ internal static class TextStyleProviderSettableFieldHelper
             Remarks = "Use a 16-bit RGBA JSON object with r, g, b and optional a."
         };
 
-    internal static string[] GetAvailableFontNames() =>
-        TextServices.LoadedFonts.Values
-            .Where(font => font is not null && !string.IsNullOrWhiteSpace(font.FontName))
-            .Select(font => font.FontName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(font => font, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-    internal static bool TryNormalizeValue(
+    public static bool TryNormalizeValue(
         EffectArgumentFieldDescriptor field,
         object? value,
         out object normalizedValue,
@@ -157,7 +148,7 @@ internal static class TextStyleProviderSettableFieldHelper
             case EffectArgumentFieldType.Boolean:
                 return TryNormalizeBoolean(field, normalizedInput, out normalizedValue, out feedback);
             case EffectArgumentFieldType.Color:
-                return TryNormalizeColor(field, value, out normalizedValue, out feedback);
+                return TryNormalizeColor(field, normalizedInput, out normalizedValue, out feedback);
             default:
                 normalizedValue = "";
                 feedback = $"Unsupported field type '{baseType}' for field '{field.Id}'.";
@@ -284,9 +275,22 @@ internal static class TextStyleProviderSettableFieldHelper
         out object normalizedValue,
         out string feedback)
     {
+        if (value is string { Length: 0 } && !field.FieldType.HasFlag(EffectArgumentFieldType.Mandatory))
+        {
+            normalizedValue = "";
+            feedback = "";
+            return true;
+        }
         if (value is string text && TryNormalizeHexColor(text, out var hexColor))
         {
-            normalizedValue = hexColor;
+            uint color = uint.Parse(hexColor.AsSpan(1), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            normalizedValue = JsonSerializer.SerializeToElement(new
+            {
+                r = (ushort)((color >> 16 & 255) * 257),
+                g = (ushort)((color >> 8 & 255) * 257),
+                b = (ushort)((color & 255) * 257),
+                a = hexColor.Length == 9 ? (color >> 24) / 255f : 1f,
+            });
             feedback = "";
             return true;
         }
@@ -312,12 +316,7 @@ internal static class TextStyleProviderSettableFieldHelper
             return false;
         }
 
-        var r8 = (byte)Math.Round(red / 65535d * 255d);
-        var g8 = (byte)Math.Round(green / 65535d * 255d);
-        var b8 = (byte)Math.Round(blue / 65535d * 255d);
-        normalizedValue = hasAlpha
-            ? $"#{(byte)Math.Round(alpha * 255f):X2}{r8:X2}{g8:X2}{b8:X2}"
-            : $"#{r8:X2}{g8:X2}{b8:X2}";
+        normalizedValue = JsonSerializer.SerializeToElement(new { r = red, g = green, b = blue, a = alpha });
         feedback = "";
         return true;
     }
@@ -327,6 +326,11 @@ internal static class TextStyleProviderSettableFieldHelper
         double value,
         out string feedback)
     {
+        if (!double.IsFinite(value))
+        {
+            feedback = $"Field '{field.Id}' requires a finite number.";
+            return false;
+        }
         if (field.FieldType.HasFlag(EffectArgumentFieldType.HasMinValue)
             && double.TryParse(field.MinValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var min)
             && value < min)
@@ -438,9 +442,12 @@ internal static class TextStyleProviderSettableFieldHelper
             case JsonElement jsonElement:
                 element = jsonElement;
                 return true;
+            case string json:
+                try { element = JsonSerializer.Deserialize<JsonElement>(json); return true; }
+                catch (JsonException) { element = default; return false; }
             default:
-                element = default;
-                return false;
+                try { element = JsonSerializer.SerializeToElement(value, new JsonSerializerOptions { IncludeFields = true }); return true; }
+                catch { element = default; return false; }
         }
     }
 

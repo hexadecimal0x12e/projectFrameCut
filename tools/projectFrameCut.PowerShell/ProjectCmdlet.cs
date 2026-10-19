@@ -10,6 +10,7 @@ public abstract class ProjectCmdlet : CancellableCmdlet
     protected abstract GuiProjectOperation Operation { get; }
     protected virtual bool IsWrite => false;
     protected virtual bool ReturnResult => true;
+    protected virtual string? RequiredClipType => null;
     [Parameter][ValidateRange(1, 3600)] public int TimeoutSeconds { get; set; } = 60;
 
     protected override void ProcessRecord()
@@ -22,8 +23,9 @@ public abstract class ProjectCmdlet : CancellableCmdlet
                 .Where(x => x.Key is not ("PassThru" or "ChangeReason" or "TimeoutSeconds" or "WhatIf" or "Confirm" or "Verbose" or "Debug" or "ErrorAction"
                     or "WarningAction" or "InformationAction" or "ProgressAction" or "ErrorVariable" or "WarningVariable" or "InformationVariable"
                     or "OutVariable" or "OutBuffer" or "PipelineVariable"))
-                .ToDictionary(x => x.Key, x => x.Key == "FilePath"
+                .ToDictionary(x => x.Key, x => x.Key is "FilePath" or "CoverFilePath"
                     ? (object?)GetUnresolvedProviderPathFromPSPath((string)x.Value) : Normalize(x.Value));
+            if (RequiredClipType is not null) parameters["RequiredClipType"] = RequiredClipType;
             var request = new GuiProjectRequest
             {
                 Operation = Operation,

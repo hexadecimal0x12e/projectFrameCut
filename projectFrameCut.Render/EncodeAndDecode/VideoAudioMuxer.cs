@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace projectFrameCut.Render.EncodeAndDecode
 {
@@ -419,14 +420,16 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         /// <summary>
         /// Muxes a video file with an audio file to create a combined output file.
-        /// This method copies both video and audio streams without re-encoding when possible.
+        /// Copies the video stream, or re-encodes it when a final video bitrate is supplied.
         /// </summary>
         /// <param name="videoInputPath">Path to the input video file.</param>
         /// <param name="audioInputPath">Path to the input audio file.</param>
         /// <param name="outputPath">Path to the output file.</param>
         /// <param name="reencodeAudio">If true, re-encodes audio to match the output container format. If false, tries to copy the audio stream directly.</param>
         /// <param name="metadata">Optional metadata key-value pairs to write into the output container.</param>
-        public static void MuxFromFiles(string videoInputPath, string audioInputPath, string outputPath, bool reencodeAudio = false, Dictionary<string, string>? metadata = null)
+        public static void MuxFromFiles(string videoInputPath, string audioInputPath, string outputPath, bool reencodeAudio = false,
+            Dictionary<string, string>? metadata = null, long? finalVideoBitRate = null, string videoEncoder = "libx264",
+            CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrEmpty(videoInputPath))
                 throw new ArgumentNullException(nameof(videoInputPath));
@@ -436,6 +439,22 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 throw new ArgumentNullException(nameof(outputPath));
             if (!File.Exists(videoInputPath))
                 throw new FileNotFoundException($"Video input file not found: {videoInputPath}");
+            if (finalVideoBitRate is long bitRate)
+            {
+                string finalVideoPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(outputPath))!,
+                    $".{Path.GetFileNameWithoutExtension(outputPath)}.{Guid.NewGuid():N}.video{Path.GetExtension(outputPath)}");
+                try
+                {
+                    VideoResizer.ReencodeToBitRate(videoInputPath, finalVideoPath, videoEncoder, bitRate, cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    MuxFromFiles(finalVideoPath, audioInputPath, outputPath, reencodeAudio, metadata, cancellationToken: cancellationToken);
+                }
+                finally
+                {
+                    if (File.Exists(finalVideoPath)) File.Delete(finalVideoPath);
+                }
+                return;
+            }
             if (!File.Exists(audioInputPath) || new FileInfo(audioInputPath).Length < 256)
             {
                 File.Copy(videoInputPath, outputPath, overwrite: true);
@@ -511,6 +530,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     "avcodec_parameters_copy (video)");
                 outputVideoStream->codecpar->codec_tag = 0;
                 outputVideoStream->time_base = inputVideoStream->time_base;
+                ffmpeg.av_dict_copy(&outputFmtCtx->metadata, videoFmtCtx->metadata, 0);
+                ffmpeg.av_dict_copy(&outputVideoStream->metadata, inputVideoStream->metadata, 0);
                 int outputVideoStreamIndex = outputVideoStream->index;
 
                 // Create output audio stream
@@ -729,6 +750,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     // Process video packets
                     while (ffmpeg.av_read_frame(videoFmtCtx, pkt) >= 0)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         if (pkt->stream_index == videoStreamIndex)
                         {
                             ffmpeg.av_packet_rescale_ts(pkt, inputVideoStream->time_base, outputVideoStream->time_base);
@@ -743,6 +765,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     // Process audio packets
                     while (ffmpeg.av_read_frame(audioFmtCtx, pkt) >= 0)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         if (pkt->stream_index == audioStreamIndex)
                         {
                             if (reencodeAudio)

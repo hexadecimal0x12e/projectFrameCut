@@ -19,6 +19,15 @@ public enum GuiProjectOperation
     GetClipEffectGroupTemplate, ImportClipEffectGroup, GetEffectGroupTemplate, SaveClipEffectGroup,
     GetVectorComponentType, GetVectorClip, AddVectorCanvasClip, AddVectorComponentClip, SetVectorClip,
     GetVectorComponent, AddVectorComponent, SetVectorComponent, RemoveVectorComponent,
+    GetClipProperties, SetClipProperties, GetClipGeometry, SetClipGeometry,
+    GetMaskSourceType, AddSolidColorClip, AddMaskClip, AddEmptyVideoClip, AddExternalSourceClip,
+    GetSubtitleClip, AddSubtitleClip, SetSubtitleClip,
+    GetSubtitleCue, AddSubtitleCue, SetSubtitleCue, RemoveSubtitleCue,
+    SplitClip, JoinClip, SplitClipGroup, RemoveTrack,
+    GetExternalSource, AddExternalSource, SetExternalSource, RemoveExternalSource,
+    GetTransformType, GetClipTransform, SetClipTransform, RemoveClipTransform, GetClipTransformPreview,
+    GetSettings, SetSettings,
+    GetClipEffectStep, AddClipEffectStep, SetClipEffectStep, RemoveClipEffectStep,
 }
 
 [ProtoContract]

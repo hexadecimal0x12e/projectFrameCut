@@ -110,7 +110,7 @@ internal sealed class DesktopPluginIsolationPlatform : IPluginIsolationPlatform
                     }) info.ArgumentList.Add(argument);
                     if (MyLoggerExtensions.LoggingDiagnosticInfo) info.ArgumentList.Add("--logDiagnostic");
                     var worker = Process.Start(info) ?? throw new InvalidOperationException("Unable to start the plugin isolation worker.");
-                    if (noConsole)
+                    if (noConsole && MyLoggerExtensions.LoggingDiagnosticInfo)
                     {
                         worker.ErrorDataReceived += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) Logger.Log(e.Data, "PluginWorker Stderr"); };
                         worker.OutputDataReceived += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) Logger.Log(e.Data, "PluginWorker Stdout"); };

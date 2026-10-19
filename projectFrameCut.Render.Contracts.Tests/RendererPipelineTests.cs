@@ -1,4 +1,4 @@
-using projectFrameCut.Drawing.Base;
+﻿using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.ClipsAndTracks;
@@ -8,6 +8,7 @@ using projectFrameCut.Render.RenderAPIBase.Context;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Rendering;
+using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Render.Transform;
 using System.Collections.Concurrent;
 
@@ -77,6 +78,42 @@ public sealed class RendererPipelineTests
         Assert.AreEqual(0, builder.PendingWriteCount);
         Assert.IsTrue(builder.FramePendedToWrite.Values.All(value => value));
         IRenderContext.Current = null;
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task BlockedWriterDoesNotPreventSchedulingTheNextFrame(bool memoryBudget)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var nextReady = new ManualResetEventSlim();
+        using var clip = Clip(frame =>
+        {
+            if (frame == 1) nextReady.Set();
+            return Picture8bpp.GenerateSolidColor(2, 1, (byte)frame, 0, 0, 1);
+        }, duration: 3);
+        var written = new List<byte>();
+        var writer = Writer();
+        writer.OnFrameWrite += (_, picture) =>
+        {
+            if (written.Count == 0)
+                Assert.IsTrue(nextReady.Wait(TimeSpan.FromSeconds(5), timeout.Token));
+            written.Add(((IPicture<byte>)picture).r[0]);
+        };
+        using var builder = new VideoBuilder(writer) { Duration = 3 };
+        var renderer = new Renderer
+        {
+            Clips = [clip], builder = builder, Duration = 3, MaxThreads = 2, Use16Bit = false,
+            RenderAheadFrames = 1, EnableMemoryBudget = memoryBudget, MaxBufferedBytes = 1,
+        };
+        try
+        {
+            renderer.PrepareRender(timeout.Token);
+            await renderer.GoRender(timeout.Token);
+            CollectionAssert.AreEqual(new byte[] { 0, 1, 2 }, written);
+            Assert.AreEqual(3, renderer.CurrentFinished);
+        }
+        finally { IRenderContext.Current = null; }
     }
 
     [TestMethod]
@@ -424,15 +461,292 @@ public sealed class RendererPipelineTests
         IRenderContext.Current = null;
     }
 
+    [TestMethod]
+    [DataRow(1)]
+    [DataRow(3)]
+    public async Task DeferredCompositionWaitsForEveryClipAndWritesInOrder(int maxThreads)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "pjfc-deferred-" + Guid.NewGuid().ToString("N"));
+        int decoded = 0;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var bottom = Clip(frame =>
+        {
+            Interlocked.Increment(ref decoded);
+            return Picture8bpp.GenerateSolidColor(2, 1, (byte)(10 + frame), 0, 0, 1);
+        }, duration: 4, layer: 1);
+        using var top = Clip(frame =>
+        {
+            Interlocked.Increment(ref decoded);
+            return Picture8bpp.GenerateSolidColor(2, 1, (byte)(20 + frame), 0, 0, 1);
+        }, duration: 4);
+        var written = new List<byte>();
+        var progress = new List<double>();
+        var writer = Writer();
+        writer.OnFrameWrite += (_, picture) =>
+        {
+            Assert.AreEqual(8, Volatile.Read(ref decoded));
+            Assert.AreEqual(4, Directory.EnumerateFiles(root, "*.vfd", SearchOption.AllDirectories).Count());
+            Assert.IsFalse(Directory.EnumerateDirectories(root, "clips", SearchOption.AllDirectories).Any());
+            written.Add(((IPicture<byte>)picture).r[0]);
+        };
+        using var builder = new VideoBuilder(writer) { Duration = 4 };
+        var renderer = new Renderer
+        {
+            Clips = [top, bottom], builder = builder, Duration = 4, MaxThreads = maxThreads, Use16Bit = false,
+            EnableDeferredComposition = true,
+            DynamicPreviewCacheProjectRoot = root, RenderResumeSignature = "state",
+        };
+        renderer.OnProgressChanged += (value, _) => progress.Add(value);
+        try
+        {
+            renderer.PrepareRender(timeout.Token);
+            await renderer.GoRender(timeout.Token);
+            CollectionAssert.AreEqual(new byte[] { 20, 21, 22, 23 }, written);
+            Assert.AreEqual(4, builder.WrittenFramesCount);
+            Assert.AreEqual(4, renderer.CurrentFinished);
+            Assert.AreEqual(1d, renderer.Progress);
+            Assert.IsTrue(progress.SequenceEqual(progress.Order()));
+            Assert.IsTrue(progress.Contains(0.5));
+        }
+        finally
+        {
+            IRenderContext.Current = null;
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    [TestMethod]
+    public async Task DeferredResumeRestoresRenderedFramesWithoutDynamicPreviewCacheReuse()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "pjfc-deferred-" + Guid.NewGuid().ToString("N"));
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var first = Clip(frame =>
+        {
+            if (frame == 2) cancellation.Cancel();
+            return Picture8bpp.GenerateSolidColor(2, 1, (byte)(30 + frame), 0, 0, 1);
+        }, duration: 4);
+        using var firstBuilder = new VideoBuilder(Writer()) { Duration = 4 };
+        var initial = DeferredRenderer(first, firstBuilder, root);
+        try
+        {
+            initial.PrepareRender(cancellation.Token);
+            try
+            {
+                await initial.GoRender(cancellation.Token);
+                Assert.Fail("The render should be cancelled.");
+            }
+            catch (OperationCanceledException) { }
+            Assert.AreEqual(0, firstBuilder.WrittenFramesCount);
+            var existing = Directory.EnumerateFiles(root, "*.vfd", SearchOption.AllDirectories)
+                .ToDictionary(path => path, File.ReadAllBytes);
+            initial.CleanupCreatedDeferredCache();
+            CollectionAssert.AreEquivalent(existing.Keys.ToArray(), Directory.GetFiles(root, "*.vfd", SearchOption.AllDirectories));
+
+            var decoded = new ConcurrentQueue<uint>();
+            using var next = Clip(frame =>
+            {
+                decoded.Enqueue(frame);
+                return Picture8bpp.GenerateSolidColor(2, 1, (byte)(30 + frame), 0, 0, 1);
+            }, duration: 4, id: first.Id);
+            using var builder = new VideoBuilder(Writer()) { Duration = 4 };
+            var resumed = DeferredRenderer(next, builder, root);
+            resumed.MaxThreads = 3;
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            resumed.PrepareRender(timeout.Token);
+            await resumed.GoRender(timeout.Token);
+            CollectionAssert.AreEqual(new uint[] { 2, 3 }, decoded.ToArray());
+            Assert.AreEqual(4, builder.WrittenFramesCount);
+            builder.Writer.Finish();
+            builder.Dispose();
+            resumed.CleanupCreatedDeferredCache();
+            CollectionAssert.AreEquivalent(existing.Keys.ToArray(), Directory.GetFiles(root, "*.vfd", SearchOption.AllDirectories));
+            foreach (var entry in existing) CollectionAssert.AreEqual(entry.Value, File.ReadAllBytes(entry.Key));
+        }
+        finally
+        {
+            IRenderContext.Current = null;
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    [TestMethod]
+    public async Task DeferredResumeRestoresComposedFramesAndRewritesTheVideoFromItsFirstFrame()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "pjfc-deferred-" + Guid.NewGuid().ToString("N"));
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var first = Clip(frame => Picture8bpp.GenerateSolidColor(2, 1, (byte)(40 + frame), 0, 0, 1), duration: 4);
+        var firstWriter = Writer();
+        firstWriter.OnFrameWrite += (_, _) => cancellation.Cancel();
+        using var firstBuilder = new VideoBuilder(firstWriter) { Duration = 4 };
+        var initial = DeferredRenderer(first, firstBuilder, root);
+        try
+        {
+            initial.PrepareRender(cancellation.Token);
+            try
+            {
+                await initial.GoRender(cancellation.Token);
+                Assert.Fail("The render should be cancelled.");
+            }
+            catch (OperationCanceledException) { }
+            string composed = Directory.EnumerateFiles(root, "0.vfd", SearchOption.AllDirectories)
+                .Single(p => Path.GetFileName(Path.GetDirectoryName(p)) == "composed");
+            var stamp = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            File.SetLastWriteTimeUtc(composed, stamp);
+
+            using var next = Clip(_ => throw new AssertFailedException("An existing clip frame was rendered again."), duration: 4, id: first.Id);
+            var written = new List<byte>();
+            var writer = Writer();
+            writer.OnFrameWrite += (_, picture) => written.Add(((IPicture<byte>)picture).r[0]);
+            using var builder = new VideoBuilder(writer) { Duration = 4 };
+            var resumed = DeferredRenderer(next, builder, root);
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            resumed.PrepareRender(timeout.Token);
+            await resumed.GoRender(timeout.Token);
+            CollectionAssert.AreEqual(new byte[] { 40, 41, 42, 43 }, written);
+            Assert.AreEqual(stamp, File.GetLastWriteTimeUtc(composed));
+            Assert.AreEqual(4, builder.WrittenFramesCount);
+        }
+        finally
+        {
+            IRenderContext.Current = null;
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(true, true)]
+    public async Task DeferredResumeRejectsChangedStateAndHonorsItsSwitch(bool resume, bool changed)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "pjfc-deferred-" + Guid.NewGuid().ToString("N"));
+        using var first = Clip(frame => Picture8bpp.GenerateSolidColor(2, 1, (byte)frame, 0, 0, 1), duration: 4);
+        using var firstBuilder = new VideoBuilder(Writer()) { Duration = 4 };
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        try
+        {
+            var initial = DeferredRenderer(first, firstBuilder, root);
+            initial.PrepareRender(timeout.Token);
+            await initial.GoRender(timeout.Token);
+            int decoded = 0;
+            using var next = Clip(frame =>
+            {
+                decoded++;
+                return Picture8bpp.GenerateSolidColor(2, 1, (byte)frame, 0, 0, 1);
+            }, duration: 4, id: first.Id);
+            using var builder = new VideoBuilder(Writer()) { Duration = 4 };
+            var renderer = DeferredRenderer(next, builder, root);
+            renderer.ResumeInterruptedRender = resume;
+            if (changed) renderer.RenderResumeSignature = "changed";
+            renderer.PrepareRender(timeout.Token);
+            await renderer.GoRender(timeout.Token);
+            Assert.AreEqual(4, decoded);
+        }
+        finally
+        {
+            IRenderContext.Current = null;
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    [TestMethod]
+    public async Task DeferredResumeRegeneratesOnlyTheCorruptFrame()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "pjfc-deferred-" + Guid.NewGuid().ToString("N"));
+        using var first = Clip(frame => Picture8bpp.GenerateSolidColor(2, 1, (byte)(50 + frame), 0, 0, 1), duration: 4);
+        using var firstBuilder = new VideoBuilder(Writer()) { Duration = 4 };
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        try
+        {
+            var initial = DeferredRenderer(first, firstBuilder, root);
+            initial.PrepareRender(timeout.Token);
+            await initial.GoRender(timeout.Token);
+            foreach (string path in Directory.EnumerateFiles(root, "0.vfd", SearchOption.AllDirectories))
+                File.WriteAllBytes(path, [1, 2, 3]);
+            var decoded = new List<uint>();
+            using var next = Clip(frame =>
+            {
+                decoded.Add(frame);
+                return Picture8bpp.GenerateSolidColor(2, 1, (byte)(50 + frame), 0, 0, 1);
+            }, duration: 4, id: first.Id);
+            using var builder = new VideoBuilder(Writer()) { Duration = 4 };
+            var resumed = DeferredRenderer(next, builder, root);
+            resumed.PrepareRender(timeout.Token);
+            await resumed.GoRender(timeout.Token);
+            CollectionAssert.AreEqual(new uint[] { 0 }, decoded);
+            Assert.AreEqual(4, builder.WrittenFramesCount);
+        }
+        finally
+        {
+            IRenderContext.Current = null;
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task DeferredCleanupPreservesDynamicPreviewCache(bool reusePreview)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "pjfc-deferred-" + Guid.NewGuid().ToString("N"));
+        using var clip = new SolidColorClip
+        {
+            Id = Guid.NewGuid(), Name = "solid", Duration = 4, FrameTime = 1f / 30,
+            TargetWidth = 2, TargetHeight = 1, A = 1, ExtraData = [],
+        };
+        var written = new List<byte>();
+        var writer = Writer();
+        writer.OnFrameWrite += (_, picture) => written.Add(((IPicture<byte>)picture).r[0]);
+        using var builder = new VideoBuilder(writer) { Duration = 4 };
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        try
+        {
+            var identity = FrameHashHelper.GetClipHash([clip], clip, 0, new()
+            {
+                Width = 2, Height = 1, ProjectWidth = 2, ProjectHeight = 1, PixelMode = 8,
+            });
+            Assert.IsTrue(identity.CanReuse);
+            string directory = Path.Combine(root, "thumbs", "perClip", clip.Id.ToString(), "dynamic");
+            Directory.CreateDirectory(directory);
+            string preview = Path.Combine(directory, $"dynamic_{RenderBackendService.ClipPreviewCacheVersion}_{identity.Hash}_2x1_2x1_vfd8.vfd");
+            using var cached = Picture8bpp.GenerateSolidColor(2, 1, 77, 0, 0, 1);
+            cached.SaveToDisk(preview, PictureExtensions.SharedVfdPictureEncoder);
+            byte[] existing = File.ReadAllBytes(preview);
+            var renderer = DeferredRenderer(clip, builder, root);
+            renderer.ReuseDynamicPreviewCache = reusePreview;
+            renderer.PrepareRender(timeout.Token);
+            await renderer.GoRender(timeout.Token);
+            CollectionAssert.AreEqual(Enumerable.Repeat(reusePreview ? (byte)77 : (byte)0, 4).ToArray(), written);
+            Assert.IsFalse(Directory.Exists(Path.Combine(root, "thumbs", "render-deferred", "clips")));
+            Assert.IsTrue(Directory.EnumerateFiles(Path.Combine(root, "thumbs", "render-deferred"), "*.vfd", SearchOption.AllDirectories).Any());
+            builder.Writer.Finish();
+            builder.Dispose();
+            renderer.CleanupCreatedDeferredCache();
+            renderer.CleanupCreatedDeferredCache();
+            Assert.AreEqual(0, Directory.GetFiles(Path.Combine(root, "thumbs", "render-deferred"), "*.vfd", SearchOption.AllDirectories).Length);
+            CollectionAssert.AreEqual(existing, File.ReadAllBytes(preview));
+        }
+        finally
+        {
+            IRenderContext.Current = null;
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    private static Renderer DeferredRenderer(IClip clip, VideoBuilder builder, string root) => new()
+    {
+        Clips = [clip], builder = builder, Duration = 4, MaxThreads = 1, Use16Bit = false,
+        EnableDeferredComposition = true, DynamicPreviewCacheProjectRoot = root, RenderResumeSignature = "state",
+    };
+
     private static BlackholeVideoWriter Writer() => new()
     {
         Width = 2, Height = 1, FramePerSecond = 30, PixelFormat = "AV_PIX_FMT_RGB24", OutputPath = "unused",
     };
 
     private static VirtualSourceVideoClip Clip(Func<uint, IPicture> generate, uint startFrame = 0, uint duration = 10,
-        uint layer = 0, uint subLayer = 0, Action? initialize = null, IEffectProvider[]? providers = null) => new()
+        uint layer = 0, uint subLayer = 0, Action? initialize = null, IEffectProvider[]? providers = null, Guid? id = null) => new()
     {
-        Id = Guid.NewGuid(), Name = "clip", StartFrame = startFrame, Duration = duration, FrameTime = 1f / 30,
+        Id = id ?? Guid.NewGuid(), Name = "clip", StartFrame = startFrame, Duration = duration, FrameTime = 1f / 30,
         LayerIndex = layer, SubLayerIndex = subLayer,
         EffectProviders = providers?.Select(EffectBindingHelper.SerializeProvider).ToArray(),
         TargetWidth = 2, TargetHeight = 1, VirtualSource = new Source(generate, initialize),
