@@ -24,6 +24,8 @@ namespace projectFrameCut.Asset
 {
     public static class AssetDatabase
     {
+        public const string ImportModeSetting = "Edit_AssetImportMode";
+
         public static void Initialize(string json)
         {
             Assets = JsonSerializer.Deserialize<ConcurrentDictionary<string, AssetItem>>(json, DraftImportAndExportHelper.DraftJSONOption) ?? new ConcurrentDictionary<string, AssetItem>();
@@ -35,11 +37,29 @@ namespace projectFrameCut.Asset
 
 
 #if !HEADLESS
-        public static async Task<AssetItem?> Add(string path, Page page)
+        public static async Task<bool?> PickImportModeAsync(Page page)
+        {
+            switch (SettingsManager.GetSetting(ImportModeSetting, "ask"))
+            {
+                case "copy": return true;
+                case "reference": return false;
+            }
+            var mode = await page.DisplayActionSheetAsync(Localized.DraftPage_AssetPanel_ImportMode, Localized._Cancel, null,
+                Localized.DraftPage_AssetPanel_ImportCopy, Localized.DraftPage_AssetPanel_ImportReference);
+            if (mode == Localized.DraftPage_AssetPanel_ImportCopy) return true;
+            if (mode == Localized.DraftPage_AssetPanel_ImportReference) return false;
+            return null;
+        }
+
+        public static async Task<AssetItem?> Add(string path, Page page, bool? copyToLibrary = null)
         {
             if (string.IsNullOrWhiteSpace(path)) return null;
+            copyToLibrary ??= await PickImportModeAsync(page);
+            if (copyToLibrary is null) return null;
+            path = Path.GetFullPath(path);
             var name = Path.GetFileNameWithoutExtension(path);
             var nameInput = await page.DisplayPromptAsync(Localized.AssetPage_AddAAsset_InputName, Path.GetFileName(path), Localized._OK, Localized._Cancel, name, 0, null, name);
+            if (nameInput is null) return null;
             if (!string.IsNullOrEmpty(nameInput)) name = nameInput;
             var type = AssetItem.GetAssetType(path);
             if (type == AssetType.Other)
@@ -51,10 +71,12 @@ namespace projectFrameCut.Asset
                     {Localized.AssetPage_AssetType_Image, AssetType.Image },
                     {Localized.AssetPage_AssetType_Font, AssetType.Font },
                     {Localized.AssetPage_AssetType_VectorComposition, AssetType.VectorComposition },
+                    {Localized.Subtitle_Title, AssetType.Subtitle },
                 };
-                var selection = await page.DisplayActionSheetAsync(Localized.AssetPage_AssetType_Unknown(name), null, null, map.Keys.ToArray());
-                if (!map.TryGetValue(selection, out type)) return null;
+                var selection = await page.DisplayActionSheetAsync(Localized.AssetPage_AssetType_Unknown(name), Localized._Cancel, null, map.Keys.ToArray());
+                if (selection is null || !map.TryGetValue(selection, out type)) return null;
             }
+            string? replaceId = null;
             if (AssetDatabase.Assets.Any(c => c.Value.Name == name))
             {
                 var existing = AssetDatabase.Assets.Values.First(v => v.Name == name);
@@ -74,8 +96,7 @@ namespace projectFrameCut.Asset
                     {
                         if (!string.IsNullOrEmpty(existing.AssetId))
                         {
-                            Remove(existing.AssetId);
-                            Log($"Replaced existing asset {existing.Name} with new one from {path}");
+                            replaceId = existing.AssetId;
                         }
                     }
                     else if (opt == Localized.DraftPage_DuplicatedAsset_Skip)
@@ -95,20 +116,23 @@ namespace projectFrameCut.Asset
             AssetItem? asset = null;
             await Task.Run(() =>
             {
-                ok = Add(path, name, type, out asset, createProxy);
+                ok = Add(path, name, type, out asset, createProxy, copyToLibrary.Value);
             });
             if (!ok)
             {
                 await page.DisplayAlertAsync(Localized._Error, Localized.DraftPage_Asset_InvaildSrc(name), Localized._OK);
                 return null;
             }
+            if (replaceId is not null) Remove(replaceId);
+            if (type == AssetType.Font) TextServices.LoadFonts();
             return asset;
         }
 
 #endif
 
-        public static bool Add(string path, string name, AssetType type, out AssetItem asset, bool proxyOption = false)
+        public static bool Add(string path, string name, AssetType type, out AssetItem asset, bool proxyOption = false, bool copyToLibrary = true)
         {
+            path = Path.GetFullPath(path);
             var createdAsset = Create(path, name, type);
             if (createdAsset is null)
             {
@@ -117,20 +141,34 @@ namespace projectFrameCut.Asset
             }
 
             asset = createdAsset;
-            asset.Path = Path.Combine(MauiProgram.DataPath, "My Assets", $"{asset.AssetId}{Path.GetExtension(path)}");
+            asset.IsReference = !copyToLibrary;
+            asset.Path = copyToLibrary ? Path.Combine(MauiProgram.DataPath, "My Assets", $"{asset.AssetId}{Path.GetExtension(path)}") : path;
             if (asset.AssetId is null || asset.Path is null) return false;
 
+            if (copyToLibrary)
+            {
+                try
+                {
+                    File.Copy(path, asset.Path);
+                }
+                catch
+                {
+                    if (File.Exists(asset.Path)) File.Delete(asset.Path);
+                    throw;
+                }
+            }
+            if (type == AssetType.Image) asset.ThumbnailPath = asset.Path;
             if (AssetDatabase.Assets.TryAdd(asset.AssetId, asset))
             {
-                File.Copy(path, asset.Path);
                 File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftImportAndExportHelper.DraftJSONOption));
+                Log($"Imported shared asset '{path}' as {(copyToLibrary ? "copy" : "reference")} at '{asset.Path}'.");
 
                 new Thread(() =>
                 {
 #if !HEADLESS
                     Toast.Make(Localized.AssetPage_PostProcess_StartPrompt(name));
 #endif
-                    StartBackgroundProcessing(createdAsset, path, type, proxyOption, name);
+                    StartBackgroundProcessing(createdAsset, createdAsset.Path!, type, proxyOption, name);
 #if !HEADLESS
                     Toast.Make(Localized.AssetPage_PostProcess_FinishPrompt(name));
 #endif
@@ -278,12 +316,6 @@ namespace projectFrameCut.Asset
                     {
 #if !HEADLESS
                         TextServices.GenerateFontThumbnail(sourcePath).SaveToPng(thumbnailPath);
-                        var t = new Thread(TextServices.LoadFonts)
-                        {
-                            Priority = ThreadPriority.BelowNormal,
-                            IsBackground = true
-                        };
-                        t.Start();
 #endif
 
                         break;
@@ -315,11 +347,14 @@ namespace projectFrameCut.Asset
             {
                 if (Assets.TryRemove(assetId, out var asset))
                 {
-                    if (File.Exists(asset.Path))
+                    if (!asset.IsReference && File.Exists(asset.Path) && !Assets.Values.Any(x => string.Equals(x.Path, asset.Path,
+                        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)))
                     {
                         File.Delete(asset.Path);
                     }
-                    if (File.Exists(asset.ThumbnailPath) && !Path.GetFileName(asset.ThumbnailPath).StartsWith('.'))
+                    if (File.Exists(asset.ThumbnailPath) && string.Equals(asset.ThumbnailPath,
+                        Path.Combine(MauiProgram.DataPath, "My Assets", ".thumbnails", $"{asset.AssetId}.png"),
+                        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
                     {
                         File.Delete(asset.ThumbnailPath);
                     }

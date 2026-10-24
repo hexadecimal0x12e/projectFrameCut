@@ -29,6 +29,7 @@ public partial class ProjectAddClipView : ContentView
             "name" => 1,
             _ => 0
         };
+        if (MauiProgram.IsStoreMode) MainTabView.TabItems.Remove(AIGeneratedContentTab);
         CollapseHeaderControls();
     }
 
@@ -71,7 +72,7 @@ public partial class ProjectAddClipView : ContentView
             });
             if (file is null) return;
 
-            var copyToProject = await PickAssetImportModeAsync(sourceType);
+            var copyToProject = await Asset.AssetDatabase.PickImportModeAsync(_page);
             if (copyToProject is null) return;
             await AddAssetPathAsync(file.FullPath, sourceType, copyToProject.Value);
         }
@@ -91,25 +92,13 @@ public partial class ProjectAddClipView : ContentView
 
     private bool CanAddAsset(string sourceType) => !_isAddingAsset && (!_page.IsReadonly || sourceType == "SharedAssets");
 
-    private async Task<bool?> PickAssetImportModeAsync(string sourceType)
-    {
-        if (sourceType != "LocalAssets") return true;
-
-        var mode = await _page.DisplayActionSheetAsync(Localized.DraftPage_AssetPanel_ImportMode, Localized._Cancel, null,
-            Localized.DraftPage_AssetPanel_ImportCopy, Localized.DraftPage_AssetPanel_ImportReference);
-        Log($"Asset import mode selected: '{mode}'.");
-        if (mode == Localized.DraftPage_AssetPanel_ImportCopy) return true;
-        if (mode == Localized.DraftPage_AssetPanel_ImportReference) return false;
-        return null;
-    }
-
     private async Task AddAssetPathAsync(string path, string sourceType, bool copyToProject)
     {
         Log($"Importing '{path}' into {sourceType} from the clip panel.");
         if (sourceType == "RpcSources")
-            await Services.ProjectExternalSourceService.AddAsync(_page, path);
+            await Services.ProjectExternalSourceService.AddAsync(_page, path, copyToProject);
         else if (sourceType == "SharedAssets")
-            await Asset.AssetDatabase.Add(path, _page);
+            await Asset.AssetDatabase.Add(path, _page, copyToLibrary: copyToProject);
         else
             await _page.AddAsset(path, false, copyToProject: copyToProject);
     }
@@ -182,7 +171,7 @@ public partial class ProjectAddClipView : ContentView
                 .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
                 .ToList();
             if (paths.Count == 0) return;
-            var copyToProject = await PickAssetImportModeAsync(source.SourceType);
+            var copyToProject = await Asset.AssetDatabase.PickImportModeAsync(_page);
             if (copyToProject is null) return;
             foreach (var path in paths)
             {

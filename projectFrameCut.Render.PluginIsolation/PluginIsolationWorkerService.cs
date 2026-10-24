@@ -394,7 +394,7 @@ internal sealed class PluginIsolationWorkerService(
             {
                 Provider = new IsolationProviderState
                 {
-                    ObjectId = request.Provider.ObjectId, Enabled = provider.Enabled, InstanceId = provider.Id.ToString(), Name = provider.Name,
+                    ObjectId = request.Provider.ObjectId, Stage = (int)provider.Stage, Enabled = provider.Enabled, InstanceId = provider.Id.ToString(), Name = provider.Name,
                     AnchorBindings = new(provider.AnchorsBindingState), Fields = provider.Fields.Values.Select(DescribeField).ToList(),
                     Metadata = provider.MetaData.ToDictionary(p => p.Key, p => IsolationValueConverter.FromObject(p.Value)),
                 },
@@ -549,6 +549,8 @@ internal sealed class PluginIsolationWorkerService(
         ApplyEffectState(effect, request.State);
         using var context = ValueProviderFrameContext.PushFrame(request.Value, request.Progress);
         foreach (var item in request.DynamicValues) ValueProviderFrameContext.Set(item.Key, IsolationValueConverter.ToObject(item.Value));
+        foreach (var item in request.DynamicAudio)
+            ValueProviderFrameContext.Set(item.Key, AudioPayloadCodec.ReadAsync(item.Value, _payloads, default).AsTask().GetAwaiter().GetResult());
         var output = effect.Process(input, request.Progress) ?? throw new InvalidDataException("The vector effect returned no component.");
         return Success(envelope, DescribeVectorComponent(output, AddObject(output)));
     }
@@ -560,6 +562,8 @@ internal sealed class PluginIsolationWorkerService(
         ApplyEffectState(effect, request.State);
         using var context = ValueProviderFrameContext.PushFrame(request.Value, request.ClipProgress);
         foreach (var item in request.DynamicValues) ValueProviderFrameContext.Set(item.Key, IsolationValueConverter.ToObject(item.Value));
+        foreach (var item in request.DynamicAudio)
+            ValueProviderFrameContext.Set(item.Key, AudioPayloadCodec.ReadAsync(item.Value, _payloads, default).AsTask().GetAwaiter().GetResult());
         var output = effect.Process(VectorPictureCodec.Decode(request.VectorElements), request.Progress)
             ?? throw new InvalidDataException("The vector effect returned no picture.");
         return Success(envelope, new IsolationVectorElementList { Elements = VectorPictureCodec.Encode(output) });
@@ -568,7 +572,12 @@ internal sealed class PluginIsolationWorkerService(
     private RenderResponseEnvelope ProcessTextEffect(RenderRequestEnvelope envelope)
     {
         var request = Read<IsolationEffectInvokeRequest>(envelope);
+        using var context = ValueProviderFrameContext.PushFrame(request.Value, request.ClipProgress);
+        foreach (var item in request.DynamicValues) ValueProviderFrameContext.Set(item.Key, IsolationValueConverter.ToObject(item.Value));
+        foreach (var item in request.DynamicAudio)
+            ValueProviderFrameContext.Set(item.Key, AudioPayloadCodec.ReadAsync(item.Value, _payloads, default).AsTask().GetAwaiter().GetResult());
         var input = System.Text.Json.JsonSerializer.Deserialize<TextEntry[]>(request.Json) ?? [];
+        ApplyEffectState(Require<IEffect>(request.ObjectId), request.State);
         var output = Require<IEffect>(request.ObjectId) switch
         {
             ITextEffect effect => effect.Process(input),
@@ -633,7 +642,11 @@ internal sealed class PluginIsolationWorkerService(
                 pictures.Add(picture);
                 values[p.Key] = picture;
             }
+            foreach (var p in frame.DynamicAudio)
+                values[p.Key] = await AudioPayloadCodec.ReadAsync(p.Value, _payloads, cancellationToken).ConfigureAwait(false);
             object? input = IsolationValueConverter.ToObject(request.Input);
+            if (request.InputAudio is not null)
+                input = await AudioPayloadCodec.ReadAsync(request.InputAudio, _payloads, cancellationToken).ConfigureAwait(false);
             if (request.InputPicture is not null)
             {
                 var picture = await PicturePayloadCodec.ReadAsync(request.InputPicture, _payloads, cancellationToken).ConfigureAwait(false);
@@ -671,8 +684,20 @@ internal sealed class PluginIsolationWorkerService(
                         published.Add(outputLease);
                         response.Pictures[key] = outputLease.Reference;
                     }
+                    else if (value is IAudioSamples audio)
+                        response.Audios[key] = await AudioPayloadCodec.WriteAsync(audio, _payloads, _payloadKind, published, cancellationToken).ConfigureAwait(false);
                     else response.Values[key] = IsolationValueConverter.FromObject(value);
                 }
+                var envelopeResult = Success(envelope, response);
+                transferred = true;
+                return envelopeResult;
+            }
+            if (result is IAudioSamples resultAudio)
+            {
+                var response = new IsolationEffectComputeResponse
+                {
+                    Audio = await AudioPayloadCodec.WriteAsync(resultAudio, _payloads, _payloadKind, published, cancellationToken).ConfigureAwait(false),
+                };
                 var envelopeResult = Success(envelope, response);
                 transferred = true;
                 return envelopeResult;
@@ -1052,6 +1077,7 @@ internal sealed class PluginIsolationWorkerService(
         ObjectId = id,
         FromPlugin = track.FromPlugin,
         TrackType = (int)track.TrackType,
+        SupportedStages = track.SupportedStages.Select(s => (int)s).ToList(),
         TypeName = track.TypeName,
         Id = track.Id,
         Name = track.Name,
@@ -1296,11 +1322,15 @@ internal sealed class PluginIsolationWorkerService(
         {
             foreach (var item in request.DynamicPictures)
                 pictures[item.Key] = await PicturePayloadCodec.ReadAsync(item.Value, _payloads, cancellationToken).ConfigureAwait(false);
+            var audio = new Dictionary<string, object?>();
+            foreach (var item in request.DynamicAudio)
+                audio[item.Key] = await AudioPayloadCodec.ReadAsync(item.Value, _payloads, cancellationToken).ConfigureAwait(false);
             IPicture rendered;
             using (ValueProviderFrameContext.PushFrame(request.TargetFrame, request.ClipProgress))
             {
                 foreach (var item in request.DynamicValues) ValueProviderFrameContext.Set(item.Key, IsolationValueConverter.ToObject(item.Value));
                 foreach (var item in pictures) ValueProviderFrameContext.Set(item.Key, item.Value);
+                foreach (var item in audio) ValueProviderFrameContext.Set(item.Key, item.Value);
                 rendered = render();
             }
             using var output = rendered;
@@ -1315,6 +1345,8 @@ internal sealed class PluginIsolationWorkerService(
 
     private void ApplyProviderState(IEffectProvider provider, IsolationProviderState state, IReadOnlyDictionary<string, IPicture> pictures)
     {
+        provider.Stage = (Stage)state.Stage;
+        EffectStages.Validate(provider);
         provider.Enabled = state.Enabled;
         provider.Id = Guid.TryParse(state.InstanceId, out var id) ? id : Guid.NewGuid();
         provider.Name = state.Name;
@@ -1325,7 +1357,10 @@ internal sealed class PluginIsolationWorkerService(
         {
             var type = (EffectArgumentFieldType)item.FieldType;
             if (type.HasFlag(EffectArgumentFieldType.CustomType)) throw new NotSupportedException($"Custom field '{item.Id}' cannot cross the isolation boundary.");
-            var value = pictures.TryGetValue(item.Id, out var picture) ? picture : IsolationValueConverter.ToObject(item.Value) ?? item.DefaultValue;
+            var value = item.AudioValue is not null
+                ? AudioPayloadCodec.ReadAsync(item.AudioValue, _payloads, default).AsTask().GetAwaiter().GetResult()
+                : pictures.TryGetValue(item.Id, out var picture) ? (object)picture : IsolationValueConverter.ToObject(item.Value)
+                    ?? (type.BaseType() == EffectArgumentFieldType.AudioSample ? null : item.DefaultValue);
             fields[item.Id] = item.IsDynamic
                 ? new DynamicEffectParamField(item.Id, type, item.BoundProviderId, value) { FieldType = type }
                 : new StaticEffectArgumentField(value, type);
@@ -1342,6 +1377,8 @@ internal sealed class PluginIsolationWorkerService(
             TypeName = provider.TypeName,
             FromPlugin = provider.FromPlugin,
             EffectType = (int)provider.TypeOfEffect,
+            Stage = (int)provider.Stage,
+            SupportedStages = provider.SupportedStages.Select(s => (int)s).ToList(),
             IsDeterministic = provider.IsDeterministic,
             Target = (int)provider.Target,
             Enabled = provider.Enabled,

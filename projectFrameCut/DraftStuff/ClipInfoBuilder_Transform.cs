@@ -245,7 +245,8 @@ public partial class ClipInfoBuilder
                     catch (Exception ex) { error.Text = ex.Message; Log(ex, $"Delete transform from {clip.Id}/{side}", this); }
                 });
             }
-            if (!audio && saved is null && connected && page.AddClipView.BindingContext is ProjectAddClipViewModel ai)
+            
+            if (!MauiProgram.IsStoreMode && !audio && saved is null && connected && page.AddClipView.BindingContext is ProjectAddClipViewModel ai)
             {
                 ppb.AddSeparator();
                 ppb.AddEntry("AIPrompt", Localized.DraftPage_AddClipView_AddTransform_AITransform, ai.AITransitionPrompt ?? "",

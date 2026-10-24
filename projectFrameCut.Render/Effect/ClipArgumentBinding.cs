@@ -32,6 +32,7 @@ public static class ClipArgumentBinding
 
     private static IClip InitializeFrameCore(IClip clip, uint frame)
     {
+        using var clipScope = ValueProviderFrameContext.PushClip(clip);
         if (Copies.TryGetValue(clip, out var copy))
         {
             if (copy.Frame == frame)
@@ -45,7 +46,11 @@ public static class ClipArgumentBinding
         try
         {
             var provider = clip.EffectProvidersInstances?.OfType<ClipArgumentProvider>().SingleOrDefault();
-            if (provider is not { Enabled: true }) return clip;
+            if (provider is not { Enabled: true })
+            {
+                clip.EffectStagePlan?.Complete(clip, Stage.ClipArguments, frame);
+                return clip;
+            }
             using var context = ValueProviderFrameContext.PushFrame(frame, clip.GetEffectiveDuration() > 0
                 ? Math.Clamp((float)((long)frame - clip.StartFrame) / clip.GetEffectiveDuration(), 0, 1) : 0);
             bool shouldRender = provider.EvaluateShouldRender();
@@ -54,6 +59,7 @@ public static class ClipArgumentBinding
                 throw new InvalidOperationException("The clip argument handler must return a frame copy with the same id.");
             Copies.Add(result, new(clip, frame, shouldRender));
             ClipValueFrameContext.Current?.SetComputed((typeof(ClipArgumentBinding), clip.Id, frame), result);
+            result.EffectStagePlan?.Complete(result, Stage.ClipArguments, frame);
             return result;
         }
         catch (OperationCanceledException) { throw; }

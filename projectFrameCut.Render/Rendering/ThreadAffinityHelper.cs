@@ -52,6 +52,48 @@ namespace projectFrameCut.Render.Rendering
             SetCurrentThreadAffinity(BuildAffinityMask(cpuIndexes));
         }
 
+        /// <summary>Apply affinity until disposed on the same calling thread.</summary>
+        public static IDisposable PushCurrentThreadAffinity(params int[] cpuIndexes)
+        {
+            ulong mask = BuildAffinityMask(cpuIndexes);
+            if (OperatingSystem.IsWindows())
+            {
+                ulong previous = SetCurrentThreadAffinityWindows(mask);
+                return new AffinityScope(() => SetCurrentThreadAffinityWindows(previous));
+            }
+
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsAndroid())
+            {
+                var previous = new byte[LinuxCpuSetSizeBytes];
+                if (sched_getaffinity(0, (nuint)previous.Length, ref previous[0]) != 0)
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), "sched_getaffinity failed.");
+
+                SetCurrentThreadAffinityLinux(mask);
+                return new AffinityScope(() =>
+                {
+                    if (sched_setaffinity(0, (nuint)previous.Length, ref previous[0]) != 0)
+                        throw new Win32Exception(Marshal.GetLastWin32Error(), "Restore sched_setaffinity failed.");
+                });
+            }
+
+            throw new PlatformNotSupportedException("Current platform does not support CPU affinity in this helper.");
+        }
+
+        private sealed class AffinityScope(Action restore) : IDisposable
+        {
+            private readonly int _threadId = Environment.CurrentManagedThreadId;
+            private bool _disposed;
+
+            public void Dispose()
+            {
+                if (_disposed) return;
+                if (Environment.CurrentManagedThreadId != _threadId)
+                    throw new InvalidOperationException("Thread affinity must be restored on the original thread.");
+                restore();
+                _disposed = true;
+            }
+        }
+
         /// <summary>
         /// Build a CPU affinity bitmask from CPU indexes.
         /// </summary>
@@ -96,7 +138,7 @@ namespace projectFrameCut.Render.Rendering
             throw new PlatformNotSupportedException("Current platform does not support CPU core grouping in this helper.");
         }
 
-        private static void SetCurrentThreadAffinityWindows(ulong affinityMask)
+        private static ulong SetCurrentThreadAffinityWindows(ulong affinityMask)
         {
             if (IntPtr.Size == 4 && affinityMask > uint.MaxValue)
             {
@@ -109,6 +151,7 @@ namespace projectFrameCut.Render.Rendering
             {
                 throw new Win32Exception(Marshal.GetLastWin32Error(), "SetThreadAffinityMask failed.");
             }
+            return (ulong)previousMask;
         }
 
         private static void SetCurrentThreadAffinityLinux(ulong affinityMask)
@@ -322,6 +365,9 @@ namespace projectFrameCut.Render.Rendering
 
         [DllImport("libc", SetLastError = true)]
         private static extern int sched_setaffinity(int pid, nuint cpusetsize, ref byte mask);
+
+        [DllImport("libc", SetLastError = true)]
+        private static extern int sched_getaffinity(int pid, nuint cpusetsize, ref byte mask);
 
         private enum LOGICAL_PROCESSOR_RELATIONSHIP : int
         {

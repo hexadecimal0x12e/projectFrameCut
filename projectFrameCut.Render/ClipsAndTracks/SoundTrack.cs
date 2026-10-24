@@ -5,6 +5,7 @@ using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.Sources;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -95,15 +96,23 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             ReleaseEffects(track);
             track.ReInit();
-            track.EffectsInstances = EffectHelper.GetClipEffectsInstances(new SoundTrackToClipWrapper
+            var clip = new SoundTrackToClipWrapper
             {
+                Id = Guid.TryParse(track.Id, out var id) ? id : ReadSourceClipId(track.ExtraData) ?? Guid.NewGuid(),
+                Name = track.Name, LayerIndex = track.LayerIndex, SubLayerIndex = track.SubLayerIndex,
+                StartFrame = track.StartFrame, Duration = track.Duration, RelativeStartFrame = track.RelativeStartFrame,
+                ExtraData = track.ExtraData,
                 Effects = track.Effects,
                 EffectProviders = track.EffectProviders
-            }, syncClipState: false);
+            };
+            track.EffectsInstances = EffectHelper.GetClipEffectsInstances(clip, syncClipState: false);
+            track.EffectStagePlan = clip.EffectStagePlan;
         }
 
         public static void ReleaseEffects(ISoundTrack track)
         {
+            track.EffectStagePlan?.Dispose();
+            track.EffectStagePlan = null;
             foreach (var effect in (track.EffectsInstances ?? []).OfType<IDisposable>().Distinct(ReferenceEqualityComparer.Instance))
                 ((IDisposable)effect).Dispose();
             track.EffectsInstances = null;
@@ -115,6 +124,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             foreach (var clip in clips.Where(c => c.ClipType is ClipMode.AudioClip or ClipMode.VideoClip))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (EmptyVideoSource.IsPath(clip.FilePath)) continue;
                 if (ReadBool(clip.ExtraData, DetachedKey)) continue;
                 if (clip.ExtraData?.ContainsKey(ProbeHasStreamKey) == true
                     && !ReadBool(clip.ExtraData, ProbeHasStreamKey)) continue;
@@ -150,6 +160,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
     public class NormalSoundTrack : ISoundTrack
     {
+        [JsonIgnore] public IReadOnlyList<Stage> SupportedStages => EffectStages.Audio;
+        [JsonIgnore] public IEffectStagePlan? EffectStagePlan { get; set; }
         private bool disposedValue;
         private ProjectExternalSourceHost? externalSourceHost;
 
@@ -245,6 +257,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<Stage> SupportedStages => EffectStages.Audio;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public string? FilePath { get; set; }
         public bool NeedFilePath => true;
         public Dictionary<string, object> ExtraData { get; set; }

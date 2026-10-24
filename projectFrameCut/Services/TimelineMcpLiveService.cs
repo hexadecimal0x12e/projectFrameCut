@@ -522,8 +522,9 @@ public static class TimelineMcpLiveService
             throw new KeyNotFoundException($"Clip '{clipId}' not found.");
         }
 
-        if (provider.GetPipeline() == EffectPipeline.NativeContent
-            && (!clip.SupportsNativeEffects || !EffectBindingHelper.AreTargetsCompatible(provider.Target, clip.GetEffectSelectionTarget(EffectPipeline.NativeContent))))
+        EffectStages.Validate(provider);
+        if (!clip.SupportedStages.Contains(provider.Stage)
+            || !EffectBindingHelper.AreTargetsCompatible(provider.Target, clip.GetEffectSelectionTarget(provider.Stage)))
             throw new ArgumentException($"Effect provider {provider.TypeName} is incompatible with clip {clip.Id}.");
         clip.EffectProviders ??= new Dictionary<Guid, IEffectProvider>();
         clip.EffectProviders[provider.Id] = provider;

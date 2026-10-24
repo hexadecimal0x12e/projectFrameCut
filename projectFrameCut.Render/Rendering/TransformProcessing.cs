@@ -234,12 +234,14 @@ public static class TransformProcessing
                     ?? throw new InvalidOperationException($"Missing effect instance for transform {resolved.Provider.Id}.");
                 float ownerProgress = owner.GetEffectiveDuration() == 0 ? 0 :
                     Math.Clamp(((float)frameIndex - owner.StartFrame) / owner.GetEffectiveDuration(), 0, 1);
+                using var clipScope = ValueProviderFrameContext.PushClip(owner);
                 using (ValueProviderFrameContext.PushFrame(frameIndex, ownerProgress))
                     transformed = ProcessFrames(left, right, transform,
                         ReadEnum<TransformInputMode>(resolved.Provider.MetaData, ModeKey),
                         Progress(frameIndex, resolved.Start, resolved.Duration),
                         ReadEnum<TransformSide>(resolved.Provider.MetaData, SideKey), inputWidth, inputHeight);
                 if (ReferenceEquals(transformed, left) || ReferenceEquals(transformed, right)) transformed = CopyPicture(transformed);
+                owner.EffectStagePlan?.Complete(owner, Stage.Transform, frameIndex);
                 if (before)
                 {
                     result = Timeline.MixtureLayers([new OneFrame(frameIndex, clip, transformed, resolveEffects: false)],

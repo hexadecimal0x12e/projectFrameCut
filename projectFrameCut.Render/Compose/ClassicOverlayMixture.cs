@@ -28,6 +28,13 @@ namespace projectFrameCut.Render.Compose
         public Dictionary<string, object> Parameters { get; set; }
         public string? BindedEffectProvidingSystemID { get; set; }
 
+        private bool UseApproximatePath => Parameters?.GetValueOrDefault("AccuracyMode")?.ToString() switch
+        {
+            "Accurate" => false,
+            "Approximate" => true,
+            _ => EnableApproximatePath,
+        };
+
         public virtual IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB) => MixInternal(basePicture, topPicture, targetPPB, true, 0, 0, basePicture.Width, basePicture.Height);
         public virtual IPicture Mix(IPicture basePicture, IPicture topPicture, IPicture.PicturePixelMode targetPPB, int topStartX, int topStartY, int targetWidth, int targetHeight)
         {
@@ -84,21 +91,21 @@ namespace projectFrameCut.Render.Compose
 
         private (Array Color, float[] Alpha) Blend8(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int count)
         {
-            var result = EnableApproximatePath ? ApproximateOverlay8(top, bottom, topAlpha, bottomAlpha, count)
+            var result = UseApproximatePath ? ApproximateOverlay8(top, bottom, topAlpha, bottomAlpha, count)
                 : Overlay8(top, bottom, topAlpha, bottomAlpha, count);
             return (result.Color, result.Alpha);
         }
 
         private (Array Color, float[] Alpha) Blend16(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int count)
         {
-            var result = EnableApproximatePath ? ApproximateOverlay16(top, bottom, topAlpha, bottomAlpha, count)
+            var result = UseApproximatePath ? ApproximateOverlay16(top, bottom, topAlpha, bottomAlpha, count)
                 : Overlay16(top, bottom, topAlpha, bottomAlpha, count);
             return (result.Color, result.Alpha);
         }
 
         private (Array Color, float[] Alpha) BlendBrightness(float[] top, float[] bottom, float[] topAlpha, float[] bottomAlpha, int count)
         {
-            var result = EnableApproximatePath ? ApproximateOverlayHdr(top, bottom, topAlpha, bottomAlpha, count)
+            var result = UseApproximatePath ? ApproximateOverlayHdr(top, bottom, topAlpha, bottomAlpha, count)
                 : OverlayHdr(top, bottom, topAlpha, bottomAlpha, count);
             return (result.Color, result.Alpha);
         }
@@ -301,14 +308,16 @@ namespace projectFrameCut.Render.Compose
     /// <summary>
     /// The Render-side provider of the ClassicOverlayMixture.
     /// </summary>
-    public class ClassicOverlayMixtureProvider : EffectProviderBase
+    public class ClassicOverlayMixtureProvider : MixtureProviderBase
     {
+        public override IReadOnlyList<Stage> SupportedStages => [Stage.Mixture];
+
         public override bool IsDeterministic => true;
 
         public ClassicOverlayMixtureProvider()
         {
             Name = "Classic Overlay";
-            SetField("AccuracyMode", "Accurate");
+            SetField("AccuracyMode", "Default");
         }
 
         public override string TypeName => "ClassicOverlayMixture";
@@ -316,13 +325,10 @@ namespace projectFrameCut.Render.Compose
         public override EffectTarget Target => EffectTarget.Mixture;
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
-        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() =>
-            new Dictionary<string, EffectArgumentFieldDescriptor>();
-
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields()
         {
             return [Field("AccuracyMode", EffectArgumentFieldType.String | EffectArgumentFieldType.CannotBeDynamic,
-                "Accurate", presetOptions: ["Accurate", "Approximate"])];
+                "Default", presetOptions: ["Default", "Accurate", "Approximate"])];
         }
 
         protected override EffectImplementType[] SupportedImplementTypes() => [EffectImplementType.HwAcceleration, EffectImplementType.IPicture];

@@ -144,6 +144,7 @@ public static class FrameHashHelper
         foreach (var provider in providers ?? [])
         {
             if (!provider.Enabled) continue;
+            if (provider.AnchorsBindingState.Values.Contains(ValueProviderFrameContext.BuiltInAudioSampleProviderId)) return true;
             if (!provider.IsDeterministic || provider is IClipValueEndpointProvider
                 || provider.TypeOfEffect == EffectType.Transform) return true;
             if (provider.Fields.Values.OfType<IEffect>().Any(e => !e.IsDeterministic)) return true;
@@ -183,7 +184,7 @@ public static class FrameHashHelper
     {
         provider.Id, provider.TypeName, provider.FromPlugin, provider.Enabled, provider.IsDeterministic,
         Module = provider.GetType().Module.ModuleVersionId,
-        provider.TypeOfEffect, provider.Target, provider.AnchorsBindingState, provider.MetaData,
+        provider.TypeOfEffect, provider.Target, provider.Stage, provider.AnchorsBindingState, provider.MetaData,
         Inputs = provider.InFields,
         Outputs = provider.GetOutputFields(),
         Fields = provider.Fields.ToDictionary(p => p.Key, p => DescribeField(p.Value)),
@@ -350,6 +351,17 @@ public static class FrameHashHelper
             {
                 if (!allowPictures) throw new RenderRequiredException();
                 writer.WriteStringValue(HashPicture(picture));
+            }
+            else if (value is projectFrameCut.Shared.IAudioSamples<float> audio)
+            {
+                if (!allowPictures) throw new RenderRequiredException();
+                using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+                hash.AppendData(BitConverter.GetBytes(audio.channelCount));
+                hash.AppendData(BitConverter.GetBytes(audio.SampleCount));
+                hash.AppendData(BitConverter.GetBytes(audio.SamplePerSecond));
+                for (int c = 0; c < audio.channelCount; c++)
+                    hash.AppendData(MemoryMarshal.AsBytes(audio.GetSamples(c).AsSpan(0, audio.SampleCount)));
+                writer.WriteStringValue(Convert.ToHexString(hash.GetHashAndReset()));
             }
             else if (value.GetType() == typeof(object)) throw new RenderRequiredException();
             else JsonSerializer.Serialize(writer, value, value.GetType(), options);

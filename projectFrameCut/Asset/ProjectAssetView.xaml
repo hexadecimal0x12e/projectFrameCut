@@ -114,6 +114,7 @@
                 <Button Text="{Binding AddButtonText}" 
                     FontSize="32"
                     Margin="0,20,0,0"
+                    CommandParameter="LocalAssets"
                     Command="{Binding AddAssetCommand}"/>
 
                 <!-- 底部占位 -->
@@ -191,6 +192,11 @@
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                 </CollectionView>
+                <Button Text="{Binding AddButtonText}"
+                        FontSize="32"
+                        Margin="0,20,0,0"
+                        CommandParameter="SharedAssets"
+                        Command="{Binding AddAssetCommand}"/>
             </VerticalStackLayout>
         </tv:TabbedViewItem>
     </tv:TabbedView>

@@ -2745,7 +2745,7 @@
       },
       {
         "Id": "DisplayName_Effect_IsUpstreamAvailableOrDefault",
-        "Value": "\u4e0a\u6e38\u53ef\u7528\u6216\u9ed8\u8ba4\u503c",
+        "Value": "\u4E0A\u6E38\u53EF\u7528\u6216\u9ED8\u8BA4\u503C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2753,7 +2753,7 @@
       },
       {
         "Id": "Description_Effect_IsUpstreamAvailableOrDefault",
-        "Value": "\u8f93\u5165\u53ef\u7528\u65f6\u539f\u6837\u8fd4\u56de\uff0c\u5426\u5219\u8fd4\u56de\u9ed8\u8ba4\u503c\u8282\u70b9\u7684\u8f93\u5165\u3002",
+        "Value": "\u8F93\u5165\u53EF\u7528\u65F6\u539F\u6837\u8FD4\u56DE\uFF0C\u5426\u5219\u8FD4\u56DE\u9ED8\u8BA4\u503C\u8282\u70B9\u7684\u8F93\u5165\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2761,7 +2761,7 @@
       },
       {
         "Id": "Effect_IsUpstreamAvailableOrDefault_DefaultValue",
-        "Value": "\u9ed8\u8ba4\u503c",
+        "Value": "\u9ED8\u8BA4\u503C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2769,7 +2769,7 @@
       },
       {
         "Id": "Effect_IsUpstreamAvailableOrDefault_OutputType",
-        "Value": "\u8f93\u51fa\u7c7b\u578b",
+        "Value": "\u8F93\u51FA\u7C7B\u578B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2777,7 +2777,7 @@
       },
       {
         "Id": "DisplayName_Effect_IfConditionNode",
-        "Value": "\u6761\u4ef6\u9009\u62e9",
+        "Value": "\u6761\u4EF6\u9009\u62E9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2785,7 +2785,7 @@
       },
       {
         "Id": "Description_Effect_IfConditionNode",
-        "Value": "\u6839\u636e\u5e03\u5c14\u8f93\u5165\u8fd4\u56de\u6761\u4ef6\u4e3a\u771f\u6216\u6761\u4ef6\u4e3a\u5047\u65f6\u7684\u503c\uff0c\u4ec5\u8ba1\u7b97\u9009\u4e2d\u7684\u5206\u652f\u3002",
+        "Value": "\u6839\u636E\u5E03\u5C14\u8F93\u5165\u8FD4\u56DE\u6761\u4EF6\u4E3A\u771F\u6216\u6761\u4EF6\u4E3A\u5047\u65F6\u7684\u503C\uFF0C\u4EC5\u8BA1\u7B97\u9009\u4E2D\u7684\u5206\u652F\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2793,7 +2793,7 @@
       },
       {
         "Id": "Effect_IfConditionNode_TrueValue",
-        "Value": "\u6761\u4ef6\u4e3a\u771f\u65f6\u7684\u503c",
+        "Value": "\u6761\u4EF6\u4E3A\u771F\u65F6\u7684\u503C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2801,7 +2801,7 @@
       },
       {
         "Id": "Effect_IfConditionNode_FalseValue",
-        "Value": "\u6761\u4ef6\u4e3a\u5047\u65f6\u7684\u503c",
+        "Value": "\u6761\u4EF6\u4E3A\u5047\u65F6\u7684\u503C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2809,7 +2809,7 @@
       },
       {
         "Id": "Effect_IfConditionNode_OutputType",
-        "Value": "\u8f93\u51fa\u7c7b\u578b",
+        "Value": "\u8F93\u51FA\u7C7B\u578B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2817,7 +2817,7 @@
       },
       {
         "Id": "DisplayName_Effect_NumericComparisonNode",
-        "Value": "\u6570\u5b57\u5927\u5c0f\u6bd4\u8f83",
+        "Value": "\u6570\u5B57\u5927\u5C0F\u6BD4\u8F83",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2825,7 +2825,7 @@
       },
       {
         "Id": "Description_Effect_NumericComparisonNode",
-        "Value": "\u6bd4\u8f83\u4e24\u4e2a\u6570\u5b57\uff0c\u652f\u6301\u5927\u4e8e\u3001\u5927\u4e8e\u7b49\u4e8e\u3001\u5c0f\u4e8e\u548c\u5c0f\u4e8e\u7b49\u4e8e\uff0c\u8f93\u51fa\u5e03\u5c14\u503c\u3002",
+        "Value": "\u6BD4\u8F83\u4E24\u4E2A\u6570\u5B57\uFF0C\u652F\u6301\u5927\u4E8E\u3001\u5927\u4E8E\u7B49\u4E8E\u3001\u5C0F\u4E8E\u548C\u5C0F\u4E8E\u7B49\u4E8E\uFF0C\u8F93\u51FA\u5E03\u5C14\u503C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2833,7 +2833,7 @@
       },
       {
         "Id": "Effect_NumericComparisonNode_A",
-        "Value": "\u6570\u5b57 A",
+        "Value": "\u6570\u5B57 A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2841,7 +2841,7 @@
       },
       {
         "Id": "Effect_NumericComparisonNode_B",
-        "Value": "\u6570\u5b57 B",
+        "Value": "\u6570\u5B57 B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2849,7 +2849,7 @@
       },
       {
         "Id": "Effect_NumericComparisonNode_Operation",
-        "Value": "\u6bd4\u8f83\u65b9\u5f0f",
+        "Value": "\u6BD4\u8F83\u65B9\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2857,7 +2857,7 @@
       },
       {
         "Id": "DisplayName_Effect_EqualityComparisonNode",
-        "Value": "\u76f8\u7b49\u6027\u6bd4\u8f83",
+        "Value": "\u76F8\u7B49\u6027\u6BD4\u8F83",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2865,7 +2865,7 @@
       },
       {
         "Id": "Description_Effect_EqualityComparisonNode",
-        "Value": "\u6bd4\u8f83\u4e24\u4e2a\u8f93\u5165\u7684\u8fd0\u884c\u65f6\u7c7b\u578b\u548c\u503c\uff0c\u56fe\u7247\u4f7f\u7528 GetUniqueID\uff0c\u5176\u4ed6\u7c7b\u578b\u4f7f\u7528 Equals\uff0c\u8f93\u51fa\u5e03\u5c14\u503c\u3002",
+        "Value": "\u6BD4\u8F83\u4E24\u4E2A\u8F93\u5165\u7684\u8FD0\u884C\u65F6\u7C7B\u578B\u548C\u503C\uFF0C\u56FE\u7247\u4F7F\u7528 GetUniqueID\uFF0C\u5176\u4ED6\u7C7B\u578B\u4F7F\u7528 Equals\uFF0C\u8F93\u51FA\u5E03\u5C14\u503C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2873,7 +2873,7 @@
       },
       {
         "Id": "Effect_EqualityComparisonNode_A",
-        "Value": "\u503c A",
+        "Value": "\u503C A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2881,7 +2881,7 @@
       },
       {
         "Id": "Effect_EqualityComparisonNode_B",
-        "Value": "\u503c B",
+        "Value": "\u503C B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2930,6 +2930,86 @@
       {
         "Id": "Tabs_SourceProperties",
         "Value": "\u6E90\u5C5E\u6027",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClassicOverlayMixture_AccuracyMode",
+        "Value": "\u7CBE\u5EA6\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClassicOverlayMixture_AccuracyMode_Default",
+        "Value": "\u9ED8\u8BA4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClassicOverlayMixture_AccuracyMode_Accurate",
+        "Value": "\u7CBE\u786E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_ClassicOverlayMixture_AccuracyMode_Approximate",
+        "Value": "\u8FD1\u4F3C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "\u6700\u7EC8\u6DF7\u97F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "\u793A\u6CE2\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "\u97F3\u9891\u6837\u672C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "\u6CE2\u5F62\u989C\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "\u589E\u76CA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "\u7EBF\u5BBD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5837,6 +5917,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "Unset localization item:EffectBind_FinalAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "Unset localization item:DisplayName_Effect_Oscilloscope()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "Unset localization item:Effect_Oscilloscope_AudioSample()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "Unset localization item:Effect_Oscilloscope_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "Unset localization item:Effect_Oscilloscope_Gain()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "Unset localization item:Effect_Oscilloscope_LineWidth()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -8731,6 +8859,54 @@
       {
         "Id": "Tabs_SourceProperties",
         "Value": "\u4F86\u6E90\u5C6C\u6027",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "Unset localization item:EffectBind_FinalAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "Unset localization item:DisplayName_Effect_Oscilloscope()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "Unset localization item:Effect_Oscilloscope_AudioSample()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "Unset localization item:Effect_Oscilloscope_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "Unset localization item:Effect_Oscilloscope_Gain()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "Unset localization item:Effect_Oscilloscope_LineWidth()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11632,6 +11808,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "Unset localization item:EffectBind_FinalAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "Unset localization item:DisplayName_Effect_Oscilloscope()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "Unset localization item:Effect_Oscilloscope_AudioSample()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "Unset localization item:Effect_Oscilloscope_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "Unset localization item:Effect_Oscilloscope_Gain()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "Unset localization item:Effect_Oscilloscope_LineWidth()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -14528,6 +14752,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "Unset localization item:EffectBind_FinalAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "Unset localization item:DisplayName_Effect_Oscilloscope()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "Unset localization item:Effect_Oscilloscope_AudioSample()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "Unset localization item:Effect_Oscilloscope_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "Unset localization item:Effect_Oscilloscope_Gain()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "Unset localization item:Effect_Oscilloscope_LineWidth()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -17415,6 +17687,54 @@
       {
         "Id": "Tabs_SourceProperties",
         "Value": "Propri\u00E9t\u00E9s de la source",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "Unset localization item:EffectBind_FinalAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "Unset localization item:DisplayName_Effect_Oscilloscope()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "Unset localization item:Effect_Oscilloscope_AudioSample()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "Unset localization item:Effect_Oscilloscope_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "Unset localization item:Effect_Oscilloscope_Gain()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "Unset localization item:Effect_Oscilloscope_LineWidth()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20320,6 +20640,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "Unset localization item:EffectBind_FinalAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "Unset localization item:DisplayName_Effect_Oscilloscope()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "Unset localization item:Effect_Oscilloscope_AudioSample()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "Unset localization item:Effect_Oscilloscope_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "Unset localization item:Effect_Oscilloscope_Gain()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "Unset localization item:Effect_Oscilloscope_LineWidth()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -23204,6 +23572,54 @@
       {
         "Id": "Tabs_SourceProperties",
         "Value": "Quelleigenschaften",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "Unset localization item:EffectBind_FinalAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "Unset localization item:DisplayName_Effect_Oscilloscope()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "Unset localization item:Effect_Oscilloscope_AudioSample()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "Unset localization item:Effect_Oscilloscope_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "Unset localization item:Effect_Oscilloscope_Gain()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "Unset localization item:Effect_Oscilloscope_LineWidth()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26095,6 +26511,54 @@
       {
         "Id": "Tabs_SourceProperties",
         "Value": "Propiedades de origen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "Unset localization item:EffectBind_FinalAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "Unset localization item:DisplayName_Effect_Oscilloscope()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "Unset localization item:Effect_Oscilloscope_AudioSample()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "Unset localization item:Effect_Oscilloscope_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "Unset localization item:Effect_Oscilloscope_Gain()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "Unset localization item:Effect_Oscilloscope_LineWidth()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -28996,6 +29460,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "Unset localization item:EffectBind_FinalAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "Unset localization item:DisplayName_Effect_Oscilloscope()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "Unset localization item:Effect_Oscilloscope_AudioSample()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "Unset localization item:Effect_Oscilloscope_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "Unset localization item:Effect_Oscilloscope_Gain()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "Unset localization item:Effect_Oscilloscope_LineWidth()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -31888,6 +32400,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "Unset localization item:EffectBind_FinalAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "Unset localization item:DisplayName_Effect_Oscilloscope()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "Unset localization item:Effect_Oscilloscope_AudioSample()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "Unset localization item:Effect_Oscilloscope_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "Unset localization item:Effect_Oscilloscope_Gain()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "Unset localization item:Effect_Oscilloscope_LineWidth()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -34773,6 +35333,54 @@
       {
         "Id": "Tabs_SourceProperties",
         "Value": "Propriedades da origem",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "Unset localization item:EffectBind_FinalAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "Unset localization item:DisplayName_Effect_Oscilloscope()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "Unset localization item:Effect_Oscilloscope_AudioSample()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "Unset localization item:Effect_Oscilloscope_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "Unset localization item:Effect_Oscilloscope_Gain()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "Unset localization item:Effect_Oscilloscope_LineWidth()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -37676,6 +38284,54 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "Unset localization item:EffectBind_FinalAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "Unset localization item:DisplayName_Effect_Oscilloscope()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "Unset localization item:Effect_Oscilloscope_AudioSample()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "Unset localization item:Effect_Oscilloscope_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "Unset localization item:Effect_Oscilloscope_Gain()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "Unset localization item:Effect_Oscilloscope_LineWidth()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -40561,6 +41217,54 @@
       {
         "Id": "Tabs_SourceProperties",
         "Value": "Kaynak \u00F6zellikleri",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "EffectBind_FinalAudio",
+        "Value": "Unset localization item:EffectBind_FinalAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DisplayName_Effect_Oscilloscope",
+        "Value": "Unset localization item:DisplayName_Effect_Oscilloscope()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_AudioSample",
+        "Value": "Unset localization item:Effect_Oscilloscope_AudioSample()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Color",
+        "Value": "Unset localization item:Effect_Oscilloscope_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_Gain",
+        "Value": "Unset localization item:Effect_Oscilloscope_Gain()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Effect_Oscilloscope_LineWidth",
+        "Value": "Unset localization item:Effect_Oscilloscope_LineWidth()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

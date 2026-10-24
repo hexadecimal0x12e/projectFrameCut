@@ -28,6 +28,7 @@ public enum GuiProjectOperation
     GetTransformType, GetClipTransform, SetClipTransform, RemoveClipTransform, GetClipTransformPreview,
     GetSettings, SetSettings,
     GetClipEffectStep, AddClipEffectStep, SetClipEffectStep, RemoveClipEffectStep,
+    AddSubTrack,
 }
 
 [ProtoContract]

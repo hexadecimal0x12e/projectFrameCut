@@ -37,12 +37,18 @@ namespace projectFrameCut.LivePreview
         int Width,
         int Height,
         PreviewPixelFormat TargetPixelFormat,
-        bool RequireSwapChain);
+        bool RequireSwapChain)
+    {
+        internal ScRgbFrame? ScRgb { get; init; }
+        internal byte[]? Png { get; init; }
+    }
 
     public partial class LivePreviewer
     {
         public IClip[]? Clips;
         public ISoundTrack[]? SoundTracks;
+        private AudioSampleSource? audioSamples;
+        public AudioSampleSource AudioSamples => audioSamples ??= new(Clips ?? [], SoundTracks ?? [], targetFrameRate);
         public int targetFrameRate = 60;
         public uint TotalDuration;
         public string TempPath = string.Empty;
@@ -60,6 +66,7 @@ namespace projectFrameCut.LivePreview
         public FrameHashIndex HashIndex { get; private set; } = new();
         private readonly ConcurrentDictionary<uint, (FrameHashOptions Options, string Hash, string Path)> renderedFrames = new();
         private readonly SemaphoreSlim _updateDraftGate = new(1, 1);
+        private readonly TaskCompletionSource _backendReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private HashSet<Guid> _cacheableClipIds = [];
         public string ProjectRoot => string.IsNullOrWhiteSpace(TempPath) ? string.Empty : Directory.GetParent(Path.GetFullPath(TempPath))?.FullName ?? string.Empty;
         public string ProjectName { get; set; } = "Untitled Project";
@@ -120,9 +127,15 @@ namespace projectFrameCut.LivePreview
             ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
             var hashOptions = new FrameHashOptions
             {
-                Mode = RenderHashSettings.Mode, Width = targetWidth, Height = targetHeight,
-                ProjectWidth = ProjectRelativeWidth, ProjectHeight = ProjectRelativeHeight,
-                FrameRate = targetFrameRate, Stage = "timeline", ProcessFromCanvas = Timeline.ProcessEffectFromCanvas, AutoCenter = true,
+                Mode = RenderHashSettings.Mode,
+                Width = targetWidth,
+                Height = targetHeight,
+                ProjectWidth = ProjectRelativeWidth,
+                ProjectHeight = ProjectRelativeHeight,
+                FrameRate = targetFrameRate,
+                Stage = "timeline",
+                ProcessFromCanvas = Timeline.ProcessEffectFromCanvas,
+                AutoCenter = true,
             };
             var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineFrameAsync(new TimelineFrameRequest
             {
@@ -155,15 +168,23 @@ namespace projectFrameCut.LivePreview
                     ? await client.RenderClipPreviewAsync(new ClipPreviewRequest
                     {
                         FrameHashMode = RenderHashSettings.Mode,
-                        SessionId = RenderSessionId, ClipId = id, FrameIndex = frameIndex,
-                        CanvasWidth = width, CanvasHeight = height,
-                        ProjectWidth = ProjectRelativeWidth, ProjectHeight = ProjectRelativeHeight,
-                        PreferredPixelFormat = PreviewPixelFormat.PngImage, BeforeLayout = true,
+                        SessionId = RenderSessionId,
+                        ClipId = id,
+                        FrameIndex = frameIndex,
+                        CanvasWidth = width,
+                        CanvasHeight = height,
+                        ProjectWidth = ProjectRelativeWidth,
+                        ProjectHeight = ProjectRelativeHeight,
+                        PreferredPixelFormat = PreviewPixelFormat.PngImage,
+                        BeforeLayout = true,
                     }, cancellationToken).ConfigureAwait(false)
                     : await client.RenderTimelineFrameAsync(new TimelineFrameRequest
                     {
                         FrameHashMode = RenderHashSettings.Mode,
-                        SessionId = RenderSessionId, FrameIndex = frameIndex, Width = width, Height = height,
+                        SessionId = RenderSessionId,
+                        FrameIndex = frameIndex,
+                        Width = width,
+                        Height = height,
                         PreferredPixelFormat = PreviewPixelFormat.PngImage,
                     }, cancellationToken).ConfigureAwait(false);
                 try
@@ -231,7 +252,7 @@ namespace projectFrameCut.LivePreview
             {
                 var artifact = (RpcClient ?? RenderRpcBootstrap.Client).RenderTimelineFrameAsync(new TimelineFrameRequest
                 {
-                FrameHashMode = RenderHashSettings.Mode,
+                    FrameHashMode = RenderHashSettings.Mode,
                     SessionId = RenderSessionId,
                     FrameIndex = frameIndex,
                     Width = targetWidth,
@@ -258,7 +279,7 @@ namespace projectFrameCut.LivePreview
             using var updateMark = new UserMarkRange("Preview.Reconfigure");
             using (new UserMarkRange("Preview.WaitUpdateLock"))
 #endif
-                await _updateDraftGate.WaitAsync().ConfigureAwait(false);
+            await _updateDraftGate.WaitAsync().ConfigureAwait(false);
             try
             {
                 await Task.Run(() => UpdateDraftCoreAsync(json)).ConfigureAwait(false);
@@ -394,6 +415,7 @@ namespace projectFrameCut.LivePreview
                     catch (Exception ex) { Log(ex, $"Dispose preview soundtrack metadata {track.Id}", this); }
                 }
                 SoundTracks = soundTracks.ToArray();
+                audioSamples = null;
             }
             ulong max = 0;
             foreach (var clip in Clips)
@@ -437,12 +459,56 @@ namespace projectFrameCut.LivePreview
             // project gets a dedicated backend bound to it.
             if (RpcClient is null) RenderRpcBootstrap.Initialize(request.ProjectRoot, projectName: ProjectName);
             var session = await (RpcClient ?? RenderRpcBootstrap.Client).OpenProjectAsync(request).ConfigureAwait(false);
+            _backendReady.TrySetResult();
             _cacheableClipIds = session.CacheableClipIds.ToHashSet();
             HashIndex = session.HashIndex ?? new();
             renderedFrames.Clear();
             TotalDuration = session.Duration;
 
             Log($"[LiveRender] Updated {Clips.Length} clips and {SoundTracks.Length} soundtracks in {sw.ElapsedMilliseconds}ms.");
+        }
+
+        public async Task GenerateTimelineThumbnailsAsync(Guid clipId, string sourcePath, int totalFrames, int intervalFrames, int maxCount, int width, CancellationToken cancellationToken)
+        {
+            await _backendReady.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            await _updateDraftGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var client = RpcClient ?? RenderRpcBootstrap.Client;
+                var response = await client.GenerateTimelineThumbnailsAsync(new()
+                {
+                    SessionId = RenderSessionId, ClipId = clipId, SourcePath = sourcePath,
+                    TotalFrames = totalFrames, IntervalFrames = intervalFrames, MaxCount = maxCount, Width = width,
+                }, cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    foreach (var artifact in response.Artifacts)
+                    {
+                        var path = await ResolveArtifactPathAsync(artifact, cancellationToken).ConfigureAwait(false);
+                        var localPath = Path.Combine(ProjectRoot, "thumbs", "perClip", clipId.ToString(), "timeline", Path.GetFileName(artifact.ProjectRelativePath));
+                        if (!string.Equals(Path.GetFullPath(path), Path.GetFullPath(localPath), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                        {
+                            Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
+                            File.Copy(path, localPath, true);
+                        }
+                    }
+                }
+                finally
+                {
+                    foreach (var artifact in response.Artifacts)
+                    {
+                        try
+                        {
+                            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                            await client.ReleaseArtifactAsync(new() { SessionId = artifact.SessionId, ArtifactId = artifact.ArtifactId }, timeout.Token).ConfigureAwait(false);
+                        }
+                        catch (Exception ex) { Log(ex, "Release timeline thumbnail artifact", this); }
+                    }
+                }
+                if (response.Errors.Count > 0)
+                    Log($"Timeline thumbnail generation for clip {clipId} failed for {response.Errors.Count} frame(s).", "warn");
+            }
+            finally { _updateDraftGate.Release(); }
         }
 
         public string RenderClipFrame(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token)

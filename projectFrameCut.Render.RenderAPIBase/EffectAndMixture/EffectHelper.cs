@@ -30,6 +30,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     /// </summary>
     public class EffectProviderJSONStructure
     {
+        public projectFrameCut.Shared.Stage? Stage { get; set; }
         public Guid Id { get; set; } = Guid.NewGuid();
         public string FromPlugin { get; set; } = string.Empty;
         public string TypeName { get; set; } = string.Empty;

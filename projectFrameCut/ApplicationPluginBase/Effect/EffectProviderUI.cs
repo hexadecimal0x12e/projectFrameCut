@@ -15,10 +15,13 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
     /// </summary>
     public class EffectProviderUI : IEffectProviderUIProvider, IBindingHostHolder
     {
-        public EffectProviderUI(IEffectProvider inner)
+        public EffectProviderUI(IEffectProvider inner, IEnumerable<string>? fieldIds = null)
         {
             Inner = inner;
+            this.fieldIds = fieldIds;
         }
+
+        private readonly IEnumerable<string>? fieldIds;
 
         /// <summary>
         /// The underlying Render-side provider instance.
@@ -37,7 +40,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public virtual PropertyPanelBuilder CreateUI(IEffectProvider _)
         {
             var panel = new PropertyPanelBuilder();
-            EffectProviderUIHelper.BuildUI(Inner, panel, BindingHost);
+            EffectProviderUIHelper.BuildUI(Inner, panel, BindingHost, fieldIds);
             return panel;
         }
 

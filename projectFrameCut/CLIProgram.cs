@@ -633,13 +633,26 @@ namespace projectFrameCut
         {
             try
             {
-                var pipe = GetOption(args, "pipe") ?? string.Empty;
                 var token = GetOption(args, "token") ?? string.Empty;
+#if HEADLESS
+                var pipe = RenderProtocol.AdditionalPipePrefix + token;
+                if (token.Length != 64 || !token.All(Uri.IsHexDigit))
+                {
+                    Console.Error.WriteLine("rpc_server requires --token=<64 hexadecimal characters>.");
+                    return InvalidCommandExitCode;
+                }
+#else
+                var pipe = GetOption(args, "pipe") ?? string.Empty;
+#endif
                 var parentPid = GetOption(args, "parentPid", required: false);
                 var dataRoot = GetOption(args, "dataRoot");
                 if (string.IsNullOrWhiteSpace(pipe) || string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(dataRoot))
                 {
+#if HEADLESS
+                    Console.Error.WriteLine("rpc_server requires --token=<64 hexadecimal characters> and --dataRoot=<path>.");
+#else
                     Console.Error.WriteLine("rpc_server requires --pipe=<pipe-name> and --token=<token> and --dataRoot=<path>.");
+#endif
                     return InvalidCommandExitCode;
                 }
 
@@ -712,6 +725,17 @@ namespace projectFrameCut
                 completionSink: RenderCompletionNotifier.Notify,
                 progressSink: RenderCompletionNotifier.NotifyProgress,
                 previewAudioSinkFactory: PreviewAudioSinkFactory.Instance);
+#if HEADLESS
+            await using var headlessService = new HeadlessProjectService(service,
+                Path.Combine(dataRoot, "My Assets", ".database", "database.json"));
+            if (!string.IsNullOrWhiteSpace(httpProjectRoot))
+                await headlessService.InitializeAsync(httpProjectRoot, cancellationToken).ConfigureAwait(false);
+            await using var httpHost = httpListenUri is null
+                ? null
+                : await StartHttpRpcServerAsync(service, httpListenUri, httpToken!, httpProjectRoot, dataRoot, cancellationToken, headlessService).ConfigureAwait(false);
+            Console.WriteLine($"projectFrameCut external RPC server listening on {pipe}");
+            await new NamedPipeRenderServer(headlessService).RunExternalAsync(token, parentPid, cancellationToken).ConfigureAwait(false);
+#else
             await using var httpHost = httpListenUri is null
                 ? null
                 : await StartHttpRpcServerAsync(service, httpListenUri, httpToken!, httpProjectRoot, dataRoot, cancellationToken).ConfigureAwait(false);
@@ -722,6 +746,7 @@ namespace projectFrameCut
                 additionalPipeFactory: null)
 #endif
                 .RunAsync(pipe, token, parentPid, cancellationToken).ConfigureAwait(false);
+#endif
             return SuccessExitCode;
         }
 
@@ -731,9 +756,10 @@ namespace projectFrameCut
             string token,
             string? projectRoot,
             string dataRoot,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            HeadlessProjectService? sharedHeadlessService = null)
         {
-            var headlessService = new HeadlessProjectService(
+            var headlessService = sharedHeadlessService ?? new HeadlessProjectService(
                 renderService,
                 Path.Combine(dataRoot, "My Assets", ".database", "database.json"));
             var server = new IntegratedApiServer();
@@ -1006,6 +1032,8 @@ namespace projectFrameCut
                 bool intermediateChunk = false)
             {
                 var clips = DraftImportAndExportHelper.JSONToIClips(timeline, false, bpp).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
+                var audioTracks = DraftImportAndExportHelper.JSONToISoundTracks(timeline, false).ToList();
+                SoundTrackMetadata.AddMissingLegacyTracks(clips, audioTracks, message => Log(message, "warn"), initialize: false);
                 if (clips.Length == 0) throw new InvalidOperationException("No video clips in the project.");
                 foreach (var clip in clips) clip.ReInit(bpp);
                 if (!writeToVoid)
@@ -1027,6 +1055,7 @@ namespace projectFrameCut
                 {
                     builder = builder,
                     Clips = clips,
+                    AudioSamples = new AudioSampleSource(clips, audioTracks.ToArray(), fps, 96000),
                     TargetWidth = width,
                     TargetHeight = height,
                     ProjectRelativeWidth = project.RelativeWidth,
@@ -1044,6 +1073,9 @@ namespace projectFrameCut
                     GCOption = gcOption,
                     MaxThreads = Math.Max(1, renderThreads),
                     AllowWorkerOversubscription = allowWorkerOversubscription,
+                    RenderAheadFrames = int.TryParse(switches.GetValueOrDefault("renderAheadFrames"), out var ahead) ? Math.Max(0, ahead) : 0,
+                    EnableMemoryBudget = bool.TryParse(switches.GetValueOrDefault("enableMemoryBudget"), out var budget) && budget,
+                    MaxBufferedBytes = long.TryParse(switches.GetValueOrDefault("maxBufferedBytes"), out var bytes) ? Math.Max(0, bytes) : 0,
                     FrameHashMode = frameHashMode,
                     ReuseDynamicPreviewCache = reuseDynamicPreviewCache,
                     EnableDeferredComposition = deferredComposition,
@@ -1053,6 +1085,9 @@ namespace projectFrameCut
                     DynamicPreviewCacheProjectWidth = Math.Max(1, project.RelativeWidth),
                     DynamicPreviewCacheProjectHeight = Math.Max(1, project.RelativeHeight),
                     EnableThreadAffinity = affinity,
+                    WorkerCPUCoreIndexs = switches.GetValueOrDefault("coreAffinityOverride", "")
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Where(c => int.TryParse(c, out var index) && index >= 0).Select(int.Parse).Distinct().ToArray(),
                 };
                 renderer.OnProgressChanged += (value, eta) =>
                 {
@@ -1080,6 +1115,7 @@ namespace projectFrameCut
                 {
                     foreach (var clip in clips) clip.Dispose();
                     renderer.builder = null;
+                    foreach (var track in audioTracks) track.Dispose();
                     Console.WriteLine();
                 }
             }

@@ -18,7 +18,7 @@ public partial class DraftEffectBindingView
         EffectArgumentFieldType.Long, EffectArgumentFieldType.UnsignedLong, EffectArgumentFieldType.Boolean,
         EffectArgumentFieldType.String, EffectArgumentFieldType.Color, EffectArgumentFieldType.Size,
         EffectArgumentFieldType.Position, EffectArgumentFieldType.SizeAndPosition, EffectArgumentFieldType.IPicture,
-        EffectArgumentFieldType.VectorPicture,
+        EffectArgumentFieldType.VectorPicture, EffectArgumentFieldType.AudioSample,
     ];
 
     private bool Precedes(ClipElementUI source, ClipElementUI target)
@@ -40,28 +40,24 @@ public partial class DraftEffectBindingView
     private void UpdateClipValuesPanel()
     {
         double scroll = ClipValuesScrollView.ScrollY;
+        ClipValueCreationPanel.Children.Clear();
         ClipValuesPanel.Children.Clear();
+        ClipValuesContent.IsVisible = _clip is not null && _page is not null;
         if (_clip is null || _page is null) return;
-        var endpointTypes = EndpointTypes.Where(t => !t.IsContent() || t == _pipeline.GetContentType()).ToArray();
+        var endpointTypes = EndpointTypes.Where(t => (!t.IsContent() || t == _pipeline.GetContentType())
+            && (t != EffectArgumentFieldType.AudioSample || ValueProviderFrameContext.SupportsAudioSample(_pipeline))).ToArray();
         if (!endpointTypes.Contains(_endpointType)) _endpointType = EffectArgumentFieldType.Numeric;
-        ClipValuesPanel.Children.Add(new Label { Text = Localized.Effect_EndpointOutputs, FontAttributes = FontAttributes.Bold });
+        ClipValueCreationPanel.Children.Add(new Label { Text = Localized.Effect_EndpointOutputs, FontAttributes = FontAttributes.Bold });
         var name = new Entry { Placeholder = Localized.Effect_EndpointName, Text = _endpointName };
         name.TextChanged += (_, e) => _endpointName = e.NewTextValue ?? "";
-        ClipValuesPanel.Children.Add(name);
+        ClipValueCreationPanel.Children.Add(name);
         var type = new Picker { Title = Localized.Effect_EndpointType, ItemsSource = endpointTypes.Select(PortTypeHelper.HumanizeTypeName).ToArray(), SelectedIndex = Array.IndexOf(endpointTypes, _endpointType) };
         type.SelectedIndexChanged += (_, _) =>
         {
             if (type.SelectedIndex >= 0) _endpointType = endpointTypes[type.SelectedIndex];
         };
-        ClipValuesPanel.Children.Add(type);
-        var create = new Button { Text = Localized.Effect_CreateEndpoint };
-        create.Clicked += (_, _) => AddEndpointNode(new ClipValueExportProvider
-        {
-            Name = string.IsNullOrWhiteSpace(_endpointName) ? Localized.Effect_EndpointName : _endpointName.Trim(),
-            ValueType = _endpointType,
-        });
-        ClipValuesPanel.Children.Add(create);
-        foreach (var endpoint in _clip.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(p => p.IsExport && p.GetPipeline() == _pipeline) ?? [])
+        ClipValueCreationPanel.Children.Add(type);
+        foreach (var endpoint in _clip.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(p => p.IsExport && p.Stage == _pipeline) ?? [])
         {
             var row = new HorizontalStackLayout { Spacing = 4 };
             var select = new Button { Text = $"{endpoint.Name} ({PortTypeHelper.HumanizeTypeName(endpoint.ValueType)})", HorizontalOptions = LayoutOptions.Fill };
@@ -87,10 +83,10 @@ public partial class DraftEffectBindingView
         foreach (var source in _page.Clips.Values.Where(c => c.EffectProviders?.Values.Any(p => p is IClipValueEndpointProvider { IsExport: true }) == true))
         {
             if (source.Id != _clip.Id && !Precedes(source, _clip)) continue;
-            foreach (var output in source.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(p => p.IsExport && p.CanPassTo(_pipeline, source.Id == _clip.Id)) ?? [])
+            foreach (var output in source.EffectProviders?.Values.OfType<IClipValueEndpointProvider>().Where(p => p.IsExport && p.CanPassTo(_pipeline, source.Id == _clip.Id, _clip.EffectProviders?.Values)) ?? [])
             {
                 any = true;
-                ClipValuesPanel.Children.Add(new Label { Text = $"{source.DisplayName}: {output.Name} ({PortTypeHelper.HumanizeTypeName(output.ValueType)})" });
+                ClipValuesPanel.Children.Add(new Label { Text = $"{source.DisplayName} / {EffectStageUI.Name(output.Stage)}: {output.Name} ({PortTypeHelper.HumanizeTypeName(output.ValueType)})" });
                 var add = new Button { Text = Localized.Effect_AddEndpointInput, IsEnabled = output.Enabled };
                 add.Clicked += (_, _) => AddEndpointNode(new ClipValueImportProvider
                 {
@@ -104,10 +100,17 @@ public partial class DraftEffectBindingView
         Dispatcher.Dispatch(async () => await ClipValuesScrollView.ScrollToAsync(0, scroll, false));
     }
 
+    private void OnCreateClipValueEndpointClicked(object? sender, EventArgs e) => AddEndpointNode(new ClipValueExportProvider
+    {
+        Name = string.IsNullOrWhiteSpace(_endpointName) ? Localized.Effect_EndpointName : _endpointName.Trim(),
+        ValueType = _endpointType,
+        AllowCrossClip = EndpointAllowCrossClipCheckBox.IsChecked,
+    });
+
     private void AddEndpointNode(ClipValueEndpointProvider provider)
     {
         if (_clip is null) return;
-        provider.SetPipeline(_pipeline);
+        provider.Stage = _pipeline;
         _clip.EffectProviders ??= new();
         _clip.EffectProviders[provider.Id] = provider;
         var node = new NodeViewModel { Id = provider.Id, Kind = NodeKind.Effect, Provider = provider, DisplayName = provider.Name };
@@ -144,7 +147,19 @@ public partial class DraftEffectBindingView
         PropertiesPanel.Children.Add(enabled);
         if (endpoint.IsExport)
         {
-            var endpointTypes = EndpointTypes.Where(t => !t.IsContent() || t == endpoint.GetPipeline().GetContentType()).ToArray();
+            var allowCrossClip = new CheckBox { IsChecked = endpoint.AllowCrossClip };
+            allowCrossClip.CheckedChanged += (_, e) =>
+            {
+                endpoint.AllowCrossClip = e.Value;
+                Log($"Changed clip endpoint {endpoint.Id} cross-clip pass-through to {e.Value} on {_clip?.Id}.");
+                UpdateEndpointNode(node);
+            };
+            PropertiesPanel.Children.Add(new HorizontalStackLayout
+            {
+                Spacing = 6,
+                Children = { allowCrossClip, new Label { Text = Localized.Effect_EndpointAllowCrossClip, VerticalOptions = LayoutOptions.Center } },
+            });
+            var endpointTypes = EndpointTypes.Where(t => !t.IsContent() || t == endpoint.Stage.GetContentType()).ToArray();
             var type = new Picker { Title = Localized.Effect_EndpointType, ItemsSource = endpointTypes.Select(PortTypeHelper.HumanizeTypeName).ToArray(), SelectedIndex = Array.IndexOf(endpointTypes, endpoint.ValueType) };
             type.SelectedIndexChanged += (_, _) =>
             {
@@ -201,8 +216,9 @@ public partial class DraftEffectBindingView
         string? status;
         if (output is not { IsExport: true }) status = Localized.Effect_EndpointMissing;
         else if (!output.Enabled) status = Localized.Effect_EndpointDisabled;
+        else if (source.Id != _clip?.Id && !output.AllowCrossClip) status = Localized.Effect_EndpointCrossClipDisabled;
         else if (output.GetMainInputSource() == IEffectProvider.NoConnectionGUID.ToString()) status = Localized.Effect_EndpointDisconnected;
-        else if (output.ValueType != input.ValueType || !output.CanPassTo(input.GetPipeline(), source.Id == _clip?.Id)) status = Localized.Effect_EndpointTypeChanged;
+        else if (output.ValueType != input.ValueType || !output.CanPassTo(input.Stage, source.Id == _clip?.Id, _clip?.EffectProviders?.Values)) status = Localized.Effect_EndpointTypeChanged;
         else if (_clip is not null && source.Id != _clip.Id && !Precedes(source, _clip)) status = Localized.Effect_EndpointOrderInvalid;
         else return null;
         return $"「{(output is { IsExport: true } ? $"{source.DisplayName} / {output.Name}" : source.DisplayName)}」：{status}";

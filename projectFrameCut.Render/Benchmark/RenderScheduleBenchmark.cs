@@ -229,8 +229,11 @@ public static class RenderScheduleBenchmark
             sw.Start();
             writer = new VideoWriterHWAccel
             {
-                OutputPath = Path.Combine(directory, "output.mp4"), Width = report.Width, Height = report.Height,
-                FramePerSecond = report.FrameRate, PixelFormat = report.Options.PixelFormat,
+                OutputPath = Path.Combine(directory, "output.mp4"),
+                Width = report.Width,
+                Height = report.Height,
+                FramePerSecond = report.FrameRate,
+                PixelFormat = report.Options.PixelFormat,
                 BitRate = report.BitRate,
                 CodecName = report.Encoder.Length > 0 ? report.Encoder : report.Options.Encoder ?? "h264",
                 UseExactEncoder = report.Encoder.Length > 0 || report.Options.Encoder is not null,
@@ -242,15 +245,25 @@ public static class RenderScheduleBenchmark
             if (report.Encoder.Length == 0) report.Encoder = encoder;
             renderer = new Renderer
             {
-                Clips = clips, builder = builder, Duration = report.Duration,
-                TargetWidth = report.Width, TargetHeight = report.Height,
-                ProjectRelativeWidth = report.Width, ProjectRelativeHeight = report.Height,
-                Use16Bit = false, EnableEffectAutoRetry = false,
-                MaxThreads = c.MaxThreads, AllowWorkerOversubscription = c.AllowWorkerOversubscription,
-                RenderAheadFrames = c.RenderAheadFrames, EnableThreadAffinity = c.EnableThreadAffinity,
-                EnableMemoryBudget = c.EnableMemoryBudget, MaxBufferedBytes = c.MaxBufferedBytes,
-                FrameHashMode = c.FrameHashMode, EnableDeferredComposition = c.EnableDeferredComposition,
-                ResumeInterruptedRender = false, ReuseDynamicPreviewCache = false,
+                Clips = clips,
+                builder = builder,
+                Duration = report.Duration,
+                TargetWidth = report.Width,
+                TargetHeight = report.Height,
+                ProjectRelativeWidth = report.Width,
+                ProjectRelativeHeight = report.Height,
+                Use16Bit = false,
+                EnableEffectAutoRetry = false,
+                MaxThreads = c.MaxThreads,
+                AllowWorkerOversubscription = c.AllowWorkerOversubscription,
+                RenderAheadFrames = c.RenderAheadFrames,
+                EnableThreadAffinity = c.EnableThreadAffinity,
+                EnableMemoryBudget = c.EnableMemoryBudget,
+                MaxBufferedBytes = c.MaxBufferedBytes,
+                FrameHashMode = c.FrameHashMode,
+                EnableDeferredComposition = c.EnableDeferredComposition,
+                ResumeInterruptedRender = false,
+                ReuseDynamicPreviewCache = false,
                 DynamicPreviewCacheProjectRoot = directory,
             };
             renderer.PrepareRender(token);
@@ -326,15 +339,15 @@ public static class RenderScheduleBenchmark
         var seen = new HashSet<RenderScheduleConfiguration> { baseline };
         yield return baseline;
         foreach (int t in threads)
-        foreach (bool soft in new[] { true, false })
-        foreach (int ahead in new[] { 1, 2, 4, 8, 16 })
-        foreach (bool affinity in new[] { true, false })
-        foreach (bool limited in new[] { false, true })
-        foreach (long budget in budgets)
-        {
-            var c = Normalize(new(t, soft, ahead, affinity, limited, budget, baseline.FrameHashMode, false));
-            if (seen.Add(c)) yield return c;
-        }
+            foreach (bool soft in new[] { true, false })
+                foreach (int ahead in new[] { 1, 2, 4, 8, 16 })
+                    foreach (bool affinity in new[] { true, false })
+                        foreach (bool limited in new[] { false, true })
+                            foreach (long budget in budgets)
+                            {
+                                var c = Normalize(new(t, soft, ahead, affinity, limited, budget, baseline.FrameHashMode, false));
+                                if (seen.Add(c)) yield return c;
+                            }
     }
 
     private static IEnumerable<RenderScheduleConfiguration> Neighbors(RenderScheduleConfiguration c,

@@ -43,12 +43,13 @@ namespace projectFrameCut
 #endif
             VersionLabel.Text = $"{Localized.AppBrand} v{Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}{channelStr}";
             CopyrightText.Text += DateTime.Now.Year.ToString();
-            if (MauiProgram.IsStoreMode) ExtensibilitySettingButton.IsVisible = false; //plugin could broke store review
+            if (MauiProgram.IsStoreMode) AISettingButton.IsVisible = false;
             if (IsBoolSettingTrue("DeveloperMode"))
             {
                 TestPageButton.IsVisible = true;
                 AdvancedSettingButton.IsVisible = true;
             }
+
         }
 
         private async void OnGeneralSettingClicked(object sender, EventArgs e)

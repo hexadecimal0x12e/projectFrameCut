@@ -19,14 +19,13 @@ public static class EffectPipelineExtensions
 {
     public const string PipelineKey = "__EffectPipeline__";
 
-    public static EffectPipeline GetPipeline(this IEffectProvider provider) =>
-        provider.Target.HasFlag(EffectTarget.ValueProvider)
-            && Enum.TryParse<EffectPipeline>(provider.MetaData.GetValueOrDefault(PipelineKey)?.ToString(), out var pipeline)
-            && Enum.IsDefined(pipeline) ? pipeline : provider.TypeOfEffect.GetPipeline();
+    public static EffectPipeline GetPipeline(this IEffectProvider provider) => provider.Stage is
+        Stage.Text or Stage.VectorComponent or Stage.VectorPicture ? EffectPipeline.NativeContent : EffectPipeline.Picture;
 
     public static void SetPipeline(this IEffectProvider provider, EffectPipeline pipeline)
     {
-        if (provider.Target.HasFlag(EffectTarget.ValueProvider)) provider.MetaData[PipelineKey] = pipeline.ToString();
+        var stage = pipeline == EffectPipeline.NativeContent ? Stage.VectorPicture : Stage.Picture;
+        if (provider.SupportedStages.Contains(stage)) provider.Stage = stage;
     }
 
     public static EffectArgumentFieldType GetContentType(this EffectPipeline pipeline) =>
@@ -48,7 +47,7 @@ public static class EffectPipelineExtensions
             || source.TypeOfEffect == EffectType.Transform || source is ClipArgumentProvider) return false;
         if (target.GetPipeline() == EffectPipeline.Picture || target.TypeOfEffect == EffectType.VectorPictureEffect
             || target.Target.HasFlag(EffectTarget.ValueProvider))
-            return source.GetPipeline() == target.GetPipeline()
+            return source.Stage == target.Stage
                 && source.TryGetOutputField(outputId, out var output)
                 && ((types?.GetOutputType(source, outputId) ?? output.FieldType).HasFlag(EffectArgumentFieldType.Any)
                     || EffectFieldTypes.AreCompatible(types?.GetOutputType(source, outputId) ?? output.FieldType,
@@ -56,7 +55,7 @@ public static class EffectPipelineExtensions
         if (!source.InFields.TryGetValue(EffectProviderAnchorExtensions.InputKey, out var sourceInput)
             || !(sourceInput.FieldType.IsContent() || sourceInput.FieldType.HasFlag(EffectArgumentFieldType.Any))
             || !(input.FieldType.IsContent() || input.FieldType.HasFlag(EffectArgumentFieldType.Any))
-            || source.GetPipeline() != target.GetPipeline()) return false;
+            || source.Stage != target.Stage) return false;
         return target.TypeOfEffect == EffectType.VectorPictureEffect
             || source.TypeOfEffect == target.TypeOfEffect
             || (source.TypeOfEffect is EffectType.TextEffect or EffectType.ContinuousTextEffect)

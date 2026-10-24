@@ -184,6 +184,7 @@ public sealed class FrameHashContext : IDisposable
     {
         IPicture p => DynamicEffectGraph.CopyPicture(p),
         VectorPicture v => VectorPictureEffectProcessing.Copy(v),
+        projectFrameCut.Shared.IAudioSamples<float> audio => EffectFieldTypes.CopyAudio(audio),
         Array a => a.Clone(),
         IReadOnlyDictionary<string, object?> outputs => outputs.ToDictionary(p => p.Key, p => CopyValue(p.Value)),
         _ => value,

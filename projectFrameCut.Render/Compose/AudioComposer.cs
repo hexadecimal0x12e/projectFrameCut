@@ -16,9 +16,10 @@ namespace projectFrameCut.Render.Compose
     {
         private const int DefaultChunkSampleCount = 40960;
 
-        public required AudioWriterBase<T> Writer { get; init; }
+        public AudioWriterBase<T>? Writer { get; init; }
         public required IClip[] Clips { get; init; }
         public ISoundTrack[]? SoundTracks { get; init; }
+        public AudioSampleSource? SampleSource { get; init; }
         public uint StartFrame { get; set; } = 0;
         public uint Duration { get; set; } = uint.MaxValue;
         public event Action<double, TimeSpan>? OnProgressChanged;
@@ -41,8 +42,11 @@ namespace projectFrameCut.Render.Compose
             if (chunkSampleCount <= 0) throw new ArgumentOutOfRangeException(nameof(chunkSampleCount));
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(channels);
 
-            var (contexts, totalSamples) = BuildAudioContexts(videoFramerate, samplerate);
-            var transforms = BuildTransforms(contexts, videoFramerate, samplerate);
+            int totalSamples;
+            lock (AudioSampleSource.Sync) totalSamples = BuildAudioContexts(videoFramerate, samplerate).totalSamples;
+            var source = SampleSource ?? new AudioSampleSource(Clips, SoundTracks ?? [], videoFramerate, samplerate, channels);
+            if (source.FrameRate != videoFramerate || source.SamplePerSecond != samplerate || source.ChannelCount != channels)
+                throw new ArgumentException("The shared audio source must match the composition frame rate, sample rate and channels.", nameof(SampleSource));
 
             Writer.SamplePerSecond = samplerate;
             Writer.ChannelCount = channels;
@@ -53,7 +57,7 @@ namespace projectFrameCut.Render.Compose
                 return;
             }
             Stopwatch elapsed = Stopwatch.StartNew();
-            Log($"[AudioComposer] Composing {totalSamples} samples, {contexts.Count} soundtracks, {transforms.Count} transforms.");
+            Log($"[AudioComposer] Composing {totalSamples} samples.");
             for (int chunkStart = 0; chunkStart < totalSamples;)
             {
                 if (cancellationToken?.IsCancellationRequested == true)
@@ -62,34 +66,7 @@ namespace projectFrameCut.Render.Compose
                     return;
                 }
                 int chunkLength = Math.Min(chunkSampleCount, totalSamples - chunkStart);
-                float[][] mixed = CreateZeroChannels(channels, chunkLength);
-
-                foreach (var context in contexts)
-                {
-                    int start = Math.Max(chunkStart, context.TimelineStartSample);
-                    int end = Math.Min(chunkStart + chunkLength, context.TimelineEndSample);
-                    if (end <= start) continue;
-                    foreach (var transform in context.Transforms)
-                    {
-                        if (transform.StartSample >= end) break;
-                        if (transform.EndSample <= start || transform.StartSample >= end) continue;
-                        MixContextIntoChunk(context, chunkStart, start, Math.Min(end, transform.StartSample), samplerate, channels, mixed);
-                        start = Math.Min(end, transform.EndSample);
-                    }
-                    MixContextIntoChunk(context, chunkStart, start, end, samplerate, channels, mixed);
-                }
-                foreach (var transform in transforms)
-                {
-                    if (transform.StartSample < chunkStart + chunkLength && transform.EndSample > chunkStart)
-                        MixTransformIntoChunk(transform, chunkStart, chunkLength, videoFramerate, samplerate, channels, mixed);
-                }
-
-                Writer.Append(new FloatAudioSamples
-                {
-                    Channels = mixed,
-                    SampleCount = chunkLength,
-                    SamplePerSecond = samplerate
-                });
+                Writer.Append(source.ReadSamples(checked(FrameToSample(StartFrame, videoFramerate, samplerate) + chunkStart), chunkLength, cancellationToken ?? default));
 
                 var prog = (double)(chunkStart + chunkLength) / totalSamples;
                 TimeSpan etr = TimeSpan.Zero;
@@ -108,6 +85,52 @@ namespace projectFrameCut.Render.Compose
             Log($"[AudioComposer] Composed {totalSamples} samples in {elapsed.Elapsed.TotalSeconds:F2}s.");
         }
 
+        public Func<int, int, CancellationToken, FloatAudioSamples> CreateSampleReader(
+            int videoFramerate, int samplerate, int channels, out int totalSamples)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(channels);
+            lock (AudioSampleSource.Sync)
+            {
+                var (contexts, count) = BuildAudioContexts(videoFramerate, samplerate);
+                var transforms = BuildTransforms(contexts, videoFramerate, samplerate);
+                totalSamples = count;
+                return (start, length, token) =>
+                {
+                    ArgumentOutOfRangeException.ThrowIfNegative(start);
+                    ArgumentOutOfRangeException.ThrowIfNegative(length);
+                    _ = checked(start + length);
+                    lock (AudioSampleSource.Sync)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        using var audioScope = ValueProviderFrameContext.PushAudioSource(null);
+                        using var frameScope = ValueProviderFrameContext.PushFrame(0, 0, false, token);
+                        var mixed = CreateZeroChannels(channels, length);
+                        foreach (var context in contexts)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            int first = Math.Max(start, context.TimelineStartSample);
+                            int end = Math.Min(start + length, context.TimelineEndSample);
+                            if (end <= first) continue;
+                            foreach (var transform in context.Transforms)
+                            {
+                                if (transform.StartSample >= end) break;
+                                if (transform.EndSample <= first) continue;
+                                MixContextIntoChunk(context, start, first, Math.Min(end, transform.StartSample), samplerate, channels, mixed);
+                                first = Math.Min(end, transform.EndSample);
+                            }
+                            MixContextIntoChunk(context, start, first, end, samplerate, channels, mixed);
+                        }
+                        foreach (var transform in transforms)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (transform.StartSample < start + length && transform.EndSample > start)
+                                MixTransformIntoChunk(transform, start, length, videoFramerate, samplerate, channels, mixed);
+                        }
+                        return new FloatAudioSamples { Channels = mixed, SampleCount = length, SamplePerSecond = samplerate };
+                    }
+                };
+            }
+        }
 
 
         private (List<SoundTrackContext> contexts, int totalSamples) BuildAudioContexts(
@@ -118,7 +141,8 @@ namespace projectFrameCut.Render.Compose
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(outputSampleRate);
 
             int renderStartSample = FrameToSample(StartFrame, videoFramerate, outputSampleRate);
-            int? requestedDurationSamples = Duration == uint.MaxValue ? null : FrameToSample(Duration, videoFramerate, outputSampleRate);
+            int? requestedDurationSamples = Duration == uint.MaxValue ? null
+                : checked(FrameToSample((double)StartFrame + Duration, videoFramerate, outputSampleRate) - renderStartSample);
             int renderEndSample = requestedDurationSamples is null
                 ? int.MaxValue
                 : SafeAdd(renderStartSample, requestedDurationSamples.Value);
@@ -191,6 +215,13 @@ namespace projectFrameCut.Render.Compose
                 }
             }
 
+            var stageClips = contexts.Select(c => c.SoundTrack.EffectStagePlan?.Owner).OfType<IClip>()
+                .Where(ClipValuePassThrough.HasEndpoints).ToArray();
+            foreach (var context in contexts)
+            {
+                context.StageClips = stageClips;
+                if (context.SoundTrack.EffectStagePlan is { } plan) plan.Owner.Duration = context.ClipInfo.Duration;
+            }
             return (contexts, totalSamples);
         }
 
@@ -394,10 +425,14 @@ namespace projectFrameCut.Render.Compose
             }
 
             IAudioSamples current = input;
+            using var clipScope = ValueProviderFrameContext.PushClip(context.SoundTrack.EffectStagePlan?.Owner);
             using var frameContext = ValueProviderFrameContext.PushFrame(
                 (uint)Math.Clamp(context.ClipInfo.Start + Math.Floor(clipLocalSampleIndex * (double)context.FrameRate / input.SamplePerSecond), 0, uint.MaxValue),
                 Math.Clamp(clipLocalSampleIndex / (float)Math.Max(1, context.TimelineEndSample - context.TimelineStartSample), 0, 1));
 
+            uint frame = (uint)Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) ?? 0f);
+            using var endpoints = context.StageClips.Count == 0 ? null : new ClipValueFrameContext(context.StageClips, frame,
+                source => source.EffectStagePlan?.Complete(source, Stage.Audio, frame), Effect.DynamicEffectGraph.CopyPicture);
             foreach (var effect in context.Effects)
             {
                 if (!effect.Enabled)
@@ -423,6 +458,7 @@ namespace projectFrameCut.Render.Compose
                 }
             }
 
+            if (context.SoundTrack.EffectStagePlan is { } plan) plan.Complete(plan.Owner, Stage.Audio, frame);
             return ToFloatSamples(current);
         }
 
@@ -444,7 +480,7 @@ namespace projectFrameCut.Render.Compose
                 return 0;
             }
 
-            return (int)Math.Max(0, Math.Round(frame / fps * sampleRate));
+            return checked((int)Math.Max(0, Math.Round(frame / fps * sampleRate)));
         }
 
         private static int SafeAdd(int left, int right)
@@ -553,6 +589,7 @@ namespace projectFrameCut.Render.Compose
             public float Ratio { get; init; }
             public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
             public bool HasAudioEffects { get; init; }
+            public IReadOnlyList<IClip> StageClips { get; set; } = [];
             public List<AudioTransformContext> Transforms { get; } = [];
         }
 

@@ -36,6 +36,7 @@
         'Remove-ProjectAsset',
         'Get-ProjectTrack',
         'Add-ProjectTrack',
+        'Add-ProjectSubTrack',
         'Get-ProjectTextStyle',
         'Get-ProjectTextStyleField',
         'Add-ProjectTextClip',

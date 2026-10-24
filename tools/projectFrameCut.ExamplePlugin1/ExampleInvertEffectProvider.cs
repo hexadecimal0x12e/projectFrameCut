@@ -5,6 +5,8 @@ namespace SomePublisher;
 
 public sealed class ExampleInvertEffectProvider : EffectProviderBase
 {
+    public override IReadOnlyList<Stage> SupportedStages => [Stage.Picture];
+
     public override bool IsDeterministic => true;
 
     public override string TypeName => "ExampleInvert";

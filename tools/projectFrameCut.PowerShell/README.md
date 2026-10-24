@@ -208,11 +208,15 @@ Set-ProjectSubtitleClip -ClipId $sub.ClipId -OffsetMilliseconds 500 -FitLength
 ## 时间线编辑
 
 ```powershell
+$track = Add-ProjectTrack -PassThru
+$subTrack = Add-ProjectSubTrack -PassThru
 $parts = Split-ProjectClip -ClipId $clip.ClipId -FrameIndex 60 -PassThru
 $group = Join-ProjectClip -ClipIds $parts.ClipId -Name '片段组' -PassThru
 Split-ProjectClipGroup -ClipId $group.ClipId
 Remove-ProjectTrack -TrackId $track.TrackId -WhatIf
 ```
+
+`Add-ProjectTrack` 添加主轨道，`TrackId` 范围为 0–9999；`Add-ProjectSubTrack` 添加辅轨道，`TrackId` 从 10000 起。省略 `TrackId` 时在对应组末尾创建，使用 `-PassThru` 返回轨道 ID。两者均支持 `-WhatIf/-ChangeReason`。
 
 拆分位置使用项目时间线帧号，并按变速后的源位置拆分、迁移边缘转场，返回左右两个片段。组合遵循界面行为：全部为矢量组件片段时合并为矢量组，其余片段生成分组标记；主轨和副轨不能混合组合。拆组支持分组标记及时间线矢量组。删除轨道会同时删除轨道内的片段并重新编号；完成后重新查询轨道 ID。
 

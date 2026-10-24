@@ -6,6 +6,8 @@ namespace projectFrameCut.Render.Effect;
 
 public sealed class IsUpstreamAvailableOrDefaultEffectProvider : EffectProviderBase
 {
+    public override IReadOnlyList<Stage> SupportedStages => EffectStages.Values;
+
     public override bool IsDeterministic => true;
 
     public IsUpstreamAvailableOrDefaultEffectProvider() => Name = "IsUpstreamAvailableOrDefault";

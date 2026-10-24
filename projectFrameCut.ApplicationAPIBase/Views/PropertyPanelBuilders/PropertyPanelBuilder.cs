@@ -570,6 +570,13 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             string headerText,
             Action<PropertyPanelBuilder> contentBuilder,
             bool defaultExpanded = false)
+            => AddCollapsibleSection(headerText, contentBuilder, defaultExpanded, new Thickness(12, 0, 0, 0));
+
+        public PropertyPanelBuilder AddCollapsibleSection(
+            string headerText,
+            Action<PropertyPanelBuilder> contentBuilder,
+            bool defaultExpanded,
+            Thickness contentPadding)
         {
             var chevron = new Label
             {
@@ -605,7 +612,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             contentBuilder(contentPanel);
             var contentLayout = contentPanel.Build();
             contentLayout.IsVisible = defaultExpanded;
-            contentLayout.Padding = new Thickness(12, 0, 0, 0);
+            contentLayout.Padding = contentPadding;
 
             // Forward PropertyChanged events from the content panel to the parent
             contentPanel.PropertyChanged += (s, e) => PropertyChanged?.Invoke(this, e);

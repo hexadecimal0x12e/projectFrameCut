@@ -60,6 +60,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public EffectTarget Target { get; }
 
+        public IReadOnlyList<Stage> SupportedStages { get; }
+        public Stage Stage { get; set; }
+
         /// <summary>
         /// Determine whether this effect is enabled.
         /// </summary>
@@ -263,6 +266,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             if (fieldType.HasFlag(EffectArgumentFieldType.Any)) return "object";
             if (fieldType.IsVector()) return nameof(projectFrameCut.Drawing.Vector.VectorPicture);
             if (fieldType.IsPicture()) return nameof(IPicture);
+            if (fieldType.BaseType() == EffectArgumentFieldType.AudioSample) return "object";
             return (fieldType & (EffectArgumentFieldType)0x3FF) switch
             {
                 EffectArgumentFieldType.Integer => EffectArgsHelper.ArgTypeInt32,
@@ -368,9 +372,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static void SetFinalOutputSource(this IEffectProvider provider, bool isFinalOutput, string? outputId, EffectFieldTypeResolution? types)
         {
             if (isFinalOutput && (provider is ClipArgumentProvider or IClipValueEndpointProvider { IsExport: true }
-                || provider.TypeOfEffect is EffectType.Transform or EffectType.SpeedVarianceProvider or EffectType.MixtureProvider
+                || provider.TypeOfEffect is EffectType.Transform or EffectType.SpeedVarianceProvider
                 || !provider.TryGetOutputField(outputId, out var field)
-                || !EffectFieldTypes.AreCompatible(types?.GetOutputType(provider, outputId) ?? field.FieldType, provider.GetPipeline().GetContentType())
+                || !EffectFieldTypes.AreCompatible(types?.GetOutputType(provider, outputId) ?? field.FieldType, provider.Stage.GetContentType())
                     && (types is not null || !field.FieldType.HasFlag(EffectArgumentFieldType.Any))))
                 throw new InvalidOperationException("This provider cannot be the final picture output.");
             var state = new Dictionary<string, string>(provider.AnchorsBindingState ?? []);

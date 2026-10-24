@@ -20,6 +20,7 @@ public sealed class ProjectExternalSourceAsset
 {
     public Guid ImportId { get; set; }
     public string Directory { get; set; } = string.Empty;
+    public string? ReferenceDirectory { get; set; }
     public string ManifestSha256 { get; set; } = string.Empty;
     public ProjectExternalSourceManifest Manifest { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

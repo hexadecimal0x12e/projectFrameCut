@@ -213,6 +213,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class ProgressPlacerProvider : KeyFramedEffectProviderBase<ProgressData>
     {
+        public override IReadOnlyList<Stage> SupportedStages => [Stage.Picture];
+
         public override bool IsDeterministic => true;
 
         public ProgressPlacerProvider()

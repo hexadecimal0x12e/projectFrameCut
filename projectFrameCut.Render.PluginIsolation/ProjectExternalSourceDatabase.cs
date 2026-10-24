@@ -30,6 +30,12 @@ public static class ProjectExternalSourceDatabase
         var expected = $"{DirectoryName}/{asset.ImportId:N}";
         if (!string.Equals(asset.Directory, expected, StringComparison.Ordinal))
             throw new InvalidDataException($"Invalid source directory '{asset.Directory}'.");
+        if (asset.ReferenceDirectory is not null)
+        {
+            if (!Path.IsPathFullyQualified(asset.ReferenceDirectory))
+                throw new InvalidDataException($"Invalid source reference '{asset.ReferenceDirectory}'.");
+            return Path.GetFullPath(asset.ReferenceDirectory);
+        }
         return ResolvePath(projectRoot, expected);
     }
 
@@ -113,14 +119,14 @@ public static class ProjectExternalSourceDatabase
         }
     }
 
-    public static async Task<ProjectExternalSourceAsset> ImportAsync(string projectRoot, string sourceDirectory, Guid? replaceId = null, CancellationToken cancellationToken = default)
+    public static async Task<ProjectExternalSourceAsset> ImportAsync(string projectRoot, string sourceDirectory, Guid? replaceId = null, CancellationToken cancellationToken = default, bool copyToProject = true)
     {
         var importId = replaceId ?? Guid.NewGuid();
         var root = ResolvePath(projectRoot, DirectoryName);
         var destination = ResolvePath(projectRoot, $"{DirectoryName}/{importId:N}");
-        var sourceRoot = Path.GetFullPath(sourceDirectory).TrimEnd(Path.DirectorySeparatorChar);
+        var sourceRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(sourceDirectory));
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        if (root.StartsWith(sourceRoot + Path.DirectorySeparatorChar, comparison) || string.Equals(root, sourceRoot, comparison))
+        if (copyToProject && (root.StartsWith(sourceRoot + Path.DirectorySeparatorChar, comparison) || string.Equals(root, sourceRoot, comparison)))
             throw new InvalidDataException("The import directory cannot contain the project's external source directory.");
         var staging = Path.Combine(root, $".import-{Guid.NewGuid():N}");
         var backup = Path.Combine(root, $".backup-{Guid.NewGuid():N}");
@@ -135,18 +141,28 @@ public static class ProjectExternalSourceDatabase
             var original = await ValidateAsync(sourceDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
             if (replaceId.HasValue && index.Assets.Single(x => x.ImportId == replaceId.Value).Manifest.Id != original.Manifest.Id)
                 throw new InvalidDataException("Only an external source with the same manifest ID can be replaced.");
-            await CopyAsync(sourceDirectory, staging, cancellationToken).ConfigureAwait(false);
-            var validated = await ValidateAsync(staging, original.Hash, cancellationToken).ConfigureAwait(false);
+            var validated = original;
+            if (copyToProject)
+            {
+                await CopyAsync(sourceDirectory, staging, cancellationToken).ConfigureAwait(false);
+                validated = await ValidateAsync(staging, original.Hash, cancellationToken).ConfigureAwait(false);
+            }
             var asset = new ProjectExternalSourceAsset
             {
                 ImportId = importId, Directory = $"{DirectoryName}/{importId:N}", Manifest = validated.Manifest, ManifestSha256 = validated.Hash,
+                ReferenceDirectory = copyToProject ? null : sourceRoot,
                 Sources = replaceId.HasValue ? index.Assets.Single(x => x.ImportId == replaceId.Value).Sources.Select(x => RenderRpcSerializer.Clone(x)).ToList() : [],
                 AudioSources = replaceId.HasValue ? index.Assets.Single(x => x.ImportId == replaceId.Value).AudioSources.Select(x => RenderRpcSerializer.Clone(x)).ToList() : [],
                 MaskSources = replaceId.HasValue ? index.Assets.Single(x => x.ImportId == replaceId.Value).MaskSources.Select(x => RenderRpcSerializer.Clone(x)).ToList() : [],
             };
-            if (System.IO.Directory.Exists(destination)) System.IO.Directory.Move(destination, backup);
-            System.IO.Directory.Move(staging, destination);
-            installed = true;
+            if (System.IO.Directory.Exists(destination) && (copyToProject ||
+                (!string.Equals(sourceRoot, destination, comparison) && !sourceRoot.StartsWith(destination + Path.DirectorySeparatorChar, comparison))))
+                System.IO.Directory.Move(destination, backup);
+            if (copyToProject)
+            {
+                System.IO.Directory.Move(staging, destination);
+                installed = true;
+            }
             index.Assets.RemoveAll(x => x.ImportId == importId);
             index.Assets.Add(asset);
             await WriteAsync(projectRoot, index, cancellationToken).ConfigureAwait(false);
@@ -205,7 +221,7 @@ public static class ProjectExternalSourceDatabase
             var asset = index.Assets.Single(x => x.ImportId == importId);
             source = ResolveAssetDirectory(projectRoot, asset);
             backup = ResolvePath(projectRoot, $"{DirectoryName}/.removed-{Guid.NewGuid():N}");
-            if (System.IO.Directory.Exists(source))
+            if (asset.ReferenceDirectory is null && System.IO.Directory.Exists(source))
             {
                 _ = EnumerateFiles(source).ToArray();
                 System.IO.Directory.Move(source, backup);

@@ -9,7 +9,7 @@
 	xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
 	xmlns:uap4="http://schemas.microsoft.com/appx/manifest/uap/windows10/4">
 
-	<Identity Name="0xeeeeeeeeeeee.projectFrameCut" Publisher="CN=0AD263CD-E10E-4A8B-A187-25C0A41C69D7" Version="1.7.0.0" />
+	<Identity Name="0xeeeeeeeeeeee.projectFrameCut" Publisher="CN=0AD263CD-E10E-4A8B-A187-25C0A41C69D7" Version="1.7.5.0" />
 
 	<mp:PhoneIdentity PhoneProductId="3ef3c1fc-97c7-447a-9209-ead7b7c85288" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
@@ -63,9 +63,16 @@
 						</com:ExeServer>
 					</com:ComServer>
 				</com:Extension>
+			</Extensions>
+		</Application>
+
+		<Application Id="projectFrameCutCompatible" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
+			<uap:VisualElements DisplayName="projectFrameCut (DO NOT DISABLE THIS ALIAS, OR YOU WILL BREAK THE APPLICATION)" Description="the entrypoint for the projectFrameCut CLI (version-specific alias), this should be hidden" AppListEntry="none"
+													Square150x150Logo="appiconMediumTile.png" Square44x44Logo="appiconLogo.png" BackgroundColor="transparent" />
+			<Extensions>
 				<uap3:Extension Category="windows.appExecutionAlias" Executable="pjfc-cli.exe" EntryPoint="Windows.FullTrustApplication">
 					<uap3:AppExecutionAlias>
-						<desktop:ExecutionAlias Alias="projectFrameCutCompatible_0xeeeeeeeeeeee.projectFrameCut_1.7.0.0.exe" />
+						<desktop:ExecutionAlias Alias="projectFrameCutCompatible_0xeeeeeeeeeeee.projectFrameCut_1.7.5.0.exe" />
 					</uap3:AppExecutionAlias>
 				</uap3:Extension>
 			</Extensions>
@@ -74,8 +81,6 @@
 
 	<Capabilities>
 		<rescap:Capability Name="runFullTrust" />
-		<Capability Name="internetClientServer"/>
-		<Capability Name="internetClient"/>
 	</Capabilities>
 
 </Package>

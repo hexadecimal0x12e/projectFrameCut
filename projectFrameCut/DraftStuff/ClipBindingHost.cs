@@ -42,11 +42,14 @@ namespace projectFrameCut.DraftStuff
                 new(IEffectProvider.InputAnchorGUID.ToString(),
                     LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBind_SourcePicture, "IPicture"),
             };
+            if (ValueProviderFrameContext.SupportsAudioSample(_provider.Stage))
+                sources.Add(new(ValueProviderFrameContext.BuiltInAudioSampleProviderId,
+                    LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBind_FinalAudio, "AudioSample"));
             if (_clip.EffectProviders is { } bundles)
             {
                 foreach (var (id, bundle) in bundles)
                 {
-                    if (id == _provider.Id) continue;
+                    if (id == _provider.Id || bundle.Stage != _provider.Stage) continue;
                     if (DynamicEffectBindings.CanBindOutput(bundle))
                     {
                         foreach (var output in bundle.GetOutputFields().Values)
@@ -63,6 +66,8 @@ namespace projectFrameCut.DraftStuff
         {
             switch (sourceId)
             {
+                case ValueProviderFrameContext.BuiltInAudioSampleProviderId:
+                    return LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBind_FinalAudio;
                 case ValueProviderFrameContext.BuiltInFrameProviderId:
                     return LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.EffectBindView_BoundSource_FrameIndex;
                 case ValueProviderFrameContext.BuiltInProgressProviderId:

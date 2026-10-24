@@ -5,6 +5,8 @@ namespace SomePublisher;
 
 public sealed class ExampleCrossfadeTransformProvider : EffectProviderBase
 {
+    public override IReadOnlyList<Stage> SupportedStages => [Stage.Transform];
+
     public override bool IsDeterministic => true;
 
     public override string TypeName => "ExampleCrossfade";

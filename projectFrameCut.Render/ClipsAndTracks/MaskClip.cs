@@ -10,6 +10,8 @@ namespace projectFrameCut.Render.ClipsAndTracks;
 
 public sealed class MaskClip : IRotatableClip
 {
+    [JsonIgnore] public IReadOnlyList<Stage> SupportedStages => EffectStages.Picture;
+    [JsonIgnore] public IEffectStagePlan? EffectStagePlan { get; set; }
     public const string SourceTypeKey = "MaskSourceType";
     public const string ArgumentPrefix = "Source.";
 

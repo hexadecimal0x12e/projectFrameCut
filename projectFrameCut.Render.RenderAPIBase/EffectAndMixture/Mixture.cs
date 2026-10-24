@@ -2,6 +2,22 @@
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
+    public abstract class MixtureProviderBase : EffectProviderBase
+    {
+        public const string UpperInputKey = "__Upper__";
+        public const string LowerInputKey = "__Lower__";
+
+        protected sealed override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() =>
+            new Dictionary<string, EffectArgumentFieldDescriptor>
+            {
+                [UpperInputKey] = Field(UpperInputKey, EffectArgumentFieldType.IPicture | EffectArgumentFieldType.Mandatory, ""),
+                [LowerInputKey] = Field(LowerInputKey, EffectArgumentFieldType.IPicture | EffectArgumentFieldType.Mandatory, ""),
+            };
+
+        protected sealed override EffectArgumentFieldDescriptor DefineOutField() =>
+            Field(OutputAnchorKey, EffectArgumentFieldType.IPicture, "");
+    }
+
     public interface IMixture : IEffect
     {
         /// <summary>

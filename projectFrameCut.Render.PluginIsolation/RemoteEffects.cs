@@ -118,11 +118,6 @@ internal sealed class RemoteVectorComponentEffect(IPluginIsolationSession sessio
             }).ToList(),
             Value = (uint)Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) ?? 0f)
         };
-        foreach (var id in DynamicProviderIds)
-        {
-            var value = GetDynamicValue(id);
-            if (value is not null) request.DynamicValues[id] = IsolationValueConverter.FromObject(value);
-        }
         var response = Invoke<IsolationEffectInvokeRequest, IsolationVectorComponentDescriptor>(RenderOperation.IsolationProcessVectorComponentEffect, request);
         using var remote = new RemoteVectorComponent(Session, response);
         var serializer = Type.GetType("projectFrameCut.Render.VectorContent.VectorComponentSerializer, projectFrameCut.Render", throwOnError: true)!;
@@ -141,11 +136,6 @@ internal sealed class RemoteVectorPictureEffect(IPluginIsolationSession session,
             VectorElements = VectorPictureCodec.Encode(source),
             Value = (uint)Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) ?? 0f)
         };
-        foreach (var id in DynamicProviderIds)
-        {
-            var value = GetDynamicValue(id);
-            if (value is not null) request.DynamicValues[id] = IsolationValueConverter.FromObject(value);
-        }
         return VectorPictureCodec.Decode(Invoke<IsolationEffectInvokeRequest, IsolationVectorElementList>(
             RenderOperation.IsolationProcessVectorPictureEffect, request).Elements);
     }
@@ -153,7 +143,7 @@ internal sealed class RemoteVectorPictureEffect(IPluginIsolationSession session,
 
 internal sealed class RemoteTextEffect(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) : RemoteEffectBase(session, descriptor), ITextEffect
 {
-    public TextEntry[] Process(TextEntry[] source) => RemoteEffectInvoke.ProcessText(Session, ObjectId, source, 0);
+    public TextEntry[] Process(TextEntry[] source) => ProcessText(source, 0);
 }
 
 internal sealed class RemoteContinuousTextEffect : RemoteEffectBase, IContinuousTextEffect
@@ -168,7 +158,7 @@ internal sealed class RemoteContinuousTextEffect : RemoteEffectBase, IContinuous
     public int StartPoint { get; set; }
     public int EndPoint { get; set; }
     public bool IsScoped { get; set; }
-    public TextEntry[] Process(TextEntry[] source, float progress) => RemoteEffectInvoke.ProcessText(Session, ObjectId, source, progress);
+    public TextEntry[] Process(TextEntry[] source, float progress) => ProcessText(source, progress);
 }
 
 internal sealed class RemoteSpeedVarianceProvider(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) : RemoteEffectBase(session, descriptor), ISpeedVarianceProvider
@@ -390,11 +380,15 @@ internal abstract class RemoteEffectBase : IEffect, IDisposable
         void AddValue(string key, object? value)
         {
             if (value is IPicture picture) request.Frame.DynamicPictures[key] = Publish(picture);
+            else if (value is IAudioSamples audio)
+                request.Frame.DynamicAudio[key] = AudioPayloadCodec.WriteAsync(audio, Session.Payloads, Session.PreferredPayloadKind, leases, context.CancellationToken).AsTask().GetAwaiter().GetResult();
             else request.Frame.DynamicValues[key] = IsolationValueConverter.FromObject(value);
         }
         try
         {
             if (context.Input is IPicture input) request.InputPicture = Publish(input);
+            else if (context.Input is IAudioSamples audio)
+                request.InputAudio = AudioPayloadCodec.WriteAsync(audio, Session.Payloads, Session.PreferredPayloadKind, leases, context.CancellationToken).AsTask().GetAwaiter().GetResult();
             else request.Input = IsolationValueConverter.FromObject(context.Input);
             foreach (var id in DynamicProviderIds) AddValue(id, GetDynamicValue(id));
             foreach (var parameter in context.Parameters) AddValue(parameter.Key, parameter.Value);
@@ -407,6 +401,8 @@ internal abstract class RemoteEffectBase : IEffect, IDisposable
                 try
                 {
                     foreach (var (key, value) in response.Values) outputs.Add(key, IsolationValueConverter.ToObject(value));
+                    foreach (var (key, value) in response.Audios)
+                        outputs.Add(key, AudioPayloadCodec.ReadAsync(value, Session.Payloads, context.CancellationToken).AsTask().GetAwaiter().GetResult());
                     foreach (var (key, reference) in response.Pictures)
                     {
                         var picture = PicturePayloadCodec.ReadAsync(reference, Session.Payloads, context.CancellationToken).AsTask().GetAwaiter().GetResult();
@@ -422,12 +418,22 @@ internal abstract class RemoteEffectBase : IEffect, IDisposable
                 }
                 finally
                 {
+                    foreach (var reference in response.Audios.Values)
+                    {
+                        try { Session.Payloads.ReleaseAsync(reference.Samples).AsTask().GetAwaiter().GetResult(); }
+                        catch (Exception ex) { Logger.Log(ex, $"Release isolated audio output of '{TypeName}'", this); }
+                    }
                     foreach (var reference in response.Pictures.Values)
                     {
                         try { Session.Payloads.ReleaseAsync(reference).AsTask().GetAwaiter().GetResult(); }
                         catch (Exception ex) { Logger.Log(ex, $"Release isolated output payload of '{TypeName}'", this); }
                     }
                 }
+            }
+            if (response.Audio is { } resultAudio)
+            {
+                try { return AudioPayloadCodec.ReadAsync(resultAudio, Session.Payloads, context.CancellationToken).AsTask().GetAwaiter().GetResult(); }
+                finally { Session.Payloads.ReleaseAsync(resultAudio.Samples).AsTask().GetAwaiter().GetResult(); }
             }
             if (response.Picture is null) return IsolationValueConverter.ToObject(response.Value);
             try { return PicturePayloadCodec.ReadAsync(response.Picture, Session.Payloads, context.CancellationToken).AsTask().GetAwaiter().GetResult(); }
@@ -491,6 +497,11 @@ internal abstract class RemoteEffectBase : IEffect, IDisposable
                 request.DynamicPictures[id] = lease.Reference;
                 continue;
             }
+            if (value is IAudioSamples audio)
+            {
+                request.DynamicAudio[id] = AudioPayloadCodec.WriteAsync(audio, Session.Payloads, Session.PreferredPayloadKind, leases).AsTask().GetAwaiter().GetResult();
+                continue;
+            }
             try { request.DynamicValues[id] = IsolationValueConverter.FromObject(value); } catch (NotSupportedException) { }
         }
     }
@@ -513,8 +524,35 @@ internal abstract class RemoteEffectBase : IEffect, IDisposable
         ProjectFrameRate = this is ISourceReplacementEffect s ? s.ProjectFrameRate : 0,
     };
 
+    protected TextEntry[] ProcessText(TextEntry[] source, float progress)
+        => JsonSerializer.Deserialize<TextEntry[]>(Invoke<IsolationEffectInvokeRequest, IsolationEffectInvokeResponse>(
+            RenderOperation.IsolationProcessTextEffect, new()
+            {
+                ObjectId = ObjectId, State = CreateState(), Json = JsonSerializer.Serialize(source), Progress = progress,
+                Value = (uint)Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInFrameProviderId) ?? 0f),
+                ClipProgress = Convert.ToSingle(ValueProviderFrameContext.Get(ValueProviderFrameContext.BuiltInProgressProviderId) ?? 0f),
+            }).Json) ?? [];
+
     protected TResponse Invoke<TRequest, TResponse>(RenderOperation operation, TRequest request)
-        => Session.InvokeAsync<TRequest, TResponse>(operation, request).AsTask().GetAwaiter().GetResult();
+    {
+        var leases = new List<IsolationPayloadLease>();
+        try
+        {
+            if (request is IsolationEffectInvokeRequest invoke)
+                foreach (var id in DynamicProviderIds)
+                {
+                    var value = GetDynamicValue(id);
+                    if (value is IAudioSamples samples)
+                        invoke.DynamicAudio[id] = AudioPayloadCodec.WriteAsync(samples, Session.Payloads, Session.PreferredPayloadKind, leases, ValueProviderFrameContext.CancellationToken).AsTask().GetAwaiter().GetResult();
+                    else if (value is not null) invoke.DynamicValues[id] = IsolationValueConverter.FromObject(value);
+                }
+            return Session.InvokeAsync<TRequest, TResponse>(operation, request, ValueProviderFrameContext.CancellationToken).AsTask().GetAwaiter().GetResult();
+        }
+        finally
+        {
+            foreach (var lease in leases) lease.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+    }
 }
 
 internal sealed class RemoteNormalEffect(IPluginIsolationSession session, IsolationEffectDescriptor descriptor) : RemoteEffectBase(session, descriptor), INormalEffect
@@ -635,6 +673,7 @@ internal static class IsolationClipSnapshotFactory
         {
             FromPlugin = clip.FromPlugin,
             ClipType = (int)clip.ClipType,
+            SupportedStages = clip.SupportedStages.Select(s => (int)s).ToList(),
             TypeName = clip.TypeName,
             Id = clip.Id.ToString(),
             Name = clip.Name,

@@ -69,6 +69,15 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         public abstract EffectTarget Target { get; }
 
+        public abstract IReadOnlyList<Stage> SupportedStages { get; }
+        private Stage? stage;
+        public virtual Stage Stage
+        {
+            get => stage ?? SupportedStages[0];
+            set => stage = SupportedStages.Contains(value) ? value
+                : throw new ArgumentOutOfRangeException(nameof(value), value, "Unsupported effect stage.");
+        }
+
         public virtual bool Enabled { get; set; } = true;
 
         public Guid Id { get; set; } = Guid.NewGuid();
@@ -225,13 +234,13 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         protected virtual IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() 
             => new Dictionary<string, EffectArgumentFieldDescriptor>
             {
-                { PrimaryInputAnchorKey, Field(PrimaryInputAnchorKey, TypeOfEffect.GetPipeline().GetContentType(), "", remarks: "The primary input for the effect to process. This is a mandatory input.") }
+                { PrimaryInputAnchorKey, Field(PrimaryInputAnchorKey, Stage.GetContentType(), "", remarks: "The primary input for the effect to process. This is a mandatory input.") }
             };
 
         /// <summary>
         /// Define the output field (anchor) of the effect. Defaults to an IPicture output.
         /// </summary>
-        protected virtual EffectArgumentFieldDescriptor DefineOutField() => Field(OutputAnchorKey, TypeOfEffect.GetPipeline().GetContentType(), "", remarks: "The output of the effect. This is a mandatory output.");
+        protected virtual EffectArgumentFieldDescriptor DefineOutField() => Field(OutputAnchorKey, Stage.GetContentType(), "", remarks: "The output of the effect. This is a mandatory output.");
 
         /// <summary>
         /// A compact helper for subclasses to declare a settable argument field.
@@ -436,6 +445,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         private static object ParseDefault(EffectArgumentFieldDescriptor desc)
         {
+            if (desc.FieldType.BaseType() == EffectArgumentFieldType.AudioSample) return null!;
             if (desc.FieldType.HasFlag(EffectArgumentFieldType.Any)) return desc.DefaultValue;
             var baseType = desc.FieldType & (EffectArgumentFieldType)0x3FF;
             return baseType switch

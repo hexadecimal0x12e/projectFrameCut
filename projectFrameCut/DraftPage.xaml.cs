@@ -387,6 +387,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     public uint ProjectDuration { get; set; } = 0;
 
     public ICommand AddCommand { get; private set; }
+    public ICommand AddTrackCommand { get; private set; }
+    public ICommand AddSubTrackCommand { get; private set; }
     public ICommand ExportCommand { get; private set; }
     public ICommand GoRenderCommand { get; private set; }
     public ICommand SettingsCommand { get; private set; }
@@ -557,6 +559,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         InitializeComponent();
         BindingContext = this;
         InitializeQuickCommands();
+        RegisterAddTrackButtonGestures();
         if (!BetterAccessibilityMode) DisableTabFocusOnWindows(AddTrackButton);
         SetPlayPauseIconToPlay();
         SetStateBusy();
@@ -643,6 +646,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         RegisterCommands();
         InitializeComponent();
         InitializeQuickCommands();
+        RegisterAddTrackButtonGestures();
         if (!BetterAccessibilityMode) DisableTabFocusOnWindows(AddTrackButton);
         SetPlayPauseIconToPlay();
         SetStateBusy();
@@ -784,6 +788,8 @@ public partial class DraftPage : ContentPage, IDraftPage
     private void RegisterCommands()
     {
         AddCommand = new Command(() => AddClip_Clicked(this, EventArgs.Empty));
+        AddTrackCommand = new Command(() => AddTrack(false));
+        AddSubTrackCommand = new Command(() => AddTrack(true));
         ExportCommand = new Command(() => OnExportedClick(this, EventArgs.Empty));
         GoRenderCommand = new Command(() => OnExportedClick(this, EventArgs.Empty));
         SettingsCommand = new Command(() => SettingsClick(this, EventArgs.Empty));
@@ -2283,14 +2289,12 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (clip.SourcePath.StartsWith("$")) return;
         if (clip.isInfiniteLength) return;
         if (string.IsNullOrWhiteSpace(WorkingPath)) return;
-        Log($"Start generating the per-clip preview for clip {clip.Id} - {clip.DisplayName}");
-
         var clipId = clip.Id;
+        var totalFrames = clip.maxFrameCount > 0 ? (int)clip.maxFrameCount : (int)clip.lengthInFrame;
+        if (totalFrames <= 0) return;
         var outDir = Path.Combine(WorkingPath, "thumbs", "perClip", clipId.ToString(), "timeline");
-
-        if (Directory.Exists(outDir)
-            && Directory.EnumerateFiles(outDir, "*.png", SearchOption.TopDirectoryOnly)
-                .Any(path => int.TryParse(Path.GetFileNameWithoutExtension(path), out _)))
+        if (Enumerable.Range(0, Math.Min(ThumbMaxCount, (int)(((long)totalFrames + ThumbIntervalFrames - 1) / ThumbIntervalFrames)))
+            .All(i => File.Exists(Path.Combine(outDir, $"{(long)i * ThumbIntervalFrames}.png"))))
             return;
 
         if (_perClipThumbCts.TryRemove(clipId, out var existingCts))
@@ -2302,44 +2306,14 @@ public partial class DraftPage : ContentPage, IDraftPage
         _perClipThumbCts[clipId] = cts;
 
         var sourcePath = clip.SourcePath;
-        var totalFrames = clip.maxFrameCount > 0 ? (int)clip.maxFrameCount : (int)clip.lengthInFrame;
         var completed = false;
 
         _ = Task.Run(async () =>
         {
             try
             {
-                Directory.CreateDirectory(outDir);
-
-                using var vidSrc = PluginManager.CreateVideoSource(sourcePath);
-                vidSrc.Initialize();
-
-                var interval = Math.Max(1, ThumbIntervalFrames);
-                var frameCount = 0;
-
-                for (int f = 0; f < totalFrames && frameCount < ThumbMaxCount; f += interval, frameCount++)
-                {
-                    cts.Token.ThrowIfCancellationRequested();
-
-                    var outPath = Path.Combine(outDir, $"{f}.png");
-                    if (File.Exists(outPath)) continue;
-
-                    try
-                    {
-                        var frame = vidSrc.GetFrame((uint)f);
-                        var aspect = (double)frame.Height / frame.Width;
-                        var targetHeight = (int)(ThumbTargetWidth * aspect);
-                        var resized = frame.Resize(ThumbTargetWidth, targetHeight, false);
-                        resized.SaveToPng(outPath);
-                        resized.Dispose();
-                        frame.Dispose();
-                        LogDiagnostic($"Read the thumb for clip {clipId} in frame {f}.");
-                    }
-                    catch (Exception ex) when (ex is not OperationCanceledException)
-                    {
-                        Log(ex, $"thumb gen clip={clipId} frame={f}", this);
-                    }
-                }
+                await previewer.GenerateTimelineThumbnailsAsync(clipId, sourcePath, totalFrames,
+                    ThumbIntervalFrames, ThumbMaxCount, ThumbTargetWidth, cts.Token).ConfigureAwait(false);
                 completed = true;
             }
             catch (OperationCanceledException) { }
@@ -2364,7 +2338,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     });
                 }
             }
-        }, cts.Token);
+        });
     }
 
     private void ApplyClipPreview(ClipElementUI element, bool force = false)
@@ -2460,17 +2434,41 @@ public partial class DraftPage : ContentPage, IDraftPage
         return string.IsNullOrWhiteSpace(fallbackId) ? "Unknown Clip" : fallbackId.Trim();
     }
 
+    private bool _suppressAddTrackButtonClick;
+
+    private void RegisterAddTrackButtonGestures()
+    {
+        AddTrackButton.Pressed += (_, _) => _suppressAddTrackButtonClick = false;
+        UIServices.RegisterSelectOrContextMenu(AddTrackButton, OnContextMenuClick: () =>
+        {
+#if ANDROID || IOS
+            _suppressAddTrackButtonClick = true;
+#endif
+            AddTrack(true);
+        });
+    }
+
     private void AddTrackButton_Clicked(object sender, EventArgs e)
     {
-        int newId = Tracks.Keys.Where(k => k < SubTrackOffset).DefaultIfEmpty(-1).Max() + 1;
+        if (_suppressAddTrackButtonClick) return;
+        AddTrack(false);
+    }
+
+    private void AddTrack(bool useSubTrack)
+    {
+        int newId = useSubTrack
+            ? Tracks.Keys.Where(k => k >= SubTrackOffset).DefaultIfEmpty(SubTrackOffset - 1).Max() + 1
+            : Tracks.Keys.Where(k => k < SubTrackOffset).DefaultIfEmpty(-1).Max() + 1;
         AddATrack(newId);
+        string trackName = useSubTrack ? $"SubTrack {newId - SubTrackOffset}" : $"Track {newId}";
+        Log($"Added {trackName}.");
 
         OnClipChanged?.Invoke(this, new ClipUpdateEventArgs
         {
             Reason = ClipUpdateReason.TrackAdd,
             SourceId = null,
-            SourceName = $"Track {newId}",
-            DetailInfo = ClipUpdateEventArgs.BuildChangeReason(ClipUpdateReason.TrackAdd, details: $"Track {newId} created")
+            SourceName = trackName,
+            DetailInfo = ClipUpdateEventArgs.BuildChangeReason(ClipUpdateReason.TrackAdd, details: $"{trackName} created")
         });
     }
 
@@ -3770,7 +3768,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                 else
                 {
                     // Add main track
-                    AddTrackButton_Clicked(this, EventArgs.Empty);
+                    AddTrack(false);
                     newTrack = Tracks.Keys.Where(k => k < SubTrackOffset).Max();
                 }
             }
@@ -4965,8 +4963,11 @@ public partial class DraftPage : ContentPage, IDraftPage
             MarkHistoryPanelDirty();
             OnClipChanged?.Invoke(this, new ClipUpdateEventArgs
             {
-                Reason = ClipUpdateReason.PropertyChanged, SourceId = changedClip.Id,
-                SourceName = changedClip.DisplayName, DetailInfo = e.Id, NoSave = false,
+                Reason = ClipUpdateReason.PropertyChanged,
+                SourceId = changedClip.Id,
+                SourceName = changedClip.DisplayName,
+                DetailInfo = e.Id,
+                NoSave = false,
             });
             try
             {
@@ -5152,18 +5153,23 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region asset
-    internal async Task AddAsset(string path, bool showAssetPanel = false, bool? copyToProject = null)
+    internal async Task<AssetItem?> AddAsset(string path, bool showAssetPanel = false, bool? copyToProject = null, string? name = null)
     {
+        if (IsReadonly) return null;
         SetStateBusy(Localized.DraftPage_PrepareAsset);
         try
         {
+            copyToProject ??= await AssetDatabase.PickImportModeAsync(this);
+            if (copyToProject is null) return null;
             path = Path.GetFullPath(path);
-            if (Assets.Values.Any((v) => v.Name == Path.GetFileNameWithoutExtension(path)))
+            name ??= Path.GetFileNameWithoutExtension(path);
+            AssetItem? replacedAsset = null;
+            if (Assets.Values.Any(v => v.Name == name))
             {
-                var existing = Assets.Values.First((v) => v.Name == Path.GetFileNameWithoutExtension(path));
+                var existing = Assets.Values.First(v => v.Name == name);
 
                 string? opt = await DisplayActionSheetAsync(
-                    Localized.DraftPage_DuplicatedAsset(Path.GetFileNameWithoutExtension(path), existing.Name),
+                    Localized.DraftPage_DuplicatedAsset(name, existing.Name),
                     Localized._Cancel,
                     null,
                     [Localized.DraftPage_DuplicatedAsset_Relpace, Localized.DraftPage_DuplicatedAsset_Skip, Localized.DraftPage_DuplicatedAsset_Together]
@@ -5172,42 +5178,30 @@ public partial class DraftPage : ContentPage, IDraftPage
                 if (string.IsNullOrEmpty(opt) || opt == Localized._Cancel)
                 {
                     Log($"Cancelled adding duplicated asset from {path}");
-                    SetStateOK();
-                    return;
+                    return null;
                 }
                 else if (opt == Localized.DraftPage_DuplicatedAsset_Relpace)
                 {
-                    Assets.TryRemove(existing.AssetId, out _);
-                    Log($"Replaced existing asset {existing.Name} with new one from {path}");
+                    replacedAsset = existing;
                 }
                 else if (opt == Localized.DraftPage_DuplicatedAsset_Skip)
                 {
                     Log($"Skipped adding duplicated asset from {path}");
-                    SetStateOK(Localized.DraftPage_AssetAdded(Path.GetFileNameWithoutExtension(path)));
-                    return;
+                    return null;
                 }
                 else
                 {
                     Log($"Adding duplicated asset from {path} together with existing one.");
                 }
             }
-            if (copyToProject is null && AssetItem.GetAssetType(path) == AssetType.VectorComposition)
-            {
-                var component = VectorClipServices.Import(path);
-                component.Name = Path.GetFileNameWithoutExtension(path);
-                _workspace.GetModule<AssetModule>().Add(VectorClipServices.AddAsset(this, component));
-                await AddClipView.RefreshAssetsAsync();
-                if (showAssetPanel) await ShowAssetPanelAsync();
-                SetStateOK(Localized.DraftPage_AssetAdded(component.Name));
-                return;
-            }
-            var item = AssetDatabase.Create(path, System.IO.Path.GetFileNameWithoutExtension(path), AssetItem.GetAssetType(path));
+            var item = AssetDatabase.Create(path, name, AssetItem.GetAssetType(path));
             if (item is null)
             {
-                await DisplayAlertAsync(Localized._Error, Localized.DraftPage_Asset_InvaildSrc(System.IO.Path.GetFileNameWithoutExtension(path)), Localized._OK);
-                return;
+                await DisplayAlertAsync(Localized._Error, Localized.DraftPage_Asset_InvaildSrc(name), Localized._OK);
+                return null;
             }
             item.Path = path;
+            item.IsReference = !copyToProject.Value;
             if (copyToProject == true)
             {
                 Directory.CreateDirectory(Path.Combine(WorkingPath, "asset"));
@@ -5236,6 +5230,11 @@ public partial class DraftPage : ContentPage, IDraftPage
             }
             var cid = item.AssetId;
             Log($"Added asset '{item.Path}'s info: {item.Duration} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.Duration * item.SecondPerFrame} s");
+            if (replacedAsset is not null)
+            {
+                Assets.TryRemove(replacedAsset.AssetId, out _);
+                _workspace.GetModule<AssetModule>().Remove(replacedAsset.AssetId);
+            }
             Assets.AddOrUpdate(cid, item, (_, _) => item);
             _workspace.GetModule<AssetModule>().Add(item);
             if (item.AssetType == AssetType.VectorComposition) NotifyVectorAssetChanged();
@@ -5248,7 +5247,7 @@ public partial class DraftPage : ContentPage, IDraftPage
                     AssetPanelButton_Clicked(this, new());
                 });
             }
-            SetStateOK(Localized.DraftPage_AssetAdded(Path.GetFileNameWithoutExtension(path)));
+            SetStateOK(Localized.DraftPage_AssetAdded(name));
             var createProxy = item.AssetType == AssetType.Video && (ProxyOption != "never") && ((ProxyOption == "always") || await DisplayAlertAsync(Localized.DraftPage_CreateProxy(item.Name), Localized.DraftPage_CreateProxy_Info, Localized._Confirm, Localized._Cancel));
             var task = new DraftTasks(cid, (c) => Task.Run(cancellationToken: c, action: async () =>
             {
@@ -5260,12 +5259,17 @@ public partial class DraftPage : ContentPage, IDraftPage
                 Assets[cid].SourceHash = await HashServices.ComputeFileHashAsync(item.Path, null, c);
             }), $"Add asset {item.Name}", $"Add asset {item.Name}");
             RunningTasks.AddOrUpdate(cid, task, (_, _) => task);
-
+            return item;
         }
         catch (Exception ex)
         {
             Log(ex, $"Importing file {path}", this);
             SetStatusText(Localized._ExceptionTemplate(ex));
+            return null;
+        }
+        finally
+        {
+            SetStateOK();
         }
     }
     private async void AssetPanelButton_Clicked(object sender, EventArgs e)
@@ -6557,12 +6561,40 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region drag and drop
+    private bool _isImportingAsset;
+
     public async void File_Drop(object? sender, DropEventArgs e)
     {
-        foreach (var path in await FileDropHelper.GetFilePathsFromDrop(e))
+#if WINDOWS
+        if (e.PlatformArgs?.DragEventArgs is { Handled: true }) return;
+#endif
+        if (IsReadonly || _isImportingAsset) return;
+        _isImportingAsset = true;
+#if WINDOWS
+        if (e.PlatformArgs?.DragEventArgs is { } args) args.Handled = true;
+        var deferral = e.PlatformArgs?.DragEventArgs?.GetDeferral();
+#endif
+        try
         {
-            Log($"Importing file from drag and drop: {path}");
-            await AddAsset(path);
+            var paths = (await FileDropHelper.GetFilePathsFromDrop(e)).Where(p => !string.IsNullOrWhiteSpace(p))
+                .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToList();
+            if (paths.Count == 0) return;
+            var copyToProject = await AssetDatabase.PickImportModeAsync(this);
+            if (copyToProject is null) return;
+            foreach (var path in paths) await AddAsset(path, copyToProject: copyToProject.Value);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Import dropped project assets", this);
+            await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
+        finally
+        {
+            _isImportingAsset = false;
+            SetStateOK();
+#if WINDOWS
+            deferral?.Complete();
+#endif
         }
     }
 
@@ -6572,6 +6604,11 @@ public partial class DraftPage : ContentPage, IDraftPage
         var platformArgs = e.PlatformArgs?.DragEventArgs;
         if (platformArgs is null)
         {
+            return;
+        }
+        if (IsReadonly || _isImportingAsset)
+        {
+            platformArgs.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.None;
             return;
         }
 
@@ -6593,7 +6630,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             platformArgs.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.None;
         }
 #else
-        e.AcceptedOperation = DataPackageOperation.Copy;
+        e.AcceptedOperation = IsReadonly || _isImportingAsset ? DataPackageOperation.None : DataPackageOperation.Copy;
 
 #endif
     }
@@ -7104,6 +7141,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             //    ActivateMultiWindowItem(AssisstantSubWindow);
             //    break;
             case "assistant-toggle":
+                if (MauiProgram.IsStoreMode) return;
                 ToggleAssistantSubWindow(AssisstantSubWindow);
                 break;
             case "close-extra":

@@ -126,6 +126,7 @@ public partial class RenderPage : ContentPage
             }
             vmDefault.FramerateDisplay = SettingsManager.GetSetting("render_DefaultFramerate", vmDefault.FramerateDisplay);
             vmDefault.BitDepthDisplay = SettingsManager.GetSetting("render_DefaultBitDepth", vmDefault.BitDepthDisplay);
+            vmDefault.ApplyDefaultBitRate();
             if (Enum.TryParse<PostRenderAction>(SettingsManager.GetSetting("render_DefaultPostRenderAction", "None"), out var action))
             {
                 vmDefault.SelectedPostRenderActionEnum = action;
@@ -170,21 +171,13 @@ public partial class RenderPage : ContentPage
             }
             vm.FramerateDisplay = SettingsManager.GetSetting("render_DefaultFramerate", vm.FramerateDisplay);
             vm.BitDepthDisplay = SettingsManager.GetSetting("render_DefaultBitDepth", vm.BitDepthDisplay);
+            vm.ApplyDefaultBitRate();
             if (Enum.TryParse<PostRenderAction>(SettingsManager.GetSetting("render_DefaultPostRenderAction", "None"), out var action))
             {
                 vm.SelectedPostRenderActionEnum = action;
             }
             if (ProjectUsesHDR) vm.BitDepth = "10bit";
-            if (SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true))
-            {
-                MaxParallelThreadsCountLabel.IsVisible = false;
-                MaxParallelThreadsCount.IsVisible = false;
-                MaxParallelThreadsCount.Value = Environment.ProcessorCount;//fallback
-            }
-            else
-            {
-                MaxParallelThreadsCount.Value = (int)SettingsManager.GetSettingAs<double>("render_defaultMaxParallelWorkers", 8, 8);
-            }
+            MaxParallelThreadsCount.Value = (int)SettingsManager.GetSettingAs<double>("render_defaultMaxParallelWorkers", 8, 8);
         }
         catch { }
         BindingContext = vm;
@@ -760,8 +753,12 @@ public partial class RenderPage : ContentPage
             PixelFormat = pixelFormat,
             MaxParallelThreads = Math.Max(1, (int)Math.Round(MaxParallelThreadsCount.Value)),
             AllowWorkerOversubscription = SettingsManager.IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true),
+            RenderAheadFrames = RenderSchedulingSettings.RenderAheadFrames,
+            EnableMemoryBudget = RenderSchedulingSettings.EnableMemoryBudget,
+            MaxBufferedBytes = RenderSchedulingSettings.MaxBufferedBytes,
             GcOption = int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var gcOption) ? gcOption : 0,
             EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true),
+            WorkerCPUCoreIndexs = RenderSchedulingSettings.WorkerCPUCoreIndexs,
             FrameHashMode = RenderHashSettings.Mode,
             ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
             EnableDeferredComposition = SettingsManager.IsBoolSettingTrueOrDefault("render_enableDeferredComposition", false),
@@ -1254,6 +1251,7 @@ public partial class RenderPage : ContentPage
     async Task DoCompute(RenderPageViewModel vm, string outputPath, Dictionary<string, string>? metadata = null, string? audioPath = null, string? writerOverride = null)
     {
         IClip[] clips = [];
+        ISoundTrack[] audioTracks = [];
         try
         {
             var encoderSelection = ResolveEncoderOptions(vm);
@@ -1296,33 +1294,9 @@ public partial class RenderPage : ContentPage
 
             await SubProgress.ProgressTo(0, 250, Easing.Linear);
 
-            int[] CPUAffinityOverride = [];
+            int[] CPUAffinityOverride = RenderSchedulingSettings.WorkerCPUCoreIndexs;
             bool EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true);
-            if (EnableThreadAffinity)
-            {
-                try
-                {
-                    if (SettingsManager.IsSettingExists("render_coreAffinityOverride") && !string.IsNullOrWhiteSpace(SettingsManager.GetSetting("render_coreAffinityOverride", "")))
-                    {
-                        CPUAffinityOverride = SettingsManager.GetSetting("render_coreAffinityOverride", "0").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Where(c => uint.TryParse(c, out _)).Select(int.Parse).ToArray();
-                    }
-                    else
-                    {
-                        try
-                        {
-                            var group = ThreadAffinityHelper.GetCpuCoreGroups();
-                            var bigGroup = group.OrderBy(c => c.MaxFrequencyKHz ?? 0 + c.Capacity ?? 0 + c.EfficiencyClass ?? 0).Last();
-                            CPUAffinityOverride = bigGroup.CpuIndexes.ToArray();
-
-                        }
-                        catch { }
-                    }
-                }
-                catch { }
-
-            }
-            int parallelThreadCount = CPUAffinityOverride.Length > 0 ? CPUAffinityOverride.Length : (int)MaxParallelThreadsCount.Value;
-            if (CPUAffinityOverride.Length > 0 && (DeviceInfo.Idiom == DeviceIdiom.Desktop || OperatingSystem.IsIOS())) parallelThreadCount = (int)(parallelThreadCount * 1.5);
+            int parallelThreadCount = Math.Max(1, (int)MaxParallelThreadsCount.Value);
 
             Log($"Parallel options: Physical core count: {Environment.ProcessorCount}, Enable Thread Affinity: {EnableThreadAffinity}, Worker target cores: {string.Join(",", CPUAffinityOverride)}, parallelThreadCount: {parallelThreadCount}");
 
@@ -1358,6 +1332,9 @@ public partial class RenderPage : ContentPage
             var duration = Math.Max(draftSrc.Duration, draftSrc.AudioDuration);
 
             clips = DraftImportAndExportHelper.JSONToIClips(draftSrc, false).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
+            var tracks = DraftImportAndExportHelper.JSONToISoundTracks(draftSrc, false).ToList();
+            SoundTrackMetadata.AddMissingLegacyTracks(clips, tracks, message => Log(message, "warn"), initialize: false);
+            audioTracks = tracks.ToArray();
 
             if (clips == null || clips.Length == 0)
             {
@@ -1455,6 +1432,7 @@ public partial class RenderPage : ContentPage
 
             Renderer renderer = new Renderer
             {
+                AudioSamples = new AudioSampleSource(clips, audioTracks, fps, 96000),
                 builder = builder,
                 Clips = clips,
                 TargetWidth = width,
@@ -1469,7 +1447,10 @@ public partial class RenderPage : ContentPage
                 Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
                 MaxThreads = parallelThreadCount,
                 AllowWorkerOversubscription = SettingsManager.IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true),
-                EnableThreadAffinity = EnableThreadAffinity && ThreadAffinityHelper.GetCpuCoreGroups().Count > 1,
+                RenderAheadFrames = RenderSchedulingSettings.RenderAheadFrames,
+                EnableMemoryBudget = RenderSchedulingSettings.EnableMemoryBudget,
+                MaxBufferedBytes = RenderSchedulingSettings.MaxBufferedBytes,
+                EnableThreadAffinity = EnableThreadAffinity,
                 WorkerCPUCoreIndexs = CPUAffinityOverride,
                 FrameHashMode = RenderHashSettings.Mode,
                 ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
@@ -1630,6 +1611,7 @@ public partial class RenderPage : ContentPage
             builder?.Dispose();
             builder = null;
             foreach (var clip in clips) clip.Dispose();
+            foreach (var track in audioTracks) track.Dispose();
         }
 
 
@@ -2621,9 +2603,26 @@ public class RenderPageViewModel : INotifyPropertyChanged
         }
     }
 
-    public string[] ExportOptions_BitRate { get; } =
-        [Localized.RenderPage_BitRateAuto, "2 Mbps", "4 Mbps", "6 Mbps", "8 Mbps", "10 Mbps", "12 Mbps",
-         "16 Mbps", "20 Mbps", "30 Mbps", "50 Mbps", "80 Mbps", "100 Mbps", Localized.RenderPage_CustomOption];
+    public static Dictionary<string, string> BitRateOptions { get; } = new()
+    {
+        [Localized.RenderPage_BitRateAuto] = "auto",
+        ["5 Mbps"] = "5",
+        ["10 Mbps"] = "10",
+        ["20 Mbps"] = "20",
+        ["30 Mbps"] = "30",
+        ["50 Mbps"] = "50",
+        ["100 Mbps"] = "100",
+        [Localized.RenderPage_CustomOption] = "custom"
+    };
+
+    public string[] ExportOptions_BitRate { get; } = BitRateOptions.Keys.ToArray();
+
+    public void ApplyDefaultBitRate()
+    {
+        CustomBitRateMbps = SettingsManager.GetSetting("render_DefaultCustomBitRateMbps", "");
+        BitRateDisplay = BitRateOptions.ReverseLookup(SettingsManager.GetSetting("render_DefaultBitRate", "auto"), Localized.RenderPage_BitRateAuto);
+        if (!TryGetFinalVideoBitRate(out _)) BitRateDisplay = Localized.RenderPage_BitRateAuto;
+    }
 
     string _bitRateDisplay = Localized.RenderPage_BitRateAuto;
     public string BitRateDisplay
@@ -2652,11 +2651,14 @@ public class RenderPageViewModel : INotifyPropertyChanged
         ? "" : IsCustomBitRateVisible ? CustomBitRateMbps : BitRateDisplay[..^5];
 
     public bool TryGetFinalVideoBitRate(out long? bitRate)
+        => TryParseVideoBitRate(FinalBitRateMbps, out bitRate);
+
+    public static bool TryParseVideoBitRate(string mbps, out long? bitRate)
     {
         bitRate = null;
-        if (string.IsNullOrWhiteSpace(FinalBitRateMbps)) return true;
-        if (!decimal.TryParse(FinalBitRateMbps.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.CurrentCulture, out var value)
-            && !decimal.TryParse(FinalBitRateMbps.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out value)) return false;
+        if (string.IsNullOrWhiteSpace(mbps)) return true;
+        if (!decimal.TryParse(mbps.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.CurrentCulture, out var value)
+            && !decimal.TryParse(mbps.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out value)) return false;
         if (value < 0.000001m || value > long.MaxValue / 1_000_000m) return false;
         bitRate = (long)(value * 1_000_000m);
         return true;

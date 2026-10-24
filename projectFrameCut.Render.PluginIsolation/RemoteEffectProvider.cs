@@ -22,6 +22,9 @@ public class RemoteEffectProvider : IEffectProvider
         FromPlugin = descriptor.FromPlugin;
         TypeOfEffect = (EffectType)descriptor.EffectType;
         Target = (EffectTarget)descriptor.Target;
+        SupportedStages = descriptor.SupportedStages.Select(s => (Stage)s).ToArray();
+        Stage = (Stage)descriptor.Stage;
+        EffectStages.Validate(this);
         Enabled = descriptor.Enabled;
         Id = Guid.TryParse(descriptor.InstanceId, out var id) ? id : Guid.NewGuid();
         Name = descriptor.Name;
@@ -37,6 +40,8 @@ public class RemoteEffectProvider : IEffectProvider
     public string FromPlugin { get; }
     public EffectType TypeOfEffect { get; }
     public EffectTarget Target { get; }
+    public IReadOnlyList<Stage> SupportedStages { get; }
+    public Stage Stage { get; set; }
     public bool Enabled { get; set; }
     public Guid Id { get; set; }
     public string Name { get; set; }
@@ -140,6 +145,8 @@ public class RemoteEffectProvider : IEffectProvider
                 leases.Add(lease);
                 descriptor.PictureValue = lease.Reference;
             }
+            else if (value is projectFrameCut.Shared.IAudioSamples samples)
+                descriptor.AudioValue = AudioPayloadCodec.WriteAsync(samples, _session.Payloads, _session.PreferredPayloadKind, leases).AsTask().GetAwaiter().GetResult();
             else descriptor.Value = IsolationValueConverter.FromObject(value);
             fields.Add(descriptor);
         }
@@ -147,6 +154,7 @@ public class RemoteEffectProvider : IEffectProvider
         return new()
         {
             ObjectId = _objectId,
+            Stage = (int)Stage,
             Enabled = Enabled,
             InstanceId = Id.ToString(),
             Name = Name,

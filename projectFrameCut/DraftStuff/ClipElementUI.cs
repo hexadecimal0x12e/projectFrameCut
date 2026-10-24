@@ -320,6 +320,26 @@ namespace projectFrameCut.DraftStuff
         public bool SupportsNativeEffects => ClipType is ClipMode.TextClip or ClipMode.SubtitleClip or ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip
             || ClipType == ClipMode.PhotoClip && (TypeName == nameof(VectorPhotoClip) || string.Equals(Path.GetExtension(SourcePath), ".svg", StringComparison.OrdinalIgnoreCase));
 
+        public IReadOnlyList<Stage>? DeclaredStages { get; set; }
+        public IReadOnlyList<Stage> SupportedStages => DeclaredStages ?? (ClipType == ClipMode.AudioClip ? EffectStages.Audio
+            : ClipType is ClipMode.TextClip or ClipMode.SubtitleClip ? EffectStages.Text
+            : ClipType is ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip ? EffectStages.Vector
+            : SupportsNativeEffects ? EffectStages.VectorImage : EffectStages.Picture);
+
+        public EffectTarget GetEffectSelectionTarget(Stage stage) => stage switch
+        {
+            Stage.ClipArguments => EffectTarget.ValueProvider,
+            Stage.Text => EffectTarget.Text | EffectTarget.ValueProvider,
+            Stage.VectorComponent => EffectTarget.VectorComponent | EffectTarget.ValueProvider,
+            Stage.VectorPicture => EffectTarget.VectorPicture | EffectTarget.ValueProvider,
+            Stage.SpeedVariance => EffectTarget.SpeedVariance | EffectTarget.ValueProvider,
+            Stage.SourceReplacement => EffectTarget.SourceReplacement | EffectTarget.ValueProvider,
+            Stage.Audio => EffectTarget.Audio | EffectTarget.ValueProvider,
+            Stage.Transform => EffectTarget.Transform | EffectTarget.ValueProvider,
+            Stage.Mixture => EffectTarget.Mixture | EffectTarget.ValueProvider,
+            _ => EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ValueProvider,
+        };
+
         public EffectTarget GetEffectSelectionTarget(EffectPipeline pipeline) => pipeline == EffectPipeline.Picture
             ? EffectTarget.Video | EffectTarget.ColorAdjustment | EffectTarget.ValueProvider
                 | (ClipType is ClipMode.TextClip or ClipMode.SubtitleClip ? EffectTarget.Text : 0)

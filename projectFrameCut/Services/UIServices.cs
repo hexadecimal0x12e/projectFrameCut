@@ -66,7 +66,7 @@ namespace projectFrameCut.Services
             return double.TryParse(SettingsManager.GetSetting("ui_SafeZoneCornerRadius", "10"), out var result) ? result : 10;
         }
 
-        public static async void RegisterSelectOrContextMenu(Border border, Action? OnSelected = null, Action? OnClicked = null, Action? OnContextMenuClick = null, int ContextMenuMinTime = 500)
+        public static async void RegisterSelectOrContextMenu(View view, Action? OnSelected = null, Action? OnClicked = null, Action? OnContextMenuClick = null, int ContextMenuMinTime = 500)
         {
 #if MACCATALYST || WINDOWS
             if (OnSelected is not null)
@@ -76,7 +76,7 @@ namespace projectFrameCut.Services
                 {
                     OnSelected();
                 };
-                border.GestureRecognizers.Add(selectTap);
+                view.GestureRecognizers.Add(selectTap);
             }
 
             if (OnClicked is not null)
@@ -86,7 +86,7 @@ namespace projectFrameCut.Services
                 {
                     OnClicked();
                 };
-                border.GestureRecognizers.Add(addTap);
+                view.GestureRecognizers.Add(addTap);
             }
 
             if (OnContextMenuClick is not null)
@@ -96,14 +96,14 @@ namespace projectFrameCut.Services
                 {
                     OnContextMenuClick();
                 };
-                border.GestureRecognizers.Add(rightTap);
+                view.GestureRecognizers.Add(rightTap);
             }
 #elif ANDROID || IOS
             if (OnClicked is not null)
             {
                 var tapGesture = new TapGestureRecognizer { NumberOfTapsRequired = 1 };
                 tapGesture.Tapped += (_, __) => OnClicked();
-                border.GestureRecognizers.Add(tapGesture);
+                view.GestureRecognizers.Add(tapGesture);
             }
 
             if (OnContextMenuClick is not null)
@@ -113,7 +113,7 @@ namespace projectFrameCut.Services
                     MinimumPressDuration = ContextMenuMinTime
                 };
                 longPressGesture.LongPressed += (_, __) => OnContextMenuClick();
-                border.GestureRecognizers.Add(longPressGesture);
+                view.GestureRecognizers.Add(longPressGesture);
             }
 #endif
         }

@@ -7,6 +7,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 public interface IClipValueEndpointProvider : IEffectProvider
 {
     bool IsExport { get; }
+    bool AllowCrossClip { get; set; }
     EffectArgumentFieldType ValueType { get; set; }
     Guid SourceClipId { get; set; }
     Guid SourceEndpointId { get; set; }
@@ -14,10 +15,17 @@ public interface IClipValueEndpointProvider : IEffectProvider
 
 public static class ClipValueEndpointExtensions
 {
+    public static bool CanPassTo(this IClipValueEndpointProvider output, Stage stage, bool sameClip,
+        IEnumerable<IEffectProvider>? providers = null)
+    {
+        bool before = providers?.Any(p => p.Stage == Stage.Transform && p.Enabled
+            && p.MetaData.GetValueOrDefault("TransformRenderOrder")?.ToString() is "BeforeEffects" or "1") == true;
+        return sameClip ? EffectStages.Precedes(output.Stage, stage, before) && !output.ValueType.IsContent()
+            : output.AllowCrossClip && output.Stage == stage;
+    }
+
     public static bool CanPassTo(this IClipValueEndpointProvider output, EffectPipeline pipeline, bool sameClip) =>
-        sameClip
-            ? output.GetPipeline() == EffectPipeline.NativeContent && pipeline == EffectPipeline.Picture && !output.ValueType.IsContent()
-            : output.GetPipeline() == pipeline;
+        output.CanPassTo(pipeline == EffectPipeline.NativeContent ? Stage.VectorPicture : Stage.Picture, sameClip);
 }
 
 public sealed class ClipValueBindingException(string message, Exception? inner = null) : InvalidOperationException(message, inner) { }
@@ -62,6 +70,7 @@ public sealed class ClipValueFrameContext : IDisposable
 
     public object Snapshot(object value)
     {
+        if (value is projectFrameCut.Shared.IAudioSamples<float> audio) return EffectFieldTypes.CopyAudio(audio);
         if (value is projectFrameCut.Drawing.Vector.VectorPicture vector) return VectorPictureEffectProcessing.Copy(vector);
         if (value is IPicture picture)
         {
@@ -132,11 +141,15 @@ public sealed class ClipValueFrameContext : IDisposable
         if (source.EffectProvidersInstances?.FirstOrDefault(p => p.Id == input.SourceEndpointId) is not IClipValueEndpointProvider { IsExport: true } output)
             throw Error("The source endpoint does not exist.");
         if (!output.Enabled) throw Error("The source endpoint is disabled.");
-        if (!output.CanPassTo(input.GetPipeline(), sameClip)) throw Error("The endpoint pipeline has changed or does not precede the input stage.");
+        if (!sameClip && !output.AllowCrossClip) throw Error("The source endpoint only allows pass-through within its own clip.");
+        if (!output.CanPassTo(input.Stage, sameClip, consumer.EffectProvidersInstances))
+            throw Error("The endpoint stage has changed or does not precede the input stage.");
         if (output.ValueType.BaseType() != input.ValueType.BaseType() && !(output.ValueType.IsPicture() && input.ValueType.IsPicture())) throw Error("The endpoint type has changed.");
         if (output.GetMainInputSource() == IEffectProvider.NoConnectionGUID.ToString()) throw Error("The source endpoint is disconnected.");
         if (!values.ContainsKey((source.Id, output.Id)) && readPublished?.Invoke(source.Id, output.Id) is { } shared)
             values[(source.Id, output.Id)] = shared;
+        if (sameClip && !values.ContainsKey((source.Id, output.Id)))
+            throw Error("The source stage has not published this endpoint at the current frame.");
         if (!values.ContainsKey((source.Id, output.Id)) && !evaluated.Contains(source.Id))
         {
             if (!evaluating.Add(source.Id)) throw Error("The endpoint dependency contains a cycle.");
@@ -155,6 +168,10 @@ public sealed class ClipValueFrameContext : IDisposable
         if (!EffectFieldTypes.Accepts(input.ValueType, value)) throw Error("The source returned an incompatible value.");
         return value;
     }
+
+    public object Read(uint frame, IClipValueEndpointProvider input) => Read(
+        clips.Values.FirstOrDefault(c => c.EffectProvidersInstances?.Any(p => p.Id == input.Id) == true)
+            ?? throw new ClipValueBindingException($"Cannot find the owner of endpoint {input.Id}."), frame, input);
 
     public void Dispose()
     {

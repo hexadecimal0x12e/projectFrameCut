@@ -410,8 +410,12 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("FFmpegLibraryPath", options.FFmpegLibraryPath);
                 Add("maxParallelThreads", Math.Max(1, options.MaxParallelThreads).ToString());
                 Add("allowWorkerOversubscription", options.AllowWorkerOversubscription.ToString());
+                Add("renderAheadFrames", options.RenderAheadFrames.ToString());
+                Add("enableMemoryBudget", options.EnableMemoryBudget.ToString());
+                Add("maxBufferedBytes", options.MaxBufferedBytes.ToString());
                 Add("GCOptions", Math.Clamp(options.GcOption, 0, 2).ToString());
                 Add("enableThreadAffinity", options.EnableThreadAffinity.ToString());
+                Add("coreAffinityOverride", string.Join(",", options.WorkerCPUCoreIndexs));
                 Add("reuseDynamicPreviewCache", options.ReuseDynamicPreviewCache.ToString());
                 Add("deferredComposition", options.EnableDeferredComposition.ToString());
                 Add("frameHashMode", options.FrameHashMode.ToString());
@@ -777,8 +781,12 @@ internal sealed record CliRenderProcessOptions
     public long? FinalVideoBitRate { get; init; }
     public int MaxParallelThreads { get; init; } = Environment.ProcessorCount;
     public bool AllowWorkerOversubscription { get; init; } = true;
+    public int RenderAheadFrames { get; init; }
+    public bool EnableMemoryBudget { get; init; }
+    public long MaxBufferedBytes { get; init; }
     public int GcOption { get; init; }
     public bool EnableThreadAffinity { get; init; } = true;
+    public int[] WorkerCPUCoreIndexs { get; init; } = [];
     public FrameHashMode FrameHashMode { get; init; } = FrameHashMode.Dynamic;
     public bool ReuseDynamicPreviewCache { get; init; }
     public bool EnableDeferredComposition { get; init; }

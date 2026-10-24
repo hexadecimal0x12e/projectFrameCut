@@ -334,6 +334,7 @@ public sealed class IsolationSoundTrackDescriptor
     [ProtoMember(17)] public string ExtraDataJson { get; set; } = string.Empty;
     [ProtoMember(18)] public string EffectProvidersJson { get; set; } = string.Empty;
     [ProtoMember(19)] public uint SubLayerIndex { get; set; }
+    [ProtoMember(20)] public List<int> SupportedStages { get; set; } = [];
 }
 
 [ProtoContract]
@@ -391,6 +392,7 @@ public sealed class IsolationFieldDescriptor
     [ProtoMember(11)] public string BoundProviderId { get; set; } = string.Empty;
     [ProtoMember(12)] public IsolationValue Value { get; set; } = new();
     [ProtoMember(13)] public IsolationPayloadReference? PictureValue { get; set; }
+    [ProtoMember(14)] public IsolationAudioSamplesResponse? AudioValue { get; set; }
 }
 
 [ProtoContract]
@@ -413,6 +415,8 @@ public sealed class IsolationProviderDescriptor
     [ProtoMember(15)] public List<IsolationFieldDescriptor> OutputFields { get; set; } = [];
     [ProtoMember(16)] public bool IsDeterministic { get; set; }
     [ProtoMember(17)] public bool HasKeyFrames { get; set; }
+    [ProtoMember(18)] public List<int> SupportedStages { get; set; } = [];
+    [ProtoMember(19)] public int Stage { get; set; }
 }
 
 [ProtoContract]
@@ -425,6 +429,7 @@ public sealed class IsolationProviderState
     [ProtoMember(5)] public Dictionary<string, string> AnchorBindings { get; set; } = [];
     [ProtoMember(6)] public List<IsolationFieldDescriptor> Fields { get; set; } = [];
     [ProtoMember(7)] public Dictionary<string, IsolationValue> Metadata { get; set; } = [];
+    [ProtoMember(8)] public int Stage { get; set; }
 }
 
 [ProtoContract]
@@ -567,6 +572,7 @@ public sealed class IsolationEffectFrameRequest
     [ProtoMember(15)] public Dictionary<string, IsolationPayloadReference> DynamicPictures { get; set; } = [];
     [ProtoMember(16)] public int TransformSide { get; set; }
     [ProtoMember(18)] public float ClipProgress { get; set; }
+    [ProtoMember(19)] public Dictionary<string, IsolationAudioSamplesResponse> DynamicAudio { get; set; } = [];
 }
 
 [ProtoContract]
@@ -595,6 +601,7 @@ public sealed class IsolationEffectComputeRequest
     [ProtoMember(5)] public int RelativeWidth { get; set; }
     [ProtoMember(6)] public int RelativeHeight { get; set; }
     [ProtoMember(7)] public Dictionary<string, int> InputTypes { get; set; } = [];
+    [ProtoMember(8)] public IsolationAudioSamplesResponse? InputAudio { get; set; }
 }
 
 [ProtoContract]
@@ -605,6 +612,8 @@ public sealed class IsolationEffectComputeResponse
     [ProtoMember(3)] public bool HasMultipleOutputs { get; set; }
     [ProtoMember(4)] public Dictionary<string, IsolationValue> Values { get; set; } = [];
     [ProtoMember(5)] public Dictionary<string, IsolationPayloadReference> Pictures { get; set; } = [];
+    [ProtoMember(6)] public IsolationAudioSamplesResponse? Audio { get; set; }
+    [ProtoMember(7)] public Dictionary<string, IsolationAudioSamplesResponse> Audios { get; set; } = [];
 }
 
 [ProtoContract]
@@ -656,6 +665,7 @@ public sealed class IsolationClipSnapshot
     [ProtoMember(22)] public Dictionary<string, IsolationValue> Metadata { get; set; } = [];
     [ProtoMember(23)] public string FilePath { get; set; } = string.Empty;
     [ProtoMember(24)] public float Rotation { get; set; }
+    [ProtoMember(25)] public List<int> SupportedStages { get; set; } = [];
 }
 
 [ProtoContract]
@@ -778,6 +788,7 @@ public sealed class IsolationEffectInvokeRequest
     [ProtoMember(17)] public long DurationSamples { get; set; }
     [ProtoMember(18)] public int TransformSide { get; set; }
     [ProtoMember(19)] public float ClipProgress { get; set; }
+    [ProtoMember(20)] public Dictionary<string, IsolationAudioSamplesResponse> DynamicAudio { get; set; } = [];
 }
 
 [ProtoContract]

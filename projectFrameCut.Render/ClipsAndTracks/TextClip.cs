@@ -39,6 +39,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<Stage> SupportedStages => EffectStages.Text;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public bool NeedFilePath => false;
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
@@ -394,6 +398,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         private IReadOnlyList<TextEntry> ResolveTextEntriesForRender(uint targetFrame)
         {
+            using var clipScope = ValueProviderFrameContext.PushClip(this);
             var raw = GetRawEntries(targetFrame);
             foreach (var item in (EffectsInstances ?? []).Where(e => e.Enabled && (e is ITextEffect or IContinuousTextEffect)).OrderBy(e => e.Index))
             {
@@ -413,6 +418,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                         : Duration <= 1 ? 0 : Math.Clamp(targetFrame / (float)(Duration - 1), 0, 1));
                 }
             }
+            EffectStagePlan?.Complete(this, Stage.Text, VectorPictureEffectProcessing.GetTargetFrame(this, targetFrame));
             return raw;
         }
 

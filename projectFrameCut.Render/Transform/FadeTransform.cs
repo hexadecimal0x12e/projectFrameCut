@@ -29,6 +29,8 @@ public class FadeTransformProvider : TransformEffectProviderBase
 
 public abstract class TransformEffectProviderBase : EffectProviderBase
 {
+    public override IReadOnlyList<Stage> SupportedStages => [Stage.Transform];
+
     public override bool IsDeterministic => true;
 
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;

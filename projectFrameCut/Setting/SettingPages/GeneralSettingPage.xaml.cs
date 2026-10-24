@@ -4,6 +4,7 @@
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
+using projectFrameCut.Asset;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -21,6 +22,7 @@ public partial class GeneralSettingPage : ContentPage
     public PropertyPanelBuilder rootPPB;
     private string[] locates;
     private Dictionary<string, string> overrideOpts, themeOpts;
+    private Dictionary<string, string> assetImportModeOpts = new();
     private Dictionary<string, string> locateDisplayNameMapping = new(), FFmpegProviderDisplayNameMapping = new(), OrderOptionStringMapping = new();
     public GeneralSettingPage()
     {
@@ -60,6 +62,12 @@ public partial class GeneralSettingPage : ContentPage
             { Localized.AssetPage_OrderBy_Name, "name" },
 
         };
+        assetImportModeOpts = new Dictionary<string, string>
+        {
+            { "ask", SettingLocalizedResources.General_AssetImportMode_Ask },
+            { "copy", Localized.DraftPage_AssetPanel_ImportCopy },
+            { "reference", Localized.DraftPage_AssetPanel_ImportReference }
+        };
         if (!SettingsManager.IsSettingExists("render_EnableScreenSaver"))
         {
 #if ANDROID || IOS //oled screen, avoid burn-in
@@ -78,6 +86,7 @@ public partial class GeneralSettingPage : ContentPage
             .AddPicker("ui_defaultTheme", SettingLocalizedResources.GeneralUI_DefaultTheme, themeOpts.Values.ToArray(), themeOpts[GetSetting("ui_defaultTheme", "default")])
             .AddSlider("ui_defaultWidthOfContent", SettingLocalizedResources.GeneralUI_DefaultWidthOfContent, -10, 10, PropertyPanelBuilder.DefaultWidthOfContent)
             .AddPicker("Edit_AddView_DefaultOrderOption", SettingLocalizedResources.Edit_AddView_DefaultOrderOption, OrderOptionStringMapping.Keys.ToArray(), OrderOptionStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_AddView_DefaultOrderOption", "date"), new KeyValuePair<string, string>(Localized.AssetPage_OrderBy_AddDate, "date")).Key, null)
+            .AddPicker(AssetDatabase.ImportModeSetting, SettingLocalizedResources.General_AssetImportMode, assetImportModeOpts.Values.ToArray(), assetImportModeOpts.GetValueOrDefault(GetSetting(AssetDatabase.ImportModeSetting, "ask"), assetImportModeOpts["ask"]))
             .AddCheckbox("render_EnableScreenSaver", SettingLocalizedResources.Render_EnableScreenSaver, IsBoolSettingTrue("render_EnableScreenSaver"), null)
 #if WINDOWS
             .AddCheckbox("General_NoRebootAfterCrash", SettingLocalizedResources.General_NoRebootAfterCrash(), IsBoolSettingTrue("General_NoRebootAfterCrash"), null)
@@ -346,6 +355,9 @@ public partial class GeneralSettingPage : ContentPage
                         WriteSetting("Edit_AddView_DefaultOrderOption", mode);
                         return;
                     }
+                case AssetDatabase.ImportModeSetting:
+                    WriteSetting(args.Id, assetImportModeOpts.FirstOrDefault(x => x.Value == args.Value as string).Key ?? "ask");
+                    return;
                 case "ui_defaultWidthOfContent":
                     if (args.Value is double d)
                         PropertyPanelBuilder.DefaultWidthOfContent = d;

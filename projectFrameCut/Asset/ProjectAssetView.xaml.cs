@@ -8,7 +8,6 @@ using Path = System.IO.Path;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
-using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 
 namespace projectFrameCut.Asset;
 
@@ -17,13 +16,14 @@ public partial class ProjectAssetView : ContentView
     public DraftPage workingDraft;
     private ProjectAssetViewModel _viewModel;
     private bool _removingAsset;
+    private bool _addingAsset;
 
     public ProjectAssetView(ref DraftPage page)
     {
         workingDraft = page;
 
         _viewModel = new ProjectAssetViewModel(
-            addAssetCommand: new Command(async () => await AddAAsset()),
+            addAssetCommand: new Command<string>(async source => await AddAAsset(shared: source == "SharedAssets")),
             removeAssetCommand: new Command<AssetItemViewModel>(async (asset) => await OnRemoveAsset(asset)),
             addToTrackCommand: new Command<AssetItemViewModel>(async (asset) => await OnAddToTrack(asset))
         );
@@ -31,7 +31,7 @@ public partial class ProjectAssetView : ContentView
         // 设置本地化字符串
         _viewModel.LocalAssetsTitle = Localized.DraftPage_AssetPanel_LocalAssets;
         _viewModel.SharedAssetsTitle = Localized.DraftPage_AssetPanel_SharedAssets;
-        _viewModel.AddButtonText = "Add";
+        _viewModel.AddButtonText = Localized.AssetPage_AddAAsset;
 
         InitializeComponent();
         BindingContext = _viewModel;
@@ -73,8 +73,10 @@ public partial class ProjectAssetView : ContentView
         }
     }
 
-    public async Task AddAAsset(string? assetSource = null)
+    public async Task AddAAsset(string? assetSource = null, bool shared = false)
     {
+        if (_addingAsset || (workingDraft.IsReadonly && !shared)) return;
+        _addingAsset = true;
         await MainThread.InvokeOnMainThreadAsync(async () =>
         {
             workingDraft.SetStateBusy(Localized.DraftPage_WaitForUser);
@@ -87,67 +89,13 @@ public partial class ProjectAssetView : ContentView
 
                 if (result is not null)
                 {
-                    PropertyPanelBuilder optionPPB = new();
-                    optionPPB.AddText(Localized.DraftPage_AssetPanel_Add_SelectMode)
-                        .AddIconTitleDescriptionCard("Copy", null, Localized.DraftPage_AssetPanel_AsLocalAssets, Localized.DraftPage_AssetPanel_AsLocalAssets_Desc)
-                        .AddIconTitleDescriptionCard("CopyToShared", null, Localized.DraftPage_AssetPanel_AsSharedAssets, Localized.DraftPage_AssetPanel_AsSharedAssets_Desc)
-                        .AddIconTitleDescriptionCard("Reference", null, Localized.DraftPage_AssetPanel_Reference, Localized.DraftPage_AssetPanel_Reference_Desc)
-                        .AddButton("Cancel", Localized._Cancel);
-
-                    TaskCompletionSource tcs = new();
-                    bool adding = false;
-
-                    optionPPB.ListenToChanges(async (e) =>
+                    if (shared)
                     {
-                        if (adding || tcs.Task.IsCompleted || e.Id is not ("Copy" or "Reference" or "CopyToShared" or "Cancel")) return;
-                        adding = true;
-                        try
-                        {
-                            switch (e.Id)
-                            {
-                                case "Reference":
-                                    {
-                                        await AddAssetToProject(result);
-                                        break;
-                                    }
-                                case "Copy":
-                                    {
-                                        var resultPath = Path.Combine(workingDraft.WorkingPath, "assets", Guid.NewGuid().ToString("N"), Path.GetFileName(result));
-                                        if (!string.IsNullOrWhiteSpace(workingDraft.WorkingPath))
-                                        {
-                                            Directory.CreateDirectory(Path.GetDirectoryName(resultPath)!);
-                                            File.Copy(result, resultPath, true);
-                                            await AddAssetToProject(resultPath);
-                                        }
-                                        break;
-                                    }
-                                case "CopyToShared":
-                                    {
-                                        await AssetDatabase.Add(result, workingDraft);
-                                        LoadAssets(); // 重新加载共享素材
-                                        break;
-                                    }
-                            }
-                            tcs.TrySetResult();
-                        }
-                        catch (Exception ex)
-                        {
-                            tcs.TrySetException(ex);
-                        }
-                    });
-
-                    await workingDraft.ShowACenteredPopup(600, 400, optionPPB.Build());
-                    try
-                    {
-                        using var cts = new CancellationTokenSource();
-                        cts.CancelAfter(60 * 1000);
-                        await tcs.Task.WaitAsync(cts.Token);
+                        await AssetDatabase.Add(result, workingDraft);
+                        await workingDraft.AddClipView.RefreshAssetsAsync();
                     }
-                    catch (OperationCanceledException) { }
-                    finally
-                    {
-                        await workingDraft.HidePopup();
-                    }
+                    else await workingDraft.AddAsset(result);
+                    LoadAssets();
                 }
             }
             catch (Exception ex)
@@ -158,14 +106,9 @@ public partial class ProjectAssetView : ContentView
             finally
             {
                 workingDraft.SetStateOK();
+                _addingAsset = false;
             }
         });
-    }
-
-    private async Task AddAssetToProject(string path)
-    {
-        await workingDraft.AddAsset(path, showAssetPanel: false);
-        LoadAssets();
     }
 
     private async Task OnRemoveAsset(AssetItemViewModel assetVM)

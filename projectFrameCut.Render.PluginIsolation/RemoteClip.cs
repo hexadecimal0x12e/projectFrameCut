@@ -18,6 +18,7 @@ internal sealed class RemoteClip : IClip
         _session = session;
         _objectId = descriptor.ObjectId;
         var state = descriptor.State;
+        SupportedStages = state.SupportedStages.Select(s => (Stage)s).ToArray();
         FromPlugin = state.FromPlugin;
         ClipType = (ClipMode)state.ClipType;
         TypeName = state.TypeName;
@@ -63,6 +64,10 @@ internal sealed class RemoteClip : IClip
     public EffectProviderJSONStructure[]? EffectProviders { get; init; }
     public IEffect[]? EffectsInstances { get; set; }
     public IEffectProvider[]? EffectProvidersInstances { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IReadOnlyList<Stage> SupportedStages { get; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IEffectStagePlan? EffectStagePlan { get; set; }
     public string? FilePath { get; set; }
     public bool NeedFilePath { get; }
     public Dictionary<string, object> ExtraData { get; set; }

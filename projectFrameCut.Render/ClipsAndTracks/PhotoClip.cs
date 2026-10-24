@@ -45,6 +45,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<Stage> SupportedStages => EffectStages.Picture;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public int TargetWidth { get; set; }
         public int TargetHeight { get; set; }
         public int TargetX { get; set; }

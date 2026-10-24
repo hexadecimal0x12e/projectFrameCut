@@ -148,33 +148,33 @@ public partial class RenderSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_DefaultExportOpts, SettingLocalizedResources.Render_DefaultExportOpts_Subtitle), null)
             .AddPicker("render_DefaultResolution", Localized.RenderPage_SelectResolution, resolutions, GetSetting("render_DefaultResolution", "3840x2160"), null)
             .AddPicker("render_DefaultFramerate", Localized.RenderPage_SelectFrameRate, framerates, GetSetting("render_DefaultFramerate", "60"), null)
-            //.AddPicker("render_DefaultEncoding", Localized.RenderPage_SelectEncoding, encodings, GetSetting("render_DefaultEncoding", "h264"), null)
-            .AddPicker("render_DefaultBitDepth", Localized.RenderPage_SelectBitdepth, bitdepths, GetSetting("render_DefaultBitDepth", "8bit"), null)
+            .AddPicker("render_DefaultBitRate", Localized.RenderPage_BitRate, RenderPageViewModel.BitRateOptions.Keys.ToArray(), RenderPageViewModel.BitRateOptions.ReverseLookup(GetSetting("render_DefaultBitRate", "auto"), Localized.RenderPage_BitRateAuto))
+            .AppendWhen(GetSetting("render_DefaultBitRate", "auto") == "custom", p => p.AddEntry("render_DefaultCustomBitRateMbps", $"{Localized.RenderPage_BitRate} (Mbps)", GetSetting("render_DefaultCustomBitRateMbps", ""), Localized.RenderPage_BitRateAuto, c => c.Keyboard = Keyboard.Numeric))
             .AddSeparator()
-            .AppendWhen(!IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true), p => p.AddSlider("render_defaultMaxParallelWorkers", SettingLocalizedResources.Render_MaxParallelWorkers, 1, 64, (int)GetSettingAs<double>("render_defaultMaxParallelWorkers", 8, 8)))
-            .AddCheckbox("render_allowWorkerOversubscription", SettingLocalizedResources.Render_AllowWorkerOversubscription, IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true))
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderingBehavior, SettingLocalizedResources.Render_RenderingBehavior_Subtitle), null)
             .AppendWhen(DeviceInfo.Idiom == DeviceIdiom.Desktop, p => p.AddPicker("render_DefaultPostRenderAction", Localized.RenderPage_PostRenderAction, RenderPageViewModel.PostRenderActionNames.Keys.ToArray(), RenderPageViewModel.PostRenderActionNames.ReverseLookup(RenderPageViewModel.GetPlatformPostRenderAction(Enum.TryParse<PostRenderAction>(GetSetting("render_DefaultPostRenderAction", "None"), out var postRenderAction) ? postRenderAction : PostRenderAction.None), Localized.RenderPage_PostRenderAction_None), null))
             .AddPicker("render_preferredAntiAliasMode", SettingLocalizedResources.Render_AntiAliasMode, AntiAliasModeMapping.Keys.ToArray(), AntiAliasModeMapping.ReverseLookup(GetSetting("render_preferredAntiAliasMode", "ssaa4x"), "SSAA 4x"), null)
+            .AddPicker("render_FrameHashMode", SettingLocalizedResources.Render_FrameHashMode, FrameHashModes.Keys.ToArray(), FrameHashModes.ReverseLookup(RenderHashSettings.Mode.ToString(), SettingLocalizedResources.Render_FrameHashMode_Dynamic))
+            .AddCheckbox("render_chunkResume", SettingLocalizedResources.Render_ChunkRender_Resume, IsBoolSettingTrueOrDefault("render_chunkResume", true), p => p.IsEnabled = cacheBehavior != "disabled")
+            .AddCheckbox("render_reuseDynamicPreviewCache", SettingLocalizedResources.Render_ReuseDynamicPreviewCache, IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false))
             .AddSeparator()
-            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_ComposeOption, SettingLocalizedResources.Render_ComposeOption_Desc))
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_HwAccelOption, SettingLocalizedResources.Render_HwAccelOption_Desc))
             .AddCheckbox("render_preferHwAccelResizeProvider", SettingLocalizedResources.Render_PreferHwAccelResizeProvider, IsBoolSettingTrueOrDefault("render_preferHwAccelResizeProvider", true))
             .AddCheckbox("render_PreferDecoderCropResize", SettingLocalizedResources.Render_PreferDecoderCropResize, IsBoolSettingTrueOrDefault("render_PreferDecoderCropResize", true))
             .AddCheckbox("render_enableHwAccelRasterizer", SettingLocalizedResources.Render_EnableHwAccelRasterizer, IsBoolSettingTrueOrDefault("render_enableHwAccelRasterizer", true))
             .AddCheckbox("render_preferApproximateMixture", SettingLocalizedResources.Render_PreferApproximateMixture, IsBoolSettingTrueOrDefault("render_preferApproximateMixture", true))
             .AddSeparator()
-            .AddPicker("render_outputCacheBehavior", SettingLocalizedResources.Render_OutputCacheBehavior, OutputCacheBehaviors.Keys.ToArray(),
-                OutputCacheBehaviors.ReverseLookup(cacheBehavior, SettingLocalizedResources.Render_OutputCacheBehavior_Disabled))
-            .AppendWhen(cacheBehavior != "disabled",
-                p => p.AddCheckbox("render_chunkResume", SettingLocalizedResources.Render_ChunkRender_Resume, IsBoolSettingTrueOrDefault("render_chunkResume", true)))
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_Scheduling, SettingLocalizedResources.Render_Scheduling_Desc))
+            .AddButton(SettingLocalizedResources.Render_ScheduleBenchmark, async (_, _) => await Navigation.PushAsync(new ScheduleBenchmarkPage()))
+            .AddEntry("render_defaultMaxParallelWorkers", SettingLocalizedResources.Render_MaxParallelWorkers, GetSetting("render_defaultMaxParallelWorkers", "8"), "8", c => c.Keyboard = Keyboard.Numeric)
+            .AddEntry("render_renderAheadFrames", SettingLocalizedResources.Render_RenderAheadFrames, GetSetting("render_renderAheadFrames", "0"), SettingLocalizedResources.Render_RenderAheadFrames_Desc, c => c.Keyboard = Keyboard.Numeric)
+            .AddCheckbox("render_allowWorkerOversubscription", SettingLocalizedResources.Render_AllowWorkerOversubscription, IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true))
             .AddCheckbox("render_enableThreadAffinity", SettingLocalizedResources.Render_EnableAutoThreadAffinity, IsBoolSettingTrueOrDefault("render_enableThreadAffinity", isCPUBigLittleCore), p => p.IsEnabled = isCPUBigLittleCore)
             .AppendWhen(!isCPUBigLittleCore, c => c.AddCustomChild(new Label { Text = SettingLocalizedResources.Render_EnableAutoThreadAffinity_Unsupported, TextColor = Colors.Gray, FontSize = 12 }))
             .AddSeparator()
-            .AddPicker("render_FrameHashMode", SettingLocalizedResources.Render_FrameHashMode, FrameHashModes.Keys.ToArray(),
-                FrameHashModes.ReverseLookup(RenderHashSettings.Mode.ToString(), SettingLocalizedResources.Render_FrameHashMode_Dynamic))
-            .AddCheckbox("render_reuseDynamicPreviewCache", SettingLocalizedResources.Render_ReuseDynamicPreviewCache, IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false))
-            .AddEntry("render_maxPendingWriteFrames", SettingLocalizedResources.Render_MaxPendingWriteFrames, GetSetting("render_maxPendingWriteFrames", suggestedMaxPendingFrame.ToString()), SettingLocalizedResources.Render_MaxPendingWriteFrames_Desc, c => c.Keyboard = Keyboard.Numeric)
-            .AddCheckbox("render_enableDiskCacheRouting", SettingLocalizedResources.Render_EnableDiskBuffer, IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", false))
-            .AppendWhen(IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", false), c => c.AddEntry("render_MaxDiskBufferCount", SettingLocalizedResources.Render_MaxDiskBufferCount, GetSetting("render_MaxDiskBufferCount", "500"), SettingLocalizedResources.Render_MaxPendingWriteFrames_Desc, c => c.Keyboard = Keyboard.Numeric))
+            .AddPicker("render_outputCacheBehavior", SettingLocalizedResources.Render_OutputCacheBehavior, OutputCacheBehaviors.Keys.ToArray(), OutputCacheBehaviors.ReverseLookup(cacheBehavior, SettingLocalizedResources.Render_OutputCacheBehavior_Disabled))
+            .AddCheckbox("render_enableMemoryBudget", SettingLocalizedResources.Render_EnableMemoryBudget, RenderSchedulingSettings.EnableMemoryBudget)
+            .AddEntry("render_maxBufferedMiB", SettingLocalizedResources.Render_MaxBufferedMiB, GetSetting("render_maxBufferedMiB", "0"), SettingLocalizedResources.Render_MaxBufferedMiB_Desc, c => c.Keyboard = Keyboard.Numeric)
             .AddSeparator();
 
 #if WINDOWS || LINUX
@@ -224,14 +224,11 @@ public partial class RenderSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle))
             .AddPicker("render_AndroidHWAccelType", SettingLocalizedResources.Render_AndroidHwAccleImpType, AndroidHWAccelImpTypeMapping.Keys.ToArray(), AndroidHWAccelImpTypeMapping.ReverseLookup(GetSetting("render_AndroidHWAccelType", "vulkan"), SettingLocalizedResources.Render_AndroidHwAccleImpType_Vulkan));
 #endif
-        //rootPPB
-        //    .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderEffectImplement, SettingLocalizedResources.Render_RenderEffectImplement_Subtitle))
-        //    .AddButton(SettingLocalizedResources.RenderEffectImplement_Title, async (s, e) => await Navigation.PushAsync(new EffectImplementPickerPage()), null)
-        //    .AddSeparator();
 
         if (showMoreOpts)
         {
             rootPPB
+                .AddSeparator()
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle))
                 .AppendWhen(cacheBehavior == "chunk",
                 p => p.AddPicker("render_chunkSizeMode", SettingLocalizedResources.Render_ChunkRender_SizeMode, ChunkSizeModeMapping.Keys.ToArray(), ChunkSizeModeMapping.ReverseLookup(GetSetting("render_chunkSizeMode", "frames"), SettingLocalizedResources.Render_ChunkRender_SizeMode_Frames), null)
@@ -240,14 +237,12 @@ public partial class RenderSettingPage : ContentPage
                 .AddEntry("render_chunkParallelism", SettingLocalizedResources.Render_ChunkRender_Parallelism, GetSetting("render_chunkParallelism", "1"), SettingLocalizedResources.Render_ChunkRender_Parallelism_Desc, c => c.Keyboard = Keyboard.Numeric)
                 .AddCheckbox("render_chunkKeepFiles", SettingLocalizedResources.Render_ChunkRender_KeepFiles, IsBoolSettingTrue("render_chunkKeepFiles"))
                 .AddSeparator()
-                .AppendWhen(IsBoolSettingTrueOrDefault("render_enableDiskCacheRouting", false), c => c.AddSlider("render_DiskBufferThreshold", SettingLocalizedResources.Render_DiskBufferThreshold, 0, 1, GetSettingAs("render_DiskBufferThreshold", 0.7, 0.7)))
                 .AddEntry("Render_AudioComposeBufferSize", SettingLocalizedResources.Render_AudioComposeBufferSize, GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960).ToString(), "40960", c => c.Keyboard = Keyboard.Numeric))
                 .AddSeparator()
+                .AddEntry("render_coreAffinityOverride", SettingLocalizedResources.Render_CoreAffinityOverride, GetSetting("render_coreAffinityOverride", ""), SettingLocalizedResources.Render_CoreAffinityOverride_Desc)
                 .AddCheckbox("render_forceImpType_ForceHwAccel", SettingLocalizedResources.Render_ForceImpType_ForceHwAccel, IsBoolSettingTrueOrDefault("render_forceImpType_ForceHwAccel", true), null)
                 .AddCheckbox("render_forceImpType_ForceIPicture", SettingLocalizedResources.Render_ForceImpType_ForceIPicture, IsBoolSettingTrue("render_forceImpType_ForceIPicture"), null)
-                .AddSeparator()
-                .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.TryGetValue(int.Parse(GetSetting("render_GCOption", "0")), out var value) ? value : SettingLocalizedResources.Render_GCOption_LetCLRDoGC)
-                .AddEntry("render_coreAffinityOverride", SettingLocalizedResources.Render_CoreAffinityOverride, GetSetting("render_coreAffinityOverride", ""), SettingLocalizedResources.Render_CoreAffinityOverride_Desc);
+                .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.GetValueOrDefault(GetSettingAs("render_GCOption", 0, 0), SettingLocalizedResources.Render_GCOption_LetCLRDoGC));
 
         }
         else
@@ -291,6 +286,18 @@ public partial class RenderSettingPage : ContentPage
         {
             switch (args.Id)
             {
+                case "render_DefaultBitRate":
+                    WriteSetting(args.Id, RenderPageViewModel.BitRateOptions.GetValueOrDefault(args.Value?.ToString() ?? "", "auto"));
+                    BuildPPB();
+                    return;
+                case "render_DefaultCustomBitRateMbps":
+                    if (!RenderPageViewModel.TryParseVideoBitRate(args.Value?.ToString() ?? "", out _))
+                    {
+                        await DisplayAlertAsync(Localized._Error, Localized.RenderPage_InvalidBitRate, Localized._OK);
+                        return;
+                    }
+                    WriteSetting(args.Id, args.Value?.ToString()?.Trim() ?? "");
+                    return;
 #if WINDOWS || LINUX
                 case "accel_DeviceId":
                     {
@@ -359,6 +366,14 @@ public partial class RenderSettingPage : ContentPage
                 case "render_FrameHashMode":
                     WriteSetting(args.Id, FrameHashModes.GetValueOrDefault(args.Value?.ToString() ?? "", "Dynamic"));
                     LogDiagnostic($"Frame hash mode changed to {RenderHashSettings.Mode}.");
+                    return;
+                case "render_renderAheadFrames":
+                case "render_maxBufferedMiB":
+                    if (long.TryParse(args.Value?.ToString(), out var number) && number >= 0
+                        && number <= (args.Id == "render_renderAheadFrames" ? int.MaxValue : long.MaxValue / (1024 * 1024)))
+                    {
+                        WriteSetting(args.Id, number.ToString());
+                    }
                     return;
                 case "render_GCOption":
                     {

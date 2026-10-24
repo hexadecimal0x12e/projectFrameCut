@@ -548,6 +548,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class CropEffectProvider : EffectProviderBase
     {
+        public override IReadOnlyList<Stage> SupportedStages => [Stage.Picture];
+
         public override bool IsDeterministic => true;
 
         public CropEffectProvider()

@@ -6,6 +6,8 @@ namespace SomePublisher;
 
 public sealed class ExampleToneTrack : ISoundTrack
 {
+    public IReadOnlyList<Stage> SupportedStages => EffectStages.Audio;
+    [System.Text.Json.Serialization.JsonIgnore] public IEffectStagePlan? EffectStagePlan { get; set; }
     private ExampleAudioSource _source = new(null);
 
     public ExampleToneTrack(string id, string name)

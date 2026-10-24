@@ -567,7 +567,7 @@ public partial class DraftEffectBindingView
             var providers = EffectGroupStore.Restore(template);
             var target = _clip.SupportsNativeEffects ? _clip.GetEffectSelectionTarget(_pipeline) : _clip.GetEffectSelectionTarget();
             if (providers.Values.Any(p => !ClipInfoBuilder.CanSelectEffectProvider(p, target, hideKeyFramedProviders: true)
-                || p.GetPipeline() != _pipeline))
+                || p.Stage != _pipeline))
                 throw new InvalidOperationException(Localized.Effect_IncompatiblePipeline);
             var combined = new Dictionary<Guid, IEffectProvider>(_clip.EffectProviders ?? []);
             foreach (var p in providers) combined.Add(p.Key, p.Value);

@@ -798,6 +798,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_AllowColorAdjustAppearInEffectEditor",
+        "Value": "\u5728\u6548\u679C\u7F16\u8F91\u5668\u4E2D\u663E\u793A\u989C\u8272\u8C03\u6574",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_AlwaysShowToolbarButtons",
         "Value": "\u603B\u662F\u663E\u793A\u5DE5\u5177\u680F\u6309\u94AE",
         "Mode": "ConstString",
@@ -822,8 +830,40 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_ClipInfoTabOrder",
+        "Value": "\u7247\u6BB5\u5C5E\u6027 Tab \u987A\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_ClipInfoTabOrder_Reset",
+        "Value": "\u6062\u590D\u9ED8\u8BA4\u987A\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_ClipInfoTabOrder_Subtitle",
+        "Value": "\u5DE6\u53F3\u62D6\u62FD Tab \u8C03\u6574\u987A\u5E8F\uFF0C\u5237\u65B0\u5C5E\u6027\u9762\u677F\u540E\u751F\u6548\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Edit_DefaultInfLengthClipLength",
         "Value": "\u65E0\u9650\u957F\u5EA6\u7247\u6BB5\u7684\u9ED8\u8BA4\u957F\u5EA6 (\u5E27)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_DefaultTransformRenderOrder",
+        "Value": "\u65B0\u5EFA\u8F6C\u573A\u7684\u9ED8\u8BA4\u6E32\u67D3\u987A\u5E8F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2293,6 +2333,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_AllowWorkerOversubscription",
+        "Value": "\u5141\u8BB8\u5FC5\u8981\u65F6\u8D85\u51FA\u6E32\u67D3\u7EBF\u7A0B\u9650\u5236",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Render_AndroidHwAccleImpType",
         "Value": "\u786C\u4EF6\u52A0\u901F\u5F15\u64CE",
         "Mode": "ConstString",
@@ -2445,22 +2493,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption",
-        "Value": "\u6E32\u67D3\u9009\u9879",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "\u914D\u7F6E\u6E32\u67D3\u5668\u7684\u884C\u4E3A\uFF0C\u6765\u63D0\u9AD8\u6027\u80FD\u548C\u7A33\u5B9A\u6027",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_CoreAffinityOverride",
         "Value": "\u624B\u52A8\u914D\u7F6E Worker \u7EBF\u7A0B\u4EB2\u548C\u6027",
         "Mode": "ConstString",
@@ -2494,6 +2526,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_DeferredComposition",
+        "Value": "\u5EF6\u8FDF\u5408\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Render_DisallowPictureModeDowngrade",
         "Value": "\u4E0D\u5141\u8BB8\u964D\u7EA7IPicture\u7684\u50CF\u7D20\u6A21\u5F0F",
         "Mode": "ConstString",
@@ -2519,7 +2559,7 @@
       },
       {
         "Id": "Render_EnableAutoThreadAffinity",
-        "Value": "\u5141\u8BB8\u81EA\u52A8\u5206\u914D\u6E32\u67D3\u5668\u5230\u5408\u9002\u7684\u5904\u7406\u5668\u6838\u5FC3",
+        "Value": "\u5141\u8BB8\u81EA\u52A8\u5206\u914D\u6E32\u67D3\u5668 ",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2552,6 +2592,14 @@
       {
         "Id": "Render_EnableHwAccelRasterizer",
         "Value": "\u786C\u4EF6\u52A0\u901F\u5149\u6805\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "\u542F\u7528\u6E32\u67D3\u5185\u5B58\u9884\u7B97",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2591,7 +2639,7 @@
       },
       {
         "Id": "Render_ForceImpType_ForceHwAccel",
-        "Value": "\u5F3A\u5236\u4F7F\u7528\u786C\u4EF6\u52A0\u901F\u5B9E\u73B0\u6548\u679C",
+        "Value": "\u5F3A\u5236\u4F7F\u7528\u786C\u4EF6\u52A0\u901F\u5B9E\u73B0\u6548\u679C\uFF08\u63A8\u8350\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2600,6 +2648,30 @@
       {
         "Id": "Render_ForceImpType_ForceIPicture",
         "Value": "\u5F3A\u5236\u4F7F\u7528CPU\u5B9E\u73B0\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_FrameHashMode",
+        "Value": "\u5E27\u54C8\u5E0C\u8BA1\u7B97\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_FrameHashMode_Dynamic",
+        "Value": "\u52A8\u6001\uFF08\u63A8\u8350\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_FrameHashMode_Static",
+        "Value": "\u4EC5\u9650\u9759\u6001",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2639,8 +2711,40 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_HwAccelOption",
+        "Value": "\u786C\u4EF6\u52A0\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_HwAccelOption_Desc",
+        "Value": "\u914D\u7F6E\u786C\u4EF6\u52A0\u901F\uFF0C\u6765\u63D0\u9AD8\u6E32\u67D3\u6027\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Render_LoadingAccels",
         "Value": "\u83B7\u53D6\u53EF\u7528\u7684\u52A0\u901F\u5668\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "\u6E32\u67D3\u7F13\u51B2\u4E0A\u9650\uFF08MiB\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "0 \u8868\u793A\u81EA\u52A8\uFF0C\u4F7F\u7528\u53EF\u7528\u5185\u5B58\u7684\u4E09\u5206\u4E4B\u4E00\uFF0C\u9650\u5236\u5728 128\u20131024 MiB\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2673,6 +2777,38 @@
       {
         "Id": "Render_MaxPendingWriteFrames_Desc",
         "Value": "\u8BBE\u7F6E\u4E3A 0 \u6765\u4EE3\u8868\u65E0\u9650\u5236",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_OutputCacheBehavior",
+        "Value": "\u8F93\u51FA\u7F13\u5B58\u884C\u4E3A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_OutputCacheBehavior_Chunk",
+        "Value": "\u5757\u7F13\u5B58",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_OutputCacheBehavior_Disabled",
+        "Value": "\u7981\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_OutputCacheBehavior_Frame",
+        "Value": "\u5E27\u7F13\u5B58",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2713,6 +2849,22 @@
       {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "\u8B66\u544A\uFF1A\u6B64\u9009\u9879\u53EF\u80FD\u5BFC\u81F4\u7531\u7B2C\u4E09\u65B9\u63D2\u4EF6\u63D0\u4F9B\u7684\u7247\u6BB5\u6216\u8005\u89E3\u7801\u5668\u4EA7\u751F\u517C\u5BB9\u6027\u95EE\u9898\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "\u9884\u6E32\u67D3\u5E27\u6570",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "0 \u8868\u793A\u81EA\u52A8\uFF0C\u6839\u636E\u7EBF\u7A0B\u6570\u9009\u62E9 2\u20138 \u5E27\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2777,6 +2929,86 @@
       {
         "Id": "Render_SaveCheckpoint",
         "Value": "\u4FDD\u5B58\u6E32\u67D3\u8FC7\u7A0B\u7684\u4E2D\u95F4\u6570\u636E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ScheduleBenchmark",
+        "Value": "\u6E32\u67D3\u8C03\u5EA6\u6D4B\u8BD5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ScheduleBenchmark_Applied",
+        "Value": "\u6D4B\u8BD5\u5B8C\u6210\uFF0C\u6700\u4F73\u8C03\u5EA6\u914D\u7F6E\u5DF2\u4FDD\u5B58",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ScheduleBenchmark_Busy",
+        "Value": "\u5DF2\u6709\u8C03\u5EA6\u6D4B\u8BD5\u6B63\u5728\u8FD0\u884C\uFF0C\u8BF7\u7B49\u5F85\u5176\u7ED3\u675F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ScheduleBenchmark_Description",
+        "Value": "\u82B1\u8D39\u7EA6 5 \u5206\u949F\uFF0C\u901A\u8FC7\u8FD0\u884C\u4E00\u4E9B\u7B80\u77ED\u7684\u6D4B\u8BD5\uFF0C\u83B7\u5F97\u8FD9\u53F0\u8BBE\u5907\u4E0A\u6700\u4F73\u7684\u5BFC\u51FA\u914D\u7F6E\u3002\r\u6D4B\u8BD5\u8FC7\u7A0B\u4E2D\uFF0C\u8BF7\u4FDD\u6301\u8BBE\u5907\u8FDE\u63A5\u5230\u7535\u6E90\uFF0C\u4E0D\u8981\u5173\u95ED\u7A0B\u5E8F\u3001\u5C06\u8BBE\u5907\u5173\u673A\uFF0C\u6216\u8005\u7F6E\u4E8E\u7761\u7720/\u5F85\u673A\u6A21\u5F0F\uFF0C\u5E76\u907F\u514D\u4F7F\u7528\u5176\u4ED6\u5E94\u7528\u9020\u6210\u8D1F\u8F7D\u6CE2\u52A8\u3002\r\u201C\u6807\u51C6\u201D\u6D4B\u8BD5\u6A21\u5F0F\u4E0B\uFF0C\u53EF\u80FD\u9700\u8981\u82B1\u8D39\u6570\u4E2A\u5C0F\u65F6\uFF0C\u6D4B\u8BD5\u7684\u5177\u4F53\u8017\u65F6\u53D6\u51B3\u4E8E\u4F60\u7684\u8BBE\u5907\u6027\u80FD\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ScheduleBenchmark_Progress",
+        "Value": "\u5F53\u524D\u6E32\u67D3\u8F6E\u6B21\uFF08\u5B9E\u9645\u8F6E\u6570\u53EF\u80FD\u5C11\u4E8E\u4E0A\u9650\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ScheduleBenchmark_Quick",
+        "Value": "\u5FEB\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ScheduleBenchmark_Report",
+        "Value": "\u6D4B\u8BD5\u62A5\u544A\u76EE\u5F55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_ScheduleBenchmark_Standard",
+        "Value": "\u6807\u51C6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "\u6E32\u67D3\u5668\u8C03\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling_Desc",
+        "Value": "\u914D\u7F6E\u6E32\u67D3\u8FC7\u7A0B\u4E2D\u7684\u6027\u80FD\u8C03\u5EA6\uFF0C\u4F18\u5316\u6E32\u67D3\u6027\u80FD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3111,112 +3343,32 @@
         "DontTranslate": false
       },
       {
-        "Id": "Edit_DefaultTransformRenderOrder",
-        "Value": "\u65B0\u5EFA\u8F6C\u573A\u7684\u9ED8\u8BA4\u6E32\u67D3\u987A\u5E8F",
+        "Id": "Render_RenderingBehavior",
+        "Value": "\u6E32\u67D3\u884C\u4E3A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       },
       {
-        "Id": "Edit_ClipInfoTabOrder",
-        "Value": "\u7247\u6BB5\u5C5E\u6027 Tab \u987A\u5E8F",
+        "Id": "Render_RenderingBehavior_Subtitle",
+        "Value": "\u914D\u7F6E\u6E32\u67D3\u5668\u7684\u884C\u4E3A\uFF0C\u90E8\u5206\u914D\u7F6E\u4E5F\u4F1A\u5E94\u7528\u5230\u9884\u89C8\u5F53\u4E2D",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       },
       {
-        "Id": "Edit_ClipInfoTabOrder_Subtitle",
-        "Value": "\u5DE6\u53F3\u62D6\u62FD Tab \u8C03\u6574\u987A\u5E8F\uFF0C\u5237\u65B0\u5C5E\u6027\u9762\u677F\u540E\u751F\u6548\u3002",
+        "Id": "General_AssetImportMode",
+        "Value": "\u6DFB\u52A0\u7D20\u6750\u7684\u9ED8\u8BA4\u884C\u4E3A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       },
       {
-        "Id": "Edit_AllowColorAdjustAppearInEffectEditor",
-        "Value": "\u5728\u6548\u679C\u7F16\u8F91\u5668\u4E2D\u663E\u793A\u989C\u8272\u8C03\u6574",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Edit_ClipInfoTabOrder_Reset",
-        "Value": "\u6062\u590D\u9ED8\u8BA4\u987A\u5E8F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_FrameHashMode",
-        "Value": "\u5E27\u54C8\u5E0C\u6A21\u5F0F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_FrameHashMode_Dynamic",
-        "Value": "\u52A8\u6001\uFF08\u8BA1\u7B97\u4F9D\u8D56\u7684\u5B9E\u9645\u8F93\u51FA\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_FrameHashMode_Static",
-        "Value": "\u7EAF\u9759\u6001\uFF08\u8DF3\u8FC7\u9700\u8981\u6E32\u67D3\u7684\u7F13\u5B58\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_AllowWorkerOversubscription",
-        "Value": "\u5141\u8BB8\u5FC5\u8981\u65F6\u8D85\u51FA\u6E32\u67D3\u7EBF\u7A0B\u9650\u5236",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_DeferredComposition",
-        "Value": "\u5EF6\u8FDF\u5408\u6210",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_OutputCacheBehavior",
-        "Value": "\u8F93\u51FA\u7F13\u5B58\u884C\u4E3A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_OutputCacheBehavior_Chunk",
-        "Value": "\u5757\u7F13\u5B58",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_OutputCacheBehavior_Frame",
-        "Value": "\u5E27\u7F13\u5B58",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_OutputCacheBehavior_Disabled",
-        "Value": "\u7981\u7528",
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "\u6BCF\u6B21\u90FD\u8BE2\u95EE",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5739,24 +5891,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption",
-        "Value": "Render Options",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "Configure the renderer\u0027s behavior to improve performance and stability.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "Warning: This option may cause compatibility issues with clips or decoders provided by third-party plugins.",
         "Mode": "ConstString",
@@ -6639,6 +6773,70 @@
       {
         "Id": "Render_OutputCacheBehavior_Disabled",
         "Value": "Disabled",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "Renderer scheduling",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "Render-ahead frames",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "0 selects 2\u20138 frames automatically based on the thread count.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "Enable renderer memory budget",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "Renderer buffer limit (MiB)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "0 uses one third of available memory, limited to 128\u20131024 MiB.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode",
+        "Value": "Unset localization item:General_AssetImportMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "Unset localization item:General_AssetImportMode_Ask()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9153,24 +9351,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption",
-        "Value": "\u6E32\u67D3\u9078\u9805",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "\u8A2D\u5B9A\u6E32\u67D3\u5668\u7684\u884C\u70BA\uFF0C\u4EE5\u63D0\u5347\u6548\u80FD\u8207\u7A69\u5B9A\u6027",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "\u8B66\u544A\uFF1A\u6B64\u9078\u9805\u53EF\u80FD\u5C0E\u81F4\u7531\u7B2C\u4E09\u65B9\u5916\u639B\u7A0B\u5F0F\u63D0\u4F9B\u7684\u7247\u6BB5\u6216\u89E3\u78BC\u5668\u7522\u751F\u76F8\u5BB9\u6027\u554F\u984C\u3002",
         "Mode": "ConstString",
@@ -10062,6 +10242,70 @@
       {
         "Id": "Render_OutputCacheBehavior_Disabled",
         "Value": "Unset localization item:Render_OutputCacheBehavior_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "Unset localization item:Render_Scheduling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "Unset localization item:Render_RenderAheadFrames()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "Unset localization item:Render_RenderAheadFrames_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "Unset localization item:Render_EnableMemoryBudget()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "Unset localization item:Render_MaxBufferedMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "Unset localization item:Render_MaxBufferedMiB_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode",
+        "Value": "Unset localization item:General_AssetImportMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "Unset localization item:General_AssetImportMode_Ask()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12580,24 +12824,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption",
-        "Value": "\u63CF\u753B\u8A2D\u5B9A",
-        "Mode": "ConstString",
-        "Comment": "\u5C06\u201C\u6E32\u67D3\u9009\u9879\u201D\u8BD1\u4E3A\u201C\u63CF\u753B\u8A2D\u5B9A\u201D\uFF0C\u51CF\u5C11\u7247\u5047\u540D\u5E76\u63A7\u5236\u957F\u5EA6\u3002",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "\u63CF\u753B\u306E\u52D5\u4F5C\u3092\u8A2D\u5B9A\u3057\u3001\u6027\u80FD\u3068\u5B89\u5B9A\u6027\u3092\u5411\u4E0A\u3055\u305B\u307E\u3059\u3002",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "\u8B66\u544A\uFF1A\u3053\u306E\u30AA\u30D7\u30B7\u30E7\u30F3\u306F\u3001\u30B5\u30FC\u30C9\u30D1\u30FC\u30C6\u30A3\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u65AD\u7247\u3084\u30C7\u30B3\u30FC\u30C0\u306B\u4E92\u63DB\u6027\u554F\u984C\u3092\u5F15\u304D\u8D77\u3053\u3059\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002",
         "Mode": "ConstString",
@@ -13489,6 +13715,70 @@
       {
         "Id": "Render_OutputCacheBehavior_Disabled",
         "Value": "Unset localization item:Render_OutputCacheBehavior_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "Unset localization item:Render_Scheduling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "Unset localization item:Render_RenderAheadFrames()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "Unset localization item:Render_RenderAheadFrames_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "Unset localization item:Render_EnableMemoryBudget()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "Unset localization item:Render_MaxBufferedMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "Unset localization item:Render_MaxBufferedMiB_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode",
+        "Value": "Unset localization item:General_AssetImportMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "Unset localization item:General_AssetImportMode_Ask()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16010,24 +16300,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "\uB80C\uB354\uB7EC\uC758 \uB3D9\uC791\uC744 \uAD6C\uC131\uD558\uC5EC \uC131\uB2A5\uACFC \uC548\uC815\uC131\uC744 \uD5A5\uC0C1\uC2DC\uD0B5\uB2C8\uB2E4",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption",
-        "Value": "\uB80C\uB354\uB9C1 \uC635\uC158",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Advanced_TextAndGlobalization",
         "Value": "\uD14D\uC2A4\uD2B8 \uBC0F \uC9C0\uC5ED\uD654",
         "Mode": "ConstString",
@@ -16909,6 +17181,70 @@
       {
         "Id": "Render_OutputCacheBehavior_Disabled",
         "Value": "Unset localization item:Render_OutputCacheBehavior_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "Unset localization item:Render_Scheduling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "Unset localization item:Render_RenderAheadFrames()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "Unset localization item:Render_RenderAheadFrames_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "Unset localization item:Render_EnableMemoryBudget()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "Unset localization item:Render_MaxBufferedMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "Unset localization item:Render_MaxBufferedMiB_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode",
+        "Value": "Unset localization item:General_AssetImportMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "Unset localization item:General_AssetImportMode_Ask()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -19421,24 +19757,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "Configurer le comportement du moteur de rendu pour am\u00E9liorer les performances et la stabilit\u00E9",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption",
-        "Value": "Options de rendu",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "Avertissement : cette option peut entra\u00EEner des probl\u00E8mes de compatibilit\u00E9 avec les segments ou d\u00E9codeurs fournis par des plugins tiers.",
         "Mode": "ConstString",
@@ -20330,6 +20648,70 @@
       {
         "Id": "Render_OutputCacheBehavior_Disabled",
         "Value": "Unset localization item:Render_OutputCacheBehavior_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "Unset localization item:Render_Scheduling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "Unset localization item:Render_RenderAheadFrames()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "Unset localization item:Render_RenderAheadFrames_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "Unset localization item:Render_EnableMemoryBudget()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "Unset localization item:Render_MaxBufferedMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "Unset localization item:Render_MaxBufferedMiB_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode",
+        "Value": "Unset localization item:General_AssetImportMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "Unset localization item:General_AssetImportMode_Ask()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22846,24 +23228,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption",
-        "Value": "\u062E\u064A\u0627\u0631\u0627\u062A \u0627\u0644\u062A\u0635\u064A\u064A\u0631",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "\u062A\u0643\u0648\u064A\u0646 \u0633\u0644\u0648\u0643 \u0627\u0644\u0639\u0627\u0631\u0636 \u0644\u062A\u062D\u0633\u064A\u0646 \u0627\u0644\u0623\u062F\u0627\u0621 \u0648\u0627\u0644\u0627\u0633\u062A\u0642\u0631\u0627\u0631",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "\u062A\u062D\u0630\u064A\u0631: \u0642\u062F \u064A\u0624\u062F\u064A \u0647\u0630\u0627 \u0627\u0644\u062E\u064A\u0627\u0631 \u0625\u0644\u0649 \u0645\u0634\u0627\u0643\u0644 \u062A\u0648\u0627\u0641\u0642 \u0645\u0639 \u0627\u0644\u0645\u0642\u0627\u0637\u0639 \u0623\u0648 \u0648\u062D\u062F\u0627\u062A \u0641\u0643 \u0627\u0644\u062A\u0631\u0645\u064A\u0632 \u0627\u0644\u0645\u0642\u062F\u0645\u0629 \u0645\u0646 \u0627\u0644\u0625\u0636\u0627\u0641\u0627\u062A \u0627\u0644\u062E\u0627\u0631\u062C\u064A\u0629.",
         "Mode": "ConstString",
@@ -23754,6 +24118,70 @@
       {
         "Id": "Render_OutputCacheBehavior_Disabled",
         "Value": "Unset localization item:Render_OutputCacheBehavior_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "Unset localization item:Render_Scheduling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "Unset localization item:Render_RenderAheadFrames()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "Unset localization item:Render_RenderAheadFrames_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "Unset localization item:Render_EnableMemoryBudget()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "Unset localization item:Render_MaxBufferedMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "Unset localization item:Render_MaxBufferedMiB_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode",
+        "Value": "Unset localization item:General_AssetImportMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "Unset localization item:General_AssetImportMode_Ask()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26266,26 +26694,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "Konfiguriert das Verhalten des Renderers, um Leistung und Stabilit\u00E4t zu verbessern.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "Warnung: Diese Option kann zu Kompatibilit\u00E4tsproblemen mit von Drittanbieter-Plugins bereitgestellten Segmenten oder Decodern f\u00FChren.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption",
-        "Value": "Renderoptionen",
         "Mode": "ConstString",
         "Comment": "",
         "Args": [],
@@ -27174,6 +27584,70 @@
       {
         "Id": "Render_OutputCacheBehavior_Disabled",
         "Value": "Unset localization item:Render_OutputCacheBehavior_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "Unset localization item:Render_Scheduling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "Unset localization item:Render_RenderAheadFrames()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "Unset localization item:Render_RenderAheadFrames_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "Unset localization item:Render_EnableMemoryBudget()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "Unset localization item:Render_MaxBufferedMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "Unset localization item:Render_MaxBufferedMiB_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode",
+        "Value": "Unset localization item:General_AssetImportMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "Unset localization item:General_AssetImportMode_Ask()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29688,24 +30162,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "Configura el comportamiento del renderizador para mejorar el rendimiento y la estabilidad.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption",
-        "Value": "Opciones de renderizado",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "Advertencia: Esta opci\u00F3n puede causar problemas de compatibilidad con fragmentos o decodificadores proporcionados por complementos de terceros.",
         "Mode": "ConstString",
@@ -30597,6 +31053,70 @@
       {
         "Id": "Render_OutputCacheBehavior_Disabled",
         "Value": "Unset localization item:Render_OutputCacheBehavior_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "Unset localization item:Render_Scheduling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "Unset localization item:Render_RenderAheadFrames()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "Unset localization item:Render_RenderAheadFrames_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "Unset localization item:Render_EnableMemoryBudget()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "Unset localization item:Render_MaxBufferedMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "Unset localization item:Render_MaxBufferedMiB_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode",
+        "Value": "Unset localization item:General_AssetImportMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "Unset localization item:General_AssetImportMode_Ask()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -33110,24 +33630,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption",
-        "Value": "Opzioni di rendering",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "Configura il comportamento del renderer per migliorare le prestazioni e la stabilit\u00E0.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "Attenzione: questa opzione potrebbe causare problemi di compatibilit\u00E0 con i frammenti o i decoder forniti da plugin di terze parti.",
         "Mode": "ConstString",
@@ -34019,6 +34521,70 @@
       {
         "Id": "Render_OutputCacheBehavior_Disabled",
         "Value": "Unset localization item:Render_OutputCacheBehavior_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "Unset localization item:Render_Scheduling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "Unset localization item:Render_RenderAheadFrames()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "Unset localization item:Render_RenderAheadFrames_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "Unset localization item:Render_EnableMemoryBudget()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "Unset localization item:Render_MaxBufferedMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "Unset localization item:Render_MaxBufferedMiB_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode",
+        "Value": "Unset localization item:General_AssetImportMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "Unset localization item:General_AssetImportMode_Ask()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36532,24 +37098,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption",
-        "Value": "Opcje renderowania",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "Skonfiguruj zachowanie renderera, aby poprawi\u0107 wydajno\u015B\u0107 i stabilno\u015B\u0107.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "Ostrze\u017Cenie: Ta opcja mo\u017Ce powodowa\u0107 problemy ze zgodno\u015Bci\u0105 fragment\u00F3w lub dekoder\u00F3w dostarczanych przez wtyczki innych firm.",
         "Mode": "ConstString",
@@ -37441,6 +37989,70 @@
       {
         "Id": "Render_OutputCacheBehavior_Disabled",
         "Value": "Unset localization item:Render_OutputCacheBehavior_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "Unset localization item:Render_Scheduling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "Unset localization item:Render_RenderAheadFrames()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "Unset localization item:Render_RenderAheadFrames_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "Unset localization item:Render_EnableMemoryBudget()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "Unset localization item:Render_MaxBufferedMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "Unset localization item:Render_MaxBufferedMiB_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode",
+        "Value": "Unset localization item:General_AssetImportMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "Unset localization item:General_AssetImportMode_Ask()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39954,24 +40566,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "Configura o comportamento do renderizador para melhorar o desempenho e a estabilidade.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption",
-        "Value": "Op\u00E7\u00F5es de renderiza\u00E7\u00E3o",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "Aviso: Esta op\u00E7\u00E3o pode causar problemas de compatibilidade com fragmentos ou decodificadores fornecidos por plugins de terceiros.",
         "Mode": "ConstString",
@@ -40863,6 +41457,70 @@
       {
         "Id": "Render_OutputCacheBehavior_Disabled",
         "Value": "Unset localization item:Render_OutputCacheBehavior_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "Unset localization item:Render_Scheduling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "Unset localization item:Render_RenderAheadFrames()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "Unset localization item:Render_RenderAheadFrames_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "Unset localization item:Render_EnableMemoryBudget()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "Unset localization item:Render_MaxBufferedMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "Unset localization item:Render_MaxBufferedMiB_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode",
+        "Value": "Unset localization item:General_AssetImportMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "Unset localization item:General_AssetImportMode_Ask()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -43380,24 +44038,6 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430 \u043F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u044F \u0440\u0435\u043D\u0434\u0435\u0440\u0435\u0440\u0430 \u0434\u043B\u044F \u043F\u043E\u0432\u044B\u0448\u0435\u043D\u0438\u044F \u043F\u0440\u043E\u0438\u0437\u0432\u043E\u0434\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u0438 \u0438 \u0441\u0442\u0430\u0431\u0438\u043B\u044C\u043D\u043E\u0441\u0442\u0438.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption",
-        "Value": "\u041F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B \u0440\u0435\u043D\u0434\u0435\u0440\u0438\u043D\u0433\u0430",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "\u041F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0435\u043D\u0438\u0435: \u044D\u0442\u0430 \u043E\u043F\u0446\u0438\u044F \u043C\u043E\u0436\u0435\u0442 \u043F\u0440\u0438\u0432\u0435\u0441\u0442\u0438 \u043A \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430\u043C \u0441\u043E\u0432\u043C\u0435\u0441\u0442\u0438\u043C\u043E\u0441\u0442\u0438 \u0441 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430\u043C\u0438 \u0438\u043B\u0438 \u0434\u0435\u043A\u043E\u0434\u0435\u0440\u0430\u043C\u0438, \u043F\u0440\u0435\u0434\u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u043C\u044B\u043C\u0438 \u0441\u0442\u043E\u0440\u043E\u043D\u043D\u0438\u043C\u0438 \u043F\u043B\u0430\u0433\u0438\u043D\u0430\u043C\u0438.",
         "Mode": "ConstString",
@@ -44289,6 +44929,70 @@
       {
         "Id": "Render_OutputCacheBehavior_Disabled",
         "Value": "Unset localization item:Render_OutputCacheBehavior_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "Unset localization item:Render_Scheduling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "Unset localization item:Render_RenderAheadFrames()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "Unset localization item:Render_RenderAheadFrames_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "Unset localization item:Render_EnableMemoryBudget()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "Unset localization item:Render_MaxBufferedMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "Unset localization item:Render_MaxBufferedMiB_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode",
+        "Value": "Unset localization item:General_AssetImportMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "Unset localization item:General_AssetImportMode_Ask()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -46804,26 +47508,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "Render_ComposeOption",
-        "Value": "Render Se\u00E7enekleri",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
         "Id": "Render_PrepareInWorkerThreads_3rdPluginWarn",
         "Value": "Uyar\u0131: Bu se\u00E7enek, \u00FC\u00E7\u00FCnc\u00FC taraf eklentiler taraf\u0131ndan sa\u011Flanan par\u00E7alar veya kod \u00E7\u00F6z\u00FCc\u00FCler ile uyumluluk sorunlar\u0131na neden olabilir.",
-        "Mode": "ConstString",
-        "Comment": "",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
-      },
-      {
-        "Id": "Render_ComposeOption_Desc",
-        "Value": "Performans\u0131 ve kararl\u0131l\u0131\u011F\u0131 art\u0131rmak i\u00E7in olu\u015Fturucunun davran\u0131\u015F\u0131n\u0131 yap\u0131land\u0131r\u0131n.",
         "Mode": "ConstString",
         "Comment": "",
         "Args": [],
@@ -47713,6 +48399,70 @@
       {
         "Id": "Render_OutputCacheBehavior_Disabled",
         "Value": "Unset localization item:Render_OutputCacheBehavior_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_Scheduling",
+        "Value": "Unset localization item:Render_Scheduling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames",
+        "Value": "Unset localization item:Render_RenderAheadFrames()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_RenderAheadFrames_Desc",
+        "Value": "Unset localization item:Render_RenderAheadFrames_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_EnableMemoryBudget",
+        "Value": "Unset localization item:Render_EnableMemoryBudget()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB",
+        "Value": "Unset localization item:Render_MaxBufferedMiB()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_MaxBufferedMiB_Desc",
+        "Value": "Unset localization item:Render_MaxBufferedMiB_Desc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode",
+        "Value": "Unset localization item:General_AssetImportMode()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_AssetImportMode_Ask",
+        "Value": "Unset localization item:General_AssetImportMode_Ask()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

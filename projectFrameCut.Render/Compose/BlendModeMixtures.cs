@@ -349,8 +349,10 @@ namespace projectFrameCut.Render.Compose
     /// <c>MixtureType + "Mixture"</c>. The legacy standalone <c>"BlendModeMixture"</c> type (with a selectable
     /// <c>MixtureType</c> parameter) is represented by an instance with <see cref = "ProviderTypeName"/> set.
     /// </summary>
-    public class BlendModeMixtureProvider : EffectProviderBase
+    public class BlendModeMixtureProvider : MixtureProviderBase
     {
+        public override IReadOnlyList<Stage> SupportedStages => [Stage.Mixture];
+
         public override bool IsDeterministic => true;
 
         public BlendModeMixtureProvider()
@@ -367,9 +369,6 @@ namespace projectFrameCut.Render.Compose
         public override EffectType TypeOfEffect => EffectType.MixtureProvider;
         public override EffectTarget Target => EffectTarget.Mixture;
         public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-
-        protected override IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> DefineInFields() =>
-            new Dictionary<string, EffectArgumentFieldDescriptor>();
 
         protected override IReadOnlyList<EffectArgumentFieldDescriptor> DefineFields() => ProviderTypeName is "BlendModeMixture" or "OverlayBlend"
             ? [Field("MixtureType", EffectArgumentFieldType.String | EffectArgumentFieldType.CannotBeDynamic,

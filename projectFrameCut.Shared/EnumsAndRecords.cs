@@ -87,6 +87,20 @@ namespace projectFrameCut.Shared
         InternalUse = 1 << 19,
     }
 
+    public enum Stage
+    {
+        SpeedVariance,
+        ClipArguments,
+        Text,
+        VectorComponent,
+        VectorPicture,
+        SourceReplacement,
+        Picture,
+        Audio,
+        Transform,
+        Mixture,
+    }
+
     public enum EffectPipeline
     {
         Picture,

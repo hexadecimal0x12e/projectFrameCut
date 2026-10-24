@@ -6,7 +6,7 @@ using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.PreviewAudio;
 
-public sealed class PreviewAudioSession(IAudioPreviewSinkFactory sinkFactory, ISoundTrack[] soundTracks, uint duration) : IAsyncDisposable
+public sealed class PreviewAudioSession(IAudioPreviewSinkFactory sinkFactory, ISoundTrack[] soundTracks, uint duration, AudioSampleSource? audioSamples = null) : IAsyncDisposable
 {
     public const int SampleRate = 48000;
     public const int Channels = 2;
@@ -120,6 +120,7 @@ public sealed class PreviewAudioSession(IAudioPreviewSinkFactory sinkFactory, IS
             {
                 Clips = [],
                 SoundTracks = soundTracks,
+                SampleSource = audioSamples?.FrameRate == _frameRate ? audioSamples : null,
                 Writer = writer,
                 StartFrame = _startFrame,
                 Duration = remaining,

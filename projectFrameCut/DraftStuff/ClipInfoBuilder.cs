@@ -162,6 +162,7 @@ namespace projectFrameCut.DraftStuff
             tabbedView = new();
             tabbedView.Background = page.Background;
             var tabs = new List<TabbedViewItem>();
+            EffectStageUI.Resolve(clip, page);
             if (clip.ClipType == ClipMode.VideoClip) page.EnsureGeneratedSoundTrack(clip);
             tabs.Add(new TabbedViewItem
             {
@@ -169,20 +170,13 @@ namespace projectFrameCut.DraftStuff
                 Content = BuildGeneralTab(clip, handler),
                 Tag = "general"
             });
-            Func<View>? buildSourceProperties = clip.ClipType switch
-            {
-                ClipMode.VideoClip => () => BuildVideoSourcePropertiesTab(clip, handler),
-                ClipMode.SolidColorClip => () => BuildSolidColorSourcePropertiesTab(clip, handler),
-                ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => () => BuildVectorSourcePropertiesTab(clip, handler),
-                ClipMode.MaskClip => () => BuildMaskSourcePropertiesTab(clip, handler),
-                ClipMode.TextClip or ClipMode.SubtitleClip => () => BuildVectorAntiAliasProperties(clip, handler, false).BuildWithScrollView(),
-                _ => null
-            };
-            if (buildSourceProperties is not null)
+            if (clip.ClipType is ClipMode.VideoClip or ClipMode.SolidColorClip or ClipMode.VectorCanvasClip
+                or ClipMode.VectorComponentClip or ClipMode.MaskClip or ClipMode.TextClip or ClipMode.SubtitleClip
+                || clip.ClipType != ClipMode.MarkingClip && clip.SupportedStages.Contains(Stage.SourceReplacement))
                 tabs.Add(new TabbedViewItem
                 {
                     Header = PPLocalizedResources.Tabs_SourceProperties,
-                    LazyContentFactory = buildSourceProperties,
+                    LazyAsyncContentFactory = () => BuildSourcePropertiesTab(clip, handler),
                     Tag = "sourceProperties"
                 });
             if (clip.ClipType == ClipMode.AudioClip || (clip.ClipType == ClipMode.VideoClip && page.GetBoundSoundTrack(clip) is not null))
@@ -891,6 +885,8 @@ namespace projectFrameCut.DraftStuff
             public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
             public EffectType TypeOfEffect => EffectType.NotSpecified;
             public EffectTarget Target => EffectTarget.Video;
+            public IReadOnlyList<Stage> SupportedStages => [Stage.Picture];
+            public Stage Stage { get; set; } = Stage.Picture;
 
             public IReadOnlyDictionary<string, EffectArgumentFieldDescriptor> InFields => new Dictionary<string, EffectArgumentFieldDescriptor>();
             public EffectArgumentFieldDescriptor OutField => new EffectArgumentFieldDescriptor

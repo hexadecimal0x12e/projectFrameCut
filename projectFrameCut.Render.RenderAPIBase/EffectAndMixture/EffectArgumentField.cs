@@ -182,6 +182,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>A device-resident image represented by <see cref="IHwAccelPicture"/>.</summary>
         HwAccelPicture = IPicture | (1 << 14),
 
+        /// <summary>Floating-point audio samples represented by <see cref="Shared.IAudioSamples{T}"/>.</summary>
+        AudioSample = 1 << 15,
+
         /// <summary>
         /// Indicate that the field is a mandatory field, which means it must be set before the effect can be applied.
         /// </summary>

@@ -84,6 +84,8 @@ public interface IRenderClient : IAsyncDisposable
     ValueTask<PreviewAudioClock> ControlPreviewAudioAsync(PreviewAudioCommandRequest request, CancellationToken cancellationToken = default);
     ValueTask<PreviewAudioClock> GetPreviewAudioClockAsync(PreviewAudioClockRequest request, CancellationToken cancellationToken = default);
     ValueTask<RenderArtifact> RenderClipPreviewAsync(ClipPreviewRequest request, CancellationToken cancellationToken = default);
+    ValueTask<TimelineThumbnailsResponse> GenerateTimelineThumbnailsAsync(TimelineThumbnailsRequest request, CancellationToken cancellationToken = default)
+        => ValueTask.FromException<TimelineThumbnailsResponse>(new NotSupportedException("This render client does not support timeline thumbnails."));
     ValueTask<ClipPreviewBatchResponse> RenderClipPreviewBatchAsync(ClipPreviewBatchRequest request, CancellationToken cancellationToken = default);
     ValueTask<DynamicPreviewSession> StartDynamicPreviewAsync(StartDynamicPreviewRequest request, CancellationToken cancellationToken = default);
     ValueTask StopDynamicPreviewAsync(StopDynamicPreviewRequest request, CancellationToken cancellationToken = default);
@@ -212,6 +214,7 @@ public sealed class RenderClient : IRenderClient
     public ValueTask<PreviewAudioClock> ControlPreviewAudioAsync(PreviewAudioCommandRequest request, CancellationToken ct = default) => SendAsync<PreviewAudioCommandRequest, PreviewAudioClock>(RenderOperation.ControlPreviewAudio, request, ct);
     public ValueTask<PreviewAudioClock> GetPreviewAudioClockAsync(PreviewAudioClockRequest request, CancellationToken ct = default) => SendAsync<PreviewAudioClockRequest, PreviewAudioClock>(RenderOperation.GetPreviewAudioClock, request, ct);
     public ValueTask<RenderArtifact> RenderClipPreviewAsync(ClipPreviewRequest request, CancellationToken ct = default) => SendAsync<ClipPreviewRequest, RenderArtifact>(RenderOperation.RenderClipPreview, request, ct);
+    public ValueTask<TimelineThumbnailsResponse> GenerateTimelineThumbnailsAsync(TimelineThumbnailsRequest request, CancellationToken ct = default) => SendAsync<TimelineThumbnailsRequest, TimelineThumbnailsResponse>(RenderOperation.GenerateTimelineThumbnails, request, ct);
     public ValueTask<ClipPreviewBatchResponse> RenderClipPreviewBatchAsync(ClipPreviewBatchRequest request, CancellationToken ct = default) => SendAsync<ClipPreviewBatchRequest, ClipPreviewBatchResponse>(RenderOperation.RenderClipPreviewBatch, request, ct);
     public ValueTask<DynamicPreviewSession> StartDynamicPreviewAsync(StartDynamicPreviewRequest request, CancellationToken ct = default) => SendAsync<StartDynamicPreviewRequest, DynamicPreviewSession>(RenderOperation.StartDynamicPreview, request, ct);
     public async ValueTask StopDynamicPreviewAsync(StopDynamicPreviewRequest request, CancellationToken ct = default) { _ = await SendAsync<StopDynamicPreviewRequest, EmptyResponse>(RenderOperation.StopDynamicPreview, request, ct).ConfigureAwait(false); }

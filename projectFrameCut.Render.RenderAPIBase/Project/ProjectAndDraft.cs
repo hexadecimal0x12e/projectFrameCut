@@ -408,6 +408,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     {
         public string Name { get; set; } = string.Empty;
         public string? Path { get; set; }
+        public bool IsReference { get; set; }
         public string? SourceHash { get; set; }
         private AssetType assetType = AssetType.Other;
         public AssetType AssetType
@@ -520,7 +521,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" => AssetType.Image,
                 ".svg" or ".pjfcvec" => AssetType.VectorComposition,
                 ".srt" or ".vtt" or ".ass" or ".ssa" => AssetType.Subtitle,
-                ".ttf" or ".otf" => AssetType.Font,
+                ".ttf" or ".otf" or ".ttc" => AssetType.Font,
                 _ => AssetType.Other
             };
         }

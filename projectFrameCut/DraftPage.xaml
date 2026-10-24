@@ -205,6 +205,9 @@
             </MenuFlyoutItem>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Manage}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8b8;}" Command="{Binding ManageReferenceLinesCommand}" />
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_ReferenceLines_Clear}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14c;}" Command="{Binding ClearReferenceLinesCommand}" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Timeline_AddTrack}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe145;}" Command="{Binding AddTrackCommand}" />
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Timeline_AddSubTrack}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe145;}" Command="{Binding AddSubTrackCommand}" />
         </MenuBarItem>
         <MenuBarItem x:Name="ViewMenuBarItem" Text="{l:Localized Key=DraftPage_MenuBar_View}">
             <MenuFlyoutSeparator></MenuFlyoutSeparator>

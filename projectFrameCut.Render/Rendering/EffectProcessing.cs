@@ -18,6 +18,9 @@ namespace projectFrameCut.Render.Rendering
 {
     public static class EffectProcessing
     {
+        public static IDisposable OpenAudioFrame(AudioSampleSource? source)
+            => ValueProviderFrameContext.PushAudioSource(source is null ? null : source.ReadFrame);
+
         // ---- 水印缓存（按源尺寸缓存不同分辨率的渲染结果） ----
         private static readonly Dictionary<(int Width, int Height), IPicture> _watermarkCache = new();
         private static readonly List<(int, int)> _watermarkKeys = new(); // FIFO 淘汰顺序

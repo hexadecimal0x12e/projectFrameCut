@@ -32,11 +32,51 @@ public sealed class NamedPipeRenderServer(
         }
     }
 
+    public async Task RunExternalAsync(string token, string? expectedParentPid = null, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(token) || token.Length != 64 || !token.All(Uri.IsHexDigit))
+            throw new ArgumentException("External RPC token must contain exactly 64 hexadecimal characters.", nameof(token));
+
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var parentMonitor = StartParentMonitor(expectedParentPid, lifetime);
+        var connections = new List<Task>();
+        try
+        {
+            while (true)
+            {
+                lifetime.Token.ThrowIfCancellationRequested();
+                var pipe = new NamedPipeServerStream(RenderProtocol.AdditionalPipePrefix + token, PipeDirection.InOut,
+                    NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                try
+                {
+                    await pipe.WaitForConnectionAsync(lifetime.Token).ConfigureAwait(false);
+                }
+                catch
+                {
+                    await pipe.DisposeAsync().ConfigureAwait(false);
+                    throw;
+                }
+                connections.Add(HandleConnectionAsync(pipe, token, _service, lifetime.Token));
+                for (var i = connections.Count - 1; i >= 0; i--)
+                {
+                    if (!connections[i].IsCompleted) continue;
+                    await connections[i].ConfigureAwait(false);
+                    connections.RemoveAt(i);
+                }
+            }
+        }
+        finally
+        {
+            lifetime.Cancel();
+            try { await Task.WhenAll(connections).ConfigureAwait(false); }
+            finally { await parentMonitor.ConfigureAwait(false); }
+        }
+    }
+
     private static async Task RunListenerAsync(string pipeName, string token, IRenderService service, CancellationToken cancellationToken, TaskCompletionSource? ready = null, Guid expectedExternalClientId = default, Func<string, bool, NamedPipeServerStream>? pipeFactory = null, bool isolated = false)
     {
         try
         {
-            var connected = false;
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -46,108 +86,7 @@ public sealed class NamedPipeRenderServer(
                 var waiting = pipe.WaitForConnectionAsync(cancellationToken);
                 ready?.TrySetResult();
                 await waiting.ConfigureAwait(false);
-                using var closeOnCancel = cancellationToken.Register(() => pipe.Dispose());
-
-                try
-                {
-                    using var handshakeTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    handshakeTimeout.CancelAfter(TimeSpan.FromSeconds(10));
-                    var handshakeBytes = await RenderPipeFrame.ReadAsync(pipe, handshakeTimeout.Token).ConfigureAwait(false)
-                        ?? throw new RenderPipeException("Render client closed the pipe during handshake.");
-                    var handshake = RenderRpcSerializer.Deserialize<RenderPipeHandshake>(handshakeBytes);
-                    var accepted = handshake.ProtocolVersion == RenderProtocol.PipeProtocolVersion
-                        && string.Equals(handshake.Token, token, StringComparison.Ordinal)
-                        && !string.IsNullOrWhiteSpace(handshake.ClientId)
-                        && (expectedExternalClientId == Guid.Empty || string.Equals(handshake.ClientId, expectedExternalClientId.ToString("D"), StringComparison.OrdinalIgnoreCase));
-                    var handshakeResponse = new RenderPipeHandshake
-                    {
-                        ProtocolVersion = RenderProtocol.PipeProtocolVersion,
-                        ClientId = handshake.ClientId,
-                        Accepted = accepted,
-                        Error = accepted ? string.Empty : "Render pipe handshake was rejected.",
-                        Capabilities = accepted ? new RenderCapabilities
-                        {
-                            ProtocolVersion = RenderProtocol.CurrentVersion,
-                            MinimumProtocolVersion = RenderProtocol.MinimumSupportedVersion,
-                        } : null,
-                    };
-                    await RenderPipeFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(handshakeResponse), handshakeTimeout.Token).ConfigureAwait(false);
-                    if (!accepted) continue;
-                    connected = true;
-                    if (service is IExternalRpcAuthorizationHost authorizationHost)
-                        authorizationHost.SetAuthorizations(handshake.PersistentAuthorizations);
-                    if (service is IRenderConnectionObserver observer) observer.Connected(handshake.ClientId);
-
-                    using var connectionCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    var writeGate = new SemaphoreSlim(1, 1);
-                    var callbacks = new ConnectionCallbacks(pipe, writeGate, connectionCancellation.Token);
-                    var externalConnection = service is IExternalVideoSourceConnectionHost host
-                        ? host.Connect(handshake.ClientId, callbacks.InvokeAsync)
-                        : null;
-                    var requests = new List<Task>();
-                    var requestCancellations = new ConcurrentDictionary<Guid, CancellationTokenSource>();
-                    try
-                    {
-                        while (pipe.IsConnected && !connectionCancellation.IsCancellationRequested)
-                        {
-                            var bytes = await RenderPipeFrame.ReadAsync(pipe, connectionCancellation.Token).ConfigureAwait(false);
-                            if (bytes is null) break;
-                            var request = RenderRpcSerializer.Deserialize<RenderRequestEnvelope>(bytes);
-                            request.ClientId = handshake.ClientId;
-                            if (request.CancelRequestId != Guid.Empty)
-                            {
-                                if (requestCancellations.TryGetValue(request.CancelRequestId, out var pending))
-                                {
-                                    try { pending.Cancel(); } catch (ObjectDisposedException) { }
-                                    catch (Exception ex) { Log(ex, $"Cancel render request {request.CancelRequestId}"); }
-                                }
-                                continue;
-                            }
-                            if (request.Operation == RenderOperation.CompleteExternalVideoSourceCallback)
-                            {
-                                callbacks.Complete(RenderRpcSerializer.Deserialize<RenderResponseEnvelope>(request.Payload));
-                                continue;
-                            }
-                            var requestCts = CancellationTokenSource.CreateLinkedTokenSource(connectionCancellation.Token);
-                            if (!requestCancellations.TryAdd(request.RequestId, requestCts))
-                            {
-                                requestCts.Dispose();
-                                throw new RenderPipeException("Duplicate render request ID.");
-                            }
-                            requests.Add(Task.Run(async () =>
-                            {
-                                try
-                                {
-                                    await DispatchAndWriteAsync(service, pipe, writeGate, request, requestCts.Token, connectionCancellation.Token).ConfigureAwait(false);
-                                }
-                                finally
-                                {
-                                    requestCancellations.TryRemove(request.RequestId, out _);
-                                    requestCts.Dispose();
-                                }
-                            }));
-                            requests.RemoveAll(static task => task.IsCompleted);
-                        }
-                    }
-                    finally
-                    {
-                        connectionCancellation.Cancel();
-                        externalConnection?.Dispose();
-                        callbacks.Dispose();
-                        pipe.Dispose();
-                        try { await Task.WhenAll(requests).ConfigureAwait(false); }
-                        finally { writeGate.Dispose(); }
-                    }
-                }
-                catch (EndOfStreamException) { }
-                catch (IOException) { }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { }
-                catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested) { }
-                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
-                {
-                    Log($"Render pipe connection failed ({ex.GetType().Name}).", "warn");
-                }
-                if (connected) break;
+                if (await HandleConnectionAsync(pipe, token, service, cancellationToken, expectedExternalClientId).ConfigureAwait(false)) break;
             }
         }
         catch (Exception ex)
@@ -155,6 +94,113 @@ public sealed class NamedPipeRenderServer(
             ready?.TrySetException(new RenderPipeException($"Render pipe listener failed ({ex.GetType().Name})."));
             throw;
         }
+    }
+
+    private static async Task<bool> HandleConnectionAsync(NamedPipeServerStream pipe, string token, IRenderService service, CancellationToken cancellationToken, Guid expectedExternalClientId = default)
+    {
+        await using var connection = pipe;
+        using var closeOnCancel = cancellationToken.Register(() => pipe.Dispose());
+        var connected = false;
+        try
+        {
+            using var handshakeTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            handshakeTimeout.CancelAfter(TimeSpan.FromSeconds(10));
+            var handshakeBytes = await RenderPipeFrame.ReadAsync(pipe, handshakeTimeout.Token).ConfigureAwait(false)
+                ?? throw new RenderPipeException("Render client closed the pipe during handshake.");
+            var handshake = RenderRpcSerializer.Deserialize<RenderPipeHandshake>(handshakeBytes);
+            var accepted = handshake.ProtocolVersion == RenderProtocol.PipeProtocolVersion
+                && string.Equals(handshake.Token, token, StringComparison.Ordinal)
+                && !string.IsNullOrWhiteSpace(handshake.ClientId)
+                && (expectedExternalClientId == Guid.Empty || string.Equals(handshake.ClientId, expectedExternalClientId.ToString("D"), StringComparison.OrdinalIgnoreCase));
+            var handshakeResponse = new RenderPipeHandshake
+            {
+                ProtocolVersion = RenderProtocol.PipeProtocolVersion,
+                ClientId = handshake.ClientId,
+                Accepted = accepted,
+                Error = accepted ? string.Empty : "Render pipe handshake was rejected.",
+                Capabilities = accepted ? new RenderCapabilities
+                {
+                    ProtocolVersion = RenderProtocol.CurrentVersion,
+                    MinimumProtocolVersion = RenderProtocol.MinimumSupportedVersion,
+                } : null,
+            };
+            await RenderPipeFrame.WriteAsync(pipe, RenderRpcSerializer.Serialize(handshakeResponse), handshakeTimeout.Token).ConfigureAwait(false);
+            if (!accepted) return false;
+            connected = true;
+            if (service is IExternalRpcAuthorizationHost authorizationHost)
+                authorizationHost.SetAuthorizations(handshake.PersistentAuthorizations);
+            if (service is IRenderConnectionObserver observer) observer.Connected(handshake.ClientId);
+
+            using var connectionCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var writeGate = new SemaphoreSlim(1, 1);
+            var callbacks = new ConnectionCallbacks(pipe, writeGate, connectionCancellation.Token);
+            var externalConnection = service is IExternalVideoSourceConnectionHost host
+                ? host.Connect(handshake.ClientId, callbacks.InvokeAsync)
+                : null;
+            var requests = new List<Task>();
+            var requestCancellations = new ConcurrentDictionary<Guid, CancellationTokenSource>();
+            try
+            {
+                while (pipe.IsConnected && !connectionCancellation.IsCancellationRequested)
+                {
+                    var bytes = await RenderPipeFrame.ReadAsync(pipe, connectionCancellation.Token).ConfigureAwait(false);
+                    if (bytes is null) break;
+                    var request = RenderRpcSerializer.Deserialize<RenderRequestEnvelope>(bytes);
+                    request.ClientId = handshake.ClientId;
+                    if (request.CancelRequestId != Guid.Empty)
+                    {
+                        if (requestCancellations.TryGetValue(request.CancelRequestId, out var pending))
+                        {
+                            try { pending.Cancel(); } catch (ObjectDisposedException) { }
+                            catch (Exception ex) { Log(ex, $"Cancel render request {request.CancelRequestId}"); }
+                        }
+                        continue;
+                    }
+                    if (request.Operation == RenderOperation.CompleteExternalVideoSourceCallback)
+                    {
+                        callbacks.Complete(RenderRpcSerializer.Deserialize<RenderResponseEnvelope>(request.Payload));
+                        continue;
+                    }
+                    var requestCts = CancellationTokenSource.CreateLinkedTokenSource(connectionCancellation.Token);
+                    if (!requestCancellations.TryAdd(request.RequestId, requestCts))
+                    {
+                        requestCts.Dispose();
+                        throw new RenderPipeException("Duplicate render request ID.");
+                    }
+                    requests.Add(Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await DispatchAndWriteAsync(service, pipe, writeGate, request, requestCts.Token, connectionCancellation.Token).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            requestCancellations.TryRemove(request.RequestId, out _);
+                            requestCts.Dispose();
+                        }
+                    }));
+                    requests.RemoveAll(static task => task.IsCompleted);
+                }
+            }
+            finally
+            {
+                connectionCancellation.Cancel();
+                externalConnection?.Dispose();
+                callbacks.Dispose();
+                pipe.Dispose();
+                try { await Task.WhenAll(requests).ConfigureAwait(false); }
+                finally { writeGate.Dispose(); }
+            }
+        }
+        catch (EndOfStreamException) { }
+        catch (IOException) { }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { }
+        catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested) { }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            Log(ex, "Render pipe connection failed");
+        }
+        return connected;
     }
 
     private interface IExternalVideoSourceConnectionHost

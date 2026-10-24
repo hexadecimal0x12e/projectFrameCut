@@ -8,10 +8,17 @@ public abstract class ClipValueEndpointProvider : EffectProviderBase, IClipValue
 {
     public override bool IsDeterministic => true;
 
+    public override IReadOnlyList<Stage> SupportedStages => EffectStages.Values;
     public abstract bool IsExport { get; }
     public override string FromPlugin => InternalPluginBase.InternalPluginBaseID;
     public override EffectType TypeOfEffect => EffectType.NormalEffect;
     public override EffectTarget Target => EffectTarget.Video | EffectTarget.ValueProvider | EffectTarget.IsNotVisibleInNewEffectSelector;
+    public bool AllowCrossClip
+    {
+        get => !MetaData.TryGetValue(nameof(AllowCrossClip), out var value)
+            || bool.TryParse(value?.ToString(), out var allow) && allow;
+        set => MetaData[nameof(AllowCrossClip)] = value;
+    }
     public EffectArgumentFieldType ValueType
     {
         get => Enum.TryParse<EffectArgumentFieldType>(MetaData.GetValueOrDefault(nameof(ValueType))?.ToString(), out var type)

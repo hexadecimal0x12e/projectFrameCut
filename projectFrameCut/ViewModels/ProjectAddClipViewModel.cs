@@ -921,7 +921,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             ReplaceTemplatePlaceholders(draftNode, inputValues, templateDefaults, templateDefinitions);
             RemapAllTemplateIds(draftNode);
-            EnsurePackagedTemplateAssetsInProject(draftNode, jsonTemplate);
+            if (!await EnsurePackagedTemplateAssetsInProjectAsync(draftNode, jsonTemplate)) return;
 
             var remappedDraft = draftNode.Deserialize<DraftStructureJSON>(DraftPage.DraftJSONOption);
             if (remappedDraft is null)
@@ -1329,26 +1329,26 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         return !string.IsNullOrWhiteSpace(key);
     }
 
-    private void EnsurePackagedTemplateAssetsInProject(JsonNode draftNode, JSONBasedTemplateStructure template)
+    private async Task<bool> EnsurePackagedTemplateAssetsInProjectAsync(JsonNode draftNode, JSONBasedTemplateStructure template)
     {
         if (template.AssetHashTable is not { Count: > 0 })
         {
-            return;
+            return true;
         }
 
         if (string.IsNullOrWhiteSpace(_draftPage.WorkingPath))
         {
-            return;
+            return true;
         }
 
         var referencedAssetIds = CollectTemplateReferencedAssetIds(draftNode);
         if (referencedAssetIds.Count == 0)
         {
-            return;
+            return true;
         }
 
         var projectAssetsDir = Path.Combine(_draftPage.WorkingPath, "assets");
-        Directory.CreateDirectory(projectAssetsDir);
+        bool? copyToProject = null;
 
         var resolvedAssetPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -1375,8 +1375,15 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 extension = ".bin";
             }
 
-            var copiedPath = Path.Combine(projectAssetsDir, assetId + extension);
-            File.Copy(packagedSourcePath, copiedPath, overwrite: true);
+            copyToProject ??= await AssetDatabase.PickImportModeAsync(_draftPage);
+            if (copyToProject is null) return false;
+            var assetPath = Path.GetFullPath(packagedSourcePath);
+            if (copyToProject.Value)
+            {
+                Directory.CreateDirectory(projectAssetsDir);
+                assetPath = Path.Combine(projectAssetsDir, assetId + extension);
+                await Task.Run(() => File.Copy(packagedSourcePath, assetPath, overwrite: true));
+            }
 
             var projectAsset = AssetDatabase.Assets.TryGetValue(assetId, out var sharedAsset)
                 ? JsonSerializer.Deserialize<AssetItem>(
@@ -1386,11 +1393,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             projectAsset ??= new AssetItem();
             projectAsset.AssetId = assetId;
-            projectAsset.Path = copiedPath;
+            projectAsset.Path = assetPath;
+            projectAsset.IsReference = !copyToProject.Value;
             if (projectAsset.AssetType == AssetType.Other)
             {
-                projectAsset.AssetType = AssetItem.GetAssetType(copiedPath);
+                projectAsset.AssetType = AssetItem.GetAssetType(assetPath);
             }
+            if (projectAsset.AssetType == AssetType.Image) projectAsset.ThumbnailPath = assetPath;
 
             if (string.IsNullOrWhiteSpace(projectAsset.Name))
             {
@@ -1407,10 +1416,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
 
             _draftPage.Assets[assetId] = projectAsset;
-            resolvedAssetPaths[assetId] = copiedPath;
+            resolvedAssetPaths[assetId] = assetPath;
         }
 
         ReplaceTemplateAssetReferencesWithPaths(draftNode, resolvedAssetPaths);
+        return true;
     }
 
     private static HashSet<string> CollectTemplateReferencedAssetIds(JsonNode? node)

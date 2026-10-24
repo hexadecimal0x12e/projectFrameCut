@@ -11,6 +11,7 @@ internal sealed class SnapshotClip : IClip
 {
     public SnapshotClip(IsolationClipSnapshot source)
     {
+        SupportedStages = source.SupportedStages.Select(s => (Stage)s).ToArray();
         FromPlugin = source.FromPlugin;
         ClipType = (ClipMode)source.ClipType;
         TypeName = source.TypeName;
@@ -63,6 +64,10 @@ internal sealed class SnapshotClip : IClip
     public EffectProviderJSONStructure[]? EffectProviders { get; init; }
     public IEffect[]? EffectsInstances { get; set; }
     public IEffectProvider[]? EffectProvidersInstances { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IReadOnlyList<Stage> SupportedStages { get; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IEffectStagePlan? EffectStagePlan { get; set; }
     public string? FilePath { get; set; }
     public bool NeedFilePath { get; }
     public Dictionary<string, object> ExtraData { get; set; }

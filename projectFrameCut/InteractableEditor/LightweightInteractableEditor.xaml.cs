@@ -377,7 +377,7 @@ public partial class LightweightInteractableEditor : ContentView, IInteractableE
             _activeImage = next;
         }
 
-        private static Image CreateImage() => new()
+        private static Image CreateImage() => new PreviewImage()
         {
             Aspect = Aspect.Fill,
             InputTransparent = true,

@@ -8,6 +8,8 @@ namespace projectFrameCut.Render.Effect;
 
 public sealed class PictureChannelAverageEffectProvider : EffectProviderBase, IMultipleOutputEffectProvider
 {
+    public override IReadOnlyList<Stage> SupportedStages => [Stage.Picture];
+
     public override bool IsDeterministic => true;
 
     public PictureChannelAverageEffectProvider() => Name = "Picture Channel Average";

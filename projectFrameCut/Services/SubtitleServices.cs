@@ -10,6 +10,15 @@ public static class SubtitleServices
         var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = Localized.Subtitle_Import });
         if (file is null) return null;
         if (!SubtitleImporter.Supports(file.FileName)) throw new NotSupportedException(Localized.Subtitle_Formats);
+#if !HEADLESS
+        if (page is DraftPage draft)
+        {
+            var asset = await draft.AddAsset(file.FullPath);
+            if (asset is null) return null;
+            var subtitles = await ReadAsync(asset.Path!, page);
+            return subtitles is null ? null : (subtitles, asset.Name);
+        }
+#endif
         var result = await ReadAsync(file.OpenReadAsync, Path.GetExtension(file.FileName), page);
         return result is null ? null : (result, Path.GetFileNameWithoutExtension(file.FileName));
     }

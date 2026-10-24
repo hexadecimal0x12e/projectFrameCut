@@ -24,7 +24,7 @@
               BackgroundColor="Transparent"
               InputTransparent="False">
             <Grid x:Name="StaticPreviewHost" InputTransparent="True">
-                <Image x:Name="PreviewOverlayImage"
+                <controls:PreviewImage x:Name="PreviewOverlayImage"
                        x:FieldModifier="public"
                        Aspect="AspectFit"
                        InputTransparent="True"

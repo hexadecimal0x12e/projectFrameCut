@@ -21,6 +21,8 @@ internal static class IsolationFieldTypeCodec
                 leases.Add(lease);
                 descriptor.PictureValue = lease.Reference;
             }
+            else if (state.Parameters.GetValueOrDefault(key) is IAudioSamples samples)
+                descriptor.AudioValue = AudioPayloadCodec.WriteAsync(samples, session.Payloads, session.PreferredPayloadKind, leases).AsTask().GetAwaiter().GetResult();
             else descriptor.Value = IsolationValueConverter.FromObject(state.Parameters.GetValueOrDefault(key));
             fields.Add(descriptor);
         }
@@ -50,6 +52,8 @@ internal static class IsolationFieldTypeCodec
                 pictures.Add(picture);
                 parameters[field.Id] = picture;
             }
+            else if (field.AudioValue is not null)
+                parameters[field.Id] = await AudioPayloadCodec.ReadAsync(field.AudioValue, payloads, cancellationToken).ConfigureAwait(false);
             else parameters[field.Id] = IsolationValueConverter.ToObject(field.Value);
         }
         return new()

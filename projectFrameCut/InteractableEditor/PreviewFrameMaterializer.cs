@@ -2,6 +2,7 @@ using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Processing.Converting;
 using System.Buffers.Binary;
+using System.Security.Cryptography;
 
 namespace projectFrameCut.LivePreview;
 
@@ -135,4 +136,7 @@ internal static class PreviewFrameMaterializer
         => value <= 0.04045f ? value / 12.92f : MathF.Pow((value + 0.055f) / 1.055f, 2.4f);
 }
 
-internal sealed record ScRgbFrame(byte[] Bytes, int Width, int Height, int Stride, bool HasTransparency);
+internal sealed record ScRgbFrame(byte[] Bytes, int Width, int Height, int Stride, bool HasTransparency)
+{
+    public string ContentHash { get; } = Convert.ToHexString(SHA256.HashData(Bytes));
+}

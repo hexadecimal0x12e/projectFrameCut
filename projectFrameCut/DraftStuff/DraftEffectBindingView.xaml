@@ -24,7 +24,8 @@
                 <PinchGestureRecognizer PinchUpdated="OnCanvasPinchUpdated" />
             </Grid.GestureRecognizers>
 
-            <Picker x:Name="PipelinePicker" HorizontalOptions="Start" VerticalOptions="Start" Margin="10" ZIndex="10" />
+            <Picker x:Name="StagePicker" HorizontalOptions="Start" VerticalOptions="Start" Margin="10" ZIndex="10"
+                    SelectedIndexChanged="OnStageChanged" />
 
             <!-- Connections Layer -->
             <GraphicsView x:Name="ConnectionsLayer" 
@@ -86,7 +87,15 @@
                 </tv:TabbedViewItem>
                 <tv:TabbedViewItem Header="{l:Localized Key=Effect_ValuePassThrough}">
                     <ScrollView x:Name="ClipValuesScrollView" Padding="10">
-                        <VerticalStackLayout x:Name="ClipValuesPanel" Spacing="10"/>
+                        <VerticalStackLayout x:Name="ClipValuesContent" Spacing="10" IsVisible="False">
+                            <VerticalStackLayout x:Name="ClipValueCreationPanel" Spacing="10"/>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                                <CheckBox x:Name="EndpointAllowCrossClipCheckBox"/>
+                                <Label Grid.Column="1" Text="{l:Localized Key=Effect_EndpointAllowCrossClip}" VerticalOptions="Center"/>
+                            </Grid>
+                            <Button Text="{l:Localized Key=Effect_CreateEndpoint}" Clicked="OnCreateClipValueEndpointClicked"/>
+                            <VerticalStackLayout x:Name="ClipValuesPanel" Spacing="10"/>
+                        </VerticalStackLayout>
                     </ScrollView>
                 </tv:TabbedViewItem>
             </tv:TabbedView>

@@ -216,9 +216,11 @@ public static class ProjectExternalSourceService
         await AddAsync(page, directory);
     }
 
-    public static async Task AddAsync(DraftPage page, string directory)
+    public static async Task AddAsync(DraftPage page, string directory, bool? copyToProject = null)
     {
         if (page.IsReadonly) throw new InvalidOperationException("Project is read-only.");
+        copyToProject ??= await Asset.AssetDatabase.PickImportModeAsync(page);
+        if (copyToProject is null) return;
         if (File.Exists(directory))
         {
             if (!string.Equals(Path.GetFileName(directory), ProjectExternalSourceDatabase.ManifestFileName, StringComparison.OrdinalIgnoreCase))
@@ -235,12 +237,12 @@ public static class ProjectExternalSourceService
             if (choice is null || choice == Localized._Cancel || choice == Localized.DraftPage_DuplicatedAsset_Skip) return;
             if (choice == Localized.DraftPage_DuplicatedAsset_Relpace) replace = duplicate.ImportId;
         }
-        await ImportAsync(page, directory, replace);
+        await ImportAsync(page, directory, replace, copyToProject: copyToProject.Value);
         await page.Save(true);
     }
 
     public static async Task<ProjectExternalSourceAsset> ImportAsync(DraftPage page, string directory, Guid? replace = null,
-        bool loaded = true, CancellationToken cancellationToken = default)
+        bool loaded = true, CancellationToken cancellationToken = default, bool copyToProject = true)
     {
         if (page.IsReadonly) throw new InvalidOperationException("Project is read-only.");
         if (File.Exists(directory))
@@ -257,7 +259,7 @@ public static class ProjectExternalSourceService
             await ApplyAsync(page.WorkingPath);
         }
         ProjectExternalSourceAsset asset;
-        try { asset = await ProjectExternalSourceDatabase.ImportAsync(page.WorkingPath, directory, replace, cancellationToken); }
+        try { asset = await ProjectExternalSourceDatabase.ImportAsync(page.WorkingPath, directory, replace, cancellationToken, copyToProject); }
         catch
         {
             lock (Selections) Selections[Path.TrimEndingDirectorySeparator(Path.GetFullPath(page.WorkingPath))] = previous;

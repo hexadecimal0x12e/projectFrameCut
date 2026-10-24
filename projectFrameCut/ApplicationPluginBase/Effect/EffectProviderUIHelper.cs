@@ -29,7 +29,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                     || field.FieldType.HasFlag(EffectArgumentFieldType.InternalUseOnly)) continue;
                 bool isBound = field.IsDynamic;
                 var componentId = ComponentId(provider, field.Id);
-                if (field.FieldType.IsContent() || field.FieldType.HasFlag(EffectArgumentFieldType.Any))
+                if (field.FieldType.IsContent() || field.FieldType.HasFlag(EffectArgumentFieldType.Any)
+                    || field.FieldType.BaseType() == EffectArgumentFieldType.AudioSample)
                 {
                     panel.AddText(Label(provider, field), componentId);
                     MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
@@ -41,7 +42,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 {
                     var current = GetString(field);
                     var defaultValue = Array.IndexOf(field.PresetOptions, current) >= 0 ? current : field.PresetOptions[0];
-                    panel.AddPicker(componentId, Label(provider, field), field.PresetOptions, defaultValue);
+                    panel.AddPicker(componentId, Label(provider, field), field.PresetOptions, defaultValue,
+                        p => p.ItemDisplayBinding = new Binding(".", BindingMode.OneWay,
+                            new PresetOptionConverter($"Effect_{provider.TypeName}_{field.Id.Replace('.', '_')}_")));
                     MaybeWrapWithBind(panel, provider, field, componentId, bindingHost, isBound);
                     continue;
                 }
@@ -301,6 +304,15 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
                 if (sf.Value is int i) return i;
             }
             return 0f;
+        }
+
+        private sealed class PresetOptionConverter(string prefix) : IValueConverter
+        {
+            public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+                PluginManager.GetLocalizationItem(prefix + value, value?.ToString() ?? string.Empty);
+
+            public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+                throw new NotSupportedException();
         }
 
         private static PropertyPanelItemLabel Label(IEffectProvider provider, IEffectArgumentField field)

@@ -104,7 +104,14 @@ public sealed partial class RenderBackendService
         private readonly Func<DynamicPreviewClock, CancellationToken, ValueTask> _sendClock;
         private readonly ConcurrentQueue<(uint Frame, string Index, string? TemporaryFrame)> _entries = new();
         private IClip[][] _renderClips = [];
+        private readonly BlockingCollection<(uint Frame, Guid ClipId, CancellationToken Token, TaskCompletionSource Completion)> _jobs = new();
+        private Task[] _workers = [];
+        private readonly object _workerGate = new();
+        private int _activeWorkers;
+        private int _workerLimit;
+        private int _renderAheadFrames;
         private readonly long _bufferFrames;
+        private readonly long _startupBufferFrames;
         private readonly long _minimumBufferFrames;
         private long _nextFrame;
         private long _startedAt;
@@ -128,7 +135,8 @@ public sealed partial class RenderBackendService
             _cacheRoot = owner._artifacts.ResolveProjectPath(session.ProjectRoot, playback.CacheDirectory);
             _operation = session.BeginOperation(_cancellation.Token);
             _bufferFrames = Math.Max(1L, (long)Math.Ceiling(request.FrameRate * 10));
-            _minimumBufferFrames = Math.Max(1L, (long)Math.Ceiling(request.FrameRate * 5));
+            _startupBufferFrames = _bufferFrames;
+            _minimumBufferFrames = Math.Max(1L, (long)Math.Ceiling(request.FrameRate * 0.5));
             _nextFrame = request.StartFrame;
             _clock.Frame = request.StartFrame;
         }
@@ -142,7 +150,7 @@ public sealed partial class RenderBackendService
             var bufferingStartedAt = Stopwatch.GetTimestamp();
             await ReportBufferingProgressAsync(0, token).ConfigureAwait(false);
             await CreateRenderWorkersAsync(token).ConfigureAwait(false);
-            await RenderFramesAsync(token, bufferStart: _request.StartFrame).ConfigureAwait(false);
+            await RenderFramesAsync(token, bufferStart: _request.StartFrame, bufferFrames: _startupBufferFrames).ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
             await ReportBufferingProgressAsync(1, token).ConfigureAwait(false);
             LogDiagnostic($"[DynamicPreview] Buffered {_nextFrame - _request.StartFrame} frames from {_request.StartFrame} with {_renderClips.Length} workers in {Stopwatch.GetElapsedTime(bufferingStartedAt).TotalSeconds:F1}s for {PlaybackId}.");
@@ -283,8 +291,31 @@ public sealed partial class RenderBackendService
                 if (clips.TryGetValue(dto.Id, out var clip)) dto.FilePath = clip.FilePath;
             }
 
-            _renderClips = new IClip[RenderMemoryBudget.LimitWorkers(Math.Clamp(Environment.ProcessorCount, 1, 4),
-                RenderMemoryBudget.EstimateClipBytes(_request.CanvasWidth, _request.CanvasHeight), RenderMemoryBudget.DefaultBytes)][];
+            _workerLimit = Math.Max(1, _request.MaxParallelWorkers);
+            var visualClips = _session.Clips.Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
+            int concurrentClips = 0, maxConcurrentClips = 0;
+            foreach (var change in visualClips.SelectMany(c => new[]
+            {
+                (Frame: c.ExtendToWholeDraft ? 0UL : c.StartFrame, Delta: 1),
+                (Frame: c.ExtendToWholeDraft ? (ulong)_session.Duration : (ulong)c.StartFrame + c.GetEffectiveDuration(), Delta: -1),
+            }).GroupBy(c => c.Frame).OrderBy(c => c.Key))
+            {
+                concurrentClips += change.Sum(c => c.Delta);
+                maxConcurrentClips = Math.Max(maxConcurrentClips, concurrentClips);
+            }
+            int workers = _request.AllowWorkerOversubscription && _workerLimit > 1
+                ? Math.Max(_workerLimit, maxConcurrentClips) : _workerLimit;
+            _renderAheadFrames = _workerLimit == 1 ? 1 : _request.RenderAheadFrames > 0
+                ? _request.RenderAheadFrames : Math.Clamp(_workerLimit, 2, 8);
+            if (_request.EnableMemoryBudget)
+            {
+                var budget = _request.MaxBufferedBytes > 0 ? _request.MaxBufferedBytes : RenderMemoryBudget.DefaultBytes;
+                var clipBytes = RenderMemoryBudget.EstimateClipBytes(_request.CanvasWidth, _request.CanvasHeight);
+                workers = RenderMemoryBudget.LimitWorkers(workers, clipBytes, budget);
+                _renderAheadFrames = RenderMemoryBudget.LimitWorkers(_renderAheadFrames,
+                    clipBytes * Math.Max(1, maxConcurrentClips), budget);
+            }
+            _renderClips = new IClip[workers][];
             await Task.WhenAll(Enumerable.Range(0, _renderClips.Length).Select(i => Task.Run(() =>
             {
                 try
@@ -294,36 +325,97 @@ public sealed partial class RenderBackendService
                 }
                 catch { Cancel(); throw; }
             }, token))).ConfigureAwait(false);
-            Log($"[DynamicPreview] Using {_renderClips.Length} render workers. Effect implementations: {Effect.EffectHelper.GetImplementationSummary(_renderClips[0])}.");
+            int[]? affinity = _request.WorkerCPUCoreIndexs;
+            if (affinity is not { Length: > 0 } && _request.EnableThreadAffinity)
+            {
+                try
+                {
+                    affinity = ThreadAffinityHelper.GetCpuCoreGroups()
+                        .OrderBy(c => (c.Capacity ?? 0) + (c.EfficiencyClass ?? 0))
+                        .LastOrDefault()?.CpuIndexes.ToArray();
+                }
+                catch (Exception ex) { Log(ex, "Resolve dynamic preview worker affinity", this); }
+            }
+            _workers = _renderClips.Select(clips => Task.Factory.StartNew(() =>
+            {
+                using var sourceScope = ProjectExternalSourceRuntime.Use(_session.ExternalSources);
+                if (affinity is { Length: > 0 })
+                {
+                    try { ThreadAffinityHelper.SetCurrentThreadAffinity(affinity); }
+                    catch (Exception ex) { Log(ex, "Set dynamic preview worker affinity", this); }
+                }
+                foreach (var job in _jobs.GetConsumingEnumerable())
+                {
+                    bool entered = false;
+                    try
+                    {
+                        lock (_workerGate)
+                        {
+                            // As in export, current-frame jobs may bypass the configured soft limit.
+                            while (_activeWorkers >= _workerLimit && (!_request.AllowWorkerOversubscription
+                                || _workerLimit == 1 || job.Frame > Interlocked.Read(ref _nextFrame)))
+                            {
+                                job.Token.ThrowIfCancellationRequested();
+                                Monitor.Wait(_workerGate, 100);
+                            }
+                            job.Token.ThrowIfCancellationRequested();
+                            _activeWorkers++;
+                            entered = true;
+                        }
+                        RenderClipFrameAsync(clips, job.Frame, job.ClipId, job.Token).GetAwaiter().GetResult();
+                        job.Completion.TrySetResult();
+                    }
+                    catch (OperationCanceledException) when (job.Token.IsCancellationRequested)
+                    {
+                        job.Completion.TrySetCanceled(job.Token);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"Render dynamic preview clip {job.ClipId} at frame {job.Frame}", this);
+                        Cancel();
+                        job.Completion.TrySetException(ex);
+                    }
+                    finally
+                    {
+                        if (entered)
+                            lock (_workerGate)
+                            {
+                                _activeWorkers--;
+                                Monitor.PulseAll(_workerGate);
+                            }
+                    }
+                }
+            }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ToArray();
+            Log($"[DynamicPreview] Worker limit={_workerLimit}, workers={workers}, oversubscription={_request.AllowWorkerOversubscription}, lookahead={_renderAheadFrames}, memory budget={_request.EnableMemoryBudget}. Effect implementations: {Effect.EffectHelper.GetImplementationSummary(_renderClips[0])}.");
         }
 
-        private async Task RenderFramesAsync(CancellationToken token, long? bufferStart = null)
+        private async Task RenderFramesAsync(CancellationToken token, long? bufferStart = null, long? bufferFrames = null)
         {
-            var bufferEnd = Math.Min(_session.Duration, (bufferStart ?? _request.StartFrame) + _bufferFrames);
+            var bufferLength = bufferFrames ?? _bufferFrames;
+            var bufferEnd = Math.Min(_session.Duration, (bufferStart ?? _request.StartFrame) + bufferLength);
             var lastProgressAt = Stopwatch.GetTimestamp();
             while (_nextFrame < _session.Duration)
             {
                 token.ThrowIfCancellationRequested();
                 var current = bufferStart ?? (long)Math.Clamp(Math.Floor(GetClock().Frame), _request.StartFrame, uint.MaxValue);
-                if (_nextFrame >= current + _bufferFrames)
+                if (_nextFrame >= current + bufferLength)
                 {
                     if (bufferStart.HasValue) return;
                     await Task.Delay(10, token).ConfigureAwait(false);
                     continue;
                 }
-                int count = (int)Math.Min(_renderClips.Length,
-                    Math.Min(_session.Duration, current + _bufferFrames) - _nextFrame);
-                var tasks = new Task[count];
+                int count = (int)Math.Min(_renderAheadFrames,
+                    Math.Min(_session.Duration, current + bufferLength) - _nextFrame);
+                var tasks = new List<Task>();
                 for (var i = 0; i < count; i++)
                 {
-                    var clips = _renderClips[i];
                     var frame = (uint)(_nextFrame + i);
-                    tasks[i] = Task.Run(async () =>
+                    foreach (var clip in _session.Clips.Where(c => c.ClipType != ClipMode.AudioClip && c.ContainsFrame(frame)))
                     {
-                        try { await RenderFrameAsync(clips, frame, token).ConfigureAwait(false); }
-                        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
-                        catch { Cancel(); throw; }
-                    }, token);
+                        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                        tasks.Add(completion.Task);
+                        _jobs.Add((frame, clip.Id, token, completion));
+                    }
                 }
                 await Task.WhenAll(tasks).ConfigureAwait(false);
                 while (_entries.TryPeek(out var entry) && (long)entry.Frame + _bufferFrames < current)
@@ -342,7 +434,7 @@ public sealed partial class RenderBackendService
             }
         }
 
-        private async Task RenderFrameAsync(IClip[] clips, uint frame, CancellationToken token)
+        private async Task RenderClipFrameAsync(IClip[] clips, uint frame, Guid clipId, CancellationToken token)
         {
             using var context = new FrameHashContext(new()
             {
@@ -352,27 +444,25 @@ public sealed partial class RenderBackendService
                 PixelMode = _request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb ? 16 : 8,
             }, token, _session.NodeCache);
             using var hashScope = context.Enter();
-            foreach (var clip in clips.Where(c => c.ClipType != ClipMode.AudioClip && c.ContainsFrame(frame)))
+            var clip = clips.First(c => c.Id == clipId);
+            token.ThrowIfCancellationRequested();
+            var artifact = await _owner.RenderClipPreviewAsync(new()
             {
-                token.ThrowIfCancellationRequested();
-                var artifact = await _owner.RenderClipPreviewAsync(new()
-                {
-                    SessionId = _session.Id, ClipId = clip.Id, FrameIndex = frame,
-                    CanvasWidth = _request.CanvasWidth, CanvasHeight = _request.CanvasHeight,
-                    ProjectWidth = _request.ProjectWidth, ProjectHeight = _request.ProjectHeight,
-                    PreferredPixelFormat = _request.PreferredPixelFormat, FrameHashMode = _request.FrameHashMode,
-                }, token, registerArtifact: false, previewSession: _session, previewClips: clips).ConfigureAwait(false);
-                var path = Path.Combine(_cacheRoot, $"{frame:D10}_{clip.Id:N}.json");
-                _entries.Enqueue((frame, path, artifact.ProjectRelativePath.StartsWith("thumbs/unCacheablePerClip/", StringComparison.Ordinal)
-                    ? _owner._artifacts.ResolveProjectPath(_session.ProjectRoot, artifact.ProjectRelativePath) : null));
-                token.ThrowIfCancellationRequested();
-                WriteDynamicPreviewJson(path, new DynamicPreviewCachedClip
-                {
-                    ClipId = clip.Id, FrameIndex = frame, ProjectRelativePath = artifact.ProjectRelativePath,
-                    Width = artifact.Width, Height = artifact.Height,
-                    IsPositionedClipPreview = TransformProcessing.HasActiveTransform(clip, clips, frame),
-                });
-            }
+                SessionId = _session.Id, ClipId = clip.Id, FrameIndex = frame,
+                CanvasWidth = _request.CanvasWidth, CanvasHeight = _request.CanvasHeight,
+                ProjectWidth = _request.ProjectWidth, ProjectHeight = _request.ProjectHeight,
+                PreferredPixelFormat = _request.PreferredPixelFormat, FrameHashMode = _request.FrameHashMode,
+            }, token, registerArtifact: false, previewSession: _session, previewClips: clips).ConfigureAwait(false);
+            var path = Path.Combine(_cacheRoot, $"{frame:D10}_{clip.Id:N}.json");
+            _entries.Enqueue((frame, path, artifact.ProjectRelativePath.StartsWith("thumbs/unCacheablePerClip/", StringComparison.Ordinal)
+                ? _owner._artifacts.ResolveProjectPath(_session.ProjectRoot, artifact.ProjectRelativePath) : null));
+            token.ThrowIfCancellationRequested();
+            WriteDynamicPreviewJson(path, new DynamicPreviewCachedClip
+            {
+                ClipId = clip.Id, FrameIndex = frame, ProjectRelativePath = artifact.ProjectRelativePath,
+                Width = artifact.Width, Height = artifact.Height,
+                IsPositionedClipPreview = TransformProcessing.HasActiveTransform(clip, clips, frame),
+            });
         }
 
         public void Cancel()
@@ -402,6 +492,9 @@ public sealed partial class RenderBackendService
             catch (Exception ex) { Log(ex, $"Finish dynamic preview cache {PlaybackId}", this); }
             finally
             {
+                _jobs.CompleteAdding();
+                await Task.WhenAll(_workers).ConfigureAwait(false);
+                _jobs.Dispose();
                 foreach (var clips in _renderClips.OfType<IClip[]>()) DisposeResources(clips, [], null);
                 _renderClips = [];
                 _operation.Dispose();

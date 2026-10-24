@@ -7,6 +7,8 @@ namespace projectFrameCut.Render.Effect;
 
 public sealed class EqualityComparisonNodeEffectProvider : EffectProviderBase
 {
+    public override IReadOnlyList<Stage> SupportedStages => EffectStages.Values;
+
     public override bool IsDeterministic => true;
 
     public EqualityComparisonNodeEffectProvider() => Name = "EqualityComparisonNode";

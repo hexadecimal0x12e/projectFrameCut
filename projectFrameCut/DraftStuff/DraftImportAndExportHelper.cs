@@ -76,6 +76,11 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
             try
             {
                 VideoClipRotation.Migrate(dto);
+                if (element.ClipType == ClipMode.ExtendClip)
+                {
+                    using var owner = PluginManager.CreateClip(JsonSerializer.SerializeToElement(dto));
+                    element.DeclaredStages = owner.SupportedStages.ToArray();
+                }
                 element.Rotation = dto.Rotation;
                 element.Effects = dto.Effects?.ToDictionary(
                     effect => string.IsNullOrWhiteSpace(effect.Name) ? $"Effect-{Guid.NewGuid()}" : effect.Name,
@@ -406,7 +411,7 @@ IconResource=%localappdata%\Packages\projectFrameCut.InstanceSelector_f91nmrsqwp
 
         private static EffectAndMixtureJSONStructure[]? SerializeEffects(ClipElementUI elem)
         {
-            return elem.Effects?.Where(kv => kv.Value is not DynamicEffectGraph).Select(kv =>
+            return elem.Effects?.Where(kv => !DynamicEffectBindings.IsGraphEffect(kv.Value)).Select(kv =>
             {
                 var effect = kv.Value;
                 if (kv.Key == "__Internal_Rotation__" && effect is RotationEffect_IPicture rotation)

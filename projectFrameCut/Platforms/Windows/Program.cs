@@ -224,6 +224,7 @@ namespace projectFrameCut.WinUI
                 projectFrameCut.Helper.HelperProgram.AppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
                 PackageFamilyName = WinUI.App.GetPackageFamilyName();
                 projectFrameCut.Helper.HelperProgram.AppChannel = PackageFamilyName.StartsWith("0xeeeeeeeeeeee") ? "Store" : "OSS";
+                IsStoreModeEnabled = projectFrameCut.Helper.HelperProgram.AppChannel == "Store";
 
                 if (args.Length > 0 && args[0].StartsWith("pjfc:", StringComparison.OrdinalIgnoreCase))
                 {

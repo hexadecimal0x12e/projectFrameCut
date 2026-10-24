@@ -13,6 +13,10 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 {
     public interface ISoundTrack : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject, IDisposable
     {
+        [JsonIgnore]
+        public IReadOnlyList<Stage> SupportedStages { get; }
+        [JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         /// <summary>
         /// Gets the ID of the plugin that provided this value.
         /// </summary>

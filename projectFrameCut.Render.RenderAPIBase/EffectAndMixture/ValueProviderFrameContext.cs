@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
@@ -16,6 +18,20 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     /// </remarks>
     public static class ValueProviderFrameContext
     {
+        [ThreadStatic] private static IClip? clip;
+        public static IClip? CurrentClip => clip;
+
+        public static IDisposable PushClip(IClip? value)
+        {
+            var scope = new ClipScope(clip);
+            clip = value;
+            return scope;
+        }
+
+        private sealed class ClipScope(IClip? previous) : IDisposable
+        {
+            public void Dispose() => clip = previous;
+        }
         /// <summary>
         /// The built-in binding source id for the current frame index (exposed as <see cref="float"/>).
         /// </summary>
@@ -24,6 +40,33 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// The built-in binding source id for the current clip progress (0..1, exposed as <see cref="float"/>).
         /// </summary>
         public const string BuiltInProgressProviderId = "builtin://progress";
+
+        public const string BuiltInAudioSampleProviderId = "builtin://audio-sample";
+
+        private static readonly AsyncLocal<Func<uint, CancellationToken, IAudioSamples<float>>?> audio = new();
+        private static Func<uint, CancellationToken, IAudioSamples<float>>? audioSource
+        {
+            get => audio.Value;
+            set => audio.Value = value;
+        }
+        [ThreadStatic] private static uint currentFrame;
+
+        public static bool IsBuiltInSource(string? id) => id is BuiltInFrameProviderId or BuiltInProgressProviderId or BuiltInAudioSampleProviderId;
+
+        public static bool SupportsAudioSample(Stage stage) => stage is Stage.Picture or Stage.VectorPicture
+            or Stage.Text or Stage.VectorComponent or Stage.Mixture;
+
+        public static IDisposable PushAudioSource(Func<uint, CancellationToken, projectFrameCut.Shared.IAudioSamples<float>>? source)
+        {
+            var scope = new AudioScope(audioSource);
+            audioSource = source;
+            return scope;
+        }
+
+        private sealed class AudioScope(Func<uint, CancellationToken, projectFrameCut.Shared.IAudioSamples<float>>? previous) : IDisposable
+        {
+            public void Dispose() => audioSource = previous;
+        }
 
         [ThreadStatic]
         private static Dictionary<string, object>? _values;
@@ -56,6 +99,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public static void BeginFrame(uint frameIndex, float progress)
         {
+            currentFrame = frameIndex;
             _computed = new(ReferenceEqualityComparer.Instance);
             _values = new Dictionary<string, object>(8)
             {
@@ -88,6 +132,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static object? Get(string key)
         {
             if (_values is not null && _values.TryGetValue(key, out var value)) return value;
+            if (key == BuiltInAudioSampleProviderId && audioSource is not null)
+            {
+                var samples = audioSource(currentFrame, _cancellationToken);
+                Set(key, samples);
+                return samples;
+            }
             return null;
         }
 
@@ -120,12 +170,13 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             var previous = _values;
             var computed = _computed;
             var previousToken = _cancellationToken;
+            var previousFrame = currentFrame;
             _cancellationToken = cancellationToken;
             BeginFrame(frameIndex, progress);
             if (reuseComputed && previous?.GetValueOrDefault(BuiltInFrameProviderId) is float frame && frame == frameIndex
                 && previous.GetValueOrDefault(BuiltInProgressProviderId) is float clipProgress && clipProgress == progress)
                 _computed = computed;
-            return new FrameScope(previous, computed, previousToken);
+            return new FrameScope(previous, computed, previousToken, previousFrame);
         }
 
         public static IDisposable PushValues(IReadOnlyDictionary<string, object?> values)
@@ -133,16 +184,17 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             var previous = _values;
             _values = previous is null ? new() : new(previous);
             foreach (var value in values) Set(value.Key, value.Value);
-            return new FrameScope(previous, _computed, _cancellationToken);
+            return new FrameScope(previous, _computed, _cancellationToken, currentFrame);
         }
 
-        private sealed class FrameScope(Dictionary<string, object>? previous, Dictionary<object, object>? computed, CancellationToken cancellationToken) : IDisposable
+        private sealed class FrameScope(Dictionary<string, object>? previous, Dictionary<object, object>? computed, CancellationToken cancellationToken, uint frame) : IDisposable
         {
             public void Dispose()
             {
                 _values = previous;
                 _computed = computed;
                 _cancellationToken = cancellationToken;
+                currentFrame = frame;
             }
         }
 

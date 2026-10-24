@@ -19,6 +19,8 @@ public sealed class VectorEffectPipelineTests
 {
     private sealed class VectorProvider : EffectProviderBase
     {
+        public override IReadOnlyList<projectFrameCut.Shared.Stage> SupportedStages => [projectFrameCut.Shared.Stage.VectorPicture];
+
         public override bool IsDeterministic => true;
 
         public override string TypeName => "TestVectorPicture";

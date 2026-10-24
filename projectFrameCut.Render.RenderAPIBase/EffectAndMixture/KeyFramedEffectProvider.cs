@@ -69,6 +69,7 @@ public static class KeyFrameStepExtensions
                 EffectArgumentFieldType.UnsignedLong => Convert.ToUInt64(value, CultureInfo.InvariantCulture),
                 EffectArgumentFieldType.Boolean when EffectParamConvert.TryConvertToBool(value, out var b) => b,
                 EffectArgumentFieldType.String when value is string => value,
+                EffectArgumentFieldType.AudioSample => throw new ArgumentException($"Keyframe field '{id}' cannot contain audio samples."),
                 EffectArgumentFieldType.Any or EffectArgumentFieldType.Color or EffectArgumentFieldType.Size
                     or EffectArgumentFieldType.Position or EffectArgumentFieldType.SizeAndPosition => value,
                 _ => throw new ArgumentException($"Invalid value for keyframe field '{id}'."),

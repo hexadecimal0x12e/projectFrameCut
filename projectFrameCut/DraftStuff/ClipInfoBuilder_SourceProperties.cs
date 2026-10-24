@@ -34,6 +34,31 @@ public partial class ClipInfoBuilder
     private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
     private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
 
+    private async Task<View> BuildSourcePropertiesTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+    {
+        View? properties = clip.ClipType switch
+        {
+            ClipMode.VideoClip => BuildVideoSourcePropertiesTab(clip, handler),
+            ClipMode.SolidColorClip => BuildSolidColorSourcePropertiesTab(clip, handler),
+            ClipMode.VectorCanvasClip or ClipMode.VectorComponentClip => BuildVectorSourcePropertiesTab(clip, handler),
+            ClipMode.MaskClip => BuildMaskSourcePropertiesTab(clip, handler),
+            ClipMode.TextClip or ClipMode.SubtitleClip => BuildVectorAntiAliasProperties(clip, handler, false).Build(),
+            _ => null
+        };
+        var layout = new VerticalStackLayout { Spacing = 8 };
+        if (properties is not null) layout.Children.Add(properties);
+        if (clip.SupportedStages.Contains(Stage.SourceReplacement))
+        {
+            var sourceReplacement = await BuildEffectStagePanel(clip, handler, Stage.SourceReplacement);
+            layout.Children.Add(new PropertyPanelBuilder()
+                .AddCollapsibleSection(Localized.Effect_Stage_SourceReplacement,
+                    p => p.AddCustomChild(sourceReplacement.Build(new VerticalStackLayout { Spacing = 10 })),
+                    defaultExpanded: false, contentPadding: new Thickness(0))
+                .Build());
+        }
+        return new ScrollView { Content = layout };
+    }
+
     private View BuildVideoSourcePropertiesTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
     {
         var targetVideoClip = page.GetLoadedClipInstance(clip.Id) as VideoClip;
@@ -154,7 +179,7 @@ public partial class ClipInfoBuilder
             }
             handler?.Invoke(s, e);
         };
-        return panel.BuildWithScrollView();
+        return panel.Build();
     }
 
     private View BuildSolidColorSourcePropertiesTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
@@ -253,7 +278,7 @@ public partial class ClipInfoBuilder
             }
             handler?.Invoke(s, e);
         };
-        return panel.BuildWithScrollView();
+        return panel.Build();
     }
 
     private View BuildVectorSourcePropertiesTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> changed)
@@ -385,7 +410,7 @@ public partial class ClipInfoBuilder
         }
 
         layout.Children.Add(BuildVectorAntiAliasProperties(clip, changed, true).Build());
-        return new ScrollView { Content = layout };
+        return layout;
     }
 
     private async Task ExportVectorClip(ClipElementUI clip, bool svg)
@@ -575,6 +600,6 @@ public partial class ClipInfoBuilder
             RebuildAllEffects(clip);
             changed?.Invoke(this, e);
         };
-        return panel.BuildWithScrollView();
+        return panel.Build();
     }
 }

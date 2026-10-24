@@ -104,7 +104,7 @@ public sealed class GetProjectTrackCommand : ProjectCmdlet
 public sealed class AddProjectTrackCommand : ProjectWriteCmdlet
 {
     protected override GuiProjectOperation Operation => GuiProjectOperation.AddTrack;
-    [Parameter(ValueFromPipelineByPropertyName = true)][ValidateRange(0, int.MaxValue)] public int? TrackId { get; set; }
+    [Parameter(ValueFromPipelineByPropertyName = true)][ValidateRange(0, 9999)] public int? TrackId { get; set; }
 }
 
 [Cmdlet("Get", "ProjectTextStyle")]

@@ -8,12 +8,15 @@ namespace projectFrameCut.Render.PluginIsolation;
 
 internal sealed class RemoteSoundTrack : ISoundTrack
 {
+    public IReadOnlyList<Stage> SupportedStages { get; }
+    [System.Text.Json.Serialization.JsonIgnore] public IEffectStagePlan? EffectStagePlan { get; set; }
     private readonly IPluginIsolationSession _session;
     private readonly long _objectId;
     private bool _disposed;
 
     public RemoteSoundTrack(IPluginIsolationSession session, IsolationSoundTrackDescriptor state)
     {
+        SupportedStages = state.SupportedStages.Select(s => (Stage)s).ToArray();
         _session = session;
         _objectId = state.ObjectId;
         FromPlugin = state.FromPlugin;
@@ -81,6 +84,7 @@ internal sealed class RemoteSoundTrack : ISoundTrack
         ObjectId = _objectId,
         FromPlugin = FromPlugin,
         TrackType = (int)TrackType,
+        SupportedStages = SupportedStages.Select(s => (int)s).ToList(),
         TypeName = TypeName,
         Id = Id,
         Name = Name,

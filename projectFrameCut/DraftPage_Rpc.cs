@@ -335,9 +335,16 @@ public partial class DraftPage
                 return Tracks.Keys.OrderBy(x => x).Where(x => !Has("TrackId") || x == I("TrackId"))
                     .Select(x => new { TrackId = x, ClipCount = Clips.Values.Count(c => c.origTrack == x) }).ToArray();
             case GuiProjectOperation.AddTrack:
+            case GuiProjectOperation.AddSubTrack:
                 {
-                    int id = I("TrackId", Tracks.Keys.DefaultIfEmpty(-1).Max() + 1);
-                    if (id < 0 || Tracks.ContainsKey(id)) throw new ArgumentException("Invalid or duplicate track.");
+                    bool useSubTrack = operation == GuiProjectOperation.AddSubTrack;
+                    int id = I("TrackId", Tracks.Keys.Where(k => (k >= SubTrackOffset) == useSubTrack)
+                        .DefaultIfEmpty(useSubTrack ? SubTrackOffset - 1 : -1).Max() + 1);
+                    if (id < 0 || (id >= SubTrackOffset) != useSubTrack)
+                        throw new ArgumentOutOfRangeException("TrackId", useSubTrack
+                            ? "Auxiliary track IDs must be 10000 or greater."
+                            : "Main track IDs must be between 0 and 9999.");
+                    if (Tracks.ContainsKey(id)) throw new ArgumentException("Track already exists.", "TrackId");
                     AddATrack(id); result = new { TrackId = id }; break;
                 }
             case GuiProjectOperation.GetAsset:
@@ -347,18 +354,9 @@ public partial class DraftPage
                 {
                     var source = S("FilePath") ?? throw new ArgumentException("FilePath is required.");
                     if (!File.Exists(source)) throw new FileNotFoundException("Asset file not found.", source);
-                    var directory = Path.Combine(WorkingPath, "assets");
-                    Directory.CreateDirectory(directory);
-                    var destination = Path.Combine(directory, Guid.NewGuid() + Path.GetExtension(source));
-                    File.Copy(source, destination);
-                    try
-                    {
-                        var asset = AssetDatabase.Create(destination, S("Name") ?? Path.GetFileNameWithoutExtension(source), AssetItem.GetAssetType(destination))
-                            ?? throw new InvalidOperationException("Cannot import asset.");
-                        if (!Assets.TryAdd(asset.AssetId, asset)) throw new InvalidOperationException("Duplicate asset ID.");
-                        result = new { asset.AssetId, asset.Name, asset.Path }; break;
-                    }
-                    catch { File.Delete(destination); throw; }
+                    var asset = await AddAsset(source, copyToProject: Has("CopyToProject") ? p.GetProperty("CopyToProject").GetBoolean() : null, name: S("Name"))
+                        ?? throw new InvalidOperationException("Asset import was cancelled or failed.");
+                    result = new { asset.AssetId, asset.Name, asset.Path }; break;
                 }
             case GuiProjectOperation.RemoveAsset:
                 if (!Assets.TryRemove(S("AssetId") ?? "", out _)) throw new KeyNotFoundException("Asset not found.");
@@ -581,8 +579,12 @@ public partial class DraftPage
         var audio = clip.ClipType == ClipMode.VideoClip ? GetBoundSoundTrack(clip) : clip.ClipType == ClipMode.AudioClip ? clip : null;
         return new
         {
-            ClipId = clip.Id, Name = clip.DisplayName, Type = clip.ClipType.ToString(), clip.ClipColor,
-            FilePath = clip.SourcePath, IsInfiniteLength = clip.isInfiniteLength,
+            ClipId = clip.Id,
+            Name = clip.DisplayName,
+            Type = clip.ClipType.ToString(),
+            clip.ClipColor,
+            FilePath = clip.SourcePath,
+            IsInfiniteLength = clip.isInfiniteLength,
             SourceDurationFrames = clip.isInfiniteLength ? (uint?)null : clip.maxFrameCount,
             AllowFreeScaleResize = clip.AllowFreeScaleResize || clip.IsExtraDataOptionIsTrue("AllowFreeScaleResize"),
             ExtendToWholeDraft = clip.IsExtraDataOptionIsTrue("ExtendToWholeDraft"),
@@ -615,11 +617,20 @@ public partial class DraftPage
         var crop = ClipInfoBuilder.GetCropGeometry(clip, width, height);
         return new
         {
-            ClipId = clip.Id, WidthPixels = width, HeightPixels = height,
-            AutomaticWidth = clip.TargetWidth <= 0, AutomaticHeight = clip.TargetHeight <= 0,
-            XPixels = clip.TargetX, YPixels = clip.TargetY, RotationDegrees = clip.Rotation,
-            CropEnabled = crop.Enabled, CropXPixels = crop.X, CropYPixels = crop.Y,
-            CropWidthPixels = crop.Width, CropHeightPixels = crop.Height, CropRotationDegrees = crop.Rotation,
+            ClipId = clip.Id,
+            WidthPixels = width,
+            HeightPixels = height,
+            AutomaticWidth = clip.TargetWidth <= 0,
+            AutomaticHeight = clip.TargetHeight <= 0,
+            XPixels = clip.TargetX,
+            YPixels = clip.TargetY,
+            RotationDegrees = clip.Rotation,
+            CropEnabled = crop.Enabled,
+            CropXPixels = crop.X,
+            CropYPixels = crop.Y,
+            CropWidthPixels = crop.Width,
+            CropHeightPixels = crop.Height,
+            CropRotationDegrees = crop.Rotation,
         };
     }
 
@@ -681,8 +692,14 @@ public partial class DraftPage
             }
             if (clip.EffectProviders?.Values.OfType<ClipArgumentProvider>().SingleOrDefault() is { } arguments)
             {
-                var keys = new Dictionary<string, string> { ["WidthPixels"] = "TargetWidth", ["HeightPixels"] = "TargetHeight",
-                    ["XPixels"] = "TargetX", ["YPixels"] = "TargetY", ["RotationDegrees"] = "Rotation" }
+                var keys = new Dictionary<string, string>
+                {
+                    ["WidthPixels"] = "TargetWidth",
+                    ["HeightPixels"] = "TargetHeight",
+                    ["XPixels"] = "TargetX",
+                    ["YPixels"] = "TargetY",
+                    ["RotationDegrees"] = "Rotation"
+                }
                     .Where(x => a.Has(x.Key)).Select(x => x.Value).ToHashSet();
                 if (new[] { "CropEnabled", "CropXPixels", "CropYPixels", "CropWidthPixels", "CropHeightPixels", "CropRotationDegrees" }.Any(a.Has)
                     && a.Bool("CropEnabled", crop.Enabled))
@@ -783,13 +800,25 @@ public partial class DraftPage
             throw new ArgumentException("Invalid clip track, timing or dimensions.");
         return new()
         {
-            Id = Guid.NewGuid(), Name = a.String("Name", name)!, ClipType = type, TypeName = typeName,
-            FromPlugin = InternalPluginBase.InternalPluginBaseID, LayerIndex = (uint)track, SubLayerIndex = (uint)track,
-            StartFrame = start, Duration = duration, RelativeStartFrame = a.UInt("SourceStartFrame"),
-            FrameTime = 1f / ProjectInfo.TargetFrameRate, IsInfiniteLength = true,
-            TargetWidth = width, TargetHeight = height,
-            MetaData = new() { [ClipDraftDTO.ProjectFrameRateMetaKey] = ProjectInfo.TargetFrameRate,
-                [ClipDraftDTO.FrameSemanticVersionMetaKey] = ClipDraftDTO.CurrentFrameSemanticVersion },
+            Id = Guid.NewGuid(),
+            Name = a.String("Name", name)!,
+            ClipType = type,
+            TypeName = typeName,
+            FromPlugin = InternalPluginBase.InternalPluginBaseID,
+            LayerIndex = (uint)track,
+            SubLayerIndex = (uint)track,
+            StartFrame = start,
+            Duration = duration,
+            RelativeStartFrame = a.UInt("SourceStartFrame"),
+            FrameTime = 1f / ProjectInfo.TargetFrameRate,
+            IsInfiniteLength = true,
+            TargetWidth = width,
+            TargetHeight = height,
+            MetaData = new()
+            {
+                [ClipDraftDTO.ProjectFrameRateMetaKey] = ProjectInfo.TargetFrameRate,
+                [ClipDraftDTO.FrameSemanticVersionMetaKey] = ClipDraftDTO.CurrentFrameSemanticVersion
+            },
         };
     }
 
@@ -824,7 +853,6 @@ public partial class DraftPage
         Logger.Log($"GUI RPC created {clip.ClipType} {clip.Id}.", "info");
         return GuiClipSnapshot(clip);
     }
-
 
     #endregion
 
@@ -884,8 +912,10 @@ public partial class DraftPage
         if (a.Has("ImportId") && a.Has("ClientId")) throw new ArgumentException("Choose ImportId or ClientId.");
         if (operation == GuiProjectOperation.AddExternalSource)
         {
+            var copyToProject = a.Has("CopyToProject") ? a.Bool("CopyToProject") : await AssetDatabase.PickImportModeAsync(this);
+            if (copyToProject is null) throw new OperationCanceledException("External source import was cancelled.");
             var asset = await ProjectExternalSourceService.ImportAsync(this, a.String("FilePath")!,
-                a.Has("ReplaceImportId") ? a.Guid("ReplaceImportId") : null, a.Bool("Loaded", true), ct);
+                a.Has("ReplaceImportId") ? a.Guid("ReplaceImportId") : null, a.Bool("Loaded", true), ct, copyToProject.Value);
             await AddClipView.RefreshExternalSourcesAsync();
             var query = new GuiEditArgs(System.Text.Json.JsonSerializer.SerializeToElement(new { asset.ImportId }));
             return (await GuiExternalSourcesAsync(query, ct)).Single();
@@ -1592,7 +1622,8 @@ public partial class DraftPage
                 .Where(x => (!Has("TypeName") || x.TypeName.Equals(S("TypeName"), StringComparison.OrdinalIgnoreCase))
                     && (!Has("Name") || x.TypeName.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)
                         || x.Component.Name.Contains(S("Name")!, StringComparison.OrdinalIgnoreCase)))
-                .Select(x => new {
+                .Select(x => new
+                {
                     x.TypeName,
                     x.Component.Name,
                     x.Component.FromPlugin,

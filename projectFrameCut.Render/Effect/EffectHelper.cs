@@ -33,6 +33,8 @@ namespace projectFrameCut.Render.Effect
 
         public static void ReleaseClipEffects(IClip clip)
         {
+            clip.EffectStagePlan?.Dispose();
+            clip.EffectStagePlan = null;
             foreach (var provider in (clip.EffectProvidersInstances ?? []).OfType<ClipArgumentProvider>())
                 provider.ClearRuntimeFields();
             foreach (var effect in (clip.EffectsInstances ?? []).Concat(new IEffect?[] { clip.MixtureInstance, clip.SpeedVarianceProviderInstance, clip.AlternativeSource }).OfType<IDisposable>().Distinct(ReferenceEqualityComparer.Instance))
@@ -53,7 +55,12 @@ namespace projectFrameCut.Render.Effect
         {
             var summary = string.Join(", ", clips.SelectMany(c => (c.EffectsInstances ?? [])
                     .Concat(new IEffect?[] { c.MixtureInstance, c.AlternativeSource }).OfType<IEffect>())
-                .SelectMany(e => e is DynamicEffectGraph graph ? graph.NodeEffects : new[] { e })
+                .SelectMany(e => e switch
+                {
+                    DynamicEffectGraph graph => graph.NodeEffects,
+                    DynamicMixtureGraph graph => graph.NodeEffects,
+                    _ => new[] { e },
+                })
                 .GroupBy(e => (e.TypeName, e.ImplementType)).OrderBy(g => g.Key.TypeName)
                 .Select(g => $"{g.Key.TypeName}={g.Key.ImplementType} ({g.Count()})"));
             return summary.Length > 0 ? summary : "none";
@@ -94,6 +101,9 @@ namespace projectFrameCut.Render.Effect
                     null,
                     out restoreDiagnostics);
                 target.EffectProvidersInstances = providers.Values.ToArray();
+                foreach (var provider in providers.Values)
+                    if (!target.SupportedStages.Contains(provider.Stage))
+                        throw new InvalidOperationException($"Clip {target.Id} does not support stage {provider.Stage}.");
                 foreach (var provider in providers.Values.OfType<ClipArgumentProvider>()) provider.Attach(target);
             }
             catch (Exception ex)
@@ -138,7 +148,7 @@ namespace projectFrameCut.Render.Effect
             Dictionary<string, IEffect> rebuiltEffects;
             try
             {
-                rebuiltEffects = EffectBindingHelper.RebuildAllEffects(providers, existingProviderEffects)
+                rebuiltEffects = EffectBindingHelper.RebuildAllEffects(providers, existingProviderEffects, target)
                     ?? new Dictionary<string, IEffect>();
             }
             catch (Exception ex)
@@ -359,7 +369,8 @@ namespace projectFrameCut.Render.Effect
             {
                 var providers = EffectBindingHelper.MigrateToEffectProviders(clip.EffectProviders, null);
                 foreach (var provider in providers.Values.OfType<ClipArgumentProvider>()) provider.Attach(clip);
-                rebuilt = EffectBindingHelper.RebuildAllEffects(providers, existing) ?? [];
+                clip.EffectProvidersInstances = providers.Values.ToArray();
+                rebuilt = EffectBindingHelper.RebuildAllEffects(providers, existing, clip) ?? [];
                 var result = rebuilt.Values.Where(e => e.Enabled && e is not (IValueProviderEffect or ISpeedVarianceProvider or IMixture or ISourceReplacementEffect))
                     .OrderBy(e => e.Index).ToArray();
                 foreach (var effect in result)

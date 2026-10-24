@@ -202,6 +202,10 @@ public partial class VectorComponentWrapperClip : IClip
     public IEffect[]? EffectsInstances { get; set; } = Array.Empty<IEffect>();
     [JsonIgnore]
     public IEffectProvider[]? EffectProvidersInstances { get; set; } = Array.Empty<IEffectProvider>();
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IReadOnlyList<Stage> SupportedStages => EffectStages.Vector;
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IEffectStagePlan? EffectStagePlan { get; set; }
 
     public string? FilePath
     {

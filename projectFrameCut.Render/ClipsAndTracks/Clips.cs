@@ -33,6 +33,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<Stage> SupportedStages => EffectStages.Picture;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public bool NeedFilePath => false;
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
@@ -200,6 +204,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<Stage> SupportedStages => EffectStages.Picture;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public string? FilePath { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }

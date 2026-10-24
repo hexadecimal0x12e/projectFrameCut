@@ -11,6 +11,8 @@ namespace projectFrameCut.Render.Effect
     /// </summary>
     public class ClassicSpeedVarianceProviderEffectProvider : EffectProviderBase
     {
+        public override IReadOnlyList<Stage> SupportedStages => [Stage.SpeedVariance];
+
         public override bool IsDeterministic => true;
 
         public ClassicSpeedVarianceProviderEffectProvider()

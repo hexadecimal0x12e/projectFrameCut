@@ -100,6 +100,7 @@ public sealed class FrameHashCache : IDisposable
         RenderAPIBase.EffectAndMixture.IHwAccelPicture => MaxBytes + 1,
         projectFrameCut.Drawing.Vector.VectorPicture => MaxBytes + 1,
         IPicture p => (long)p.Width * p.Height * 16,
+        projectFrameCut.Shared.IAudioSamples<float> audio => (long)audio.channelCount * audio.SampleCount * sizeof(float),
         IReadOnlyDictionary<string, object?> outputs => outputs.Values.Sum(Estimate),
         null => 0,
         string s => (long)s.Length * 2,

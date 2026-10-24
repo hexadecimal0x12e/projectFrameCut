@@ -51,8 +51,7 @@ public partial class DraftEffectBindingView
                     provider.MetaData["__DraftEffectBindingView_InteractiveEditorY__"] = node.Y;
                 }
             }
-            if (_inputNode is not null) SaveSystemNodePosition(_inputNode);
-            if (_outputNode is not null) SaveSystemNodePosition(_outputNode);
+            SaveStageLayout();
             EffectGroupHelper.Write(_clip.ExtraData, _groups);
             UpdateGroupBounds();
             FitArrangedNodes(contentSize);
@@ -118,8 +117,8 @@ public partial class DraftEffectBindingView
             }
         }
         if (cycleBreaks > 0) Log($"Resolved {cycleBreaks} cyclic layout dependencies among {nodes.Count} effect binding nodes.", "warning");
-        if (nodes.FirstOrDefault(n => n.Node.Kind == NodeKind.Output) is { } output)
-            output.Layer = nodes.Where(n => n != output).Select(n => n.Layer).DefaultIfEmpty(-1).Max() + 1;
+        int last = nodes.Where(n => n.Node.Kind != NodeKind.Output && n.Node.TerminalField is null).Select(n => n.Layer).DefaultIfEmpty(-1).Max() + 1;
+        foreach (var output in nodes.Where(n => n.Node.Kind == NodeKind.Output || n.Node.TerminalField is not null)) output.Layer = last;
 
         var columns = nodes.GroupBy(n => n.Layer).OrderBy(g => g.Key).Select(g => g.ToList()).ToList();
         var order = nodes.Select((n, i) => (n, i)).ToDictionary(p => p.n, p => p.i);
@@ -180,7 +179,7 @@ public partial class DraftEffectBindingView
 
     private void FitArrangedNodes(Size size)
     {
-        double top = PipelinePicker.IsVisible ? Math.Max(40, PipelinePicker.Height) + 20 : 20;
+        double top = StagePicker.IsVisible ? Math.Max(40, StagePicker.Height) + 20 : 20;
         double width = ConnectionsLayer.Width - 40;
         double height = ConnectionsLayer.Height - top - Math.Max(BottomCommandBar.Height, InfoLabel.Height) - 20;
         double scale = width > 0 && height > 0 ? Math.Clamp(Math.Min(width / size.Width, height / size.Height), 0.2, 1.0) : 1.0;

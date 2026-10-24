@@ -74,6 +74,7 @@ public enum RenderOperation
     [ProtoEnum] ExternalMaskSourceProcess = 57,
     [ProtoEnum] StartDynamicPreview = 58,
     [ProtoEnum] StopDynamicPreview = 59,
+    [ProtoEnum] GenerateTimelineThumbnails = 60,
     [ProtoEnum] RegisterGuiProject = 30,
     [ProtoEnum] UnregisterGuiProject = 31,
     [ProtoEnum] GetGuiProjectWork = 32,
@@ -448,6 +449,25 @@ public sealed class TimelineFrameRequest
 }
 
 [ProtoContract]
+public sealed class TimelineThumbnailsRequest
+{
+    [ProtoMember(1)] public Guid SessionId { get; set; }
+    [ProtoMember(2)] public Guid ClipId { get; set; }
+    [ProtoMember(3)] public string SourcePath { get; set; } = string.Empty;
+    [ProtoMember(4)] public int TotalFrames { get; set; }
+    [ProtoMember(5)] public int IntervalFrames { get; set; } = 30;
+    [ProtoMember(6)] public int MaxCount { get; set; } = 60;
+    [ProtoMember(7)] public int Width { get; set; } = 320;
+}
+
+[ProtoContract]
+public sealed class TimelineThumbnailsResponse
+{
+    [ProtoMember(1)] public List<RenderArtifact> Artifacts { get; set; } = [];
+    [ProtoMember(2)] public List<RemoteError> Errors { get; set; } = [];
+}
+
+[ProtoContract]
 public sealed class ClipPreviewRequest
 {
     [ProtoMember(11)] public FrameHashMode FrameHashMode { get; set; }
@@ -490,6 +510,13 @@ public sealed class StartDynamicPreviewRequest
     [ProtoMember(8)] public PreviewPixelFormat PreferredPixelFormat { get; set; }
     [ProtoMember(9)] public bool StartAudio { get; set; } = true;
     [ProtoMember(10)] public Guid PlaybackId { get; set; }
+    [ProtoMember(12)] public int MaxParallelWorkers { get; set; } = 8;
+    [ProtoMember(13)] public bool AllowWorkerOversubscription { get; set; } = true;
+    [ProtoMember(14)] public int RenderAheadFrames { get; set; }
+    [ProtoMember(15)] public bool EnableThreadAffinity { get; set; } = true;
+    [ProtoMember(16)] public int[] WorkerCPUCoreIndexs { get; set; } = [];
+    [ProtoMember(17)] public bool EnableMemoryBudget { get; set; }
+    [ProtoMember(18)] public long MaxBufferedBytes { get; set; }
 }
 
 [ProtoContract]

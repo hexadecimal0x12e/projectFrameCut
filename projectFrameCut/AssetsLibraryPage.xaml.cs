@@ -39,6 +39,7 @@ public partial class AssetsLibraryPage : ContentPage
 
     private readonly int ItemSize = 200;
     private readonly int ItemSpacing = 5;
+    private bool _isAddingAsset;
 
     internal static readonly ConcurrentDictionary<string, CancellationTokenSource> perAssetThumbCts = new();
     private const int AssetThumbIntervalFrames = 30;
@@ -79,20 +80,39 @@ public partial class AssetsLibraryPage : ContentPage
 
     public async void OnDrop(object sender, DropEventArgs e)
     {
-        List<string> filePaths = new List<string>();
-        if (BindingContext is AssetViewModel vm)
+        if (_isAddingAsset) return;
+        _isAddingAsset = true;
+#if WINDOWS
+        if (e.PlatformArgs?.DragEventArgs is { } args) args.Handled = true;
+        var deferral = e.PlatformArgs?.DragEventArgs?.GetDeferral();
+#endif
+        try
         {
-            foreach (var item in await FileDropHelper.GetFilePathsFromDrop(e))
-            {
-                await AddAsset(item);
-            }
-
-
+            var paths = (await FileDropHelper.GetFilePathsFromDrop(e)).Where(p => !string.IsNullOrWhiteSpace(p))
+                .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToList();
+            if (paths.Count == 0) return;
+            var copyToLibrary = await AssetDatabase.PickImportModeAsync(this);
+            if (copyToLibrary is null) return;
+            foreach (var path in paths) await AddAsset(path, copyToLibrary.Value);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Import dropped shared assets", this);
+            await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
+        finally
+        {
+            _isAddingAsset = false;
+#if WINDOWS
+            deferral?.Complete();
+#endif
         }
     }
 
     private async void AddAAsset_Clicked(object sender, EventArgs e)
     {
+        if (_isAddingAsset) return;
+        _isAddingAsset = true;
         try
         {
             var result = await FilePicker.Default.PickAsync();
@@ -104,13 +124,17 @@ public partial class AssetsLibraryPage : ContentPage
         catch (Exception ex)
         {
             Log(ex, "Add a asset", this);
-            App.GetCurrentPage()?.DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+            await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
+        finally
+        {
+            _isAddingAsset = false;
         }
     }
 
-    public async Task AddAsset(string path)
+    public async Task AddAsset(string path, bool? copyToLibrary = null)
     {
-        var asset = await AssetDatabase.Add(path, this);
+        var asset = await AssetDatabase.Add(path, this, copyToLibrary);
         if (asset?.AssetType == AssetType.Font)
         {
             await MainSettingsPage.RebootApp(this);

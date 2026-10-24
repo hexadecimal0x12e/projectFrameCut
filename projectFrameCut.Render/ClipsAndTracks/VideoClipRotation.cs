@@ -2,6 +2,8 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using System.Diagnostics;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Shared;
 using System.Numerics;
 
 namespace projectFrameCut.Render.ClipsAndTracks;
@@ -76,6 +78,7 @@ public static class VideoClipRotation
 
     private static IPicture ReadFrameCore(IClip clip, uint frameIndex, int width, int height, IPicture.PicturePixelMode pixelMode)
     {
+        using var clipScope = ValueProviderFrameContext.PushClip(clip);
         var source = VectorPictureEffectProcessing.ReadFrame(clip, frameIndex, width, height, pixelMode);
         try
         {
@@ -85,6 +88,8 @@ public static class VideoClipRotation
                 if (!ReferenceEquals(source, replaced)) source.Dispose();
                 source = replaced;
             }
+            clip.EffectStagePlan?.Complete(clip, Stage.SourceReplacement, ClipArgumentBinding.GetFrameIndex(clip,
+                VectorPictureEffectProcessing.GetTargetFrame(clip, frameIndex)));
             return source;
         }
         catch

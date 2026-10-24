@@ -26,6 +26,13 @@ public sealed class SplitProjectClipGroupCommand : ProjectWriteCmdlet
     [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)] public Guid ClipId { get; set; }
 }
 
+[Cmdlet("Add", "ProjectSubTrack", SupportsShouldProcess = true)]
+public sealed class AddProjectSubTrackCommand : ProjectWriteCmdlet
+{
+    protected override GuiProjectOperation Operation => GuiProjectOperation.AddSubTrack;
+    [Parameter(ValueFromPipelineByPropertyName = true)][ValidateRange(10000, int.MaxValue)] public int? TrackId { get; set; }
+}
+
 [Cmdlet("Remove", "ProjectTrack", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
 public sealed class RemoveProjectTrackCommand : ProjectWriteCmdlet
 {

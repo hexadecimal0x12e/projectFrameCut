@@ -5,6 +5,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
 public sealed class ClipArgumentProvider : IEffectProvider
 {
+    public IReadOnlyList<Stage> SupportedStages => [Stage.ClipArguments];
+    public Stage Stage
+    {
+        get => Stage.ClipArguments;
+        set { if (value != Stage.ClipArguments) throw new ArgumentOutOfRangeException(nameof(value)); }
+    }
     public bool IsDeterministic => true;
 
     public const string ProviderTypeName = "ClipArguments";

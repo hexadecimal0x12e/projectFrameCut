@@ -80,6 +80,7 @@ public partial class DraftPage
         {
             var dto = DraftImportAndExportHelper.ExportClipElementFromDraftPage(this, clip, rebuildEffects: false);
             using var owner = PluginManager.CreateClip(JsonSerializer.SerializeToElement(dto));
+            clip.DeclaredStages = owner.SupportedStages.ToArray();
             fields = owner.ArgumentFields;
             foreach (var field in fields)
             {
@@ -128,6 +129,7 @@ public partial class DraftPage
                 copy = factory();
             }
 
+            copy.Stage = original.Stage;
             copy.Id = original.Id;
             copy.Name = original.Name;
             copy.Enabled = original.Enabled;
@@ -201,7 +203,11 @@ public partial class DraftPage
         {
             return "Source endpoint is disabled.";
         }
-        if (output.ValueType != endpoint.ValueType || !output.CanPassTo(endpoint.GetPipeline(), source.Id == clip.Id))
+        if (source.Id != clip.Id && !output.AllowCrossClip)
+        {
+            return "Source endpoint only allows pass-through within its own clip.";
+        }
+        if (output.ValueType != endpoint.ValueType || !output.CanPassTo(endpoint.Stage, source.Id == clip.Id, providers.Values))
         {
             return "Source endpoint type or pipeline has changed.";
         }
@@ -222,7 +228,9 @@ public partial class DraftPage
             endpoint.Name,
             endpoint.Enabled,
             endpoint.IsExport,
+            endpoint.AllowCrossClip,
             ValueType = endpoint.ValueType.ToString(),
+            Stage = endpoint.Stage.ToString(),
             Pipeline = endpoint.GetPipeline().ToString(),
             endpoint.SourceClipId,
             endpoint.SourceEndpointId,
@@ -267,6 +275,8 @@ public partial class DraftPage
                     SourceId = binding.Value,
                     SourceProviderId = parsed ? (Guid?)sourceId : null,
                     SourceOutputFieldId = parsed ? outputId : null,
+                    Stage = provider.Stage.ToString(),
+                    SupportedStages = provider.SupportedStages.Select(s => s.ToString()).ToArray(),
                     Pipeline = provider.GetPipeline().ToString(),
                 });
             }
@@ -288,6 +298,8 @@ public partial class DraftPage
                     ProviderId = provider.Id,
                     OutputFieldId = provider.GetFinalOutputFieldId(),
                     SourceId = provider.GetFinalOutputSourceId(),
+                    Stage = provider.Stage.ToString(),
+                    SupportedStages = provider.SupportedStages.Select(s => s.ToString()).ToArray(),
                     Pipeline = provider.GetPipeline().ToString(),
                 });
             }
@@ -319,11 +331,10 @@ public partial class DraftPage
         {
             return;
         }
-        if (provider.GetPipeline() == EffectPipeline.NativeContent && !clip.SupportsNativeEffects)
-        {
-            throw new ArgumentException($"Effect provider '{provider.TypeName}' is incompatible with clip {clip.Id}.");
-        }
-        var target = clip.SupportsNativeEffects ? clip.GetEffectSelectionTarget(provider.GetPipeline()) : clip.GetEffectTarget();
+        EffectStages.Validate(provider);
+        if (!clip.SupportedStages.Contains(provider.Stage))
+            throw new ArgumentException($"Clip {clip.Id} does not support stage {provider.Stage}.");
+        var target = clip.GetEffectSelectionTarget(provider.Stage);
         if (!EffectBindingHelper.AreTargetsCompatible(provider.Target, target))
         {
             throw new ArgumentException($"Effect provider '{provider.TypeName}' is incompatible with clip {clip.Id}.");
@@ -485,6 +496,13 @@ public partial class DraftPage
             return pipeline;
         }
 
+        Stage GetStage()
+        {
+            if (!HasParameter("Stage")) return GetPipeline() == EffectPipeline.NativeContent ? Stage.VectorPicture : Stage.Picture;
+            return Enum.TryParse<Stage>(GetString("Stage"), true, out var stage) && Enum.IsDefined(stage)
+                ? stage : throw new ArgumentException("Invalid stage.");
+        }
+
         Dictionary<string, object> GetFields()
         {
             var fields = new Dictionary<string, object>();
@@ -602,6 +620,8 @@ public partial class DraftPage
                                 ProviderId = provider.Id,
                                 FieldId = binding.Key,
                                 SourceId = binding.Value,
+                                Stage = provider.Stage.ToString(),
+                                SupportedStages = provider.SupportedStages.Select(s => s.ToString()).ToArray(),
                                 Pipeline = provider.GetPipeline().ToString(),
                             });
                         }
@@ -619,7 +639,7 @@ public partial class DraftPage
                     {
                         target = GetProvider(GetGuid("ProviderId"));
                     }
-                    return await GuiBindingSourcesAsync(clip, providers, target, GetString("FieldId"), GetPipeline(), HasParameter("Pipeline"), ct);
+                    return await GuiBindingSourcesAsync(clip, providers, target, GetString("FieldId"), GetStage(), HasParameter("Stage") || HasParameter("Pipeline"), ct);
                 }
             case GuiProjectOperation.GetClipArgument:
                 {
@@ -651,7 +671,7 @@ public partial class DraftPage
                             }
                             foreach (var endpoint in sourceProviders.Values.OfType<IClipValueEndpointProvider>())
                             {
-                                if (!endpoint.IsExport || !endpoint.CanPassTo(GetPipeline(), sourceClip.Id == clip.Id))
+                                if (!endpoint.IsExport || !endpoint.CanPassTo(GetStage(), sourceClip.Id == clip.Id, providers.Values))
                                 {
                                     continue;
                                 }
@@ -771,7 +791,13 @@ public partial class DraftPage
                             }
                         }
                     }
-                    if (HasParameter("Pipeline"))
+                    if (HasParameter("Stage"))
+                    {
+                        if (!Enum.TryParse<Stage>(GetString("Stage"), true, out var stage) || !Enum.IsDefined(stage))
+                            throw new ArgumentException("Invalid stage.");
+                        provider.Stage = stage;
+                    }
+                    else if (HasParameter("Pipeline"))
                     {
                         var pipeline = GetPipeline();
                         provider.SetPipeline(pipeline);
@@ -812,7 +838,7 @@ public partial class DraftPage
                     {
                         if (GetBoolean("IsFinalOutput"))
                         {
-                            EffectBindingHelper.SetFinalOutput(providers, provider.Id, provider.GetPipeline());
+                            EffectBindingHelper.SetFinalOutput(providers, provider.Id, provider.Stage);
                         }
                         else
                         {
@@ -935,7 +961,7 @@ public partial class DraftPage
                     {
                         throw new ArgumentException("Provider is in another pipeline.");
                     }
-                    EffectBindingHelper.SetFinalOutput(providers, provider.Id, provider.GetPipeline(), GetString("OutputFieldId"),
+                    EffectBindingHelper.SetFinalOutput(providers, provider.Id, provider.Stage, GetString("OutputFieldId"),
                         await EffectFieldTypeResolution.ResolveAsync(providers, ct));
                 }
                 else
@@ -944,7 +970,7 @@ public partial class DraftPage
                     {
                         throw new ArgumentException("OutputFieldId requires ProviderId.");
                     }
-                    EffectBindingHelper.SetFinalOutput(providers, null, GetPipeline());
+                    EffectBindingHelper.SetFinalOutput(providers, null, GetStage());
                 }
                 break;
             case GuiProjectOperation.AddClipValueEndpoint:
@@ -981,10 +1007,14 @@ public partial class DraftPage
                     }
                     if (HasParameter("Pipeline") || add)
                     {
-                        endpoint.SetPipeline(GetPipeline());
+                        endpoint.Stage = GetStage();
                     }
                     if (endpoint.IsExport)
                     {
+                        if (HasParameter("AllowCrossClip"))
+                        {
+                            endpoint.AllowCrossClip = GetBoolean("AllowCrossClip");
+                        }
                         if (HasParameter("SourceClipId") || HasParameter("SourceEndpointId"))
                         {
                             throw new ArgumentException("Output endpoints do not have a source endpoint.");
@@ -1040,7 +1070,7 @@ public partial class DraftPage
                             var sourceProviders = source.Id == clip.Id ? providers : source.EffectProviders;
                             var output = sourceProviders?.GetValueOrDefault(endpoint.SourceEndpointId) as IClipValueEndpointProvider;
                             if (output is null || !output.IsExport || !output.Enabled
-                                || !output.CanPassTo(endpoint.GetPipeline(), source.Id == clip.Id)
+                                || !output.CanPassTo(endpoint.Stage, source.Id == clip.Id, providers.Values)
                                 || source.Id != clip.Id && !GuiClipPrecedes(source, clip))
                             {
                                 throw new ArgumentException("Source endpoint is unavailable in this clip and pipeline.");
@@ -1048,7 +1078,7 @@ public partial class DraftPage
                             endpoint.ValueType = output.ValueType;
                         }
                     }
-                    if (endpoint.ValueType.IsContent() && endpoint.ValueType != endpoint.GetPipeline().GetContentType())
+                    if (endpoint.ValueType.IsContent() && endpoint.ValueType != endpoint.Stage.GetContentType())
                     {
                         throw new ArgumentException("Endpoint content type belongs to another pipeline.");
                     }
@@ -1297,9 +1327,9 @@ public partial class DraftPage
     }
 
     private static async Task<object[]> GuiBindingSourcesAsync(ClipElementUI clip, Dictionary<Guid, IEffectProvider> providers,
-        IEffectProvider? target, string? fieldId, EffectPipeline pipeline, bool filterPipeline, CancellationToken ct)
+        IEffectProvider? target, string? fieldId, Stage pipeline, bool filterPipeline, CancellationToken ct)
     {
-        if (filterPipeline && pipeline == EffectPipeline.NativeContent && !clip.SupportsNativeEffects)
+        if (filterPipeline && !clip.SupportedStages.Contains(pipeline))
         {
             throw new ArgumentException("Clip does not support the native content pipeline.");
         }
@@ -1308,9 +1338,9 @@ public partial class DraftPage
             throw new ArgumentException("Target input field not found.");
         }
         var types = await EffectFieldTypeResolution.ResolveAsync(providers, ct);
-        var inputPipeline = target?.GetPipeline() ?? pipeline;
+        var inputPipeline = target?.Stage ?? pipeline;
         var sources = new List<(string SourceId, Guid? ProviderId, string? OutputFieldId,
-            string Name, EffectArgumentFieldType FieldType, EffectPipeline Pipeline)>
+            string Name, EffectArgumentFieldType FieldType, Stage Pipeline)>
         {
             (ValueProviderFrameContext.BuiltInFrameProviderId, null, null, "Frame", EffectArgumentFieldType.Numeric, pipeline),
             (ValueProviderFrameContext.BuiltInProgressProviderId, null, null, "Progress", EffectArgumentFieldType.Numeric, pipeline),
@@ -1322,7 +1352,7 @@ public partial class DraftPage
             {
                 continue;
             }
-            if (filterPipeline && provider.GetPipeline() != pipeline)
+            if (provider.Stage != inputPipeline || filterPipeline && provider.Stage != pipeline)
             {
                 continue;
             }
@@ -1333,7 +1363,7 @@ public partial class DraftPage
                 {
                     sourceId = EffectProviderOutputExtensions.CreateOutputSourceId(provider.Id, output.Id);
                 }
-                sources.Add((sourceId, provider.Id, output.Id, provider.Name, types.GetOutputType(provider, output.Id), provider.GetPipeline()));
+                sources.Add((sourceId, provider.Id, output.Id, provider.Name, types.GetOutputType(provider, output.Id), provider.Stage));
             }
         }
 
@@ -1367,7 +1397,8 @@ public partial class DraftPage
                     SourceOutputFieldId = source.OutputFieldId,
                     source.Name,
                     FieldType = source.FieldType.ToString(),
-                    Pipeline = source.Pipeline.ToString(),
+                    Stage = source.Pipeline.ToString(),
+                    Pipeline = (source.Pipeline is Stage.Text or Stage.VectorComponent or Stage.VectorPicture ? EffectPipeline.NativeContent : EffectPipeline.Picture).ToString(),
                 });
             }
             return result.ToArray();

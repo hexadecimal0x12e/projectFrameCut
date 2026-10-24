@@ -29,6 +29,7 @@ namespace projectFrameCut.Render.Rendering
         public const int SubTrackOffset = ClipLayerOrder.SubTrackOffset;
 
         public required IClip[] Clips { get; set; }
+        public AudioSampleSource? AudioSamples { get; set; }
         public uint Duration;
         public uint StartFrame = 0;
         /// <summary>
@@ -344,6 +345,7 @@ namespace projectFrameCut.Render.Rendering
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public async Task GoRender(CancellationToken token, IPicture? cover = null)
         {
+            using var audio = EffectProcessing.OpenAudioFrame(AudioSamples);
             using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
             using var changed = new AutoResetEvent(false);
             using var registration = cancellation.Token.Register(() =>
@@ -850,6 +852,7 @@ namespace projectFrameCut.Render.Rendering
                     }
                 }
 
+                clip.EffectStagePlan?.Complete(clip, Stage.Picture, targetFrame);
                 if (UseHDR)
                 {
                     using var hdrTiming = RenderFrameDiagnostics.Current?.Measure("HDR conversion");
@@ -884,8 +887,15 @@ namespace projectFrameCut.Render.Rendering
 
         #region compose
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private IPicture Composite(IEnumerable<ClipContent?> clips, CancellationToken token)
+        private IPicture Composite(IEnumerable<ClipContent?> clips, uint frameIndex, CancellationToken token)
         {
+            using var audio = EffectProcessing.OpenAudioFrame(AudioSamples);
+            using var endpoints = ClipValuePassThrough.Open(Clips, frameIndex, TargetWidth, TargetHeight,
+                ProjectRelativeWidth, ProjectRelativeHeight, _ppb, token, source =>
+                {
+                    var dependency = RenderClip(source, frameIndex, token);
+                    dependency?.Picture.Dispose();
+                });
             using var diagnostic = RenderFrameDiagnostics.Current?.Measure("Compositing");
             var temporary = new HashSet<IPicture>(ReferenceEqualityComparer.Instance);
             IPicture? result = null, output = null;
@@ -907,6 +917,10 @@ namespace projectFrameCut.Render.Rendering
                 {
                     token.ThrowIfCancellationRequested();
                     if (clip is null) continue;
+                    using var endpointClip = ClipValueFrameContext.Current?.EnterClip(clip.Clip.Id, independent: true);
+                    using var clipScope = ValueProviderFrameContext.PushClip(clip.Clip);
+                    using var frameScope = ValueProviderFrameContext.PushFrame(frameIndex,
+                        Math.Clamp(((float)frameIndex - clip.Clip.StartFrame) / Math.Max(1u, clip.Clip.GetEffectiveDuration()), 0, 1), false, token);
                     using var clipTiming = RenderFrameDiagnostics.Current?.Measure($"Compose clip {clip.Clip.Name} ({clip.Clip.Id})", "Compose clip");
                     IPicture frame;
                     using (RenderFrameDiagnostics.Current?.Measure("Copy picture"))
@@ -926,7 +940,8 @@ namespace projectFrameCut.Render.Rendering
                         x += (int)Math.Round((pos.TargetWidth - frame.Width) / 2d);
                         y += (int)Math.Round((pos.TargetHeight - frame.Height) / 2d);
                     }
-                    if (result is null && x == 0 && y == 0 && frame.Width == TargetWidth && frame.Height == TargetHeight)
+                    if (result is null && clip.Clip.MixtureInstance is not DynamicMixtureGraph
+                        && x == 0 && y == 0 && frame.Width == TargetWidth && frame.Height == TargetHeight)
                         result = frame;
                     else
                     {
@@ -937,6 +952,7 @@ namespace projectFrameCut.Render.Rendering
                         if (!ReferenceEquals(frame, mixed)) Release(frame);
                         result = mixed;
                     }
+                    clip.Clip.EffectStagePlan?.Complete(clip.Clip, Stage.Mixture, frameIndex);
                 }
                 if (result is not null && (result.Width != TargetWidth || result.Height != TargetHeight))
                 {
@@ -1215,7 +1231,7 @@ namespace projectFrameCut.Render.Rendering
                     {
                         IRenderContext.SetWorkerState(frame, RenderWorkerStage.Compositing, Thread.CurrentThread.Name);
                         long started = Stopwatch.GetTimestamp();
-                        try { picture = Composite(entries.Select(e => e.Content.Value), token); }
+                        try { picture = Composite(entries.Select(e => e.Content.Value), frame, token); }
                         finally { Interlocked.Add(ref compositeTicks, Stopwatch.GetElapsedTime(started).Ticks); }
                     }
                 }
@@ -1301,7 +1317,7 @@ namespace projectFrameCut.Render.Rendering
             WaitForClipFrames(frame, pending, changed, token);
             long compositeStarted = Stopwatch.GetTimestamp();
             IPicture picture;
-            using (pending.Context.Enter()) picture = Composite(pending.Entries.Select(e => e.Content.Value), token);
+            using (pending.Context.Enter()) picture = Composite(pending.Entries.Select(e => e.Content.Value), frame, token);
             Interlocked.Add(ref compositeTicks, Stopwatch.GetElapsedTime(compositeStarted).Ticks);
             return picture;
         }
@@ -1390,7 +1406,7 @@ namespace projectFrameCut.Render.Rendering
                     entries.Add(entry);
                     ReadContent(entry);
                 }
-                return Composite(entries.Select(e => e.Content.Value), token);
+                return Composite(entries.Select(e => e.Content.Value), frameIndex, token);
             }
             finally
             {
@@ -1408,6 +1424,7 @@ namespace projectFrameCut.Render.Rendering
 
         private ClipContent? RenderClip(IClip clip, uint frameIndex, CancellationToken token)
         {
+            using var audio = EffectProcessing.OpenAudioFrame(AudioSamples);
             using var diagnostic = RenderFrameDiagnostics.Current?.Measure($"Clip {clip.Name} ({clip.Id}), frame {frameIndex}", "Clip");
             EnsureClipDependencies(clip, frameIndex, token);
             if (FrameHashContext.Current is { } context)
@@ -1424,7 +1441,7 @@ namespace projectFrameCut.Render.Rendering
                 foreach (var clip in Clips.Where(c => (c.ContainsFrame(frame) || c.ExtendToWholeDraft && c.LayerIndex > SubTrackOffset)
                     && ClipLayerOrder.BottomToTop.Compare(c, mask) < 0).OrderBy(c => c, ClipLayerOrder.BottomToTop))
                     lower.Add(RenderClip(clip, frame, token));
-                return Composite(lower, token);
+                return Composite(lower, frame, token);
             }
             finally { foreach (var item in lower) item?.Picture.Dispose(); }
         }
@@ -1493,6 +1510,7 @@ namespace projectFrameCut.Render.Rendering
             }
             using var context = ValueProviderFrameContext.PushFrame(frameIndex,
                 Math.Clamp(((float)frameIndex - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1), false, token);
+            using var clipScope = ValueProviderFrameContext.PushClip(clip);
             IRenderContext.SetWorkerState(frameIndex, RenderWorkerStage.PreparingSource, Thread.CurrentThread.Name, clip);
             long sourceStarted = Stopwatch.GetTimestamp();
             IPicture frame = null!;

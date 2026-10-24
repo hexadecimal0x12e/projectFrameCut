@@ -146,7 +146,7 @@ public sealed class ProjectExternalSourceHost : IAsyncDisposable
             Error = current ? Errors.GetValueOrDefault(x.ImportId) ?? (Entries.TryGetValue(x.ImportId, out var worker) ? worker.Client.FrameError ?? (!worker.Client.IsAvailable ? "External source worker has exited." : string.Empty) : string.Empty) : string.Empty,
             Name = x.Manifest.Name, Version = x.Manifest.Version, Author = x.Manifest.Author, ManifestId = x.Manifest.Id,
             Description = x.Manifest.Description ?? string.Empty, AuthorUrl = x.Manifest.AuthorUrl ?? string.Empty,
-            ManifestSha256 = x.ManifestSha256, Directory = x.Directory, ImportedAt = x.CreatedAt,
+            ManifestSha256 = x.ManifestSha256, Directory = x.ReferenceDirectory ?? x.Directory, ImportedAt = x.CreatedAt,
             Sources = current && Entries.TryGetValue(x.ImportId, out var entry) ? entry.Asset.Sources : x.Sources,
             AudioSources = current && Entries.TryGetValue(x.ImportId, out var audioEntry) ? audioEntry.Asset.AudioSources : x.AudioSources,
             MaskSources = current && Entries.TryGetValue(x.ImportId, out var maskEntry) ? maskEntry.Asset.MaskSources : x.MaskSources }).ToList(),

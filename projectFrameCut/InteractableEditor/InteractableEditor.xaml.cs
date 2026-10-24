@@ -944,7 +944,7 @@ namespace projectFrameCut.InteractableEditor
 
             private static Image CreateImageBuffer()
             {
-                return new Image
+                return new PreviewImage
                 {
                     Aspect = Aspect.Fill,
                     InputTransparent = true,

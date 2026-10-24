@@ -56,6 +56,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<Stage> SupportedStages => EffectStages.Vector;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
 
         public string? FilePath { get; set; }
         public virtual bool NeedFilePath => false;
@@ -98,6 +102,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     (EffectsInstances ?? []).Where(e => e.Enabled).OrderBy(e => e.Index).OfType<IVectorComponentEffect>(),
                     frameIndex, progress));
             }
+            EffectStagePlan?.Complete(this, Stage.VectorComponent,
+                VectorPictureEffectProcessing.GetTargetFrame(this, frameIndex));
             return result;
         }
 
@@ -221,6 +227,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public IEffectProvider[]? EffectProvidersInstances { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<Stage> SupportedStages => EffectStages.VectorImage;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IEffectStagePlan? EffectStagePlan { get; set; }
         public string? FilePath { get; set; }
 
         public bool NeedFilePath => true;

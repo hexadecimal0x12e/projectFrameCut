@@ -136,6 +136,8 @@ public class VectorComponentClip : VectorCanvasClip
         {
             picture = new VectorPicture { Elements = RotateViewport(picture.Elements, viewport[2], viewport[3], rotation) };
         }
+        if (frameOverride is null)
+            EffectStagePlan?.Complete(this, Stage.VectorComponent, VectorPictureEffectProcessing.GetTargetFrame(this, frameIndex));
         return frameOverride is null ? VectorPictureEffectProcessing.Process(this, picture, frameIndex, Progress(frameIndex), requiredWidth, requiredHeight) : picture;
     }
 

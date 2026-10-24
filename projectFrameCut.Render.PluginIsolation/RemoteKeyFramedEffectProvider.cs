@@ -54,6 +54,7 @@ public class RemoteKeyFramedEffectProvider(IPluginIsolationSession session, Isol
             {
                 Fields = result.Provider.Fields.ToDictionary(f => f.Id, f =>
                     Fields.TryGetValue(f.Id, out var old) && old.GetGetter()() is projectFrameCut.Drawing.Base.IPicture ? old : ToField(f));
+                Stage = (Stage)result.Provider.Stage;
                 MetaData = result.Provider.Metadata.ToDictionary(p => p.Key, p => IsolationValueConverter.ToObject(p.Value)!);
                 AnchorsBindingState = new(result.Provider.AnchorBindings);
                 Name = result.Provider.Name;

@@ -2,6 +2,7 @@
 using Microsoft.Maui.Controls;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
+using projectFrameCut.Asset;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Drawing.Text.FontHelper;
 using projectFrameCut.Render.Plugin;
@@ -161,7 +162,9 @@ namespace projectFrameCut.Services
             Directory.CreateDirectory(Path.Combine(MauiProgram.CachePath, "FontCache", "dark"));
             Directory.CreateDirectory(Path.Combine(MauiProgram.CachePath, "FontCache", "light"));
             LoadedFonts.Clear();
-            foreach (var f in (new[] { "*.ttf", "*.otf", "*.ttc" }).SelectMany(ext => Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "My Assets"), ext)))
+            foreach (var f in (new[] { "*.ttf", "*.otf", "*.ttc" }).SelectMany(ext => Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "My Assets"), ext))
+                .Concat(AssetDatabase.Assets.Values.Where(a => a.AssetType == AssetType.Font && !string.IsNullOrWhiteSpace(a.Path)).Select(a => a.Path!))
+                .Where(File.Exists).Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal))
             {
                 foreach (var info in TextHelper.CreateFontInfo(LocalizedResources.SimpleLocalizerBaseGeneratedHelper.Localized.TextServices_FontCatagory_YourAsset, f))
                 {

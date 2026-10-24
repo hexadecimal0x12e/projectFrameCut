@@ -28,11 +28,13 @@ public sealed class EmptyVideoSource : IVideoSource
 
     public static string CreatePath(int width, int height) => $"{PathPrefix}{width}x{height}";
 
+    public static bool IsPath(string? path) => path?.StartsWith(PathPrefix, StringComparison.Ordinal) == true;
+
     public void Initialize() => ObjectDisposedException.ThrowIf(Disposed, this);
 
     public IVideoSource CreateNew(string newSource)
     {
-        if (newSource.StartsWith(PathPrefix, StringComparison.Ordinal)) newSource = newSource[PathPrefix.Length..];
+        if (IsPath(newSource)) newSource = newSource[PathPrefix.Length..];
         var parts = newSource.Split('x', 2);
         if (parts.Length != 2 || !int.TryParse(parts[0], out int width) || !int.TryParse(parts[1], out int height)
             || width <= 0 || height <= 0)

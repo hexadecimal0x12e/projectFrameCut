@@ -48,7 +48,6 @@ public sealed class DynamicPreview : IDisposable
     private const int MaxDiskCachedFallbackFrames = 1500;
     private const string TextStyleProviderFromKey = "TextStyleProvider_FromPlugin";
     private const string TextStyleProviderTypeKey = "TextStyleProvider_TypeName";
-    private static readonly int s_maxPreparationParallelism = Math.Max(1, Environment.ProcessorCount / 2);
     private static readonly ConcurrentDictionary<FallbackFrameCacheKey, CachedFallbackFrame> s_fallbackFrameCache = new();
     private static readonly ConcurrentDictionary<string, long> s_fallbackDiskFrameAccess = new(StringComparer.Ordinal);
     public static string DiskCacheRoot { get; set { if (Directory.Exists(value)) field = value; } } = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
@@ -119,7 +118,7 @@ public sealed class DynamicPreview : IDisposable
 
     /// <summary>
     /// Divisor for continuous preview resolution. 1 = the fitted viewport resolution, 2 = half, etc.
-    /// This only changes continuous-playback bitmap density; still frames prepared by
+    /// This changes playback and interactive preview bitmap density; still frames prepared by
     /// <see cref="PrepareFrameAsync(uint, int, int, CancellationToken, bool)"/> always use the requested target resolution.
     /// </summary>
     public int PreviewResolutionDivisor
@@ -133,9 +132,7 @@ public sealed class DynamicPreview : IDisposable
     } = 1;
 
     /// <summary>
-    /// Prepares a still frame at the requested output resolution. Still-frame rendering
-    /// deliberately bypasses viewport fitting and <see cref="PreviewResolutionDivisor"/>;
-    /// those optimizations are reserved for continuous dynamic preview playback.
+    /// Prepares a still frame at the requested output resolution, without viewport fitting.
     /// </summary>
     public async Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight, CancellationToken token, bool applyClipTargetLayout = true)
     {
@@ -157,11 +154,14 @@ public sealed class DynamicPreview : IDisposable
     }
 
     /// <summary>
-    /// Compatibility overload for callers that previously supplied preview-host dimensions.
-    /// Host dimensions are intentionally ignored for still-frame rendering.
+    /// Fits interactive previews to the viewport; still frames retain the requested resolution.
     /// </summary>
-    public Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight, double _, double __, CancellationToken token, bool applyClipTargetLayout = true)
-        => PrepareFrameAsync(frameIndex, targetWidth, targetHeight, token, applyClipTargetLayout);
+    public Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight, double viewportWidth, double viewportHeight, CancellationToken token, bool applyClipTargetLayout = true, bool interactivePreview = false)
+    {
+        if (interactivePreview)
+            (targetWidth, targetHeight) = ResolveDimensions(targetWidth, targetHeight, viewportWidth, viewportHeight);
+        return PrepareFrameAsync(frameIndex, targetWidth, targetHeight, token, applyClipTargetLayout);
+    }
 
     /// <summary>
     /// Resolves the bitmap canvas inside the aspect-fitted project viewport.
@@ -484,7 +484,7 @@ public sealed class DynamicPreview : IDisposable
 
         var prepared = new PreparedPreview[orderedRequests.Length];
 
-        using var semaphore = new SemaphoreSlim(s_maxPreparationParallelism);
+        using var semaphore = new SemaphoreSlim(RenderSchedulingSettings.MaxParallelWorkers);
         if (_previewer is not null)
         {
             // The backend shares one render gate; keep waiting clips local instead of queueing RPCs.
@@ -548,21 +548,28 @@ public sealed class DynamicPreview : IDisposable
                     frameClips[i] = ClipArgumentBinding.InitializeFrame(requests[requests.Count - i - 1].Clip, frameIndex);
                 }
 
-                var prepared = new PreparedPreview?[frameClips.Length];
+                var prepared = new PreparedPreview[frameClips.Length];
                 Parallel.For(0, frameClips.Length, new ParallelOptions
                 {
                     CancellationToken = token,
-                    MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount, 1, 4),
+                    MaxDegreeOfParallelism = RenderSchedulingSettings.MaxParallelWorkers,
                 }, i =>
                 {
-                    if (!cache.TryGetClip(frameIndex, frameClips[i].Id, out var source, out var positioned)) return;
                     try
                     {
-                        prepared[i] = CreatePreparedClipPreview(frameClips[i], source, positioned);
+                        prepared[i] = cache.TryGetClip(frameIndex, frameClips[i].Id, out var source, out var positioned)
+                            ? CreatePreparedClipPreview(frameClips[i], source, positioned)
+                            : new PreparedPreview(frameClips[i].Id, null,
+                                $"Preview cache is missing for clip '{frameClips[i].Name}' at frame {frameIndex}.", frameClips[i]);
                     }
-                    catch (IOException) { }
+                    catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"Read cached preview for clip {frameClips[i].Id} at frame {frameIndex}", this);
+                        prepared[i] = new PreparedPreview(frameClips[i].Id, null, ex.Message, frameClips[i]);
+                    }
                 });
-                return prepared.OfType<PreparedPreview>().ToArray();
+                return prepared;
             }
             finally { ReleaseClipsSnapshot(); }
         }, token).ConfigureAwait(false);
@@ -785,7 +792,7 @@ public sealed class DynamicPreview : IDisposable
                 }
                 finally { try { rendered.Dispose(); } catch { } }
 
-                return new PreparedPreview(request.Clip.Id, () => new Image
+                return new PreparedPreview(request.Clip.Id, () => new PreviewImage
                 {
                     Source = source,
                     Aspect = Aspect.Fill,
@@ -818,6 +825,7 @@ public sealed class DynamicPreview : IDisposable
 
     private static PreparedPreview CreatePreparedClipPreview(IClip clip, PreviewFrameSource frame, bool positioned)
     {
+        frame = HdrPreviewView.PrepareFrame(frame);
 #if WINDOWS
         if (frame.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb || frame.RequireSwapChain)
             return new PreparedPreview(clip.Id, () => new HdrPreviewView
@@ -828,8 +836,9 @@ public sealed class DynamicPreview : IDisposable
                 AutomationId = $"hdr-clip={clip.ClipType},id={clip.Id}",
             }, null, clip, isPositionedClipPreview: positioned, isTransparentAt: CreateVfdTransparencyHitTest(frame.VfdPath));
 #endif
-        var source = PreviewFrameMaterializer.CreateImageSource(frame.VfdPath);
-        return new PreparedPreview(clip.Id, () => new Image
+        var bytes = frame.Png!;
+        var source = ImageSource.FromStream(() => new MemoryStream(bytes, writable: false));
+        return new PreparedPreview(clip.Id, () => new PreviewImage
         {
             Source = source,
             Aspect = Aspect.Fill,
@@ -845,6 +854,7 @@ public sealed class DynamicPreview : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private IPicture? RenderClipPreviewSource(ref IClip clip, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token)
     {
+        using var audio = EffectProcessing.OpenAudioFrame(_previewer?.AudioSamples);
         token.ThrowIfCancellationRequested();
         using var hashContext = new FrameHashContext(new()
         {
@@ -1322,7 +1332,7 @@ public sealed class DynamicPreview : IDisposable
         }
         else if (source.FrameSource is not null)
         {
-            generatedView = new Image
+            generatedView = new PreviewImage
             {
                 Source = source.FrameSource,
                 // PreviewHost is already positioned/scaled to the clip's on-screen rect
@@ -1802,7 +1812,7 @@ public sealed class DynamicPreview : IDisposable
 
         if (token.IsCancellationRequested) return null!;
 
-        return new Image
+        return new PreviewImage
         {
             Source = frame.ToImageSource(),
             Aspect = Aspect.Fill,
@@ -1833,7 +1843,7 @@ public sealed class DynamicPreview : IDisposable
 
         if (frame is null)
         {
-            return new Image
+            return new PreviewImage
             {
                 Source = null,
                 Aspect = Aspect.Fill,
@@ -1870,7 +1880,7 @@ public sealed class DynamicPreview : IDisposable
         }
         if (token.IsCancellationRequested) return null;
 
-        return new Image
+        return new PreviewImage
         {
             Source = frame.ToImageSource(),
             Aspect = Aspect.Fill,
@@ -3006,7 +3016,7 @@ public sealed class DynamicPreview : IDisposable
 
             var cropped = CropPictureRegion(fullRaster, vpX, vpY, viewportWidth, viewportHeight);
 
-            return new Image
+            return new PreviewImage
             {
                 Source = cropped.ToImageSource(),
                 WidthRequest = Math.Max(1, viewportWidth),
@@ -3038,7 +3048,7 @@ public sealed class DynamicPreview : IDisposable
     /// </summary>
     private static View CreateEmptyGroupPreviewView(int width, int height)
     {
-        return new Image
+        return new PreviewImage
         {
             WidthRequest = Math.Max(1, width),
             HeightRequest = Math.Max(1, height),

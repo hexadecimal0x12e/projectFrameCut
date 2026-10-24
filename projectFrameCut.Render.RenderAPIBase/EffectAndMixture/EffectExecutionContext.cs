@@ -60,7 +60,7 @@ public static class EffectFieldTypes
 
     public static object? DefaultValue(IEffectArgumentField field) => field.FieldType.BaseType() switch
     {
-        EffectArgumentFieldType.IPicture or EffectArgumentFieldType.HwAccelPicture or EffectArgumentFieldType.VectorPicture => null,
+        EffectArgumentFieldType.IPicture or EffectArgumentFieldType.HwAccelPicture or EffectArgumentFieldType.VectorPicture or EffectArgumentFieldType.AudioSample => null,
         EffectArgumentFieldType.Integer => EffectParamConvert.TryConvertToInt(field.DefaultValue, out var i) ? i : 0,
         EffectArgumentFieldType.UnsignedInteger => uint.TryParse(field.DefaultValue, out var u) ? u : 0u,
         EffectArgumentFieldType.Long => long.TryParse(field.DefaultValue, out var l) ? l : 0L,
@@ -79,6 +79,7 @@ public static class EffectFieldTypes
             EffectArgumentFieldType.IPicture => value is IPicture,
             EffectArgumentFieldType.HwAccelPicture => value is IPicture,
             EffectArgumentFieldType.VectorPicture => value is projectFrameCut.Drawing.Vector.VectorPicture,
+            EffectArgumentFieldType.AudioSample => value is projectFrameCut.Shared.IAudioSamples<float>,
             EffectArgumentFieldType.Integer or EffectArgumentFieldType.UnsignedInteger or EffectArgumentFieldType.Long
                 or EffectArgumentFieldType.UnsignedLong or EffectArgumentFieldType.Numeric => value is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal,
             EffectArgumentFieldType.Boolean => value is bool,
@@ -91,6 +92,8 @@ public static class EffectFieldTypes
 
     public static object? ConvertInput(EffectArgumentFieldType type, object? value, bool convertPictures = true)
     {
+        if (value is projectFrameCut.Shared.IAudioSamples<float> audio)
+            return CopyAudio(audio);
         if (type.HasFlag(EffectArgumentFieldType.Any)) return value;
         if (convertPictures && type.IsPicture() && value is IPicture picture)
             return type.IsHwAccelPicture() ? EffectPictureProcessing.Upload(picture) : EffectPictureProcessing.Materialize(picture);
@@ -106,6 +109,19 @@ public static class EffectFieldTypes
             _ => value,
         };
         if (value is null) return null;
+        if (type.BaseType() == EffectArgumentFieldType.Color && value is string color)
+        {
+            color = color.TrimStart('#');
+            if (color.Length is not (6 or 8) || !uint.TryParse(color, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var rgba))
+                throw new FormatException("A color must use #RRGGBB or #AARRGGBB.");
+            return new PictureExtensions.Pixel<ushort>
+            {
+                r = (ushort)(((rgba >> 16) & 255) * 257),
+                g = (ushort)(((rgba >> 8) & 255) * 257),
+                b = (ushort)((rgba & 255) * 257),
+                a = color.Length == 8 ? (rgba >> 24) / 255f : 1f,
+            };
+        }
         var target = type.BaseType() switch
         {
             EffectArgumentFieldType.Integer => typeof(int),
@@ -118,4 +134,11 @@ public static class EffectFieldTypes
         };
         return target is null ? value : Convert.ChangeType(value, target, CultureInfo.InvariantCulture);
     }
+
+    public static projectFrameCut.Shared.FloatAudioSamples CopyAudio(projectFrameCut.Shared.IAudioSamples<float> audio) => new()
+    {
+        Channels = Enumerable.Range(0, audio.channelCount).Select(c => audio.GetSamples(c).AsSpan(0, audio.SampleCount).ToArray()).ToArray(),
+        SampleCount = audio.SampleCount,
+        SamplePerSecond = audio.SamplePerSecond,
+    };
 }

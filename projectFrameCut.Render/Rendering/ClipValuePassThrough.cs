@@ -71,7 +71,9 @@ public static class ClipValuePassThrough
             else if (source.Id != consumer.Id && ClipLayerOrder.BottomToTop.Compare(source, consumer) >= 0) error = "The source must precede the consumer in clip render order.";
             else if (output is null) error = "The source endpoint does not exist.";
             else if (!output.Enabled) error = "The source endpoint is disabled.";
-            else if (!output.CanPassTo(input.GetPipeline(), source.Id == consumer.Id)) error = "The endpoint pipeline has changed or does not precede the input stage.";
+            else if (source.Id != consumer.Id && !output.AllowCrossClip) error = "The source endpoint only allows pass-through within its own clip.";
+            else if (!output.CanPassTo(input.Stage, source.Id == consumer.Id, consumer.EffectProvidersInstances))
+                error = "The endpoint stage has changed or does not precede the input stage.";
             else if (output.ValueType.BaseType() != input.ValueType.BaseType() && !(output.ValueType.IsPicture() && input.ValueType.IsPicture())) error = "The endpoint type has changed.";
             if (error is not null) result.Add(new(input.Id, "InvalidClipEndpoint", error));
         }

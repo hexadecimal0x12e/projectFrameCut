@@ -220,7 +220,8 @@ namespace projectFrameCut.Render.Rendering
             bool clipLocalOutput = false,
             CancellationToken cancellationToken = default,
             Action<IEffect, object?>? afterNodeCallback = null,
-            bool beforeLayoutOutput = false, IReadOnlyList<IClip>? allClips = null, bool keepHwAccelPicture = false)
+            bool beforeLayoutOutput = false, IReadOnlyList<IClip>? allClips = null, bool keepHwAccelPicture = false,
+            IPicture? basePicture = null)
         {
             using var gpuScope = HwAccelPictureScope.Current is null ? new HwAccelPictureScope() : null;
             using var gpuEntry = gpuScope?.Enter();
@@ -235,6 +236,15 @@ namespace projectFrameCut.Render.Rendering
                 projectRelativeWidth, projectRelativeHeight, targetPPB, cancellationToken);
             using var endpoints = ClipValuePassThrough.Open(allClips, frameIndex, targetWidth, targetHeight,
                 projectRelativeWidth, projectRelativeHeight, targetPPB, cancellationToken);
+            void ObserveNode(IEffect effect, object? value)
+            {
+                afterNodeCallback?.Invoke(effect, value);
+                if (AfterEffectCallback is not null && value is IPicture picture)
+                {
+                    using var downloaded = picture is IHwAccelPicture gpu ? gpu.Download() : null;
+                    AfterEffectCallback(effect, downloaded ?? picture);
+                }
+            }
             var temporaryFrames = new HashSet<IPicture>(ReferenceEqualityComparer.Instance);
             IPicture? output = null;
             IPicture Track(IPicture picture)
@@ -246,7 +256,7 @@ namespace projectFrameCut.Render.Rendering
             {
                 int layoutRelativeWidth = projectRelativeWidth > 0 ? projectRelativeWidth : targetWidth;
                 int layoutRelativeHeight = projectRelativeHeight > 0 ? projectRelativeHeight : targetHeight;
-                IPicture? result = null;
+                IPicture? result = basePicture is null ? null : Track(DynamicEffectGraph.CopyPicture(basePicture));
                 ConcurrentDictionary<string, object> bindableEffectResultCache = new();
                 Dictionary<string, object> bindableEffectResultCache2 = new();
                 Dictionary<string, bool> producedValueTable = new();
@@ -282,12 +292,20 @@ namespace projectFrameCut.Render.Rendering
                     }
                     var srcFrame = new OneFrame(frameIndex, clip, source, resolveEffects: false) { Effects = original.Effects };
                     using var endpointClip = ClipValueFrameContext.Current?.EnterClip(srcFrame.ParentClip.Id);
+                    var clipDuration = srcFrame.ParentClip.GetEffectiveDuration();
+                    var clipProgress = clipDuration > 0
+                        ? Math.Clamp((float)((long)frameIndex - srcFrame.ParentClip.StartFrame) / clipDuration, 0f, 1f) : 0f;
+                    using var frameContext = ValueProviderFrameContext.PushFrame(frameIndex, clipProgress, false, cancellationToken);
+                    using var clipScope = ValueProviderFrameContext.PushClip(srcFrame.ParentClip);
+                    using var observer = AfterEffectCallback is null && afterNodeCallback is null ? null
+                        : ValueProviderFrameContext.ObserveNodes(ObserveNode);
                     if (TransformProcessing.IsCanvasFrame(srcFrame.Clip))
                     {
                         result = EffectPictureProcessing.Mix(srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default,
                             result ?? Track(transparentBackground ? Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0) : FallBackImageGetter(targetWidth, targetHeight)),
                             srcFrame.Clip, targetPPB, 0, 0, targetWidth, targetHeight);
                         Track(result);
+                        srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, Stage.Mixture, frameIndex);
                         continue;
                     }
                     IPicture effected = source;
@@ -307,13 +325,6 @@ namespace projectFrameCut.Render.Rendering
                             : targetHeight,
                         false, srcFrame.ParentClip.Rotation);
                     bool preserveAspect = true;
-                    // Begin the per-frame value-provider context for this clip: pre-fills the built-in
-                    // frame/progress sources and clears provider values.
-                    var clipDuration = srcFrame.ParentClip.GetEffectiveDuration();
-                    var clipProgress = clipDuration > 0
-                        ? Math.Clamp((float)((long)frameIndex - (long)srcFrame.ParentClip.StartFrame) / clipDuration, 0f, 1f)
-                        : 0f;
-                    using var frameContext = ValueProviderFrameContext.PushFrame(frameIndex, clipProgress);
                     foreach (var effect in effectsList)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
@@ -322,15 +333,8 @@ namespace projectFrameCut.Render.Rendering
                         {
                             var graphResult = graph.Evaluate(effected, srcFrame.ParentClip, frameIndex, targetWidth, targetHeight,
                                 layoutRelativeWidth, layoutRelativeHeight, clipPos, preserveAspect, ProcessEffectFromCanvas,
-                                cancellationToken, AfterEffectCallback is null && afterNodeCallback is null ? null : (node, value) =>
-                                {
-                                    afterNodeCallback?.Invoke(node, value);
-                                    if (AfterEffectCallback is not null && value is IPicture picture)
-                                    {
-                                        using var downloaded = picture is IHwAccelPicture gpu ? gpu.Download() : null;
-                                        AfterEffectCallback(node, downloaded ?? picture);
-                                    }
-                                }, keepHwAccelPicture: true);
+                                cancellationToken, AfterEffectCallback is null && afterNodeCallback is null ? null : ObserveNode,
+                                keepHwAccelPicture: true);
                             Track(effected);
                             effected = Track(graphResult.Picture);
                             clipPos = graphResult.Position;
@@ -438,6 +442,7 @@ namespace projectFrameCut.Render.Rendering
                         }
                     }
 
+                    srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, Stage.Picture, frameIndex);
                     int clipX = ScaleCoordinateToTarget(clipPos.TargetX, layoutRelativeWidth, targetWidth);
                     int clipY = ScaleCoordinateToTarget(clipPos.TargetY, layoutRelativeHeight, targetHeight);
                     if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && clipY == 0 && effected.Height < targetHeight)
@@ -459,7 +464,7 @@ namespace projectFrameCut.Render.Rendering
                     var mixer = srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default;
                     if (result is null)
                     {
-                        if (!needsPlacement)
+                        if (!needsPlacement && mixer is not DynamicMixtureGraph)
                         {
                             result = effected;
                         }
@@ -487,6 +492,7 @@ namespace projectFrameCut.Render.Rendering
                             targetHeight);
                     }
                     if (result is not null) Track(result);
+                    srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, Stage.Mixture, frameIndex);
                 }
                 //LogDiagnostic($"Result's diag info:{result?.GetDiagnosticsInfo() ?? "unknown"}");
                 if (result?.Width == targetWidth && result?.Height == targetHeight)

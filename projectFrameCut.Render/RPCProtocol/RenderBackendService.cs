@@ -1,4 +1,5 @@
 using projectFrameCut.Drawing.Processing.Converting;
+using projectFrameCut.Drawing.Base.ReadWriteConvert;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Contracts;
@@ -32,6 +33,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
     public const string PreviewCacheManifestFileName = "cache-index.json";
     public const string TimelineFrameCacheVersion = ClipPreviewCacheVersion;
     private static readonly TimeSpan PreviewCacheRetention = TimeSpan.FromHours(240);
+    private static readonly VfdV2PictureEncoder PreviewVfdEncoder = new(VfdCompression.Zstandard, zstandardLevel: 1);
 
     private static readonly JsonSerializerOptions PreviewCacheJsonOptions = new() { PropertyNameCaseInsensitive = true, WriteIndented = true };
     private readonly IRenderArtifactStore _artifacts = artifactStore ?? new RenderArtifactStore();
@@ -85,6 +87,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 RenderOperation.ControlPreviewAudio => Success(request, await ControlPreviewAudioAsync(Read<PreviewAudioCommandRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.GetPreviewAudioClock => Success(request, GetPreviewAudioClock(Read<PreviewAudioClockRequest>(request))),
                 RenderOperation.RenderClipPreview => Success(request, await RenderClipPreviewAsync(Read<ClipPreviewRequest>(request), cancellationToken).ConfigureAwait(false)),
+                RenderOperation.GenerateTimelineThumbnails => Success(request, await GenerateTimelineThumbnailsAsync(Read<TimelineThumbnailsRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.RenderClipPreviewBatch => Success(request, await RenderClipPreviewBatchAsync(Read<ClipPreviewBatchRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.StartDynamicPreview => Success(request, await StartDynamicPreviewAsync(Read<StartDynamicPreviewRequest>(request), cancellationToken).ConfigureAwait(false)),
                 RenderOperation.StopDynamicPreview => Success(request, await StopDynamicPreviewAsync(Read<StopDynamicPreviewRequest>(request), cancellationToken).ConfigureAwait(false)),
@@ -339,6 +342,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             hashIndex,
             cacheNamespace, sourceConfiguration, clipSignatures, trackSignatures);
         backendSession.ExternalSources = externalSources;
+        backendSession.AudioSamples.Revision = () => backendSession.CacheNamespace;
 
         if (previous is not null)
         {
@@ -357,6 +361,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             clip.TargetHeight = dto.TargetHeight;
         }
         _sessions[sessionId] = backendSession;
+        StartPreviewHashWarmup(backendSession);
         LogDiagnostic($"[RenderRPC] Updated session {sessionId}: reused {clips.Count(clip => reusable?.Clips.Contains(clip, ReferenceEqualityComparer.Instance) == true)}/{clips.Length} clips and {soundTracks.Count(track => reusable?.SoundTracks.Contains(track, ReferenceEqualityComparer.Instance) == true)}/{soundTracks.Length} soundtracks.");
         return backendSession.ToContract();
     }
@@ -546,6 +551,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         using var operation = session.BeginOperation(cancellationToken);
         cancellationToken = operation.Token;
         using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
+        using var audioScope = EffectProcessing.OpenAudioFrame(session.AudioSamples);
         var width = Math.Max(1, request.Width);
         var height = Math.Max(1, request.Height);
         await session.RenderGate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -604,7 +610,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                         temporaryPath = _artifacts.CreateTemporaryPath(finalPath);
                         LogDiagnostic($"[RenderRPC] Bypassing timeline preview cache after rendering frame {request.FrameIndex}.");
                     }
-                    picture.SaveToDisk(temporaryPath, Drawing.Base.PictureExtensions.SharedVfdPictureEncoder);
+                    picture.SaveToDisk(temporaryPath, PreviewVfdEncoder);
                     cancellationToken.ThrowIfCancellationRequested();
                     _artifacts.CommitTemporaryFile(temporaryPath, finalPath);
                 }
@@ -638,6 +644,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         using var operation = session.BeginOperation(cancellationToken);
         cancellationToken = operation.Token;
         using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
+        using var audioScope = EffectProcessing.OpenAudioFrame(session.AudioSamples);
         var sessionClips = previewClips ?? session.Clips;
         var savedClip = sessionClips.FirstOrDefault(candidate => candidate.Id == request.ClipId)
             ?? throw new KeyNotFoundException($"Clip '{request.ClipId}' was not found in render session '{request.SessionId}'.");
@@ -688,8 +695,8 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 ? new FrameHashContext(hashOptions, cancellationToken, session.NodeCache) : null;
             using var hashScope = ownedHashContext?.Enter();
             var stageStarted = Stopwatch.GetTimestamp();
-            InitializePreviewClips([clip, .. Timeline.CollectHashDependencies(visualClips, clip, new HashSet<Guid> { clip.Id })],
-                pixelMode, request.FrameIndex, cancellationToken);
+            IClip[] hashDependencies = [clip, .. Timeline.CollectHashDependencies(visualClips, clip, new HashSet<Guid> { clip.Id })];
+            InitializePreviewClips(hashDependencies, pixelMode, request.FrameIndex, cancellationToken);
             initializeMs = Stopwatch.GetElapsedTime(stageStarted).TotalMilliseconds;
             IPicture RenderPreview()
             {
@@ -705,7 +712,10 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 finally { renderMs += Stopwatch.GetElapsedTime(started).TotalMilliseconds; }
             }
             var hashStarted = Stopwatch.GetTimestamp();
-            var identity = FrameHashHelper.GetClipHash(visualClips, clip, request.FrameIndex, hashOptions, () => RenderPreview(), cancellationToken);
+            var identity = snapshot is null && hashDependencies.All(c => !ClipInitializationFailure.IsMarked(c) && !FrameHashHelper.NeedsRendering(c))
+                && TryGetPreparedPreviewHash(session, clip, request.FrameIndex, hashOptions, out var preparedHash)
+                ? preparedHash
+                : FrameHashHelper.GetClipHash(visualClips, clip, request.FrameIndex, hashOptions, () => RenderPreview(), cancellationToken);
             hashMs = Math.Max(0, Stopwatch.GetElapsedTime(hashStarted).TotalMilliseconds - renderMs);
             var lookupStarted = Stopwatch.GetTimestamp();
             var clipHash = identity.Hash;
@@ -740,7 +750,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                         LogDiagnostic($"[RenderRPC] Bypassing clip preview cache after rendering clip {clip.Id} at frame {request.FrameIndex}.");
                     }
                     var stageStartedAt = Stopwatch.GetTimestamp();
-                    picture.SaveToDisk(temporaryPath, Drawing.Base.PictureExtensions.SharedVfdPictureEncoder);
+                    picture.SaveToDisk(temporaryPath, PreviewVfdEncoder);
                     cancellationToken.ThrowIfCancellationRequested();
                     _artifacts.CommitTemporaryFile(temporaryPath, finalPath);
                     writeMs = Stopwatch.GetElapsedTime(stageStartedAt).TotalMilliseconds;
@@ -1059,6 +1069,8 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 };
                 var renderer = new Renderer
                 {
+                    AudioSamples = new AudioSampleSource(session.Clips, session.SoundTracks, frameRate,
+                        Math.Max(8000, request.AudioSampleRate), Math.Clamp(request.AudioChannels, 1, 8)),
                     FrameHashMode = request.FrameHashMode,
                     StartFrame = request.StartFrame,
                     Duration = length,
@@ -1090,6 +1102,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                         Writer = writer,
                         StartFrame = request.StartFrame,
                         Duration = length,
+                        SampleSource = renderer.AudioSamples,
                     };
                     await Task.Run(() => composer.Compose(frameRate, request.AudioSampleRate, request.AudioChannels, 40960, cancellationToken), cancellationToken).ConfigureAwait(false);
                     writer.Finish();
@@ -1774,7 +1787,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         public DateTimeOffset LastAccessedAtUtc { get; set; }
     }
 
-    private sealed class BackendSession(
+    private sealed partial class BackendSession(
         Guid id, string projectRoot, string projectJson, string timelineJson, string projectName,
         int width, int height, int frameRate, uint duration, IClip[] clips, ISoundTrack[] soundTracks,
         IReadOnlyDictionary<string, string> assets, string snapshotHash, FrameHashIndex hashIndex,
@@ -1792,6 +1805,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         public uint Duration { get; } = duration;
         public IClip[] Clips { get; } = clips;
         public ISoundTrack[] SoundTracks { get; } = soundTracks;
+        public AudioSampleSource AudioSamples { get; } = new(clips, soundTracks, frameRate);
         public IReadOnlyDictionary<string, string> Assets { get; } = assets;
         public string SnapshotHash { get; } = snapshotHash;
         public FrameHashIndex HashIndex { get; } = hashIndex;
@@ -1845,7 +1859,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
 
         public PreviewAudioSession GetPreviewAudio(IAudioPreviewSinkFactory factory)
         {
-            lock (_previewAudioGate) return _previewAudio ??= new PreviewAudioSession(factory, SoundTracks, Duration);
+            lock (_previewAudioGate) return _previewAudio ??= new PreviewAudioSession(factory, SoundTracks, Duration, AudioSamples);
         }
 
         public bool TryGetPreviewAudio([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out PreviewAudioSession? audio)

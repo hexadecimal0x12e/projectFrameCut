@@ -1,4 +1,5 @@
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Controls;
 using projectFrameCut.Services;
 using System.Diagnostics;
 using System.Text.Json;
@@ -29,6 +30,13 @@ public partial class LivePreviewer
                 {
                     FrameHashMode = mode, SessionId = sessionId, PlaybackId = playbackId, StartFrame = startFrame, CanvasWidth = canvasWidth, CanvasHeight = canvasHeight,
                     ProjectWidth = projectWidth, ProjectHeight = projectHeight, FrameRate = frameRate, StartAudio = HasAudioSources(),
+                    MaxParallelWorkers = RenderSchedulingSettings.MaxParallelWorkers,
+                    AllowWorkerOversubscription = RenderSchedulingSettings.AllowWorkerOversubscription,
+                    RenderAheadFrames = RenderSchedulingSettings.RenderAheadFrames,
+                    EnableThreadAffinity = RenderSchedulingSettings.EnableThreadAffinity,
+                    WorkerCPUCoreIndexs = RenderSchedulingSettings.WorkerCPUCoreIndexs,
+                    EnableMemoryBudget = RenderSchedulingSettings.EnableMemoryBudget,
+                    MaxBufferedBytes = RenderSchedulingSettings.MaxBufferedBytes,
                     PreferredPixelFormat = OperatingSystem.IsWindows() && DefaultOutputMode != NativePreviewOutputMode.Disabled
                         ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage,
                 }, token).AsTask();
@@ -85,6 +93,12 @@ internal sealed class DynamicPreviewCache
     private readonly string _cacheRoot;
     private DynamicPreviewClock _clock;
     private volatile bool _stopped;
+    private readonly object _framesGate = new();
+    private readonly Dictionary<(uint Frame, Guid Clip), (Lazy<PreviewFrameSource> Source, bool Positioned, long Bytes)> _frames = new();
+    private readonly long _maxPreparedBytes = 256L * 1024 * 1024;
+    private readonly int _preloadWorkers;
+    private long _preparedBytes;
+    private uint _currentFrame;
 
     public IRenderClient Client { get; }
     public DynamicPreviewSession Session { get; }
@@ -92,6 +106,7 @@ internal sealed class DynamicPreviewCache
     public bool IsCompleted => _stopped || _clock.IsCompleted;
     public bool IsRunning => _clock.IsRunning;
     public bool IsBuffering => _clock.BufferingProgress.HasValue;
+    public double? BufferingProgress => _clock.BufferingProgress;
 
     public DynamicPreviewCache(IRenderClient client, string projectRoot, DynamicPreviewSession session, FrameHashMode mode)
     {
@@ -101,6 +116,12 @@ internal sealed class DynamicPreviewCache
         _projectRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(projectRoot)) + Path.DirectorySeparatorChar;
         _cacheRoot = ResolveProjectPath(session.CacheDirectory);
         _clock = session.Clock;
+        _currentFrame = session.StartFrame;
+        _preloadWorkers = RenderSchedulingSettings.MaxParallelWorkers;
+        var budget = RenderSchedulingSettings.MaxBufferedBytes;
+        if (RenderSchedulingSettings.EnableMemoryBudget && budget > 0)
+            _maxPreparedBytes = Math.Min(_maxPreparedBytes, budget);
+        _ = Task.Run(PreloadFramesAsync);
     }
 
     public uint GetFrame()
@@ -111,23 +132,110 @@ internal sealed class DynamicPreviewCache
         // Local processes share the monotonic clock; anchor it to the backend audio sample position.
         var elapsed = _clock.IsRunning && _clock.Frequency > 0
             ? Math.Max(0, (now - _clock.Timestamp) / (double)_clock.Frequency) : 0;
-        return (uint)Math.Clamp(Math.Floor(_clock.Frame + elapsed * Session.FrameRate), Session.StartFrame, uint.MaxValue);
+        var frame = (uint)Math.Clamp(Math.Floor(_clock.Frame + elapsed * Session.FrameRate), Session.StartFrame, uint.MaxValue);
+        lock (_framesGate)
+        {
+            _currentFrame = frame;
+            foreach (var key in _frames.Keys.Where(k => k.Frame < frame).ToArray())
+            {
+                _preparedBytes -= _frames[key].Bytes;
+                _frames.Remove(key);
+            }
+        }
+        return frame;
     }
 
     public bool TryGetClip(uint frame, Guid clipId, out PreviewFrameSource source, out bool positioned)
     {
         source = null!;
         positioned = false;
+        Lazy<PreviewFrameSource>? prepared = null;
+        lock (_framesGate)
+        {
+            if (_stopped) return false;
+            if (_frames.TryGetValue((frame, clipId), out var cached))
+            {
+                prepared = cached.Source;
+                positioned = cached.Positioned;
+            }
+        }
+        if (prepared is not null)
+        {
+            source = prepared.Value;
+            return true;
+        }
         var entry = ReadJson<DynamicPreviewCachedClip>(Path.Combine(_cacheRoot, $"{frame:D10}_{clipId:N}.json"));
         if (entry is null || entry.ClipId != clipId || entry.FrameIndex != frame) return false;
-        var path = ResolveProjectPath(entry.ProjectRelativePath);
-        if (!File.Exists(path)) return false;
-        source = new(path, entry.Width, entry.Height, Session.PixelFormat, false);
+        prepared = PrepareClip(entry, preload: false);
+        if (prepared is null) return false;
+        source = prepared.Value;
         positioned = entry.IsPositionedClipPreview;
         return true;
     }
 
-    public void Stop() => _stopped = true;
+    private Lazy<PreviewFrameSource>? PrepareClip(DynamicPreviewCachedClip entry, bool preload)
+    {
+        var path = ResolveProjectPath(entry.ProjectRelativePath);
+        if (!File.Exists(path)) return null;
+        lock (_framesGate)
+        {
+            if (_stopped || entry.FrameIndex < _currentFrame) return null;
+            var key = (entry.FrameIndex, entry.ClipId);
+            if (_frames.TryGetValue(key, out var cached)) return cached.Source;
+            // Reserve decoded pixel storage before loading; the current frame must still be displayable.
+            var bytes = checked((long)Math.Max(1, entry.Width) * Math.Max(1, entry.Height) * 8);
+            if (preload && bytes > _maxPreparedBytes - _preparedBytes) return null;
+            var source = new Lazy<PreviewFrameSource>(() => HdrPreviewView.PrepareFrame(
+                new(path, entry.Width, entry.Height, Session.PixelFormat, false)));
+            _frames.Add(key, (source, entry.IsPositionedClipPreview, bytes));
+            _preparedBytes += bytes;
+            return source;
+        }
+    }
+
+    private async Task PreloadFramesAsync()
+    {
+        try
+        {
+            while (!_stopped)
+            {
+                var current = Volatile.Read(ref _currentFrame);
+                var end = Math.Min(uint.MaxValue, (double)current + Math.Ceiling(Session.FrameRate * 2));
+                Parallel.ForEach(Directory.EnumerateFiles(_cacheRoot, "*.json").OrderBy(p => Path.GetFileName(p), StringComparer.Ordinal),
+                    new ParallelOptions { MaxDegreeOfParallelism = _preloadWorkers }, file =>
+                {
+                    if (_stopped) return;
+                    var name = Path.GetFileNameWithoutExtension(file);
+                    if (name.Length != 43 || name[10] != '_' || !uint.TryParse(name.AsSpan(0, 10), out var frame)
+                        || !Guid.TryParseExact(name.AsSpan(11), "N", out var id) || frame < current || frame > end)
+                        return;
+                    lock (_framesGate)
+                    {
+                        if (_preparedBytes >= _maxPreparedBytes || _frames.ContainsKey((frame, id))) return;
+                    }
+                    var entry = ReadJson<DynamicPreviewCachedClip>(file);
+                    if (entry is null || entry.FrameIndex != frame || entry.ClipId != id) return;
+                    try { _ = PrepareClip(entry, preload: true)?.Value; }
+                    catch (Exception ex) { Log(ex, $"Preload preview for clip {entry.ClipId} at frame {frame}", this); }
+                });
+                await Task.Delay(50).ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex)
+        {
+            if (!_stopped) Log(ex, "Preload dynamic preview frames", this);
+        }
+    }
+
+    public void Stop()
+    {
+        lock (_framesGate)
+        {
+            _stopped = true;
+            _frames.Clear();
+            _preparedBytes = 0;
+        }
+    }
 
     private string ResolveProjectPath(string relativePath)
     {

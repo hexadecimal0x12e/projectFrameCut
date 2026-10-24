@@ -21,6 +21,7 @@ public static class VectorPictureEffectProcessing
 
     public static IPicture ReadFrame(IClip clip, uint frame, int width, int height, IPicture.PicturePixelMode ppb)
     {
+        using var clipScope = ValueProviderFrameContext.PushClip(clip);
         if (clip is not IVectorContentClip vector || vector.ProcessesVectorPictureEffects
             || !(clip.EffectsInstances ?? []).Any(e => e.Enabled && e is IVectorPictureEffect))
             return clip.GetFrameRelativeToStartPointOfSource(frame, width, height, ppb);

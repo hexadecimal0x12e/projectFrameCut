@@ -252,8 +252,11 @@ public sealed class EffectFieldTypeResolution
         }, cancellationToken);
     }
 
-    public bool AreInputsCompatible(IEffectProvider provider) => GetContext(provider.Id).InputTypes.All(p =>
-        p.Value.HasFlag(EffectArgumentFieldType.Any) || EffectFieldTypes.AreCompatible(p.Value, GetInputType(provider, p.Key)));
+    public bool AreInputsCompatible(IEffectProvider provider) =>
+        (ValueProviderFrameContext.SupportsAudioSample(provider.Stage)
+            || !GetContext(provider.Id).State.Bindings.Values.Contains(ValueProviderFrameContext.BuiltInAudioSampleProviderId))
+        && GetContext(provider.Id).InputTypes.All(p => p.Value.HasFlag(EffectArgumentFieldType.Any)
+            || EffectFieldTypes.AreCompatible(p.Value, GetInputType(provider, p.Key)));
 
     public EffectArgumentFieldType GetInputType(IEffectProvider provider, string fieldId) =>
         GetResolvedType(provider.Id, true, fieldId, EffectArgumentFieldType.Unknown);
@@ -290,6 +293,7 @@ public sealed class EffectFieldTypeResolution
     private EffectArgumentFieldType GetSourceType(string source, IReadOnlyDictionary<Guid, IEffectProvider> providers)
     {
         if (source == IEffectProvider.InputAnchorGUID.ToString()) return EffectArgumentFieldType.IPicture;
+        if (source == ValueProviderFrameContext.BuiltInAudioSampleProviderId) return EffectArgumentFieldType.AudioSample;
         if (source is ValueProviderFrameContext.BuiltInFrameProviderId or ValueProviderFrameContext.BuiltInProgressProviderId) return EffectArgumentFieldType.Numeric;
         return EffectProviderOutputExtensions.TryParseOutputSourceId(source, out var id, out var outputId) && providers.TryGetValue(id, out var provider)
             ? GetOutputType(provider, outputId) : EffectArgumentFieldType.Any;
