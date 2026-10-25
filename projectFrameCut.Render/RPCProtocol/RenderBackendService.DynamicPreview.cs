@@ -81,17 +81,6 @@ public sealed partial class RenderBackendService
         finally { _dynamicPreviewGate.Release(); }
     }
 
-    private static void WriteDynamicPreviewJson<T>(string path, T value)
-    {
-        var temporaryPath = path + ".tmp";
-        try
-        {
-            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(value));
-            File.Move(temporaryPath, path, true);
-        }
-        finally { try { File.Delete(temporaryPath); } catch { } }
-    }
-
     private sealed class DynamicPreviewProducer : IAsyncDisposable
     {
         private readonly RenderBackendService _owner;
@@ -101,8 +90,10 @@ public sealed partial class RenderBackendService
         private readonly CancellationTokenSource _cancellation = new();
         private readonly BackendSession.SessionOperation _operation;
         private readonly string _cacheRoot;
+        private DynamicPreviewIndex? _index;
         private readonly Func<DynamicPreviewClock, CancellationToken, ValueTask> _sendClock;
-        private readonly ConcurrentQueue<(uint Frame, string Index, string? TemporaryFrame)> _entries = new();
+        private readonly ConcurrentQueue<(uint Frame, string TemporaryFrame)> _entries = new();
+        private long _prunedBefore;
         private IClip[][] _renderClips = [];
         private readonly BlockingCollection<(uint Frame, Guid ClipId, CancellationToken Token, TaskCompletionSource Completion)> _jobs = new();
         private Task[] _workers = [];
@@ -146,6 +137,7 @@ public sealed partial class RenderBackendService
             using var startup = CancellationTokenSource.CreateLinkedTokenSource(token, _operation.Token);
             token = startup.Token;
             Directory.CreateDirectory(_cacheRoot);
+            _index = new(_cacheRoot);
             using var sourceScope = ProjectExternalSourceRuntime.Use(_session.ExternalSources);
             var bufferingStartedAt = Stopwatch.GetTimestamp();
             await ReportBufferingProgressAsync(0, token).ConfigureAwait(false);
@@ -272,12 +264,12 @@ public sealed partial class RenderBackendService
             }
         }
 
-        private ValueTask ReportBufferingProgressAsync(double progress, CancellationToken token, double? frame = null)
+        private ValueTask ReportBufferingProgressAsync(double progress, CancellationToken token, double? frame = null, double? frameRate = null)
             => _sendClock(new()
             {
                 SessionId = _session.Id, PlaybackId = PlaybackId,
                 Timestamp = Stopwatch.GetTimestamp(), Frequency = Stopwatch.Frequency,
-                Frame = frame ?? _request.StartFrame, BufferingProgress = progress,
+                Frame = frame ?? _request.StartFrame, BufferingProgress = progress, BufferingFrameRate = frameRate,
             }, token);
 
         private async Task CreateRenderWorkersAsync(CancellationToken token)
@@ -394,6 +386,7 @@ public sealed partial class RenderBackendService
             var bufferLength = bufferFrames ?? _bufferFrames;
             var bufferEnd = Math.Min(_session.Duration, (bufferStart ?? _request.StartFrame) + bufferLength);
             var lastProgressAt = Stopwatch.GetTimestamp();
+            var lastProgressFrame = _nextFrame;
             while (_nextFrame < _session.Duration)
             {
                 token.ThrowIfCancellationRequested();
@@ -418,30 +411,43 @@ public sealed partial class RenderBackendService
                     }
                 }
                 await Task.WhenAll(tasks).ConfigureAwait(false);
-                while (_entries.TryPeek(out var entry) && (long)entry.Frame + _bufferFrames < current)
+                long cutoff = current - _bufferFrames;
+                if (cutoff > _prunedBefore)
+                {
+                    _index!.RemoveBefore(cutoff);
+                    _prunedBefore = cutoff;
+                }
+                while (_entries.TryPeek(out var entry) && entry.Frame < cutoff)
                 {
                     _entries.TryDequeue(out _);
-                    try { File.Delete(entry.Index); if (entry.TemporaryFrame is not null) File.Delete(entry.TemporaryFrame); }
+                    try { File.Delete(entry.TemporaryFrame); }
                     catch (IOException) { }
                 }
                 Interlocked.Add(ref _nextFrame, count);
                 if (bufferStart.HasValue && Stopwatch.GetElapsedTime(lastProgressAt).TotalMilliseconds >= 200)
                 {
-                    lastProgressAt = Stopwatch.GetTimestamp();
+                    var now = Stopwatch.GetTimestamp();
                     await ReportBufferingProgressAsync((_nextFrame - bufferStart.Value)
-                        / (double)Math.Max(1L, bufferEnd - bufferStart.Value), token, _clock.Frame).ConfigureAwait(false);
+                        / (double)Math.Max(1L, bufferEnd - bufferStart.Value), token, _clock.Frame,
+                        (_nextFrame - lastProgressFrame) / Stopwatch.GetElapsedTime(lastProgressAt, now).TotalSeconds).ConfigureAwait(false);
+                    lastProgressAt = now;
+                    lastProgressFrame = _nextFrame;
                 }
             }
         }
 
         private async Task RenderClipFrameAsync(IClip[] clips, uint frame, Guid clipId, CancellationToken token)
         {
+            using var proxies = _owner.GetPreviewProxies(_session).Enter(clips, _request.CanvasWidth, _request.CanvasHeight,
+                _request.ProjectWidth > 0 ? _request.ProjectWidth : _session.Width,
+                _request.ProjectHeight > 0 ? _request.ProjectHeight : _session.Height, frame);
             using var context = new FrameHashContext(new()
             {
                 Mode = _request.FrameHashMode, Width = _request.CanvasWidth, Height = _request.CanvasHeight,
                 ProjectWidth = _request.ProjectWidth, ProjectHeight = _request.ProjectHeight,
                 FrameRate = _session.FrameRate,
                 PixelMode = _request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb ? 16 : 8,
+                PreviewSourceIdentity = proxies.Identity,
             }, token, _session.NodeCache);
             using var hashScope = context.Enter();
             var clip = clips.First(c => c.Id == clipId);
@@ -452,15 +458,16 @@ public sealed partial class RenderBackendService
                 CanvasWidth = _request.CanvasWidth, CanvasHeight = _request.CanvasHeight,
                 ProjectWidth = _request.ProjectWidth, ProjectHeight = _request.ProjectHeight,
                 PreferredPixelFormat = _request.PreferredPixelFormat, FrameHashMode = _request.FrameHashMode,
+                UsePreviewMetadata = _request.UsePreviewMetadata,
             }, token, registerArtifact: false, previewSession: _session, previewClips: clips).ConfigureAwait(false);
-            var path = Path.Combine(_cacheRoot, $"{frame:D10}_{clip.Id:N}.json");
-            _entries.Enqueue((frame, path, artifact.ProjectRelativePath.StartsWith("thumbs/unCacheablePerClip/", StringComparison.Ordinal)
-                ? _owner._artifacts.ResolveProjectPath(_session.ProjectRoot, artifact.ProjectRelativePath) : null));
+            if (artifact.ProjectRelativePath.StartsWith("thumbs/unCacheablePerClip/", StringComparison.Ordinal))
+                _entries.Enqueue((frame, _owner._artifacts.ResolveProjectPath(_session.ProjectRoot, artifact.ProjectRelativePath)));
             token.ThrowIfCancellationRequested();
-            WriteDynamicPreviewJson(path, new DynamicPreviewCachedClip
+            _index!.Write(new DynamicPreviewCachedClip
             {
                 ClipId = clip.Id, FrameIndex = frame, ProjectRelativePath = artifact.ProjectRelativePath,
                 Width = artifact.Width, Height = artifact.Height,
+                PreviewContainer = artifact.PreviewContainer, PreviewEffectHash = artifact.PreviewEffectHash,
                 IsPositionedClipPreview = TransformProcessing.HasActiveTransform(clip, clips, frame),
             });
         }
@@ -505,13 +512,20 @@ public sealed partial class RenderBackendService
         {
             if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
             Cancel();
-            if (_run is not null) await _run.ConfigureAwait(false);
-            else await FinishAsync().ConfigureAwait(false);
-            _cancellation.Dispose();
+            try
+            {
+                if (_run is not null) await _run.ConfigureAwait(false);
+                else await FinishAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                _index?.Dispose();
+                _cancellation.Dispose();
+            }
             try
             {
                 foreach (var entry in _entries)
-                    if (entry.TemporaryFrame is not null) File.Delete(entry.TemporaryFrame);
+                    File.Delete(entry.TemporaryFrame);
                 if (Directory.Exists(_cacheRoot)) Directory.Delete(_cacheRoot, true);
             }
             catch (Exception ex) { Log(ex, $"Delete dynamic preview cache {PlaybackId}", this); }

@@ -1,8 +1,9 @@
 using projectFrameCut.Render.Contracts;
 using projectFrameCut.Controls;
 using projectFrameCut.Services;
+using projectFrameCut.Render.Rendering;
+using Microsoft.Data.Sqlite;
 using System.Diagnostics;
-using System.Text.Json;
 
 namespace projectFrameCut.LivePreview;
 
@@ -12,6 +13,7 @@ public partial class LivePreviewer
     private readonly SemaphoreSlim _dynamicPreviewControlGate = new(1, 1);
 
     internal bool HasDynamicPreview => _dynamicPreviewCache is not null;
+    internal double? DynamicPreviewBufferingFrameRate { get; private set; }
 
     internal async Task<DynamicPreviewCache> StartDynamicPreviewAsync(uint startFrame, int canvasWidth, int canvasHeight,
         int projectWidth, int projectHeight, double frameRate, CancellationToken token)
@@ -25,6 +27,7 @@ public partial class LivePreviewer
             var mode = RenderHashSettings.Mode;
             try
             {
+                DynamicPreviewBufferingFrameRate = null;
                 OnProgressChanged?.Invoke(0, TimeSpan.Zero);
                 var startup = client.StartDynamicPreviewAsync(new()
                 {
@@ -37,28 +40,32 @@ public partial class LivePreviewer
                     WorkerCPUCoreIndexs = RenderSchedulingSettings.WorkerCPUCoreIndexs,
                     EnableMemoryBudget = RenderSchedulingSettings.EnableMemoryBudget,
                     MaxBufferedBytes = RenderSchedulingSettings.MaxBufferedBytes,
+                    UsePreviewMetadata = true,
                     PreferredPixelFormat = OperatingSystem.IsWindows() && DefaultOutputMode != NativePreviewOutputMode.Disabled
                         ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage,
                 }, token).AsTask();
                 double lastProgress = 0;
                 while (!startup.IsCompleted && !token.IsCancellationRequested)
                 {
-                    if (client.GetDynamicPreviewClock(sessionId, playbackId)?.BufferingProgress is double progress && progress > lastProgress)
+                    var clock = client.GetDynamicPreviewClock(sessionId, playbackId);
+                    if (clock?.BufferingProgress is double progress && progress > lastProgress)
                     {
                         lastProgress = progress;
+                        DynamicPreviewBufferingFrameRate = clock.BufferingFrameRate ?? DynamicPreviewBufferingFrameRate;
                         OnProgressChanged?.Invoke(progress, TimeSpan.Zero);
                     }
                     await Task.WhenAny(startup, Task.Delay(200, token)).ConfigureAwait(false);
                 }
                 var session = await startup.ConfigureAwait(false);
-                _dynamicPreviewCache = new DynamicPreviewCache(client, ProjectRoot, session, mode);
+                _dynamicPreviewCache = new DynamicPreviewCache(client, ProjectRoot, session, mode,
+                    canvasWidth, canvasHeight, projectWidth, projectHeight);
                 token.ThrowIfCancellationRequested();
                 OnProgressChanged?.Invoke(1, TimeSpan.Zero);
                 return _dynamicPreviewCache;
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
-                _dynamicPreviewCache?.Stop();
+                if (_dynamicPreviewCache is not null) await _dynamicPreviewCache.StopAsync().ConfigureAwait(false);
                 _dynamicPreviewCache = null;
                 try { await client.StopDynamicPreviewAsync(new() { SessionId = sessionId, PlaybackId = playbackId }).ConfigureAwait(false); }
                 catch (Exception ex) { Log(ex, "Stop canceled dynamic preview startup", this); }
@@ -77,7 +84,7 @@ public partial class LivePreviewer
             cache = _dynamicPreviewCache;
             _dynamicPreviewCache = null;
             if (cache is null) return;
-            cache.Stop();
+            await cache.StopAsync().ConfigureAwait(false);
             await cache.Client.StopDynamicPreviewAsync(new()
             {
                 SessionId = cache.Session.SessionId, PlaybackId = cache.Session.PlaybackId,
@@ -90,13 +97,17 @@ public partial class LivePreviewer
 internal sealed class DynamicPreviewCache
 {
     private readonly string _projectRoot;
-    private readonly string _cacheRoot;
+    private readonly DynamicPreviewIndex _index;
+    private readonly Task _preloadTask;
+    private int _indexErrorLogged;
     private DynamicPreviewClock _clock;
     private volatile bool _stopped;
     private readonly object _framesGate = new();
     private readonly Dictionary<(uint Frame, Guid Clip), (Lazy<PreviewFrameSource> Source, bool Positioned, long Bytes)> _frames = new();
     private readonly long _maxPreparedBytes = 256L * 1024 * 1024;
     private readonly int _preloadWorkers;
+    private readonly int _canvasWidth, _canvasHeight, _projectWidth, _projectHeight;
+    private readonly CancellationTokenSource _cancellation = new();
     private long _preparedBytes;
     private uint _currentFrame;
 
@@ -107,21 +118,25 @@ internal sealed class DynamicPreviewCache
     public bool IsRunning => _clock.IsRunning;
     public bool IsBuffering => _clock.BufferingProgress.HasValue;
     public double? BufferingProgress => _clock.BufferingProgress;
+    public double? BufferingFrameRate => _clock.BufferingFrameRate;
 
-    public DynamicPreviewCache(IRenderClient client, string projectRoot, DynamicPreviewSession session, FrameHashMode mode)
+    public DynamicPreviewCache(IRenderClient client, string projectRoot, DynamicPreviewSession session, FrameHashMode mode,
+        int canvasWidth, int canvasHeight, int projectWidth, int projectHeight)
     {
+        _canvasWidth = canvasWidth; _canvasHeight = canvasHeight;
+        _projectWidth = projectWidth; _projectHeight = projectHeight;
         Mode = mode;
         Client = client;
         Session = session;
         _projectRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(projectRoot)) + Path.DirectorySeparatorChar;
-        _cacheRoot = ResolveProjectPath(session.CacheDirectory);
+        _index = new(ResolveProjectPath(session.CacheDirectory), readOnly: true);
         _clock = session.Clock;
         _currentFrame = session.StartFrame;
         _preloadWorkers = RenderSchedulingSettings.MaxParallelWorkers;
         var budget = RenderSchedulingSettings.MaxBufferedBytes;
         if (RenderSchedulingSettings.EnableMemoryBudget && budget > 0)
             _maxPreparedBytes = Math.Min(_maxPreparedBytes, budget);
-        _ = Task.Run(PreloadFramesAsync);
+        _preloadTask = Task.Run(PreloadFramesAsync);
     }
 
     public uint GetFrame()
@@ -164,7 +179,20 @@ internal sealed class DynamicPreviewCache
             source = prepared.Value;
             return true;
         }
-        var entry = ReadJson<DynamicPreviewCachedClip>(Path.Combine(_cacheRoot, $"{frame:D10}_{clipId:N}.json"));
+        DynamicPreviewCachedClip? entry;
+        try
+        {
+            lock (_framesGate)
+            {
+                if (_stopped) return false;
+                entry = _index.Read(frame, clipId);
+            }
+        }
+        catch (SqliteException ex)
+        {
+            LogIndexError(ex);
+            return false;
+        }
         if (entry is null || entry.ClipId != clipId || entry.FrameIndex != frame) return false;
         prepared = PrepareClip(entry, preload: false);
         if (prepared is null) return false;
@@ -185,11 +213,35 @@ internal sealed class DynamicPreviewCache
             // Reserve decoded pixel storage before loading; the current frame must still be displayable.
             var bytes = checked((long)Math.Max(1, entry.Width) * Math.Max(1, entry.Height) * 8);
             if (preload && bytes > _maxPreparedBytes - _preparedBytes) return null;
-            var source = new Lazy<PreviewFrameSource>(() => HdrPreviewView.PrepareFrame(
-                new(path, entry.Width, entry.Height, Session.PixelFormat, false)));
+            var source = new Lazy<PreviewFrameSource>(() => LoadFrame(entry, path));
             _frames.Add(key, (source, entry.IsPositionedClipPreview, bytes));
             _preparedBytes += bytes;
             return source;
+        }
+    }
+
+    private PreviewFrameSource LoadFrame(DynamicPreviewCachedClip entry, string path)
+    {
+        _cancellation.Token.ThrowIfCancellationRequested();
+        try
+        {
+            return HdrPreviewView.PrepareFrame(new(path, entry.Width, entry.Height, Session.PixelFormat, false)
+                { PreviewContainer = entry.PreviewContainer, PreviewEffectHash = entry.PreviewEffectHash });
+        }
+        catch (Exception ex) when (!_stopped && (ex is IOException or InvalidDataException))
+        {
+            Log(ex, $"Regenerate cached preview for clip {entry.ClipId} at frame {entry.FrameIndex}", this);
+            var artifact = Client.RenderClipPreviewAsync(new()
+            {
+                SessionId = Session.SessionId, ClipId = entry.ClipId, FrameIndex = entry.FrameIndex,
+                CanvasWidth = _canvasWidth, CanvasHeight = _canvasHeight, ProjectWidth = _projectWidth, ProjectHeight = _projectHeight,
+                FrameHashMode = Mode, PreferredPixelFormat = Session.PixelFormat,
+                UsePreviewMetadata = entry.PreviewContainer == "vfd2m",
+            }, _cancellation.Token).AsTask().GetAwaiter().GetResult();
+            if (entry.PreviewEffectHash.Length > 0 && artifact.PreviewEffectHash != entry.PreviewEffectHash)
+                throw new InvalidDataException("The playback preview no longer matches its timeline snapshot.");
+            return HdrPreviewView.PrepareFrame(new(ResolveProjectPath(artifact.ProjectRelativePath), artifact.Width, artifact.Height,
+                Session.PixelFormat, false) { PreviewContainer = artifact.PreviewContainer, PreviewEffectHash = artifact.PreviewEffectHash });
         }
     }
 
@@ -200,34 +252,44 @@ internal sealed class DynamicPreviewCache
             while (!_stopped)
             {
                 var current = Volatile.Read(ref _currentFrame);
-                var end = Math.Min(uint.MaxValue, (double)current + Math.Ceiling(Session.FrameRate * 2));
-                Parallel.ForEach(Directory.EnumerateFiles(_cacheRoot, "*.json").OrderBy(p => Path.GetFileName(p), StringComparer.Ordinal),
-                    new ParallelOptions { MaxDegreeOfParallelism = _preloadWorkers }, file =>
+                var end = (uint)Math.Min(uint.MaxValue, (double)current + Math.Ceiling(Session.FrameRate * 2));
+                IReadOnlyList<DynamicPreviewCachedClip> entries;
+                try
                 {
-                    if (_stopped) return;
-                    var name = Path.GetFileNameWithoutExtension(file);
-                    if (name.Length != 43 || name[10] != '_' || !uint.TryParse(name.AsSpan(0, 10), out var frame)
-                        || !Guid.TryParseExact(name.AsSpan(11), "N", out var id) || frame < current || frame > end)
-                        return;
                     lock (_framesGate)
                     {
-                        if (_preparedBytes >= _maxPreparedBytes || _frames.ContainsKey((frame, id))) return;
+                        if (_stopped) return;
+                        entries = _index.ReadRange(current, end);
                     }
-                    var entry = ReadJson<DynamicPreviewCachedClip>(file);
-                    if (entry is null || entry.FrameIndex != frame || entry.ClipId != id) return;
+                }
+                catch (SqliteException ex)
+                {
+                    LogIndexError(ex);
+                    await Task.Delay(50, _cancellation.Token).ConfigureAwait(false);
+                    continue;
+                }
+                Parallel.ForEach(entries, new ParallelOptions { MaxDegreeOfParallelism = _preloadWorkers }, entry =>
+                {
+                    if (_stopped) return;
+                    lock (_framesGate)
+                    {
+                        if (_preparedBytes >= _maxPreparedBytes || _frames.ContainsKey((entry.FrameIndex, entry.ClipId))) return;
+                    }
                     try { _ = PrepareClip(entry, preload: true)?.Value; }
-                    catch (Exception ex) { Log(ex, $"Preload preview for clip {entry.ClipId} at frame {frame}", this); }
+                    catch (OperationCanceledException) when (_stopped) { }
+                    catch (Exception ex) { Log(ex, $"Preload preview for clip {entry.ClipId} at frame {entry.FrameIndex}", this); }
                 });
-                await Task.Delay(50).ConfigureAwait(false);
+                await Task.Delay(50, _cancellation.Token).ConfigureAwait(false);
             }
         }
+        catch (OperationCanceledException) when (_stopped) { }
         catch (Exception ex)
         {
             if (!_stopped) Log(ex, "Preload dynamic preview frames", this);
         }
     }
 
-    public void Stop()
+    public async Task StopAsync()
     {
         lock (_framesGate)
         {
@@ -235,6 +297,9 @@ internal sealed class DynamicPreviewCache
             _frames.Clear();
             _preparedBytes = 0;
         }
+        _cancellation.Cancel();
+        await _preloadTask.ConfigureAwait(false);
+        _index.Dispose();
     }
 
     private string ResolveProjectPath(string relativePath)
@@ -246,15 +311,9 @@ internal sealed class DynamicPreviewCache
         return path;
     }
 
-    private static T? ReadJson<T>(string path) where T : class
+    private void LogIndexError(SqliteException error)
     {
-        if (!File.Exists(path)) return null;
-        try
-        {
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            return JsonSerializer.Deserialize<T>(stream);
-        }
-        catch (IOException) { return null; }
-        catch (JsonException) { return null; }
+        if (!_stopped && Interlocked.Exchange(ref _indexErrorLogged, 1) == 0)
+            Log(error, "Read dynamic preview cache index", this);
     }
 }

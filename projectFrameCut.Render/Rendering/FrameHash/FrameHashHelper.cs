@@ -33,6 +33,8 @@ public sealed record FrameHashOptions
     public int SdrBrightness { get; init; } = 203;
     public int PeakBrightness { get; init; } = 1000;
     public string Stage { get; init; } = "clip";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PreviewSourceIdentity { get; init; }
     public bool ProcessFromCanvas { get; init; } = true;
     public bool AutoCenter { get; init; }
 }
@@ -218,6 +220,36 @@ public static class FrameHashHelper
         state["Parameters"] = effect.Parameters.ToDictionary(p => p.Key, p => IsRuntimeValue(p.Value)
             ? bound ? (object)new { BoundParameter = p.Key } : throw new RenderRequiredException() : p.Value);
         return state;
+    }
+
+    internal static string GetPreviewSourceHash(IClip clip, uint sourceFrame, int width, int height, int pixelMode)
+    {
+        object state;
+        if (clip is VideoClip video)
+            state = new { video.StartingX, video.StartingY, video.TargetDecoder, video.HDRBrightnessOffset,
+                Decoder = video.Decoder?.GetType().AssemblyQualifiedName,
+                DecoderModule = video.Decoder?.GetType().Module.ModuleVersionId,
+                Crop = clip.ExtraData?.Where(p => p.Key.StartsWith("__Internal_DirectCrop", StringComparison.Ordinal)).ToDictionary(p => p.Key, p => p.Value) };
+        else if (clip is PhotoClip photo)
+            state = new { photo.StartingX, photo.StartingY,
+                Crop = clip.ExtraData?.Where(p => p.Key.StartsWith("__Internal_DirectCrop", StringComparison.Ordinal)).ToDictionary(p => p.Key, p => p.Value) };
+        else
+        {
+            var properties = ReadProperties(clip);
+            foreach (string name in new[] { "Effects", "EffectProviders", "EffectStagePlan", "Rotation", "TargetX", "TargetY" })
+                properties.Remove(name);
+            state = properties;
+        }
+        return HashValue(new { Schema = "preview-source", Module = clip.GetType().Module.ModuleVersionId,
+            DrawingModule = typeof(IPicture).Module.ModuleVersionId,
+            Source = SourceFingerprint(clip.FilePath), Font = clip is TextClip text ? SourceFingerprint(text.FontPath) : null,
+            Frame = clip is IImmutableContentClip ? 0u : sourceFrame,
+            width, height, pixelMode, State = state, Proxy = PreviewVideoProxies.Scope.Current?.Identity,
+            EffectHelper.ForcePreferToType, EffectHelper.DefaultImplementsType,
+            PreferredPlugins = RenderAPIBase.Plugins.IPluginBase.EffectImplementations.PreferredPlugins
+                .OrderBy(p => p.Key.TypeName, StringComparer.Ordinal).ThenBy(p => p.Key.ImplementType).Select(p => new { p.Key, p.Value }).ToArray(),
+            Rasterizer = RenderAPIBase.ClipAndTrack.IVectorContentClip.GlobalDefaultRasterizer.GetType().AssemblyQualifiedName,
+            AntiAlias = RenderAPIBase.ClipAndTrack.IVectorContentClip.GlobalDefaultAntiAliasMode });
     }
 
     private static Dictionary<string, object?> ReadProperties(object value) => value.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)

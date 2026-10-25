@@ -7,6 +7,7 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Context;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
+using System.Runtime.CompilerServices;
 
 namespace projectFrameCut.Render.Effect;
 
@@ -102,6 +103,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
     internal sealed record ContentFrameResult(object Content, ClipPositionTuple Position, bool PreserveAspect);
     private sealed record CachedFrame(ContentFrameResult Frame, IReadOnlyDictionary<Guid, object> Exports);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public FrameResult Evaluate(IPicture source, IClip? clip, uint frame, int width, int height, int relativeWidth,
         int relativeHeight, ClipPositionTuple initialPosition, bool preserveAspect = true, bool processFromCanvas = false,
         CancellationToken cancellationToken = default, Action<IEffect, object?>? afterNode = null, bool keepHwAccelPicture = false)
@@ -117,6 +119,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
         return new(picture, result.Position, result.PreserveAspect);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal ContentFrameResult EvaluateContent(object source, IClip? clip, uint frame, int width, int height, int relativeWidth,
         int relativeHeight, ClipPositionTuple initialPosition, bool preserveAspect = true, bool processFromCanvas = false,
         CancellationToken cancellationToken = default, Action<IEffect, object?>? afterNode = null, float? clipProgress = null,

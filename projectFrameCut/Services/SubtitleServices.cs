@@ -47,7 +47,11 @@ public static class SubtitleServices
             catch (DecoderFallbackException ex)
             {
                 Log(ex, "Decode subtitle file");
+#if WINDOWS
+                string? selected = await UIServices.DisplayActionSheetAsync(page, Localized.Subtitle_Encoding, Localized._Cancel, null, "UTF-8", "GB18030", "Windows-1252", "UTF-16LE", "UTF-16BE");
+#else
                 string? selected = await page.DisplayActionSheetAsync(Localized.Subtitle_Encoding, Localized._Cancel, null, "UTF-8", "GB18030", "Windows-1252", "UTF-16LE", "UTF-16BE");
+#endif
                 if (selected is null || selected == Localized._Cancel) return null;
                 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
                 encoding = Encoding.GetEncoding(selected switch { "UTF-16LE" => "utf-16", "UTF-16BE" => "unicodeFFFE", _ => selected }, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);

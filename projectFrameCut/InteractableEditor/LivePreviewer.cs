@@ -41,6 +41,9 @@ namespace projectFrameCut.LivePreview
     {
         internal ScRgbFrame? ScRgb { get; init; }
         internal byte[]? Png { get; init; }
+        internal byte[]? AlphaMask { get; init; }
+        public string PreviewContainer { get; init; } = string.Empty;
+        public string PreviewEffectHash { get; init; } = string.Empty;
     }
 
     public partial class LivePreviewer
@@ -353,34 +356,10 @@ namespace projectFrameCut.LivePreview
                             else if (AssetDatabase.Assets.TryGetValue(assetId, out var asset) && asset is not null && !string.IsNullOrWhiteSpace(asset.Path))
                             {
                                 clipInstance.FilePath = asset.Path;
-                                var proxyPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".proxy", $"{asset.AssetId}.mp4");
-                                if (Path.Exists(proxyPath))
-                                {
-                                    clipInstance.FilePath = proxyPath;
-                                    Log($"The proxy for {clipInstance.Name} is used.");
-                                }
-                                else
-                                {
-                                    Log($"The proxy for {clipInstance.Name} does not exist.");
-                                }
                             }
                             else
                             {
                                 Log($"Live preview asset '{assetId}' was not found; the clip will use its fallback frame.", "warn");
-                            }
-                        }
-                        else if (ProxyRoot is not null && clipInstance.FilePath is not null)
-                        {
-                            var proxiedPath = Path.Combine(ProxyRoot, $"{Path.GetFileNameWithoutExtension(clipInstance.FilePath)}.proxy.mp4");
-
-                            if (Path.Exists(proxiedPath))
-                            {
-                                clipInstance.FilePath = proxiedPath;
-                                Log($"The proxy for {clipInstance.Name} is used.");
-                            }
-                            else
-                            {
-                                Log($"The proxy for {clipInstance.Name} does not exist.");
                             }
                         }
                     }
@@ -443,7 +422,7 @@ namespace projectFrameCut.LivePreview
                 AllowedExternalSources = ProjectExternalSourceService.GetApprovals(RenderProjectRoot ?? ProjectRoot),
                 ProjectJson = ProjectJson,
                 TimelineJson = JsonSerializer.Serialize(json),
-                ProxyRoot = RenderProxyRoot ?? ProxyRoot ?? string.Empty,
+                ProxyRoot = string.Empty,
                 ProjectWidth = Math.Max(1, ProjectRelativeWidth),
                 ProjectHeight = Math.Max(1, ProjectRelativeHeight),
                 FrameRate = Math.Max(1, targetFrameRate),
@@ -512,12 +491,12 @@ namespace projectFrameCut.LivePreview
         }
 
         public string RenderClipFrame(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token)
-            => MaterializePng(RenderClipFrameVfdAsync(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token).GetAwaiter().GetResult());
+            => RenderClipFramePngAsync(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token).GetAwaiter().GetResult();
 
-        private async Task<string> RenderClipFrameVfdAsync(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
+        private async Task<string> RenderClipFramePngAsync(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
         {
 #if DIAGHUB_ENABLE_TRACE_SYSTEM
-            using var frameMark = new UserMarkRange("Preview.RenderClipVfd", $"clip={clipId}, frame={frameIndex}, size={canvasWidth}x{canvasHeight}");
+            using var frameMark = new UserMarkRange("Preview.RenderClipPng", $"clip={clipId}, frame={frameIndex}, size={canvasWidth}x{canvasHeight}");
 #endif
             var artifact = await (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
             {
@@ -529,10 +508,11 @@ namespace projectFrameCut.LivePreview
                 CanvasHeight = canvasHeight,
                 ProjectWidth = projectWidth,
                 ProjectHeight = projectHeight,
-                PreferredPixelFormat = PreviewPixelFormat.EncodedImage,
+                PreferredPixelFormat = PreviewPixelFormat.PngImage,
+                UsePreviewMetadata = true,
                 VectorClipJson = vectorClipJson,
             }, token).ConfigureAwait(false);
-            if (artifact.PixelFormat != PreviewPixelFormat.VfdPicture)
+            if (artifact.PixelFormat != PreviewPixelFormat.EncodedImage)
                 throw new InvalidDataException($"The render backend returned unsupported preview format {artifact.PixelFormat}.");
             return await ResolveArtifactPathAsync(artifact, token).ConfigureAwait(false);
         }
@@ -542,41 +522,38 @@ namespace projectFrameCut.LivePreview
 
         public async Task<PreviewFrameSource> RenderClipFrameForDisplayAsync(Guid clipId, uint frameIndex, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, CancellationToken token, string? vectorClipJson = null)
         {
-#if DIAGHUB_ENABLE_TRACE_SYSTEM
-            using var displayMark = new UserMarkRange("Preview.RenderClipDisplay", $"clip={clipId}, frame={frameIndex}, size={canvasWidth}x{canvasHeight}");
-#endif
-            if (DefaultOutputMode == NativePreviewOutputMode.Disabled || !OperatingSystem.IsWindows())
-            {
-                var path = await RenderClipFrameVfdAsync(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson).ConfigureAwait(false);
-                return new PreviewFrameSource(path, canvasWidth, canvasHeight, PreviewPixelFormat.EncodedImage, false);
-            }
-
-            try
-            {
-                var artifact = await (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
-                {
-                    FrameHashMode = RenderHashSettings.Mode,
-                    SessionId = RenderSessionId,
-                    ClipId = clipId,
-                    FrameIndex = frameIndex,
-                    CanvasWidth = canvasWidth,
-                    CanvasHeight = canvasHeight,
-                    ProjectWidth = projectWidth,
-                    ProjectHeight = projectHeight,
-                    PreferredPixelFormat = PreviewPixelFormat.Rgba16FloatScRgb,
-                    VectorClipJson = vectorClipJson,
-                }, token).ConfigureAwait(false);
-                if (artifact.PixelFormat != PreviewPixelFormat.VfdPicture)
-                    throw new NotSupportedException("The render backend did not return a VFD clip-preview artifact.");
-
-                var path = await ResolveArtifactPathAsync(artifact, token).ConfigureAwait(false);
-                return new PreviewFrameSource(path, artifact.Width, artifact.Height, PreviewPixelFormat.Rgba16FloatScRgb, false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException && !token.IsCancellationRequested)
+            var format = DefaultOutputMode != NativePreviewOutputMode.Disabled && OperatingSystem.IsWindows()
+                ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage;
+            try { return await PrepareDisplayAsync(format).ConfigureAwait(false); }
+            catch (Exception ex) when (format == PreviewPixelFormat.Rgba16FloatScRgb && ex is not OperationCanceledException && !token.IsCancellationRequested)
             {
                 Log(ex, $"Render native preview for clip {clipId} at frame #{frameIndex}; using standard preview", this);
-                var path = await RenderClipFrameVfdAsync(clipId, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, token, vectorClipJson).ConfigureAwait(false);
-                return new PreviewFrameSource(path, canvasWidth, canvasHeight, PreviewPixelFormat.EncodedImage, false);
+                return await PrepareDisplayAsync(PreviewPixelFormat.EncodedImage).ConfigureAwait(false);
+            }
+
+            async Task<PreviewFrameSource> PrepareDisplayAsync(PreviewPixelFormat target)
+            {
+                for (int attempt = 0; ; attempt++)
+                {
+                    var artifact = await (RpcClient ?? RenderRpcBootstrap.Client).RenderClipPreviewAsync(new ClipPreviewRequest
+                    {
+                        FrameHashMode = RenderHashSettings.Mode, SessionId = RenderSessionId, ClipId = clipId,
+                        FrameIndex = frameIndex, CanvasWidth = canvasWidth, CanvasHeight = canvasHeight,
+                        ProjectWidth = projectWidth, ProjectHeight = projectHeight,
+                        PreferredPixelFormat = target, VectorClipJson = vectorClipJson, UsePreviewMetadata = true,
+                    }, token).ConfigureAwait(false);
+                    if (artifact.PixelFormat != PreviewPixelFormat.VfdPicture)
+                        throw new InvalidDataException($"The render backend returned unsupported preview format {artifact.PixelFormat}.");
+                    try
+                    {
+                        var path = await ResolveArtifactPathAsync(artifact, token).ConfigureAwait(false);
+                        return await Task.Run(() => PreviewFrameMaterializer.Prepare(new(path, artifact.Width, artifact.Height, target, false)
+                        {
+                            PreviewContainer = artifact.PreviewContainer, PreviewEffectHash = artifact.PreviewEffectHash,
+                        }), token).ConfigureAwait(false);
+                    }
+                    catch (Exception ex) when (attempt == 0 && !token.IsCancellationRequested && (ex is IOException or InvalidDataException)) { }
+                }
             }
         }
 

@@ -9,6 +9,7 @@ using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.RenderAPIBase.Context;
 using FFmpeg.AutoGen;
 using projectFrameCut.Render.RPCProtocol;
+using projectFrameCut.Render.Rendering;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
@@ -116,21 +117,17 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             try
             {
+                if (PreviewVideoProxies.Scope.Current is { } proxies && Decoder is { Width: > 0, Height: > 0 } original)
+                {
+                    var region = GetSourceRegion(original.Width, original.Height);
+                    if (proxies.TryRead(this, ClampFrameToDecoderRange(original, targetFrame), original.Width, original.Height,
+                        region.X, region.Y, region.Width, region.Height, targetWidth, targetHeight, targetPPB) is { } proxyFrame)
+                        return proxyFrame;
+                }
                 using var decoderLease = _decoderPool.Rent(targetFrame);
                 var decoder = decoderLease.Decoder;
                 targetFrame = ClampFrameToDecoderRange(decoder, targetFrame);
-                int sourceX = Math.Clamp(StartingX, 0, Math.Max(0, decoder.Width - 1));
-                int sourceY = Math.Clamp(StartingY, 0, Math.Max(0, decoder.Height - 1));
-                // Crop the source region before scaling to the requested output size.
-                int sourceWidth = Math.Max(1, decoder.Width - sourceX);
-                int sourceHeight = Math.Max(1, decoder.Height - sourceY);
-                if (SoundTrackMetadata.ReadBool(ExtraData, "__Internal_DirectCropEnabled__"))
-                {
-                    if (EffectParamConvert.TryConvertToInt(ExtraData.GetValueOrDefault("__Internal_DirectCropWidth__"), out int cropWidth) && cropWidth > 0)
-                        sourceWidth = Math.Min(sourceWidth, cropWidth);
-                    if (EffectParamConvert.TryConvertToInt(ExtraData.GetValueOrDefault("__Internal_DirectCropHeight__"), out int cropHeight) && cropHeight > 0)
-                        sourceHeight = Math.Min(sourceHeight, cropHeight);
-                }
+                var (sourceX, sourceY, sourceWidth, sourceHeight) = GetSourceRegion(decoder.Width, decoder.Height);
                 IPicture result;
                 if (decoder is IHDRVideoSource h)
                 {
@@ -157,6 +154,22 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 Log(ex, $"Read external RPC video source for clip {Name}", this);
                 return ClipInitializationFailure.CreateFallbackFrame(targetWidth, targetHeight, targetPPB, ExtraData);
             }
+        }
+
+        internal (int X, int Y, int Width, int Height) GetSourceRegion(int width, int height)
+        {
+            int x = Math.Clamp(StartingX, 0, Math.Max(0, width - 1));
+            int y = Math.Clamp(StartingY, 0, Math.Max(0, height - 1));
+            width = Math.Max(1, width - x);
+            height = Math.Max(1, height - y);
+            if (SoundTrackMetadata.ReadBool(ExtraData, "__Internal_DirectCropEnabled__"))
+            {
+                if (EffectParamConvert.TryConvertToInt(ExtraData.GetValueOrDefault("__Internal_DirectCropWidth__"), out int w) && w > 0)
+                    width = Math.Min(width, w);
+                if (EffectParamConvert.TryConvertToInt(ExtraData.GetValueOrDefault("__Internal_DirectCropHeight__"), out int h) && h > 0)
+                    height = Math.Min(height, h);
+            }
+            return (x, y, width, height);
         }
 
         private uint ClampFrameToDecoderRange(IVideoSource? decoder, uint targetFrame)
@@ -269,6 +282,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 return;
             }
 
+            ReleaseDecoderPool(poolKey, pool);
+        }
+
+        internal static void ReleaseDecoderPool(string poolKey, VideoDecoderPool pool)
+        {
             lock (DecoderPoolRegistryLock)
             {
                 if (!DecoderPools.TryGetValue(poolKey, out var existing) || !ReferenceEquals(existing, pool))
@@ -283,7 +301,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             }
         }
 
-        private static VideoDecoderPool AcquireDecoderPool(string poolKey, Func<IVideoSource> decoderFactory)
+        internal static VideoDecoderPool AcquireDecoderPool(string poolKey, Func<IVideoSource> decoderFactory)
         {
             lock (DecoderPoolRegistryLock)
             {
@@ -306,7 +324,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 : RemoteRpcVideoSource.IsPath(filePath) ? "::" + ExternalVideoSourceRegistry.CacheToken : string.Empty)}";
         }
 
-        private sealed class VideoDecoderPool : IDisposable
+        internal sealed class VideoDecoderPool : IDisposable
         {
             private readonly string _poolKey;
             private readonly Func<IVideoSource> _decoderFactory;

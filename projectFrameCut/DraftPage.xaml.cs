@@ -791,6 +791,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         AddTrackCommand = new Command(() => AddTrack(false));
         AddSubTrackCommand = new Command(() => AddTrack(true));
         ExportCommand = new Command(() => OnExportedClick(this, EventArgs.Empty));
+        ExportCurrentFrameCommand = new Command(async () => await ExportCurrentFrameAsync(false));
+        ExportSelectedClipFrameCommand = new Command(async () => await ExportCurrentFrameAsync(true));
         GoRenderCommand = new Command(() => OnExportedClick(this, EventArgs.Empty));
         SettingsCommand = new Command(() => SettingsClick(this, EventArgs.Empty));
         UndoCommand = new Command(async () => await UndoChanges());
@@ -5168,7 +5170,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 var existing = Assets.Values.First(v => v.Name == name);
 
-                string? opt = await DisplayActionSheetAsync(
+                string? opt = await UIServices.DisplayActionSheetAsync(this,
                     Localized.DraftPage_DuplicatedAsset(name, existing.Name),
                     Localized._Cancel,
                     null,
@@ -6576,6 +6578,9 @@ public partial class DraftPage : ContentPage, IDraftPage
 #endif
         try
         {
+#if WINDOWS
+            await WinUI.App.BringToForeground(Window);
+#endif
             var paths = (await FileDropHelper.GetFilePathsFromDrop(e)).Where(p => !string.IsNullOrWhiteSpace(p))
                 .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToList();
             if (paths.Count == 0) return;
@@ -8343,6 +8348,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (leavingProject && !ExitNoSave)
             SaveProjectThumbnailBeforeExit();
         AlreadyDisappeared = true;
+        _frameExportCts?.Cancel();
         CancelVectorHandleDrags();
         StopRenderBackendWatchdog();
         StopRemoteProjectMonitor();

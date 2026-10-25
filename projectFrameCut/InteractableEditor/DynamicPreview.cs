@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.Text;
+using projectFrameCut.Render.Text;
 using projectFrameCut.Render.RenderAPIBase.Text;
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Helpers;
@@ -49,7 +49,10 @@ public sealed class DynamicPreview : IDisposable
     private const string TextStyleProviderFromKey = "TextStyleProvider_FromPlugin";
     private const string TextStyleProviderTypeKey = "TextStyleProvider_TypeName";
     private static readonly ConcurrentDictionary<FallbackFrameCacheKey, CachedFallbackFrame> s_fallbackFrameCache = new();
-    private static readonly ConcurrentDictionary<string, long> s_fallbackDiskFrameAccess = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, LocalPreviewCacheIndex> s_localCacheIndexes = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+    private static int s_localCacheErrorLogged;
+    private static LocalPreviewCacheIndex GetLocalCacheIndex(string? root = null)
+        => s_localCacheIndexes.GetOrAdd(Path.GetFullPath(root ?? DiskCacheRoot), static path => new(path));
     public static string DiskCacheRoot { get; set { if (Directory.Exists(value)) field = value; } } = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
     public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Required;
 
@@ -227,37 +230,9 @@ public sealed class DynamicPreview : IDisposable
 
             var clipJson = JsonSerializer.SerializeToElement(clip);
             var clipInstance = PluginManager.CreateClip(clipJson);
-            if (clipInstance.FilePath is not null)
+            if (clipInstance.FilePath?.StartsWith('$') == true)
             {
-                if (clipInstance.FilePath.StartsWith('$'))
-                {
-                    var asset = AssetDatabase.Assets[clipInstance.FilePath.Substring(1)];
-                    clipInstance.FilePath = asset.Path;
-                    var proxyPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".proxy", $"{asset.AssetId}.mp4");
-                    if (Path.Exists(proxyPath))
-                    {
-                        clipInstance.FilePath = proxyPath;
-                        Log($"The proxy for {clipInstance.Name} is used.");
-                    }
-                    else
-                    {
-                        Log($"The proxy for {clipInstance.Name} does not exist.");
-                    }
-                }
-                else if (_previewer?.ProxyRoot is not null && clipInstance.FilePath is not null)
-                {
-                    var proxiedPath = Path.Combine(_previewer.ProxyRoot, $"{Path.GetFileNameWithoutExtension(clipInstance.FilePath)}.proxy.mp4");
-
-                    if (Path.Exists(proxiedPath))
-                    {
-                        clipInstance.FilePath = proxiedPath;
-                        Log($"The proxy for {clipInstance.Name} is used.");
-                    }
-                    else
-                    {
-                        Log($"The proxy for {clipInstance.Name} does not exist.");
-                    }
-                }
+                clipInstance.FilePath = AssetDatabase.Assets[clipInstance.FilePath.Substring(1)].Path;
             }
             clipsList.Add(clipInstance);
             reinitTasks.Add(Task.Run(() =>
@@ -763,7 +738,6 @@ public sealed class DynamicPreview : IDisposable
         long renderedAt = 0;
         try
         {
-            ImageSource source;
             bool canvasPreview = TransformProcessing.HasActiveTransform(request.Clip, _clips ?? [request.Clip], frameIndex);
             if (_previewer is not null)
             {
@@ -774,32 +748,11 @@ public sealed class DynamicPreview : IDisposable
             }
             else
             {
-                // Compatibility fallback for isolated editor surfaces that do not own a project
-                // render session. Normal DraftPage previews always use the RPC/file path above.
-                var rendered = await Task.Run(() => RenderClipPreviewSource(ref clip, canvasWidth, canvasHeight,
+                var displayFrame = await Task.Run(() => PrepareLocalClipPreview(clip, canvasWidth, canvasHeight,
                     projectWidth, projectHeight, frameIndex, token), token).ConfigureAwait(false);
+                clip = ClipArgumentBinding.InitializeFrame(clip, frameIndex);
                 renderedAt = Stopwatch.GetTimestamp();
-                if (rendered is null)
-                {
-                    Log($"No preview source was rendered for clip {clip.Name} ({clip.Id}) at frame {frameIndex}.", "warning");
-                    return new PreparedPreview(request.Clip.Id, null, "Failed to render preview source.", clip);
-                }
-                Func<double, double, bool>? isTransparentAt;
-                try
-                {
-                    source = rendered.ToImageSource();
-                    isTransparentAt = CreateTransparencyHitTest(rendered);
-                }
-                finally { try { rendered.Dispose(); } catch { } }
-
-                return new PreparedPreview(request.Clip.Id, () => new PreviewImage
-                {
-                    Source = source,
-                    Aspect = Aspect.Fill,
-                    HorizontalOptions = LayoutOptions.Fill,
-                    VerticalOptions = LayoutOptions.Fill,
-                    AutomationId = $"clip={request.Clip.ClipType},id={request.Clip.Id}",
-                }, null, clip, isPositionedClipPreview: canvasPreview, isTransparentAt: isTransparentAt);
+                return CreatePreparedClipPreview(clip, displayFrame, canvasPreview);
             }
         }
         catch (OperationCanceledException)
@@ -834,7 +787,7 @@ public sealed class DynamicPreview : IDisposable
                 HorizontalOptions = LayoutOptions.Fill,
                 VerticalOptions = LayoutOptions.Fill,
                 AutomationId = $"hdr-clip={clip.ClipType},id={clip.Id}",
-            }, null, clip, isPositionedClipPreview: positioned, isTransparentAt: CreateVfdTransparencyHitTest(frame.VfdPath));
+            }, null, clip, isPositionedClipPreview: positioned, isTransparentAt: CreatePreviewTransparencyHitTest(frame));
 #endif
         var bytes = frame.Png!;
         var source = ImageSource.FromStream(() => new MemoryStream(bytes, writable: false));
@@ -845,121 +798,80 @@ public sealed class DynamicPreview : IDisposable
             HorizontalOptions = LayoutOptions.Fill,
             VerticalOptions = LayoutOptions.Fill,
             AutomationId = $"clip={clip.ClipType},id={clip.Id}",
-        }, null, clip, isPositionedClipPreview: positioned, isTransparentAt: CreateVfdTransparencyHitTest(frame.VfdPath));
+        }, null, clip, isPositionedClipPreview: positioned, isTransparentAt: CreatePreviewTransparencyHitTest(frame));
     }
 
-    /// <summary>
-    /// Renders clip-local output through the compositor; the preview host owns its canvas position.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    private IPicture? RenderClipPreviewSource(ref IClip clip, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token)
+    private PreviewFrameSource PrepareLocalClipPreview(IClip clip, int canvasWidth, int canvasHeight,
+        int projectWidth, int projectHeight, uint frameIndex, CancellationToken token)
     {
+        bool scRgb = OperatingSystem.IsWindows() && DefaultOutputMode != NativePreviewOutputMode.Disabled;
+        var mode = scRgb ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
         using var audio = EffectProcessing.OpenAudioFrame(_previewer?.AudioSamples);
-        token.ThrowIfCancellationRequested();
-        using var hashContext = new FrameHashContext(new()
+        using var context = new FrameHashContext(new()
         {
             Mode = RenderHashSettings.Mode, Width = canvasWidth, Height = canvasHeight,
             ProjectWidth = projectWidth, ProjectHeight = projectHeight,
-            FrameRate = _previewer?.targetFrameRate ?? 30, PixelMode = 8,
+            PixelMode = mode.Value, Stage = "clip", ProcessFromCanvas = Timeline.ProcessEffectFromCanvas,
         }, token, nodeCache);
-        using var hashScope = hashContext.Enter();
-        var previewClip = clip;
-        var allClips = (_clips ?? [clip]).Select(c => c.Id == previewClip.Id ? previewClip : c).ToArray();
-        using var maskScope = MaskFrameContext.Open(allClips, frameIndex, canvasWidth, canvasHeight,
-            projectWidth, projectHeight, IPicture.PicturePixelMode.BytePicture, token);
-        using var endpoints = ClipValuePassThrough.Open(allClips, frameIndex, canvasWidth, canvasHeight,
-            projectWidth, projectHeight, IPicture.PicturePixelMode.BytePicture, token);
-
-        if (TransformProcessing.HasActiveTransform(clip, _clips ?? [clip], frameIndex))
+        using var hashScope = context.Enter();
+        var clips = _clips ?? [clip];
+        clip.ReInit(mode);
+        using var cache = new PreviewFrameCache(id => Path.Combine(DiskCacheRoot, id.ToString()), frameIndex,
+            canvasWidth, canvasHeight, projectWidth, projectHeight, scRgb, false, token);
+        IPicture? rendered = null;
+        IPicture Render() => rendered ??= projectFrameCut.Render.RPCProtocol.ClipPreviewRenderer.Render(clip, clips,
+            canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex, token, mode, initializeClips: false)
+            ?? throw new InvalidOperationException($"Clip {clip.Id} did not produce a preview frame.");
+        try
         {
-            var arguments = new ClipArgumentFrameCache();
-            var rendered = TransformProcessing.RenderCanvas(clip, _clips ?? [clip], frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, IPicture.PicturePixelMode.BytePicture, arguments);
-            clip = arguments.Get(clip, frameIndex);
-            return rendered;
+            var identity = FrameHashHelper.GetClipHash(clips, clip, frameIndex, context.Options, () => Render(), token);
+            var cached = cache.GetOrCreate(clip, clips, identity.Hash, identity.CanReuse,
+                Path.Combine(DiskCacheRoot, "temporary", $"{Guid.NewGuid():N}.vfd2m"),
+                () => { var picture = Render(); rendered = null; return picture; },
+                () => clips.All(c => !ClipInitializationFailure.IsMarked(c) && Timeline.CanCacheClipSource(c)));
+            var result = PreviewFrameMaterializer.FromData(new(cached.Path, cached.Data.Width, cached.Data.Height,
+                scRgb ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage, false)
+                { PreviewContainer = "vfd2m", PreviewEffectHash = identity.Hash }, cached.Data);
+            if (!cached.Persistent) File.Delete(cached.Path);
+            else
+            {
+                try { GetLocalCacheIndex().Track(cached.Path, clip.Id, frameIndex, cached.Data.Width, cached.Data.Height); }
+                catch (Exception ex) { LogLocalCacheError(ex); }
+            }
+            MaintainLocalPreviewCache();
+            return result;
         }
+        finally { rendered?.Dispose(); }
+    }
 
-        var pixelMode = IPicture.PicturePixelMode.BytePicture;
+    private static long s_lastPreviewCacheCleanup;
 
-        if (!ClipArgumentBinding.IsFrameCopy(clip) && !ClipInitializationFailure.HasDeferredFailures(clip.ExtraData))
+    private static void MaintainLocalPreviewCache()
+    {
+        long now = Environment.TickCount64, last = Interlocked.Read(ref s_lastPreviewCacheCleanup);
+        if (now - last < 60000 || Interlocked.CompareExchange(ref s_lastPreviewCacheCleanup, now, last) != last) return;
+        _ = Task.Run(() =>
         {
             try
             {
-                clip.ReInit(pixelMode);
-                ClipInitializationFailure.Clear(clip);
+                GetLocalCacheIndex().TrimPreviews(MaxDiskCachedFallbackFrames, TimeSpan.FromDays(10));
             }
-            catch (Exception ex)
-            {
-                ClipInitializationFailure.Mark(clip, "ResolveBinding", ex);
-                Log(ex, $"Initialize preview clip {clip.Name} ({clip.Id}); using fallback", this);
-            }
-        }
-
-        clip = ClipArgumentBinding.InitializeFrame(clip, frameIndex);
-        var sourceWidth = ResolveClipPreviewDimension(clip.TargetWidth, projectWidth, canvasWidth);
-        var sourceHeight = ResolveClipPreviewDimension(clip.TargetHeight, projectHeight, canvasHeight);
-        token.ThrowIfCancellationRequested();
-        IPicture? frame;
-        try
-        {
-            if (ClipInitializationFailure.IsMarked(clip))
-            {
-                frame = ClipInitializationFailure.CreateFallbackFrame(sourceWidth, sourceHeight, pixelMode, clip.ExtraData);
-            }
-            else
-            {
-                var actualFrame = clip.GetRelativeFrameIndex(frameIndex)
-                    ?? clip.StartFrame + clip.GetEffectiveDuration();
-                frame = VideoClipRotation.ReadFrame(clip, actualFrame, sourceWidth, sourceHeight, pixelMode);
-            }
-        }
-        catch (Exception ex)
-        {
-            ClipInitializationFailure.Mark(clip, "SourceReading", ex);
-            Log(ex, $"Read preview source for clip {clip.Name} ({clip.Id}); using fallback", this);
-            frame = ClipInitializationFailure.CreateFallbackFrame(sourceWidth, sourceHeight, pixelMode, clip.ExtraData);
-        }
-
-        if (frame is null)
-        {
-            return null;
-        }
-
-        if (IsAiGeneratedClip(clip))
-        {
-            frame = EffectProcessing.ProcessAIWatermark(frame, frameIndex);
-        }
-
-        token.ThrowIfCancellationRequested();
-        OneFrame oneFrame;
-        try
-        {
-            oneFrame = new OneFrame(frameIndex, clip, frame, resolveEffects: false);
-        }
-        catch (Exception ex)
-        {
-            ClipInitializationFailure.Mark(clip, "ResolveEffect", ex);
-            Log(ex, $"Resolve preview effects for clip {clip.Name} ({clip.Id}); using fallback", this);
-            try { frame.Dispose(); } catch { }
-            frame = ClipInitializationFailure.CreateFallbackFrame(sourceWidth, sourceHeight, pixelMode, clip.ExtraData);
-            oneFrame = new OneFrame(frameIndex, clip, frame, resolveEffects: false);
-        }
-
-        try
-        {
-            token.ThrowIfCancellationRequested();
-            return Timeline.MixtureLayers([oneFrame], frameIndex, canvasWidth, canvasHeight, (int)pixelMode,
-                projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight,
-                transparentBackground: true, disposeIntermediateFrames: true, clipLocalOutput: true, cancellationToken: token, allClips: allClips);
-        }
-        catch
-        {
-            try { frame.Dispose(); } catch { }
-            throw;
-        }
+            catch (IOException) { }
+            catch (Exception ex) { Log(ex, "Clean local preview cache", typeof(DynamicPreview)); }
+        });
     }
 
-    private static Func<double, double, bool>? CreateVfdTransparencyHitTest(string path)
+    private static Func<double, double, bool>? CreatePreviewTransparencyHitTest(PreviewFrameSource frame)
     {
+        if (frame.AlphaMask is { } mask)
+            return (x, y) =>
+            {
+                if (!double.IsFinite(x) || !double.IsFinite(y) || x < 0 || x > 1 || y < 0 || y > 1) return true;
+                int i = Math.Min(frame.Height - 1, (int)(y * frame.Height)) * frame.Width
+                    + Math.Min(frame.Width - 1, (int)(x * frame.Width));
+                return (mask[i >> 3] & (1 << (i & 7))) != 0;
+            };
+        string path = frame.VfdPath;
         // Playback only needs the image; decode the alpha mask when it is first hit-tested.
         var hitTest = new Lazy<Func<double, double, bool>?>(() =>
         {
@@ -2087,20 +1999,23 @@ public sealed class DynamicPreview : IDisposable
             return true;
         }
 
-        var diskPath = ResolveFallbackDiskCachePath(key);
-        if (File.Exists(diskPath))
+        try
         {
-            try
+            var index = GetLocalCacheIndex();
+            var diskPath = index.FindFallback(key.ClipId, key.SourceFingerprint, key.FrameIndex, key.TargetWidth, key.TargetHeight);
+            if (diskPath is not null && File.Exists(diskPath))
             {
-                frame = PreviewFrameMaterializer.LoadVfd(diskPath);
-                CacheFallbackFrame(key, frame);
-                TouchFallbackDiskEntry(diskPath);
-                return true;
-            }
-            catch
-            {
+                lock (PreviewFrameContainer.Gate(diskPath))
+                {
+                    frame = PreviewFrameMaterializer.LoadVfd(diskPath);
+                    CacheFallbackFrame(key, frame);
+                    try { index.Touch(diskPath); }
+                    catch (Exception ex) { LogLocalCacheError(ex); }
+                    return true;
+                }
             }
         }
+        catch (Exception ex) { LogLocalCacheError(ex); }
 
         frame = null!;
         return false;
@@ -2154,40 +2069,15 @@ public sealed class DynamicPreview : IDisposable
         return true;
     }
 
-    private static List<(int width, int height)> ResolveFallbackDiskCacheSizes(Guid clipId, long sourceFingerprint)
+    private static IReadOnlyList<(int Width, int Height)> ResolveFallbackDiskCacheSizes(Guid clipId, long sourceFingerprint, uint frame)
     {
-        var sizes = new List<(int width, int height)>();
-        var baseDir = Path.Combine(DiskCacheRoot, SanitizePathSegment(clipId.ToString()));
-        if (!Directory.Exists(baseDir))
-            return sizes;
-
-        var fingerprintStr = sourceFingerprint.ToString("X16");
-        try
-        {
-            foreach (var subDir in Directory.EnumerateDirectories(baseDir))
-            {
-                var name = Path.GetFileName(subDir);
-                var parts = name.Split('x');
-                if (parts.Length == 2
-                    && int.TryParse(parts[0], out var w)
-                    && int.TryParse(parts[1], out var h)
-                    && w > 0 && h > 0
-                    && Directory.Exists(Path.Combine(subDir, fingerprintStr)))
-                {
-                    sizes.Add((w, h));
-                }
-            }
-        }
-        catch
-        {
-        }
-
-        return sizes;
+        try { return GetLocalCacheIndex().ReadFallbackSizes(clipId, sourceFingerprint, frame); }
+        catch (Exception ex) { LogLocalCacheError(ex); return []; }
     }
 
     private static bool TryGetResizedFallbackFromDisk(FallbackFrameCacheKey targetKey, out IPicture resizedFrame)
     {
-        var sizes = ResolveFallbackDiskCacheSizes(targetKey.ClipId, targetKey.SourceFingerprint);
+        var sizes = ResolveFallbackDiskCacheSizes(targetKey.ClipId, targetKey.SourceFingerprint, targetKey.FrameIndex);
         if (sizes.Count == 0)
         {
             resizedFrame = null!;
@@ -2221,26 +2111,26 @@ public sealed class DynamicPreview : IDisposable
         }
 
         var diskKey = new FallbackFrameCacheKey(targetKey.ClipId, bestSize.width, bestSize.height, targetKey.FrameIndex, targetKey.SourceFingerprint);
-        var diskPath = ResolveFallbackDiskCachePath(diskKey);
-        if (!File.Exists(diskPath))
-        {
-            resizedFrame = null!;
-            return false;
-        }
-
         try
         {
-            using var source = PreviewFrameMaterializer.LoadVfd(diskPath);
-            resizedFrame = source.Resize(targetKey.TargetWidth, targetKey.TargetHeight, preserveAspect: true);
-            if (ReferenceEquals(resizedFrame, source)) resizedFrame = source.Clone();
-            TouchFallbackDiskEntry(diskPath);
-            return true;
+            var index = GetLocalCacheIndex();
+            var diskPath = index.FindFallback(diskKey.ClipId, diskKey.SourceFingerprint, diskKey.FrameIndex, diskKey.TargetWidth, diskKey.TargetHeight);
+            if (diskPath is not null && File.Exists(diskPath))
+            {
+                lock (PreviewFrameContainer.Gate(diskPath))
+                {
+                    using var source = PreviewFrameMaterializer.LoadVfd(diskPath);
+                    resizedFrame = source.Resize(targetKey.TargetWidth, targetKey.TargetHeight, preserveAspect: true);
+                    if (ReferenceEquals(resizedFrame, source)) resizedFrame = source.Clone();
+                    try { index.Touch(diskPath); }
+                    catch (Exception ex) { LogLocalCacheError(ex); }
+                    return true;
+                }
+            }
         }
-        catch
-        {
-            resizedFrame = null!;
-            return false;
-        }
+        catch (Exception ex) { LogLocalCacheError(ex); }
+        resizedFrame = null!;
+        return false;
     }
 
     private static void CacheFallbackFrame(FallbackFrameCacheKey key, IPicture frame)
@@ -2274,23 +2164,30 @@ public sealed class DynamicPreview : IDisposable
 
     private static void EnqueueFallbackDiskPersist(FallbackFrameCacheKey key, IPicture frame)
     {
+        string root = DiskCacheRoot;
         var diskPath = ResolveFallbackDiskCachePath(key);
-        Task.Run(() =>
+        var snapshot = frame.Clone();
+        _ = Task.Run(() =>
         {
+            using var picture = snapshot;
+            string temporary = diskPath + $".{Guid.NewGuid():N}.tmp";
             try
             {
-                var dir = Path.GetDirectoryName(diskPath);
-                if (!string.IsNullOrWhiteSpace(dir))
+                var index = GetLocalCacheIndex(root);
+                lock (PreviewFrameContainer.Gate(diskPath))
                 {
-                    Directory.CreateDirectory(dir);
+                    Directory.CreateDirectory(Path.GetDirectoryName(diskPath)!);
+                    picture.SaveToDisk(temporary, PictureExtensions.SharedVfdPictureEncoder);
+                    File.Move(temporary, diskPath, true);
+                    index.Track(diskPath, key.ClipId, key.FrameIndex, key.TargetWidth, key.TargetHeight, key.SourceFingerprint);
                 }
-
-                frame.SaveToDisk(diskPath, PictureExtensions.SharedVfdPictureEncoder);
-                TouchFallbackDiskEntry(diskPath);
-                TrimFallbackDiskCacheIfNeeded();
+                index.TrimFallback(MaxDiskCachedFallbackFrames);
             }
-            catch
+            catch (Exception ex) { LogLocalCacheError(ex); }
+            finally
             {
+                try { File.Delete(temporary); }
+                catch (Exception ex) { LogLocalCacheError(ex); }
             }
         });
     }
@@ -2330,8 +2227,6 @@ public sealed class DynamicPreview : IDisposable
         var dimension = $"{key.TargetWidth}x{key.TargetHeight}";
         var fingerprint = key.SourceFingerprint.ToString("X16");
         var directory = Path.Combine(DiskCacheRoot, clipId, dimension, fingerprint);
-        var legacyPath = Path.Combine(directory, $"{key.FrameIndex}.png");
-        try { if (File.Exists(legacyPath)) File.Delete(legacyPath); } catch { }
         return Path.Combine(directory, $"{key.FrameIndex}.vfd");
     }
 
@@ -2356,38 +2251,10 @@ public sealed class DynamicPreview : IDisposable
         return new string(chars);
     }
 
-    private static void TouchFallbackDiskEntry(string? diskPath)
+    private static void LogLocalCacheError(Exception error)
     {
-        if (!string.IsNullOrWhiteSpace(diskPath))
-        {
-            s_fallbackDiskFrameAccess[diskPath] = DateTime.UtcNow.Ticks;
-        }
-    }
-
-    private static void TrimFallbackDiskCacheIfNeeded()
-    {
-        if (s_fallbackDiskFrameAccess.Count <= MaxDiskCachedFallbackFrames)
-        {
-            return;
-        }
-
-        var removeCount = s_fallbackDiskFrameAccess.Count - MaxDiskCachedFallbackFrames;
-        foreach (var stale in s_fallbackDiskFrameAccess.OrderBy(entry => entry.Value).Take(removeCount))
-        {
-            if (s_fallbackDiskFrameAccess.TryRemove(stale.Key, out _))
-            {
-                try
-                {
-                    if (File.Exists(stale.Key))
-                    {
-                        File.Delete(stale.Key);
-                    }
-                }
-                catch
-                {
-                }
-            }
-        }
+        if (Interlocked.Exchange(ref s_localCacheErrorLogged, 1) == 0)
+            Log(error, "Access local preview cache index", typeof(DynamicPreview));
     }
 
     #region Vector to MAUI Path conversion

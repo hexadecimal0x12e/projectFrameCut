@@ -8,7 +8,7 @@ using System.Text.Json;
 
 namespace projectFrameCut.Render.RPCProtocol;
 
-internal static class ClipPreviewRenderer
+public static class ClipPreviewRenderer
 {
     public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode, bool beforeLayout = false, bool initializeClips = true)
     {

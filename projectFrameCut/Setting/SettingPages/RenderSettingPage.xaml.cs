@@ -127,10 +127,19 @@ public partial class RenderSettingPage : ContentPage
         base.OnAppearing();
 
 #if WINDOWS || LINUX
-        AcceleratorDevices = await (acceleratorDiscovery ??= Task.Run(AcceleratorsManager.DiscoverDevices));
+        AcceleratorDevices = (await (acceleratorDiscovery ??= Task.Run(AcceleratorsManager.DiscoverDevices)))
+            .Where(IsSelectableAccelerator)
+            .ToArray();
 #endif
         BuildPPB();
     }
+
+#if WINDOWS || LINUX
+    private static bool IsSelectableAccelerator(AcceleratorDeviceInfo device) =>
+        device.Type != "CPU" && !(device.Type == "OpenCL"
+            && device.Name.Contains("Intel", StringComparison.OrdinalIgnoreCase)
+            && device.Name.Contains(" CPU", StringComparison.OrdinalIgnoreCase));
+#endif
 
     private void BuildPPB()
     {

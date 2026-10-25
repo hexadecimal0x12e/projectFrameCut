@@ -11337,6 +11337,96 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "\u5BFC\u51FA\u5F53\u524D\u5E27",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "\u5BFC\u51FA\u9009\u4E2D\u7684Clip\u7684\u5F53\u524D\u5E27",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "\u5206\u4EAB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "\u590D\u5236\u5230\u526A\u8D34\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "\u64AD\u653E\u5934\u4E0D\u5728\u9879\u76EE\u7684\u5E27\u8303\u56F4\u5185\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "\u64AD\u653E\u5934\u4E0D\u5728\u9009\u4E2D\u7684Clip\u7684\u5E27\u8303\u56F4\u5185\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "\u9009\u4E2D\u7684Clip\u6CA1\u6709\u53EF\u5BFC\u51FA\u7684\u753B\u9762\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "\u7B2C {frame} \u5E27 \u00B7 {width} \u00D7 {height}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "\u65E0\u6CD5\u5B8C\u6210\u6B64\u64CD\u4F5C\uFF0C\u56E0\u4E3A{_ExceptionTemplate(ex)}\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -22174,6 +22264,96 @@
         "Value": "Enter a positive bitrate in Mbps, or leave blank for automatic settings.",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "Export current frame",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "Export selected clip current frame",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "Share",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "Copy to clipboard",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "The playhead is outside the project timeline.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "The playhead is outside the selected clip.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "The selected clip has no image to export.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "Frame {frame} \u00B7 {width} \u00D7 {height}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "Unable to complete this operation: {_ExceptionTemplate(ex)}.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -33031,6 +33211,96 @@
         "Value": "\u8ACB\u8F38\u5165\u5927\u65BC 0 \u7684\u4F4D\u5143\u7387\uFF08Mbps\uFF09\uFF0C\u6216\u7559\u7A7A\u4F7F\u7528\u81EA\u52D5\u8A2D\u5B9A\u3002",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportCurrentFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportSelectedClipFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Share()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "Unset localization item:DraftPage_ExportFrame_CopyToClipboard()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideProject()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "Unset localization item:DraftPage_ExportFrame_NoVisual()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Info(frame frame: {frame}, width width: {width}, height height: {height})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "Unset localization item:DraftPage_ExportFrame_ActionFailed(ex ex: {ex})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -43896,6 +44166,96 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportCurrentFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportSelectedClipFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Share()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "Unset localization item:DraftPage_ExportFrame_CopyToClipboard()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideProject()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "Unset localization item:DraftPage_ExportFrame_NoVisual()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Info(frame frame: {frame}, width width: {width}, height height: {height})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "Unset localization item:DraftPage_ExportFrame_ActionFailed(ex ex: {ex})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -54744,6 +55104,96 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportCurrentFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportSelectedClipFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Share()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "Unset localization item:DraftPage_ExportFrame_CopyToClipboard()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideProject()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "Unset localization item:DraftPage_ExportFrame_NoVisual()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Info(frame frame: {frame}, width width: {width}, height height: {height})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "Unset localization item:DraftPage_ExportFrame_ActionFailed(ex ex: {ex})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -65588,6 +66038,96 @@
         "Value": "Saisissez un d\u00E9bit positif en Mbit/s, ou laissez ce champ vide pour un r\u00E9glage automatique.",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportCurrentFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportSelectedClipFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Share()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "Unset localization item:DraftPage_ExportFrame_CopyToClipboard()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideProject()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "Unset localization item:DraftPage_ExportFrame_NoVisual()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Info(frame frame: {frame}, width width: {width}, height height: {height})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "Unset localization item:DraftPage_ExportFrame_ActionFailed(ex ex: {ex})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -76445,6 +76985,96 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportCurrentFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportSelectedClipFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Share()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "Unset localization item:DraftPage_ExportFrame_CopyToClipboard()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideProject()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "Unset localization item:DraftPage_ExportFrame_NoVisual()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Info(frame frame: {frame}, width width: {width}, height height: {height})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "Unset localization item:DraftPage_ExportFrame_ActionFailed(ex ex: {ex})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -87299,6 +87929,96 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportCurrentFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportSelectedClipFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Share()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "Unset localization item:DraftPage_ExportFrame_CopyToClipboard()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideProject()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "Unset localization item:DraftPage_ExportFrame_NoVisual()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Info(frame frame: {frame}, width width: {width}, height height: {height})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "Unset localization item:DraftPage_ExportFrame_ActionFailed(ex ex: {ex})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -98147,6 +98867,96 @@
         "Value": "Introduce una tasa de bits positiva en Mbps o deja el campo vac\u00EDo para usar el ajuste autom\u00E1tico.",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportCurrentFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportSelectedClipFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Share()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "Unset localization item:DraftPage_ExportFrame_CopyToClipboard()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideProject()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "Unset localization item:DraftPage_ExportFrame_NoVisual()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Info(frame frame: {frame}, width width: {width}, height height: {height})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "Unset localization item:DraftPage_ExportFrame_ActionFailed(ex ex: {ex})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -109004,6 +109814,96 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportCurrentFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportSelectedClipFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Share()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "Unset localization item:DraftPage_ExportFrame_CopyToClipboard()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideProject()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "Unset localization item:DraftPage_ExportFrame_NoVisual()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Info(frame frame: {frame}, width width: {width}, height height: {height})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "Unset localization item:DraftPage_ExportFrame_ActionFailed(ex ex: {ex})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -119850,6 +120750,96 @@
         "Value": "Wpisz dodatni\u0105 przep\u0142ywno\u015B\u0107 w Mb/s lub pozostaw pole puste, aby u\u017Cy\u0107 ustawie\u0144 automatycznych.",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportCurrentFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportSelectedClipFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Share()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "Unset localization item:DraftPage_ExportFrame_CopyToClipboard()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideProject()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "Unset localization item:DraftPage_ExportFrame_NoVisual()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Info(frame frame: {frame}, width width: {width}, height height: {height})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "Unset localization item:DraftPage_ExportFrame_ActionFailed(ex ex: {ex})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -130700,6 +131690,96 @@
         "Value": "Insira uma taxa de bits positiva em Mbps ou deixe o campo em branco para usar a configura\u00E7\u00E3o autom\u00E1tica.",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportCurrentFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportSelectedClipFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Share()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "Unset localization item:DraftPage_ExportFrame_CopyToClipboard()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideProject()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "Unset localization item:DraftPage_ExportFrame_NoVisual()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Info(frame frame: {frame}, width width: {width}, height height: {height})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "Unset localization item:DraftPage_ExportFrame_ActionFailed(ex ex: {ex})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }
@@ -141555,6 +142635,96 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportCurrentFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportSelectedClipFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Share()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "Unset localization item:DraftPage_ExportFrame_CopyToClipboard()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideProject()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "Unset localization item:DraftPage_ExportFrame_NoVisual()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Info(frame frame: {frame}, width width: {width}, height height: {height})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "Unset localization item:DraftPage_ExportFrame_ActionFailed(ex ex: {ex})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -152403,6 +153573,96 @@
         "Value": "Mb/sn cinsinden s\u0131f\u0131rdan b\u00FCy\u00FCk bir bit h\u0131z\u0131 girin veya otomatik ayar i\u00E7in bo\u015F b\u0131rak\u0131n.",
         "Mode": "ConstString",
         "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportCurrentFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportCurrentFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip_ExportSelectedClipFrame",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip_ExportSelectedClipFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Share",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Share()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_CopyToClipboard",
+        "Value": "Unset localization item:DraftPage_ExportFrame_CopyToClipboard()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideProject",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideProject()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_OutsideClip",
+        "Value": "Unset localization item:DraftPage_ExportFrame_OutsideClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_NoVisual",
+        "Value": "Unset localization item:DraftPage_ExportFrame_NoVisual()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_Info",
+        "Value": "Unset localization item:DraftPage_ExportFrame_Info(frame frame: {frame}, width width: {width}, height height: {height})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "frame"
+          },
+          {
+            "Key": "int",
+            "Value": "width"
+          },
+          {
+            "Key": "int",
+            "Value": "height"
+          }
+        ],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ExportFrame_ActionFailed",
+        "Value": "Unset localization item:DraftPage_ExportFrame_ActionFailed(ex ex: {ex})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
         "ArgsComment": [],
         "DontTranslate": false
       }

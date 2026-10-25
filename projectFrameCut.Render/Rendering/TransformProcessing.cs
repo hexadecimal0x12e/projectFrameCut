@@ -193,6 +193,7 @@ public static class TransformProcessing
         using var gpuEntry = gpuScope?.Enter();
         argumentFrames ??= new();
         result = null;
+        if (PreviewSourceFrameContext.ReadingRaw) return false;
         using var maskScope = MaskFrameContext.Open(clips, frameIndex, width, height, projectWidth, projectHeight, pixelMode,
             ValueProviderFrameContext.CancellationToken);
         using var endpointClip = ClipValueFrameContext.Current?.EnterClip(clip.Id);

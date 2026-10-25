@@ -1,4 +1,4 @@
-using FFmpeg.AutoGen;
+﻿using FFmpeg.AutoGen;
 using projectFrameCut.Drawing.Processing.Converting;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
@@ -631,6 +631,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private const float ChannelMaxValue = 65535f;
 
         private readonly string _path;
+        private readonly bool _preserveAlpha;
+        private AVPixelFormat OutputPixelFormat => _preserveAlpha ? AVPixelFormat.AV_PIX_FMT_BGRA64LE : AVPixelFormat.AV_PIX_FMT_BGR48LE;
         private readonly FFmpegStreamIOContext? _streamIO;
         private AVFormatContext* _fmt = null;
         private AVCodecContext* _codec = null;
@@ -681,9 +683,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _path = null!;
         }
 
-        public HDRDecoderContext(string path)
+        public HDRDecoderContext(string path) : this(path, false) { }
+
+        internal HDRDecoderContext(string path, bool preserveAlpha)
         {
             _path = path;
+            _preserveAlpha = preserveAlpha;
             Initialize();
         }
 
@@ -793,13 +798,13 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 _sws = ffmpeg.sws_getContext(
                         _width, _height, _codec->pix_fmt,
-                        _width, _height, AVPixelFormat.AV_PIX_FMT_BGR48LE,
+                        _width, _height, OutputPixelFormat,
                         4 /* SWS_BICUBIC == 4*/, null, null, null);
 
                 if (_sws == null)
                     throw new InvalidOperationException("Failed to alloc a context for the Renderer. Please try reboot your device, or reinstall projectFrameCut.");
 
-                int bufferSize = ffmpeg.av_image_get_buffer_size(AVPixelFormat.AV_PIX_FMT_BGR48LE, _width, _height, 32);
+                int bufferSize = ffmpeg.av_image_get_buffer_size(OutputPixelFormat, _width, _height, 32);
                 if (bufferSize <= 0) throw new OutOfMemoryException($"Failed to allocate enough memory space to process the video '{_path}'. Try closing other programs, restarting your device, reinstall projectFrameCut, increasing page file size (on Windows platforms)/swapping files (on Linux platforms), or adding more RAM on your device if possible.");
 
                 _rgbBuffer = (byte*)ffmpeg.av_malloc((ulong)bufferSize);
@@ -810,7 +815,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 int_array4 tmpLinesize = default;
                 int fillRet = ffmpeg.av_image_fill_arrays(
                     ref tmpData, ref tmpLinesize,
-                    _rgbBuffer, AVPixelFormat.AV_PIX_FMT_BGR48LE,
+                    _rgbBuffer, OutputPixelFormat,
                     _width, _height, 32);
                 if (fillRet < 0) throw new InvalidOperationException("av_image_fill_arrays failed.");
 
@@ -819,7 +824,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     _rgb->data[i] = tmpData[i];
                     _rgb->linesize[i] = tmpLinesize[i];
                 }
-                _rgb->format = (int)AVPixelFormat.AV_PIX_FMT_BGR48LE;
+                _rgb->format = (int)OutputPixelFormat;
                 _rgb->width = _width;
                 _rgb->height = _height;
 
@@ -1029,10 +1034,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         requestedRegion.SourceX, requestedRegion.SourceY,
                         requestedRegion.SourceWidth, requestedRegion.SourceHeight,
                         requestedRegion.TargetWidth, requestedRegion.TargetHeight,
-                        AVPixelFormat.AV_PIX_FMT_BGR48LE,
+                        OutputPixelFormat,
                         (data, stride, width, height) => PixelsToHDRPicture(
                             data, stride, width, height, hasAlpha, _path, targetFrame,
-                            transferCharacteristic, maximumBrightness, height));
+                            transferCharacteristic, maximumBrightness, height, _preserveAlpha));
                 }
 
                 int scaledRows = FFmpegHelper.ScaleFrame(_sws, _frm, _rgb);
@@ -1041,7 +1046,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 if (scaledRows < _height)
                     Log($"[VideoDecoder] sws_scale only processed {scaledRows}/{_height} rows for HDR '{_path}' frame {targetFrame}.", "warning");
 
-                var picture = PixelsToHDRPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, transferCharacteristic, maximumBrightness, scaledRows);
+                var picture = PixelsToHDRPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame, transferCharacteristic, maximumBrightness, scaledRows, _preserveAlpha);
                 return picture;
             }
             finally
@@ -1228,14 +1233,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
         [DebuggerNonUserCode()]
-        private static HDRPicture16bpp PixelsToHDRPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0, AVColorTransferCharacteristic transferCharacteristic = AVColorTransferCharacteristic.AVCOL_TRC_UNSPECIFIED, float maximumBrightness = DefaultSdrMaximumBrightness, int maxRows = int.MaxValue)
+        private static HDRPicture16bpp PixelsToHDRPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0, AVColorTransferCharacteristic transferCharacteristic = AVColorTransferCharacteristic.AVCOL_TRC_UNSPECIFIED, float maximumBrightness = DefaultSdrMaximumBrightness, int maxRows = int.MaxValue, bool sourceAlpha = false)
         {
             if (data == null)
                 throw new ArgumentNullException(nameof(data));
             if (width <= 0 || height <= 0)
                 throw new ArgumentException($"Invalid dimensions: {width}x{height}");
-            if (stride <= 0 || stride < width * 6)
-                throw new ArgumentException($"Invalid stride {stride} for width {width} (expected at least {width * 6})");
+            int bytesPerPixel = sourceAlpha ? 8 : 6;
+            if (stride <= 0 || stride < width * bytesPerPixel)
+                throw new ArgumentException($"Invalid stride {stride} for width {width} (expected at least {width * bytesPerPixel})");
 
             int size = width * height;
             float maxBrightness = maximumBrightness > 0f && float.IsFinite(maximumBrightness)
@@ -1266,8 +1272,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 for (x = 0; x < width; x++)
                 {
                     idx = baseIndex + x;
-                    offset = x * 6;
-                    if (offset + 5 >= stride) break;
+                    offset = x * bytesPerPixel;
+                    if (offset + bytesPerPixel > stride) break;
 
                     ushort blue = (ushort)(srcRow[offset] | (srcRow[offset + 1] << 8));
                     ushort green = (ushort)(srcRow[offset + 2] | (srcRow[offset + 3] << 8));
@@ -1276,6 +1282,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     result.b[idx] = blue;
                     result.g[idx] = green;
                     result.r[idx] = red;
+                    if (sourceAlpha && result.a is not null)
+                        result.a[idx] = (srcRow[offset + 6] | (srcRow[offset + 7] << 8)) / ChannelMaxValue;
 
                     float redSignal = red / ChannelMaxValue;
                     float greenSignal = green / ChannelMaxValue;

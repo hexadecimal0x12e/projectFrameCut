@@ -133,7 +133,8 @@ namespace projectFrameCut.Render.Rendering
 
                     if (frame is not null || clip is MaskClip)
                     {
-                        if (frame is not null && isAI && !TransformProcessing.IsCanvasFrame(frame)) frame = EffectProcessing.ProcessAIWatermark(frame, null);
+                        if (!PreviewSourceFrameContext.ReadingRaw && frame is not null && isAI && !TransformProcessing.IsCanvasFrame(frame))
+                            frame = EffectProcessing.ProcessAIWatermark(frame, null);
                         try
                         {
                             result.Add(new OneFrame(targetFrame, clip, frame, resolveEffects: false) { ApplyTransforms = applyTransforms });
@@ -282,7 +283,7 @@ namespace projectFrameCut.Render.Rendering
                             ResolveClipOutputHeight(clip, targetHeight, projectRelativeHeight), targetPPB);
                         Track(source);
                     }
-                    if (original.ApplyTransforms && TransformProcessing.TryRender(clip,
+                    if (!PreviewSourceFrameContext.ReadingRaw && original.ApplyTransforms && TransformProcessing.TryRender(clip,
                         allClips, frameIndex, targetWidth, targetHeight,
                         projectRelativeWidth, projectRelativeHeight, targetPPB, out var transformed,
                         initializeClips: false, preparedSource: source, keepHwAccelPicture: true))
@@ -301,15 +302,18 @@ namespace projectFrameCut.Render.Rendering
                         : ValueProviderFrameContext.ObserveNodes(ObserveNode);
                     if (TransformProcessing.IsCanvasFrame(srcFrame.Clip))
                     {
-                        result = EffectPictureProcessing.Mix(srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default,
+                        result = EffectPictureProcessing.Mix(PreviewSourceFrameContext.ReadingRaw ? ClassicOverlayMixture.Default
+                                : srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default,
                             result ?? Track(transparentBackground ? Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0) : FallBackImageGetter(targetWidth, targetHeight)),
                             srcFrame.Clip, targetPPB, 0, 0, targetWidth, targetHeight);
                         Track(result);
-                        srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, Stage.Mixture, frameIndex);
+                        if (!PreviewSourceFrameContext.ReadingRaw)
+                            srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, Stage.Mixture, frameIndex);
                         continue;
                     }
                     IPicture effected = source;
-                    var effectsList = srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
+                    IEnumerable<IEffect> effectsList = PreviewSourceFrameContext.ReadingRaw ? []
+                        : srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
                     // TargetX/Y live in project-relative space. Width/height, however, must already
                     // be converted to the current output space before effects can adjust the rect.
                     // This mirrors Renderer.ProcessAndCompositeClip; using PositionTuple directly
@@ -442,7 +446,8 @@ namespace projectFrameCut.Render.Rendering
                         }
                     }
 
-                    srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, Stage.Picture, frameIndex);
+                    if (!PreviewSourceFrameContext.ReadingRaw)
+                        srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, Stage.Picture, frameIndex);
                     int clipX = ScaleCoordinateToTarget(clipPos.TargetX, layoutRelativeWidth, targetWidth);
                     int clipY = ScaleCoordinateToTarget(clipPos.TargetY, layoutRelativeHeight, targetHeight);
                     if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && clipY == 0 && effected.Height < targetHeight)
@@ -461,7 +466,8 @@ namespace projectFrameCut.Render.Rendering
                     clipY += (int)Math.Round((clipPos.TargetHeight - effected.Height) / 2d);
                     bool needsPlacement = clipX != 0 || clipY != 0 || effected.Width != targetWidth || effected.Height != targetHeight;
 
-                    var mixer = srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default;
+                    var mixer = PreviewSourceFrameContext.ReadingRaw ? ClassicOverlayMixture.Default
+                        : srcFrame.ParentClip.MixtureInstance ?? ClassicOverlayMixture.Default;
                     if (result is null)
                     {
                         if (!needsPlacement && mixer is not DynamicMixtureGraph)
@@ -492,7 +498,8 @@ namespace projectFrameCut.Render.Rendering
                             targetHeight);
                     }
                     if (result is not null) Track(result);
-                    srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, Stage.Mixture, frameIndex);
+                    if (!PreviewSourceFrameContext.ReadingRaw)
+                        srcFrame.ParentClip.EffectStagePlan?.Complete(srcFrame.ParentClip, Stage.Mixture, frameIndex);
                 }
                 //LogDiagnostic($"Result's diag info:{result?.GetDiagnosticsInfo() ?? "unknown"}");
                 if (result?.Width == targetWidth && result?.Height == targetHeight)

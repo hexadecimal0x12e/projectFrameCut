@@ -96,7 +96,7 @@ public sealed class FrameHashContext : IDisposable
         }
     }
 
-    public IPicture? ReadPicture(object key, Func<IPicture?> compute) => Evaluate(key, compute,
+    public IPicture? ReadPicture(object key, Func<IPicture?> compute) => Evaluate((key, PreviewSourceFrameContext.ReadingRaw), compute,
         p => p is null ? null : DynamicEffectGraph.CopyPicture(p), p => p?.Dispose());
 
     internal static T Compute<T>(IEffect effect, RenderAPIBase.ClipAndTrack.IClip clip, uint frame,

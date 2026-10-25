@@ -25,15 +25,7 @@ public sealed class HdrPreviewView : View
     }
 
     internal static PreviewFrameSource PrepareFrame(PreviewFrameSource frame)
-    {
-        if (frame.ScRgb is not null || frame.Png is not null) return frame;
-        using var picture = PreviewFrameMaterializer.LoadVfd(frame.VfdPath);
-#if WINDOWS
-        if (frame.TargetPixelFormat == Render.Contracts.PreviewPixelFormat.Rgba16FloatScRgb)
-            return frame with { ScRgb = PreviewFrameMaterializer.ToScRgb(picture) };
-#endif
-        return frame with { Png = PreviewFrameMaterializer.ToPngBytes(picture) };
-    }
+        => PreviewFrameMaterializer.Prepare(frame);
 
     public static readonly BindableProperty FrameProperty = BindableProperty.Create(
         nameof(Frame),

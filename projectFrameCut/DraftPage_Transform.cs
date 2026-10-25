@@ -199,7 +199,7 @@ public partial class DraftPage
             ProjectRoot = previewer.RenderProjectRoot ?? previewer.ProjectRoot,
             ProjectJson = JsonSerializer.Serialize(ProjectInfo, DraftJSONOption),
             TimelineJson = JsonSerializer.Serialize(new DraftStructureJSON { Clips = clips }, DraftJSONOption),
-            ProxyRoot = previewer.RenderProxyRoot ?? previewer.ProxyRoot ?? string.Empty,
+            ProxyRoot = string.Empty,
             ProjectWidth = Math.Max(1, ProjectInfo.RelativeWidth),
             ProjectHeight = Math.Max(1, ProjectInfo.RelativeHeight),
             FrameRate = Math.Max(1, (int)ProjectInfo.TargetFrameRate),

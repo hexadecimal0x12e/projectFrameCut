@@ -232,7 +232,7 @@ public static class ProjectExternalSourceService
         Guid? replace = null;
         if (duplicate is not null)
         {
-            var choice = await page.DisplayActionSheetAsync(Localized.ProjectExternalSource_Duplicate, Localized._Cancel, null,
+            var choice = await UIServices.DisplayActionSheetAsync(page, Localized.ProjectExternalSource_Duplicate, Localized._Cancel, null,
                 Localized.DraftPage_DuplicatedAsset_Relpace, Localized.DraftPage_DuplicatedAsset_Skip, Localized.DraftPage_DuplicatedAsset_Together);
             if (choice is null || choice == Localized._Cancel || choice == Localized.DraftPage_DuplicatedAsset_Skip) return;
             if (choice == Localized.DraftPage_DuplicatedAsset_Relpace) replace = duplicate.ImportId;

@@ -88,6 +88,9 @@ public partial class AssetsLibraryPage : ContentPage
 #endif
         try
         {
+#if WINDOWS
+            await WinUI.App.BringToForeground(Window);
+#endif
             var paths = (await FileDropHelper.GetFilePathsFromDrop(e)).Where(p => !string.IsNullOrWhiteSpace(p))
                 .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToList();
             if (paths.Count == 0) return;

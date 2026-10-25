@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 #if iDevices
 using UIKit;
 using CoreAnimation;
@@ -10,6 +11,28 @@ namespace projectFrameCut.Services
 {
     internal class UIServices
     {
+        public static async Task<string?> DisplayActionSheetAsync(Page page, string title, string? cancel, string? destruction, params string[] buttons)
+        {
+#if WINDOWS
+            var window = page.Window;
+            while (true)
+            {
+                var result = await page.DisplayActionSheetAsync(title, cancel, destruction, buttons);
+                if (result is not null) return result;
+
+                // Let the native flyout finish closing before opening another one.
+                await Task.Delay(100);
+                if (window is null || page.Window != window || Application.Current?.Windows.Contains(window) != true ||
+                    page.Handler?.PlatformView is not Microsoft.UI.Xaml.FrameworkElement { IsLoaded: true, XamlRoot: not null })
+                    return null;
+
+                LogDiagnostic($"Reopening dismissed action sheet '{title}'.");
+            }
+#else
+            return await page.DisplayActionSheetAsync(title, cancel, destruction, buttons);
+#endif
+        }
+
         public static double GetWindowCornerRadius()
         {
             if (!SettingsManager.IsBoolSettingTrue("ui_ForceUseUserDefinedSafeZone"))

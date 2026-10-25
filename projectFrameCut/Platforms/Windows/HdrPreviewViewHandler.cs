@@ -222,7 +222,7 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
         try
         {
             timing?.Stage("PNG preparation started");
-            var bytes = frame.Png ?? await Task.Run(() => PreviewFrameMaterializer.ToPngBytes(frame.VfdPath));
+            var bytes = frame.Png ?? await Task.Run(() => PreviewFrameMaterializer.ToPngBytes(frame));
             if (!IsCurrent(version)) return;
             timing?.Stage("PNG bytes ready");
             using var memory = new MemoryStream(bytes, writable: false);

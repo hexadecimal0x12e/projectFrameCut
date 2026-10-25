@@ -166,6 +166,9 @@ public partial class ProjectAddClipView : ContentView
 #endif
         try
         {
+#if WINDOWS
+            await WinUI.App.BringToForeground(_page.Window);
+#endif
             var paths = (await FileDropHelper.GetFilePathsFromDrop(e, source.SourceType == "RpcSources"))
                 .Where(p => !string.IsNullOrWhiteSpace(p))
                 .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)

@@ -44,7 +44,7 @@ namespace projectFrameCut.Asset
                 case "copy": return true;
                 case "reference": return false;
             }
-            var mode = await page.DisplayActionSheetAsync(Localized.DraftPage_AssetPanel_ImportMode, Localized._Cancel, null,
+            var mode = await UIServices.DisplayActionSheetAsync(page, Localized.DraftPage_AssetPanel_ImportMode, Localized._Cancel, null,
                 Localized.DraftPage_AssetPanel_ImportCopy, Localized.DraftPage_AssetPanel_ImportReference);
             if (mode == Localized.DraftPage_AssetPanel_ImportCopy) return true;
             if (mode == Localized.DraftPage_AssetPanel_ImportReference) return false;
@@ -73,7 +73,7 @@ namespace projectFrameCut.Asset
                     {Localized.AssetPage_AssetType_VectorComposition, AssetType.VectorComposition },
                     {Localized.Subtitle_Title, AssetType.Subtitle },
                 };
-                var selection = await page.DisplayActionSheetAsync(Localized.AssetPage_AssetType_Unknown(name), Localized._Cancel, null, map.Keys.ToArray());
+                var selection = await UIServices.DisplayActionSheetAsync(page, Localized.AssetPage_AssetType_Unknown(name), Localized._Cancel, null, map.Keys.ToArray());
                 if (selection is null || !map.TryGetValue(selection, out type)) return null;
             }
             string? replaceId = null;
@@ -82,7 +82,7 @@ namespace projectFrameCut.Asset
                 var existing = AssetDatabase.Assets.Values.First(v => v.Name == name);
                 if (existing is not null)
                 {
-                    string opt = await page.DisplayActionSheetAsync(
+                    string? opt = await UIServices.DisplayActionSheetAsync(page,
                         Localized.DraftPage_DuplicatedAsset(Path.GetFileNameWithoutExtension(path), existing.Name),
                         Localized._Cancel,
                         null,

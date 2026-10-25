@@ -82,14 +82,15 @@ public static class VideoClipRotation
         var source = VectorPictureEffectProcessing.ReadFrame(clip, frameIndex, width, height, pixelMode);
         try
         {
-            if (clip.AlternativeSource is { } replacement && replacement.SupportsSourceReplacement(clip, width, height))
+            if (!PreviewSourceFrameContext.ReadingRaw && clip.AlternativeSource is { } replacement && replacement.SupportsSourceReplacement(clip, width, height))
             {
                 var replaced = replacement.Compute(clip, source, width, height, frameIndex, pixelMode);
                 if (!ReferenceEquals(source, replaced)) source.Dispose();
                 source = replaced;
             }
-            clip.EffectStagePlan?.Complete(clip, Stage.SourceReplacement, ClipArgumentBinding.GetFrameIndex(clip,
-                VectorPictureEffectProcessing.GetTargetFrame(clip, frameIndex)));
+            if (!PreviewSourceFrameContext.ReadingRaw)
+                clip.EffectStagePlan?.Complete(clip, Stage.SourceReplacement, ClipArgumentBinding.GetFrameIndex(clip,
+                    VectorPictureEffectProcessing.GetTargetFrame(clip, frameIndex)));
             return source;
         }
         catch

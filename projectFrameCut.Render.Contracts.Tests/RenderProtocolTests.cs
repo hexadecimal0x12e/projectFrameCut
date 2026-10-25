@@ -86,6 +86,8 @@ public sealed class RenderProtocolTests
             PixelFormat = PreviewPixelFormat.VfdPicture,
             Width = 1920,
             Height = 1080,
+            PreviewContainer = "vfd2m",
+            PreviewEffectHash = "effects",
         };
 
         var clone = RenderRpcSerializer.Clone(source);
@@ -93,6 +95,8 @@ public sealed class RenderProtocolTests
         Assert.AreEqual(PreviewPixelFormat.VfdPicture, clone.PixelFormat);
         Assert.AreEqual("thumbs/frame.vfd", clone.ProjectRelativePath);
         Assert.AreEqual("application/x-projectframecut-vfd", clone.MediaType);
+        Assert.AreEqual("vfd2m", clone.PreviewContainer);
+        Assert.AreEqual("effects", clone.PreviewEffectHash);
     }
 
     [TestMethod]

@@ -200,7 +200,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 Duration <= 1 ? 0 : Math.Clamp(frameIndex / (float)(Duration - 1), 0, 1));
             var rawEntries = ResolveTextEntriesForRender(frameIndex);
             long cacheKey = BuildFrameCacheKey(targetWidth, targetHeight, targetPPB, rawEntries);
-            bool cacheable = !(EffectsInstances ?? []).Any(e => e.Enabled && e is IVectorPictureEffect);
+            bool cacheable = !PreviewSourceFrameContext.ReadingRaw && !(EffectsInstances ?? []).Any(e => e.Enabled && e is IVectorPictureEffect);
 
             if (cacheable && TryGetFrameFromCache(cacheKey, out var cachedFrame))
             {
@@ -400,6 +400,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             using var clipScope = ValueProviderFrameContext.PushClip(this);
             var raw = GetRawEntries(targetFrame);
+            if (PreviewSourceFrameContext.ReadingRaw) return raw;
             foreach (var item in (EffectsInstances ?? []).Where(e => e.Enabled && (e is ITextEffect or IContinuousTextEffect)).OrderBy(e => e.Index))
             {
                 if (item is ITextEffect textEffect)

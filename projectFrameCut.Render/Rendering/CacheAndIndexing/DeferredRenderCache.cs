@@ -1,16 +1,29 @@
 using projectFrameCut.Drawing.Base.ReadWriteConvert;
-using System.Buffers.Binary;
+using Microsoft.Data.Sqlite;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
-using System.Text.Json;
 
 namespace projectFrameCut.Render.Rendering;
 
 internal sealed class DeferredRenderCache : IDisposable
 {
     internal const int Version = 1;
-    private const int Magic = 0x43444650;
-    private static readonly JsonSerializerOptions jsonOptions = new() { IncludeFields = true };
+    private const string Schema = """
+        CREATE TABLE IF NOT EXISTS task (
+            id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL, fingerprint TEXT NOT NULL,
+            stage TEXT NOT NULL, updated_at INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS frames (
+            path TEXT PRIMARY KEY, version INTEGER NOT NULL, clip TEXT NOT NULL, frame INTEGER NOT NULL,
+            composed INTEGER NOT NULL, has_picture INTEGER NOT NULL, reusable INTEGER NOT NULL,
+            x INTEGER NOT NULL, y INTEGER NOT NULL, target_width INTEGER NOT NULL, target_height INTEGER NOT NULL,
+            is_delta INTEGER NOT NULL, rotation REAL NOT NULL, preserve_aspect INTEGER NOT NULL,
+            is_canvas INTEGER NOT NULL, center_implicit INTEGER NOT NULL,
+            width INTEGER NOT NULL, height INTEGER NOT NULL, bits INTEGER NOT NULL, hdr INTEGER NOT NULL,
+            length INTEGER NOT NULL, checksum BLOB NOT NULL
+        );
+        """;
+    private readonly CacheIndexDatabase database;
     private readonly IPictureEncoder encoder;
     private readonly ConcurrentDictionary<string, (long Length, DateTime Modified)> verified = new();
     private readonly ConcurrentDictionary<string, (long Length, DateTime Modified)> createdFiles = new();
@@ -41,15 +54,6 @@ internal sealed class DeferredRenderCache : IDisposable
         public bool Hdr { get; init; }
     }
 
-    private sealed record Manifest
-    {
-        public Manifest() { }
-        public int Version { get; init; }
-        public string Fingerprint { get; init; } = "";
-        public string Stage { get; init; } = "";
-        public DateTime UpdatedUtc { get; init; }
-    }
-
     public DeferredRenderCache(string? projectRoot, string? signature, bool resume, IPictureEncoder encoder)
     {
         ArgumentNullException.ThrowIfNull(encoder);
@@ -64,33 +68,48 @@ internal sealed class DeferredRenderCache : IDisposable
         {
             foreach (string candidate in Directory.EnumerateDirectories(jobs).OrderByDescending(p => Path.GetFileName(p), StringComparer.Ordinal))
             {
+                if (!File.Exists(Path.Combine(candidate, CacheIndexDatabase.FileName))) continue;
                 FileStream? handle = null;
+                CacheIndexDatabase? index = null;
                 try
                 {
                     handle = OpenLock(candidate);
-                    var manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(Path.Combine(candidate, "manifest.json")));
-                    if (manifest?.Version == Version && manifest.Fingerprint == fingerprint)
+                    index = new(candidate, Schema, keepOpen: true);
+                    using var connection = index.Open();
+                    using var query = CacheIndexDatabase.Command(connection,
+                        "SELECT 1 FROM task WHERE id=1 AND version=$version AND fingerprint=$fingerprint;",
+                        ("$version", Version), ("$fingerprint", fingerprint));
+                    if (query.ExecuteScalar() is not null)
                     {
                         DirectoryPath = candidate;
                         jobLock = handle;
+                        database = index;
                         Restoring = true;
                         return;
                     }
                 }
                 catch (IOException ex) when ((ex.HResult & 0xffff) is 32 or 33) { break; }
                 catch (IOException) { }
-                catch (JsonException) { }
+                catch (SqliteException ex) { Log(ex, $"Read deferred render index {candidate}", this); }
                 finally
                 {
-                    if (!Restoring) handle?.Dispose();
+                    if (!Restoring)
+                    {
+                        index?.Dispose();
+                        handle?.Dispose();
+                    }
                 }
             }
         }
         DirectoryPath = Path.Combine(jobs, $"{DateTime.UtcNow.Ticks:D19}-{Guid.NewGuid():N}");
         Directory.CreateDirectory(DirectoryPath);
         jobLock = OpenLock(DirectoryPath);
-        try { SetStage("rendering"); }
-        catch { jobLock.Dispose(); throw; }
+        try
+        {
+            database = new(DirectoryPath, Schema, keepOpen: true);
+            SetStage("rendering");
+        }
+        catch { database?.Dispose(); jobLock.Dispose(); throw; }
     }
 
     private static FileStream OpenLock(string path) => new(Path.Combine(path, "job.lock"), FileMode.OpenOrCreate,
@@ -101,14 +120,13 @@ internal sealed class DeferredRenderCache : IDisposable
 
     public void SetStage(string value)
     {
+        using var connection = database.Open();
+        using var command = CacheIndexDatabase.Command(connection, """
+            INSERT INTO task(id, version, fingerprint, stage, updated_at) VALUES (1, $version, $fingerprint, $stage, $time)
+            ON CONFLICT(id) DO UPDATE SET stage=excluded.stage, updated_at=excluded.updated_at;
+            """, ("$version", Version), ("$fingerprint", fingerprint), ("$stage", value), ("$time", DateTime.UtcNow.Ticks));
+        command.ExecuteNonQuery();
         stage = value;
-        string path = Path.Combine(DirectoryPath, "manifest.json");
-        string temporary = path + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(new Manifest
-        {
-            Version = DeferredRenderCache.Version, Fingerprint = fingerprint, Stage = stage, UpdatedUtc = DateTime.UtcNow,
-        }));
-        File.Move(temporary, path, true);
     }
 
     public bool TryRead(string path, CancellationToken token, out FrameInfo info, out IPicture? picture, bool readPicture = true)
@@ -117,16 +135,40 @@ internal sealed class DeferredRenderCache : IDisposable
         picture = null;
         try
         {
+            byte[] checksum;
+            long length;
+            using (var connection = database.Open())
+            using (var query = CacheIndexDatabase.Command(connection, """
+                SELECT version, clip, frame, composed, has_picture, reusable, x, y, target_width, target_height,
+                    is_delta, rotation, preserve_aspect, is_canvas, center_implicit, width, height, bits, hdr, length, checksum
+                FROM frames WHERE path=$path;
+                """, ("$path", Path.GetRelativePath(DirectoryPath, path))))
+            using (var reader = query.ExecuteReader())
+            {
+                if (!reader.Read() || reader.GetInt32(0) != Version) return false;
+                info = new()
+                {
+                    Version = reader.GetInt32(0), Clip = Guid.ParseExact(reader.GetString(1), "N"),
+                    Frame = checked((uint)reader.GetInt64(2)), Composed = reader.GetBoolean(3),
+                    HasPicture = reader.GetBoolean(4), Reusable = reader.GetBoolean(5),
+                    Position = new(reader.GetInt32(6), reader.GetInt32(7), reader.GetInt32(8), reader.GetInt32(9),
+                        reader.GetBoolean(10), reader.GetFloat(11)),
+                    PreserveAspect = reader.GetBoolean(12), IsCanvas = reader.GetBoolean(13), CenterImplicit = reader.GetBoolean(14),
+                    Width = reader.GetInt32(15), Height = reader.GetInt32(16), Bits = reader.GetInt32(17), Hdr = reader.GetBoolean(18),
+                };
+                length = reader.GetInt64(19);
+                checksum = (byte[])reader.GetValue(20);
+            }
             if (!File.Exists(path)) return false;
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete,
                 65536, FileOptions.SequentialScan);
             var stamp = (stream.Length, File.GetLastWriteTimeUtc(path));
+            if (stream.Length != length || checksum.Length != 32) return false;
             if (!verified.TryGetValue(path, out var saved) || saved != stamp)
             {
-                if (stream.Length < 40) return false;
                 using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 byte[] buffer = new byte[65536];
-                long remaining = stream.Length - 32;
+                long remaining = stream.Length;
                 while (remaining > 0)
                 {
                     token.ThrowIfCancellationRequested();
@@ -135,19 +177,11 @@ internal sealed class DeferredRenderCache : IDisposable
                     hash.AppendData(buffer.AsSpan(0, count));
                     remaining -= count;
                 }
-                byte[] checksum = new byte[32];
-                stream.ReadExactly(checksum);
                 if (!CryptographicOperations.FixedTimeEquals(hash.GetHashAndReset(), checksum)) return false;
                 verified[path] = stamp;
             }
             token.ThrowIfCancellationRequested();
             stream.Position = 0;
-            using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, true);
-            if (reader.ReadInt32() != Magic) return false;
-            int length = reader.ReadInt32();
-            if (length <= 0 || length > 1024 * 1024 || length > stream.Length - 40) return false;
-            info = JsonSerializer.Deserialize<FrameInfo>(reader.ReadBytes(length), jsonOptions)!;
-            if (info is null || info.Version != Version) return false;
             if (!readPicture || !info.HasPicture) return true;
             if (!PictureExtensions.SharedVfdPictureDecoder.TryLoad(stream, out picture) || picture is null) return false;
             if (picture.Width == info.Width && picture.Height == info.Height && (int)picture.BitPerPixel == info.Bits
@@ -157,7 +191,7 @@ internal sealed class DeferredRenderCache : IDisposable
             return false;
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or JsonException or ArgumentException or OverflowException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or InvalidDataException or SqliteException or ArgumentException or FormatException or OverflowException or NotSupportedException)
         {
             picture?.Dispose();
             picture = null;
@@ -172,19 +206,13 @@ internal sealed class DeferredRenderCache : IDisposable
         string temporary = path + $".{Guid.NewGuid():N}.tmp";
         try
         {
+            byte[] checksum;
             using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
                 65536, FileOptions.SequentialScan))
             {
                 using var hash = SHA256.Create();
-                byte[] checksum;
                 using (var output = new CryptoStream(stream, hash, CryptoStreamMode.Write, leaveOpen: true))
                 {
-                    byte[] header = JsonSerializer.SerializeToUtf8Bytes(info, jsonOptions);
-                    Span<byte> prefix = stackalloc byte[8];
-                    BinaryPrimitives.WriteInt32LittleEndian(prefix, Magic);
-                    BinaryPrimitives.WriteInt32LittleEndian(prefix[4..], header.Length);
-                    output.Write(prefix);
-                    output.Write(header);
                     token.ThrowIfCancellationRequested();
                     switch (picture)
                     {
@@ -198,12 +226,27 @@ internal sealed class DeferredRenderCache : IDisposable
                     output.FlushFinalBlock();
                     checksum = hash.Hash!;
                 }
-                stream.Write(checksum);
                 stream.Flush(true);
             }
             token.ThrowIfCancellationRequested();
             Publish(temporary, path);
+            using var connection = database.Open();
+            using var command = CacheIndexDatabase.Command(connection, """
+                INSERT OR REPLACE INTO frames(path, version, clip, frame, composed, has_picture, reusable,
+                    x, y, target_width, target_height, is_delta, rotation, preserve_aspect, is_canvas, center_implicit,
+                    width, height, bits, hdr, length, checksum)
+                VALUES ($path, $version, $clip, $frame, $composed, $picture, $reusable,
+                    $x, $y, $tw, $th, $delta, $rotation, $aspect, $canvas, $center,
+                    $width, $height, $bits, $hdr, $length, $checksum);
+                """, ("$path", Path.GetRelativePath(DirectoryPath, path)), ("$version", info.Version), ("$clip", info.Clip.ToString("N")),
+                ("$frame", (long)info.Frame), ("$composed", info.Composed), ("$picture", info.HasPicture), ("$reusable", info.Reusable),
+                ("$x", info.Position.TargetX), ("$y", info.Position.TargetY), ("$tw", info.Position.TargetWidth), ("$th", info.Position.TargetHeight),
+                ("$delta", info.Position.IsDelta), ("$rotation", info.Position.Rotation), ("$aspect", info.PreserveAspect),
+                ("$canvas", info.IsCanvas), ("$center", info.CenterImplicit), ("$width", info.Width), ("$height", info.Height),
+                ("$bits", info.Bits), ("$hdr", info.Hdr), ("$length", new FileInfo(path).Length), ("$checksum", checksum));
+            command.ExecuteNonQuery();
         }
+        catch (SqliteException ex) { Log(ex, $"Save deferred render index for {path}", this); throw; }
         finally
         {
             if (File.Exists(temporary)) File.Delete(temporary);
@@ -234,6 +277,7 @@ internal sealed class DeferredRenderCache : IDisposable
         try
         {
             using var handle = OpenLock(DirectoryPath);
+            using var index = new CacheIndexDatabase(DirectoryPath, Schema);
             foreach (var entry in createdFiles)
             {
                 try
@@ -242,17 +286,21 @@ internal sealed class DeferredRenderCache : IDisposable
                     if (info.Exists && (info.Length, info.LastWriteTimeUtc) == entry.Value)
                     {
                         File.Delete(entry.Key);
+                        using var connection = index.Open();
+                        using var command = CacheIndexDatabase.Command(connection,
+                            "DELETE FROM frames WHERE path=$path;", ("$path", Path.GetRelativePath(DirectoryPath, entry.Key)));
+                        command.ExecuteNonQuery();
                         removed++;
                     }
                     createdFiles.TryRemove(entry.Key, out _);
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SqliteException)
                 {
                     Logger.Log(ex, $"Clean deferred cache {entry.Key}", nameof(DeferredRenderCache));
                 }
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SqliteException)
         {
             Logger.Log(ex, "Lock deferred cache for cleanup", nameof(DeferredRenderCache));
         }
@@ -272,6 +320,7 @@ internal sealed class DeferredRenderCache : IDisposable
         catch (Exception ex) { Logger.Log(ex, "Finalize deferred render state", nameof(DeferredRenderCache)); }
         finally
         {
+            database.Dispose();
             jobLock.Dispose();
             verified.Clear();
         }

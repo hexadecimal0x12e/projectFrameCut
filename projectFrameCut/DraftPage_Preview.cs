@@ -1072,13 +1072,17 @@ public partial class DraftPage : ContentPage, IDraftPage
             if (!IsRemoteProject)
             {
                 bool buffering = true;
+                var developerMode = SettingsManager.IsBoolSettingTrue("DeveloperMode");
                 void progressChanged(double progress, TimeSpan _)
                 {
+                    var frameRate = previewer.DynamicPreviewBufferingFrameRate;
                     Dispatcher.Dispatch(() =>
                     {
                         if (ct.IsCancellationRequested || !Volatile.Read(ref buffering)) return;
                         StatusLabel.TextColor = Colors.White;
                         StatusLabel.Text = $"{Localized.DraftPage_LivePreview_Preparing} {progress:P0}";
+                        if (developerMode)
+                            AlternativeStatusLabel.Text = frameRate is double fps ? $"{fps:F1} FPS" : "-- FPS";
                     });
                 }
 
@@ -1175,6 +1179,15 @@ public partial class DraftPage : ContentPage, IDraftPage
             {
                 rebuffering = true;
                 SetStatusText($"{Localized.DraftPage_LivePreview_Preparing} {progress:P0}");
+                if (developerMode)
+                {
+                    var frameRate = cache.BufferingFrameRate;
+                    await Dispatcher.DispatchAsync(() =>
+                    {
+                        if (ct.IsCancellationRequested) return;
+                        AlternativeStatusLabel.Text = frameRate is double fps ? $"{fps:F1} FPS" : "-- FPS";
+                    });
+                }
                 await Task.Delay(50, ct);
                 continue;
             }

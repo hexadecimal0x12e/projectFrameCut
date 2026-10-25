@@ -230,14 +230,15 @@ namespace projectFrameCut.WinUI
             }
         }
 
-        public static async Task BringToForeground()
+        public static async Task BringToForeground(Microsoft.Maui.Controls.Window? window = null)
         {
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
-                var window = Microsoft.Maui.Controls.Application.Current?.Windows[0];
-                if (window?.Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow)
+                if ((window ?? Microsoft.Maui.Controls.Application.Current?.Windows.FirstOrDefault())?.Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow)
                 {
+                    nativeWindow.Activate();
                     var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(nativeWindow);
+                    AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(hwnd)).MoveInZOrderAtTop();
                     SetForegroundWindow(hwnd);
                     SetFocus(hwnd);
                 }

@@ -57,380 +57,324 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
-        private static void Reencode(string inputPath, string outputPath, int targetWidth, int targetHeight,
-            string videoEncoder, long targetBitrate, bool preserveSourceFormat, CancellationToken cancellationToken)
+        internal readonly record struct ReencodeResult(int Width, int Height, bool HasAlpha, bool HasAuxiliary);
+
+        internal static ReencodeResult ReencodePreviewProxy(string inputPath, string outputPath, int targetWidth, int targetHeight,
+            CancellationToken cancellationToken = default)
+            => Reencode(inputPath, outputPath, targetWidth, targetHeight, "ffv1", 0, true, cancellationToken, previewProxy: true);
+
+        private static ReencodeResult Reencode(string inputPath, string outputPath, int targetWidth, int targetHeight,
+            string videoEncoder, long targetBitrate, bool preserveSourceFormat, CancellationToken cancellationToken, bool previewProxy = false)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(inputPath);
             ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
             ArgumentException.ThrowIfNullOrWhiteSpace(videoEncoder);
-            if (!preserveSourceFormat && (targetWidth <= 0 || targetHeight <= 0)) throw new ArgumentOutOfRangeException(nameof(targetWidth));
+            if ((!preserveSourceFormat || previewProxy) && (targetWidth <= 0 || targetHeight <= 0))
+                throw new ArgumentOutOfRangeException(nameof(targetWidth));
             if (!preserveSourceFormat && ((targetWidth & 1) != 0 || (targetHeight & 1) != 0))
                 throw new ArgumentException("Target resolution must be even when encoding to YUV420P.");
-            if (targetBitrate <= 0) throw new ArgumentOutOfRangeException(nameof(targetBitrate));
+            if (!previewProxy && targetBitrate <= 0) throw new ArgumentOutOfRangeException(nameof(targetBitrate));
             cancellationToken.ThrowIfCancellationRequested();
-
-            if (!File.Exists(inputPath))
-                throw new FileNotFoundException($"Input file '{inputPath}' doesn't exist.", inputPath);
-
+            if (!File.Exists(inputPath)) throw new FileNotFoundException($"Input file '{inputPath}' doesn't exist.", inputPath);
             ffmpeg.avformat_network_init();
 
-            AVFormatContext* inFmt = null;
-            AVFormatContext* outFmt = null;
-            AVCodecContext* decCtx = null;
-            AVCodecContext* encCtx = null;
-            SwsContext* sws = null;
-            AVFrame* decFrame = null;
-            AVFrame* encFrame = null;
-            AVPacket* inPkt = null;
-            AVPacket* outPkt = null;
-            int[]? streamMappingManaged = null;
-            int streamMappingSize = 0;
-            long nextVideoPts = 0;
-
+            AVFormatContext* input = null;
+            AVFormatContext* output = null;
+            AVPacket* packet = null;
+            var tracks = new Dictionary<int, Track>();
+            var copiedStreams = new Dictionary<int, int>();
             try
             {
-                // -------- Open input --------
-                inFmt = ffmpeg.avformat_alloc_context();
-                if (inFmt == null) throw new InvalidOperationException("Failed to allocate input AVFormatContext.");
-
-                FFmpegHelper.Throw(ffmpeg.avformat_open_input(&inFmt, inputPath, null, null), "avformat_open_input");
-                FFmpegHelper.Throw(ffmpeg.avformat_find_stream_info(inFmt, null), "avformat_find_stream_info");
-
-                int videoStreamIndex = ffmpeg.av_find_best_stream(inFmt, AVMediaType.AVMEDIA_TYPE_VIDEO, -1, -1, null, 0);
-                if (videoStreamIndex < 0)
-                    throw new InvalidDataException($"No video stream found in '{inputPath}'.");
-
-                AVStream* inVideoStream = inFmt->streams[videoStreamIndex];
-                AVCodecParameters* inVideoPar = inVideoStream->codecpar;
-                if (preserveSourceFormat)
+                FFmpegHelper.Throw(ffmpeg.avformat_open_input(&input, inputPath, null, null), "avformat_open_input");
+                FFmpegHelper.Throw(ffmpeg.avformat_find_stream_info(input, null), "avformat_find_stream_info");
+                int mainIndex = -1;
+                if (previewProxy)
                 {
-                    targetWidth = inVideoPar->width;
-                    targetHeight = inVideoPar->height;
+                    for (int i = 0; i < input->nb_streams; i++)
+                    {
+                        if (input->streams[i]->codecpar->codec_type != AVMediaType.AVMEDIA_TYPE_VIDEO) continue;
+                        mainIndex = i;
+                        break;
+                    }
+                }
+                else mainIndex = ffmpeg.av_find_best_stream(input, AVMediaType.AVMEDIA_TYPE_VIDEO, -1, -1, null, 0);
+                if (mainIndex < 0) throw new InvalidDataException($"No video stream found in '{inputPath}'.");
+                bool auxiliary = previewProxy && ReadMetadata(input->metadata, AlphaBrightnessVideoWriter.FormatMetadataKey)
+                    == AlphaBrightnessVideoWriter.FormatVersion;
+                if (preserveSourceFormat && !previewProxy)
+                {
+                    targetWidth = input->streams[mainIndex]->codecpar->width;
+                    targetHeight = input->streams[mainIndex]->codecpar->height;
                     Log($"Final video encoding: {videoEncoder}, {targetBitrate} bps, {targetWidth}x{targetHeight}.");
                 }
+                FFmpegHelper.Throw(ffmpeg.avformat_alloc_output_context2(&output, null, previewProxy ? "matroska" : null, outputPath),
+                    "avformat_alloc_output_context2");
+                if (output == null) throw new OutOfMemoryException();
+                if (preserveSourceFormat) ffmpeg.av_dict_copy(&output->metadata, input->metadata, 0);
 
-                AVCodec* decoder = ffmpeg.avcodec_find_decoder(inVideoPar->codec_id);
-                if (decoder == null) throw new NotSupportedException("No suitable video decoder found.");
-
-                decCtx = ffmpeg.avcodec_alloc_context3(decoder);
-                if (decCtx == null) throw new InvalidOperationException("Failed to allocate decoder context.");
-                FFmpegHelper.Throw(ffmpeg.avcodec_parameters_to_context(decCtx, inVideoPar), "avcodec_parameters_to_context");
-                FFmpegHelper.Throw(ffmpeg.avcodec_open2(decCtx, decoder, null), "avcodec_open2(decoder)");
-
-                // -------- Create output --------
-                int ret = ffmpeg.avformat_alloc_output_context2(&outFmt, null, null, outputPath);
-                if (ret < 0 || outFmt == null)
-                    FFmpegHelper.Throw(ret, "avformat_alloc_output_context2");
-
-                streamMappingSize = (int)inFmt->nb_streams;
-                streamMappingManaged = new int[streamMappingSize];
-                for (int i = 0; i < streamMappingManaged.Length; i++) streamMappingManaged[i] = -1;
-                AVStream* outVideoStream = null;
-
-                // Create output streams for non-video (stream copy) first.
-                for (int i = 0; i < inFmt->nb_streams; i++)
+                for (int i = 0; i < input->nb_streams; i++)
                 {
-                    if (i == videoStreamIndex)
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var stream = input->streams[i];
+                    var type = stream->codecpar->codec_type;
+                    if (i == mainIndex || auxiliary && type == AVMediaType.AVMEDIA_TYPE_VIDEO)
                     {
+                        if (!preserveSourceFormat) continue;
+                        tracks.Add(i, new Track(input, stream, output, targetWidth, targetHeight, videoEncoder, targetBitrate,
+                            preserveSourceFormat, previewProxy));
+                        if (auxiliary && ReadMetadata(stream->metadata, AlphaBrightnessVideoWriter.StreamRoleMetadataKey) == "main")
+                            mainIndex = i;
+                    }
+                    else if (!previewProxy && (type is AVMediaType.AVMEDIA_TYPE_AUDIO or AVMediaType.AVMEDIA_TYPE_SUBTITLE or AVMediaType.AVMEDIA_TYPE_DATA
+                        || preserveSourceFormat && type == AVMediaType.AVMEDIA_TYPE_VIDEO))
+                    {
+                        var copy = ffmpeg.avformat_new_stream(output, null);
+                        if (copy == null) throw new OutOfMemoryException();
+                        FFmpegHelper.Throw(ffmpeg.avcodec_parameters_copy(copy->codecpar, stream->codecpar), "avcodec_parameters_copy");
+                        copy->codecpar->codec_tag = 0;
+                        copy->time_base = stream->time_base;
                         if (preserveSourceFormat)
                         {
-                            outVideoStream = ffmpeg.avformat_new_stream(outFmt, null);
-                            if (outVideoStream == null) throw new InvalidOperationException("Failed to create output video stream.");
+                            ffmpeg.av_dict_copy(&copy->metadata, stream->metadata, 0);
+                            copy->disposition = stream->disposition;
                         }
-                        continue;
+                        copiedStreams.Add(i, copy->index);
                     }
-
-                    AVStream* inStream = inFmt->streams[i];
-                    AVCodecParameters* inPar = inStream->codecpar;
-
-                    if (inPar->codec_type != AVMediaType.AVMEDIA_TYPE_AUDIO &&
-                        inPar->codec_type != AVMediaType.AVMEDIA_TYPE_SUBTITLE &&
-                        inPar->codec_type != AVMediaType.AVMEDIA_TYPE_DATA &&
-                        !(preserveSourceFormat && inPar->codec_type == AVMediaType.AVMEDIA_TYPE_VIDEO))
-                    {
-                        continue; // ignore attachments/unknown by default
-                    }
-
-                    AVStream* outStream = ffmpeg.avformat_new_stream(outFmt, null);
-                    if (outStream == null) throw new InvalidOperationException("Failed to create output stream.");
-
-                    FFmpegHelper.Throw(ffmpeg.avcodec_parameters_copy(outStream->codecpar, inPar), "avcodec_parameters_copy");
-                    outStream->codecpar->codec_tag = 0;
-                    outStream->time_base = inStream->time_base;
-                    if (preserveSourceFormat)
-                    {
-                        ffmpeg.av_dict_copy(&outStream->metadata, inStream->metadata, 0);
-                        outStream->disposition = inStream->disposition;
-                    }
-
-                    streamMappingManaged[i] = outStream->index;
                 }
-
-                // Create output video stream (re-encode).
-                AVCodec* encoder = ffmpeg.avcodec_find_encoder_by_name(videoEncoder);
-                if (encoder == null)
-                    throw new VideoEncoderException($"Could not find video encoder '{videoEncoder}'.");
-
-                if (outVideoStream == null) outVideoStream = ffmpeg.avformat_new_stream(outFmt, encoder);
-                if (outVideoStream == null) throw new InvalidOperationException("Failed to create output video stream.");
-
-                encCtx = ffmpeg.avcodec_alloc_context3(encoder);
-                if (encCtx == null) throw new InvalidOperationException("Failed to allocate encoder context.");
-
-                // Choose a reasonable fps / time base.
-                AVRational fr = ffmpeg.av_guess_frame_rate(inFmt, inVideoStream, null);
-                if (fr.num <= 0 || fr.den <= 0)
-                {
-                    fr = inVideoStream->avg_frame_rate;
-                }
-                if (fr.num <= 0 || fr.den <= 0)
-                {
-                    fr = new AVRational { num = 30, den = 1 };
-                }
-
-                // Encoder parameters.
-                encCtx->codec_id = encoder->id;
-                encCtx->codec_type = AVMediaType.AVMEDIA_TYPE_VIDEO;
-                encCtx->width = targetWidth;
-                encCtx->height = targetHeight;
-                encCtx->pix_fmt = preserveSourceFormat
-                    ? SelectPixelFormat(encoder, decCtx->pix_fmt)
-                    : AVPixelFormat.AV_PIX_FMT_YUV420P;
-                encCtx->time_base = new AVRational { num = fr.den, den = fr.num }; // 1/fps
-                encCtx->framerate = fr;
-                encCtx->gop_size = 12;
-                encCtx->max_b_frames = preserveSourceFormat ? 0 : 2;
-                encCtx->bit_rate = targetBitrate;
-                if (preserveSourceFormat)
-                {
-                    encCtx->sample_aspect_ratio = inVideoPar->sample_aspect_ratio;
-                    encCtx->color_range = inVideoPar->color_range;
-                    encCtx->color_primaries = inVideoPar->color_primaries;
-                    encCtx->color_trc = inVideoPar->color_trc;
-                    encCtx->colorspace = inVideoPar->color_space;
-                    encCtx->chroma_sample_location = inVideoPar->chroma_location;
-                    ffmpeg.av_dict_copy(&outFmt->metadata, inFmt->metadata, 0);
-                    ffmpeg.av_dict_copy(&outVideoStream->metadata, inVideoStream->metadata, 0);
-                    outVideoStream->disposition = inVideoStream->disposition;
-                    outVideoStream->avg_frame_rate = fr;
-                }
-
-                outVideoStream->time_base = encCtx->time_base;
-
-                if ((outFmt->oformat->flags & ffmpeg.AVFMT_GLOBALHEADER) != 0)
-                    encCtx->flags |= ffmpeg.AV_CODEC_FLAG_GLOBAL_HEADER;
-
-                AVDictionary* opts = null;
-                if (!preserveSourceFormat && encCtx->codec_id == AVCodecID.AV_CODEC_ID_H264)
-                {
-                    ffmpeg.av_dict_set(&opts, "preset", "veryfast", 0);
-                    ffmpeg.av_dict_set(&opts, "tune", "zerolatency", 0);
-                }
-                else if (preserveSourceFormat && (videoEncoder == "libx264" || videoEncoder == "libx265"))
-                    ffmpeg.av_dict_set(&opts, "preset", "veryfast", 0);
-                int openResult = ffmpeg.avcodec_open2(encCtx, encoder, &opts);
-                ffmpeg.av_dict_free(&opts);
-                CheckEncoderResult(openResult, "avcodec_open2(encoder)");
-
-                FFmpegHelper.Throw(ffmpeg.avcodec_parameters_from_context(outVideoStream->codecpar, encCtx), "avcodec_parameters_from_context");
-                outVideoStream->codecpar->codec_tag = 0;
-
-                streamMappingManaged[videoStreamIndex] = outVideoStream->index;
-
-                if ((outFmt->oformat->flags & ffmpeg.AVFMT_NOFILE) == 0)
-                {
-                    FFmpegHelper.Throw(ffmpeg.avio_open(&outFmt->pb, outputPath, ffmpeg.AVIO_FLAG_WRITE), "avio_open");
-                }
-
-                FFmpegHelper.Throw(ffmpeg.avformat_write_header(outFmt, null), "avformat_write_header");
-
-                // -------- Alloc frames/packets & scaler --------
-                decFrame = ffmpeg.av_frame_alloc();
-                encFrame = ffmpeg.av_frame_alloc();
-                inPkt = ffmpeg.av_packet_alloc();
-                outPkt = ffmpeg.av_packet_alloc();
-                if (decFrame == null || encFrame == null || inPkt == null || outPkt == null)
-                    throw new OutOfMemoryException("Failed to allocate frames/packets.");
-
-                encFrame->format = (int)encCtx->pix_fmt;
-                encFrame->width = encCtx->width;
-                encFrame->height = encCtx->height;
-                FFmpegHelper.Throw(ffmpeg.av_frame_get_buffer(encFrame, 32), "av_frame_get_buffer(encFrame)");
-
-                sws = ffmpeg.sws_getContext(
-                    decCtx->width, decCtx->height, decCtx->pix_fmt,
-                    encCtx->width, encCtx->height, encCtx->pix_fmt,
-                    4, null, null, null);
-                if (sws == null)
-                    throw new InvalidOperationException("Failed to create SWS scaler context.");
-
-                // -------- Transcode loop --------
-                while (ffmpeg.av_read_frame(inFmt, inPkt) >= 0)
+                if (!tracks.ContainsKey(mainIndex))
+                    tracks.Add(mainIndex, new Track(input, input->streams[mainIndex], output, targetWidth, targetHeight,
+                        videoEncoder, targetBitrate, preserveSourceFormat, previewProxy));
+                if ((output->oformat->flags & ffmpeg.AVFMT_NOFILE) == 0)
+                    FFmpegHelper.Throw(ffmpeg.avio_open(&output->pb, outputPath, ffmpeg.AVIO_FLAG_WRITE), "avio_open");
+                FFmpegHelper.Throw(ffmpeg.avformat_write_header(output, null), "avformat_write_header");
+                packet = ffmpeg.av_packet_alloc();
+                if (packet == null) throw new OutOfMemoryException();
+                int result;
+                while ((result = ffmpeg.av_read_frame(input, packet)) >= 0)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    int inIndex = inPkt->stream_index;
-                    if (inIndex < 0 || inIndex >= streamMappingSize)
+                    if (tracks.TryGetValue(packet->stream_index, out var track)) track.Decode(packet, output, cancellationToken);
+                    else if (copiedStreams.TryGetValue(packet->stream_index, out int index))
                     {
-                        ffmpeg.av_packet_unref(inPkt);
-                        continue;
+                        ffmpeg.av_packet_rescale_ts(packet, input->streams[packet->stream_index]->time_base, output->streams[index]->time_base);
+                        packet->stream_index = index;
+                        FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(output, packet), "av_interleaved_write_frame(copy)");
                     }
-
-                    if (inIndex == videoStreamIndex)
-                    {
-                        // Decode -> Scale -> Encode
-                        FFmpegHelper.Throw(ffmpeg.avcodec_send_packet(decCtx, inPkt), "avcodec_send_packet(decoder)");
-                        ffmpeg.av_packet_unref(inPkt);
-
-                        while (true)
-                        {
-                            int recv = ffmpeg.avcodec_receive_frame(decCtx, decFrame);
-                            if (recv == ffmpeg.AVERROR(ffmpeg.EAGAIN) || recv == ffmpeg.AVERROR_EOF) break;
-                            FFmpegHelper.Throw(recv, "avcodec_receive_frame(decoder)");
-
-                            FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(encFrame), "av_frame_make_writable(encFrame)");
-
-                            FFmpegHelper.ScaleFrame(sws, decFrame, encFrame);
-                            if (preserveSourceFormat)
-                                CopyFrameProperties(encFrame, decFrame, inVideoStream->time_base, encCtx->time_base);
-
-                            long srcPts = decFrame->best_effort_timestamp;
-                            if (srcPts == ffmpeg.AV_NOPTS_VALUE)
-                            {
-                                encFrame->pts = nextVideoPts++;
-                            }
-                            else
-                            {
-                                encFrame->pts = ffmpeg.av_rescale_q(srcPts, inVideoStream->time_base, encCtx->time_base);
-                                if (encFrame->pts < 0) encFrame->pts = nextVideoPts++;
-                                else nextVideoPts = encFrame->pts + 1;
-                            }
-
-                            CheckEncoderResult(ffmpeg.avcodec_send_frame(encCtx, encFrame), "avcodec_send_frame(encoder)");
-
-                            while (true)
-                            {
-                                int er = ffmpeg.avcodec_receive_packet(encCtx, outPkt);
-                                if (er == ffmpeg.AVERROR(ffmpeg.EAGAIN) || er == ffmpeg.AVERROR_EOF) break;
-                                CheckEncoderResult(er, "avcodec_receive_packet(encoder)");
-
-                                AVStream* outStream = outFmt->streams[outVideoStream->index];
-                                ffmpeg.av_packet_rescale_ts(outPkt, encCtx->time_base, outStream->time_base);
-                                outPkt->stream_index = outVideoStream->index;
-
-                                FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(outFmt, outPkt), "av_interleaved_write_frame(video)");
-                                ffmpeg.av_packet_unref(outPkt);
-                            }
-
-                            ffmpeg.av_frame_unref(decFrame);
-                        }
-                    }
-                    else
-                    {
-                        // Stream copy other packets
-                        int outIndex = streamMappingManaged[inIndex];
-                        if (outIndex < 0)
-                        {
-                            ffmpeg.av_packet_unref(inPkt);
-                            continue;
-                        }
-
-                        AVStream* inStream = inFmt->streams[inIndex];
-                        AVStream* outStream = outFmt->streams[outIndex];
-
-                        inPkt->stream_index = outIndex;
-                        ffmpeg.av_packet_rescale_ts(inPkt, inStream->time_base, outStream->time_base);
-
-                        FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(outFmt, inPkt), "av_interleaved_write_frame(copy)");
-                        ffmpeg.av_packet_unref(inPkt);
-                    }
+                    ffmpeg.av_packet_unref(packet);
                 }
-
-                // -------- Flush decoder --------
-                FFmpegHelper.Throw(ffmpeg.avcodec_send_packet(decCtx, null), "avcodec_send_packet(decoder_flush)");
-                while (true)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    int recv = ffmpeg.avcodec_receive_frame(decCtx, decFrame);
-                    if (recv == ffmpeg.AVERROR(ffmpeg.EAGAIN) || recv == ffmpeg.AVERROR_EOF) break;
-                    FFmpegHelper.Throw(recv, "avcodec_receive_frame(decoder_flush)");
-
-                    FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(encFrame), "av_frame_make_writable(encFrame)");
-                    FFmpegHelper.ScaleFrame(sws, decFrame, encFrame);
-                    if (preserveSourceFormat)
-                        CopyFrameProperties(encFrame, decFrame, inVideoStream->time_base, encCtx->time_base);
-
-                    long srcPts = decFrame->best_effort_timestamp;
-                    if (srcPts == ffmpeg.AV_NOPTS_VALUE)
-                    {
-                        encFrame->pts = nextVideoPts++;
-                    }
-                    else
-                    {
-                        encFrame->pts = ffmpeg.av_rescale_q(srcPts, inVideoStream->time_base, encCtx->time_base);
-                        if (encFrame->pts < 0) encFrame->pts = nextVideoPts++;
-                        else nextVideoPts = encFrame->pts + 1;
-                    }
-
-                    CheckEncoderResult(ffmpeg.avcodec_send_frame(encCtx, encFrame), "avcodec_send_frame(encoder_flush_in)");
-                    while (true)
-                    {
-                        int er = ffmpeg.avcodec_receive_packet(encCtx, outPkt);
-                        if (er == ffmpeg.AVERROR(ffmpeg.EAGAIN) || er == ffmpeg.AVERROR_EOF) break;
-                        CheckEncoderResult(er, "avcodec_receive_packet(encoder_flush_out)");
-
-                        AVStream* outStream = outFmt->streams[streamMappingManaged[videoStreamIndex]];
-                        ffmpeg.av_packet_rescale_ts(outPkt, encCtx->time_base, outStream->time_base);
-                        outPkt->stream_index = streamMappingManaged[videoStreamIndex];
-                        FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(outFmt, outPkt), "av_interleaved_write_frame(video_flush)");
-                        ffmpeg.av_packet_unref(outPkt);
-                    }
-
-                    ffmpeg.av_frame_unref(decFrame);
-                }
-
-                // -------- Flush encoder --------
-                CheckEncoderResult(ffmpeg.avcodec_send_frame(encCtx, null), "avcodec_send_frame(encoder_null)");
-                while (true)
-                {
-                    int er = ffmpeg.avcodec_receive_packet(encCtx, outPkt);
-                    if (er == ffmpeg.AVERROR(ffmpeg.EAGAIN) || er == ffmpeg.AVERROR_EOF) break;
-                    CheckEncoderResult(er, "avcodec_receive_packet(encoder_null)");
-
-                    AVStream* outStream = outFmt->streams[streamMappingManaged[videoStreamIndex]];
-                    ffmpeg.av_packet_rescale_ts(outPkt, encCtx->time_base, outStream->time_base);
-                    outPkt->stream_index = streamMappingManaged[videoStreamIndex];
-                    FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(outFmt, outPkt), "av_interleaved_write_frame(encoder_null)");
-                    ffmpeg.av_packet_unref(outPkt);
-                }
-
-                FFmpegHelper.Throw(ffmpeg.av_write_trailer(outFmt), "av_write_trailer");
+                if (result != ffmpeg.AVERROR_EOF) FFmpegHelper.Throw(result, "av_read_frame");
+                foreach (var track in tracks.Values) track.Finish(output, cancellationToken);
+                var main = tracks[mainIndex];
+                if (previewProxy && (tracks.Values.Any(t => t.Frames == 0) || auxiliary && tracks.Values.Any(t => t.Frames != main.Frames)))
+                    throw new InvalidDataException("The preview proxy contains incomplete video channels.");
+                cancellationToken.ThrowIfCancellationRequested();
+                FFmpegHelper.Throw(ffmpeg.av_write_trailer(output), "av_write_trailer");
+                return new(targetWidth, targetHeight, main.HasAlpha, auxiliary);
             }
             finally
             {
-                if (outPkt != null) { AVPacket* t = outPkt; outPkt = null; ffmpeg.av_packet_free(&t); }
-                if (inPkt != null) { AVPacket* t = inPkt; inPkt = null; ffmpeg.av_packet_free(&t); }
-                if (encFrame != null) { AVFrame* t = encFrame; encFrame = null; ffmpeg.av_frame_free(&t); }
-                if (decFrame != null) { AVFrame* t = decFrame; decFrame = null; ffmpeg.av_frame_free(&t); }
-                if (sws != null) { ffmpeg.sws_freeContext(sws); sws = null; }
-                if (encCtx != null) { AVCodecContext* t = encCtx; encCtx = null; ffmpeg.avcodec_free_context(&t); }
-                if (decCtx != null) { AVCodecContext* t = decCtx; decCtx = null; ffmpeg.avcodec_free_context(&t); }
-
-                if (outFmt != null)
+                foreach (var track in tracks.Values) track.Dispose();
+                if (packet != null) ffmpeg.av_packet_free(&packet);
+                if (output != null)
                 {
-                    if ((outFmt->oformat->flags & ffmpeg.AVFMT_NOFILE) == 0 && outFmt->pb != null)
-                        ffmpeg.avio_closep(&outFmt->pb);
-
-                    AVFormatContext* t = outFmt;
-                    outFmt = null;
-                    ffmpeg.avformat_free_context(t);
+                    if (output->pb != null) ffmpeg.avio_closep(&output->pb);
+                    ffmpeg.avformat_free_context(output);
                 }
+                if (input != null) ffmpeg.avformat_close_input(&input);
+            }
+        }
 
-                if (inFmt != null)
+        private static string? ReadMetadata(AVDictionary* metadata, string key)
+        {
+            var entry = ffmpeg.av_dict_get(metadata, key, null, 0);
+            return entry == null ? null : Marshal.PtrToStringUTF8((nint)entry->value);
+        }
+
+        private sealed class Track : IDisposable
+        {
+            private AVCodecContext* decoder;
+            private AVCodecContext* encoder;
+            private AVFrame* source;
+            private AVFrame* scaled;
+            private AVPacket* packet;
+            private SwsContext* scaler;
+            private readonly AVStream* input;
+            private readonly AVStream* output;
+            private readonly bool preserveSourceFormat;
+            private readonly bool previewProxy;
+            private long nextPts;
+            public long Frames { get; private set; }
+            public bool HasAlpha { get; private set; }
+
+            public Track(AVFormatContext* sourceFormat, AVStream* input, AVFormatContext* format, int width, int height,
+                string videoEncoder, long bitrate, bool preserveSourceFormat, bool previewProxy)
+            {
+                this.input = input;
+                this.preserveSourceFormat = preserveSourceFormat;
+                this.previewProxy = previewProxy;
+                try
                 {
-                    AVFormatContext* t = inFmt;
-                    inFmt = null;
-                    ffmpeg.avformat_close_input(&t);
+                    var codec = ffmpeg.avcodec_find_decoder(input->codecpar->codec_id);
+                    if (codec == null) throw new NotSupportedException("No suitable video decoder found.");
+                    decoder = ffmpeg.avcodec_alloc_context3(codec);
+                    if (decoder == null) throw new OutOfMemoryException();
+                    FFmpegHelper.Throw(ffmpeg.avcodec_parameters_to_context(decoder, input->codecpar), "avcodec_parameters_to_context");
+                    decoder->pkt_timebase = input->time_base;
+                    if (previewProxy) decoder->thread_count = 2;
+                    FFmpegHelper.Throw(ffmpeg.avcodec_open2(decoder, codec, null), "avcodec_open2(decoder)");
+                    var sourceInfo = ffmpeg.av_pix_fmt_desc_get(decoder->pix_fmt);
+                    if (previewProxy && ReadMetadata(input->metadata, "alpha_mode") == "1"
+                        && (sourceInfo == null || (sourceInfo->flags & ffmpeg.AV_PIX_FMT_FLAG_ALPHA) == 0))
+                        throw new NotSupportedException("The source decoder cannot preserve this video's alpha channel.");
+
+                    codec = ffmpeg.avcodec_find_encoder_by_name(videoEncoder);
+                    if (codec == null) throw new VideoEncoderException($"Could not find video encoder '{videoEncoder}'.");
+                    encoder = ffmpeg.avcodec_alloc_context3(codec);
+                    if (encoder == null) throw new OutOfMemoryException();
+                    var frameRate = previewProxy ? input->avg_frame_rate : ffmpeg.av_guess_frame_rate(sourceFormat, input, null);
+                    if (frameRate.num <= 0 || frameRate.den <= 0) frameRate = input->avg_frame_rate;
+                    if (previewProxy && (frameRate.num <= 0 || frameRate.den <= 0)) frameRate = input->r_frame_rate;
+                    if (frameRate.num <= 0 || frameRate.den <= 0) frameRate = new() { num = 30, den = 1 };
+                    encoder->codec_id = codec->id;
+                    encoder->codec_type = AVMediaType.AVMEDIA_TYPE_VIDEO;
+                    encoder->width = width;
+                    encoder->height = height;
+                    encoder->pix_fmt = preserveSourceFormat ? SelectPixelFormat(codec, decoder->pix_fmt, previewProxy) : AVPixelFormat.AV_PIX_FMT_YUV420P;
+                    encoder->time_base = previewProxy ? input->time_base : new() { num = frameRate.den, den = frameRate.num };
+                    if (encoder->time_base.num <= 0 || encoder->time_base.den <= 0)
+                        throw new InvalidDataException("The source video has no valid time base.");
+                    encoder->framerate = frameRate;
+                    encoder->gop_size = previewProxy ? 1 : 12;
+                    encoder->max_b_frames = preserveSourceFormat ? 0 : 2;
+                    encoder->bit_rate = bitrate;
+                    if (previewProxy) encoder->thread_count = 2;
+                    if (preserveSourceFormat)
+                    {
+                        encoder->sample_aspect_ratio = input->codecpar->sample_aspect_ratio;
+                        encoder->color_range = input->codecpar->color_range;
+                        encoder->color_primaries = input->codecpar->color_primaries;
+                        encoder->color_trc = input->codecpar->color_trc;
+                        encoder->colorspace = input->codecpar->color_space;
+                        encoder->chroma_sample_location = input->codecpar->chroma_location;
+                    }
+                    if ((format->oformat->flags & ffmpeg.AVFMT_GLOBALHEADER) != 0)
+                        encoder->flags |= ffmpeg.AV_CODEC_FLAG_GLOBAL_HEADER;
+                    AVDictionary* options = null;
+                    try
+                    {
+                        if (!preserveSourceFormat && codec->id == AVCodecID.AV_CODEC_ID_H264)
+                        {
+                            ffmpeg.av_dict_set(&options, "preset", "veryfast", 0);
+                            ffmpeg.av_dict_set(&options, "tune", "zerolatency", 0);
+                        }
+                        else if (preserveSourceFormat && videoEncoder is "libx264" or "libx265")
+                            ffmpeg.av_dict_set(&options, "preset", "veryfast", 0);
+                        CheckEncoderResult(ffmpeg.avcodec_open2(encoder, codec, &options), "avcodec_open2(encoder)");
+                    }
+                    finally { ffmpeg.av_dict_free(&options); }
+                    HasAlpha = (ffmpeg.av_pix_fmt_desc_get(encoder->pix_fmt)->flags & ffmpeg.AV_PIX_FMT_FLAG_ALPHA) != 0;
+                    output = ffmpeg.avformat_new_stream(format, null);
+                    if (output == null) throw new OutOfMemoryException();
+                    FFmpegHelper.Throw(ffmpeg.avcodec_parameters_from_context(output->codecpar, encoder), "avcodec_parameters_from_context");
+                    output->codecpar->codec_tag = 0;
+                    output->time_base = encoder->time_base;
+                    if (preserveSourceFormat)
+                    {
+                        output->avg_frame_rate = previewProxy ? input->avg_frame_rate : frameRate;
+                        if (previewProxy) output->r_frame_rate = input->r_frame_rate;
+                        output->sample_aspect_ratio = input->sample_aspect_ratio;
+                        output->disposition = input->disposition;
+                        ffmpeg.av_dict_copy(&output->metadata, input->metadata, 0);
+                        for (int i = 0; i < input->codecpar->nb_coded_side_data; i++)
+                        {
+                            var data = input->codecpar->coded_side_data[i];
+                            var copy = ffmpeg.av_packet_side_data_new(&output->codecpar->coded_side_data,
+                                &output->codecpar->nb_coded_side_data, data.type, data.size, 0);
+                            if (copy == null) throw new OutOfMemoryException();
+                            Buffer.MemoryCopy(data.data, copy->data, data.size, data.size);
+                        }
+                    }
+                    source = ffmpeg.av_frame_alloc();
+                    scaled = ffmpeg.av_frame_alloc();
+                    packet = ffmpeg.av_packet_alloc();
+                    if (source == null || scaled == null || packet == null) throw new OutOfMemoryException();
+                    scaled->format = (int)encoder->pix_fmt;
+                    scaled->width = width;
+                    scaled->height = height;
+                    FFmpegHelper.Throw(ffmpeg.av_frame_get_buffer(scaled, 32), "av_frame_get_buffer");
                 }
+                catch { Dispose(); throw; }
+            }
+
+            public void Decode(AVPacket* inputPacket, AVFormatContext* format, CancellationToken token)
+            {
+                FFmpegHelper.Throw(ffmpeg.avcodec_send_packet(decoder, inputPacket), "avcodec_send_packet");
+                while (true)
+                {
+                    token.ThrowIfCancellationRequested();
+                    int result = ffmpeg.avcodec_receive_frame(decoder, source);
+                    if (result == ffmpeg.AVERROR(ffmpeg.EAGAIN) || result == ffmpeg.AVERROR_EOF) return;
+                    FFmpegHelper.Throw(result, "avcodec_receive_frame");
+                    if (previewProxy && (source->width != input->codecpar->width || source->height != input->codecpar->height))
+                        throw new NotSupportedException("Variable-resolution videos cannot use a preview proxy.");
+                    scaler = ffmpeg.sws_getCachedContext(scaler, source->width, source->height, (AVPixelFormat)source->format,
+                        encoder->width, encoder->height, encoder->pix_fmt, 4, null, null, null);
+                    if (scaler == null) throw new InvalidOperationException("Cannot create video scaler.");
+                    if (previewProxy && (AVPixelFormat)source->format != encoder->pix_fmt
+                        && ffmpeg.av_pix_fmt_desc_get((AVPixelFormat)source->format)->nb_components >= 3)
+                    {
+                        var coefficients = ffmpeg.sws_getCoefficients((int)source->colorspace);
+                        if (coefficients == null) throw new NotSupportedException("Unknown proxy colorspace.");
+                        var details = new int_array4();
+                        details.UpdateFrom(new[] { coefficients[0], coefficients[1], coefficients[2], coefficients[3] });
+                        int fullRange = source->color_range == AVColorRange.AVCOL_RANGE_JPEG ? 1 : 0;
+                        FFmpegHelper.Throw(ffmpeg.sws_setColorspaceDetails(scaler, details, fullRange,
+                            details, fullRange, 0, 1 << 16, 1 << 16), "Set proxy colorspace");
+                    }
+                    FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(scaled), "av_frame_make_writable");
+                    if (FFmpegHelper.ScaleFrame(scaler, source, scaled) != encoder->height)
+                        throw new InvalidDataException("Incomplete scaled video frame.");
+                    if (preserveSourceFormat) CopyFrameProperties(scaled, source, input->time_base, encoder->time_base);
+                    long pts = source->best_effort_timestamp;
+                    scaled->pts = pts == ffmpeg.AV_NOPTS_VALUE ? nextPts : ffmpeg.av_rescale_q(pts, input->time_base, encoder->time_base);
+                    if (!previewProxy && scaled->pts < 0) scaled->pts = nextPts;
+                    nextPts = scaled->pts + (previewProxy ? Math.Max(1, scaled->duration) : 1);
+                    CheckEncoderResult(ffmpeg.avcodec_send_frame(encoder, scaled), "avcodec_send_frame");
+                    WritePackets(format);
+                    Frames++;
+                    ffmpeg.av_frame_unref(source);
+                }
+            }
+
+            public void Finish(AVFormatContext* format, CancellationToken token)
+            {
+                Decode(null, format, token);
+                CheckEncoderResult(ffmpeg.avcodec_send_frame(encoder, null), "avcodec_send_frame(flush)");
+                WritePackets(format);
+            }
+
+            private void WritePackets(AVFormatContext* format)
+            {
+                while (true)
+                {
+                    int result = ffmpeg.avcodec_receive_packet(encoder, packet);
+                    if (result == ffmpeg.AVERROR(ffmpeg.EAGAIN) || result == ffmpeg.AVERROR_EOF) return;
+                    CheckEncoderResult(result, "avcodec_receive_packet");
+                    ffmpeg.av_packet_rescale_ts(packet, encoder->time_base, output->time_base);
+                    packet->stream_index = output->index;
+                    FFmpegHelper.Throw(ffmpeg.av_interleaved_write_frame(format, packet), "av_interleaved_write_frame(video)");
+                    ffmpeg.av_packet_unref(packet);
+                }
+            }
+
+            public void Dispose()
+            {
+                if (scaler != null) { ffmpeg.sws_freeContext(scaler); scaler = null; }
+                fixed (AVPacket** p = &packet) ffmpeg.av_packet_free(p);
+                fixed (AVFrame** p = &source) ffmpeg.av_frame_free(p);
+                fixed (AVFrame** p = &scaled) ffmpeg.av_frame_free(p);
+                fixed (AVCodecContext** p = &decoder) ffmpeg.avcodec_free_context(p);
+                fixed (AVCodecContext** p = &encoder) ffmpeg.avcodec_free_context(p);
             }
         }
 
@@ -456,8 +400,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
             target->duration = ffmpeg.av_rescale_q(source->duration, sourceTimeBase, targetTimeBase);
         }
 
-        private static AVPixelFormat SelectPixelFormat(AVCodec* encoder, AVPixelFormat source)
+        private static AVPixelFormat SelectPixelFormat(AVCodec* encoder, AVPixelFormat source, bool preserveAlpha = false)
         {
+            var sourceInfo = ffmpeg.av_pix_fmt_desc_get(source);
+            if (preserveAlpha && sourceInfo == null) throw new VideoEncoderException("Unknown source pixel format.");
             AVPixelFormat* formats;
             int count;
             int result = ffmpeg.avcodec_get_supported_config(null, encoder,
@@ -470,6 +416,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 var desc = ffmpeg.av_pix_fmt_desc_get(formats[i]);
                 if (desc == null || (desc->flags & ffmpeg.AV_PIX_FMT_FLAG_HWACCEL) != 0) continue;
                 if (desc->nb_components > 0 && desc->comp[0].depth < depth) continue;
+                if (preserveAlpha && (sourceInfo->flags & ffmpeg.AV_PIX_FMT_FLAG_ALPHA) != 0
+                    && (desc->flags & ffmpeg.AV_PIX_FMT_FLAG_ALPHA) == 0) continue;
                 if (formats[i] == source) return source;
                 best = best == AVPixelFormat.AV_PIX_FMT_NONE
                     ? formats[i] : ffmpeg.av_find_best_pix_fmt_of_2(best, formats[i], source, 1, null);

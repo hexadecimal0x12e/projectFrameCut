@@ -234,16 +234,12 @@ public sealed class ShouldRenderTests
         var artifact = await client.RenderClipPreviewAsync(new()
         {
             SessionId = session.SessionId, ClipId = clip.Id, CanvasWidth = 2, CanvasHeight = 1,
-            PreferredPixelFormat = PreviewPixelFormat.VfdPicture, BeforeLayout = beforeLayout,
+            PreferredPixelFormat = PreviewPixelFormat.VfdPicture, BeforeLayout = beforeLayout, UsePreviewMetadata = true,
         });
-        using var stream = File.OpenRead(Path.Combine(root, artifact.ProjectRelativePath));
-        Assert.IsTrue(PictureExtensions.SharedVfdPictureDecoder.TryLoad(stream, out IPicture? picture));
-        using (picture)
-        {
-            Assert.AreEqual(2, picture!.Width);
-            Assert.AreEqual(1, picture.Height);
-            Assert.IsTrue(((IPicture<byte>)picture).a!.All(a => a == 0));
-        }
+        var preview = PreviewFrameContainer.Read(Path.Combine(root, artifact.ProjectRelativePath), artifact.PreviewEffectHash);
+        Assert.AreEqual(2, preview.Width);
+        Assert.AreEqual(1, preview.Height);
+        Assert.AreEqual(3, preview.AlphaMask[0] & 3);
     }
 
     [TestMethod]

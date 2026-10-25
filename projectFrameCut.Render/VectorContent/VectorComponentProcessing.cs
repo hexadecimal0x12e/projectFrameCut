@@ -8,6 +8,7 @@ public static class VectorComponentProcessing
 {
     public static VectorCanvasElement[] Compute(IVectorComponent component, IEnumerable<IVectorComponentEffect> effects, uint frame, float progress)
     {
+        if (PreviewSourceFrameContext.ReadingRaw) return component.ComputeAll().ToArray();
         using var context = ValueProviderFrameContext.PushFrame(frame, progress);
         IVectorComponent? temporary = null;
         try

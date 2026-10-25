@@ -20,6 +20,11 @@ public static class VectorPictureEffectProcessing
     }
 
     public static IPicture ReadFrame(IClip clip, uint frame, int width, int height, IPicture.PicturePixelMode ppb)
+        => PreviewSourceFrameContext.Current is { } preview
+            ? preview.Read(clip, frame, width, height, ppb, () => ReadFrameCore(clip, frame, width, height, ppb))
+            : ReadFrameCore(clip, frame, width, height, ppb);
+
+    private static IPicture ReadFrameCore(IClip clip, uint frame, int width, int height, IPicture.PicturePixelMode ppb)
     {
         using var clipScope = ValueProviderFrameContext.PushClip(clip);
         if (clip is not IVectorContentClip vector || vector.ProcessesVectorPictureEffects
@@ -38,6 +43,7 @@ public static class VectorPictureEffectProcessing
 
     public static VectorPicture Process(IClip clip, VectorPicture picture, uint frame, float? clipProgress = null, int width = 0, int height = 0)
     {
+        if (PreviewSourceFrameContext.ReadingRaw) return picture;
         var effects = (clip.EffectsInstances ?? []).Where(e => e.Enabled).OrderBy(e => e.Index).OfType<IVectorPictureEffect>().ToArray();
         if (effects.Length == 0) return picture;
         float progress = clipProgress ?? (clip.Duration <= 1 ? 0 : Math.Clamp(frame / (float)(clip.Duration - 1), 0, 1));

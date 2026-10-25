@@ -426,6 +426,8 @@ public sealed class RenderArtifact
     [ProtoMember(12)] public PreviewPixelFormat PixelFormat { get; set; } = PreviewPixelFormat.EncodedImage;
     [ProtoMember(13)] public int Stride { get; set; }
     [ProtoMember(14)] public string ColorSpace { get; set; } = string.Empty;
+    [ProtoMember(15)] public string PreviewContainer { get; set; } = string.Empty;
+    [ProtoMember(16)] public string PreviewEffectHash { get; set; } = string.Empty;
 }
 
 [ProtoContract]
@@ -481,6 +483,7 @@ public sealed class ClipPreviewRequest
     [ProtoMember(8)] public PreviewPixelFormat PreferredPixelFormat { get; set; } = PreviewPixelFormat.EncodedImage;
     [ProtoMember(9)] public string? VectorClipJson { get; set; }
     [ProtoMember(10)] public bool BeforeLayout { get; set; }
+    [ProtoMember(12)] public bool UsePreviewMetadata { get; set; }
 }
 
 [ProtoContract]
@@ -517,6 +520,7 @@ public sealed class StartDynamicPreviewRequest
     [ProtoMember(16)] public int[] WorkerCPUCoreIndexs { get; set; } = [];
     [ProtoMember(17)] public bool EnableMemoryBudget { get; set; }
     [ProtoMember(18)] public long MaxBufferedBytes { get; set; }
+    [ProtoMember(19)] public bool UsePreviewMetadata { get; set; }
 }
 
 [ProtoContract]
@@ -550,6 +554,7 @@ public sealed class DynamicPreviewClock
     [ProtoMember(7)] public Guid SessionId { get; set; }
     [ProtoMember(8)] public Guid PlaybackId { get; set; }
     [ProtoMember(9)] public double? BufferingProgress { get; set; }
+    [ProtoMember(10)] public double? BufferingFrameRate { get; set; }
 }
 
 public sealed class DynamicPreviewCachedClip
@@ -560,6 +565,8 @@ public sealed class DynamicPreviewCachedClip
     public int Width { get; set; }
     public int Height { get; set; }
     public bool IsPositionedClipPreview { get; set; }
+    public string PreviewContainer { get; set; } = string.Empty;
+    public string PreviewEffectHash { get; set; } = string.Empty;
 }
 
 [ProtoContract]

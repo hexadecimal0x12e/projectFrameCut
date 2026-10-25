@@ -30,12 +30,11 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
     public const string TimelineSegmentCacheVersion = $"audio-source_APIv8";
     public const string AudioSegmentCacheVersion = $"track-source_APIv8";
     public const string FrameHashIndexVersion = $"frame-hash-index_APIv8";
-    public const string PreviewCacheManifestFileName = "cache-index.json";
+    public const string PreviewCacheManifestFileName = CacheIndexDatabase.FileName;
     public const string TimelineFrameCacheVersion = ClipPreviewCacheVersion;
     private static readonly TimeSpan PreviewCacheRetention = TimeSpan.FromHours(240);
     private static readonly VfdV2PictureEncoder PreviewVfdEncoder = new(VfdCompression.Zstandard, zstandardLevel: 1);
 
-    private static readonly JsonSerializerOptions PreviewCacheJsonOptions = new() { PropertyNameCaseInsensitive = true, WriteIndented = true };
     private readonly IRenderArtifactStore _artifacts = artifactStore ?? new RenderArtifactStore();
     private readonly string? _stateRoot = string.IsNullOrWhiteSpace(stateRoot) ? null : Path.GetFullPath(stateRoot);
     private readonly Action<RenderJob>? _completionSink = completionSink;
@@ -43,8 +42,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
     private readonly IAudioPreviewSinkFactory? _previewAudioSinkFactory = previewAudioSinkFactory;
     private readonly ConcurrentDictionary<Guid, BackendSession> _sessions = new();
     private readonly ConcurrentDictionary<Guid, JobEntry> _jobs = new();
-    private readonly ConcurrentDictionary<string, object> _previewCacheGates = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, PreviewCacheManifest> _previewCacheManifests = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, PreviewCacheIndex> _previewCacheIndexes = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
     private readonly object _previewCachePersistGate = new();
     private Timer? _previewCacheTimer;
     private readonly ConditionalWeakTable<IClip, PreviewClipInitialization> _previewClipInitializations = new();
@@ -54,6 +52,8 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
     private int _disposed;
     private readonly ConcurrentDictionary<string, ProjectExternalSourceHost> _externalSources = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
     private ProjectExternalSourceHost GetSourceHost(string root) => _externalSources.GetOrAdd(Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)), _ => new());
+    private readonly ConcurrentDictionary<string, PreviewVideoProxies> _previewProxies = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+    private PreviewVideoProxies GetPreviewProxies(BackendSession session) => _previewProxies.GetOrAdd(session.ProjectRoot, static root => new(root));
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -163,8 +163,9 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
 
     private async Task ReleaseUnusedSourcesAsync(string root)
     {
-        if (!_sessions.Values.Any(x => string.Equals(x.ProjectRoot, root, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-            && _externalSources.TryRemove(root, out var sources))
+        if (_sessions.Values.Any(x => string.Equals(x.ProjectRoot, root, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))) return;
+        if (_previewProxies.TryRemove(root, out var proxies)) await proxies.DisposeAsync().ConfigureAwait(false);
+        if (_externalSources.TryRemove(root, out var sources))
             await sources.CloseAsync().ConfigureAwait(false);
     }
 
@@ -563,11 +564,13 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             var pixelMode = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb
                 ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
             InitializePreviewClips(visualClips, pixelMode, request.FrameIndex, cancellationToken);
+            using var proxies = GetPreviewProxies(session).Enter(visualClips, width, height, session.Width, session.Height, request.FrameIndex);
             var hashOptions = new FrameHashOptions
             {
                 Mode = request.FrameHashMode, Width = width, Height = height, ProjectWidth = session.Width,
                 ProjectHeight = session.Height, FrameRate = session.FrameRate, PixelMode = pixelMode.Value,
                 Stage = "timeline", ProcessFromCanvas = Timeline.ProcessEffectFromCanvas, AutoCenter = true,
+                PreviewSourceIdentity = proxies.Identity,
             };
             using var hashContext = new FrameHashContext(hashOptions, cancellationToken, session.NodeCache);
             using var hashScope = hashContext.Enter();
@@ -602,7 +605,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                     picture = RenderTimeline();
                     renderedPicture = null;
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (allowCaching && visualClips.Any(ClipInitializationFailure.IsMarked))
+                    if (allowCaching && (visualClips.Any(ClipInitializationFailure.IsMarked) || proxies.Failed))
                     {
                         allowCaching = false;
                         relativePath = $"thumbs/unCacheablePerClip/{session.Id:N}/frame_{Guid.NewGuid():N}.vfd";
@@ -684,12 +687,15 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             var visualClips = GetVisualClips(clips);
             var pixelMode = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb
                 ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
+            using var proxies = PreviewVideoProxies.Scope.Current is null
+                ? GetPreviewProxies(session).Enter(visualClips, canvasWidth, canvasHeight, projectWidth, projectHeight, request.FrameIndex) : null;
             var hashOptions = new FrameHashOptions
             {
                 Mode = request.FrameHashMode, Width = canvasWidth, Height = canvasHeight,
                 ProjectWidth = projectWidth, ProjectHeight = projectHeight, FrameRate = session.FrameRate,
                 PixelMode = pixelMode.Value, Stage = request.BeforeLayout ? "before-layout" : "clip",
                 ProcessFromCanvas = Timeline.ProcessEffectFromCanvas,
+                PreviewSourceIdentity = PreviewVideoProxies.Scope.Current?.Identity,
             };
             using var ownedHashContext = FrameHashContext.Current is null
                 ? new FrameHashContext(hashOptions, cancellationToken, session.NodeCache) : null;
@@ -698,6 +704,10 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             IClip[] hashDependencies = [clip, .. Timeline.CollectHashDependencies(visualClips, clip, new HashSet<Guid> { clip.Id })];
             InitializePreviewClips(hashDependencies, pixelMode, request.FrameIndex, cancellationToken);
             initializeMs = Stopwatch.GetElapsedTime(stageStarted).TotalMilliseconds;
+            using var previewCache = request.UsePreviewMetadata
+                ? new PreviewFrameCache(id => Path.Combine(session.ProjectRoot, "thumbs", "perClip", id.ToString(), "dynamic"),
+                request.FrameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight,
+                request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb, request.BeforeLayout, cancellationToken) : null;
             IPicture RenderPreview()
             {
                 if (renderedPicture is not null) return renderedPicture;
@@ -718,76 +728,53 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 : FrameHashHelper.GetClipHash(visualClips, clip, request.FrameIndex, hashOptions, () => RenderPreview(), cancellationToken);
             hashMs = Math.Max(0, Stopwatch.GetElapsedTime(hashStarted).TotalMilliseconds - renderMs);
             var lookupStarted = Stopwatch.GetTimestamp();
-            var clipHash = identity.Hash;
-            var namespacePrefix = string.IsNullOrEmpty(session.CacheNamespace) ? string.Empty : $"{session.CacheNamespace}_";
+            IPicture TakePreview()
+            {
+                var picture = RenderPreview();
+                renderedPicture = null;
+                return picture;
+            }
+            bool CanPersist() => PreviewVideoProxies.Scope.Current?.Failed != true
+                && hashDependencies.All(c => !ClipInitializationFailure.IsMarked(c) && Timeline.CanCacheClipSource(c));
+            if (!request.UsePreviewMetadata)
+            {
+                var legacy = RenderLegacyClipPreview(session, request, identity, projectWidth, projectHeight,
+                    canvasWidth, canvasHeight, TakePreview, CanPersist, registerArtifact, cancellationToken);
+                previewCacheHit = legacy.CacheHit;
+                return legacy;
+            }
+            var clipHash = FrameHashHelper.HashValue(new { Identity = identity.Hash, session.CacheNamespace });
             var wantsScRgb = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb;
-            var formatSuffix = wantsScRgb ? "vfd16" : "vfd8";
+            var formatSuffix = wantsScRgb ? "scrgb16" : "png";
             var allowCaching = identity.CanReuse;
-            var layoutPrefix = request.BeforeLayout ? "before-layout_" : string.Empty;
-            var relativePath = allowCaching
-                ? $"thumbs/perClip/{clip.Id}/dynamic/dynamic_{ClipPreviewCacheVersion}_{layoutPrefix}{namespacePrefix}{clipHash}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}_{formatSuffix}.vfd"
-                : $"thumbs/unCacheablePerClip/{session.Id:N}/clip_{clip.Id:N}_{Guid.NewGuid():N}.vfd";
-            var finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
-            var cacheHit = allowCaching && File.Exists(finalPath);
+            var cached = previewCache!.GetOrCreate(clip, visualClips, clipHash, allowCaching,
+                _artifacts.ResolveProjectPath(session.ProjectRoot, $"thumbs/unCacheablePerClip/{session.Id:N}/clip_{clip.Id:N}_{Guid.NewGuid():N}.vfd2m"),
+                TakePreview, CanPersist);
+            var relativePath = Path.GetRelativePath(session.ProjectRoot, cached.Path).Replace(Path.DirectorySeparatorChar, '/');
+            var cacheHit = cached.CacheHit;
+            allowCaching = cached.Persistent;
             previewCacheHit = cacheHit;
-            lookupMs = Stopwatch.GetElapsedTime(lookupStarted).TotalMilliseconds;
-            if (!cacheHit)
-            {
-                var temporaryPath = _artifacts.CreateTemporaryPath(finalPath);
-                IPicture? picture = null;
-                try
-                {
-                    picture = RenderPreview();
-                    renderedPicture = null;
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (allowCaching && (ClipInitializationFailure.IsMarked(clip)
-                        || Timeline.CollectHashDependencies(visualClips, clip, new HashSet<Guid> { clip.Id }).Any(ClipInitializationFailure.IsMarked)))
-                    {
-                        allowCaching = false;
-                        relativePath = $"thumbs/unCacheablePerClip/{session.Id:N}/clip_{clip.Id:N}_{Guid.NewGuid():N}.vfd";
-                        finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
-                        temporaryPath = _artifacts.CreateTemporaryPath(finalPath);
-                        LogDiagnostic($"[RenderRPC] Bypassing clip preview cache after rendering clip {clip.Id} at frame {request.FrameIndex}.");
-                    }
-                    var stageStartedAt = Stopwatch.GetTimestamp();
-                    picture.SaveToDisk(temporaryPath, PreviewVfdEncoder);
-                    cancellationToken.ThrowIfCancellationRequested();
-                    _artifacts.CommitTemporaryFile(temporaryPath, finalPath);
-                    writeMs = Stopwatch.GetElapsedTime(stageStartedAt).TotalMilliseconds;
-                }
-                catch
-                {
-                    try { File.Delete(temporaryPath); } catch { }
-                    throw;
-                }
-                finally
-                {
-                    try { picture?.Dispose(); } catch { }
-                }
-            }
-            using (var stream = File.OpenRead(finalPath))
-            {
-                var header = new byte[18];
-                stream.ReadExactly(header);
-                if (!header.AsSpan(0, 4).SequenceEqual("VFCD"u8)) throw new InvalidDataException("Invalid VFD clip preview header.");
-                int offset = header[4] == 0xFF ? 10 : 5;
-                previewWidth = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(offset, 4));
-                previewHeight = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(offset + 4, 4));
-            }
+            previewWidth = cached.Data.Width;
+            previewHeight = cached.Data.Height;
+            writeMs = Math.Max(0, Stopwatch.GetElapsedTime(lookupStarted).TotalMilliseconds - renderMs);
             var trackStartedAt = Stopwatch.GetTimestamp();
             if (allowCaching)
                 TrackPreviewCacheAccess(session.ProjectRoot, relativePath, clip.Id, request.FrameIndex, $"project:{projectWidth}x{projectHeight};canvas:{canvasWidth}x{canvasHeight};output:{previewWidth}x{previewHeight};format:{formatSuffix}");
             trackMs = Stopwatch.GetElapsedTime(trackStartedAt).TotalMilliseconds;
             if (request.PreferredPixelFormat == PreviewPixelFormat.PngImage)
-                return MaterializePreviewPng(session, relativePath, clip.Id, request.FrameIndex, previewWidth, previewHeight, cacheHit, allowCaching, cancellationToken);
-            if (!registerArtifact)
-                return new RenderArtifact
+                return MaterializePreviewPng(session, relativePath, clip.Id, request.FrameIndex, previewWidth, previewHeight, cacheHit, allowCaching, cancellationToken, cached.Data);
+            var artifact = registerArtifact
+                ? _artifacts.Register(session.Id, session.ProjectRoot, relativePath, "application/x-projectframecut-vfd2m",
+                    cacheHit, isPreview: true, previewWidth, previewHeight, session.FrameRate, PreviewPixelFormat.VfdPicture,
+                    cached.Data.Stride, wantsScRgb ? "scrgb-linear-premultiplied" : "srgb")
+                : new RenderArtifact
                 {
                     SessionId = session.Id, ProjectRelativePath = relativePath, Width = previewWidth, Height = previewHeight,
                     PixelFormat = PreviewPixelFormat.VfdPicture, CacheHit = cacheHit, IsPreview = true,
                 };
-            return _artifacts.Register(session.Id, session.ProjectRoot, relativePath, "application/x-projectframecut-vfd",
-                cacheHit, isPreview: true, previewWidth, previewHeight, session.FrameRate, PreviewPixelFormat.VfdPicture, 0, "vfd-native");
+            artifact.PreviewContainer = "vfd2m";
+            artifact.PreviewEffectHash = clipHash;
+            return artifact;
         }
         finally
         {
@@ -803,10 +790,14 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
     }
 
     private RenderArtifact MaterializePreviewPng(BackendSession session, string vfdRelativePath, Guid? clipId, uint frameIndex,
-        int width, int height, bool sourceCacheHit, bool allowCaching, CancellationToken cancellationToken)
+        int width, int height, bool sourceCacheHit, bool allowCaching, CancellationToken cancellationToken, PreviewFrameData? data = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var relativePath = Path.ChangeExtension(vfdRelativePath, ".png");
+        bool container = Path.GetExtension(vfdRelativePath).Equals(".vfd2m", StringComparison.OrdinalIgnoreCase);
+        data ??= container ? PreviewFrameContainer.Read(_artifacts.ResolveProjectPath(session.ProjectRoot, vfdRelativePath)) : null;
+        var relativePath = container
+            ? Path.ChangeExtension(vfdRelativePath, $".{data!.EffectHash}.png")
+            : Path.ChangeExtension(vfdRelativePath, ".png");
         var finalPath = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
         var cacheHit = allowCaching && File.Exists(finalPath);
         if (!cacheHit)
@@ -814,17 +805,22 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             var temporaryPath = _artifacts.CreateTemporaryPath(finalPath);
             try
             {
-                using var stream = File.OpenRead(_artifacts.ResolveProjectPath(session.ProjectRoot, vfdRelativePath));
-                if (!PictureExtensions.SharedVfdPictureDecoder.TryLoad(stream, out IPicture? picture) || picture is null)
-                    throw new InvalidDataException("The cached preview is not a valid VFD picture.");
-                using (picture)
+                if (data is not null)
+                    File.WriteAllBytes(temporaryPath, data.ToPng());
+                else
                 {
-                    if (picture is IHDRPicture<ushort> hdr)
+                    using var stream = File.OpenRead(_artifacts.ResolveProjectPath(session.ProjectRoot, vfdRelativePath));
+                    if (!PictureExtensions.SharedVfdPictureDecoder.TryLoad(stream, out IPicture? picture) || picture is null)
+                        throw new InvalidDataException("The cached preview is not a valid VFD picture.");
+                    using (picture)
                     {
-                        using var sdr = hdr.DegradeToSDR(HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB);
-                        sdr.SaveToPng(temporaryPath);
+                        if (picture is IHDRPicture<ushort> hdr)
+                        {
+                            using var sdr = hdr.DegradeToSDR(HDRImageDegradeToSDRMode.NormalizeBrightnessToRGB);
+                            sdr.SaveToPng(temporaryPath);
+                        }
+                        else picture.SaveToPng(temporaryPath);
                     }
-                    else picture.SaveToPng(temporaryPath);
                 }
                 cancellationToken.ThrowIfCancellationRequested();
                 _artifacts.CommitTemporaryFile(temporaryPath, finalPath);
@@ -1461,7 +1457,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
 
     private static string ResolveMediaType(string path) => Path.GetExtension(path).ToLowerInvariant() switch
     {
-        ".vfd" => "application/x-projectframecut-vfd", ".png" => "image/png", ".jpg" or ".jpeg" => "image/jpeg", ".wav" => "audio/wav", ".mp3" => "audio/mpeg",
+        ".vfd" => "application/x-projectframecut-vfd", ".vfd2m" => "application/x-projectframecut-vfd2m", ".png" => "image/png", ".jpg" or ".jpeg" => "image/jpeg", ".wav" => "audio/wav", ".mp3" => "audio/mpeg",
         ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".webm" => "video/webm", _ => "application/octet-stream",
     };
 
@@ -1472,102 +1468,48 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         return string.IsNullOrWhiteSpace(name) ? fallback : name;
     }
 
+    private PreviewCacheIndex GetPreviewCacheIndex(string projectRoot)
+        => _previewCacheIndexes.GetOrAdd(projectRoot, static root => new(Path.Combine(root, "thumbs")));
+
     private void TrackPreviewCacheAccess(string projectRoot, string relativePath, Guid? clipId, uint frameIndex, string configuration)
     {
         try
         {
-            var normalizedPath = relativePath.Replace(Path.DirectorySeparatorChar, '/');
-            if (!TryResolveTrackedPreviewPath(projectRoot, normalizedPath, out _)) return;
-            var cacheId = ComputeTextHash(normalizedPath);
-            lock (_previewCacheGates.GetOrAdd(projectRoot, static _ => new object()))
-            {
-                var now = DateTimeOffset.UtcNow;
-                var manifest = LoadPreviewCacheManifest(projectRoot);
-                manifest.Entries[cacheId] = new PreviewCacheEntry
-                {
-                    CacheId = cacheId,
-                    ClipId = clipId,
-                    FrameIndex = frameIndex,
-                    Configuration = configuration,
-                    ProjectRelativePath = normalizedPath,
-                    LastAccessedAtUtc = now,
-                };
-                manifest.Dirty = true;
-            }
+            relativePath = relativePath.Replace(Path.DirectorySeparatorChar, '/');
+            if (TryResolveTrackedPreviewPath(projectRoot, relativePath, out _))
+                GetPreviewCacheIndex(projectRoot).Track(relativePath, clipId, frameIndex, configuration);
         }
-        catch (Exception ex)
-        {
-            Log(ex, "Track preview cache access", this);
-        }
+        catch (Exception ex) { Log(ex, "Track preview cache access", this); }
     }
 
     private void TouchTrackedPreviewCache(string projectRoot, string fullPath)
     {
         try
         {
-            var relativePath = Path.GetRelativePath(projectRoot, fullPath).Replace(Path.DirectorySeparatorChar, '/');
-            if (!TryResolveTrackedPreviewPath(projectRoot, relativePath, out _)) return;
-            lock (_previewCacheGates.GetOrAdd(projectRoot, static _ => new object()))
-            {
-                var manifest = LoadPreviewCacheManifest(projectRoot);
-                var cacheId = ComputeTextHash(relativePath);
-                if (!manifest.Entries.TryGetValue(cacheId, out var entry)) return;
-                var now = DateTimeOffset.UtcNow;
-                entry.LastAccessedAtUtc = now;
-                manifest.Dirty = true;
-            }
+            var path = Path.GetRelativePath(projectRoot, fullPath).Replace(Path.DirectorySeparatorChar, '/');
+            if (TryResolveTrackedPreviewPath(projectRoot, path, out _)) GetPreviewCacheIndex(projectRoot).Touch(path);
         }
-        catch (Exception ex)
-        {
-            Log(ex, "Touch preview cache artifact", this);
-        }
+        catch (Exception ex) { Log(ex, "Touch preview cache artifact", this); }
     }
 
     private void MaintainPreviewCache(string projectRoot)
     {
         try
         {
-            lock (_previewCacheGates.GetOrAdd(projectRoot, static _ => new object()))
-            {
-                var manifest = LoadPreviewCacheManifest(projectRoot);
-                DiscoverPreviewCacheEntries(projectRoot, manifest);
-                CleanupPreviewCache(projectRoot, manifest, DateTimeOffset.UtcNow);
-                manifest.Dirty = true;
-            }
+            GetPreviewCacheIndex(projectRoot);
             FlushPreviewCache(projectRoot);
             lock (_previewCachePersistGate)
                 _previewCacheTimer ??= new Timer(_ => FlushPreviewCaches(), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
         }
-        catch (Exception ex)
-        {
-            Log(ex, "Maintain preview cache", this);
-        }
+        catch (Exception ex) { Log(ex, "Maintain preview cache", this); }
     }
-
-    private PreviewCacheManifest LoadPreviewCacheManifest(string projectRoot)
-        => _previewCacheManifests.GetOrAdd(projectRoot, root =>
-        {
-            var path = GetPreviewCacheManifestPath(root);
-            if (!File.Exists(path)) return new();
-            try
-            {
-                var manifest = JsonSerializer.Deserialize<PreviewCacheManifest>(File.ReadAllText(path), PreviewCacheJsonOptions) ?? new();
-                manifest.Entries ??= new(StringComparer.Ordinal);
-                return manifest;
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Read preview cache manifest", this);
-                return new();
-            }
-        });
 
     private void FlushPreviewCaches()
     {
         if (!Monitor.TryEnter(_previewCachePersistGate)) return;
         try
         {
-            foreach (var root in _previewCacheManifests.Keys) FlushPreviewCache(root);
+            foreach (var root in _previewCacheIndexes.Keys) FlushPreviewCache(root);
         }
         finally { Monitor.Exit(_previewCachePersistGate); }
     }
@@ -1576,130 +1518,11 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
     {
         try
         {
-            lock (_previewCachePersistGate)
-            {
-                var gate = _previewCacheGates.GetOrAdd(projectRoot, static _ => new object());
-                PreviewCacheManifest snapshot;
-                lock (gate)
-                {
-                    if (!_previewCacheManifests.TryGetValue(projectRoot, out var manifest) || !manifest.Dirty) return;
-                    var now = DateTimeOffset.UtcNow;
-                    if (now - manifest.LastCleanupAtUtc >= TimeSpan.FromMinutes(1)) CleanupPreviewCache(projectRoot, manifest, now);
-                    snapshot = new()
-                    {
-                        Version = manifest.Version,
-                        Entries = manifest.Entries.ToDictionary(pair => pair.Key, pair => new PreviewCacheEntry
-                        {
-                            CacheId = pair.Value.CacheId,
-                            ClipId = pair.Value.ClipId,
-                            FrameIndex = pair.Value.FrameIndex,
-                            Configuration = pair.Value.Configuration,
-                            ProjectRelativePath = pair.Value.ProjectRelativePath,
-                            LastAccessedAtUtc = pair.Value.LastAccessedAtUtc,
-                        }, StringComparer.Ordinal),
-                    };
-                    manifest.Dirty = false;
-                }
-                // Keep serialization and disk writes outside the render thread's manifest lock.
-                try { SavePreviewCacheManifest(projectRoot, snapshot); }
-                catch
-                {
-                    lock (gate)
-                        if (_previewCacheManifests.TryGetValue(projectRoot, out var manifest)) manifest.Dirty = true;
-                    throw;
-                }
-            }
+            if (_previewCacheIndexes.TryGetValue(projectRoot, out var index))
+                index.Maintain(PreviewCacheRetention,
+                    path => TryResolveTrackedPreviewPath(projectRoot, path, out var fullPath) ? fullPath : null);
         }
-        catch (Exception ex) { Log(ex, "Save preview cache manifest", this); }
-    }
-
-    private void SavePreviewCacheManifest(string projectRoot, PreviewCacheManifest manifest)
-    {
-        var path = GetPreviewCacheManifestPath(projectRoot);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var temporaryPath = $"{path}.tmp-{Guid.NewGuid():N}";
-        try
-        {
-            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(manifest, PreviewCacheJsonOptions));
-            File.Move(temporaryPath, path, overwrite: true);
-        }
-        finally
-        {
-            try { File.Delete(temporaryPath); } catch { }
-        }
-    }
-
-    private void CleanupPreviewCache(string projectRoot, PreviewCacheManifest manifest, DateTimeOffset now)
-    {
-        var cutoff = now - PreviewCacheRetention;
-        var deleted = 0;
-        foreach (var pair in manifest.Entries.ToArray())
-        {
-            if (pair.Value is null)
-            {
-                manifest.Entries.Remove(pair.Key);
-                continue;
-            }
-            if (pair.Value.LastAccessedAtUtc > cutoff) continue;
-            if (!TryResolveTrackedPreviewPath(projectRoot, pair.Value.ProjectRelativePath, out var path))
-            {
-                manifest.Entries.Remove(pair.Key);
-                continue;
-            }
-            if (!File.Exists(path))
-            {
-                manifest.Entries.Remove(pair.Key);
-                continue;
-            }
-            try
-            {
-                File.Delete(path);
-                manifest.Entries.Remove(pair.Key);
-                deleted++;
-            }
-            catch (Exception ex)
-            {
-                Log(ex, $"Delete expired preview cache '{pair.Value.ProjectRelativePath}'", this);
-            }
-        }
-        manifest.LastCleanupAtUtc = now;
-        if (deleted > 0) Log($"[RenderRPC] Deleted {deleted} preview cache file(s) unused for more than {PreviewCacheRetention.TotalHours:0} hours.");
-    }
-
-    private void DiscoverPreviewCacheEntries(string projectRoot, PreviewCacheManifest manifest)
-    {
-        var thumbsRoot = Path.Combine(projectRoot, "thumbs");
-        if (!Directory.Exists(thumbsRoot)) return;
-        IEnumerable<string> files = Directory.EnumerateFiles(thumbsRoot, "projectFrameCut_Render_*", SearchOption.TopDirectoryOnly)
-            .Concat(Directory.Exists(Path.Combine(thumbsRoot, "perClip"))
-                ? Directory.EnumerateFiles(Path.Combine(thumbsRoot, "perClip"), "dynamic_*", SearchOption.AllDirectories)
-                : Enumerable.Empty<string>());
-        foreach (var path in files.Where(static path => Path.GetExtension(path).Equals(".vfd", StringComparison.OrdinalIgnoreCase)
-            || Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase)
-            || Path.GetExtension(path).Equals(".rgba16f", StringComparison.OrdinalIgnoreCase)))
-        {
-            var directory = Directory.GetParent(path);
-            Guid? clipId = null;
-            var isTimelineFrame = string.Equals(directory?.FullName, thumbsRoot, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
-            if (!isTimelineFrame)
-            {
-                if (!string.Equals(directory?.Name, "dynamic", StringComparison.OrdinalIgnoreCase)
-                    || !Guid.TryParse(directory.Parent?.Name, out var parsedClipId))
-                    continue;
-                clipId = parsedClipId;
-            }
-            var relativePath = Path.GetRelativePath(projectRoot, path).Replace(Path.DirectorySeparatorChar, '/');
-            var cacheId = ComputeTextHash(relativePath);
-            if (manifest.Entries.ContainsKey(cacheId)) continue;
-            manifest.Entries[cacheId] = new PreviewCacheEntry
-            {
-                CacheId = cacheId,
-                ClipId = clipId,
-                Configuration = "discovered",
-                ProjectRelativePath = relativePath,
-                LastAccessedAtUtc = File.GetLastWriteTimeUtc(path),
-            };
-        }
+        catch (Exception ex) { Log(ex, "Save preview cache index", this); }
     }
 
     private bool TryResolveTrackedPreviewPath(string projectRoot, string relativePath, out string fullPath)
@@ -1714,16 +1537,13 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 + Path.DirectorySeparatorChar;
             var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
             return fullPath.StartsWith(thumbsRoot, comparison)
-                && !string.Equals(fullPath, GetPreviewCacheManifestPath(projectRoot), comparison);
+                && !CacheIndexDatabase.IsIndexFile(fullPath);
         }
         catch
         {
             return false;
         }
     }
-
-    private static string GetPreviewCacheManifestPath(string projectRoot)
-        => Path.Combine(projectRoot, "thumbs", PreviewCacheManifestFileName);
 
     private static string ComputeTextHash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
     private static string ComputeFileHash(string path) { using var stream = File.OpenRead(path); return Convert.ToHexString(SHA256.HashData(stream)); }
@@ -1752,9 +1572,11 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             await StopAllDynamicPreviewsAsync().ConfigureAwait(false);
             foreach (var session in _sessions.Values) await session.DisposeAsync().ConfigureAwait(false);
             _sessions.Clear();
+            foreach (var proxies in _previewProxies.Values) await proxies.DisposeAsync().ConfigureAwait(false);
+            _previewProxies.Clear();
             if (_previewCacheTimer is not null) await _previewCacheTimer.DisposeAsync().ConfigureAwait(false);
             FlushPreviewCaches();
-            _previewCacheManifests.Clear();
+            _previewCacheIndexes.Clear();
             foreach (var sources in _externalSources.Values) await sources.CloseAsync().ConfigureAwait(false);
             _externalSources.Clear();
             if (PluginManager.ProjectPluginIds.Count > 0 && PluginManager.ProjectPluginUnloader is not null)
@@ -1767,24 +1589,6 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
     private sealed class PreviewClipInitialization
     {
         public int PixelMode { get; set; }
-    }
-
-    private sealed class PreviewCacheManifest
-    {
-        public int Version { get; set; } = 1;
-        public Dictionary<string, PreviewCacheEntry> Entries { get; set; } = new(StringComparer.Ordinal);
-        [JsonIgnore] public bool Dirty { get; set; }
-        [JsonIgnore] public DateTimeOffset LastCleanupAtUtc { get; set; }
-    }
-
-    private sealed class PreviewCacheEntry
-    {
-        public string CacheId { get; set; } = string.Empty;
-        public Guid? ClipId { get; set; }
-        public uint FrameIndex { get; set; }
-        public string Configuration { get; set; } = string.Empty;
-        public string ProjectRelativePath { get; set; } = string.Empty;
-        public DateTimeOffset LastAccessedAtUtc { get; set; }
     }
 
     private sealed partial class BackendSession(
