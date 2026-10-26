@@ -10,20 +10,20 @@ namespace projectFrameCut.Render.RPCProtocol;
 
 public static class ClipPreviewRenderer
 {
-    public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode, bool beforeLayout = false, bool initializeClips = true)
+    public static IPicture? Render(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight, int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode, bool beforeLayout = false, bool initializeClips = true, bool keepHwAccelPicture = false)
     {
         if (FrameHashContext.Current is { } context)
             return context.ReadPicture((typeof(ClipPreviewRenderer), clip.Id, frameIndex, canvasWidth, canvasHeight,
-                projectWidth, projectHeight, pixelMode.Value, beforeLayout),
+                projectWidth, projectHeight, pixelMode.Value, beforeLayout, keepHwAccelPicture),
                 () => RenderCore(clip, allClips, canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex,
-                    token, pixelMode, beforeLayout, initializeClips));
+                    token, pixelMode, beforeLayout, initializeClips, keepHwAccelPicture));
         return RenderCore(clip, allClips, canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex,
-            token, pixelMode, beforeLayout, initializeClips);
+            token, pixelMode, beforeLayout, initializeClips, keepHwAccelPicture);
     }
 
     private static IPicture? RenderCore(IClip clip, IReadOnlyList<IClip> allClips, int canvasWidth, int canvasHeight,
         int projectWidth, int projectHeight, uint frameIndex, CancellationToken token, IPicture.PicturePixelMode pixelMode,
-        bool beforeLayout, bool initializeClips)
+        bool beforeLayout, bool initializeClips, bool keepHwAccelPicture)
     {
         token.ThrowIfCancellationRequested();
         using var maskScope = MaskFrameContext.Open(allClips, frameIndex, canvasWidth, canvasHeight,
@@ -55,7 +55,7 @@ public static class ClipPreviewRenderer
             return Timeline.CreateTransparentFrame(transform ? canvasWidth : sourceWidth, transform ? canvasHeight : sourceHeight, pixelMode);
         if (transform)
             return TransformProcessing.RenderCanvas(clip, allClips, frameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight, pixelMode,
-                initializeClips: initializeClips);
+                initializeClips: initializeClips, keepHwAccelPicture: keepHwAccelPicture);
         IPicture? frame;
         try
         {
@@ -98,7 +98,7 @@ public static class ClipPreviewRenderer
             return Timeline.MixtureLayers([oneFrame], frameIndex, canvasWidth, canvasHeight, (int)pixelMode,
                 projectRelativeWidth: projectWidth, projectRelativeHeight: projectHeight,
                 transparentBackground: true, disposeIntermediateFrames: true, clipLocalOutput: true, cancellationToken: token,
-                beforeLayoutOutput: beforeLayout, allClips: allClips);
+                beforeLayoutOutput: beforeLayout, allClips: allClips, keepHwAccelPicture: keepHwAccelPicture);
         }
         catch
         {

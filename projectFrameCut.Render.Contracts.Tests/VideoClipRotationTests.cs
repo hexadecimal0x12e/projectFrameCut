@@ -223,6 +223,8 @@ public sealed class VideoClipRotationTests
 
     private sealed class TestSource(Func<IPicture> generate) : IVirtualVideoSource
     {
+        public bool IsDeterministic => false;
+
         public string TypeName => nameof(TestSource);
         public void Init(int width, int height, int fps, uint targetDuration, IPicture.PicturePixelMode targetPPB) { }
         public IPicture Generate(uint index, bool hasAlpha) => generate();

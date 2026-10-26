@@ -34,6 +34,7 @@ public static class ExternalRpcAuthorizationStore
 
     public static ExternalRpcClientAuthorization Add(string path, ExternalRpcClientAuthorization authorization)
     {
+        ExternalRpcPipeSettings.EnsureAllowed(Path.GetDirectoryName(Path.GetFullPath(path))!);
         lock (Gate)
         {
             using var crossProcessLock = AcquireCrossProcessLock(path);
@@ -41,6 +42,7 @@ public static class ExternalRpcAuthorizationStore
             if (items.Any(c => c.ClientId == authorization.ClientId || c.PublicKey == authorization.PublicKey && !c.Revoked))
                 throw new InvalidOperationException("This external RPC client is already authorized.");
             items.Add(authorization);
+            ExternalRpcPipeSettings.EnsureAllowed(Path.GetDirectoryName(Path.GetFullPath(path))!);
             WriteUnsafe(path, items);
             return authorization;
         }

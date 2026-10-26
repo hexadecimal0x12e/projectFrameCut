@@ -1167,13 +1167,6 @@ public partial class DraftPage : ContentPage, IDraftPage
             var clockStartedAt = Stopwatch.GetTimestamp();
             targetFrame = cache?.GetFrame() ?? GetContinuousAudioFrame();
             var clockElapsedMs = Stopwatch.GetElapsedTime(clockStartedAt).TotalMilliseconds;
-            if (cache is not null && cache.Mode != RenderHashSettings.Mode)
-            {
-                await previewer.StopDynamicPreviewAsync(cache).ConfigureAwait(false);
-                cache = await previewer.StartDynamicPreviewAsync(targetFrame, canvasWidth, canvasHeight, projectWidth, projectHeight,
-                    Math.Max(1d, ProjectInfo.TargetFrameRate), ct).ConfigureAwait(false);
-                onRestart?.Invoke(cache);
-            }
             if (targetFrame > maxFrame || cache?.IsCompleted == true) break;
             if (cache?.BufferingProgress is double progress)
             {

@@ -5,6 +5,7 @@ internal sealed class PreviewCacheIndex
     private readonly CacheIndexDatabase database;
     private readonly object gate = new(), flushGate = new();
     private readonly Dictionary<string, Access> pending = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> sourcePaths = new(StringComparer.Ordinal);
     private DateTime lastCleanup;
 
     private sealed record Access(string Path, Guid? Clip, uint Frame, string? Configuration, long Ticks);
@@ -20,7 +21,29 @@ internal sealed class PreviewCacheIndex
 
     public void Track(string path, Guid? clip, uint frame, string configuration)
     {
-        lock (gate) pending[path] = new(path, clip, frame, configuration, DateTime.UtcNow.Ticks);
+        lock (gate)
+        {
+            if (path.EndsWith(".vfd2m", StringComparison.OrdinalIgnoreCase))
+            {
+                string key = PreviewFrameContainer.GetSourceKey(path);
+                if (sourcePaths.TryGetValue(key, out var old) && old != path) pending.Remove(old);
+                sourcePaths[key] = path;
+            }
+            pending[path] = new(path, clip, frame, configuration, DateTime.UtcNow.Ticks);
+        }
+    }
+
+    public string? FindSource(string sourceKey)
+    {
+        lock (gate)
+            if (sourcePaths.TryGetValue(sourceKey, out var path)) return path;
+        string prefix = PreviewFrameContainer.GetSourcePrefix(sourceKey);
+        using var connection = database.Open();
+        using var query = CacheIndexDatabase.Command(connection, """
+            SELECT path FROM preview_files WHERE path >= $prefix AND path < $end
+            ORDER BY last_access DESC LIMIT 1;
+            """, ("$prefix", prefix), ("$end", prefix + '\uffff'));
+        return query.ExecuteScalar() as string;
     }
 
     public void Touch(string path)
@@ -50,6 +73,16 @@ internal sealed class PreviewCacheIndex
                 using var transaction = connection.BeginTransaction();
                 foreach (var entry in entries)
                 {
+                    if (entry.Configuration is not null && entry.Path.EndsWith(".vfd2m", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string key = PreviewFrameContainer.GetSourceKey(entry.Path), prefix = PreviewFrameContainer.GetSourcePrefix(entry.Path);
+                        using var remove = CacheIndexDatabase.Command(connection, """
+                            DELETE FROM preview_files WHERE path!=$path
+                                AND (path=$key OR (path >= $prefix AND path < $end));
+                            """, ("$path", entry.Path), ("$key", key), ("$prefix", prefix), ("$end", prefix + '\uffff'));
+                        remove.Transaction = transaction;
+                        remove.ExecuteNonQuery();
+                    }
                     using var command = entry.Configuration is null
                         ? CacheIndexDatabase.Command(connection,
                             "UPDATE preview_files SET last_access=MAX(last_access, $time) WHERE path=$path;",
@@ -72,6 +105,9 @@ internal sealed class PreviewCacheIndex
                 {
                     foreach (var entry in entries)
                     {
+                        if (entry.Path.EndsWith(".vfd2m", StringComparison.OrdinalIgnoreCase)
+                            && sourcePaths.TryGetValue(PreviewFrameContainer.GetSourceKey(entry.Path), out var current)
+                            && current != entry.Path) continue;
                         if (!pending.TryGetValue(entry.Path, out var newer)) pending[entry.Path] = entry;
                         else if (newer.Configuration is null && entry.Configuration is not null)
                             pending[entry.Path] = entry with { Ticks = Math.Max(entry.Ticks, newer.Ticks) };
@@ -99,6 +135,8 @@ internal sealed class PreviewCacheIndex
             int deleted = 0;
             foreach (string relativePath in paths)
             {
+                string? fullPath = resolvePath(relativePath);
+                lock (PreviewFrameContainer.Gate(fullPath ?? relativePath))
                 lock (gate)
                 {
                     if (pending.ContainsKey(relativePath)) continue;
@@ -112,12 +150,19 @@ internal sealed class PreviewCacheIndex
                             query.Transaction = transaction;
                             if (query.ExecuteScalar() is null) continue;
                         }
-                        if (resolvePath(relativePath) is { } path) File.Delete(path);
+                        if (fullPath is not null && File.Exists(fullPath) && File.GetLastWriteTimeUtc(fullPath).Ticks > cutoff)
+                        {
+                            pending[relativePath] = new(relativePath, null, 0, null, DateTime.UtcNow.Ticks);
+                            continue;
+                        }
+                        if (fullPath is not null) File.Delete(fullPath);
                         using var command = CacheIndexDatabase.Command(connection,
                             "DELETE FROM preview_files WHERE path=$path;", ("$path", relativePath));
                         command.Transaction = transaction;
                         command.ExecuteNonQuery();
                         transaction.Commit();
+                        string key = PreviewFrameContainer.GetSourceKey(relativePath);
+                        if (sourcePaths.TryGetValue(key, out var source) && source == relativePath) sourcePaths.Remove(key);
                         deleted++;
                     }
                     catch (Exception ex) { Log(ex, $"Delete expired preview cache '{relativePath}'", this); }

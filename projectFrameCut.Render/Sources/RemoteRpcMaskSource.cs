@@ -7,6 +7,8 @@ namespace projectFrameCut.Render.Sources;
 
 public class RemoteRpcMaskSource : MaskSource
 {
+    public override bool IsDeterministic => Descriptor.IsDeterministic;
+
     protected readonly ExternalMaskSourceReference Source;
     private readonly Func<ExternalMaskSourceProcessRequest, CancellationToken, ValueTask<ExternalVideoFrame>>? processor;
 

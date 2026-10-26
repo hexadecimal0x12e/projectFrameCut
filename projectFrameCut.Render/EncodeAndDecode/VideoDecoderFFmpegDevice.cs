@@ -15,6 +15,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
     /// </summary>
     public sealed unsafe class FFmpegDeviceDecoderContext : IVideoSource<byte>
     {
+        public bool IsDeterministic => false;
+
         private readonly string _sourceSpec;
         private readonly string _inputFormatName;
         private readonly string _inputSource;

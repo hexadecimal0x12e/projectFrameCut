@@ -6,6 +6,7 @@ namespace projectFrameCut.Platforms.Windows;
 internal sealed class WasapiPreviewAudioSink : IAudioPreviewSink
 {
     private const uint StreamFlags = 0x80000000 | 0x08000000;
+    private readonly object _gate = new();
     private IAudioClient? _client;
     private IAudioRenderClient? _render;
     private IAudioClock? _clock;
@@ -21,51 +22,51 @@ internal sealed class WasapiPreviewAudioSink : IAudioPreviewSink
 
     public ValueTask InitializeAsync(PreviewAudioFormat format, CancellationToken cancellationToken)
     {
-        _format = format;
-        _enumerator = new MMDeviceEnumerator();
-        var enumerator = (IMMDeviceEnumerator)_enumerator;
-        ThrowIfFailed(enumerator.GetDefaultAudioEndpoint(EDataFlow.Render, ERole.Multimedia, out var device));
-        _device = device;
-        var audioClientId = typeof(IAudioClient).GUID;
-        ThrowIfFailed(device.Activate(ref audioClientId, 23, IntPtr.Zero, out var clientObject));
-        _client = (IAudioClient)clientObject;
-        var wave = new WaveFormatEx
+        lock (_gate)
         {
-            FormatTag = 3,
-            Channels = checked((ushort)format.Channels),
-            SamplesPerSec = checked((uint)format.SampleRate),
-            BitsPerSample = 32,
-            BlockAlign = checked((ushort)(format.Channels * sizeof(float))),
-            AvgBytesPerSec = checked((uint)(format.SampleRate * format.Channels * sizeof(float))),
-            Size = 0,
-        };
-        ThrowIfFailed(_client.Initialize(AudioClientShareMode.Shared, StreamFlags, 20_000_000, 0, ref wave, IntPtr.Zero));
-        ThrowIfFailed(_client.GetBufferSize(out _bufferFrames));
-        var renderId = typeof(IAudioRenderClient).GUID;
-        ThrowIfFailed(_client.GetService(ref renderId, out var renderObject));
-        _render = (IAudioRenderClient)renderObject;
-        var clockId = typeof(IAudioClock).GUID;
-        ThrowIfFailed(_client.GetService(ref clockId, out var clockObject));
-        _clock = (IAudioClock)clockObject;
-        ThrowIfFailed(_clock.GetFrequency(out _clockFrequency));
+            _format = format;
+            _enumerator = new MMDeviceEnumerator();
+            var enumerator = (IMMDeviceEnumerator)_enumerator;
+            ThrowIfFailed(enumerator.GetDefaultAudioEndpoint(EDataFlow.Render, ERole.Multimedia, out var device));
+            _device = device;
+            var audioClientId = typeof(IAudioClient).GUID;
+            ThrowIfFailed(device.Activate(ref audioClientId, 23, IntPtr.Zero, out var clientObject));
+            _client = (IAudioClient)clientObject;
+            var wave = new WaveFormatEx
+            {
+                FormatTag = 3,
+                Channels = checked((ushort)format.Channels),
+                SamplesPerSec = checked((uint)format.SampleRate),
+                BitsPerSample = 32,
+                BlockAlign = checked((ushort)(format.Channels * sizeof(float))),
+                AvgBytesPerSec = checked((uint)(format.SampleRate * format.Channels * sizeof(float))),
+                Size = 0,
+            };
+            ThrowIfFailed(_client.Initialize(AudioClientShareMode.Shared, StreamFlags, 20_000_000, 0, ref wave, IntPtr.Zero));
+            ThrowIfFailed(_client.GetBufferSize(out _bufferFrames));
+            var renderId = typeof(IAudioRenderClient).GUID;
+            ThrowIfFailed(_client.GetService(ref renderId, out var renderObject));
+            _render = (IAudioRenderClient)renderObject;
+            var clockId = typeof(IAudioClock).GUID;
+            ThrowIfFailed(_client.GetService(ref clockId, out var clockObject));
+            _clock = (IAudioClock)clockObject;
+            ThrowIfFailed(_clock.GetFrequency(out _clockFrequency));
+        }
         return ValueTask.CompletedTask;
     }
 
     public ValueTask StartAsync(CancellationToken cancellationToken)
     {
-        _startRequested = true;
-        if (!_running && _client is not null && Interlocked.Read(ref _writtenFrames) > 0)
+        lock (_gate)
         {
-            ThrowIfFailed(_client.Start());
-            _running = true;
+            _startRequested = true;
+            StartCore();
         }
         return ValueTask.CompletedTask;
     }
 
     public ValueTask WriteAsync(ReadOnlyMemory<float> interleavedSamples, CancellationToken cancellationToken)
     {
-        var client = _client ?? throw new InvalidOperationException("WASAPI is not initialized.");
-        var render = _render!;
         float[] source;
         var sourceOffset = 0;
         if (MemoryMarshal.TryGetArray(interleavedSamples, out var segment) && segment.Array is not null)
@@ -82,91 +83,138 @@ internal sealed class WasapiPreviewAudioSink : IAudioPreviewSink
         while (frameOffset < totalFrames)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (_paused) { Thread.Sleep(5); continue; }
-            ThrowIfFailed(client.GetCurrentPadding(out var padding));
-            var writable = (int)(_bufferFrames - padding);
-            if (writable <= 0)
+            var delay = 0;
+            lock (_gate)
             {
-                if (!_running && Interlocked.Read(ref _writtenFrames) > 0) { ThrowIfFailed(client.Start()); _running = true; }
-                Thread.Sleep(2);
-                continue;
+                if (_paused) delay = 5;
+                else
+                {
+                    var client = _client ?? throw new InvalidOperationException("WASAPI is not initialized.");
+                    ThrowIfFailed(client.GetCurrentPadding(out var padding));
+                    var writable = (int)(_bufferFrames - padding);
+                    if (writable <= 0)
+                    {
+                        StartCore();
+                        delay = 2;
+                    }
+                    else
+                    {
+                        var frames = Math.Min(writable, totalFrames - frameOffset);
+                        ThrowIfFailed(_render!.GetBuffer((uint)frames, out var target));
+                        try { Marshal.Copy(source, sourceOffset + frameOffset * _format.Channels, target, frames * _format.Channels); }
+                        finally { ThrowIfFailed(_render.ReleaseBuffer((uint)frames, 0)); }
+                        frameOffset += frames;
+                        Interlocked.Add(ref _writtenFrames, frames);
+                        if (_startRequested) StartCore();
+                    }
+                }
             }
-            var frames = Math.Min(writable, totalFrames - frameOffset);
-            ThrowIfFailed(render.GetBuffer((uint)frames, out var target));
-            try { Marshal.Copy(source, sourceOffset + frameOffset * _format.Channels, target, frames * _format.Channels); }
-            finally { ThrowIfFailed(render.ReleaseBuffer((uint)frames, 0)); }
-            frameOffset += frames;
-            Interlocked.Add(ref _writtenFrames, frames);
-            if (_startRequested && !_running) { ThrowIfFailed(client.Start()); _running = true; }
+            if (delay > 0) Thread.Sleep(delay);
         }
         return ValueTask.CompletedTask;
     }
 
     public ValueTask PauseAsync(CancellationToken cancellationToken)
     {
-        _paused = true;
-        if (_running) ThrowIfFailed(_client!.Stop());
-        _running = false;
+        lock (_gate)
+        {
+            _paused = true;
+            if (_running) ThrowIfFailed(_client!.Stop());
+            _running = false;
+        }
         return ValueTask.CompletedTask;
     }
 
     public ValueTask ResumeAsync(CancellationToken cancellationToken)
     {
-        _paused = false;
-        if (!_running && _client is not null && Interlocked.Read(ref _writtenFrames) > 0) { ThrowIfFailed(_client.Start()); _running = true; }
+        lock (_gate)
+        {
+            _paused = false;
+            StartCore();
+        }
         return ValueTask.CompletedTask;
     }
 
     public ValueTask FlushAsync(CancellationToken cancellationToken)
     {
-        if (_client is not null)
+        lock (_gate)
         {
-            if (_running) ThrowIfFailed(_client.Stop());
-            ThrowIfFailed(_client.Reset());
+            if (_client is not null)
+            {
+                if (_running) ThrowIfFailed(_client.Stop());
+                ThrowIfFailed(_client.Reset());
+            }
+            _running = false;
+            Interlocked.Exchange(ref _writtenFrames, 0);
         }
-        _running = false;
-        Interlocked.Exchange(ref _writtenFrames, 0);
         return ValueTask.CompletedTask;
     }
 
     public ValueTask StopAsync(CancellationToken cancellationToken)
     {
-        if (_client is not null)
+        lock (_gate)
         {
-            try { _client.Stop(); } catch { }
-            try { _client.Reset(); } catch { }
+            if (_client is not null)
+            {
+                try { _client.Stop(); } catch { }
+                try { _client.Reset(); } catch { }
+            }
+            _running = false;
+            _paused = false;
+            _startRequested = false;
         }
-        _running = false;
-        _paused = false;
-        _startRequested = false;
         return ValueTask.CompletedTask;
     }
 
     public PreviewAudioSinkClock GetClock()
     {
-        long played = 0;
-        if (_clock is not null && _clockFrequency > 0 && _clock.GetPosition(out var position, out _) >= 0)
-            played = checked((long)(position * (ulong)_format.SampleRate / _clockFrequency));
-        return new(played, Math.Max(0, Interlocked.Read(ref _writtenFrames) - played), _running, _paused);
+        lock (_gate)
+        {
+            long played = 0;
+            if (_clock is not null && _clockFrequency > 0)
+            {
+                ThrowIfFailed(_clock.GetPosition(out var position, out _));
+                played = checked((long)(position * (ulong)_format.SampleRate / _clockFrequency));
+            }
+            return new(played, Math.Max(0, Interlocked.Read(ref _writtenFrames) - played), _running, _paused);
+        }
     }
 
     public ValueTask DisposeAsync()
     {
-        StopAsync(CancellationToken.None);
-        Release(_clock);
-        Release(_render);
-        Release(_client);
-        Release(_device);
-        Release(_enumerator);
-        _clock = null;
-        _render = null;
-        _client = null;
-        _device = null;
-        _enumerator = null;
+        lock (_gate)
+        {
+            StopAsync(CancellationToken.None);
+            Release(_clock);
+            Release(_render);
+            Release(_client);
+            Release(_device);
+            Release(_enumerator);
+            _clock = null;
+            _render = null;
+            _client = null;
+            _device = null;
+            _enumerator = null;
+        }
         return ValueTask.CompletedTask;
     }
 
-    private static void ThrowIfFailed(int result) { if (result < 0) Marshal.ThrowExceptionForHR(result); }
+    private void StartCore()
+    {
+        if (!_running && _client is not null && Interlocked.Read(ref _writtenFrames) > 0)
+        {
+            ThrowIfFailed(_client.Start());
+            _running = true;
+        }
+    }
+
+    private static void ThrowIfFailed(int result)
+    {
+        if (result is unchecked((int)0x88890004) or unchecked((int)0x88890026)
+            or unchecked((int)0x88890010) or unchecked((int)0x80070490))
+            throw new PreviewAudioDeviceUnavailableException(result);
+        if (result < 0) Marshal.ThrowExceptionForHR(result);
+    }
     private static void Release(object? value) { if (value is not null && Marshal.IsComObject(value)) Marshal.FinalReleaseComObject(value); }
 
     private enum EDataFlow { Render, Capture, All }

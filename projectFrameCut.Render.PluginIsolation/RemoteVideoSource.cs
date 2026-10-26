@@ -7,6 +7,8 @@ namespace projectFrameCut.Render.PluginIsolation;
 
 public class RemoteVideoSource : IVideoSource
 {
+    public bool IsDeterministic => _descriptor.IsDeterministic;
+
     protected readonly IPluginIsolationSession Session;
     private IsolationVideoSourceDescriptor _descriptor;
     private IsolationPayloadLease? _resource;

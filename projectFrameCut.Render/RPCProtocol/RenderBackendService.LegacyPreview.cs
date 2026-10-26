@@ -11,12 +11,11 @@ public sealed partial class RenderBackendService
         bool registerArtifact, CancellationToken token)
     {
         string format = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb ? "vfd16" : "vfd8";
-        string prefix = (request.BeforeLayout ? "before-layout_" : "")
-            + (string.IsNullOrEmpty(session.CacheNamespace) ? "" : session.CacheNamespace + "_");
         bool persistent = identity.CanReuse;
         string temporaryEntry = $"thumbs/unCacheablePerClip/{session.Id:N}/clip_{request.ClipId:N}_{Guid.NewGuid():N}.vfd";
         string relativePath = persistent
-            ? $"thumbs/perClip/{request.ClipId}/dynamic/dynamic_{ClipPreviewCacheVersion}_{prefix}{identity.Hash}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}_{format}.vfd"
+            ? GetLegacyClipPreviewPath(session, request.ClipId, identity, projectWidth, projectHeight,
+                canvasWidth, canvasHeight, request.PreferredPixelFormat, request.BeforeLayout)
             : temporaryEntry;
         string path = _artifacts.ResolveProjectPath(session.ProjectRoot, relativePath);
         bool hit = persistent && File.Exists(path);
@@ -53,5 +52,14 @@ public sealed partial class RenderBackendService
                 hit, true, width, height, session.FrameRate, PreviewPixelFormat.VfdPicture, 0, "vfd-native")
             : new RenderArtifact { SessionId = session.Id, ProjectRelativePath = relativePath, Width = width, Height = height,
                 PixelFormat = PreviewPixelFormat.VfdPicture, CacheHit = hit, IsPreview = true };
+    }
+
+    private static string GetLegacyClipPreviewPath(BackendSession session, Guid clipId, FrameHashResult identity,
+        int projectWidth, int projectHeight, int canvasWidth, int canvasHeight, PreviewPixelFormat pixelFormat, bool beforeLayout = false)
+    {
+        string format = pixelFormat == PreviewPixelFormat.Rgba16FloatScRgb ? "vfd16" : "vfd8";
+        string prefix = (beforeLayout ? "before-layout_" : "")
+            + (string.IsNullOrEmpty(session.CacheNamespace) ? "" : session.CacheNamespace + "_");
+        return $"thumbs/perClip/{clipId}/dynamic/dynamic_{ClipPreviewCacheVersion}_{prefix}{identity.Hash}_{projectWidth}x{projectHeight}_{canvasWidth}x{canvasHeight}_{format}.vfd";
     }
 }

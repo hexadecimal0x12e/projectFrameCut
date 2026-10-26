@@ -700,8 +700,9 @@ public sealed class RendererPipelineTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         try
         {
-            var identity = FrameHashHelper.GetClipHash([clip], clip, 0, new()
+            var identity = FrameHashHelper.GetFrameHash([clip], 0, new()
             {
+                Stage = "clip",
                 Width = 2, Height = 1, ProjectWidth = 2, ProjectHeight = 1, PixelMode = 8,
             });
             Assert.IsTrue(identity.CanReuse);
@@ -754,6 +755,8 @@ public sealed class RendererPipelineTests
 
     private sealed class Source(Func<uint, IPicture> generate, Action? initialize) : IVirtualVideoSource
     {
+        public bool IsDeterministic => false;
+
         public string TypeName => nameof(Source);
         public void Init(int width, int height, int fps, uint duration, IPicture.PicturePixelMode mode) => initialize?.Invoke();
         public IPicture Generate(uint frame, bool hasAlpha) => generate(frame);

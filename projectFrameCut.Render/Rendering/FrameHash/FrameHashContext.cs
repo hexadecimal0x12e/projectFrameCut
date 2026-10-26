@@ -17,6 +17,7 @@ public sealed class FrameHashContext : IDisposable
     private bool disposed;
     public static FrameHashContext? Current => current.Value;
     public FrameHashOptions Options { get; }
+    public IReadOnlyList<RenderAPIBase.ClipAndTrack.IClip>? Clips { get; init; }
     public CancellationToken Token { get; }
     internal RenderFrameDiagnostics? Diagnostics { get; set; }
     private readonly FrameHashCache? cache;
@@ -113,55 +114,34 @@ public sealed class FrameHashContext : IDisposable
             CancellationToken = hashes.Token,
         };
         return (T)hashes.ComputeEffect(effect, context, () => compute(),
-            !effect.Parameters.Values.Any(FrameHashHelper.IsRuntimeValue),
-            clip.EffectProvidersInstances?.FirstOrDefault(p => p.Id.ToString() == effect.BindedEffectProvidingSystemID))!;
+            provider: clip.EffectProvidersInstances?.FirstOrDefault(p => p.Id.ToString() == effect.BindedEffectProvidingSystemID),
+            effectIndex: effect.Index)!;
     }
 
     internal object? ComputeEffect(IEffect effect, EffectExecutionContext context, Func<object?> compute,
-        bool deterministic = true, IEffectProvider? provider = null)
+        bool deterministic = true, IEffectProvider? provider = null, int effectIndex = 0)
     {
         if (effect is IHwAccelPictureEffect || context.Input is IHwAccelPicture
             || context.Parameters.Values.Any(p => p is IHwAccelPicture)) return compute();
-        deterministic &= provider?.IsDeterministic ?? true;
-        if (Options.Mode == Contracts.FrameHashMode.Static)
-        {
-            if (deterministic && effect.IsDeterministic) return compute();
-            return Evaluate((effect, context.Input, context.Clip?.Id, context.FrameIndex, context.Progress, context.TargetWidth,
-                context.TargetHeight, context.RelativeWidth, context.RelativeHeight, ClipValueFrameContext.Current?.IsTransformInput),
-                compute, CopyValue, ReleaseValue);
-        }
-        string key;
-        try
-        {
-            key = FrameHashHelper.HashValue(new
-            {
-                Stage = "node", Options, Effect = FrameHashHelper.DescribeEffect(effect, true), context.Input,
-                Provider = provider is null ? null : FrameHashHelper.DescribeProvider(provider),
-                context.Parameters, context.FrameIndex, context.Progress, context.ClipProgress,
-                context.TargetWidth, context.TargetHeight, context.RelativeWidth, context.RelativeHeight,
-                Clip = context.Clip is null ? null : new
-                {
-                    context.Clip.Id, context.Clip.TypeName, context.Clip.StartFrame, context.Clip.Duration,
-                    context.Clip.RelativeStartFrame, context.Clip.FrameTime, context.Clip.TargetX, context.Clip.TargetY,
-                    context.Clip.TargetWidth, context.Clip.TargetHeight, context.Clip.Rotation, context.Clip.ExtraData,
-                },
-            });
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException) { return compute(); }
+        deterministic &= effect.IsDeterministic && (provider?.IsDeterministic ?? true);
+        var identity = deterministic ? FrameHashHelper.GetEffectHash(effect, context, provider, effectIndex, Options, Token)
+            : FrameHashResult.Uncacheable();
         object? Compute()
         {
-            bool reusable = Options.Mode == Contracts.FrameHashMode.Dynamic && deterministic && effect.IsDeterministic;
-            if (reusable && cache?.TryRead(key, out var saved) == true) return saved;
+            if (identity.CanReuse && cache?.TryRead(identity.Hash, out var saved) == true) return saved;
             var result = compute();
             if (Token.IsCancellationRequested)
             {
                 if (!ReferenceEquals(result, context.Input)) ReleaseValue(result);
                 Token.ThrowIfCancellationRequested();
             }
-            if (reusable) cache?.Write(key, result);
+            if (identity.CanReuse) cache?.Write(identity.Hash, result);
             return result;
         }
-        return deterministic && effect.IsDeterministic ? Compute() : Evaluate((effect, key), Compute, CopyValue, ReleaseValue);
+        return identity.CanReuse ? Compute()
+            : Evaluate((effect, context.Input, context.Clip?.Id, context.FrameIndex, context.Progress, context.TargetWidth,
+                context.TargetHeight, context.RelativeWidth, context.RelativeHeight, ClipValueFrameContext.Current?.IsTransformInput),
+                Compute, CopyValue, ReleaseValue);
     }
 
     internal object? ReadEndpoint(Guid clip, Guid endpoint)

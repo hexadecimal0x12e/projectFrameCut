@@ -19,11 +19,20 @@ public sealed class PreviewAudioSession(IAudioPreviewSinkFactory sinkFactory, IS
     private int _frameRate = 30;
     private bool _paused;
     private volatile bool _hasAudio;
+    private int _deviceError;
+    private long _playedSamples;
 
     internal bool ProducerCompleted => _producer is { IsCompleted: true };
     internal long Generation => Interlocked.Read(ref _generation);
+    internal int DeviceError => Volatile.Read(ref _deviceError);
 
-    public async ValueTask<PreviewAudioState> StartAsync(uint startFrame, int frameRate, CancellationToken cancellationToken)
+    public ValueTask<PreviewAudioState> StartAsync(uint startFrame, int frameRate, CancellationToken cancellationToken)
+        => StartCoreAsync(startFrame, frameRate, false, cancellationToken);
+
+    internal ValueTask<PreviewAudioState> RecoverAsync(uint startFrame, int frameRate, CancellationToken cancellationToken)
+        => StartCoreAsync(startFrame, frameRate, _paused, cancellationToken);
+
+    private async ValueTask<PreviewAudioState> StartCoreAsync(uint startFrame, int frameRate, bool paused, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -32,13 +41,14 @@ public sealed class PreviewAudioSession(IAudioPreviewSinkFactory sinkFactory, IS
             _generation++;
             _startFrame = startFrame;
             _frameRate = Math.Max(1, frameRate);
-            _paused = false;
+            _paused = paused;
             if (startFrame >= duration || !soundTracks.Any(track => SoundTrackMetadata.ReadBool(track.ExtraData, SoundTrackMetadata.EnabledKey, true)))
                 return GetState();
 
             _cancellation = new CancellationTokenSource();
             _sink = sinkFactory.Create();
             await _sink.InitializeAsync(new PreviewAudioFormat(SampleRate, Channels), cancellationToken).ConfigureAwait(false);
+            if (paused) await _sink.PauseAsync(cancellationToken).ConfigureAwait(false);
             _hasAudio = true;
             var generation = _generation;
             var token = _cancellation.Token;
@@ -47,6 +57,13 @@ public sealed class PreviewAudioSession(IAudioPreviewSinkFactory sinkFactory, IS
                 token,
                 TaskCreationOptions.LongRunning,
                 TaskScheduler.Default);
+            return GetState();
+        }
+        catch (PreviewAudioDeviceUnavailableException ex)
+        {
+            await StopCoreAsync().ConfigureAwait(false);
+            _paused = paused;
+            Interlocked.Exchange(ref _deviceError, ex.HResult);
             return GetState();
         }
         catch
@@ -62,8 +79,12 @@ public sealed class PreviewAudioSession(IAudioPreviewSinkFactory sinkFactory, IS
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (_sink is not null) await _sink.PauseAsync(cancellationToken).ConfigureAwait(false);
             _paused = true;
+            if (_sink is not null && DeviceError == 0)
+            {
+                try { await _sink.PauseAsync(cancellationToken).ConfigureAwait(false); }
+                catch (PreviewAudioDeviceUnavailableException ex) { Interlocked.Exchange(ref _deviceError, ex.HResult); }
+            }
             return GetState();
         }
         finally { _gate.Release(); }
@@ -74,8 +95,12 @@ public sealed class PreviewAudioSession(IAudioPreviewSinkFactory sinkFactory, IS
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (_sink is not null) await _sink.ResumeAsync(cancellationToken).ConfigureAwait(false);
             _paused = false;
+            if (_sink is not null && DeviceError == 0)
+            {
+                try { await _sink.ResumeAsync(cancellationToken).ConfigureAwait(false); }
+                catch (PreviewAudioDeviceUnavailableException ex) { Interlocked.Exchange(ref _deviceError, ex.HResult); }
+            }
             return GetState();
         }
         finally { _gate.Release(); }
@@ -101,9 +126,18 @@ public sealed class PreviewAudioSession(IAudioPreviewSinkFactory sinkFactory, IS
         if (generation != 0 && generation != _generation)
             return new(_generation, _startFrame, SampleRate, Channels, 0, 0, false, false, false);
         var sink = _sink;
-        PreviewAudioSinkClock clock;
-        try { clock = sink?.GetClock() ?? default; }
-        catch (ObjectDisposedException) { clock = default; }
+        PreviewAudioSinkClock clock = default;
+        if (DeviceError == 0)
+        {
+            try
+            {
+                clock = sink?.GetClock() ?? default;
+                Interlocked.Exchange(ref _playedSamples, clock.PlayedSamples);
+            }
+            catch (PreviewAudioDeviceUnavailableException ex) { Interlocked.Exchange(ref _deviceError, ex.HResult); }
+            catch (ObjectDisposedException) { }
+        }
+        if (DeviceError != 0) clock = new(Interlocked.Read(ref _playedSamples), 0, false, true);
         return new(_generation, _startFrame, SampleRate, Channels, clock.PlayedSamples, clock.BufferedSamples,
             clock.IsRunning, _paused || clock.IsPaused, sink is not null && _hasAudio);
     }
@@ -128,6 +162,7 @@ public sealed class PreviewAudioSession(IAudioPreviewSinkFactory sinkFactory, IS
             writer.Finish();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+        catch (PreviewAudioDeviceUnavailableException ex) { Interlocked.Exchange(ref _deviceError, ex.HResult); }
         catch (Exception ex)
         {
             _hasAudio = false;
@@ -156,6 +191,8 @@ public sealed class PreviewAudioSession(IAudioPreviewSinkFactory sinkFactory, IS
         _sink = null;
         _paused = false;
         _hasAudio = false;
+        Interlocked.Exchange(ref _deviceError, 0);
+        Interlocked.Exchange(ref _playedSamples, 0);
     }
 
     public async ValueTask DisposeAsync()

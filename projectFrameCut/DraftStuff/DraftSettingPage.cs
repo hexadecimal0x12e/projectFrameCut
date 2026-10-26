@@ -76,12 +76,13 @@ public class DraftSettingPage
                 Tag = "statistics",
                 LazyAsyncContentFactory = BuildStatisticsTabAsync
             });
-            tabView.TabItems.Add(new TabbedViewItem
-            {
-                Header = Localized.DraftSettingPage_Tab_ExternalSources,
-                Tag = "externalSources",
-                LazyAsyncContentFactory = BuildExternalSourcesTabAsync
-            });
+            if (ProjectExternalSourceService.AllowRpcSources || ProjectExternalSourceService.AllowAssemblySources)
+                tabView.TabItems.Add(new TabbedViewItem
+                {
+                    Header = Localized.DraftSettingPage_Tab_ExternalSources,
+                    Tag = "externalSources",
+                    LazyAsyncContentFactory = BuildExternalSourcesTabAsync
+                });
             tabView.TabItems.Add(new TabbedViewItem
             {
                 Header = Localized.MainSettingsPage_Tab_Misc,
@@ -120,12 +121,13 @@ public class DraftSettingPage
         //    Header = Localized.DraftSettingPage_Tab_Compatibility,
         //    Content = BuildCompatibilityTab()
         //});
-        tabView.TabItems.Add(new TabbedViewItem
-        {
-            Header = Localized.DraftSettingPage_Tab_ExternalSources,
-            Tag = "externalSources",
-            LazyAsyncContentFactory = BuildExternalSourcesTabAsync
-        });
+        if (ProjectExternalSourceService.AllowRpcSources || ProjectExternalSourceService.AllowAssemblySources)
+            tabView.TabItems.Add(new TabbedViewItem
+            {
+                Header = Localized.DraftSettingPage_Tab_ExternalSources,
+                Tag = "externalSources",
+                LazyAsyncContentFactory = BuildExternalSourcesTabAsync
+            });
         tabView.TabItems.Add(new TabbedViewItem
         {
             Header = Localized.MainSettingsPage_Tab_Misc,
@@ -199,63 +201,69 @@ public class DraftSettingPage
             try
             {
                 if (IsStandaloneJsonMode) rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_OpenProject });
-                rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Assembly, FontSize = 18, FontAttributes = FontAttributes.Bold });
-                try
+                if (ProjectExternalSourceService.AllowAssemblySources)
                 {
-                    var sources = await ProjectExternalSourceRuntime.ListAsync(ResolveJsonProjectRoot());
-                    if (!IsStandaloneJsonMode && RenderRpcBootstrap.TryGetClient(out var backend) && backend is not null)
-                    {
-                        var remote = await backend.ListProjectExternalSourcesAsync(new() { ProjectRoot = parent.WorkingPath });
-                        foreach (var source in sources.Sources)
-                        {
-                            var state = remote.Sources.FirstOrDefault(x => x.ImportId == source.ImportId);
-                            if (state is null) continue;
-                            source.Loaded &= state.Loaded;
-                            if (!string.IsNullOrWhiteSpace(state.Error)) source.Error = state.Error;
-                        }
-                    }
-                    if (sources.Sources.Count == 0) rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Empty });
-                    foreach (var source in sources.Sources.OrderBy(x => x.Name))
-                    {
-                        AddCard(source.Name, $"{source.Author} · {source.Version}\n{source.ManifestId}\n{source.Description}",
-                            source.Sources.Select(x => x.Name).Concat(source.AudioSources.Select(x => x.Name)).Concat(source.MaskSources.Select(x => x.Name)),
-                            source.Loaded, source.Error, !IsStandaloneJsonMode, IsStandaloneJsonMode || !parent.IsReadonly,
-                            () => ProjectExternalSourceService.SetLoadedAsync(parent.WorkingPath, source.ImportId, true),
-                            () => ProjectExternalSourceService.SetLoadedAsync(parent.WorkingPath, source.ImportId, false),
-                            () => IsStandaloneJsonMode ? ProjectExternalSourceDatabase.RemoveAsync(ResolveJsonProjectRoot(), source.ImportId)
-                                : ProjectExternalSourceService.RemoveAsync(parent, source.ImportId),
-                            Localized.DraftSettingPage_ExternalSources_RemoveAssembly);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(ex, "List project external sources", this);
-                    rows.Add(new Label { Text = ex.Message });
-                }
-
-                rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Rpc, FontSize = 18, FontAttributes = FontAttributes.Bold });
-                if (!IsStandaloneJsonMode && RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
-                {
+                    rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Assembly, FontSize = 18, FontAttributes = FontAttributes.Bold });
                     try
                     {
-                        var clients = await client.ListExternalVideoSourceClientsAsync();
-                        if (clients.Clients.Count == 0) rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Empty });
-                        foreach (var rpc in clients.Clients.OrderBy(x => x.ClientName))
-                            AddCard(rpc.ClientName, rpc.ClientId.ToString(),
-                                rpc.Sources.Select(x => x.Name).Concat(rpc.AudioSources.Select(x => x.Name)).Concat(rpc.MaskSources.Select(x => x.Name)),
-                                rpc.Loaded, string.Empty, true, true,
-                                () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Load),
-                                () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Unload),
-                                () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Remove),
-                                Localized.DraftSettingPage_ExternalSources_RemoveRpc);
+                        var sources = await ProjectExternalSourceRuntime.ListAsync(ResolveJsonProjectRoot());
+                        if (!IsStandaloneJsonMode && RenderRpcBootstrap.TryGetClient(out var backend) && backend is not null)
+                        {
+                            var remote = await backend.ListProjectExternalSourcesAsync(new() { ProjectRoot = parent.WorkingPath });
+                            foreach (var source in sources.Sources)
+                            {
+                                var state = remote.Sources.FirstOrDefault(x => x.ImportId == source.ImportId);
+                                if (state is null) continue;
+                                source.Loaded &= state.Loaded;
+                                if (!string.IsNullOrWhiteSpace(state.Error)) source.Error = state.Error;
+                            }
+                        }
+                        if (sources.Sources.Count == 0) rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Empty });
+                        foreach (var source in sources.Sources.OrderBy(x => x.Name))
+                        {
+                            AddCard(source.Name, $"{source.Author} · {source.Version}\n{source.ManifestId}\n{source.Description}",
+                                source.Sources.Select(x => x.Name).Concat(source.AudioSources.Select(x => x.Name)).Concat(source.MaskSources.Select(x => x.Name)),
+                                source.Loaded, source.Error, !IsStandaloneJsonMode, IsStandaloneJsonMode || !parent.IsReadonly,
+                                () => ProjectExternalSourceService.SetLoadedAsync(parent.WorkingPath, source.ImportId, true),
+                                () => ProjectExternalSourceService.SetLoadedAsync(parent.WorkingPath, source.ImportId, false),
+                                () => IsStandaloneJsonMode ? ProjectExternalSourceDatabase.RemoveAsync(ResolveJsonProjectRoot(), source.ImportId)
+                                    : ProjectExternalSourceService.RemoveAsync(parent, source.ImportId),
+                                Localized.DraftSettingPage_ExternalSources_RemoveAssembly);
+                        }
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log(ex, "List RPC external source clients", this);
+                        Logger.Log(ex, "List project external sources", this);
                         rows.Add(new Label { Text = ex.Message });
                     }
                 }
-                else rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Empty });
+
+                if (ProjectExternalSourceService.AllowRpcSources)
+                {
+                    rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Rpc, FontSize = 18, FontAttributes = FontAttributes.Bold });
+                    if (!IsStandaloneJsonMode && RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
+                    {
+                        try
+                        {
+                            var clients = await client.ListExternalVideoSourceClientsAsync();
+                            if (clients.Clients.Count == 0) rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Empty });
+                            foreach (var rpc in clients.Clients.OrderBy(x => x.ClientName))
+                                AddCard(rpc.ClientName, rpc.ClientId.ToString(),
+                                    rpc.Sources.Select(x => x.Name).Concat(rpc.AudioSources.Select(x => x.Name)).Concat(rpc.MaskSources.Select(x => x.Name)),
+                                    rpc.Loaded, string.Empty, true, true,
+                                    () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Load),
+                                    () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Unload),
+                                    () => ProjectExternalSourceService.ManageRpcClientAsync(rpc.ClientId, ExternalVideoSourceClientAction.Remove),
+                                    Localized.DraftSettingPage_ExternalSources_RemoveRpc);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log(ex, "List RPC external source clients", this);
+                            rows.Add(new Label { Text = ex.Message });
+                        }
+                    }
+                    else rows.Add(new Label { Text = Localized.DraftSettingPage_ExternalSources_Empty });
+                }
             }
             finally
             {

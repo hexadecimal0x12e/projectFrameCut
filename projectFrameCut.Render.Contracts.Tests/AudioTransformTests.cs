@@ -145,6 +145,8 @@ public sealed class AudioTransformTests
 
     private sealed class ConstantSource(float value, int sampleRate) : IAudioSource
     {
+        public bool IsDeterministic => true;
+
         public string FromPlugin => "test";
         public string TypeName => "constant";
         public string[] PreferredExtension => [];

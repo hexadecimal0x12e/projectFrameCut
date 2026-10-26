@@ -6,6 +6,8 @@ namespace SomePublisher;
 
 public sealed class ExampleVideoSource : IVideoSource
 {
+    public bool IsDeterministic => true;
+
     private bool _disposed;
 
     public ExampleVideoSource(string? path = null) => SourcePath = path;

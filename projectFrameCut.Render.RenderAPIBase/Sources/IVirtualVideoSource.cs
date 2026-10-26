@@ -11,6 +11,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
     /// </summary>
     public interface IVirtualVideoSource : IDisposable
     {
+        public bool IsDeterministic { get; }
+
         /// <summary>
         /// Get the type name of this virtual decoder. Should be the same as the class name.
         /// </summary>

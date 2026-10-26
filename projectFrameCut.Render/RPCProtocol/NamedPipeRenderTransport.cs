@@ -9,9 +9,16 @@ public sealed class NamedPipeRenderServer(
     IRenderService service,
     bool allowAdditionalPipes = false,
     string? requestDirectory = null,
-    Func<string, bool, NamedPipeServerStream>? additionalPipeFactory = null)
+    Func<string, bool, NamedPipeServerStream>? additionalPipeFactory = null,
+    Func<bool>? externalPipeSingleConnection = null,
+    Func<bool>? externalRpcAllowed = null,
+    Func<bool>? externalSourcesAllowed = null)
 {
     private readonly IRenderService _service = service ?? throw new ArgumentNullException(nameof(service));
+    private readonly Func<bool> _externalRpcAllowed = externalRpcAllowed ?? (() => requestDirectory is null
+        || ExternalRpcPipeSettings.Load(Path.GetDirectoryName(Path.GetFullPath(requestDirectory))!).AllowExternalRPC);
+    private readonly Func<bool> _externalSourcesAllowed = externalSourcesAllowed ?? (() => requestDirectory is null
+        || ExternalSourceSettings.Load(Path.GetDirectoryName(Path.GetFullPath(requestDirectory))!).AllowRpcSources);
 
     public async Task RunAsync(string pipeName, string token, string? expectedParentPid = null, CancellationToken cancellationToken = default)
     {
@@ -20,7 +27,7 @@ public sealed class NamedPipeRenderServer(
 
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var parentMonitor = StartParentMonitor(expectedParentPid, lifetime);
-        await using var additional = allowAdditionalPipes ? new AdditionalPipeHost(_service, lifetime.Token, requestDirectory, additionalPipeFactory) : null;
+        await using var additional = allowAdditionalPipes ? new AdditionalPipeHost(_service, lifetime.Token, requestDirectory, additionalPipeFactory, externalPipeSingleConnection, _externalRpcAllowed, _externalSourcesAllowed) : null;
         try
         {
             await RunListenerAsync(pipeName, token, additional ?? _service, lifetime.Token).ConfigureAwait(false);
@@ -34,6 +41,7 @@ public sealed class NamedPipeRenderServer(
 
     public async Task RunExternalAsync(string token, string? expectedParentPid = null, CancellationToken cancellationToken = default)
     {
+        ExternalRpcPipeSettings.ThrowIfDisabled(_externalRpcAllowed());
         if (string.IsNullOrEmpty(token) || token.Length != 64 || !token.All(Uri.IsHexDigit))
             throw new ArgumentException("External RPC token must contain exactly 64 hexadecimal characters.", nameof(token));
 
@@ -42,11 +50,20 @@ public sealed class NamedPipeRenderServer(
         var connections = new List<Task>();
         try
         {
+            if (externalPipeSingleConnection?.Invoke() == true)
+            {
+                await RunListenerAsync(RenderProtocol.AdditionalPipePrefix + token, token, _service, lifetime.Token,
+                    pipeFactory: additionalPipeFactory, externalRpcAllowed: _externalRpcAllowed).ConfigureAwait(false);
+                return;
+            }
             while (true)
             {
                 lifetime.Token.ThrowIfCancellationRequested();
-                var pipe = new NamedPipeServerStream(RenderProtocol.AdditionalPipePrefix + token, PipeDirection.InOut,
-                    NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                ExternalRpcPipeSettings.ThrowIfDisabled(_externalRpcAllowed());
+                var pipeName = RenderProtocol.AdditionalPipePrefix + token;
+                var pipe = additionalPipeFactory is null
+                    ? new NamedPipeServerStream(pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous)
+                    : additionalPipeFactory(pipeName, false);
                 try
                 {
                     await pipe.WaitForConnectionAsync(lifetime.Token).ConfigureAwait(false);
@@ -56,7 +73,7 @@ public sealed class NamedPipeRenderServer(
                     await pipe.DisposeAsync().ConfigureAwait(false);
                     throw;
                 }
-                connections.Add(HandleConnectionAsync(pipe, token, _service, lifetime.Token));
+                connections.Add(HandleConnectionAsync(pipe, token, _service, lifetime.Token, externalRpcAllowed: _externalRpcAllowed));
                 for (var i = connections.Count - 1; i >= 0; i--)
                 {
                     if (!connections[i].IsCompleted) continue;
@@ -73,30 +90,31 @@ public sealed class NamedPipeRenderServer(
         }
     }
 
-    private static async Task RunListenerAsync(string pipeName, string token, IRenderService service, CancellationToken cancellationToken, TaskCompletionSource? ready = null, Guid expectedExternalClientId = default, Func<string, bool, NamedPipeServerStream>? pipeFactory = null, bool isolated = false)
+    private static async Task RunListenerAsync(string pipeName, string token, IRenderService service, CancellationToken cancellationToken, TaskCompletionSource? ready = null, Guid expectedExternalClientId = default, Func<string, bool, NamedPipeServerStream>? pipeFactory = null, bool isolated = false, bool singleConnection = true, Func<bool>? externalRpcAllowed = null)
     {
         try
         {
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                ExternalRpcPipeSettings.ThrowIfDisabled(externalRpcAllowed?.Invoke() ?? true);
                 await using var pipe = pipeFactory is null
                     ? new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous)
                     : pipeFactory(pipeName, isolated);
                 var waiting = pipe.WaitForConnectionAsync(cancellationToken);
                 ready?.TrySetResult();
                 await waiting.ConfigureAwait(false);
-                if (await HandleConnectionAsync(pipe, token, service, cancellationToken, expectedExternalClientId).ConfigureAwait(false)) break;
+                if (await HandleConnectionAsync(pipe, token, service, cancellationToken, expectedExternalClientId, externalRpcAllowed).ConfigureAwait(false) && singleConnection) break;
             }
         }
         catch (Exception ex)
         {
-            ready?.TrySetException(new RenderPipeException($"Render pipe listener failed ({ex.GetType().Name})."));
+            ready?.TrySetException(ex is UnauthorizedAccessException ? ex : new RenderPipeException($"Render pipe listener failed ({ex.GetType().Name})."));
             throw;
         }
     }
 
-    private static async Task<bool> HandleConnectionAsync(NamedPipeServerStream pipe, string token, IRenderService service, CancellationToken cancellationToken, Guid expectedExternalClientId = default)
+    private static async Task<bool> HandleConnectionAsync(NamedPipeServerStream pipe, string token, IRenderService service, CancellationToken cancellationToken, Guid expectedExternalClientId = default, Func<bool>? externalRpcAllowed = null)
     {
         await using var connection = pipe;
         using var closeOnCancel = cancellationToken.Register(() => pipe.Dispose());
@@ -108,7 +126,8 @@ public sealed class NamedPipeRenderServer(
             var handshakeBytes = await RenderPipeFrame.ReadAsync(pipe, handshakeTimeout.Token).ConfigureAwait(false)
                 ?? throw new RenderPipeException("Render client closed the pipe during handshake.");
             var handshake = RenderRpcSerializer.Deserialize<RenderPipeHandshake>(handshakeBytes);
-            var accepted = handshake.ProtocolVersion == RenderProtocol.PipeProtocolVersion
+            var allowed = externalRpcAllowed?.Invoke() ?? true;
+            var accepted = allowed && handshake.ProtocolVersion == RenderProtocol.PipeProtocolVersion
                 && string.Equals(handshake.Token, token, StringComparison.Ordinal)
                 && !string.IsNullOrWhiteSpace(handshake.ClientId)
                 && (expectedExternalClientId == Guid.Empty || string.Equals(handshake.ClientId, expectedExternalClientId.ToString("D"), StringComparison.OrdinalIgnoreCase));
@@ -117,7 +136,7 @@ public sealed class NamedPipeRenderServer(
                 ProtocolVersion = RenderProtocol.PipeProtocolVersion,
                 ClientId = handshake.ClientId,
                 Accepted = accepted,
-                Error = accepted ? string.Empty : "Render pipe handshake was rejected.",
+                Error = !allowed ? ExternalRpcPipeSettings.DisabledMessage : accepted ? string.Empty : "Render pipe handshake was rejected.",
                 Capabilities = accepted ? new RenderCapabilities
                 {
                     ProtocolVersion = RenderProtocol.CurrentVersion,
@@ -147,6 +166,12 @@ public sealed class NamedPipeRenderServer(
                     if (bytes is null) break;
                     var request = RenderRpcSerializer.Deserialize<RenderRequestEnvelope>(bytes);
                     request.ClientId = handshake.ClientId;
+                    if (externalRpcAllowed?.Invoke() == false)
+                    {
+                        await DispatchAndWriteAsync(service, pipe, writeGate, request, connectionCancellation.Token,
+                            connectionCancellation.Token, externalRpcAllowed).ConfigureAwait(false);
+                        break;
+                    }
                     if (request.CancelRequestId != Guid.Empty)
                     {
                         if (requestCancellations.TryGetValue(request.CancelRequestId, out var pending))
@@ -171,7 +196,7 @@ public sealed class NamedPipeRenderServer(
                     {
                         try
                         {
-                            await DispatchAndWriteAsync(service, pipe, writeGate, request, requestCts.Token, connectionCancellation.Token).ConfigureAwait(false);
+                            await DispatchAndWriteAsync(service, pipe, writeGate, request, requestCts.Token, connectionCancellation.Token, externalRpcAllowed).ConfigureAwait(false);
                         }
                         finally
                         {
@@ -249,7 +274,7 @@ public sealed class NamedPipeRenderServer(
         }
     }
 
-    private static async Task DispatchAndWriteAsync(IRenderService service, NamedPipeServerStream pipe, SemaphoreSlim writeGate, RenderRequestEnvelope request, CancellationToken cancellationToken, CancellationToken connectionToken)
+    private static async Task DispatchAndWriteAsync(IRenderService service, NamedPipeServerStream pipe, SemaphoreSlim writeGate, RenderRequestEnvelope request, CancellationToken cancellationToken, CancellationToken connectionToken, Func<bool>? externalRpcAllowed = null)
     {
         using var notifications = RenderRpcNotifications.UseDynamicPreviewClockSender(async (clock, token) =>
         {
@@ -267,6 +292,7 @@ public sealed class NamedPipeRenderServer(
         RenderResponseEnvelope response;
         try
         {
+            ExternalRpcPipeSettings.ThrowIfDisabled(externalRpcAllowed?.Invoke() ?? true);
             response = await service.DispatchAsync(request, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { return; }
@@ -307,19 +333,22 @@ public sealed class NamedPipeRenderServer(
         catch (ObjectDisposedException) { }
     }
 
-    private sealed class AdditionalPipeHost(IRenderService service, CancellationToken cancellationToken, string? requestDirectory, Func<string, bool, NamedPipeServerStream>? additionalPipeFactory) : IRenderService, IAsyncDisposable, IExternalRpcAuthorizationHost
+    private sealed class AdditionalPipeHost(IRenderService service, CancellationToken cancellationToken, string? requestDirectory, Func<string, bool, NamedPipeServerStream>? additionalPipeFactory, Func<bool>? externalPipeSingleConnection, Func<bool> externalRpcAllowed, Func<bool> externalSourcesAllowed) : IRenderService, IAsyncDisposable, IExternalRpcAuthorizationHost
     {
         private readonly CancellationTokenSource _lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         private readonly object _gate = new();
         private readonly List<Task> _listeners = [];
         private readonly ConcurrentDictionary<string, CancellationTokenSource> _pipeLifetimes = new();
-        private readonly ExternalRpcRequestBroker? _requests = requestDirectory is null ? null : new(requestDirectory, [], cancellationToken);
+        private readonly ExternalRpcRequestBroker? _requests = requestDirectory is null ? null : new(requestDirectory, [], cancellationToken, externalRpcAllowed);
         private IReadOnlyDictionary<Guid, ExternalRpcClientAuthorization> _authorizations = new Dictionary<Guid, ExternalRpcClientAuthorization>();
         private bool _disposed;
         private readonly GuiProjectBroker _gui = new();
 
         public async ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken ct = default)
         {
+            if (request.Operation is RenderOperation.CreateAdditionalPipe or RenderOperation.CreateGuiProjectPipe
+                or RenderOperation.ResolveExternalRpcRequest)
+                ExternalRpcPipeSettings.ThrowIfDisabled(externalRpcAllowed());
             if (request.ProtocolVersion < RenderProtocol.MinimumSupportedVersion || request.ProtocolVersion > RenderProtocol.CurrentVersion)
                 throw new ArgumentException("Unsupported render protocol version.");
             if (request.Operation is RenderOperation.RegisterGuiProject or RenderOperation.UnregisterGuiProject
@@ -425,11 +454,11 @@ public sealed class NamedPipeRenderServer(
                 if (request.Operation == RenderOperation.GetCapabilities && response.Error is null)
                 {
                     var capabilities = RenderRpcSerializer.Deserialize<RenderCapabilities>(response.Payload);
-                    capabilities.Operations.Add(nameof(RenderOperation.CreateAdditionalPipe));
+                    if (externalRpcAllowed()) capabilities.Operations.Add(nameof(RenderOperation.CreateAdditionalPipe));
                     capabilities.Operations.Add(nameof(RenderOperation.RegisterGuiProject));
                     capabilities.Operations.Add(nameof(RenderOperation.ListExternalVideoSourceClients));
                     capabilities.Operations.Add(nameof(RenderOperation.ManageExternalVideoSourceClient));
-                    if (_requests is not null)
+                    if (_requests is not null && externalRpcAllowed())
                     {
                         capabilities.Operations.Add(nameof(RenderOperation.GetExternalRpcRequest));
                         capabilities.Operations.Add(nameof(RenderOperation.ResolveExternalRpcRequest));
@@ -452,6 +481,7 @@ public sealed class NamedPipeRenderServer(
 
         private async Task<string> CreatePipeAsync(CancellationToken ct, Guid guiSessionId = default, Guid externalClientId = default, string clientName = "", bool isolated = false)
         {
+            ExternalRpcPipeSettings.ThrowIfDisabled(externalRpcAllowed());
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
             var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             lock (_gate)
@@ -461,7 +491,16 @@ public sealed class NamedPipeRenderServer(
                 _lifetime.Token.ThrowIfCancellationRequested();
                 _listeners.Add(ListenAsync(token, ready, guiSessionId, externalClientId, clientName, isolated));
             }
-            await ready.Task.ConfigureAwait(false);
+            try
+            {
+                await ready.Task.ConfigureAwait(false);
+                ExternalRpcPipeSettings.ThrowIfDisabled(externalRpcAllowed());
+            }
+            catch
+            {
+                RevokePipe(token);
+                throw;
+            }
             Log("Created an additional render RPC pipe.");
             return token;
         }
@@ -485,7 +524,8 @@ public sealed class NamedPipeRenderServer(
                 if (externalClientId != Guid.Empty)
                     pipeService = new ExternalVideoSourcePipeService(this, pipeService, externalClientId, clientName);
                 // Only the internal listener receives this management service.
-                await RunListenerAsync(RenderProtocol.AdditionalPipePrefix + token, token, pipeService, lifetime.Token, ready, externalClientId, additionalPipeFactory, isolated).ConfigureAwait(false);
+                await RunListenerAsync(RenderProtocol.AdditionalPipePrefix + token, token, pipeService, lifetime.Token, ready,
+                    externalClientId, additionalPipeFactory, isolated, externalPipeSingleConnection?.Invoke() ?? true, externalRpcAllowed).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
             catch (Exception ex)
@@ -504,9 +544,9 @@ public sealed class NamedPipeRenderServer(
                 if (!string.Equals(connectedClientId, clientId.ToString("D"), StringComparison.OrdinalIgnoreCase))
                     throw new UnauthorizedAccessException("External RPC client ID does not match its authorization.");
                 return new ExternalSourceConnection(
-                    ExternalVideoSourceRegistry.Connect(clientId, clientName, callback, () => host.IsAuthorized(clientId)),
-                    ExternalAudioSourceRegistry.Connect(clientId, clientName, callback, () => host.IsAuthorized(clientId)),
-                    ExternalMaskSourceRegistry.Connect(clientId, clientName, callback, () => host.IsAuthorized(clientId)));
+                    ExternalVideoSourceRegistry.Connect(clientId, clientName, callback, () => host.AreExternalSourcesAllowed(clientId)),
+                    ExternalAudioSourceRegistry.Connect(clientId, clientName, callback, () => host.AreExternalSourcesAllowed(clientId)),
+                    ExternalMaskSourceRegistry.Connect(clientId, clientName, callback, () => host.AreExternalSourcesAllowed(clientId)));
             }
 
             public async ValueTask<RenderResponseEnvelope> DispatchAsync(RenderRequestEnvelope request, CancellationToken cancellationToken = default)
@@ -571,7 +611,9 @@ public sealed class NamedPipeRenderServer(
         }
 
         private bool IsAuthorized(Guid clientId) =>
-            Volatile.Read(ref _authorizations).TryGetValue(clientId, out var authorization) && !authorization.Revoked;
+            externalRpcAllowed() && Volatile.Read(ref _authorizations).TryGetValue(clientId, out var authorization) && !authorization.Revoked;
+
+        private bool AreExternalSourcesAllowed(Guid clientId) => IsAuthorized(clientId) && externalSourcesAllowed();
 
         public async ValueTask DisposeAsync()
         {

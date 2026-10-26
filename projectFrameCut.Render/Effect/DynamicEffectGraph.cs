@@ -131,18 +131,9 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
         var endpoints = clip is not null && ClipValueFrameContext.Current?.FrameIndex == frame && clip.ContainsFrame(frame)
             && nodes.Values.Any(n => n.Provider is IClipValueEndpointProvider)
             ? ClipValueFrameContext.Current : null;
-        object SourceIdentity()
-        {
-            if (FrameHashContext.Current?.Options.Mode != Contracts.FrameHashMode.Static)
-            {
-                try { return FrameHashHelper.HashValue(source); }
-                catch (Exception ex) when (ex is not OperationCanceledException) { }
-            }
-            return source;
-        }
         var key = endpoints is null || pipeline == Stage.Mixture ? null : new FrameKey(this, clip!.Id, frame, width, height, relativeWidth,
             relativeHeight, (source as IPicture)?.Width ?? width, (source as IPicture)?.Height ?? height,
-            source.GetType(), SourceIdentity(), initialPosition, preserveAspect, processFromCanvas, endpoints.IsTransformInput);
+            source.GetType(), source, initialPosition, preserveAspect, processFromCanvas, endpoints.IsTransformInput);
         if (key is not null && afterNode is null && endpoints!.TryGetComputed<CachedFrame>(key, out var cachedFrame))
         {
             foreach (var (id, value) in cachedFrame!.Exports) endpoints.Publish(clip!, frame, id, value);
@@ -481,7 +472,7 @@ public sealed class DynamicEffectGraph : INormalEffect, IDisposable
                                 upperPosition.TargetX, upperPosition.TargetY, width, height);
                         }
                         computed = effect is not IMixture && FrameHashContext.Current is { } hashes
-                            ? hashes.ComputeEffect(effect, context, Compute, node.Provider.IsDeterministic, node.Provider) : Compute();
+                            ? hashes.ComputeEffect(effect, context, Compute, node.Provider.IsDeterministic, node.Provider, Array.IndexOf(node.Effects, effect)) : Compute();
                         if (effect is IMultipleOutputEffect)
                         {
                             outputs = computed as IReadOnlyDictionary<string, object?>

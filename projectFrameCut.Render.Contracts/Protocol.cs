@@ -442,7 +442,6 @@ public enum PreviewPixelFormat
 [ProtoContract]
 public sealed class TimelineFrameRequest
 {
-    [ProtoMember(6)] public FrameHashMode FrameHashMode { get; set; }
     [ProtoMember(1)] public Guid SessionId { get; set; }
     [ProtoMember(2)] public uint FrameIndex { get; set; }
     [ProtoMember(3)] public int Width { get; set; }
@@ -472,7 +471,6 @@ public sealed class TimelineThumbnailsResponse
 [ProtoContract]
 public sealed class ClipPreviewRequest
 {
-    [ProtoMember(11)] public FrameHashMode FrameHashMode { get; set; }
     [ProtoMember(1)] public Guid SessionId { get; set; }
     [ProtoMember(2)] public Guid ClipId { get; set; }
     [ProtoMember(3)] public uint FrameIndex { get; set; }
@@ -502,7 +500,6 @@ public sealed class ClipPreviewBatchResponse
 [ProtoContract]
 public sealed class StartDynamicPreviewRequest
 {
-    [ProtoMember(11)] public FrameHashMode FrameHashMode { get; set; }
     [ProtoMember(1)] public Guid SessionId { get; set; }
     [ProtoMember(2)] public uint StartFrame { get; set; }
     [ProtoMember(3)] public int CanvasWidth { get; set; }
@@ -540,6 +537,7 @@ public sealed class StopDynamicPreviewRequest
 {
     [ProtoMember(1)] public Guid SessionId { get; set; }
     [ProtoMember(2)] public Guid PlaybackId { get; set; }
+    [ProtoMember(3)] public bool ClearCache { get; set; }
 }
 
 [ProtoContract]
@@ -572,7 +570,6 @@ public sealed class DynamicPreviewCachedClip
 [ProtoContract]
 public sealed class TimelineSegmentRequest
 {
-    [ProtoMember(10)] public FrameHashMode FrameHashMode { get; set; }
     [ProtoMember(1)] public Guid SessionId { get; set; }
     [ProtoMember(2)] public uint StartFrame { get; set; }
     [ProtoMember(3)] public uint Length { get; set; }
@@ -638,7 +635,6 @@ public sealed class PreviewAudioClock
 [ProtoContract]
 public sealed class RenderProjectRequest
 {
-    [ProtoMember(13)] public FrameHashMode FrameHashMode { get; set; }
     [ProtoMember(1)] public Guid SessionId { get; set; }
     [ProtoMember(2)] public int Width { get; set; }
     [ProtoMember(3)] public int Height { get; set; }
@@ -671,6 +667,8 @@ public sealed class RenderJob
     [ProtoMember(13)] public bool Background { get; set; }
     [ProtoMember(14)] public double CurrentFps { get; set; }
     [ProtoMember(15)] public string Stage { get; set; } = string.Empty;
+    [ProtoMember(16)] public long HashPreparationCompleted { get; set; }
+    [ProtoMember(17)] public long HashPreparationTotal { get; set; }
 }
 
 [ProtoContract]

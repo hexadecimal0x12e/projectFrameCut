@@ -13,8 +13,12 @@ public static class ProjectExternalSourceService
     private static readonly Dictionary<string, List<ProjectExternalSourceApproval>> Selections = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
     private static readonly SemaphoreSlim SelectionGate = new(1, 1);
 
+    public static bool AllowRpcSources => ExternalSourceSettings.Load(MauiProgram.BasicDataPath).AllowRpcSources;
+    public static bool AllowAssemblySources => ExternalSourceSettings.Load(MauiProgram.BasicDataPath).AllowAssemblySources;
+
     public static List<ProjectExternalSourceApproval> GetApprovals(string root)
     {
+        if (!AllowAssemblySources) return [];
         lock (Selections) return Selections.GetValueOrDefault(Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)))?.Select(x => RenderRpcSerializer.Clone(x)).ToList() ?? [];
     }
 
@@ -23,10 +27,15 @@ public static class ProjectExternalSourceService
         lock (Selections) return Selections.ContainsKey(Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)));
     }
 
-    public static void InitializeRuntime() => ProjectExternalSourceRuntime.StartWorker = StartWorkerAsync;
+    public static void InitializeRuntime(string? dataRoot = null)
+    {
+        ProjectExternalSourceRuntime.IsAllowed = () => ExternalSourceSettings.Load(dataRoot ?? MauiProgram.BasicDataPath).AllowAssemblySources;
+        ProjectExternalSourceRuntime.StartWorker = StartWorkerAsync;
+    }
 
     private static async ValueTask<IPluginIsolationSession> StartWorkerAsync(string projectRoot, ProjectExternalSourceAsset asset, CancellationToken cancellationToken)
     {
+        ProjectExternalSourceRuntime.EnsureAllowed();
         var sourceRoot = ProjectExternalSourceDatabase.ResolveAssetDirectory(projectRoot, asset);
 #if WINDOWS
         var stageRoot = Path.Combine(Platforms.Windows.WindowsPluginIsolationPlatform.ExternalSourceDirectory, Guid.NewGuid().ToString("N"));
@@ -63,6 +72,11 @@ public static class ProjectExternalSourceService
 
     private static async Task SelectCoreAsync(Page page, string root)
     {
+        if (!AllowAssemblySources)
+        {
+            await ApplyAsync(root);
+            return;
+        }
         if (HasSelection(root)) return;
         InitializeRuntime();
         var assets = ProjectExternalSourceDatabase.Read(root).Assets;
@@ -169,6 +183,7 @@ public static class ProjectExternalSourceService
 
     public static async Task SetLoadedAsync(string root, Guid importId, bool loaded)
     {
+        if (loaded) ExternalSourceSettings.EnsureAssemblySourcesAllowed(MauiProgram.BasicDataPath);
         var asset = ProjectExternalSourceDatabase.Read(root).Assets.Single(x => x.ImportId == importId);
         var previous = GetApprovals(root);
         var selected = previous.Where(x => x.ImportId != importId).ToList();
@@ -205,12 +220,14 @@ public static class ProjectExternalSourceService
 
     public static async Task ManageRpcClientAsync(Guid clientId, ExternalVideoSourceClientAction action)
     {
+        if (action == ExternalVideoSourceClientAction.Load) ExternalSourceSettings.EnsureRpcSourcesAllowed(MauiProgram.BasicDataPath);
         await RenderRpcBootstrap.Client.ManageExternalVideoSourceClientAsync(new() { ClientId = clientId, Action = action });
     }
 
     public static async Task AddAsync(DraftPage page)
     {
         if (page.IsReadonly) return;
+        ExternalSourceSettings.EnsureAssemblySourcesAllowed(MauiProgram.BasicDataPath);
         var directory = await FileSystemService.PickFolderAsync();
         if (string.IsNullOrWhiteSpace(directory)) return;
         await AddAsync(page, directory);
@@ -219,6 +236,7 @@ public static class ProjectExternalSourceService
     public static async Task AddAsync(DraftPage page, string directory, bool? copyToProject = null)
     {
         if (page.IsReadonly) throw new InvalidOperationException("Project is read-only.");
+        ExternalSourceSettings.EnsureAssemblySourcesAllowed(MauiProgram.BasicDataPath);
         copyToProject ??= await Asset.AssetDatabase.PickImportModeAsync(page);
         if (copyToProject is null) return;
         if (File.Exists(directory))
@@ -245,6 +263,7 @@ public static class ProjectExternalSourceService
         bool loaded = true, CancellationToken cancellationToken = default, bool copyToProject = true)
     {
         if (page.IsReadonly) throw new InvalidOperationException("Project is read-only.");
+        ExternalSourceSettings.EnsureAssemblySourcesAllowed(MauiProgram.BasicDataPath);
         if (File.Exists(directory))
         {
             if (!string.Equals(Path.GetFileName(directory), ProjectExternalSourceDatabase.ManifestFileName, StringComparison.OrdinalIgnoreCase))

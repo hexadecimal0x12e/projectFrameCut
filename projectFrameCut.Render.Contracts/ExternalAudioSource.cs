@@ -26,6 +26,7 @@ public sealed class ExternalAudioSourceCatalog
 [ProtoContract]
 public sealed class ExternalAudioSourceDescriptor
 {
+    [ProtoMember(11)] public bool IsDeterministic { get; set; }
     [ProtoMember(1)] public Guid ClientId { get; set; }
     [ProtoMember(2)] public string SourceId { get; set; } = string.Empty;
     [ProtoMember(3)] public string Name { get; set; } = string.Empty;

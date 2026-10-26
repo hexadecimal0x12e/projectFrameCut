@@ -60,12 +60,14 @@ namespace projectFrameCut.Render.Rendering
         public bool EnableThreadAffinity { get; set; } = false;
         public int[]? WorkerCPUCoreIndexs { get; set; }
         public int MaxThreads { get => field > 0 ? field : Environment.ProcessorCount; set; }
+        /// <summary>Maximum hash preparation workers; nonpositive values use all available CPU cores.</summary>
+        public int MaxHashThreads { get => field > 0 ? field : Environment.ProcessorCount; set; }
         public bool AllowWorkerOversubscription { get; set; } = true;
         public int GCOption = 0;
 
         public bool EnableEffectAutoRetry { get; set; } = true;
         public bool ProcessEffectFromCanvas { get; set; } = true;
-        public FrameHashMode FrameHashMode { get; set; } = FrameHashMode.Dynamic;
+
         public bool ReuseDynamicPreviewCache { get; set; } = false;
         public bool EnableDeferredComposition { get; set; }
         /// <summary>Encodes deferred canvas frames in a format supported by the VFD decoder.</summary>
@@ -93,6 +95,7 @@ namespace projectFrameCut.Render.Rendering
         Dictionary<Guid, bool> IsClipGeneratedByAI = new();
 
         public event Action<double, TimeSpan>? OnProgressChanged;
+        public event Action<long, long>? OnHashPreparationProgressChanged;
         public event Action<ChunkRenderProgress>? OnChunkProgressChanged;
         private Stopwatch _renderTotalStopwatch = new();
         private readonly Queue<(TimeSpan Elapsed, long Finished)> progressSamples = new();
@@ -384,7 +387,14 @@ namespace projectFrameCut.Render.Rendering
             {
                 if (EnableDeferredComposition)
                 {
-                    InitializeDeferredCache(cancellation.Token);
+                    try
+                    {
+                        InitializeDeferredCache(cancellation.Token);
+                    }
+                    finally
+                    {
+                        OnHashPreparationProgressChanged?.Invoke(0, 0);
+                    }
                     Log($"[Render] Deferred composition: render and compose to VFD, then encode. Resume={ResumeInterruptedRender}.");
                 }
                 else if (serialRendering)
@@ -1061,7 +1071,7 @@ namespace projectFrameCut.Render.Rendering
                         SetThreadWorking((uint)i, true);
                         var sw = Stopwatch.StartNew();
                         var diagnostic = LogFrameTimings ? new RenderFrameDiagnostics((uint)i) : null;
-                        var context = new FrameHashContext(HashOptions, ct, nodeCache, gpuSession) { Diagnostics = diagnostic };
+                        var context = new FrameHashContext(HashOptions, ct, nodeCache, gpuSession) { Diagnostics = diagnostic, Clips = Clips };
                         var entries = new List<CachedClipFrame>();
                         bool retained = false;
                         try
@@ -1211,7 +1221,7 @@ namespace projectFrameCut.Render.Rendering
                 using (diagnostic?.Measure("Schedule frame"))
                 {
                     requests = cacheOutput ? GetDeferredRequests(frame, token) : GetFrameRequests(frame);
-                    context = new FrameHashContext(HashOptions, token, nodeCache, gpuSession);
+                    context = new FrameHashContext(HashOptions, token, nodeCache, gpuSession) { Clips = Clips };
                 }
                 using (context.Enter())
                 {
@@ -1386,10 +1396,7 @@ namespace projectFrameCut.Render.Rendering
                 readers++;
             }
             var entries = new List<CachedClipFrame>();
-            using var frameContext = new FrameHashContext(HashOptions with
-            {
-                Mode = FrameHashContext.Current?.Options.Mode ?? HashOptions.Mode,
-            }, token, nodeCache, gpuSession);
+            using var frameContext = new FrameHashContext(HashOptions, token, nodeCache, gpuSession) { Clips = Clips };
             using var hashScope = frameContext.Enter();
             using var effects = effectRuntime.Enter();
             var previousWorker = IRenderContext.WorkerState;
@@ -1429,9 +1436,9 @@ namespace projectFrameCut.Render.Rendering
             using var diagnostic = RenderFrameDiagnostics.Current?.Measure($"Clip {clip.Name} ({clip.Id}), frame {frameIndex}", "Clip");
             EnsureClipDependencies(clip, frameIndex, token);
             if (FrameHashContext.Current is { } context)
-                return context.Evaluate((typeof(Renderer), clip.Id, frameIndex), () => RenderClipCore(clip, frameIndex, token),
+                return context.Evaluate((typeof(Renderer), clip.Id, frameIndex), () => RenderDeferredClip(clip, frameIndex, token),
                     c => c is null ? null : c with { Picture = DynamicEffectGraph.CopyPicture(c.Picture) }, c => c?.Picture.Dispose());
-            return RenderClipCore(clip, frameIndex, token);
+            return RenderDeferredClip(clip, frameIndex, token);
         }
 
         private IPicture ReadMaskBackdrop(IClip mask, uint frame, CancellationToken token)
@@ -1445,50 +1452,6 @@ namespace projectFrameCut.Render.Rendering
                 return Composite(lower, frame, token);
             }
             finally { foreach (var item in lower) item?.Picture.Dispose(); }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private ClipContent? RenderClipCore(IClip clip, uint frameIndex, CancellationToken token)
-        {
-            using var diagnostic = RenderFrameDiagnostics.Current?.Measure("Clip hash/cache and setup");
-            ClipContent? rendered = null;
-            bool evaluated = false;
-            try
-            {
-                var identity = FrameHashHelper.GetClipHash(Clips, clip, frameIndex, HashOptions with
-                {
-                    Mode = FrameHashContext.Current?.Options.Mode ?? HashOptions.Mode,
-                    Stage = "render-clip",
-                }, () =>
-                {
-                    evaluated = true;
-                    rendered = RenderClipUncached(clip, frameIndex, token);
-                    return rendered is null ? null : new { rendered.Picture, rendered.Position, rendered.PreserveAspect, rendered.IsCanvas };
-                }, token);
-                string key = "clip/" + identity.Hash;
-                if (identity.CanReuse && nodeCache.TryRead(key, out var saved)
-                    && saved is IReadOnlyDictionary<string, object?> values)
-                {
-                    rendered?.Picture.Dispose();
-                    rendered = null;
-                    return new((IClip)values["Clip"]!, (IPicture)values["Picture"]!,
-                        (ClipPositionTuple)values["Position"]!, (bool)values["PreserveAspect"]!, (bool)values["IsCanvas"]!);
-                }
-                if (!evaluated) rendered = RenderClipUncached(clip, frameIndex, token);
-                if (identity.CanReuse && rendered is not null && !ClipInitializationFailure.IsMarked(clip))
-                    nodeCache.Write(key, new Dictionary<string, object?>
-                    {
-                        ["Clip"] = rendered.Clip,
-                        ["Picture"] = rendered.Picture,
-                        ["Position"] = rendered.Position,
-                        ["PreserveAspect"] = rendered.PreserveAspect,
-                        ["IsCanvas"] = rendered.IsCanvas,
-                    });
-                var result = rendered;
-                rendered = null;
-                return result;
-            }
-            finally { rendered?.Picture.Dispose(); }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -1512,6 +1475,26 @@ namespace projectFrameCut.Render.Rendering
             using var context = ValueProviderFrameContext.PushFrame(frameIndex,
                 Math.Clamp(((float)frameIndex - clip.StartFrame) / Math.Max(1u, clip.GetEffectiveDuration()), 0, 1), false, token);
             using var clipScope = ValueProviderFrameContext.PushClip(clip);
+            string? contentKey = null;
+            // Graphs and endpoints keep their own node snapshots; layout is always evaluated for the current clip.
+            if (clip is not MaskClip && !ClipValuePassThrough.HasEndpoints(clip)
+                && !(clip.EffectsInstances ?? []).Any(e => e.Enabled && (DynamicEffectBindings.IsGraphEffect(e)
+                    || e is IClipPositionProvider or IContinuousClipPositionProvider))
+                && !TransformProcessing.HasActiveTransform(clip, Clips, frameIndex))
+            {
+                var identity = FrameHashHelper.GetClipHash(Clips, clip, frameIndex, HashOptions, token);
+                if (identity.CanReuse)
+                {
+                    contentKey = "clip/" + FrameHashHelper.HashValue(new
+                    {
+                        identity.Hash,
+                        Width = ResolveClipOutputWidth(clip, TargetWidth, ProjectRelativeWidth),
+                        Height = ResolveClipOutputHeight(clip, TargetHeight, ProjectRelativeHeight),
+                    });
+                    if (nodeCache.TryRead(contentKey, out var saved) && saved is IPicture picture)
+                        return ProcessClip(clip, picture, frameIndex, reusedPreview: true, token);
+                }
+            }
             IRenderContext.SetWorkerState(frameIndex, RenderWorkerStage.PreparingSource, Thread.CurrentThread.Name, clip);
             long sourceStarted = Stopwatch.GetTimestamp();
             IPicture frame = null!;
@@ -1544,7 +1527,13 @@ namespace projectFrameCut.Render.Rendering
                 Interlocked.Add(ref sourceTicks, Stopwatch.GetElapsedTime(sourceStarted).Ticks);
                 Interlocked.Increment(ref sourceReadCount);
             }
-            return ProcessClip(clip, frame, frameIndex, reusedPreview, token);
+            var result = ProcessClip(clip, frame, frameIndex, reusedPreview, token);
+            try
+            {
+                if (contentKey is not null && !ClipInitializationFailure.IsMarked(clip)) nodeCache.Write(contentKey, result.Picture);
+                return result;
+            }
+            catch { result.Picture.Dispose(); throw; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -1601,7 +1590,7 @@ namespace projectFrameCut.Render.Rendering
             if (!Directory.Exists(directory)) return false;
 
             var hashClip = _dynamicPreviewHashClips.FirstOrDefault(c => c.Id == clip.Id) ?? clip;
-            var identity = FrameHashHelper.GetClipHash(_dynamicPreviewHashClips, hashClip, frameIndex,
+            var identity = FrameHashHelper.GetClipOutputHash(_dynamicPreviewHashClips, hashClip, frameIndex,
                 HashOptions with { AutoCenter = false });
             if (!identity.CanReuse) return false;
             var hash = identity.Hash;
@@ -1671,7 +1660,6 @@ namespace projectFrameCut.Render.Rendering
 
         private FrameHashOptions HashOptions => preparedHashOptions ?? new()
         {
-            Mode = FrameHashMode,
             Width = TargetWidth,
             Height = TargetHeight,
             ProjectWidth = ProjectRelativeWidth,
@@ -1803,13 +1791,58 @@ namespace projectFrameCut.Render.Rendering
         private sealed record DeferredFrame(uint Frame, IPicture? Picture, bool Reusable, long Bytes);
         private int preparedFrames, restoredComposites;
         private readonly ConcurrentDictionary<uint, byte> restoredCompositeFrames = new();
+        private readonly ConcurrentDictionary<(Guid Clip, uint Frame), FrameHashResult> deferredClipHashes = new();
+        private readonly ConcurrentDictionary<uint, FrameHashResult> deferredFrameHashes = new();
+        private int restoredClips;
 
-        /// <summary>Remove this render's new disk frames after its output has been finalized.</summary>
+        /// <summary>Clean this render's disk frames when retention is disabled.</summary>
         public void CleanupCreatedDeferredCache() => cleanupDeferredCache?.Invoke();
 
         private void InitializeDeferredCache(CancellationToken token)
         {
+            using var effects = effectRuntime.Enter();
             token.ThrowIfCancellationRequested();
+            foreach (var worker in clipWorkers.Values)
+            {
+                token.ThrowIfCancellationRequested();
+                _ = worker.Initialization.Value;
+            }
+            long totalHashes = Duration + clipWorkers.Values.Sum(w => Math.Max(0L, (long)w.EndFrame - w.FirstFrame));
+            long completedHashes = 0;
+            int hashThreads = MaxHashThreads;
+            var progressTimer = Stopwatch.StartNew();
+            OnHashPreparationProgressChanged?.Invoke(0, totalHashes);
+            Log($"[Render] Preparing {totalHashes} deferred hashes for {Duration} frames with {hashThreads} workers.");
+            void ReportHashProgress()
+            {
+                lock (progressTimer)
+                {
+                    completedHashes++;
+                    if (completedHashes != totalHashes && progressTimer.ElapsedMilliseconds < 100) return;
+                    OnHashPreparationProgressChanged?.Invoke(completedHashes, totalHashes);
+                    progressTimer.Restart();
+                }
+            }
+            FrameHashResult PrepareHash(FrameHashResult identity) => identity.CanReuse
+                ? identity with { Hash = FrameHashHelper.HashValue(new { identity.Hash, EnableEffectAutoRetry, ReuseDynamicPreviewCache }) }
+                : identity;
+            Parallel.For((long)StartFrame, (long)StartFrame + Duration, new ParallelOptions
+            {
+                MaxDegreeOfParallelism = hashThreads,
+                CancellationToken = token,
+                TaskScheduler = TaskScheduler.Default,
+            }, i =>
+            {
+                uint frame = (uint)i;
+                token.ThrowIfCancellationRequested();
+                deferredFrameHashes[frame] = PrepareHash(FrameHashHelper.GetFrameHash(Clips, frame, HashOptions, token));
+                ReportHashProgress();
+                foreach (var clip in orderedClips.Where(c => frame >= clipWorkers[c.Id].FirstFrame && frame < clipWorkers[c.Id].EndFrame))
+                {
+                    deferredClipHashes[(clip.Id, frame)] = PrepareHash(FrameHashHelper.GetClipOutputHash(Clips, clip, frame, HashOptions, token));
+                    ReportHashProgress();
+                }
+            });
             string? signature = null;
             if (!string.IsNullOrWhiteSpace(RenderResumeSignature) && !string.IsNullOrWhiteSpace(DynamicPreviewCacheProjectRoot)
                 && !Clips.Any(c => c is VideoClip { Decoder: EncodeAndDecode.DecoderContextPJFCProject }
@@ -1847,14 +1880,68 @@ namespace projectFrameCut.Render.Rendering
             }
             if (ResumeInterruptedRender && signature is null)
                 Log("[Render] Using an isolated deferred job because a stable project/source signature is unavailable.");
-            deferredCache = new(DynamicPreviewCacheProjectRoot, signature, ResumeInterruptedRender, VfdEncoder);
+            deferredCache = new(DynamicPreviewCacheProjectRoot, signature, ResumeInterruptedRender, VfdEncoder) { KeepFiles = true };
+            deferredCache.WriteHashes(deferredClipHashes.Select(p => (p.Key.Clip, p.Key.Frame, p.Value))
+                .Concat(deferredFrameHashes.Select(p => (Guid.Empty, p.Key, p.Value))), token);
+            deferredCache.IndexReusableFrames(deferredClipHashes.Values.Concat(deferredFrameHashes.Values)
+                .Where(h => h.CanReuse).Select(h => h.Hash).ToHashSet(StringComparer.Ordinal), token);
             Log($"[Render] Deferred cache: {deferredCache.DirectoryPath}, restoring={deferredCache.Restoring}, encoder={VfdEncoder.GetType().Name}.");
+        }
+
+        private ClipContent? RenderDeferredClip(IClip clip, uint frame, CancellationToken token)
+        {
+            // Endpoint snapshots are produced by the normal graph path for the current frame.
+            if (deferredCache is not { } cache || !deferredClipHashes.TryGetValue((clip.Id, frame), out var identity))
+                return RenderClipUncached(clip, frame, token);
+            bool reusable = identity.CanReuse && !ClipValuePassThrough.HasEndpoints(clip);
+            string path = cache.ClipPath(clip.Id, identity.Hash);
+            if (reusable && cache.TryReadReusable(path, identity.Hash, false, token, out var info, out var picture))
+            {
+                if (info.Clip == clip.Id)
+                {
+                    try
+                    {
+                        var frameClip = clipArgumentFrames.Get(clip, frame);
+                        Interlocked.Increment(ref restoredClips);
+                        return picture is null ? null : new(frameClip, picture, info.Position, info.PreserveAspect,
+                            info.IsCanvas, info.CenterImplicit);
+                    }
+                    catch { picture?.Dispose(); throw; }
+                }
+                picture?.Dispose();
+            }
+            var content = RenderClipUncached(clip, frame, token);
+            try
+            {
+                using var downloaded = content?.Picture is IHwAccelPicture gpu ? gpu.Download() : null;
+                var saved = downloaded ?? content?.Picture;
+                cache.Write(path, new()
+                {
+                    Clip = clip.Id,
+                    Frame = frame,
+                    Hash = identity.Hash,
+                    HasPicture = saved is not null,
+                    Reusable = reusable && !ClipInitializationFailure.IsMarked(clip)
+                        && !clipWorkers[clip.Id].Dependencies.Any(ClipInitializationFailure.IsMarked),
+                    Position = content?.Position ?? default,
+                    PreserveAspect = content?.PreserveAspect ?? false,
+                    IsCanvas = content?.IsCanvas ?? false,
+                    CenterImplicit = content?.CenterImplicit ?? ShouldAutoCenterImplicitClip(content?.Clip ?? clip),
+                    Width = saved?.Width ?? 0,
+                    Height = saved?.Height ?? 0,
+                    Bits = saved is null ? _ppb : (int)saved.BitPerPixel,
+                    Hdr = saved is IHDRPicture<ushort>,
+                }, saved, token);
+                return content;
+            }
+            catch { content?.Picture.Dispose(); throw; }
         }
 
         private ClipRequest[] GetDeferredRequests(uint frame, CancellationToken token)
         {
             var cache = deferredCache!;
-            if (cache.Restoring && cache.TryRead(cache.ComposedPath(frame), token, out var info, out var picture))
+            var identity = deferredFrameHashes[frame];
+            if (identity.CanReuse && cache.TryReadReusable(cache.ComposedPath(frame), identity.Hash, true, token, out var info, out var picture))
             {
                 picture?.Dispose();
                 if (IsComposedFrame(info, frame) && info.Reusable)
@@ -1883,7 +1970,7 @@ namespace projectFrameCut.Render.Rendering
                     Interlocked.Add(ref deferredBufferedBytes, bytes);
                 }
                 using (RenderFrameDiagnostics.Current?.Measure("Queue composed frame"))
-                    deferredWrites!.Add(new(frame, picture, !Clips.Any(ClipInitializationFailure.IsMarked), bytes), token);
+                    deferredWrites!.Add(new(frame, picture, deferredFrameHashes[frame].CanReuse && !Clips.Any(ClipInitializationFailure.IsMarked), bytes), token);
                 picture = null;
                 bytes = 0;
                 CompleteThreadFrame(frame);
@@ -1913,6 +2000,7 @@ namespace projectFrameCut.Render.Rendering
                             Composed = true,
                             HasPicture = true,
                             Reusable = frame.Reusable,
+                            Hash = deferredFrameHashes[frame.Frame].Hash,
                             Width = picture.Width,
                             Height = picture.Height,
                             Bits = (int)picture.BitPerPixel,
@@ -1968,7 +2056,7 @@ namespace projectFrameCut.Render.Rendering
             }
             token.ThrowIfCancellationRequested();
 
-            Log($"[Render] All composed frames cached; restored {restoredComposites} frames. Writing video in timeline order.");
+            Log($"[Render] All composed frames cached; restored {restoredComposites} composed frames and {restoredClips} clip frames. Writing video in timeline order.");
             cache.SetStage("encoding");
             if (cover is not null) builder?.Writer.Append(cover);
             for (ulong i = StartFrame, end = (ulong)StartFrame + Duration; i < end; i++)
@@ -1993,7 +2081,11 @@ namespace projectFrameCut.Render.Rendering
 
         private IPicture ReadDeferredComposedFrame(uint frame, CancellationToken token)
         {
-            if (!deferredCache!.TryRead(deferredCache.ComposedPath(frame), token, out var info, out var picture)
+            var cache = deferredCache!;
+            bool found = restoredCompositeFrames.ContainsKey(frame)
+                ? cache.TryReadReusable(cache.ComposedPath(frame), deferredFrameHashes[frame].Hash, true, token, out var info, out var picture)
+                : cache.TryRead(cache.ComposedPath(frame), token, out info, out picture);
+            if (!found
                 || !IsComposedFrame(info, frame) || picture is null)
             {
                 picture?.Dispose();
@@ -2124,6 +2216,8 @@ namespace projectFrameCut.Render.Rendering
         {
             deferredCache?.Dispose();
             deferredCache = null;
+            deferredClipHashes.Clear();
+            deferredFrameHashes.Clear();
             IPicture[] pictures;
             lock (cacheGate)
             {

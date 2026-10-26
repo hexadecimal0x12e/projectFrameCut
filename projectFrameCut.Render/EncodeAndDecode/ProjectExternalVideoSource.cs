@@ -55,7 +55,11 @@ public class ProjectExternalVideoSource : RemoteRpcVideoSource
         return client.CreateAsync(new() { Source = source });
     }
     protected override ValueTask<ExternalVideoSourceInstance> InitializeInstanceAsync(Guid clientId, ExternalVideoSourceStateRequest state) => client!.InitializeAsync(state);
-    protected override ValueTask<ExternalVideoFrame> ReadInstanceAsync(Guid clientId, ExternalVideoSourceReadRequest request) => client!.ReadFrameAsync(request);
+    protected override ValueTask<ExternalVideoFrame> ReadInstanceAsync(Guid clientId, ExternalVideoSourceReadRequest request)
+    {
+        ProjectExternalSourceRuntime.EnsureAllowed();
+        return client!.ReadFrameAsync(request);
+    }
     protected override ValueTask ReleaseInstanceAsync(Guid clientId, ExternalVideoSourceStateRequest state) => client!.ReleaseAsync(state);
 }
 

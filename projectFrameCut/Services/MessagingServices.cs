@@ -85,6 +85,7 @@ namespace projectFrameCut.Services
         }
         private static object? InternalCallBack_GetRPCToken(object[] arg)
         {
+            ExternalRpcPipeSettings.EnsureAllowed(MauiProgram.BasicDataPath);
             if (arg.Length != 3
                 || arg[0] is not string name
                 || arg[1] is not string purpose

@@ -393,12 +393,11 @@ namespace projectFrameCut.StandaloneRender
                         [-maxPendingWriteFrames=<number>]
                         [-enableThreadAffinity=<true|false>]
                         [-reuseDynamicPreviewCache=<true|false>]
-                        [-deferredComposition=<true|false>]
+                        [--incrementalRendering=<true|false>]
                         [-vfdCompression=<None|Deflate|GZip|Brotli|Zstandard|Lzma2>] (default: Zstandard)
                         [-vfdCompressionLevel=<level>]
                           Zstandard: -131072..22 (default: 1); Lzma2: 1..10 (default: 6).
                           Deflate/GZip/Brotli: Fastest|Optimal|SmallestSize|NoCompression (default: Fastest).
-                        [-frameHashMode=<Dynamic|Static>]
                         [-renderWorkerAffinity=<cpu0,cpu1,cpu2... | cpuStart-cpuEnd>]
                         [-multiAccelerator=<true|false>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
@@ -429,7 +428,6 @@ namespace projectFrameCut.StandaloneRender
 
                     Sub-mode 'schedule' arguments:
                         [-reportDirectory=<path>] [-encoder=<exact encoder name>]
-                        [-frameHashMode=<Dynamic|Static>]                (default: Dynamic; fixed during search)
                         [-pixelFormat=<AVPixelFormat name>]             (default: AV_PIX_FMT_YUV420P)
                         [-scheduleCandidates=<number>] [-scheduleSeed=<number>] (defaults: 120, 42)
                         Uses hardware H.264 with software fallback unless -encoder is specified.
@@ -1027,14 +1025,10 @@ namespace projectFrameCut.StandaloneRender
             int maxParallelThreads = Environment.ProcessorCount;
             bool enableThreadAffinity = true;
             int[]? renderWorkerAffinityCpuIndexes = null;
-            if (!Enum.TryParse<FrameHashMode>(switches.GetValueOrDefault("frameHashMode", "Dynamic"), true, out var frameHashMode)
-                || !Enum.IsDefined(frameHashMode))
-            {
-                Log("Invalid frameHashMode: expected Dynamic or Static.", "error");
-                return 1;
-            }
+
             bool reuseDynamicPreviewCache = bool.TryParse(switches.GetOrAdd("reuseDynamicPreviewCache", "false"), out var reusePreview) && reusePreview;
-            bool deferredComposition = bool.TryParse(switches.GetValueOrDefault("deferredComposition", "false"), out var deferred) && deferred;
+            bool deferredComposition = bool.TryParse(switches.GetValueOrDefault("incrementalRendering",
+                switches.GetValueOrDefault("deferredComposition", "false")), out var deferred) && deferred;
             if (!int.TryParse(switches.GetValueOrDefault("renderAheadFrames", "0"), out var renderAheadFrames) || renderAheadFrames < 0
                 || !bool.TryParse(switches.GetValueOrDefault("enableMemoryBudget", "false"), out var enableMemoryBudget)
                 || !long.TryParse(switches.GetValueOrDefault("maxBufferedBytes", "0"), out var maxBufferedBytes) || maxBufferedBytes < 0)
@@ -1213,18 +1207,8 @@ namespace projectFrameCut.StandaloneRender
                 writer.OutputPath = path;
                 if (string.IsNullOrWhiteSpace(writer.CodecName)) writer.CodecName = outputEncoder;
                 if (requestedBitRate.HasValue) writer.BitRate = requestedBitRate.Value;
-                if (intermediateChunk)
-                {
-                    writer.BitRate = Math.Max(writer.BitRate, CalculateIntermediateBitRate(width, height, fps, bpp));
-                    writer.PreferToSpeed = true;
-                }
+                if (intermediateChunk && finalVideoBitRate.HasValue) writer.BitRate = finalVideoBitRate.Value;
                 return writer;
-            }
-
-            IVideoSource CreateChunkVideoSource(string path)
-            {
-                if (HDRDecoderContext.IsHdrVideo(path)) return new HDRDecoderContext(path);
-                return use16Bit ? new DecoderContext16Bit(path) : new DecoderContext8Bit(path);
             }
 
             var noSigInt = !Environment.GetCommandLineArgs().Contains("--noSigInt");
@@ -1293,7 +1277,6 @@ namespace projectFrameCut.StandaloneRender
                     RenderAheadFrames = renderAheadFrames,
                     EnableMemoryBudget = enableMemoryBudget,
                     MaxBufferedBytes = maxBufferedBytes,
-                    FrameHashMode = frameHashMode,
                     ReuseDynamicPreviewCache = reuseDynamicPreviewCache,
                     EnableDeferredComposition = deferredComposition,
                     VfdEncoder = vfdEncoder,
@@ -1416,7 +1399,7 @@ namespace projectFrameCut.StandaloneRender
                 }
             }
 
-            async Task<ChunkRenderCoordinator?> composeVideo(string resultPath, bool publishChunkedResult = true)
+            async Task<ChunkRenderCoordinator?> composeVideo(string resultPath)
             {
                 if (!chunkOptions.Enabled)
                 {
@@ -1430,7 +1413,7 @@ namespace projectFrameCut.StandaloneRender
                     timeline.Duration,
                     fps,
                     Path.GetExtension(resultPath),
-                    $"{width}x{height}|{fps}|{outputFormat}|{outputEncoder}|16bit={use16Bit}|bitrate={requestedBitRate}|render=clip-cache|frameHashMode={frameHashMode}|reusePreview={reuseDynamicPreviewCache}|approx={ClassicOverlayMixture.EnableApproximatePath}|effect={EffectHelper.ForcePreferToType}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}|externalSources={projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken}",
+                    $"{width}x{height}|{fps}|{outputFormat}|{outputEncoder}|16bit={use16Bit}|bitrate={requestedBitRate}|merge=streamcopy|finalBitrate={finalVideoBitRate}|render=clip-cache|reusePreview={reuseDynamicPreviewCache}|approx={ClassicOverlayMixture.EnableApproximatePath}|effect={EffectHelper.ForcePreferToType}|assetDb={GetFileFingerprintPart(switches.GetValueOrDefault("assetDbFile"))}|externalSources={projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.Current.CacheToken}",
                     maxParallelThreads,
                     chunkOptions);
                 await coordinator.InitializeAsync(cts.Token).ConfigureAwait(false);
@@ -1447,17 +1430,32 @@ namespace projectFrameCut.StandaloneRender
                         state => progress?.SetProjectProgress(state.GlobalProgress, state.EstimatedRemaining, state.FramesPerSecond),
                         cts.Token).ConfigureAwait(false);
                 }
-                string merged = await coordinator.MergeAsync(
-                    path => CreateConfiguredWriter(path, intermediateChunk: false),
-                    CreateChunkVideoSource,
-                    (mergeProgress, mergeEta) =>
+                IClip[] audioClips = [];
+                List<ISoundTrack> tracks = [];
+                try
+                {
+                    if (target == "all")
                     {
-                        if (logProgress)
-                            Console.Write($"Merging chunks by frame: {mergeProgress:P1} complete, ETA {FormatEta(mergeEta)}       \r");
-                    },
-                    cts.Token).ConfigureAwait(false);
-                if (publishChunkedResult)
+                        audioClips = JSONToIClips(timeline, assets, bpp);
+                        tracks = JSONToISoundTracks(timeline, assets).ToList();
+                        SoundTrackMetadata.AddMissingLegacyTracks(audioClips.Where(c => c.ClipType is ClipMode.AudioClip or ClipMode.VideoClip).ToArray(),
+                            tracks, message => Log(message, "warn"));
+                    }
+                    string merged = await coordinator.MergeAsync(
+                        (mergeProgress, mergeEta) =>
+                        {
+                            if (logProgress)
+                                Console.Write($"Merging chunks{(target == "all" ? " and composing audio" : "")}: {mergeProgress:P1} complete, ETA {FormatEta(mergeEta)}       \r");
+                        },
+                        cts.Token,
+                        tracks.Count > 0 ? new AudioComposer<float> { Clips = [], SoundTracks = tracks.ToArray() } : null).ConfigureAwait(false);
                     await ChunkRenderCoordinator.PublishAsync(merged, resultPath, cts.Token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    foreach (var clip in audioClips) clip.Dispose();
+                    foreach (var track in tracks) track.Dispose();
+                }
                 return coordinator;
             }
 
@@ -1601,7 +1599,7 @@ namespace projectFrameCut.StandaloneRender
             {
                 case "video":
                     var videoChunkJob = await composeVideo(outputPath);
-                    if (finalVideoBitRate is long bitRate)
+                    if (videoChunkJob is null && finalVideoBitRate is long bitRate)
                         VideoResizer.ReencodeToBitRate(outputPath, outputPath, outputEncoder, bitRate, cts.Token);
                     if (videoChunkJob is not null && !chunkOptions.KeepChunkFiles) videoChunkJob.Cleanup();
                     break;
@@ -1609,47 +1607,35 @@ namespace projectFrameCut.StandaloneRender
                     composeAudio(outputPath);
                     break;
                 case "all":
+                    if (chunkOptions.Enabled)
+                    {
+                        var job = await composeVideo(outputPath);
+                        if (job is not null && !chunkOptions.KeepChunkFiles) job.Cleanup();
+                        break;
+                    }
                     var outputDir = switches.TryGetValue("outputIntermediatePath", out var iPath) ? iPath : Path.GetDirectoryName(outputPath);
                     outputDir ??= Environment.CurrentDirectory;
                     var ext = Path.GetExtension(outputPath);
                     string vidOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
                     string audOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_Intermediate_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
-                    var allChunkJob = await composeVideo(vidOutputPath, publishChunkedResult: !chunkOptions.Enabled);
-                    if (allChunkJob is not null) vidOutputPath = allChunkJob.MergedPath;
+                    await composeVideo(vidOutputPath);
                     composeAudio(audOutputPath);
                     Console.WriteLine("Composing audio and video... this may take a few seconds.");
                     if (!File.Exists(audOutputPath) && !finalVideoBitRate.HasValue)
                     {
-                        if (allChunkJob is null) File.Move(vidOutputPath, outputPath, overwrite: true);
-                        else await ChunkRenderCoordinator.PublishAsync(vidOutputPath, outputPath, cts.Token).ConfigureAwait(false);
+                        File.Move(vidOutputPath, outputPath, overwrite: true);
                     }
-                    else if (allChunkJob is null)
+                    else
                     {
                         VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, outputPath, true,
                             finalVideoBitRate: finalVideoBitRate, videoEncoder: outputEncoder, cancellationToken: cts.Token);
                     }
-                    else
-                    {
-                        string outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath)) ?? Environment.CurrentDirectory;
-                        string atomicOutput = Path.Combine(outputDirectory, $".{Path.GetFileNameWithoutExtension(outputPath)}.{Guid.NewGuid():N}{Path.GetExtension(outputPath)}");
-                        try
-                        {
-                            VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, atomicOutput, true,
-                                finalVideoBitRate: finalVideoBitRate, videoEncoder: outputEncoder, cancellationToken: cts.Token);
-                            File.Move(atomicOutput, outputPath, overwrite: true);
-                        }
-                        finally
-                        {
-                            if (File.Exists(atomicOutput)) File.Delete(atomicOutput);
-                        }
-                    }
                     try
                     {
-                        if (allChunkJob is null) File.Delete(vidOutputPath);
+                        File.Delete(vidOutputPath);
                         File.Delete(audOutputPath);
                     }
                     catch { }
-                    if (allChunkJob is not null && !chunkOptions.KeepChunkFiles) allChunkJob.Cleanup();
                     break;
                 default:
                     Log($"ERROR: Unknown target '{target}'.");
@@ -1695,7 +1681,8 @@ namespace projectFrameCut.StandaloneRender
                     encoder = new(compression, compressionLevel: codecLevel);
                     break;
             }
-            if (bool.TryParse(switches.GetValueOrDefault("deferredComposition", "false"), out var deferred) && deferred)
+            if (bool.TryParse(switches.GetValueOrDefault("incrementalRendering",
+                switches.GetValueOrDefault("deferredComposition", "false")), out var deferred) && deferred)
                 Log($"[Render] VFD compression={compression}, level={level ?? "none"}.");
             return encoder;
         }
@@ -1738,17 +1725,6 @@ namespace projectFrameCut.StandaloneRender
             };
         }
 
-        private static long CalculateIntermediateBitRate(
-            int width,
-            int height,
-            int frameRate,
-            IPicture.PicturePixelMode pixelMode)
-        {
-            double bitsPerPixel = pixelMode == IPicture.PicturePixelMode.UShortPicture ? 0.5 : 0.3;
-            double estimate = (double)width * height * frameRate * bitsPerPixel;
-            return (long)Math.Clamp(estimate, 12_000_000d, 300_000_000d);
-        }
-
         private static string GetFileFingerprintPart(string? path)
         {
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return string.Empty;
@@ -1758,12 +1734,7 @@ namespace projectFrameCut.StandaloneRender
 
         private static async Task<int> GoBenchSchedule(ConcurrentDictionary<string, string> switches)
         {
-            if (!Enum.TryParse<FrameHashMode>(switches.GetValueOrDefault("frameHashMode", "Dynamic"), true, out var frameHashMode)
-                || !Enum.IsDefined(frameHashMode))
-            {
-                Log("Invalid frameHashMode: expected Dynamic or Static.", "error");
-                return 1;
-            }
+
             if (!int.TryParse(switches.GetValueOrDefault("scheduleCandidates", "120"), out var candidates) || candidates < 1
                 || !int.TryParse(switches.GetValueOrDefault("scheduleSeed", "42"), out var seed))
             {
@@ -1803,7 +1774,6 @@ namespace projectFrameCut.StandaloneRender
                         ? [] : AcceleratorsManager.AcceleratorsForRendering.Select(a => a.Name).ToArray(),
                     CandidateCount = candidates,
                     Seed = seed,
-                    FrameHashMode = frameHashMode,
                 }, cts.Token, renderer => !Environment.GetCommandLineArgs().Contains("--nolog")
                     ? new RenderProgressDisplay(() => [renderer]) : null);
                 return 0;

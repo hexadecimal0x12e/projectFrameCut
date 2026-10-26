@@ -122,7 +122,7 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
         timing?.Stage("native frame mapped");
         try
         {
-            if (frame is not null && frame.ScRgb is null && frame.Png is null)
+            if (frame is not null && frame.ScRgb is not { IsCurrent: true } && frame.Png is null)
             {
                 timing?.Stage("materialization queued");
                 frame = await Task.Run(() =>
@@ -172,24 +172,33 @@ public sealed class HdrPreviewViewHandler : ViewHandler<HdrPreviewView, Platform
         try
         {
             var materialized = frame.ScRgb ?? throw new InvalidOperationException("Preview scRGB data was not prepared.");
-            if (!IsCurrent(version)) return;
+            lock (materialized.PixelsGate)
+            {
+                if (!IsCurrent(version)) return;
+                if (!materialized.IsCurrent)
+                {
+                    _hasFrameRequest = false;
+                    UpdateFrame(frame with { ScRgb = null, Png = null });
+                    return;
+                }
 
-            _device ??= CanvasDevice.GetSharedDevice();
-            if (!_device.IsPixelFormatSupported(CanvasDirectXPixelFormat.R16G16B16A16Float))
-                throw new NotSupportedException("The active Direct3D device does not support R16G16B16A16_FLOAT.");
-            _presentTiming?.Stage("graphics device ready");
+                _device ??= CanvasDevice.GetSharedDevice();
+                if (!_device.IsPixelFormatSupported(CanvasDirectXPixelFormat.R16G16B16A16Float))
+                    throw new NotSupportedException("The active Direct3D device does not support R16G16B16A16_FLOAT.");
+                _presentTiming?.Stage("graphics device ready");
 
-            if (materialized.HasTransparency)
-                PresentTransparentFrame(materialized);
-            else
-                PresentOpaqueHdrFrame(materialized);
+                if (materialized.HasTransparency)
+                    PresentTransparentFrame(materialized);
+                else
+                    PresentOpaqueHdrFrame(materialized);
 
-            if (!IsCurrent(version)) return;
-            ShowError(null);
-            _fallback.Visibility = Visibility.Collapsed;
-            _presentationConfigured = true;
-            _presentTiming?.Stage("presentation configured");
-            if (_frameSubmitted) _presentTiming?.ContentReady("HDR content ready");
+                if (!IsCurrent(version)) return;
+                ShowError(null);
+                _fallback.Visibility = Visibility.Collapsed;
+                _presentationConfigured = true;
+                _presentTiming?.Stage("presentation configured");
+                if (_frameSubmitted) _presentTiming?.ContentReady("HDR content ready");
+            }
         }
         catch (Exception ex)
         {

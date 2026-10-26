@@ -3,8 +3,8 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.EncodeAndDecode;
-using projectFrameCut.Render.RenderAPIBase.Sources;
 
 namespace projectFrameCut.Render.Rendering;
 
@@ -212,58 +212,22 @@ public sealed class ChunkRenderCoordinator
     }
 
     public async Task<string> MergeAsync(
-        Func<string, IVideoWriter> writerFactory,
-        Func<string, IVideoSource> videoSourceFactory,
         Action<double, TimeSpan>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        AudioComposer<float>? audioComposer = null)
     {
-        ArgumentNullException.ThrowIfNull(writerFactory);
-        ArgumentNullException.ThrowIfNull(videoSourceFactory);
         if (_manifest is null) await InitializeAsync(cancellationToken).ConfigureAwait(false);
         if (_manifest.Chunks.Any(chunk => chunk.Status != ChunkStatus.Completed))
             throw new InvalidOperationException("All chunks must be completed before merging.");
 
+        cancellationToken.ThrowIfCancellationRequested();
         if (File.Exists(MergedPath)) File.Delete(MergedPath);
         try
         {
-            using IVideoWriter writer = writerFactory(MergedPath);
-            writer.Initialize();
-            ulong written = 0;
-            var mergeStopwatch = Stopwatch.StartNew();
-            foreach (var chunk in _manifest.Chunks.OrderBy(chunk => chunk.Index))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                string chunkPath = ResolveChunkPath(chunk.RelativePath);
-                using IVideoSource source = videoSourceFactory(chunkPath);
-                if (source.Width != writer.Width || source.Height != writer.Height)
-                    throw new InvalidDataException($"Chunk {chunk.Index} is {source.Width}x{source.Height}, expected {writer.Width}x{writer.Height}.");
-
-                for (uint localFrame = 0; localFrame < chunk.Duration; localFrame++)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    IPicture frame = source is HDRDecoderContext hdrSource
-                        ? hdrSource.GetHDRFrame(localFrame)
-                        : source.GetFrame(localFrame);
-                    try
-                    {
-                        writer.Append(frame);
-                    }
-                    finally
-                    {
-                        frame.Dispose();
-                    }
-                    written++;
-                    double mergeProgress = Math.Clamp((double)written / _totalFrames, 0, 1);
-                    double remainingSeconds = mergeStopwatch.Elapsed.TotalSeconds * (_totalFrames - written) / written;
-                    TimeSpan estimatedRemaining = double.IsFinite(remainingSeconds) && remainingSeconds <= TimeSpan.MaxValue.TotalSeconds
-                        ? TimeSpan.FromSeconds(Math.Max(0, remainingSeconds))
-                        : TimeSpan.MaxValue;
-                    progress?.Invoke(mergeProgress, estimatedRemaining);
-                }
-            }
-            writer.Finish();
-            if (written != _totalFrames)
-                throw new InvalidDataException($"Merged video contains {written} frames, expected {_totalFrames}.");
+            var chunks = _manifest.Chunks.OrderBy(chunk => chunk.Index)
+                .Select(chunk => (Path: ResolveChunkPath(chunk.RelativePath), chunk.Duration)).ToArray();
+            await Task.Run(() => VideoChunkMerger.Merge(chunks, MergedPath, _frameRate, _totalFrames,
+                audioComposer, progress, cancellationToken), cancellationToken).ConfigureAwait(false);
         }
         catch
         {

@@ -759,9 +759,8 @@ public partial class RenderPage : ContentPage
             GcOption = int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var gcOption) ? gcOption : 0,
             EnableThreadAffinity = SettingsManager.IsBoolSettingTrueOrDefault("render_enableThreadAffinity", true),
             WorkerCPUCoreIndexs = RenderSchedulingSettings.WorkerCPUCoreIndexs,
-            FrameHashMode = RenderHashSettings.Mode,
             ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
-            EnableDeferredComposition = SettingsManager.IsBoolSettingTrueOrDefault("render_enableDeferredComposition", false),
+            EnableDeferredComposition = vm.IncrementalRendering,
             ChunkRender = chunkOptions.Enabled && !writeToVoid,
             ChunkFrames = chunkOptions.ChunkFrames,
             ChunkSeconds = chunkOptions.ChunkSeconds,
@@ -793,12 +792,8 @@ public partial class RenderPage : ContentPage
             while (job.State is RenderJobState.Queued or RenderJobState.Running)
             {
                 _cts.Token.ThrowIfCancellationRequested();
-                ApplyCliRenderStage(job);
-                await SubProgress.ProgressTo(job.Progress, 100, Easing.Linear);
+                await ApplyRenderJobStatusAsync(job);
                 await RefreshCliPreviewAsync();
-                var eta = TimeSpan.FromTicks(Math.Max(0, job.EstimatedRemainingTicks));
-                var fpsText = job.CurrentFps > 0 ? $", {job.CurrentFps:N2} FPS" : string.Empty;
-                SubProgLabel.Text = $"{_currentSubProgText} ({job.Progress:P1}, ETA {FormatRenderEta(eta)}{fpsText})";
                 await Task.Delay(500, _cts.Token);
                 job = await TryGetCliRenderJobStatusAsync(job.JobId, _cts.Token) ?? job;
             }
@@ -964,6 +959,8 @@ public partial class RenderPage : ContentPage
     {
         await Dispatcher.DispatchAsync(async () =>
         {
+            if (UpdateHashPreparationProgress(job.HashPreparationCompleted,
+                job.State is RenderJobState.Queued or RenderJobState.Running ? job.HashPreparationTotal : 0)) return;
             ApplyCliRenderStage(job);
             await SubProgress.ProgressTo(Math.Clamp(job.Progress, 0, 1), 100, Easing.Linear);
             var eta = TimeSpan.FromTicks(Math.Max(0, job.EstimatedRemainingTicks));
@@ -1452,11 +1449,10 @@ public partial class RenderPage : ContentPage
                 MaxBufferedBytes = RenderSchedulingSettings.MaxBufferedBytes,
                 EnableThreadAffinity = EnableThreadAffinity,
                 WorkerCPUCoreIndexs = CPUAffinityOverride,
-                FrameHashMode = RenderHashSettings.Mode,
                 ReuseDynamicPreviewCache = SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false),
-                EnableDeferredComposition = SettingsManager.IsBoolSettingTrueOrDefault("render_enableDeferredComposition", false),
+                EnableDeferredComposition = vm.IncrementalRendering,
                 ResumeInterruptedRender = SettingsManager.IsBoolSettingTrueOrDefault("render_chunkResume", true),
-                RenderResumeSignature = SettingsManager.IsBoolSettingTrueOrDefault("render_enableDeferredComposition", false)
+                RenderResumeSignature = vm.IncrementalRendering
                     ? FrameHashHelper.CreateRenderResumeSignature(_project, draftSrc, Asset.AssetDatabase.Assets.Values) : null,
                 DynamicPreviewCacheProjectRoot = _workingPath,
                 UseHDR = ProjectUsesHDR,
@@ -1470,6 +1466,13 @@ public partial class RenderPage : ContentPage
                 AudioFilePath = audioPath
             };
 
+            renderer.OnHashPreparationProgressChanged += (completed, total) =>
+                Dispatcher.Dispatch(() =>
+                {
+                    if (UpdateHashPreparationProgress(completed, total)) return;
+                    SubProgress.Progress = 0;
+                    SubProgLabel.Text = _currentSubProgText;
+                });
             renderer.OnProgressChanged += (p, etr) =>
             {
                 string fpsStr = renderer.CurrentFps > 0 ? $"{renderer.CurrentFps:n2}" : "--";
@@ -2003,6 +2006,18 @@ public partial class RenderPage : ContentPage
 #endif
     }
 
+    private bool UpdateHashPreparationProgress(long completed, long total)
+    {
+        if (total <= 0) return false;
+        SubProgress.Progress = Math.Clamp((double)completed / total, 0, 1);
+        SubProgLabel.Text = $"{Localized.RenderPage_HashPreparationProgress} ({completed:N0}/{total:N0}, {SubProgress.Progress:P1})";
+        if (ScreenSaverOverlay.IsVisible)
+        {
+            HintLabel.Text = $"{Localized.RenderPage_ClickToShowUI}{Environment.NewLine}{SubProgLabel.Text}";
+        }
+        return true;
+    }
+
     void ApplyCliRenderStage(RenderJob job)
     {
         if (string.IsNullOrWhiteSpace(job.Stage) || job.Stage == _currentCliRenderStage) return;
@@ -2286,9 +2301,8 @@ public partial class RenderPage : ContentPage
         args.Add($"-allowWorkerOversubscription={SettingsManager.IsBoolSettingTrueOrDefault("render_allowWorkerOversubscription", true)}");
         args.Add($"-preferHwAccelEncoder={useHardwareAcceleration}");
         if (finalVideoBitRate is long bitRate) args.Add($"-finalVideoBitRate={bitRate}");
-        args.Add($"-frameHashMode={RenderHashSettings.Mode}");
         args.Add($"-reuseDynamicPreviewCache={SettingsManager.IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false)}");
-        args.Add($"-deferredComposition={SettingsManager.IsBoolSettingTrueOrDefault("render_enableDeferredComposition", false)}");
+        args.Add($"--incrementalRendering={((RenderPageViewModel)BindingContext).IncrementalRendering}");
 
         if (int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var gcOption) && gcOption is >= 0 and <= 2)
         {
@@ -2320,10 +2334,10 @@ public partial class RenderPage : ContentPage
         return "render  " + string.Join(" ", args.Select(s => $"\"{s}\""));
     }
 
-    private static ChunkRenderOptions GetConfiguredChunkRenderOptions(int frameRate)
+    private ChunkRenderOptions GetConfiguredChunkRenderOptions(int frameRate)
     {
         bool enabled = SettingsManager.IsBoolSettingTrueOrDefault("render_enableChunkRender", false)
-            && !SettingsManager.IsBoolSettingTrueOrDefault("render_enableDeferredComposition", false);
+            && !((RenderPageViewModel)BindingContext).IncrementalRendering;
         string mode = SettingsManager.GetSetting("render_chunkSizeMode", "frames");
         uint? frames = null;
         double? seconds = null;
@@ -2359,6 +2373,8 @@ public class RenderPageViewModel : INotifyPropertyChanged
 
     bool _hdrEnabled;
     public bool HDREnabled => _hdrEnabled;
+    bool _incrementalRendering;
+    public bool IncrementalRendering { get => _incrementalRendering; set => SetProperty(ref _incrementalRendering, value); }
     bool _preserveAlpha;
     public bool PreserveAlpha { get => _preserveAlpha; set { if (SetProperty(ref _preserveAlpha, value)) OnPropertyChanged(nameof(UseAlphaBrightnessPackage)); } }
     bool _preserveHdrBrightness;

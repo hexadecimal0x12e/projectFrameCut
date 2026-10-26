@@ -68,23 +68,16 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 
             var popupFrame = new Border
             {
-                IsVisible = false,
                 StrokeShape = new RoundRectangle { CornerRadius = 8 },
                 BackgroundColor = Microsoft.Maui.Graphics.Color.FromArgb("#2D2D2D"),
                 Padding = new Thickness(8),
                 Content = new Label { Text = infoText, TextColor = Microsoft.Maui.Graphics.Colors.White }
             };
 
-            var tap = new TapGestureRecognizer();
-            tap.Tapped += (s, e) =>
-            {
-                popupFrame.IsVisible = !popupFrame.IsVisible;
-            };
-            infoFrame.GestureRecognizers.Add(tap);
-
-            return new VerticalStackLayout
+            var layout = new VerticalStackLayout
             {
                 Spacing = 2,
+                VerticalOptions = LayoutOptions.Center,
                 Children =
                 {
                     new HorizontalStackLayout
@@ -92,10 +85,17 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
                         Spacing = 8,
                         VerticalOptions = LayoutOptions.Center,
                         Children = { mainLabel, infoFrame }
-                    },
-                    popupFrame
+                    }
                 }
             };
+            var tap = new TapGestureRecognizer();
+            tap.Tapped += (s, e) =>
+            {
+                if (layout.Children.Contains(popupFrame)) layout.Children.Remove(popupFrame);
+                else layout.Children.Add(popupFrame);
+            };
+            infoFrame.GestureRecognizers.Add(tap);
+            return layout;
         }
 
         public static implicit operator InfoSingleLineLabel(string text) => new InfoSingleLineLabel(text, "");

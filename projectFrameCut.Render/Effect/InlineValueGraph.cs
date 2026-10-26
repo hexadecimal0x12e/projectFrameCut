@@ -191,7 +191,7 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
                 if (effect is IMultipleOutputEffect multiple)
                 {
                     var outputs = (FrameHashContext.Current is { } hashes
-                        ? hashes.ComputeEffect(effect, context, () => EffectPictureProcessing.Compute(effect, context, values), node.Provider.IsDeterministic, node.Provider)
+                        ? hashes.ComputeEffect(effect, context, () => EffectPictureProcessing.Compute(effect, context, values), node.Provider.IsDeterministic, node.Provider, Array.IndexOf(node.Effects, effect))
                         : EffectPictureProcessing.Compute(effect, context, values)) as IReadOnlyDictionary<string, object?>
                         ?? throw new InvalidOperationException($"Provider {node.Provider.Id} returned no output map.");
                     foreach (var picture in outputs.Values.OfType<IPicture>()) pictures.Add(picture);
@@ -200,7 +200,7 @@ internal sealed class InlineValueGraph(IReadOnlyDictionary<Guid, IEffectProvider
                     return outputs;
                 }
                 value = FrameHashContext.Current is { } frameHashes
-                    ? frameHashes.ComputeEffect(effect, context, () => EffectPictureProcessing.Compute(effect, context, values), node.Provider.IsDeterministic, node.Provider)
+                    ? frameHashes.ComputeEffect(effect, context, () => EffectPictureProcessing.Compute(effect, context, values), node.Provider.IsDeterministic, node.Provider, Array.IndexOf(node.Effects, effect))
                     : EffectPictureProcessing.Compute(effect, context, values);
                 if (value is IPicture p) pictures.Add(p);
                 ValueProviderFrameContext.NodeObserver?.Invoke(effect, value);

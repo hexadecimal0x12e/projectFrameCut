@@ -52,7 +52,6 @@ public partial class RenderSettingPage : ContentPage
     Dictionary<string, string> OutputCacheBehaviors = new()
     {
         { SettingLocalizedResources.Render_OutputCacheBehavior_Chunk, "chunk" },
-        { SettingLocalizedResources.Render_OutputCacheBehavior_Frame, "frame" },
         { SettingLocalizedResources.Render_OutputCacheBehavior_Disabled, "disabled" },
     };
 
@@ -60,12 +59,6 @@ public partial class RenderSettingPage : ContentPage
     {
         { SettingLocalizedResources.Render_ChunkRender_SizeMode_Frames, "frames" },
         { SettingLocalizedResources.Render_ChunkRender_SizeMode_Seconds, "seconds" },
-    };
-
-    Dictionary<string, string> FrameHashModes = new()
-    {
-        { SettingLocalizedResources.Render_FrameHashMode_Dynamic, "Dynamic" },
-        { SettingLocalizedResources.Render_FrameHashMode_Static, "Static" },
     };
 
     string[] resolutions = new[] { "1280x720", "1920x1080", "2560x1440", "3840x2160", "7680x4320" };
@@ -144,10 +137,7 @@ public partial class RenderSettingPage : ContentPage
     private void BuildPPB()
     {
         var scrollY = (Content as ScrollView)?.ScrollY ?? 0;
-        string cacheBehavior = IsBoolSettingTrueOrDefault("render_enableDeferredComposition", false) ? "frame"
-            : IsBoolSettingTrueOrDefault("render_enableChunkRender", false) ? "chunk" : "disabled";
-        if (cacheBehavior == "frame" && IsBoolSettingTrueOrDefault("render_enableChunkRender", false))
-            WriteSetting("render_enableChunkRender", "False");
+        string cacheBehavior = IsBoolSettingTrueOrDefault("render_enableChunkRender", false) ? "chunk" : "disabled";
         var isCPUBigLittleCore = ThreadAffinityHelper.GetCpuCoreGroups().Count > 1;
         if (!isCPUBigLittleCore && !Settings.ContainsKey("render_enableThreadAffinity")) WriteSetting("render_enableThreadAffinity", "False");
         var suggestedMaxPendingFrame = ((int)(Environment.WorkingSet / ((1920 * 1080 * 3) + 32)) / 2 + 5) / 10 * 10;
@@ -163,8 +153,7 @@ public partial class RenderSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderingBehavior, SettingLocalizedResources.Render_RenderingBehavior_Subtitle), null)
             .AppendWhen(DeviceInfo.Idiom == DeviceIdiom.Desktop, p => p.AddPicker("render_DefaultPostRenderAction", Localized.RenderPage_PostRenderAction, RenderPageViewModel.PostRenderActionNames.Keys.ToArray(), RenderPageViewModel.PostRenderActionNames.ReverseLookup(RenderPageViewModel.GetPlatformPostRenderAction(Enum.TryParse<PostRenderAction>(GetSetting("render_DefaultPostRenderAction", "None"), out var postRenderAction) ? postRenderAction : PostRenderAction.None), Localized.RenderPage_PostRenderAction_None), null))
             .AddPicker("render_preferredAntiAliasMode", SettingLocalizedResources.Render_AntiAliasMode, AntiAliasModeMapping.Keys.ToArray(), AntiAliasModeMapping.ReverseLookup(GetSetting("render_preferredAntiAliasMode", "ssaa4x"), "SSAA 4x"), null)
-            .AddPicker("render_FrameHashMode", SettingLocalizedResources.Render_FrameHashMode, FrameHashModes.Keys.ToArray(), FrameHashModes.ReverseLookup(RenderHashSettings.Mode.ToString(), SettingLocalizedResources.Render_FrameHashMode_Dynamic))
-            .AddCheckbox("render_chunkResume", SettingLocalizedResources.Render_ChunkRender_Resume, IsBoolSettingTrueOrDefault("render_chunkResume", true), p => p.IsEnabled = cacheBehavior != "disabled")
+            .AddCheckbox("render_chunkResume", SettingLocalizedResources.Render_ChunkRender_Resume, IsBoolSettingTrueOrDefault("render_chunkResume", true))
             .AddCheckbox("render_reuseDynamicPreviewCache", SettingLocalizedResources.Render_ReuseDynamicPreviewCache, IsBoolSettingTrueOrDefault("render_reuseDynamicPreviewCache", false))
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_HwAccelOption, SettingLocalizedResources.Render_HwAccelOption_Desc))
@@ -372,10 +361,6 @@ public partial class RenderSettingPage : ContentPage
                         BuildPPB();
                         return;
                     }
-                case "render_FrameHashMode":
-                    WriteSetting(args.Id, FrameHashModes.GetValueOrDefault(args.Value?.ToString() ?? "", "Dynamic"));
-                    LogDiagnostic($"Frame hash mode changed to {RenderHashSettings.Mode}.");
-                    return;
                 case "render_renderAheadFrames":
                 case "render_maxBufferedMiB":
                     if (long.TryParse(args.Value?.ToString(), out var number) && number >= 0
@@ -474,7 +459,6 @@ public partial class RenderSettingPage : ContentPage
                     if (args.Value is string selected && OutputCacheBehaviors.TryGetValue(selected, out var behavior))
                     {
                         WriteSetting("render_enableChunkRender", (behavior == "chunk").ToString());
-                        WriteSetting("render_enableDeferredComposition", (behavior == "frame").ToString());
                         BuildPPB();
                     }
                     break;

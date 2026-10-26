@@ -17,6 +17,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
         /// </summary>
         public static bool Enabled { get; set; } = true;
 
+        public static bool AllowBeDeterministic { get; set; } = true;
+
         private readonly string _url;
         private AVFormatContext* _fmt = null;
         private AVCodecContext* _codec = null;
@@ -49,7 +51,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public uint Index { get; set; } = 0;
         public string[] PreferredExtension => []; //no extension to avoid auto-matching
         public string TypeName => "HttpDecoderContext";
-
+        public bool IsDeterministic => AllowBeDeterministic;
         public int? ResultBitPerPixel => 8;
         public bool AllowCachingResult => false;
 

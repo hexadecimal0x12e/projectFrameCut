@@ -417,8 +417,7 @@ internal sealed class RenderServerProcessManager : IAsyncDisposable
                 Add("enableThreadAffinity", options.EnableThreadAffinity.ToString());
                 Add("coreAffinityOverride", string.Join(",", options.WorkerCPUCoreIndexs));
                 Add("reuseDynamicPreviewCache", options.ReuseDynamicPreviewCache.ToString());
-                Add("deferredComposition", options.EnableDeferredComposition.ToString());
-                Add("frameHashMode", options.FrameHashMode.ToString());
+                Add("incrementalRendering", options.EnableDeferredComposition.ToString());
                 Add("preferHwAccelDecoder", options.UseHwAccelDecoder.ToString());
                 Add("preferHwAccelEncoder", options.UseHwAccelEncoder.ToString());
                 Add("chunkRender", options.ChunkRender.ToString());
@@ -787,7 +786,7 @@ internal sealed record CliRenderProcessOptions
     public int GcOption { get; init; }
     public bool EnableThreadAffinity { get; init; } = true;
     public int[] WorkerCPUCoreIndexs { get; init; } = [];
-    public FrameHashMode FrameHashMode { get; init; } = FrameHashMode.Dynamic;
+
     public bool ReuseDynamicPreviewCache { get; init; }
     public bool EnableDeferredComposition { get; init; }
     public bool ChunkRender { get; init; }

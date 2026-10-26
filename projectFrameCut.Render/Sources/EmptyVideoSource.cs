@@ -4,6 +4,8 @@ namespace projectFrameCut.Render.Sources;
 
 public sealed class EmptyVideoSource : IVideoSource
 {
+    public bool IsDeterministic => true;
+
     private const string PathPrefix = "#" + nameof(EmptyVideoSource) + ",";
 
     public EmptyVideoSource(int width = 1, int height = 1)

@@ -20,16 +20,15 @@ public sealed record RenderScheduleOptions
     public string[] Accelerators { get; init; } = [];
     public int Seed { get; init; } = 42;
     public int CandidateCount { get; init; } = 120;
-    public FrameHashMode FrameHashMode { get; init; } = FrameHashMode.Dynamic;
 }
 
 public sealed record RenderScheduleConfiguration(
     int MaxThreads, bool AllowWorkerOversubscription, int RenderAheadFrames,
     bool EnableThreadAffinity, bool EnableMemoryBudget, long MaxBufferedBytes,
-    FrameHashMode FrameHashMode, bool EnableDeferredComposition)
+    bool EnableDeferredComposition)
 {
     public string ToArguments() => FormattableString.Invariant(
-        $"-maxParallelThreads={MaxThreads} -allowWorkerOversubscription={AllowWorkerOversubscription} -renderAheadFrames={RenderAheadFrames} -enableThreadAffinity={EnableThreadAffinity} -enableMemoryBudget={EnableMemoryBudget} -maxBufferedBytes={MaxBufferedBytes} -frameHashMode={FrameHashMode} -deferredComposition={EnableDeferredComposition}");
+        $"-maxParallelThreads={MaxThreads} -allowWorkerOversubscription={AllowWorkerOversubscription} -renderAheadFrames={RenderAheadFrames} -enableThreadAffinity={EnableThreadAffinity} -enableMemoryBudget={EnableMemoryBudget} -maxBufferedBytes={MaxBufferedBytes} -deferredComposition={EnableDeferredComposition}");
 }
 
 public sealed record RenderScheduleRun(
@@ -84,14 +83,13 @@ public static class RenderScheduleBenchmark
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(options.OutputDirectory);
         if (options.CandidateCount < 1) throw new ArgumentOutOfRangeException(nameof(options.CandidateCount));
-        if (!Enum.IsDefined(options.FrameHashMode)) throw new ArgumentOutOfRangeException(nameof(options.FrameHashMode));
         string root = Path.GetFullPath(options.OutputDirectory);
         Directory.CreateDirectory(root);
         string job = Path.Combine(root, $"schedule-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}");
         Directory.CreateDirectory(job);
         var report = new RenderScheduleReport { Options = options };
         var baseline = Normalize(new(Environment.ProcessorCount, true, Math.Clamp(Environment.ProcessorCount, 2, 8),
-            true, false, RenderMemoryBudget.DefaultBytes, options.FrameHashMode, false));
+            true, false, RenderMemoryBudget.DefaultBytes, false));
         var random = new Random(options.Seed);
         var candidates = CreateCandidates(baseline).ToList();
         random.Shuffle(CollectionsMarshal.AsSpan(candidates));
@@ -260,7 +258,6 @@ public static class RenderScheduleBenchmark
                 EnableThreadAffinity = c.EnableThreadAffinity,
                 EnableMemoryBudget = c.EnableMemoryBudget,
                 MaxBufferedBytes = c.MaxBufferedBytes,
-                FrameHashMode = c.FrameHashMode,
                 EnableDeferredComposition = c.EnableDeferredComposition,
                 ResumeInterruptedRender = false,
                 ReuseDynamicPreviewCache = false,
@@ -345,7 +342,7 @@ public static class RenderScheduleBenchmark
                         foreach (bool limited in new[] { false, true })
                             foreach (long budget in budgets)
                             {
-                                var c = Normalize(new(t, soft, ahead, affinity, limited, budget, baseline.FrameHashMode, false));
+                                var c = Normalize(new(t, soft, ahead, affinity, limited, budget, false));
                                 if (seen.Add(c)) yield return c;
                             }
     }
@@ -363,13 +360,13 @@ public static class RenderScheduleBenchmark
         File.WriteAllText(Path.Combine(directory, "report.json.tmp"), JsonSerializer.Serialize(report, jsonOptions));
         File.Move(Path.Combine(directory, "report.json.tmp"), Path.Combine(directory, "report.json"), true);
         using var csv = new StreamWriter(Path.Combine(directory, "runs.csv"), false, new UTF8Encoding(true));
-        csv.WriteLine("Index,Stage,Encoder,MaxThreads,AllowWorkerOversubscription,RenderAheadFrames,EnableThreadAffinity,EnableMemoryBudget,MaxBufferedBytes,FrameHashMode,EnableDeferredComposition,Frames,Seconds,Fps,PeakWorkingSetBytes,Error");
+        csv.WriteLine("Index,Stage,Encoder,MaxThreads,AllowWorkerOversubscription,RenderAheadFrames,EnableThreadAffinity,EnableMemoryBudget,MaxBufferedBytes,EnableDeferredComposition,Frames,Seconds,Fps,PeakWorkingSetBytes,Error");
         foreach (var r in report.Runs)
         {
             var c = r.Configuration;
             csv.WriteLine(string.Join(",", new object?[] { r.Index, r.Stage, Escape(r.Encoder), c.MaxThreads,
                 c.AllowWorkerOversubscription, c.RenderAheadFrames, c.EnableThreadAffinity, c.EnableMemoryBudget,
-                c.MaxBufferedBytes, c.FrameHashMode, c.EnableDeferredComposition, r.Frames,
+                c.MaxBufferedBytes, c.EnableDeferredComposition, r.Frames,
                 r.Seconds.ToString("R", CultureInfo.InvariantCulture), r.Fps.ToString("R", CultureInfo.InvariantCulture),
                 r.PeakWorkingSetBytes, Escape(r.Error ?? "") }));
         }

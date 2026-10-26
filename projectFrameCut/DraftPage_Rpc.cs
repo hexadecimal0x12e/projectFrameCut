@@ -33,6 +33,23 @@ public partial class DraftPage
     private IRenderClient? _guiClient;
 
     #region external RPC
+    private bool? externalRpcUiAllowed;
+    private int externalRpcMenuIndex = -1;
+
+    private void UpdateExternalRpcUi(bool allowed)
+    {
+        if (externalRpcUiAllowed == allowed) return;
+        externalRpcUiAllowed = allowed;
+        if (externalRpcMenuIndex < 0) externalRpcMenuIndex = ProjectNameMenuBarItem.IndexOf(CreateRpcPipeMenuItem);
+        if (allowed)
+        {
+            if (!ProjectNameMenuBarItem.Contains(CreateRpcPipeMenuItem))
+                ProjectNameMenuBarItem.Insert(Math.Clamp(externalRpcMenuIndex, 0, ProjectNameMenuBarItem.Count), CreateRpcPipeMenuItem);
+        }
+        else ProjectNameMenuBarItem.Remove(CreateRpcPipeMenuItem);
+        if (QuickCommands.Count > 0) RefreshQuickCommands();
+    }
+
     private async Task<Guid> EnsureGuiRpcSessionAsync(IRenderClient client, CancellationToken ct)
     {
         await _guiRegistrationGate.WaitAsync(ct).ConfigureAwait(false);
@@ -497,11 +514,41 @@ public partial class DraftPage
     {
         IRenderClient? checkedClient = null;
         var supported = false;
+        bool? lastAllowed = null;
+        bool? lastRpcSourcesAllowed = null;
+        bool? lastAssemblySourcesAllowed = null;
         while (!ct.IsCancellationRequested)
         {
             try
             {
                 await Task.Delay(1000, ct).ConfigureAwait(false);
+                var sources = ExternalSourceSettings.Load(MauiProgram.BasicDataPath);
+                if (lastRpcSourcesAllowed != sources.AllowRpcSources || lastAssemblySourcesAllowed != sources.AllowAssemblySources)
+                {
+                    var changed = lastRpcSourcesAllowed.HasValue;
+                    var assemblyChanged = lastAssemblySourcesAllowed.HasValue && lastAssemblySourcesAllowed != sources.AllowAssemblySources;
+                    await MainThread.InvokeOnMainThreadAsync(async () =>
+                    {
+                        if (AlreadyDisappeared || AddClipView is null) return;
+                        if (assemblyChanged) await ProjectExternalSourceService.ApplyAsync(WorkingPath);
+                        await AddClipView.RefreshExternalSourcesAsync();
+                        if (changed) await RefreshPreviewFromCurrentProviderAsync();
+                    });
+                    lastRpcSourcesAllowed = sources.AllowRpcSources;
+                    lastAssemblySourcesAllowed = sources.AllowAssemblySources;
+                }
+                var allowed = ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath).AllowExternalRPC;
+                if (lastAllowed != allowed)
+                {
+                    lastAllowed = allowed;
+                    checkedClient = null;
+                    supported = false;
+                }
+                if (externalRpcUiAllowed != allowed)
+                {
+                    await MainThread.InvokeOnMainThreadAsync(() => UpdateExternalRpcUi(allowed));
+                }
+                if (!allowed) continue;
                 if (AlreadyDisappeared || !RenderRpcBootstrap.SupportsCliRenderProcess ||
                     !RenderRpcBootstrap.TryGetClient(out var client) || client is null) continue;
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -520,11 +567,13 @@ public partial class DraftPage
                 var approved = request.IsPersistent || await MainThread.InvokeOnMainThreadAsync(async () =>
                 {
                     if (AlreadyDisappeared || ct.IsCancellationRequested) return false;
+                    if (!ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath).AllowExternalRPC) return false;
                     return await DisplayAlertAsync(Localized.DraftPage_ExternalRpcAuthorization_Title(request.AppName),
                         Localized.DraftPage_ExternalRpcAuthorization(request.AppName, request.Author, request.Purpose),
                         Localized._OK, Localized._Cancel);
                 }).WaitAsync(ct).ConfigureAwait(false);
                 if (AlreadyDisappeared || ct.IsCancellationRequested) return;
+                ExternalRpcPipeSettings.EnsureAllowed(MauiProgram.BasicDataPath);
                 using var responseTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 responseTimeout.CancelAfter(TimeSpan.FromSeconds(10));
                 await client.ResolveExternalRpcRequestAsync(new() { ClaimId = pending.ClaimId, Approved = approved, GuiSessionId = sessionId }, responseTimeout.Token).ConfigureAwait(false);
@@ -861,7 +910,7 @@ public partial class DraftPage
     {
         if (a.Has("ImportId") && a.Has("ClientId")) throw new ArgumentException("Choose ImportId or ClientId.");
         var result = new List<object>();
-        if (!a.Has("ClientId"))
+        if (!a.Has("ClientId") && ProjectExternalSourceService.AllowAssemblySources)
         {
             var local = await ProjectExternalSourceRuntime.ListAsync(WorkingPath, ct);
             ProjectExternalSourceCatalog? remote = null;
@@ -887,7 +936,7 @@ public partial class DraftPage
                 });
             }
         }
-        if (!a.Has("ImportId") && RenderRpcBootstrap.TryGetClient(out var rpc) && rpc is not null)
+        if (!a.Has("ImportId") && ProjectExternalSourceService.AllowRpcSources && RenderRpcBootstrap.TryGetClient(out var rpc) && rpc is not null)
         {
             var clients = await rpc.ListExternalVideoSourceClientsAsync(ct);
             foreach (var client in clients.Clients.Where(c => !a.Has("ClientId") || c.ClientId == a.Guid("ClientId")))
@@ -912,6 +961,7 @@ public partial class DraftPage
         if (a.Has("ImportId") && a.Has("ClientId")) throw new ArgumentException("Choose ImportId or ClientId.");
         if (operation == GuiProjectOperation.AddExternalSource)
         {
+            ExternalSourceSettings.EnsureAssemblySourcesAllowed(MauiProgram.BasicDataPath);
             var copyToProject = a.Has("CopyToProject") ? a.Bool("CopyToProject") : await AssetDatabase.PickImportModeAsync(this);
             if (copyToProject is null) throw new OperationCanceledException("External source import was cancelled.");
             var asset = await ProjectExternalSourceService.ImportAsync(this, a.String("FilePath")!,
@@ -937,6 +987,8 @@ public partial class DraftPage
     private async Task<object> AddGuiExternalSourceClipAsync(GuiEditArgs a, CancellationToken ct)
     {
         if (a.Has("ImportId") == a.Has("ClientId")) throw new ArgumentException("Choose ImportId or ClientId.");
+        if (a.Has("ImportId")) ExternalSourceSettings.EnsureAssemblySourcesAllowed(MauiProgram.BasicDataPath);
+        else ExternalSourceSettings.EnsureRpcSourcesAllowed(MauiProgram.BasicDataPath);
         if (!Tracks.ContainsKey(a.Int("TrackId"))) throw new KeyNotFoundException("Track not found.");
         List<ExternalVideoSourceDescriptor> videos;
         List<ExternalAudioSourceDescriptor> audios;

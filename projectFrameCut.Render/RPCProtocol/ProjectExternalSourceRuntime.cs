@@ -10,6 +10,28 @@ public static class ProjectExternalSourceRuntime
     private static readonly ProjectExternalSourceHost Default = new();
     private static readonly AsyncLocal<ProjectExternalSourceHost?> Context = new();
     public static ProjectExternalSourceHost Current => Context.Value ?? Default;
+    public static Func<bool> IsAllowed { get; set; } = () => true;
+    private static readonly object PolicyLock = new();
+    private static long policyValidUntil;
+    private static bool sourcesAllowed = true;
+
+    internal static bool CheckAllowed()
+    {
+        lock (PolicyLock)
+        {
+            if (Environment.TickCount64 >= policyValidUntil)
+            {
+                sourcesAllowed = IsAllowed();
+                policyValidUntil = Environment.TickCount64 + 1000;
+            }
+            return sourcesAllowed;
+        }
+    }
+
+    public static void EnsureAllowed()
+    {
+        if (!CheckAllowed()) throw new UnauthorizedAccessException("Assembly external sources are disabled by security policy.");
+    }
     public static Func<string, ProjectExternalSourceAsset, CancellationToken, ValueTask<IPluginIsolationSession>>? StartWorker { get; set; }
     public static Task<ProjectExternalSourceCatalog> SetAsync(SetProjectExternalSourcesRequest request, CancellationToken cancellationToken = default) => Default.SetAsync(request, cancellationToken);
     public static Task<ProjectExternalSourceCatalog> ListAsync(string root, CancellationToken cancellationToken = default) => Default.ListAsync(root, cancellationToken);
@@ -71,7 +93,7 @@ public sealed class ProjectExternalSourceHost : IAsyncDisposable
             if (index.Assets.Count == 0 && Entries.Count == 0) return new();
             if (activeRoot is not null && !SameRoot(activeRoot, root))
                 throw new NotSupportedException("A render process cannot host external sources from multiple projects.");
-            var allowed = request.AllowedSources.ToDictionary(x => x.ImportId);
+            var allowed = ProjectExternalSourceRuntime.IsAllowed() ? request.AllowedSources.ToDictionary(x => x.ImportId) : [];
             if (allowed.Keys.Except(index.Assets.Select(x => x.ImportId)).Any()) throw new ArgumentException("Unknown project external source ImportId.");
             activeRoot = root;
             foreach (var id in Entries.Keys.ToArray())
@@ -135,7 +157,7 @@ public sealed class ProjectExternalSourceHost : IAsyncDisposable
     public async Task<ProjectExternalSourceCatalog> ListAsync(string projectRoot, CancellationToken cancellationToken = default)
     {
         await Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try { return Catalog(ProjectExternalSourceDatabase.Read(projectRoot), activeRoot is not null && SameRoot(activeRoot, projectRoot)); }
+        try { return Catalog(ProjectExternalSourceDatabase.Read(projectRoot), ProjectExternalSourceRuntime.IsAllowed() && activeRoot is not null && SameRoot(activeRoot, projectRoot)); }
         finally { Gate.Release(); }
     }
 
@@ -177,11 +199,12 @@ public sealed class ProjectExternalSourceHost : IAsyncDisposable
 
     public ProjectExternalSourceClient GetClient(Guid importId)
     {
+        ProjectExternalSourceRuntime.EnsureAllowed();
         if (Entries.TryGetValue(importId, out var entry) && entry.Client.IsAvailable) return entry.Client;
         throw new IOException(Errors.GetValueOrDefault(importId) ?? $"Project external source {importId} was skipped, is missing, or its worker has exited.");
     }
 
-    public IEnumerable<ExternalMaskSourceDescriptor> GetMaskSources() => Entries.Values.Where(x => x.Client.IsAvailable)
+    public IEnumerable<ExternalMaskSourceDescriptor> GetMaskSources() => !ProjectExternalSourceRuntime.CheckAllowed() ? [] : Entries.Values.Where(x => x.Client.IsAvailable)
         .SelectMany(x => x.Asset.MaskSources).Select(x => RenderRpcSerializer.Clone(x));
 
     private sealed record Entry(ProjectExternalSourceAsset Asset, ProjectExternalSourceClient Client);

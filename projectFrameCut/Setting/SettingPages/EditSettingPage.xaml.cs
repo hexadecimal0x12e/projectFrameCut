@@ -49,6 +49,7 @@ public partial class EditSettingPage : ContentPage
     };
 
     static string[] resolutions = ["1280x720", "1920x1080", "2560x1440", "3840x2160"];
+    readonly Dictionary<string, long> DynamicPreviewResolutionOptions = DynamicPreviewSettings.TargetResolutionOptions;
     static bool LoadTextPreview = false;
 
     public EditSettingPage()
@@ -81,6 +82,12 @@ public partial class EditSettingPage : ContentPage
                 c => c.AddEntry("Edit_PreviewWarmupSeconds", SettingLocalizedResources.Edit_PreviewWarmupSeconds, GetSetting("Edit_PreviewWarmupSeconds", "5"), "5"))
             .AppendWhen(IsBoolSettingTrue("Edit_UseDynamicPreview"),
                 c => c.AddCheckbox("Edit_UseLightweightDynamicPreviewHost", SettingLocalizedResources.Edit_UseLightweightDynamicPreviewHost, IsBoolSettingTrueOrDefault("Edit_UseLightweightDynamicPreviewHost", true))
+                      .AddEntry("Edit_DynamicPreviewClipPoolMiB", SettingLocalizedResources.Edit_DynamicPreviewClipPoolMiB, GetSetting("Edit_DynamicPreviewClipPoolMiB", "64"), "64")
+                      .AddText(new Label { Text = SettingLocalizedResources.Edit_DynamicPreviewClipPoolMiB_Subtitle, FontSize = 12, Margin = new Thickness(12, 0, 12, 8) })
+                      .AddCheckbox("Edit_IgnorePreviewWindowSize", SettingLocalizedResources.Edit_IgnorePreviewWindowSize, IsBoolSettingTrue("Edit_IgnorePreviewWindowSize"))
+                      .AppendWhen(IsBoolSettingTrue("Edit_IgnorePreviewWindowSize"),
+                          c => c.AddPicker(DynamicPreviewSettings.TargetPixelsSettingKey, SettingLocalizedResources.Edit_DynamicPreviewTargetResolution,
+                              DynamicPreviewResolutionOptions.Keys.ToArray(), DynamicPreviewResolutionOptions.FirstOrDefault(p => p.Value == DynamicPreview.TargetResolutionPixels).Key ?? DynamicPreviewResolutionOptions.Keys.First()))
                       .AddEntry("Edit_DynamicPreviewResolutionDivisor", SettingLocalizedResources.Edit_DynamicPreviewResolutionDivisor, GetSetting("Edit_DynamicPreviewResolutionDivisor", "1"), "1")
                       .AddEntry("Edit_DynamicPreviewTimeout", SettingLocalizedResources.Edit_DynamicPreviewTimeout, GetSetting("Edit_DynamicPreviewTimeout", "5000"), "5000")
             )
@@ -255,6 +262,27 @@ public partial class EditSettingPage : ContentPage
                         LogDiagnostic($"Preview output mode changed to {mode}.");
                         return;
                     }
+                case "Edit_IgnorePreviewWindowSize":
+                    if (args.Value is bool ignoreWindowSize)
+                    {
+                        WriteSetting(args.Id, ignoreWindowSize.ToString());
+                        DynamicPreview.IgnorePreviewWindowSize = ignoreWindowSize;
+                        LogDiagnostic($"Ignore preview window size changed to {ignoreWindowSize}.");
+                        BuildPPB();
+                    }
+                    return;
+                case DynamicPreviewSettings.TargetPixelsSettingKey:
+                    if (args.Value is string resolution && DynamicPreviewResolutionOptions.TryGetValue(resolution, out var pixels))
+                        DynamicPreviewSettings.SetTargetResolution(pixels);
+                    return;
+                case "Edit_DynamicPreviewClipPoolMiB":
+                    if (int.TryParse(args.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var poolMiB)
+                        && poolMiB is >= 1 and <= 4096)
+                    {
+                        WriteSetting(args.Id, poolMiB.ToString(CultureInfo.InvariantCulture));
+                        LogDiagnostic($"Dynamic preview clip pool limit changed to {poolMiB} MiB.");
+                    }
+                    return;
                 case "Edit_PreviewWarmupSeconds":
                     if (int.TryParse(args.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds)
                         && seconds is >= 1 and <= 60)

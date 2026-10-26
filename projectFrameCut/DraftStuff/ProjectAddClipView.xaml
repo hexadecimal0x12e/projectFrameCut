@@ -253,7 +253,7 @@
                     </CollectionView.ItemsLayout>
                     <CollectionView.Header>
                         <Label Text="{l:Localized Key=DraftPage_AssetPanel_RpcSources_None}"
-                               IsVisible="{Binding FilteredRpcVideoSources.Count, Converter={StaticResource OnlyAddCardConverter}}"
+                               IsVisible="{Binding HasNoExternalSources}"
                                HorizontalOptions="Center" VerticalOptions="Center" Margin="20"/>
                     </CollectionView.Header>
                 </CollectionView>

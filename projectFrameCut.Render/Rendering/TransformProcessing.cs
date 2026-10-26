@@ -175,11 +175,11 @@ public static class TransformProcessing
 
     public static IPicture RenderCanvas(IClip clip, IReadOnlyList<IClip> clips, uint frame, int width, int height,
         int projectWidth, int projectHeight, IPicture.PicturePixelMode pixelMode, ClipArgumentFrameCache? argumentFrames = null,
-        bool initializeClips = true)
+        bool initializeClips = true, bool keepHwAccelPicture = false)
     {
         var arguments = argumentFrames ?? new ClipArgumentFrameCache();
         if (TryRender(clip, clips, frame, width, height, projectWidth, projectHeight, pixelMode, out var result,
-            initializeClips: initializeClips, argumentFrames: arguments)) return result!;
+            initializeClips: initializeClips, argumentFrames: arguments, keepHwAccelPicture: keepHwAccelPicture)) return result!;
         return RenderInput(clip, frame, width, height, projectWidth, projectHeight, pixelMode,
             initializeClips: initializeClips, argumentFrames: arguments);
     }

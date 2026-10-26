@@ -18,8 +18,21 @@ namespace projectFrameCut.Render.Rendering
 {
     public static class EffectProcessing
     {
+        private static readonly AsyncLocal<AudioSampleSource?> audioSource = new();
+        internal static AudioSampleSource? CurrentAudioSource => audioSource.Value;
+
         public static IDisposable OpenAudioFrame(AudioSampleSource? source)
-            => ValueProviderFrameContext.PushAudioSource(source is null ? null : source.ReadFrame);
+        {
+            var scope = new AudioFrameScope(audioSource.Value,
+                ValueProviderFrameContext.PushAudioSource(source is null ? null : source.ReadFrame));
+            audioSource.Value = source;
+            return scope;
+        }
+
+        private sealed class AudioFrameScope(AudioSampleSource? previous, IDisposable scope) : IDisposable
+        {
+            public void Dispose() { scope.Dispose(); audioSource.Value = previous; }
+        }
 
         // ---- 水印缓存（按源尺寸缓存不同分辨率的渲染结果） ----
         private static readonly Dictionary<(int Width, int Height), IPicture> _watermarkCache = new();

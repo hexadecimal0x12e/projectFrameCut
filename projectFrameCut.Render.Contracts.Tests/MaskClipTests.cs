@@ -306,6 +306,8 @@ public sealed class MaskClipTests
 
     private sealed class CustomSource : MaskSource
     {
+        public override bool IsDeterministic => true;
+
         public override string TypeName => "MaskTest";
         public override IReadOnlyList<EffectArgumentFieldDescriptor> Fields =>
             [new() { Id = "Amount", FieldType = EffectArgumentFieldType.Numeric, DefaultValue = "2" }];
@@ -320,6 +322,8 @@ public sealed class MaskClipTests
 
     private sealed class TestSource(Func<uint, IPicture> generate) : IVirtualVideoSource
     {
+        public bool IsDeterministic => false;
+
         public string TypeName => nameof(TestSource);
         public void Init(int width, int height, int fps, uint duration, IPicture.PicturePixelMode pixelMode) { }
         public IPicture Generate(uint index, bool hasAlpha) => generate(index);

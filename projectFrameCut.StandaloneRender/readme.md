@@ -1,4 +1,4 @@
-﻿# projectFrameCut.StandaloneRender
+# projectFrameCut.StandaloneRender
 
 独立渲染器组件 - 用于从项目文件渲染成果的命令行工具。
 **此工具的使用许可和projectFrameCut主程序一致**。
@@ -54,7 +54,7 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 ```powershell
 projectFrameCut.StandaloneRender bench schedule -reportDirectory=D:\bench-results
 # 指定编码器、候选数量和随机种子
-projectFrameCut.StandaloneRender bench schedule -encoder=h264_nvenc -scheduleCandidates=120 -scheduleSeed=42 -frameHashMode=Dynamic
+projectFrameCut.StandaloneRender bench schedule -encoder=h264_nvenc -scheduleCandidates=120 -scheduleSeed=42
 ```
 
 `bench schedule` 使用完整渲染管线，逐轮生成并实际编码 1920×1080、30fps、300 帧的内置项目。默认优先选择硬件 H.264，不可用时回退软件编码；指定 `-encoder` 时严格使用该编码器。预热后固定实际编码器，编码条件在整个搜索期间保持一致。`-pixelFormat` 默认为 `AV_PIX_FMT_YUV420P`。
@@ -63,7 +63,7 @@ projectFrameCut.StandaloneRender bench schedule -encoder=h264_nvenc -scheduleCan
 
 如果连续 3 组延迟合成的平均 FPS 都低于对应的直接合成，就跳过剩余延迟合成候选及其确认轮次，继续探索直接合成领先组合的单参数邻域。否则后续邻域探索仍先测直接合成，再测相同参数的延迟合成，沿用相同的提前跳过规则。`scheduleCandidates` 包含两种模式的候选总数；候选空间耗尽时提前结束，候选顺序同时受实测排名影响。报告中的 `DeferredCompositionSkipped` 记录是否提前跳过延迟合成。
 
-搜索线程数、软并发、预渲染窗口、线程亲和性、内存预算，以及直接编码/延迟合成。`-frameHashMode=Dynamic|Static` 指定整次检测固定使用的哈希模式，默认 `Dynamic`，不参与搜索。每轮使用独立项目和缓存，关闭预览复用、断点恢复、效果自动重试及详细诊断。VideoBuilder 的写入队列缓存不参与搜索，因为完整渲染管线直接调用视频写入器。
+搜索线程数、软并发、预渲染窗口、线程亲和性、内存预算，以及直接编码/延迟合成。每轮使用独立项目和缓存，关闭预览复用、断点恢复、效果自动重试及详细诊断。VideoBuilder 的写入队列缓存不参与搜索，因为完整渲染管线直接调用视频写入器。
 
 评分为有效重复轮次的总输出帧数除以总耗时，包含写入器初始化、渲染准备、渲染、编码 flush 和封装关闭。结果是本机、当前编码条件和已测组合中的最佳值。内存峰值按 100ms 采样整个进程的工作集。
 
@@ -172,10 +172,9 @@ bench 模式会使用 `BenchmarkSourceGenerator` 自动生成一个包含多种�
   渲染工作线程的手动 CPU 亲和性设置。支持逗号分隔的 CPU 索引或范围，例如 `0-3,5,7`。  
   启用此参数后会自动设置 `enableThreadAffinity=true`。
 
-- **`-deferredComposition=<true|false>`**
-  启用延迟合成。默认：`false`。先完成片段渲染和总画布合成，将完整画布帧缓存到 VFD；全部完成后再按时间线顺序写入视频。与分块渲染互斥。
-  缓存和恢复状态保存在 `<项目目录>/thumbs/render-deferred/`。启用 `-chunkResume=true` 时，渲染器重新启动后复用相同项目和渲染参数下已完成的画布帧，仅重新渲染缺失或损坏的帧，再从首帧编码视频。
-  中断时保留缓存供下次续渲。
+- **`--incrementalRendering=<true|false>`**
+  启用增量渲染。默认：`false`。渲染前计算全部帧的哈希，复用已有的确定性片段帧和完整画布帧，重新计算不确定性、缺失或损坏的帧，再按时间线顺序编码视频。与分块渲染互斥，原 `-deferredComposition` 参数仍然有效。
+  每次生成的 VFD 缓存、帧哈希和 SQLite 索引保留在 `<项目目录>/incrementalRendering/`，完成或中断后均保留。`-chunkResume=true` 允许继续相同项目和渲染参数下未完成的任务。
 
 - **`-vfdCompression=<None|Deflate|GZip|Brotli|Zstandard|Lzma2>`**
   帧缓存使用的 VFD 压缩格式，默认 `Zstandard`。名称不区分大小写。
@@ -183,7 +182,7 @@ bench 模式会使用 `BenchmarkSourceGenerator` 自动生成一个包含多种�
 - **`-vfdCompressionLevel=<level>`**
   `Zstandard` 接受整数 `-131072` 至 `22`，默认 `1`；`Lzma2` 接受整数 `1` 至 `10`，默认 `6`。
   `Deflate`、`GZip`、`Brotli` 接受 `Fastest`、`Optimal`、`SmallestSize` 或 `NoCompression`，默认 `Fastest`。
-  `None` 不接受级别参数。例如：`-deferredComposition=true -vfdCompression=Zstandard -vfdCompressionLevel=3`。
+  `None` 不接受级别参数。例如：`--incrementalRendering=true -vfdCompression=Zstandard -vfdCompressionLevel=3`。
   修改压缩配置不影响已有有效缓存的复用；新生成的帧使用当前配置。
 
 - **`-reuseDynamicPreviewCache=<true|false>`**

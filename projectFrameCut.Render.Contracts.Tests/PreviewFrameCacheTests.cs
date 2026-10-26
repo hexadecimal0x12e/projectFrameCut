@@ -50,8 +50,10 @@ public sealed class PreviewFrameCacheTests
 
         Assert.ThrowsException<InvalidDataException>(() => PreviewFrameContainer.Read(path));
         using var recovered = PreviewFrameContainer.LoadSource(path);
+        using var opened = PreviewFrameContainer.Open(path);
         PreviewFrameContainer.ReplaceMetadata(path, recovered, data with { EffectHash = "new" }, default);
         Assert.AreEqual("new", PreviewFrameContainer.Read(path).EffectHash);
+        Assert.ThrowsException<InvalidDataException>(() => PreviewFrameContainer.Read(opened));
         using var raw = PreviewFrameContainer.LoadSource(path);
         Assert.AreEqual(32, ((IPicture<byte>)raw).r[0]);
     }
@@ -98,13 +100,16 @@ public sealed class PreviewFrameCacheTests
         var first = Prepare("first");
         var second = Prepare("second");
         var hit = Prepare("second");
-        Assert.AreEqual(first.Path, second.Path);
+        Assert.AreNotEqual(first.Path, second.Path);
+        Assert.IsFalse(File.Exists(first.Path));
+        Assert.IsTrue(Path.GetFileName(second.Path).Contains(second.Data.EffectHash, StringComparison.Ordinal));
+        Assert.AreEqual(second.Path, hit.Path);
         Assert.AreEqual(1, reads);
         Assert.AreEqual(2, effects);
         Assert.IsTrue(hit.CacheHit);
-        Assert.AreEqual("second", PreviewFrameContainer.Read(first.Path).EffectHash);
+        Assert.AreEqual(second.Data.EffectHash, PreviewFrameContainer.Read(second.Path).EffectHash);
         Assert.AreEqual(1, Directory.GetFiles(root, "*.vfd2m").Length);
-        using var raw = PreviewFrameContainer.LoadSource(first.Path);
+        using var raw = PreviewFrameContainer.LoadSource(second.Path);
         Assert.AreEqual(0, ((IPicture<byte>)raw).g[0]);
     }
 }

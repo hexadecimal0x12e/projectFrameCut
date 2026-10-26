@@ -17,25 +17,28 @@ internal static class PreviewFrameMaterializer
         return picture;
     }
 
-    public static PreviewFrameSource Prepare(PreviewFrameSource frame)
+    public static PreviewFrameSource Prepare(PreviewFrameSource frame, PreviewFrameBuffer? buffer = null)
     {
-        if (frame.ScRgb is not null || frame.Png is not null) return frame;
+        if (frame.ScRgb is { IsCurrent: true } || frame.Png is not null) return frame;
+        Func<int, byte[]>? allocatePixels = buffer is null ? null : buffer.GetBytes;
         if (frame.PreviewContainer == "vfd2m" || Path.GetExtension(frame.VfdPath).Equals(".vfd2m", StringComparison.OrdinalIgnoreCase))
         {
             var data = PreviewFrameContainer.Read(frame.VfdPath, frame.PreviewEffectHash,
-                frame.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb);
-            return FromData(frame, data);
+                frame.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb, allocatePixels);
+            return FromData(frame, data, buffer);
         }
         using var picture = LoadVfd(frame.VfdPath);
-        return FromData(frame, PreviewFrameData.Create(picture, "", "", frame.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb));
+        return FromData(frame, PreviewFrameData.Create(picture, "", "",
+            frame.TargetPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb, allocatePixels), buffer);
     }
 
-    public static PreviewFrameSource FromData(PreviewFrameSource frame, PreviewFrameData data)
+    public static PreviewFrameSource FromData(PreviewFrameSource frame, PreviewFrameData data, PreviewFrameBuffer? buffer = null)
         => frame with
         {
             Width = data.Width, Height = data.Height, AlphaMask = data.AlphaMask,
             PreviewEffectHash = data.EffectHash,
-            ScRgb = data.ScRgb ? new(data.Pixels, data.Width, data.Height, data.Stride, data.HasTransparency, data.ContentHash) : null,
+            ScRgb = data.ScRgb ? new(data.Pixels, data.Width, data.Height, data.Stride, data.HasTransparency, data.ContentHash)
+                { Buffer = buffer, BufferVersion = buffer?.Version ?? 0 } : null,
             Png = data.ScRgb ? null : data.Pixels,
         };
 
@@ -53,8 +56,14 @@ internal static class PreviewFrameMaterializer
     {
         if (frame.Png is not null) return frame.Png;
         if (frame.ScRgb is { } pixels)
-            return new PreviewFrameData("", frame.PreviewEffectHash, true, pixels.Width, pixels.Height, pixels.Stride,
-                pixels.HasTransparency, pixels.ContentHash, pixels.Bytes, frame.AlphaMask ?? []).ToPng();
+        {
+            lock (pixels.PixelsGate)
+            {
+                if (pixels.IsCurrent)
+                    return new PreviewFrameData("", frame.PreviewEffectHash, true, pixels.Width, pixels.Height, pixels.Stride,
+                        pixels.HasTransparency, pixels.ContentHash, pixels.Bytes, frame.AlphaMask ?? []).ToPng();
+            }
+        }
         return ToPngBytes(frame.VfdPath);
     }
 
@@ -85,4 +94,21 @@ internal static class PreviewFrameMaterializer
 internal sealed record ScRgbFrame(byte[] Bytes, int Width, int Height, int Stride, bool HasTransparency, string? CachedContentHash = null)
 {
     public string ContentHash { get; } = CachedContentHash ?? Convert.ToHexString(SHA256.HashData(Bytes));
+    internal PreviewFrameBuffer? Buffer { get; init; }
+    internal long BufferVersion { get; init; }
+    internal object PixelsGate => Buffer?.Gate ?? this;
+    internal bool IsCurrent => Buffer is null || Volatile.Read(ref Buffer.Version) == BufferVersion;
+}
+
+internal sealed class PreviewFrameBuffer
+{
+    public object Gate { get; } = new();
+    public long Version;
+    private byte[] bytes = [];
+
+    public byte[] GetBytes(int length)
+    {
+        if (bytes.Length != length) bytes = GC.AllocateUninitializedArray<byte>(length);
+        return bytes;
+    }
 }

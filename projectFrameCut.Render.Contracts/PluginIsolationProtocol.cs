@@ -219,6 +219,7 @@ public sealed class IsolationCreateAudioSourceRequest
 [ProtoContract]
 public sealed class IsolationAudioSourceDescriptor
 {
+    [ProtoMember(7)] public bool IsDeterministic { get; set; }
     [ProtoMember(1)] public long ObjectId { get; set; }
     [ProtoMember(2)] public string TypeName { get; set; } = string.Empty;
     [ProtoMember(3)] public List<string> PreferredExtensions { get; set; } = [];
@@ -671,6 +672,7 @@ public sealed class IsolationClipSnapshot
 [ProtoContract]
 public sealed class IsolationVideoSourceDescriptor
 {
+    [ProtoMember(12)] public bool IsDeterministic { get; set; }
     [ProtoMember(1)] public long ObjectId { get; set; }
     [ProtoMember(2)] public string TypeName { get; set; } = string.Empty;
     [ProtoMember(3)] public List<string> PreferredExtensions { get; set; } = [];

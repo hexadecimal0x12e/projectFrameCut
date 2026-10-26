@@ -8,6 +8,8 @@ namespace projectFrameCut.Render.EncodeAndDecode;
 
 public class RemoteRpcVideoSource : IVideoSource
 {
+    public bool IsDeterministic => _descriptor?.IsDeterministic == true;
+
     public const string DecoderTypeName = nameof(RemoteRpcVideoSource);
     private readonly ExternalVideoSourceReference? _source;
     private ExternalVideoSourceDescriptor? _descriptor;

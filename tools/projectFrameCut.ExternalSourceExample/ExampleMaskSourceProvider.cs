@@ -6,7 +6,7 @@ public sealed class ExampleMaskSourceProvider : IExternalMaskSourceProvider
 {
     public IReadOnlyList<ExternalMaskSourceDescriptor> MaskSources { get; } = [new()
     {
-        SourceId = "invert", Name = "Example invert mask", Fields = [new()
+        IsDeterministic = true, SourceId = "invert", Name = "Example invert mask", Fields = [new()
         {
             Id = "Enabled", FieldType = 1UL << 8, DefaultValue = "true",
         }],

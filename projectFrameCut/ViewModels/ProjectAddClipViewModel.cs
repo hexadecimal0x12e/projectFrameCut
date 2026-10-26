@@ -503,6 +503,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ObservableCollection<object> FilteredSharedAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> FilteredReuseableAssets { get; } = new();
     public ObservableCollection<object> FilteredRpcVideoSources { get; } = new();
+    public bool HasNoExternalSources => FilteredRpcVideoSources.All(x => x is AddSourceCardViewModel);
     public ObservableCollection<TemplateItemViewModel> FilteredAvailableTemplates { get; } = new();
     public ObservableCollection<TextStyleItemViewModel> FilteredAvailableTextStyles { get; } = new();
     public ObservableCollection<TextStyleProviderItemViewModel> FilteredAvailableTextStyleProviders { get; } = new();
@@ -740,24 +741,27 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
         int version = ++_rpcLoadVersion;
         List<RpcVideoSourceItemViewModel> sources = new();
-        try
+        if (ProjectExternalSourceService.AllowAssemblySources)
         {
-            var catalog = await projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.ListAsync(_draftPage.WorkingPath);
-            foreach (var asset in projectFrameCut.Render.PluginIsolation.ProjectExternalSourceDatabase.Read(_draftPage.WorkingPath).Assets)
+            try
             {
-                var status = catalog.Sources.FirstOrDefault(x => x.ImportId == asset.ImportId);
-                if (asset.Sources.Count == 0 && asset.AudioSources.Count == 0 && asset.MaskSources.Count == 0)
-                    sources.Add(new(this, new ExternalVideoSourceDescriptor { Name = asset.Manifest.Name }, asset, status));
-                else
+                var catalog = await projectFrameCut.Render.RPCProtocol.ProjectExternalSourceRuntime.ListAsync(_draftPage.WorkingPath);
+                foreach (var asset in projectFrameCut.Render.PluginIsolation.ProjectExternalSourceDatabase.Read(_draftPage.WorkingPath).Assets)
                 {
-                    foreach (var source in status?.Sources ?? asset.Sources) sources.Add(new(this, source, asset, status));
-                    foreach (var source in status?.AudioSources ?? asset.AudioSources) sources.Add(new(this, source, asset, status));
-                    foreach (var source in status?.MaskSources ?? asset.MaskSources) sources.Add(new(this, source, asset, status));
+                    var status = catalog.Sources.FirstOrDefault(x => x.ImportId == asset.ImportId);
+                    if (asset.Sources.Count == 0 && asset.AudioSources.Count == 0 && asset.MaskSources.Count == 0)
+                        sources.Add(new(this, new ExternalVideoSourceDescriptor { Name = asset.Manifest.Name }, asset, status));
+                    else
+                    {
+                        foreach (var source in status?.Sources ?? asset.Sources) sources.Add(new(this, source, asset, status));
+                        foreach (var source in status?.AudioSources ?? asset.AudioSources) sources.Add(new(this, source, asset, status));
+                        foreach (var source in status?.MaskSources ?? asset.MaskSources) sources.Add(new(this, source, asset, status));
+                    }
                 }
             }
+            catch (Exception ex) { Log(ex, "Load project external sources", this); }
         }
-        catch (Exception ex) { Log(ex, "Load project external sources", this); }
-        if (RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
+        if (ProjectExternalSourceService.AllowRpcSources && RenderRpcBootstrap.TryGetClient(out var client) && client is not null)
         {
             try
             {
@@ -2110,10 +2114,14 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             FilteredAvailableTextStyleProviders.Clear();
             foreach (var asset in localFiltered) FilteredLocalAssets.Add(asset);
             foreach (var asset in sharedFiltered) FilteredSharedAssets.Add(asset);
-            foreach (var source in rpcFiltered) FilteredRpcVideoSources.Add(source);
+            var externalSources = ExternalSourceSettings.Load(MauiProgram.BasicDataPath);
+            foreach (var source in rpcFiltered.Where(x => x.ProjectAsset is null ? externalSources.AllowRpcSources : externalSources.AllowAssemblySources))
+                FilteredRpcVideoSources.Add(source);
             FilteredLocalAssets.Add(new AddSourceCardViewModel("LocalAssets", Localized.AssetPage_AddAAsset));
             FilteredSharedAssets.Add(new AddSourceCardViewModel("SharedAssets", Localized.AssetPage_AddAAsset));
-            FilteredRpcVideoSources.Add(new AddSourceCardViewModel("RpcSources", Localized.ProjectExternalSource_Add));
+            if (externalSources.AllowAssemblySources)
+                FilteredRpcVideoSources.Add(new AddSourceCardViewModel("RpcSources", Localized.ProjectExternalSource_Add));
+            OnPropertyChanged(nameof(HasNoExternalSources));
             foreach (var asset in reuseableFiltered) FilteredReuseableAssets.Add(asset);
             foreach (var template in templateFiltered) FilteredAvailableTemplates.Add(template);
 
@@ -3273,7 +3281,8 @@ public sealed class RpcVideoSourceItemViewModel
     public bool IsMediaSource => MaskSource is null;
     public ProjectExternalSourceAsset? ProjectAsset { get; }
     private ProjectExternalSourceStatus? LoadStatus { get; }
-    public bool CanAdd => !string.IsNullOrWhiteSpace(Source.SourceId);
+    public bool CanAdd => !string.IsNullOrWhiteSpace(Source.SourceId)
+        && (ProjectAsset is null ? ProjectExternalSourceService.AllowRpcSources : ProjectExternalSourceService.AllowAssemblySources);
     public string Status => ProjectAsset is null ? string.Empty : !string.IsNullOrWhiteSpace(LoadStatus?.Error)
         ? $"{Localized.ProjectExternalSource_Failed}: {LoadStatus.Error}"
         : LoadStatus?.Loaded == true ? Localized.ProjectExternalSource_Loaded : Localized.ProjectExternalSource_NotLoaded;

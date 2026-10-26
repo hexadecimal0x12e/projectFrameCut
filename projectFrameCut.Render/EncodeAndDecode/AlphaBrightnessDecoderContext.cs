@@ -12,6 +12,8 @@ namespace projectFrameCut.Render.EncodeAndDecode;
 /// <summary>Reads MKV packages produced by <see cref="AlphaBrightnessVideoWriter"/>.</summary>
 public sealed unsafe class AlphaBrightnessDecoderContext : IVideoSource<ushort>, IHDRVideoSource
 {
+    public bool IsDeterministic => true;
+
     private readonly string _path;
     private readonly FFmpegStreamIOContext? _streamIO;
     private readonly Lock _locker = new();

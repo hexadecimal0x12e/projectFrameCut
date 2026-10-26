@@ -897,6 +897,7 @@ internal sealed class PluginIsolationWorkerService(
 
     private static IsolationAudioSourceDescriptor DescribeAudioSource(long id, string typeName, IAudioSource source) => new()
     {
+        IsDeterministic = source.IsDeterministic,
         ObjectId = id,
         TypeName = typeName,
         PreferredExtensions = source.PreferredExtension.ToList(),
@@ -1471,6 +1472,7 @@ internal sealed class PluginIsolationWorkerService(
         ResultBitsPerPixel = source.ResultBitPerPixel ?? 0,
         HasKnownResultBitsPerPixel = source.ResultBitPerPixel.HasValue,
         AllowCachingResult = source.AllowCachingResult,
+        IsDeterministic = source.IsDeterministic,
         TotalFrames = source.TotalFrames,
         Fps = source.Fps,
         Width = source.Width,

@@ -1,4 +1,5 @@
 using projectFrameCut.Render.Contracts;
+using projectFrameCut.Render.Rendering;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
@@ -79,30 +80,33 @@ public sealed class RenderArtifactStore : IRenderArtifactStore
     public RenderArtifact Register(Guid sessionId, string projectRoot, string projectRelativePath, string mediaType, bool cacheHit, bool isPreview, int width = 0, int height = 0, double frameRate = 0, PreviewPixelFormat pixelFormat = PreviewPixelFormat.EncodedImage, int stride = 0, string? colorSpace = null)
     {
         var fullPath = ResolveProjectPath(projectRoot, projectRelativePath);
-        if (!File.Exists(fullPath))
+        lock (PreviewFrameContainer.Gate(fullPath))
         {
-            throw new FileNotFoundException("Render artifact was not found.", fullPath);
-        }
+            if (!File.Exists(fullPath))
+            {
+                throw new FileNotFoundException("Render artifact was not found.", fullPath);
+            }
 
-        var artifact = new RenderArtifact
-        {
-            ArtifactId = Guid.NewGuid(),
-            SessionId = sessionId,
-            ProjectRelativePath = projectRelativePath.Replace(Path.DirectorySeparatorChar, '/'),
-            MediaType = mediaType,
-            Size = new FileInfo(fullPath).Length,
-            ContentHash = ComputeHash(fullPath),
-            Width = width,
-            Height = height,
-            FrameRate = frameRate,
-            CacheHit = cacheHit,
-            IsPreview = isPreview,
-            PixelFormat = pixelFormat,
-            Stride = stride,
-            ColorSpace = colorSpace ?? string.Empty,
-        };
-        _artifacts[artifact.ArtifactId] = new ArtifactRegistration(sessionId, fullPath, isPreview);
-        return artifact;
+            var artifact = new RenderArtifact
+            {
+                ArtifactId = Guid.NewGuid(),
+                SessionId = sessionId,
+                ProjectRelativePath = projectRelativePath.Replace(Path.DirectorySeparatorChar, '/'),
+                MediaType = mediaType,
+                Size = new FileInfo(fullPath).Length,
+                ContentHash = ComputeHash(fullPath),
+                Width = width,
+                Height = height,
+                FrameRate = frameRate,
+                CacheHit = cacheHit,
+                IsPreview = isPreview,
+                PixelFormat = pixelFormat,
+                Stride = stride,
+                ColorSpace = colorSpace ?? string.Empty,
+            };
+            _artifacts[artifact.ArtifactId] = new ArtifactRegistration(sessionId, fullPath, isPreview);
+            return artifact;
+        }
     }
 
     public bool Release(Guid sessionId, Guid artifactId)

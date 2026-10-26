@@ -8,6 +8,7 @@ namespace projectFrameCut.Render.Sources;
 
 public abstract class MaskSource
 {
+    public abstract bool IsDeterministic { get; }
     public abstract string TypeName { get; }
     public abstract IReadOnlyList<EffectArgumentFieldDescriptor> Fields { get; }
     /// <summary>The caller retains ownership of the backdrop, including when it is returned unchanged.</summary>
@@ -78,6 +79,8 @@ public static class MaskSources
 
 public sealed class PassthroughMaskSource : MaskSource
 {
+    public override bool IsDeterministic => true;
+
     public override string TypeName => "Passthrough";
     public override IReadOnlyList<EffectArgumentFieldDescriptor> Fields { get; } = [];
 
@@ -91,6 +94,8 @@ public sealed class PassthroughMaskSource : MaskSource
 
 public sealed class BlurMaskSource : MaskSource
 {
+    public override bool IsDeterministic => true;
+
     public override string TypeName => "Blur";
     public override IReadOnlyList<EffectArgumentFieldDescriptor> Fields { get; } =
     [
@@ -107,6 +112,8 @@ public sealed class BlurMaskSource : MaskSource
 
 public sealed class MosaicMaskSource : MaskSource
 {
+    public override bool IsDeterministic => true;
+
     public override string TypeName => "Mosaic";
     public override IReadOnlyList<EffectArgumentFieldDescriptor> Fields { get; } =
     [

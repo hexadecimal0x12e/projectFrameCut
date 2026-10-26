@@ -52,8 +52,6 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
     private int _disposed;
     private readonly ConcurrentDictionary<string, ProjectExternalSourceHost> _externalSources = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
     private ProjectExternalSourceHost GetSourceHost(string root) => _externalSources.GetOrAdd(Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)), _ => new());
-    private readonly ConcurrentDictionary<string, PreviewVideoProxies> _previewProxies = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
-    private PreviewVideoProxies GetPreviewProxies(BackendSession session) => _previewProxies.GetOrAdd(session.ProjectRoot, static root => new(root));
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -164,7 +162,6 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
     private async Task ReleaseUnusedSourcesAsync(string root)
     {
         if (_sessions.Values.Any(x => string.Equals(x.ProjectRoot, root, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))) return;
-        if (_previewProxies.TryRemove(root, out var proxies)) await proxies.DisposeAsync().ConfigureAwait(false);
         if (_externalSources.TryRemove(root, out var sources))
             await sources.CloseAsync().ConfigureAwait(false);
     }
@@ -285,7 +282,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         var snapshotHash = ComputeTextHash($"{request.ProjectJson}\n{request.TimelineJson}");
         if (reusable?.SnapshotHash == snapshotHash && reusable.Clips.All(clip => !ClipInitializationFailure.IsMarked(clip)))
             return reusable.ToContract();
-        await StopDynamicPreviewAsync(new() { SessionId = sessionId }, cancellationToken).ConfigureAwait(false);
+        await StopDynamicPreviewAsync(new() { SessionId = sessionId, ClearCache = true }, cancellationToken).ConfigureAwait(false);
         var clipSignatures = draft.Clips.Where(dto => dto.ClipType != ClipMode.MarkingClip)
             .ToDictionary(dto => dto.Id, GetClipSignature);
         var trackSignatures = draft.SoundTracks.ToDictionary(dto => dto.Id, dto => JsonSerializer.Serialize(dto, _jsonOptions));
@@ -362,6 +359,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             clip.TargetHeight = dto.TargetHeight;
         }
         _sessions[sessionId] = backendSession;
+        if (previous is not null && previous.ProjectRoot != root) ReleasePreviewCacheIndex(previous.ProjectRoot);
         StartPreviewHashWarmup(backendSession);
         LogDiagnostic($"[RenderRPC] Updated session {sessionId}: reused {clips.Count(clip => reusable?.Clips.Contains(clip, ReferenceEqualityComparer.Instance) == true)}/{clips.Length} clips and {soundTracks.Count(track => reusable?.SoundTracks.Contains(track, ReferenceEqualityComparer.Instance) == true)}/{soundTracks.Length} soundtracks.");
         return backendSession.ToContract();
@@ -423,9 +421,9 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         CancelJobsForSession(request.SessionId);
         if (_sessions.TryRemove(request.SessionId, out var session))
         {
-            await StopDynamicPreviewAsync(new() { SessionId = session.Id }, CancellationToken.None).ConfigureAwait(false);
+            await StopDynamicPreviewAsync(new() { SessionId = session.Id, ClearCache = true }, CancellationToken.None).ConfigureAwait(false);
             await session.DisposeAsync().ConfigureAwait(false);
-            FlushPreviewCache(session.ProjectRoot);
+            ReleasePreviewCacheIndex(session.ProjectRoot);
             await ReleaseUnusedSourcesAsync(session.ProjectRoot).ConfigureAwait(false);
         }
         if (_sessions.IsEmpty && PluginManager.ProjectPluginIds.Count > 0 && PluginManager.ProjectPluginUnloader is not null)
@@ -564,15 +562,13 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             var pixelMode = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb
                 ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
             InitializePreviewClips(visualClips, pixelMode, request.FrameIndex, cancellationToken);
-            using var proxies = GetPreviewProxies(session).Enter(visualClips, width, height, session.Width, session.Height, request.FrameIndex);
             var hashOptions = new FrameHashOptions
             {
-                Mode = request.FrameHashMode, Width = width, Height = height, ProjectWidth = session.Width,
+                Width = width, Height = height, ProjectWidth = session.Width,
                 ProjectHeight = session.Height, FrameRate = session.FrameRate, PixelMode = pixelMode.Value,
                 Stage = "timeline", ProcessFromCanvas = Timeline.ProcessEffectFromCanvas, AutoCenter = true,
-                PreviewSourceIdentity = proxies.Identity,
             };
-            using var hashContext = new FrameHashContext(hashOptions, cancellationToken, session.NodeCache);
+            using var hashContext = new FrameHashContext(hashOptions, cancellationToken, session.NodeCache) { Clips = visualClips };
             using var hashScope = hashContext.Enter();
             IPicture RenderTimeline()
             {
@@ -583,7 +579,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                     autoCenterImplicitClip: true, projectRelativeWidth: session.Width, projectRelativeHeight: session.Height,
                     disposeIntermediateFrames: true, cancellationToken: cancellationToken);
             }
-            var identity = FrameHashHelper.GetFrameHash(visualClips, request.FrameIndex, hashOptions, () => RenderTimeline(), cancellationToken);
+            var identity = FrameHashHelper.GetFrameHash(visualClips, request.FrameIndex, hashOptions, cancellationToken);
             var frameHash = identity.Hash;
             var namespacePrefix = string.IsNullOrEmpty(session.CacheNamespace) ? string.Empty : $"{session.CacheNamespace}_";
             var wantsScRgb = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb;
@@ -605,7 +601,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                     picture = RenderTimeline();
                     renderedPicture = null;
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (allowCaching && (visualClips.Any(ClipInitializationFailure.IsMarked) || proxies.Failed))
+                    if (allowCaching && visualClips.Any(ClipInitializationFailure.IsMarked))
                     {
                         allowCaching = false;
                         relativePath = $"thumbs/unCacheablePerClip/{session.Id:N}/frame_{Guid.NewGuid():N}.vfd";
@@ -687,18 +683,15 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             var visualClips = GetVisualClips(clips);
             var pixelMode = request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb
                 ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
-            using var proxies = PreviewVideoProxies.Scope.Current is null
-                ? GetPreviewProxies(session).Enter(visualClips, canvasWidth, canvasHeight, projectWidth, projectHeight, request.FrameIndex) : null;
             var hashOptions = new FrameHashOptions
             {
-                Mode = request.FrameHashMode, Width = canvasWidth, Height = canvasHeight,
+                Width = canvasWidth, Height = canvasHeight,
                 ProjectWidth = projectWidth, ProjectHeight = projectHeight, FrameRate = session.FrameRate,
                 PixelMode = pixelMode.Value, Stage = request.BeforeLayout ? "before-layout" : "clip",
                 ProcessFromCanvas = Timeline.ProcessEffectFromCanvas,
-                PreviewSourceIdentity = PreviewVideoProxies.Scope.Current?.Identity,
             };
             using var ownedHashContext = FrameHashContext.Current is null
-                ? new FrameHashContext(hashOptions, cancellationToken, session.NodeCache) : null;
+                ? new FrameHashContext(hashOptions, cancellationToken, session.NodeCache) { Clips = visualClips } : null;
             using var hashScope = ownedHashContext?.Enter();
             var stageStarted = Stopwatch.GetTimestamp();
             IClip[] hashDependencies = [clip, .. Timeline.CollectHashDependencies(visualClips, clip, new HashSet<Guid> { clip.Id })];
@@ -707,7 +700,8 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             using var previewCache = request.UsePreviewMetadata
                 ? new PreviewFrameCache(id => Path.Combine(session.ProjectRoot, "thumbs", "perClip", id.ToString(), "dynamic"),
                 request.FrameIndex, canvasWidth, canvasHeight, projectWidth, projectHeight,
-                request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb, request.BeforeLayout, cancellationToken) : null;
+                request.PreferredPixelFormat == PreviewPixelFormat.Rgba16FloatScRgb, request.BeforeLayout, cancellationToken,
+                findSource: key => FindPreviewSource(session.ProjectRoot, key)) : null;
             IPicture RenderPreview()
             {
                 if (renderedPicture is not null) return renderedPicture;
@@ -722,10 +716,10 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 finally { renderMs += Stopwatch.GetElapsedTime(started).TotalMilliseconds; }
             }
             var hashStarted = Stopwatch.GetTimestamp();
-            var identity = snapshot is null && hashDependencies.All(c => !ClipInitializationFailure.IsMarked(c) && !FrameHashHelper.NeedsRendering(c))
+            var identity = snapshot is null && FrameHashHelper.CanPersistClipHash(visualClips, clip, hashOptions, cancellationToken)
                 && TryGetPreparedPreviewHash(session, clip, request.FrameIndex, hashOptions, out var preparedHash)
                 ? preparedHash
-                : FrameHashHelper.GetClipHash(visualClips, clip, request.FrameIndex, hashOptions, () => RenderPreview(), cancellationToken);
+                : FrameHashHelper.GetClipHash(visualClips, clip, request.FrameIndex, hashOptions, cancellationToken);
             hashMs = Math.Max(0, Stopwatch.GetElapsedTime(hashStarted).TotalMilliseconds - renderMs);
             var lookupStarted = Stopwatch.GetTimestamp();
             IPicture TakePreview()
@@ -734,11 +728,11 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 renderedPicture = null;
                 return picture;
             }
-            bool CanPersist() => PreviewVideoProxies.Scope.Current?.Failed != true
-                && hashDependencies.All(c => !ClipInitializationFailure.IsMarked(c) && Timeline.CanCacheClipSource(c));
+            bool CanPersist() => hashDependencies.All(c => !ClipInitializationFailure.IsMarked(c) && Timeline.CanCacheClipSource(c));
             if (!request.UsePreviewMetadata)
             {
-                var legacy = RenderLegacyClipPreview(session, request, identity, projectWidth, projectHeight,
+                var legacy = RenderLegacyClipPreview(session, request,
+                    FrameHashHelper.GetClipOutputHash(visualClips, clip, request.FrameIndex, hashOptions, cancellationToken), projectWidth, projectHeight,
                     canvasWidth, canvasHeight, TakePreview, CanPersist, registerArtifact, cancellationToken);
                 previewCacheHit = legacy.CacheHit;
                 return legacy;
@@ -773,7 +767,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                     PixelFormat = PreviewPixelFormat.VfdPicture, CacheHit = cacheHit, IsPreview = true,
                 };
             artifact.PreviewContainer = "vfd2m";
-            artifact.PreviewEffectHash = clipHash;
+            artifact.PreviewEffectHash = cached.Data.EffectHash;
             return artifact;
         }
         finally
@@ -888,10 +882,14 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         using var operation = session.BeginOperation(cancellationToken);
         cancellationToken = operation.Token;
         using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
+        using var audioScope = EffectProcessing.OpenAudioFrame(session.AudioSamples);
         var clips = GetVisualClips(session.Clips);
-        var hashes = clips.Select(c => FrameHashHelper.GetClipHash(clips, c, request.StartFrame)).ToArray();
-        var keySource = $"frame-content|{TimelineSegmentCacheVersion}|{session.CacheNamespace}|{session.SnapshotHash}|{request.FrameHashMode}|{request.StartFrame}|{request.Length}|{request.Width}|{request.Height}|{request.FrameRate}|{request.IncludeAudio}|{string.Join(',', hashes.Select(h => h.Hash))}";
-        var relativePath = hashes.All(h => h.CanReuse)
+        var options = new FrameHashOptions { Width = request.Width, Height = request.Height,
+            ProjectWidth = session.Width, ProjectHeight = session.Height, FrameRate = request.FrameRate, Stage = "segment" };
+        var hashes = clips.Select(c => FrameHashHelper.GetClipOutputHash(clips, c, request.StartFrame, options, cancellationToken)).ToArray();
+        var audioHash = request.IncludeAudio ? FrameHashHelper.GetAudioHash(session.AudioSamples, cancellationToken) : new FrameHashResult("", true);
+        var keySource = $"frame-content|{TimelineSegmentCacheVersion}|{session.CacheNamespace}|{session.SnapshotHash}|{request.StartFrame}|{request.Length}|{request.Width}|{request.Height}|{request.FrameRate}|{request.IncludeAudio}|{audioHash.Hash}|{string.Join(',', hashes.Select(h => h.Hash))}";
+        var relativePath = audioHash.CanReuse && hashes.All(h => h.CanReuse)
             ? $"thumbs/projectFrameCut_Render_segment_{ComputeTextHash(keySource)}.mp4"
             : $"thumbs/unCacheablePerClip/{session.Id:N}/segment_{Guid.NewGuid():N}.mp4";
         return await RenderSegmentInternalAsync(session, request, relativePath, isPreview: true, cancellationToken).ConfigureAwait(false);
@@ -987,7 +985,6 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             var relativePath = $"cache/render/{entry.JobId:N}/{safeName}";
             var segment = new TimelineSegmentRequest
             {
-                FrameHashMode = request.FrameHashMode,
                 SessionId = request.SessionId,
                 StartFrame = 0,
                 Length = session.Duration,
@@ -1067,7 +1064,6 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 {
                     AudioSamples = new AudioSampleSource(session.Clips, session.SoundTracks, frameRate,
                         Math.Max(8000, request.AudioSampleRate), Math.Clamp(request.AudioChannels, 1, 8)),
-                    FrameHashMode = request.FrameHashMode,
                     StartFrame = request.StartFrame,
                     Duration = length,
                     builder = builder,
@@ -1217,7 +1213,8 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         using var sourceScope = ProjectExternalSourceRuntime.Use(session.ExternalSources);
         if (!_artifacts.TryGetPath(request.SessionId, request.ArtifactId, out var path))
             throw new FileNotFoundException($"Artifact '{request.ArtifactId}' was not found for this session.");
-        var content = File.ReadAllBytes(path);
+        byte[] content;
+        lock (PreviewFrameContainer.Gate(path)) content = File.ReadAllBytes(path);
         TouchTrackedPreviewCache(session.ProjectRoot, path);
         return (content, path);
     }
@@ -1471,13 +1468,24 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
     private PreviewCacheIndex GetPreviewCacheIndex(string projectRoot)
         => _previewCacheIndexes.GetOrAdd(projectRoot, static root => new(Path.Combine(root, "thumbs")));
 
+    private string? FindPreviewSource(string projectRoot, string sourceKey)
+    {
+        var path = GetPreviewCacheIndex(projectRoot).FindSource(Path.GetRelativePath(projectRoot, sourceKey).Replace(Path.DirectorySeparatorChar, '/'));
+        return path is not null && TryResolveTrackedPreviewPath(projectRoot, path, out var fullPath) ? fullPath : null;
+    }
+
     private void TrackPreviewCacheAccess(string projectRoot, string relativePath, Guid? clipId, uint frameIndex, string configuration)
     {
         try
         {
             relativePath = relativePath.Replace(Path.DirectorySeparatorChar, '/');
-            if (TryResolveTrackedPreviewPath(projectRoot, relativePath, out _))
-                GetPreviewCacheIndex(projectRoot).Track(relativePath, clipId, frameIndex, configuration);
+            if (TryResolveTrackedPreviewPath(projectRoot, relativePath, out var path))
+            {
+                lock (PreviewFrameContainer.Gate(path))
+                {
+                    if (File.Exists(path)) GetPreviewCacheIndex(projectRoot).Track(relativePath, clipId, frameIndex, configuration);
+                }
+            }
         }
         catch (Exception ex) { Log(ex, "Track preview cache access", this); }
     }
@@ -1514,6 +1522,17 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
         finally { Monitor.Exit(_previewCachePersistGate); }
     }
 
+    private void ReleasePreviewCacheIndex(string projectRoot)
+    {
+        lock (_previewCachePersistGate)
+        {
+            FlushPreviewCache(projectRoot);
+            if (!_sessions.Values.Any(s => string.Equals(s.ProjectRoot, projectRoot,
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)))
+                _previewCacheIndexes.TryRemove(projectRoot, out _);
+        }
+    }
+
     private void FlushPreviewCache(string projectRoot)
     {
         try
@@ -1522,7 +1541,7 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
                 index.Maintain(PreviewCacheRetention,
                     path => TryResolveTrackedPreviewPath(projectRoot, path, out var fullPath) ? fullPath : null);
         }
-        catch (Exception ex) { Log(ex, "Save preview cache index", this); }
+        catch (Exception ex) { Log(ex, $"Save preview cache index {Path.Combine(projectRoot, "thumbs", CacheIndexDatabase.FileName)}", this); }
     }
 
     private bool TryResolveTrackedPreviewPath(string projectRoot, string relativePath, out string fullPath)
@@ -1572,8 +1591,6 @@ public sealed partial class RenderBackendService(IRenderArtifactStore? artifactS
             await StopAllDynamicPreviewsAsync().ConfigureAwait(false);
             foreach (var session in _sessions.Values) await session.DisposeAsync().ConfigureAwait(false);
             _sessions.Clear();
-            foreach (var proxies in _previewProxies.Values) await proxies.DisposeAsync().ConfigureAwait(false);
-            _previewProxies.Clear();
             if (_previewCacheTimer is not null) await _previewCacheTimer.DisposeAsync().ConfigureAwait(false);
             FlushPreviewCaches();
             _previewCacheIndexes.Clear();

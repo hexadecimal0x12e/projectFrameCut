@@ -153,22 +153,27 @@ namespace projectFrameCut.Render.Rendering
         }
 
         public static string GetFrameHash(IClip[] video, uint targetFrame)
-            => FrameHashHelper.GetFrameHash(video, targetFrame, new() { Mode = Contracts.FrameHashMode.Static }).Hash;
+            => FrameHashHelper.GetFrameHash(video, targetFrame, new()).Hash;
 
         public static bool CanCacheFrame(IClip[] video, uint targetFrame)
-            => FrameHashHelper.GetFrameHash(video, targetFrame, new() { Mode = Contracts.FrameHashMode.Static }).CanReuse;
+            => FrameHashHelper.GetFrameHash(video, targetFrame, new()).CanReuse;
 
         public static bool CanCacheClipFrame(IClip[] video, IClip clip)
-            => FrameHashHelper.GetClipHash(video, clip, clip.StartFrame, new() { Mode = Contracts.FrameHashMode.Static }).CanReuse;
+            => FrameHashHelper.CanPersistClipHash(video, clip);
 
         public static bool CanCacheClipSource(IClip clip)
         {
             if (ClipInitializationFailure.IsMarked(clip)) return false;
-            if (clip is not VideoClip videoClip) return true;
             try
             {
-                if (!videoClip.HasCurrentDecoder || videoClip.Decoder is not { Disposed: false } decoder) return false;
-                return decoder.AllowCachingResult;
+                return clip switch
+                {
+                    VirtualSourceVideoClip virtualClip => virtualClip.VirtualSource?.IsDeterministic == true,
+                    MaskClip mask => Sources.MaskSources.Create(mask.SourceType).IsDeterministic,
+                    VideoClip video => video.HasCurrentDecoder
+                        && video.Decoder is { Disposed: false, IsDeterministic: true, AllowCachingResult: true },
+                    _ => clip.FromPlugin == Plugin.InternalPluginBase.InternalPluginBaseID,
+                };
             }
             catch (Exception ex)
             {
@@ -178,7 +183,7 @@ namespace projectFrameCut.Render.Rendering
         }
 
         public static string GetClipFrameHash(IClip[] video, IClip clip, uint targetFrame)
-            => FrameHashHelper.GetClipHash(video, clip, targetFrame, new() { Mode = Contracts.FrameHashMode.Static }).Hash;
+            => FrameHashHelper.GetClipHash(video, clip, targetFrame, new()).Hash;
 
         internal static IReadOnlyList<IClip> CollectHashDependencies(IClip[] video, IClip clip, HashSet<Guid> visited)
         {

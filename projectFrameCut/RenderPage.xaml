@@ -92,6 +92,10 @@
                 ItemsSource="{Binding PostRenderActions}"
                 SelectedItem="{Binding SelectedPostRenderAction, Mode=TwoWay}" />
                 <Label x:Name="HDRHintLabel" Text="{l:Localized Key=RenderPage_HDREnabledNotAvailable}" FontSize="12" TextColor="Gray" IsVisible="False"/>
+                <HorizontalStackLayout Spacing="8" Margin="0,8,0,0">
+                    <CheckBox IsChecked="{Binding IncrementalRendering, Mode=TwoWay}" />
+                    <Label Text="{l:Localized Key=RenderPage_IncrementalRendering}" VerticalOptions="Center" />
+                </HorizontalStackLayout>
                 <Button Margin="0,8,0,8" x:Name="StartRender" Text="{l:Localized Key=RenderPage_StartRender}" Clicked="StartRender_Clicked" />
 
                 <Border Margin="0,8,0,0" Padding="12">

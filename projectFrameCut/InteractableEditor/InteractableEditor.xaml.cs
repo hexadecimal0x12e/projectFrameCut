@@ -131,7 +131,9 @@ namespace projectFrameCut.InteractableEditor
         private Action? _manageReferenceLinesRequestedCallback;
         private Action<Color>? _defaultColorPickerRequestedCallback;
         private Func<string, Task>? _previewResolutionChangedCallback;
+        private Func<Task>? _dynamicPreviewTargetResolutionChangedCallback;
         private List<string> _previewResolutionOptions = [];
+        private Dictionary<string, long> _dynamicPreviewTargetResolutionOptions = [];
         private bool _suppressPreviewResolutionChanged;
         private long _lastPreviewRefreshTick;
         private int _isPreviewRefreshRunning;
@@ -1622,10 +1624,12 @@ namespace projectFrameCut.InteractableEditor
         public InteractableEditor ConfigurePreviewResolution(
             IEnumerable<string> options,
             string? selectedOption,
-            Func<string, Task>? changedCallback)
+            Func<string, Task>? changedCallback,
+            Func<Task>? dynamicTargetResolutionChangedCallback = null)
         {
             _previewResolutionOptions = options?.ToList() ?? [];
             _previewResolutionChangedCallback = changedCallback;
+            _dynamicPreviewTargetResolutionChangedCallback = dynamicTargetResolutionChangedCallback;
 
             _suppressPreviewResolutionChanged = true;
             try
@@ -4907,7 +4911,28 @@ namespace projectFrameCut.InteractableEditor
 
         private void OptionsButton_Clicked(object sender, EventArgs e)
         {
+            UpdateDynamicPreviewResolutionOptions();
             OptionsOverlay.IsVisible = true;
+        }
+
+        private void UpdateDynamicPreviewResolutionOptions()
+        {
+            DynamicPreviewResolutionOptions.IsVisible = ShowClipPreviewOverlays && DynamicPreview.IgnorePreviewWindowSize;
+            if (!DynamicPreviewResolutionOptions.IsVisible) return;
+
+            DynamicPreviewTargetResolutionLabel.Text = SettingsManager.SettingLocalizedResources.Edit_DynamicPreviewTargetResolution;
+            _dynamicPreviewTargetResolutionOptions = DynamicPreviewSettings.TargetResolutionOptions;
+            _suppressPreviewResolutionChanged = true;
+            try
+            {
+                DynamicPreviewTargetResolutionPicker.ItemsSource = _dynamicPreviewTargetResolutionOptions.Keys.ToList();
+                DynamicPreviewTargetResolutionPicker.SelectedItem = _dynamicPreviewTargetResolutionOptions.FirstOrDefault(p => p.Value == DynamicPreview.TargetResolutionPixels).Key
+                    ?? _dynamicPreviewTargetResolutionOptions.Keys.First();
+            }
+            finally
+            {
+                _suppressPreviewResolutionChanged = false;
+            }
         }
 
         private void CloseOptionsButton_Clicked(object sender, EventArgs e)
@@ -4933,10 +4958,33 @@ namespace projectFrameCut.InteractableEditor
             try
             {
                 await _previewResolutionChangedCallback(selected);
+                UpdateDynamicPreviewResolutionOptions();
             }
             finally
             {
                 PreviewResolutionPicker.IsEnabled = true;
+            }
+        }
+
+        private async void DynamicPreviewTargetResolutionPicker_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_suppressPreviewResolutionChanged || !DynamicPreview.IgnorePreviewWindowSize || !ShowClipPreviewOverlays
+                || DynamicPreviewTargetResolutionPicker.SelectedItem is not string selected
+                || !_dynamicPreviewTargetResolutionOptions.TryGetValue(selected, out var pixels)
+                || pixels == DynamicPreview.TargetResolutionPixels)
+                return;
+
+            DynamicPreviewTargetResolutionPicker.IsEnabled = false;
+            try
+            {
+                DynamicPreviewSettings.SetTargetResolution(pixels);
+                await ((_dynamicPreviewTargetResolutionChangedCallback ?? _previewRefreshCallback)?.Invoke() ?? Task.CompletedTask);
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { Log(ex, "Change dynamic preview target resolution", this); }
+            finally
+            {
+                DynamicPreviewTargetResolutionPicker.IsEnabled = true;
             }
         }
 

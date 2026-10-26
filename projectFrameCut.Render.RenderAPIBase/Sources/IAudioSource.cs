@@ -6,6 +6,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
 {
     public interface IAudioSource : projectFrameCut.Render.RenderAPIBase.Plugins.IExtensibleObject, IDisposable
     {
+        public bool IsDeterministic { get; }
+
         /// <summary>
         /// Initialize the audio source. This method should prepare the audio source for frame extraction.
         /// </summary>

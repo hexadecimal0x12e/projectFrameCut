@@ -1,4 +1,5 @@
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
@@ -20,6 +21,9 @@ namespace projectFrameCut.Setting.SettingPages
         private static readonly SemaphoreSlim NetworkPolicyLock = new(1, 1);
         private ScrollView? settingsContent;
         private ActivityIndicator? networkPolicyBusyIndicator;
+        private bool showAllRpcPrincipals;
+        private const string RpcPipeSidPrefix = "ExternalRpcPipeSid:";
+        private const string RpcPipeSingleConnection = "Security_ExternalRpcPipe_SingleConnection";
 #endif
 
         public SecuritySettingPage()
@@ -32,6 +36,8 @@ namespace projectFrameCut.Setting.SettingPages
 
         public void BuildPPB()
         {
+            var allowExternalRpc = ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath).AllowExternalRPC;
+            var externalSources = ExternalSourceSettings.Load(MauiProgram.BasicDataPath);
             Content = new VerticalStackLayout();
             rootPPB = new();
             rootPPB
@@ -41,6 +47,21 @@ namespace projectFrameCut.Setting.SettingPages
                 .AddText(new SingleLineLabel(SettingLocalizedResources.Security_RemoteContent, 25))
                 .AddCheckbox("Security_RemoteContent_EnableHttpDecoder", SettingLocalizedResources.Security_RemoteContent_EnableHttpDecoder, IsBoolSettingTrueOrDefault("Security_RemoteContent_EnableHttpDecoder", true))
                 .AddCheckbox("Security_RemoteContent_EnableRemoteContent", SettingLocalizedResources.Security_RemoteContent_EnableRemoteContent, IsBoolSettingTrueOrDefault("Security_RemoteContent_EnableRemoteContent", true))
+                .AddSeparator()
+                .AddText(new SingleLineLabel(SettingLocalizedResources.Security_ExternalSources, 25))
+                .AddCheckbox(ExternalSourceSettings.AllowRpcSourcesSetting, SettingLocalizedResources.Security_ExternalSources_AllowRpcSources, externalSources.AllowRpcSources)
+                .AddCheckbox(ExternalSourceSettings.AllowAssemblySourcesSetting, SettingLocalizedResources.Security_ExternalSources_AllowAssemblySources, externalSources.AllowAssemblySources)
+                .AddSeparator()
+                .AddText(new SingleLineLabel(SettingLocalizedResources.Security_ExternalRpcPipe, 25))
+                .AddCheckbox(ExternalRpcPipeSettings.AllowExternalRpcSetting,
+                    new InfoSingleLineLabel(SettingLocalizedResources.Security_ExternalRpcPipe_AllowExternalRPC, SettingLocalizedResources.Security_ExternalRpcPipe_AllowExternalRPC_Description),
+                    allowExternalRpc)
+#if WINDOWS
+                .AppendWhen(allowExternalRpc, ppb => ppb
+                    .AddText(SettingLocalizedResources.Security_ExternalRpcPipe_Description)
+                    .AddCheckbox(RpcPipeSingleConnection, SettingLocalizedResources.Security_ExternalRpcPipe_SingleConnection, ExternalRpcPipePermissions.LoadSingleConnection(MauiProgram.BasicDataPath))
+                    .AddCustomChild(BuildExternalRpcPipePermissions()))
+#endif
                 .AddSeparator()
 #if WINDOWS
                 .AddText(new SingleLineLabel(SettingLocalizedResources.Security_IsolatedPlugins, 25))
@@ -93,7 +114,43 @@ namespace projectFrameCut.Setting.SettingPages
             {
                 if (args.Value != null)
                 {
+                    if (args.Id is ExternalSourceSettings.AllowRpcSourcesSetting or ExternalSourceSettings.AllowAssemblySourcesSetting)
+                    {
+                        var configuration = ExternalSourceSettings.Load(MauiProgram.BasicDataPath);
+                        if (args.Id == ExternalSourceSettings.AllowRpcSourcesSetting) configuration.AllowRpcSources = Convert.ToBoolean(args.Value);
+                        else configuration.AllowAssemblySources = Convert.ToBoolean(args.Value);
+                        configuration.Save(MauiProgram.BasicDataPath);
+                        Log($"Set external source security setting '{args.Id}' to '{args.Value}'.");
+                        return;
+                    }
+                    if (args.Id == ExternalRpcPipeSettings.AllowExternalRpcSetting)
+                    {
+                        var configuration = ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath);
+                        configuration.AllowExternalRPC = Convert.ToBoolean(args.Value);
+                        configuration.Save(MauiProgram.BasicDataPath);
+                        Log($"Set external RPC client availability to '{configuration.AllowExternalRPC}'.");
+                        BuildPPB();
+                        return;
+                    }
 #if WINDOWS
+                    if (args.Id == RpcPipeSingleConnection)
+                    {
+                        var enabled = Convert.ToBoolean(args.Value);
+                        ExternalRpcPipePermissions.SaveSingleConnection(MauiProgram.BasicDataPath, enabled);
+                        Log($"Set external RPC pipes to single-connection mode: {enabled}.");
+                        return;
+                    }
+                    if (args.Id.StartsWith(RpcPipeSidPrefix, StringComparison.Ordinal))
+                    {
+                        var sid = args.Id[RpcPipeSidPrefix.Length..];
+                        var allowed = ExternalRpcPipePermissions.LoadAllowedSids(MauiProgram.BasicDataPath);
+                        var enabled = Convert.ToBoolean(args.Value);
+                        if (enabled) allowed.Add(sid);
+                        else allowed.Remove(sid);
+                        ExternalRpcPipePermissions.SaveAllowedSids(MauiProgram.BasicDataPath, allowed);
+                        Log($"Updated external RPC pipe access for SID '{sid}' to '{enabled}'.");
+                        return;
+                    }
                     if (args.Id is PluginInternetSetting or PluginServerSetting)
                     {
                         var enabled = Convert.ToBoolean(args.Value);
@@ -141,6 +198,77 @@ namespace projectFrameCut.Setting.SettingPages
         }
 
 #if WINDOWS
+        private View BuildExternalRpcPipePermissions()
+        {
+            var accounts = new VerticalStackLayout();
+            var refresh = new Button { Text = SettingLocalizedResources._Refresh };
+            var showAll = new Button();
+            showAll.Clicked += async (_, _) =>
+            {
+                showAllRpcPrincipals = !showAllRpcPrincipals;
+                await LoadExternalRpcPrincipalsAsync(accounts, refresh, showAll);
+            };
+            refresh.Clicked += async (_, _) => await LoadExternalRpcPrincipalsAsync(accounts, refresh, showAll);
+            _ = LoadExternalRpcPrincipalsAsync(accounts, refresh, showAll);
+            return new VerticalStackLayout
+            {
+                Spacing = 8,
+                VerticalOptions = LayoutOptions.Start,
+                Children = { refresh, accounts, showAll }
+            };
+        }
+
+        private async Task LoadExternalRpcPrincipalsAsync(VerticalStackLayout accounts, Button refresh, Button showAll)
+        {
+            refresh.IsEnabled = false;
+            showAll.IsEnabled = false;
+            showAll.Text = showAllRpcPrincipals ? SettingLocalizedResources.Security_ExternalRpcPipe_ShowCommon : SettingLocalizedResources.Security_ExternalRpcPipe_ShowAll;
+            accounts.Children.Clear();
+            accounts.Children.Add(new ActivityIndicator { IsRunning = true });
+            try
+            {
+                var principals = await Task.Run(ExternalRpcPipePermissions.EnumerateLocalPrincipals);
+                var allowed = ExternalRpcPipePermissions.LoadAllowedSids(MauiProgram.BasicDataPath);
+                var ppb = new PropertyPanelBuilder { WidthOfContent = 0.1 };
+                var visible = principals.Where(p =>
+                {
+                    if (showAllRpcPrincipals) return true;
+                    if (p.IsGroup)
+                        return !p.Sid.StartsWith("S-1-5-32-", StringComparison.Ordinal) || p.Sid is "S-1-5-32-544" or "S-1-5-32-545";
+                    // Guest, krbtgt, DefaultAccount, WDAGUtilityAccount.
+                    return p.Sid[(p.Sid.LastIndexOf('-') + 1)..] is not ("501" or "502" or "503" or "504");
+                });
+                foreach (var group in visible.GroupBy(p => p.IsGroup))
+                {
+                    ppb.AddText(group.Key ? SettingLocalizedResources.Security_ExternalRpcPipe_Groups : SettingLocalizedResources.Security_ExternalRpcPipe_Users, fontSize: 18);
+                    foreach (var p in group)
+                        ppb.AddCheckbox(RpcPipeSidPrefix + p.Sid, new TitleAndDescriptionLineLabel(p.Name, p.Sid, 14, 12), allowed.Contains(p.Sid))
+                            .AddSeparator(b => b.Opacity = 0.25);
+                }
+                var missing = allowed.Except(principals.Select(p => p.Sid), StringComparer.OrdinalIgnoreCase).ToArray();
+                if (missing.Length > 0)
+                {
+                    ppb.AddText(SettingLocalizedResources.Security_ExternalRpcPipe_OtherSids, fontSize: 18);
+                    foreach (var sid in missing)
+                        ppb.AddCheckbox(RpcPipeSidPrefix + sid, sid, true).AddSeparator(b => b.Opacity = 0.25);
+                }
+                ppb.ListenToChanges(SettingInvoker);
+                accounts.Children.Clear();
+                accounts.Children.Add(ppb.Build());
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "enumerate external RPC pipe accounts", this);
+                accounts.Children.Clear();
+                accounts.Children.Add(new Label { Text = Localized._ExceptionTemplate(ex) });
+            }
+            finally
+            {
+                refresh.IsEnabled = true;
+                showAll.IsEnabled = true;
+            }
+        }
+
         private void SetNetworkPolicyBusy(bool busy)
         {
             if (settingsContent is not null) settingsContent.IsEnabled = !busy;

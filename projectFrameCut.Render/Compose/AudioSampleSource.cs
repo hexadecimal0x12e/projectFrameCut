@@ -1,6 +1,7 @@
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Shared;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Rendering;
 
 namespace projectFrameCut.Render.Compose;
 
@@ -20,6 +21,39 @@ public sealed class AudioSampleSource(IClip[] clips, ISoundTrack[] tracks, int f
     public int SamplePerSecond => sampleRate;
     public int ChannelCount => channels;
     public Func<string>? Revision { get; set; }
+
+    internal object DescribeHashInputs(CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        var active = tracks.Where(t => SoundTrackMetadata.ReadBool(t.ExtraData, SoundTrackMetadata.EnabledKey, true)).ToArray();
+        if (active.Any(t => t is not NormalSoundTrack { AudioSource: { IsDeterministic: true, Disposed: false } }
+            || ClipInitializationFailure.HasDeferredFailures(t.ExtraData)
+            || t.Effects is { Length: > 0 } && t.EffectsInstances is not { Length: > 0 }
+            || t.EffectsInstances?.Any(e => e.Enabled && !e.IsDeterministic) == true))
+            throw new FrameHashHelper.UnhashableInputException();
+        var analysis = new FrameHashAnalysis(clips, token);
+        return new
+        {
+            frameRate, sampleRate, channels,
+            Revision = Revision?.Invoke(),
+            Tracks = active.Select(t => new
+            {
+                State = FrameHashHelper.ReadProperties(t),
+                File = FrameHashHelper.SourceFingerprint(t.FilePath),
+                Source = new { ((NormalSoundTrack)t).AudioSource!.TypeName,
+                    Module = ((NormalSoundTrack)t).AudioSource!.GetType().Module.ModuleVersionId },
+                Effects = (t.EffectsInstances ?? []).Where(e => e.Enabled)
+                    .Select(e => FrameHashHelper.DescribeEffect(e,
+                        t.EffectProviders?.Any(p => p.Id.ToString() == e.BindedEffectProvidingSystemID) == true)).ToArray(),
+            }).ToArray(),
+            Clips = clips.Select(c => new
+            {
+                c.Id, c.BindedSoundTrack, c.StartFrame, c.RelativeStartFrame, c.Duration, c.FrameTime,
+                c.ExtraData,
+                Speed = analysis.DescribeSpeed(c),
+            }).ToArray(),
+        };
+    }
 
     public IAudioSamples<float> ReadFrame(uint frame, CancellationToken token)
     {

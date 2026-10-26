@@ -470,6 +470,7 @@ public partial class HomePage : ContentPage
     {
         try
         {
+            ExternalRpcPipeSettings.EnsureAllowed(MauiProgram.BasicDataPath);
             var appName = GetCommandLineOption(args, "--rpcAppName") ?? "";
             var author = GetCommandLineOption(args, "--rpcAuthor") ?? "";
             var purpose = GetCommandLineOption(args, "--rpcPurpose") ?? "";
@@ -506,16 +507,20 @@ public partial class HomePage : ContentPage
             if (existing is null)
             {
                 var approved = await MainThread.InvokeOnMainThreadAsync(() =>
-                    DisplayAlertAsync(
+                {
+                    ExternalRpcPipeSettings.EnsureAllowed(MauiProgram.BasicDataPath);
+                    return DisplayAlertAsync(
                         Localized.DraftPage_ExternalRpcAuthorization_Title(appName),
                         Localized.DraftPage_ExternalRpcAuthorization_Presist(appName, author, purpose),
-                        Localized._Confirm, Localized._Cancel));
+                        Localized._Confirm, Localized._Cancel);
+                });
                 if (!approved)
                 {
                     Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "denied" }));
                     Environment.Exit(255);
                     return;
                 }
+                ExternalRpcPipeSettings.EnsureAllowed(MauiProgram.BasicDataPath);
                 ExternalRpcAuthorizationStore.Add(storePath, client);
                 Log($"Persistent external RPC client authorized: {client.ClientId} ({client.PublicKeyFingerprint}).");
                 Console.Error.WriteLine(JsonSerializer.Serialize(new { status = "granted", clientId = client.ClientId }));

@@ -9,14 +9,14 @@ public sealed class ExampleProvider : IExternalVideoSourceProvider, IExternalAud
     private readonly HashSet<Guid> audioInstances = [];
     private readonly ExampleMaskSourceProvider masks = new();
     public IReadOnlyList<ExternalMaskSourceDescriptor> MaskSources => masks.MaskSources;
-    public IReadOnlyList<ExternalAudioSourceDescriptor> AudioSources { get; } = [new() { SourceId = "tone", DecoderName = "ExampleAudio",
+    public IReadOnlyList<ExternalAudioSourceDescriptor> AudioSources { get; } = [new() { IsDeterministic = true, SourceId = "tone", DecoderName = "ExampleAudio",
         Name = "Example stereo tone", Duration = 10, ChannelCount = 2, SamplePerSecond = 48000 }];
     public IReadOnlyList<ExternalVideoSourceDescriptor> Sources { get; } = new[] { "8bit", "16bit", "alpha", "hdr" }.Select(id => new ExternalVideoSourceDescriptor
     {
         SourceId = id, DecoderName = "Example", Name = "Example " + id, Width = 640, Height = 360,
         TotalFrames = 300, Fps = 30, HasKnownResultBitsPerPixel = true, ResultBitsPerPixel = id == "8bit" ? 8 : 16,
         SupportsHdr = id == "hdr", SupportsAlpha = id is "alpha" or "hdr",
-        AllowCachingResult = true,
+        AllowCachingResult = true, IsDeterministic = true,
     }).ToList();
 
     public ValueTask<ExternalVideoSourceInstance> CreateAsync(ExternalVideoSourceCreateRequest request, CancellationToken cancellationToken = default)

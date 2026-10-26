@@ -8,6 +8,7 @@ namespace projectFrameCut.Render.RPCProtocol;
 internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
 {
     private readonly string _directory;
+    private readonly Func<bool> _externalRpcAllowed;
     private IReadOnlyDictionary<Guid, ExternalRpcClientAuthorization> _authorizations;
     private readonly CancellationTokenSource _lifetime;
     private readonly SemaphoreSlim _gate = new(1);
@@ -17,9 +18,10 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
     private Guid _claim;
     private DateTimeOffset _frontendUntil;
 
-    public ExternalRpcRequestBroker(string directory, IReadOnlyList<ExternalRpcClientAuthorization> authorizations, CancellationToken ct)
+    public ExternalRpcRequestBroker(string directory, IReadOnlyList<ExternalRpcClientAuthorization> authorizations, CancellationToken ct, Func<bool>? externalRpcAllowed = null)
     {
         _directory = Path.GetFullPath(directory);
+        _externalRpcAllowed = externalRpcAllowed ?? (() => ExternalRpcPipeSettings.Load(Path.GetDirectoryName(_directory)!).AllowExternalRPC);
         _authorizations = CreateAuthorizationMap(authorizations);
         _lifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
         Directory.CreateDirectory(_directory);
@@ -34,6 +36,7 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            if (!_externalRpcAllowed()) return new();
             _frontendUntil = DateTimeOffset.UtcNow.AddSeconds(5);
             return _request is null ? new() : new() { ClaimId = _claim, Json = JsonSerializer.Serialize(_request) };
         }
@@ -50,12 +53,18 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
                 await _gate.WaitAsync(_lifetime.Token).ConfigureAwait(false);
                 try
                 {
+                    var allowed = _externalRpcAllowed();
+                    if (!allowed && _request is not null)
+                    {
+                        WriteResult("disabled");
+                        Release();
+                    }
                     if (_request is not null && _request.ExpiresAt <= DateTimeOffset.UtcNow)
                     {
                         WriteResult("expired");
                         Release();
                     }
-                    if (_request is not null || DateTimeOffset.UtcNow > _frontendUntil) continue;
+                    if (_request is not null || (allowed && DateTimeOffset.UtcNow > _frontendUntil)) continue;
                     foreach (var path in Directory.EnumerateFiles(_directory, "*.json"))
                     {
                         FileStream? file = null;
@@ -72,6 +81,12 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
                             file = null;
                             _request = request;
                             _claim = Guid.NewGuid();
+                            if (!allowed)
+                            {
+                                WriteResult("disabled");
+                                Release();
+                                continue;
+                            }
                             if (request.ExpiresAt <= DateTimeOffset.UtcNow || request.ExpiresAt > DateTimeOffset.UtcNow.AddHours(1))
                             {
                                 WriteResult("expired");
@@ -99,6 +114,7 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
         string? token = null;
         try
         {
+            ExternalRpcPipeSettings.ThrowIfDisabled(_externalRpcAllowed());
             if (_request is null || decision.ClaimId != _claim) throw new ArgumentException("RPC authorization is no longer pending.");
             if (_request.ExpiresAt <= DateTimeOffset.UtcNow) { WriteResult("expired"); return; }
             if (!decision.Approved) { WriteResult("denied"); return; }
@@ -114,6 +130,7 @@ internal sealed class ExternalRpcRequestBroker : IAsyncDisposable
             }
             using var rsa = _request.OpenPublicKey();
             token = await createPipe(authorization?.ClientId ?? Guid.Empty, authorization?.AppName ?? _request.AppName).ConfigureAwait(false);
+            ExternalRpcPipeSettings.ThrowIfDisabled(_externalRpcAllowed());
             ct.ThrowIfCancellationRequested();
             _lifetime.Token.ThrowIfCancellationRequested();
             _request.EncryptedConnection = Convert.ToBase64String(rsa.Encrypt(JsonSerializer.SerializeToUtf8Bytes(new ExternalRpcConnection

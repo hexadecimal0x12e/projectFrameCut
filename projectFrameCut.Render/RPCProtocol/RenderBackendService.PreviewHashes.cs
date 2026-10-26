@@ -11,11 +11,10 @@ public sealed partial class RenderBackendService
 {
     private void StartPreviewHashWarmup(BackendSession session)
     {
-        foreach (var mode in new[] { FrameHashMode.Static, FrameHashMode.Dynamic })
         foreach (var pixelMode in new[] { 8, 16 })
             PreparePreviewHashes(session, new()
             {
-                Mode = mode, Width = session.Width, Height = session.Height,
+                Width = session.Width, Height = session.Height,
                 ProjectWidth = session.Width, ProjectHeight = session.Height,
                 FrameRate = session.FrameRate, PixelMode = pixelMode,
                 Stage = "clip", ProcessFromCanvas = Timeline.ProcessEffectFromCanvas,
@@ -30,7 +29,7 @@ public sealed partial class RenderBackendService
         if (!prepared.Clips.TryGetValue(clip.Id, out var saved)
             || saved.Dependencies.Any(ClipInitializationFailure.IsMarked)
             || saved.Guard != GetPreviewHashGuard(session, saved.Dependencies)) return false;
-        if (!saved.Hashes.TryGetValue(clip is IImmutableContentClip ? 0 : frame, out var value)) return false;
+        if (!saved.Hashes.TryGetValue(FrameHashHelper.IsFrameInvariant(clip) ? 0 : frame, out var value)) return false;
         hash = new(value, true);
         return true;
     }
@@ -41,13 +40,6 @@ public sealed partial class RenderBackendService
         {
             if (session.PreviewHashes.TryGetValue(options, out var saved)) return saved;
             var prepared = new PreparedPreviewHashes();
-            // Keep viewport resizing from retaining an unlimited number of full-project indexes.
-            if (session.PreviewHashes.Count >= 8)
-            {
-                var oldest = session.PreviewHashes.Keys.First();
-                session.PreviewHashes[oldest].Cancel();
-                session.PreviewHashes.Remove(oldest);
-            }
             session.PreviewHashes.Add(options, prepared);
             var operation = session.BeginOperation();
             _ = Task.Run(async () =>
@@ -59,6 +51,7 @@ public sealed partial class RenderBackendService
                     try
                     {
                         using var sources = ProjectExternalSourceRuntime.Use(session.ExternalSources);
+                        using var audio = EffectProcessing.OpenAudioFrame(session.AudioSamples);
                         var clips = GetVisualClips(session.Clips);
                         foreach (var clip in clips)
                         {
@@ -75,8 +68,6 @@ public sealed partial class RenderBackendService
                                     entry ??= new PreparedClipHashes(
                                         [clip, .. Timeline.CollectHashDependencies(clips, clip, [clip.Id])]);
                                     entry.Guard ??= GetPreviewHashGuard(session, entry.Dependencies);
-                                    // A null render callback only accepts identities computable in static mode,
-                                    // while retaining the requested mode in the existing cache key.
                                     var batchEnd = Math.Min(end, frame + 16);
                                     for (; frame < batchEnd; frame++)
                                     {
@@ -88,9 +79,9 @@ public sealed partial class RenderBackendService
                                             frame = end;
                                             break;
                                         }
-                                        entry.Hashes[clip is IImmutableContentClip ? 0 : (uint)frame] = identity.Hash;
+                                        entry.Hashes[FrameHashHelper.IsFrameInvariant(clip) ? 0 : (uint)frame] = identity.Hash;
                                         prepared.Clips.TryAdd(clip.Id, entry);
-                                        if (clip is IImmutableContentClip)
+                                        if (FrameHashHelper.IsFrameInvariant(clip))
                                         {
                                             frame = end;
                                             break;
@@ -116,6 +107,7 @@ public sealed partial class RenderBackendService
         {
             session.CacheNamespace,
             Sources = clips.Select(c => FrameHashHelper.SourceFingerprint(c.FilePath)).ToArray(),
+            Audio = session.SoundTracks.Select(t => new { t.Id, Source = FrameHashHelper.SourceFingerprint(t.FilePath) }).ToArray(),
             Fonts = clips.OfType<TextClip>().Select(c => FrameHashHelper.SourceFingerprint(c.FontPath)).ToArray(),
             EffectHelper.ForcePreferToType, EffectHelper.DefaultImplementsType,
             PreferredPlugins = RenderAPIBase.Plugins.IPluginBase.EffectImplementations.PreferredPlugins

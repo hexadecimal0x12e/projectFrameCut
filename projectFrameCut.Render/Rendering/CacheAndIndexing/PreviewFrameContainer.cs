@@ -1,6 +1,7 @@
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.ReadWriteConvert;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using System.Buffers;
 using System.Buffers.Binary;
 using System.IO.Hashing;
 using System.Security.Cryptography;
@@ -10,9 +11,20 @@ namespace projectFrameCut.Render.Rendering;
 public static class PreviewFrameContainer
 {
     private static readonly VfdV2PictureEncoder encoder = new(VfdCompression.Zstandard, zstandardLevel: 1);
-    private static readonly object[] gates = Enumerable.Range(0, 64).Select(_ => new object()).ToArray();
+    private static readonly object[] gates = Enumerable.Range(0, 1024).Select(_ => new object()).ToArray();
 
-    public static object Gate(string path) => gates[(uint)StringComparer.OrdinalIgnoreCase.GetHashCode(path) % (uint)gates.Length];
+    public static object Gate(string path) => gates[(uint)StringComparer.OrdinalIgnoreCase.GetHashCode(GetSourceKey(Path.GetFullPath(path))) % (uint)gates.Length];
+
+    internal static string GetSourceKey(string path)
+    {
+        string name = Path.GetFileNameWithoutExtension(path);
+        if (!name.StartsWith("dynamic_vfd2m_", StringComparison.Ordinal)) return path;
+        int index = name.LastIndexOf('_');
+        return name.Length - index - 1 == 67 && name.AsSpan(index + 1).StartsWith("fh-", StringComparison.Ordinal)
+            ? path[..(path.Length - Path.GetFileName(path).Length)] + name[..index] + Path.GetExtension(path) : path;
+    }
+
+    internal static string GetSourcePrefix(string path) => Path.ChangeExtension(GetSourceKey(path), null) + "_";
 
     public static FileStream Open(string path) => new(path, FileMode.Open, FileAccess.Read,
         FileShare.ReadWrite | FileShare.Delete, 65536, FileOptions.SequentialScan);
@@ -37,20 +49,65 @@ public static class PreviewFrameContainer
     }
 
     public static PreviewFrameData Read(string path, string? expectedEffectHash = null, bool? scRgb = null)
+        => Read(path, expectedEffectHash, scRgb, null);
+
+    public static PreviewFrameData Read(string path, string? expectedEffectHash, bool? scRgb,
+        Func<int, byte[]>? allocatePixels)
     {
-        using var stream = Open(path);
-        return Read(stream, expectedEffectHash, scRgb);
+        lock (Gate(path))
+        {
+            using var stream = Open(path);
+            return Read(stream, expectedEffectHash, scRgb, allocatePixels);
+        }
     }
 
     public static PreviewFrameData Read(Stream stream, string? expectedEffectHash = null, bool? scRgb = null)
+        => Read(stream, expectedEffectHash, scRgb, null);
+
+    public static PreviewFrameData Read(Stream stream, string? expectedEffectHash, bool? scRgb,
+        Func<int, byte[]>? allocatePixels)
+    {
+        long length = ReadMetadataLength(stream);
+        using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
+        using var metadata = new CheckedReadStream(stream, length);
+        using var data = new BinaryReader(metadata, System.Text.Encoding.UTF8, leaveOpen: true);
+        var info = ReadInfo(data, expectedEffectHash, scRgb);
+        byte[] pixels = info.ScRgb && allocatePixels is not null
+            ? allocatePixels(info.PixelsLength) : GC.AllocateUninitializedArray<byte>(info.PixelsLength);
+        if (pixels.Length != info.PixelsLength) throw new InvalidDataException("Invalid preview pixel buffer length.");
+        metadata.ReadExactly(pixels);
+        byte[] mask = data.ReadBytes(info.MaskLength);
+        if (metadata.Position != length || reader.ReadUInt32() != metadata.Checksum)
+            throw new InvalidDataException("Preview metadata checksum mismatch.");
+        if (Convert.ToHexString(SHA256.HashData(pixels)) != info.ContentHash) throw new InvalidDataException("Preview pixel hash mismatch.");
+        return new(info.SourceHash, info.EffectHash, info.ScRgb, info.Width, info.Height, info.Stride,
+            info.HasTransparency, info.ContentHash, pixels, mask);
+    }
+
+    // Pixel integrity is checked when the frame is materialized.
+    public static PreviewFrameInfo ReadInfo(string path, string? expectedEffectHash = null, bool? scRgb = null)
+    {
+        lock (Gate(path))
+        {
+            using var stream = Open(path);
+            using var metadata = new CheckedReadStream(stream, ReadMetadataLength(stream));
+            using var reader = new BinaryReader(metadata, System.Text.Encoding.UTF8, leaveOpen: true);
+            return ReadInfo(reader, expectedEffectHash, scRgb);
+        }
+    }
+
+    private static long ReadMetadataLength(Stream stream)
     {
         SeekMetadata(stream);
         using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
         long length = reader.ReadInt64();
         if (length < 0 || length > int.MaxValue || length > stream.Length - stream.Position - 4)
             throw new InvalidDataException("Invalid preview metadata length.");
-        using var metadata = new CheckedReadStream(stream, length);
-        using var data = new BinaryReader(metadata, System.Text.Encoding.UTF8, leaveOpen: true);
+        return length;
+    }
+
+    private static PreviewFrameInfo ReadInfo(BinaryReader data, string? expectedEffectHash, bool? scRgb)
+    {
         if (data.ReadUInt32() != 0x31435046) throw new InvalidDataException("Unsupported preview metadata.");
         string sourceHash = data.ReadString(), effectHash = data.ReadString();
         bool isScRgb = data.ReadBoolean();
@@ -59,16 +116,12 @@ public static class PreviewFrameContainer
         string contentHash = data.ReadString();
         int pixelsLength = data.ReadInt32(), maskLength = data.ReadInt32();
         if (width <= 0 || height <= 0 || pixelsLength <= 0 || maskLength != (checked((long)width * height) + 7) / 8
-            || (long)pixelsLength + maskLength != metadata.Length - metadata.Position
+            || (long)pixelsLength + maskLength != data.BaseStream.Length - data.BaseStream.Position
             || (isScRgb && (stride != checked(width * 8) || pixelsLength != checked((long)stride * height))))
             throw new InvalidDataException("Invalid preview pixel dimensions.");
         if ((expectedEffectHash is { Length: > 0 } && expectedEffectHash != effectHash) || (scRgb.HasValue && scRgb.Value != isScRgb))
             throw new InvalidDataException("The cached preview belongs to a different effect or output format.");
-        byte[] pixels = data.ReadBytes(pixelsLength), mask = data.ReadBytes(maskLength);
-        if (metadata.Position != length || reader.ReadUInt32() != metadata.Checksum)
-            throw new InvalidDataException("Preview metadata checksum mismatch.");
-        if (Convert.ToHexString(SHA256.HashData(pixels)) != contentHash) throw new InvalidDataException("Preview pixel hash mismatch.");
-        return new(sourceHash, effectHash, isScRgb, width, height, stride, transparent, contentHash, pixels, mask);
+        return new(sourceHash, effectHash, isScRgb, width, height, stride, transparent, contentHash, pixelsLength, maskLength);
     }
 
     public static IPicture LoadSource(string path)
@@ -87,47 +140,40 @@ public static class PreviewFrameContainer
     }
 
     public static void Save(string path, IPicture source, PreviewFrameData data, CancellationToken token)
-        => Write(path, source, data, null, token);
+    {
+        lock (Gate(path)) Write(path, source, data, token);
+    }
 
     public static void ReplaceMetadata(string path, IPicture source, PreviewFrameData data, CancellationToken token)
-        => Write(path, source, data, File.Exists(path) ? path : null, token);
-
-    private static void Write(string path, IPicture source, PreviewFrameData data, string? copyFrom, CancellationToken token)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        string temp = Path.Combine(Path.GetDirectoryName(path)!, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
-        try
+        lock (Gate(path))
         {
-            using var header = new MemoryStream();
-            using (var writer = new BinaryWriter(header, System.Text.Encoding.UTF8, leaveOpen: true))
+            if (File.Exists(path)) ReplaceMetadata(path, data, token);
+            else Write(path, source, data, token);
+        }
+    }
+
+    public static void ReplaceMetadata(string path, PreviewFrameData data, CancellationToken token)
+    {
+        using var metadata = CreateMetadata(data);
+        lock (Gate(path))
+        {
+            string temp = Path.Combine(Path.GetDirectoryName(path)!, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(65536);
+            try
             {
-                writer.Write(0x31435046u);
-                writer.Write(data.SourceHash); writer.Write(data.EffectHash); writer.Write(data.ScRgb);
-                writer.Write(data.Width); writer.Write(data.Height); writer.Write(data.Stride); writer.Write(data.HasTransparency);
-                writer.Write(data.ContentHash); writer.Write(data.Pixels.Length); writer.Write(data.AlphaMask.Length);
-            }
-            using var metadata = new PartsStream([header.ToArray(), data.Pixels, data.AlphaMask]);
-            token.ThrowIfCancellationRequested();
-            using (var output = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536))
-            {
-                if (copyFrom is null)
+                using (var input = Open(path))
+                using (var output = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536))
                 {
-                    using var downloaded = source is IHwAccelPicture gpu ? gpu.Download() : null;
-                    encoder.Save(downloaded ?? source, output, metadata, metadata.Length);
-                }
-                else
-                {
-                    using var input = Open(copyFrom);
-                    long end = SeekMetadata(input);
+                    long remaining = SeekMetadata(input);
                     input.Position = 0;
-                    byte[] buffer = new byte[65536];
-                    while (end > 0)
+                    while (remaining > 0)
                     {
                         token.ThrowIfCancellationRequested();
-                        int count = input.Read(buffer, 0, (int)Math.Min(end, buffer.Length));
-                        if (count == 0) throw new EndOfStreamException();
+                        int count = (int)Math.Min(buffer.Length, remaining);
+                        input.ReadExactly(buffer.AsSpan(0, count));
                         output.Write(buffer, 0, count);
-                        end -= count;
+                        remaining -= count;
                     }
                     using var writer = new BinaryWriter(output, System.Text.Encoding.UTF8, leaveOpen: true);
                     writer.Write(metadata.Length);
@@ -135,6 +181,42 @@ public static class PreviewFrameContainer
                     checkedMetadata.CopyTo(output, 65536);
                     writer.Write(checkedMetadata.Checksum);
                 }
+                token.ThrowIfCancellationRequested();
+                File.Move(temp, path, overwrite: true);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+                if (File.Exists(temp)) File.Delete(temp);
+            }
+        }
+    }
+
+    private static PartsStream CreateMetadata(PreviewFrameData data)
+    {
+        using var header = new MemoryStream();
+        using (var writer = new BinaryWriter(header, System.Text.Encoding.UTF8, leaveOpen: true))
+        {
+            writer.Write(0x31435046u);
+            writer.Write(data.SourceHash); writer.Write(data.EffectHash); writer.Write(data.ScRgb);
+            writer.Write(data.Width); writer.Write(data.Height); writer.Write(data.Stride); writer.Write(data.HasTransparency);
+            writer.Write(data.ContentHash); writer.Write(data.Pixels.Length); writer.Write(data.AlphaMask.Length);
+        }
+        return new([header.ToArray(), data.Pixels, data.AlphaMask]);
+    }
+
+    private static void Write(string path, IPicture source, PreviewFrameData data, CancellationToken token)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        string temp = Path.Combine(Path.GetDirectoryName(path)!, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            using var metadata = CreateMetadata(data);
+            token.ThrowIfCancellationRequested();
+            using (var output = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536))
+            {
+                using var downloaded = source is IHwAccelPicture gpu ? gpu.Download() : null;
+                encoder.Save(downloaded ?? source, output, metadata, metadata.Length);
             }
             token.ThrowIfCancellationRequested();
             File.Move(temp, path, overwrite: true);

@@ -11,6 +11,7 @@ public partial class ProjectAddClipView : ContentView
     private readonly int ItemSize = 180;
     private readonly int ItemSpacing = 8;
     private bool _isAddingAsset;
+    private readonly int _rpcSourcesTabIndex;
 
     public ProjectAddClipView(ref DraftPage draftPage)
     {
@@ -20,6 +21,8 @@ public partial class ProjectAddClipView : ContentView
         _viewModel.LoadVectorComponents();
         _ = _viewModel.LoadMaskSources();
         BindingContext = _viewModel;
+        _rpcSourcesTabIndex = MainTabView.TabItems.IndexOf(RpcSourcesTab);
+        UpdateExternalSourceAvailability();
         _viewModel.SetDrawingView(DrawingCanvas);
         MainTabView.OnTabSwitched += MainTabView_OnTabSwitched;
         var orderOpt = SettingsManager.GetSetting("Edit_AddView_DefaultOrderOption", "date");
@@ -33,8 +36,25 @@ public partial class ProjectAddClipView : ContentView
         CollapseHeaderControls();
     }
 
-    internal Task RefreshExternalSourcesAsync() => _viewModel.LoadRpcVideoSources();
+    internal Task RefreshExternalSourcesAsync()
+    {
+        UpdateExternalSourceAvailability();
+        return _viewModel.LoadRpcVideoSources();
+    }
     internal Task RefreshAssetsAsync() => MainThread.InvokeOnMainThreadAsync(_viewModel.LoadAssets);
+
+    private void UpdateExternalSourceAvailability()
+    {
+        var allowed = Services.ProjectExternalSourceService.AllowRpcSources || Services.ProjectExternalSourceService.AllowAssemblySources;
+        if (allowed == MainTabView.TabItems.Contains(RpcSourcesTab)) return;
+        var selected = MainTabView.SelectedItem;
+        if (!allowed && (selected == RpcSourcesTab || MainTabView.SelectedIndex >= MainTabView.TabItems.Count - 1))
+            MainTabView.SelectedIndex = 0;
+        if (allowed) MainTabView.TabItems.Insert(Math.Clamp(_rpcSourcesTabIndex, 0, MainTabView.TabItems.Count), RpcSourcesTab);
+        else MainTabView.TabItems.Remove(RpcSourcesTab);
+        if (selected is not null && selected != RpcSourcesTab && MainTabView.TabItems.Contains(selected))
+            MainTabView.SelectedIndex = MainTabView.TabItems.IndexOf(selected);
+    }
 
     private void MainTabView_OnTabSwitched(object? sender, ApplicationAPIBase.Views.TabbedView.TabbedViewItem e)
     {
@@ -90,7 +110,8 @@ public partial class ProjectAddClipView : ContentView
         }
     }
 
-    private bool CanAddAsset(string sourceType) => !_isAddingAsset && (!_page.IsReadonly || sourceType == "SharedAssets");
+    private bool CanAddAsset(string sourceType) => !_isAddingAsset && (!_page.IsReadonly || sourceType == "SharedAssets")
+        && (sourceType != "RpcSources" || Services.ProjectExternalSourceService.AllowAssemblySources);
 
     private async Task AddAssetPathAsync(string path, string sourceType, bool copyToProject)
     {

@@ -24,8 +24,8 @@ public sealed class HdrPreviewView : View
         base.OnPropertyChanged(propertyName);
     }
 
-    internal static PreviewFrameSource PrepareFrame(PreviewFrameSource frame)
-        => PreviewFrameMaterializer.Prepare(frame);
+    internal static PreviewFrameSource PrepareFrame(PreviewFrameSource frame, PreviewFrameBuffer? buffer = null)
+        => PreviewFrameMaterializer.Prepare(frame, buffer);
 
     public static readonly BindableProperty FrameProperty = BindableProperty.Create(
         nameof(Frame),

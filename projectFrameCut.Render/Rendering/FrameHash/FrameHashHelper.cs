@@ -1,6 +1,5 @@
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Render.ClipsAndTracks;
-using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -22,7 +21,6 @@ public readonly record struct FrameHashResult(string Hash, bool CanReuse)
 
 public sealed record FrameHashOptions
 {
-    public FrameHashMode Mode { get; init; } = FrameHashMode.Dynamic;
     public int Width { get; init; }
     public int Height { get; init; }
     public int ProjectWidth { get; init; }
@@ -33,8 +31,6 @@ public sealed record FrameHashOptions
     public int SdrBrightness { get; init; } = 203;
     public int PeakBrightness { get; init; } = 1000;
     public string Stage { get; init; } = "clip";
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? PreviewSourceIdentity { get; init; }
     public bool ProcessFromCanvas { get; init; } = true;
     public bool AutoCenter { get; init; }
 }
@@ -42,7 +38,7 @@ public sealed record FrameHashOptions
 /// <summary>Builds cache identities without treating runtime delegates as constant inputs.</summary>
 public static class FrameHashHelper
 {
-    private sealed class RenderRequiredException : Exception { }
+    internal sealed class UnhashableInputException : Exception { }
     private static readonly JsonSerializerOptions jsonOptions = CreateJsonOptions(true);
     private static readonly JsonSerializerOptions configurationOptions = CreateJsonOptions(false);
     private static readonly HashSet<string> runtimeProperties = new(StringComparer.Ordinal)
@@ -50,6 +46,7 @@ public static class FrameHashHelper
         "EffectsInstances", "EffectProvidersInstances", "SpeedVarianceProviderInstance", "MixtureInstance",
         "AlternativeSource", "ArgumentFields", "Decoder", "VirtualSource", "HasCurrentDecoder",
         "NodeEffects", "ParametersNeeded", "ParametersType", "BindedEffectProvidingSystemID",
+        "EffectStagePlan", "AudioSource", "SourceArguments",
     };
 
     public static string CreateRenderResumeSignature(ProjectJSONStructure project, DraftStructureJSON timeline, IEnumerable<AssetItem> assets)
@@ -67,148 +64,121 @@ public static class FrameHashHelper
                 .Select(a => new { Asset = a, Source = SourceFingerprint(a.Path) }).ToArray(),
         });
 
+    public static bool CanPersistClipHash(IReadOnlyList<IClip> clips, IClip clip,
+        FrameHashOptions? options = null, CancellationToken token = default)
+        => DescribeClip(clips, clip, false, token).HasValue;
+
     public static FrameHashResult GetClipHash(IReadOnlyList<IClip> clips, IClip clip, uint frame,
-        FrameHashOptions? options = null, Func<object?>? render = null, CancellationToken token = default)
+        FrameHashOptions? options = null, CancellationToken token = default)
+        => GetClipHash(clips, clip, frame, options ?? new(), false, token);
+
+    internal static FrameHashResult GetClipOutputHash(IReadOnlyList<IClip> clips, IClip clip, uint frame,
+        FrameHashOptions options, CancellationToken token = default)
+        => GetClipHash(clips, clip, frame, options, true, token);
+
+    private static FrameHashResult GetClipHash(IReadOnlyList<IClip> clips, IClip clip, uint frame,
+        FrameHashOptions options, bool layout, CancellationToken token)
     {
-        options ??= new();
+        var configuration = DescribeClip(clips, clip, layout, token);
+        if (!configuration.HasValue) return FrameHashResult.Uncacheable();
+        return new(HashValue(new
+        {
+            Schema = layout ? "timeline-content-v2" : "clip-content-v2",
+            Frame = IsFrameInvariant(clip, layout) ? 0u : frame,
+            Options = options, Configuration = configuration.Value,
+        }), true);
+    }
+
+    private static JsonElement? DescribeClip(IReadOnlyList<IClip> clips, IClip clip, bool layout, CancellationToken token)
+    {
         token.ThrowIfCancellationRequested();
-        bool rendering = false;
         try
         {
-            var dependencies = Timeline.CollectHashDependencies(clips.ToArray(), clip, new HashSet<Guid> { clip.Id });
-            if (ClipInitializationFailure.IsMarked(clip) || dependencies.Any(ClipInitializationFailure.IsMarked))
-                return FrameHashResult.Uncacheable();
-            var needsRender = NeedsRendering(clip) || dependencies.Any(NeedsRendering);
-            if (needsRender && options.Mode == FrameHashMode.Static) return FrameHashResult.Uncacheable();
-            object? configuration = null;
-            try
-            {
-                configuration = new
-                {
-                    Clip = DescribeClip(clip),
-                    Dependencies = dependencies.Select(DescribeClip).ToArray(),
-                };
-                // Materialize now so an opaque value cannot silently become a stable placeholder.
-                configuration = JsonSerializer.SerializeToElement(configuration, configurationOptions);
-            }
-            catch (RenderRequiredException) { configuration = null; needsRender = true; }
-            catch (JsonException) { configuration = null; needsRender = true; }
-            catch (NotSupportedException) { configuration = null; needsRender = true; }
-            if (needsRender && (options.Mode == FrameHashMode.Static || render is null))
-                return FrameHashResult.Uncacheable();
-            rendering = needsRender;
-            var output = needsRender ? render!() : null;
-            rendering = false;
+            var state = new FrameHashAnalysis(clips, token).DescribeClip(clip, layout);
+            var configuration = JsonSerializer.SerializeToElement(layout ? new[] { state } : state, configurationOptions);
             token.ThrowIfCancellationRequested();
-            if (ClipInitializationFailure.IsMarked(clip) || dependencies.Any(ClipInitializationFailure.IsMarked))
-                return FrameHashResult.Uncacheable();
-            return new(HashValue(new { Schema = "frame-content", Frame = clip is IImmutableContentClip ? 0u : frame,
-                Options = options, Configuration = configuration, Output = output }), true);
+            return configuration;
         }
         catch (OperationCanceledException) { throw; }
-        catch (RenderRequiredException) when (!rendering) { return FrameHashResult.Uncacheable(); }
+        catch (UnhashableInputException) { return null; }
         catch (Exception ex)
         {
-            if (rendering) throw;
-            Logger.Log(ex, $"Hash clip {clip.Id}, frame {frame}", nameof(FrameHashHelper));
-            return FrameHashResult.Uncacheable();
+            Logger.Log(ex, $"Describe clip {clip.Id} for hashing", nameof(FrameHashHelper));
+            return null;
         }
     }
 
     public static FrameHashResult GetFrameHash(IReadOnlyList<IClip> clips, uint frame,
-        FrameHashOptions? options = null, Func<object?>? render = null, CancellationToken token = default)
+        FrameHashOptions? options = null, CancellationToken token = default)
     {
         options ??= new() { Stage = "timeline" };
         token.ThrowIfCancellationRequested();
-        // Determining speed-adjusted membership can itself execute an effect.
-        bool runtimeTiming = clips.Any(c => c.SpeedVarianceProviderInstance is not null);
-        if (runtimeTiming && (options.Mode == FrameHashMode.Static || render is null)) return FrameHashResult.Uncacheable();
-        var active = clips.Where(c => runtimeTiming || c.ExtendToWholeDraft
-            || frame >= c.StartFrame && (ulong)frame < (ulong)c.StartFrame + c.Duration)
-            .OrderBy(c => c, ClipLayerOrder.BottomToTop).ToArray();
-        FrameHashResult[] hashes = runtimeTiming ? [] : active.Select(c => GetClipHash(clips, c, frame, options, token: token)).ToArray();
-        if (!runtimeTiming && hashes.All(h => h.CanReuse))
-            return new(HashValue(new { Schema = "timeline-content", Frame = frame, Options = options, Clips = hashes.Select(h => h.Hash).ToArray() }), true);
-        if (options.Mode == FrameHashMode.Static || render is null) return FrameHashResult.Uncacheable();
-        var output = render();
-        token.ThrowIfCancellationRequested();
-        if (active.Any(ClipInitializationFailure.IsMarked)) return FrameHashResult.Uncacheable();
-        return new(HashValue(new { Schema = "timeline-content", Frame = frame, Options = options, Output = output }), true);
-    }
-
-    public static bool NeedsRendering(IClip clip)
-    {
-        if (clip is MaskClip or VirtualSourceVideoClip || clip is VideoClip { Decoder: EncodeAndDecode.DecoderContextPJFCProject }
-            || clip.FromPlugin != Plugin.InternalPluginBase.InternalPluginBaseID || !Timeline.CanCacheClipSource(clip)) return true;
-        var providers = clip.EffectProvidersInstances;
-        if (clip.EffectProviders is { Length: > 0 } && providers is not { Length: > 0 }) return true;
-        if (clip.Effects is { Length: > 0 } && clip.EffectsInstances is not { Length: > 0 }) return true;
-        foreach (var provider in providers ?? [])
+        try
         {
-            if (!provider.Enabled) continue;
-            if (provider.AnchorsBindingState.Values.Contains(ValueProviderFrameContext.BuiltInAudioSampleProviderId)) return true;
-            if (!provider.IsDeterministic || provider is IClipValueEndpointProvider
-                || provider.TypeOfEffect == EffectType.Transform) return true;
-            if (provider.Fields.Values.OfType<IEffect>().Any(e => !e.IsDeterministic)) return true;
-            if (DynamicEffectBindings.InputFields(provider).Any(p => p.Value.FieldType.IsContent()
-                && (p.Key != EffectProviderAnchorExtensions.InputKey
-                    || provider.TypeOfEffect == EffectType.NonIPictureOutputValueProvider))) return true;
-            if (DynamicEffectBindings.InputFields(provider).Values.Any(f => f.FieldType.HasFlag(EffectArgumentFieldType.Any)))
-                return true;
+            var analysis = new FrameHashAnalysis(clips, token);
+            // Speed maps can execute effects. Include all clips when membership is not statically known.
+            bool runtimeTiming = clips.Any(c => c.SpeedVarianceProviderInstance is not null);
+            var active = clips.Where(c => runtimeTiming || c.ExtendToWholeDraft
+                || frame >= c.StartFrame && (ulong)frame < (ulong)c.StartFrame + c.Duration)
+                .OrderBy(c => c, ClipLayerOrder.BottomToTop);
+            var configuration = JsonSerializer.SerializeToElement(active.Select(c => analysis.DescribeClip(c, true)).ToArray(), configurationOptions);
+            token.ThrowIfCancellationRequested();
+            return new(HashValue(new { Schema = "timeline-content-v2", Frame = frame,
+                Options = options, Configuration = configuration }), true);
         }
-        return clip.SpeedVarianceProviderInstance is { IsDeterministic: false }
-            || clip.MixtureInstance is { IsDeterministic: false } || clip.AlternativeSource is { IsDeterministic: false }
-            || (clip.EffectsInstances ?? []).Any(e => e is { Enabled: true, IsDeterministic: false });
+        catch (OperationCanceledException) { throw; }
+        catch (UnhashableInputException) { return FrameHashResult.Uncacheable(); }
+        catch (Exception ex)
+        {
+            Logger.Log(ex, $"Hash timeline frame {frame}", nameof(FrameHashHelper));
+            return FrameHashResult.Uncacheable();
+        }
     }
 
-    private static object DescribeClip(IClip clip) => new
+    internal static FrameHashResult GetEffectHash(IEffect effect, EffectExecutionContext context,
+        IEffectProvider? provider, int effectIndex, FrameHashOptions options, CancellationToken token)
     {
-        State = ReadProperties(clip),
-        Module = clip.GetType().Module.ModuleVersionId,
-        Font = clip is TextClip text ? SourceFingerprint(text.FontPath) : null,
-        Source = SourceFingerprint(clip.FilePath),
-        Arguments = clip.ArgumentFields.ToDictionary(p => p.Key, p => p.Value.ReadValue(clip)),
-        Effects = (clip.EffectsInstances ?? []).OrderBy(e => e.Index).Select(e => DescribeEffect(e,
-            clip.EffectProvidersInstances?.Any(p => p.Id.ToString() == e.BindedEffectProvidingSystemID) == true)).ToArray(),
-        Providers = (clip.EffectProvidersInstances ?? []).OrderBy(p => p.Id).Select(DescribeProvider).ToArray(),
-        Replacement = clip.AlternativeSource is { } source ? DescribeEffect(source, false) : null,
-        Mixture = clip.MixtureInstance is { } mixture ? DescribeEffect(mixture, false) : null,
-        Speed = clip.SpeedVarianceProviderInstance is { } speed ? DescribeEffect(speed, false) : null,
-        Rotation = VideoClipRotation.GetAngle(clip),
-        ForcedImplementation = EffectHelper.ForcePreferToType,
-        DefaultImplementations = EffectHelper.DefaultImplementsType,
-        PreferredPlugins = RenderAPIBase.Plugins.IPluginBase.EffectImplementations.PreferredPlugins
-            .OrderBy(p => p.Key.TypeName, StringComparer.Ordinal).ThenBy(p => p.Key.ImplementType).Select(p => new { p.Key, p.Value }).ToArray(),
-        ApproximateMixture = Compose.ClassicOverlayMixture.EnableApproximatePath,
-    };
-
-    internal static object DescribeProvider(IEffectProvider provider) => new
-    {
-        provider.Id, provider.TypeName, provider.FromPlugin, provider.Enabled, provider.IsDeterministic,
-        Module = provider.GetType().Module.ModuleVersionId,
-        provider.TypeOfEffect, provider.Target, provider.Stage, provider.AnchorsBindingState, provider.MetaData,
-        Inputs = provider.InFields,
-        Outputs = provider.GetOutputFields(),
-        Fields = provider.Fields.ToDictionary(p => p.Key, p => DescribeField(p.Value)),
-    };
-
-    private static object DescribeField(IEffectArgumentField field) => new
-    {
-        field.TypeName, field.FromPlugin, field.FieldType, field.IsDynamic, field.IsDynamicAtRenderTime,
-        Binding = (field as DynamicEffectParamField)?.BoundProviderId,
-        Value = field switch
+        if (context.Clip is not { } clip || !effect.IsDeterministic) return FrameHashResult.Uncacheable();
+        try
         {
-            DynamicEffectParamField f => f.StaticFallbackValue,
-            EffectArgumentFieldDescriptor => field.DefaultValue,
-            IEffect effect => DescribeEffect(effect, true),
-            _ when !field.IsDynamic && !field.IsDynamicAtRenderTime => field.GetGetter()(),
-            _ => throw new RenderRequiredException(),
-        },
-    };
+            var clips = FrameHashContext.Current?.Clips ?? [clip];
+            var analysis = new FrameHashAnalysis(clips, token);
+            var configuration = provider is null ? analysis.DescribeClip(clip, true)
+                : analysis.DescribeProvider(clip, provider, true);
+            return new(HashValue(new
+            {
+                Schema = "effect-input-v2", Options = options, Index = effectIndex,
+                Clip = new { clip.PositionTuple, clip.LayerIndex, clip.SubLayerIndex },
+                Configuration = JsonSerializer.SerializeToElement(configuration, configurationOptions),
+                Effect = JsonSerializer.SerializeToElement(DescribeEffect(effect, provider is not null), configurationOptions),
+                Parameters = JsonSerializer.SerializeToElement(context.Parameters.Where(p => !FrameHashAnalysis.IsMutableInput(p.Value))
+                    .ToDictionary(p => p.Key, p => p.Value), configurationOptions),
+                context.FrameIndex, context.Progress, context.ClipProgress,
+                context.TargetWidth, context.TargetHeight, context.RelativeWidth, context.RelativeHeight,
+            }), true);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception) { return FrameHashResult.Uncacheable(); }
+    }
+
+    internal static FrameHashResult GetAudioHash(Compose.AudioSampleSource source, CancellationToken token)
+    {
+        try
+        {
+            return new(HashValue(JsonSerializer.SerializeToElement(source.DescribeHashInputs(token), configurationOptions)), true);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (UnhashableInputException) { return FrameHashResult.Uncacheable(); }
+        catch (Exception ex)
+        {
+            Logger.Log(ex, "Describe mixed audio for hashing", nameof(FrameHashHelper));
+            return FrameHashResult.Uncacheable();
+        }
+    }
 
     internal static object DescribeEffect(IEffect effect, bool bound = false)
     {
-        var state = ReadProperties(effect);
+        var state = ReadProperties(effect, effect.Parameters.Keys.Prepend(nameof(IEffect.Parameters)).ToArray());
         state["TypeName"] = effect.TypeName;
         state["FromPlugin"] = effect.FromPlugin;
         state["TypeOfEffect"] = effect.TypeOfEffect;
@@ -217,10 +187,18 @@ public static class FrameHashHelper
         state["Module"] = effect.GetType().Module.ModuleVersionId;
         state.Remove(nameof(IEffect.Id));
         state.Remove(nameof(IEffect.Parameters));
-        state["Parameters"] = effect.Parameters.ToDictionary(p => p.Key, p => IsRuntimeValue(p.Value)
-            ? bound ? (object)new { BoundParameter = p.Key } : throw new RenderRequiredException() : p.Value);
+        state.Remove(nameof(IEffect.Index));
+        state["Parameters"] = effect.Parameters.ToDictionary(p => p.Key, p => FrameHashAnalysis.IsMutableInput(p.Value)
+            ? bound ? (object)new { BoundParameter = p.Key } : throw new UnhashableInputException() : p.Value);
         return state;
     }
+
+    internal static bool IsFrameInvariant(IClip clip, bool layout = false) => clip is IImmutableContentClip
+        && clip.AlternativeSource is null && clip.SpeedVarianceProviderInstance is null && clip.MixtureInstance is null
+        && !(clip.EffectProvidersInstances ?? []).Any(p => p.Enabled && (layout
+            || p.TypeOfEffect is not (Shared.EffectType.ClipPositionProvider or Shared.EffectType.ContinuousClipPositionProvider)))
+        && !(clip.EffectsInstances ?? []).Any(e => e.Enabled && (layout
+            || e is not (IClipPositionProvider or IContinuousClipPositionProvider)));
 
     internal static string GetPreviewSourceHash(IClip clip, uint sourceFrame, int width, int height, int pixelMode)
     {
@@ -240,29 +218,29 @@ public static class FrameHashHelper
                 properties.Remove(name);
             state = properties;
         }
-        return HashValue(new { Schema = "preview-source", Module = clip.GetType().Module.ModuleVersionId,
+        return HashValue(JsonSerializer.SerializeToElement(new { Schema = "preview-source-v2", Module = clip.GetType().Module.ModuleVersionId,
             DrawingModule = typeof(IPicture).Module.ModuleVersionId,
             Source = SourceFingerprint(clip.FilePath), Font = clip is TextClip text ? SourceFingerprint(text.FontPath) : null,
             Frame = clip is IImmutableContentClip ? 0u : sourceFrame,
-            width, height, pixelMode, State = state, Proxy = PreviewVideoProxies.Scope.Current?.Identity,
+            width, height, pixelMode, State = state,
             EffectHelper.ForcePreferToType, EffectHelper.DefaultImplementsType,
             PreferredPlugins = RenderAPIBase.Plugins.IPluginBase.EffectImplementations.PreferredPlugins
                 .OrderBy(p => p.Key.TypeName, StringComparer.Ordinal).ThenBy(p => p.Key.ImplementType).Select(p => new { p.Key, p.Value }).ToArray(),
             Rasterizer = RenderAPIBase.ClipAndTrack.IVectorContentClip.GlobalDefaultRasterizer.GetType().AssemblyQualifiedName,
-            AntiAlias = RenderAPIBase.ClipAndTrack.IVectorContentClip.GlobalDefaultAntiAliasMode });
+            AntiAlias = RenderAPIBase.ClipAndTrack.IVectorContentClip.GlobalDefaultAntiAliasMode }, configurationOptions));
     }
 
-    private static Dictionary<string, object?> ReadProperties(object value) => value.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
-        .Where(p => p.CanRead && p.GetIndexParameters().Length == 0 && !runtimeProperties.Contains(p.Name)
+    internal static Dictionary<string, object?> ReadProperties(object value, params string[] excluded) => value.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+        .Where(p => p.CanRead && p.GetIndexParameters().Length == 0 && !runtimeProperties.Contains(p.Name) && !excluded.Contains(p.Name)
             && p.GetCustomAttribute<JsonIgnoreAttribute>()?.Condition != JsonIgnoreCondition.Always)
         .GroupBy(p => p.Name).ToDictionary(g => g.Key, g => g.First().GetValue(value));
 
     internal static object? SourceFingerprint(string? path)
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
-        if (Uri.TryCreate(path, UriKind.Absolute, out var uri) && !uri.IsFile)
+        if (path.StartsWith('#') || Uri.TryCreate(path, UriKind.Absolute, out var uri) && !uri.IsFile)
             return new { Path = path, Revision = ProjectExternalSourceRuntime.Current.CacheToken,
-                Video = ExternalVideoSourceRegistry.CacheToken, Mask = ExternalMaskSourceRegistry.CacheToken };
+                Video = ExternalVideoSourceRegistry.CacheToken, Audio = ExternalAudioSourceRegistry.CacheToken, Mask = ExternalMaskSourceRegistry.CacheToken };
         var file = new FileInfo(path);
         return new { Path = Path.GetFullPath(path), Exists = file.Exists, Length = file.Exists ? file.Length : 0,
             Modified = file.Exists ? file.LastWriteTimeUtc.Ticks : 0 };
@@ -301,7 +279,7 @@ public static class FrameHashHelper
 
     public static string HashPicture(IPicture picture)
     {
-        if (picture is IHwAccelPicture) throw new RenderRequiredException();
+        if (picture is IHwAccelPicture) throw new UnhashableInputException();
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         hash.AppendData(Encoding.UTF8.GetBytes($"{picture.Width}/{picture.Height}/{picture.BitPerPixel.Value}/{picture.HasAlphaChannel}/"));
         void Append(Array? channel)
@@ -366,7 +344,7 @@ public static class FrameHashHelper
         public override IPicture Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => throw new NotSupportedException();
         public override void Write(Utf8JsonWriter writer, IPicture value, JsonSerializerOptions options)
         {
-            if (!allowPictures) throw new RenderRequiredException();
+            if (!allowPictures) throw new UnhashableInputException();
             writer.WriteStringValue(HashPicture(value));
         }
     }
@@ -378,15 +356,16 @@ public static class FrameHashHelper
 
         public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options)
         {
-            if (IsRuntimeValue(value)) throw new RenderRequiredException();
+            if (!allowPictures && FrameHashAnalysis.IsMutableInput(value)) throw new UnhashableInputException();
+            if (IsRuntimeValue(value)) throw new UnhashableInputException();
             if (value is IPicture picture)
             {
-                if (!allowPictures) throw new RenderRequiredException();
+                if (!allowPictures) throw new UnhashableInputException();
                 writer.WriteStringValue(HashPicture(picture));
             }
             else if (value is projectFrameCut.Shared.IAudioSamples<float> audio)
             {
-                if (!allowPictures) throw new RenderRequiredException();
+                if (!allowPictures) throw new UnhashableInputException();
                 using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 hash.AppendData(BitConverter.GetBytes(audio.channelCount));
                 hash.AppendData(BitConverter.GetBytes(audio.SampleCount));
@@ -395,7 +374,7 @@ public static class FrameHashHelper
                     hash.AppendData(MemoryMarshal.AsBytes(audio.GetSamples(c).AsSpan(0, audio.SampleCount)));
                 writer.WriteStringValue(Convert.ToHexString(hash.GetHashAndReset()));
             }
-            else if (value.GetType() == typeof(object)) throw new RenderRequiredException();
+            else if (value.GetType() == typeof(object)) throw new UnhashableInputException();
             else JsonSerializer.Serialize(writer, value, value.GetType(), options);
         }
     }

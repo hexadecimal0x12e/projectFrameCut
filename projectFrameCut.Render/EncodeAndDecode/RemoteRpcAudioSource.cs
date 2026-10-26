@@ -7,6 +7,8 @@ namespace projectFrameCut.Render.EncodeAndDecode;
 
 public class RemoteRpcAudioSource : IAudioSource<float>
 {
+    public bool IsDeterministic => descriptor.IsDeterministic;
+
     public const string DecoderTypeName = nameof(RemoteRpcAudioSource);
     private readonly ExternalAudioSourceReference source;
     private readonly object gate = new();

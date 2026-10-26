@@ -50,6 +50,7 @@ public sealed class ManageExternalVideoSourceClientRequest
 [ProtoContract]
 public sealed class ExternalVideoSourceDescriptor
 {
+    [ProtoMember(17)] public bool IsDeterministic { get; set; }
     [ProtoMember(1)] public Guid ClientId { get; set; }
     [ProtoMember(2)] public string SourceId { get; set; } = string.Empty;
     [ProtoMember(3)] public string Name { get; set; } = string.Empty;

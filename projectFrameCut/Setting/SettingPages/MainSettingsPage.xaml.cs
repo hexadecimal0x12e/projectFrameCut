@@ -227,6 +227,8 @@ namespace projectFrameCut
                 DynamicPreview.DisableEffectDynamicPreview = IsBoolSettingTrue("render_DisallowViewBasedEffectInPreview");
 
                 DynamicPreview.DefaultOutputMode = ParsePreviewOutputMode(GetSetting("Edit_PreviewOutputMode", nameof(NativePreviewOutputMode.Required)));
+                DynamicPreview.IgnorePreviewWindowSize = IsBoolSettingTrue("Edit_IgnorePreviewWindowSize");
+                DynamicPreview.TargetResolutionPixels = Math.Max(0, GetSettingAs<long>(DynamicPreviewSettings.TargetPixelsSettingKey, 0, 0));
                 LivePreviewer.DefaultOutputMode = DynamicPreview.DefaultOutputMode;
                 IColorAdjustEffect.AllowColorAdjustAppearInEffectEditor = IsBoolSettingTrue("Edit_AllowColorAdjustAppearInEffectEditor");
 

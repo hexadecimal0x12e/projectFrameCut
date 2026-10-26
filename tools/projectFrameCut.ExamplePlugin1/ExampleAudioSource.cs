@@ -5,6 +5,8 @@ namespace SomePublisher;
 
 public sealed class ExampleAudioSource : IAudioSource<float>
 {
+    public bool IsDeterministic => true;
+
     private bool _disposed;
 
     public ExampleAudioSource(string? path) => SourcePath = path;

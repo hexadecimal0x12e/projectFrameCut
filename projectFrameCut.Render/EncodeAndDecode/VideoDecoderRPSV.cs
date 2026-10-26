@@ -9,8 +9,11 @@ using System.Text;
 
 namespace projectFrameCut.Render.EncodeAndDecode
 {
+    [Obsolete("No longer maintained and will be removed in API v10. Use RPC Source, or assembly-based external source instead.")]
     internal class RawPictureSequenceStreamVideoDecoderContext : IVideoSource
     {
+        public bool IsDeterministic => false;
+
         private bool _disposed;
 
         public int? ResultBitPerPixel => BytesPerPixel switch

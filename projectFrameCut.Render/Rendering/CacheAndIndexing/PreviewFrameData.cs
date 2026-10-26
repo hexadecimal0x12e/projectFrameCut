@@ -6,10 +6,20 @@ using System.Security.Cryptography;
 
 namespace projectFrameCut.Render.Rendering;
 
+public sealed record PreviewFrameInfo(string SourceHash, string EffectHash, bool ScRgb, int Width, int Height,
+    int Stride, bool HasTransparency, string ContentHash, int PixelsLength, int MaskLength);
+
 public sealed record PreviewFrameData(string SourceHash, string EffectHash, bool ScRgb, int Width, int Height,
     int Stride, bool HasTransparency, string ContentHash, byte[] Pixels, byte[] AlphaMask)
 {
+    public PreviewFrameInfo Info => new(SourceHash, EffectHash, ScRgb, Width, Height, Stride,
+        HasTransparency, ContentHash, Pixels.Length, AlphaMask.Length);
+
     public static PreviewFrameData Create(IPicture picture, string sourceHash, string effectHash, bool scRgb)
+        => Create(picture, sourceHash, effectHash, scRgb, null);
+
+    public static PreviewFrameData Create(IPicture picture, string sourceHash, string effectHash, bool scRgb,
+        Func<int, byte[]>? allocatePixels)
     {
         int width = picture.Width, height = picture.Height;
         var mask = new byte[checked((picture.Pixels + 7) / 8)];
@@ -26,7 +36,9 @@ public sealed record PreviewFrameData(string SourceHash, string EffectHash, bool
         int stride = scRgb ? checked(width * 8) : 0;
         if (scRgb)
         {
-            pixels = new byte[checked(stride * height)];
+            int length = checked(stride * height);
+            pixels = allocatePixels?.Invoke(length) ?? GC.AllocateUninitializedArray<byte>(length);
+            if (pixels.Length != length) throw new InvalidDataException("Invalid preview pixel buffer length.");
             if (picture is IPicture<ushort> p16)
             {
                 bool pq = p16 is IHDRPicture<ushort> hdr && float.IsFinite(hdr.MaximumBrightness) && hdr.MaximumBrightness > 300;

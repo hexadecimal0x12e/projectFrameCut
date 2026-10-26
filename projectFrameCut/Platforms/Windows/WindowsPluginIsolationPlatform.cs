@@ -50,8 +50,8 @@ internal sealed partial class WindowsPluginIsolationPlatform : IPluginIsolationP
         directory.SetAccessControl(security);
     }
     internal static SecurityIdentifier GetAppContainerSid(string packageFamilyName) => DeriveAppContainerSid(GetContainerName(packageFamilyName));
-    internal static NamedPipeServerStream CreateRpcPipe(string name, bool isolated) =>
-        isolated ? CreatePipe(name, AppContainerSid) : new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+    internal static NamedPipeServerStream CreateRpcPipe(string name, bool isolated, string dataRoot) =>
+        projectFrameCut.Services.ExternalRpcPipePermissions.CreatePipe(name, dataRoot, isolated ? AppContainerSid : null);
 
     internal static void PrepareCurrentProjectAccess(string projectRoot) =>
         PrepareDirectoryAccess(projectRoot, "CurrentProject");

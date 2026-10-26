@@ -9,7 +9,6 @@ using projectFrameCut.Drawing.Processing.Resizing;
 using projectFrameCut.Render.RenderAPIBase.Context;
 using FFmpeg.AutoGen;
 using projectFrameCut.Render.RPCProtocol;
-using projectFrameCut.Render.Rendering;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
@@ -117,13 +116,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             try
             {
-                if (PreviewVideoProxies.Scope.Current is { } proxies && Decoder is { Width: > 0, Height: > 0 } original)
-                {
-                    var region = GetSourceRegion(original.Width, original.Height);
-                    if (proxies.TryRead(this, ClampFrameToDecoderRange(original, targetFrame), original.Width, original.Height,
-                        region.X, region.Y, region.Width, region.Height, targetWidth, targetHeight, targetPPB) is { } proxyFrame)
-                        return proxyFrame;
-                }
                 using var decoderLease = _decoderPool.Rent(targetFrame);
                 var decoder = decoderLease.Decoder;
                 targetFrame = ClampFrameToDecoderRange(decoder, targetFrame);

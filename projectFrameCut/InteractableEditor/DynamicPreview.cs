@@ -55,6 +55,8 @@ public sealed class DynamicPreview : IDisposable
         => s_localCacheIndexes.GetOrAdd(Path.GetFullPath(root ?? DiskCacheRoot), static path => new(path));
     public static string DiskCacheRoot { get; set { if (Directory.Exists(value)) field = value; } } = Path.Combine(MauiProgram.DataPath, "RenderCache", "clipLocalFallback");
     public static NativePreviewOutputMode DefaultOutputMode { get; set; } = NativePreviewOutputMode.Required;
+    public static bool IgnorePreviewWindowSize { get; set; }
+    public static long TargetResolutionPixels { get; set; }
 
 
     private IClip[]? _clips;
@@ -120,7 +122,7 @@ public sealed class DynamicPreview : IDisposable
     public static int GroupRasterizationChildThreshold { get; set; } = 128;
 
     /// <summary>
-    /// Divisor for continuous preview resolution. 1 = the fitted viewport resolution, 2 = half, etc.
+    /// Divisor for continuous preview resolution after optional viewport fitting. 2 = half, etc.
     /// This changes playback and interactive preview bitmap density; still frames prepared by
     /// <see cref="PrepareFrameAsync(uint, int, int, CancellationToken, bool)"/> always use the requested target resolution.
     /// </summary>
@@ -157,7 +159,7 @@ public sealed class DynamicPreview : IDisposable
     }
 
     /// <summary>
-    /// Fits interactive previews to the viewport; still frames retain the requested resolution.
+    /// Prepares interactive previews at the configured resolution; still frames retain the requested resolution.
     /// </summary>
     public Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight, double viewportWidth, double viewportHeight, CancellationToken token, bool applyClipTargetLayout = true, bool interactivePreview = false)
     {
@@ -167,7 +169,7 @@ public sealed class DynamicPreview : IDisposable
     }
 
     /// <summary>
-    /// Resolves the bitmap canvas inside the aspect-fitted project viewport.
+    /// Resolves the bitmap canvas from the target resolution and optional viewport fitting.
     /// The returned dimensions deliberately exclude any letterbox/pillarbox area.
     /// </summary>
     public (int canvasWidth, int canvasHeight) ResolveDimensions(int projectWidth, int projectHeight, double CanvasWidth, double CanvasHeight)
@@ -175,11 +177,14 @@ public sealed class DynamicPreview : IDisposable
         projectWidth = Math.Max(1, projectWidth);
         projectHeight = Math.Max(1, projectHeight);
 
-        var viewportWidth = ResolveCanvasSize(CanvasWidth, _viewportWidth, projectWidth);
-        var viewportHeight = ResolveCanvasSize(CanvasHeight, _viewportHeight, projectHeight);
+        var viewportWidth = IgnorePreviewWindowSize ? projectWidth : ResolveCanvasSize(CanvasWidth, _viewportWidth, projectWidth);
+        var viewportHeight = IgnorePreviewWindowSize ? projectHeight : ResolveCanvasSize(CanvasHeight, _viewportHeight, projectHeight);
         var fittedRect = CalculateAspectFitRect(viewportWidth, viewportHeight, projectWidth, projectHeight);
-        var scale = Math.Min(fittedRect.Width / projectWidth, fittedRect.Height / projectHeight)
-            / PreviewResolutionDivisor;
+        var targetPixels = TargetResolutionPixels;
+        var scale = IgnorePreviewWindowSize && targetPixels > 0
+            ? Math.Sqrt(targetPixels / ((double)projectWidth * projectHeight))
+            : Math.Min(fittedRect.Width / projectWidth, fittedRect.Height / projectHeight);
+        scale /= PreviewResolutionDivisor;
 
         var canvasWidth = Math.Max(1, (int)Math.Round(projectWidth * scale, MidpointRounding.AwayFromZero));
         var canvasHeight = Math.Max(1, (int)Math.Round(projectHeight * scale, MidpointRounding.AwayFromZero));
@@ -809,29 +814,30 @@ public sealed class DynamicPreview : IDisposable
         using var audio = EffectProcessing.OpenAudioFrame(_previewer?.AudioSamples);
         using var context = new FrameHashContext(new()
         {
-            Mode = RenderHashSettings.Mode, Width = canvasWidth, Height = canvasHeight,
+            Width = canvasWidth, Height = canvasHeight,
             ProjectWidth = projectWidth, ProjectHeight = projectHeight,
             PixelMode = mode.Value, Stage = "clip", ProcessFromCanvas = Timeline.ProcessEffectFromCanvas,
-        }, token, nodeCache);
+        }, token, nodeCache) { Clips = _clips ?? [clip] };
         using var hashScope = context.Enter();
         var clips = _clips ?? [clip];
         clip.ReInit(mode);
         using var cache = new PreviewFrameCache(id => Path.Combine(DiskCacheRoot, id.ToString()), frameIndex,
-            canvasWidth, canvasHeight, projectWidth, projectHeight, scRgb, false, token);
+            canvasWidth, canvasHeight, projectWidth, projectHeight, scRgb, false, token,
+            findSource: key => GetLocalCacheIndex().FindPreviewSource(key));
         IPicture? rendered = null;
         IPicture Render() => rendered ??= projectFrameCut.Render.RPCProtocol.ClipPreviewRenderer.Render(clip, clips,
             canvasWidth, canvasHeight, projectWidth, projectHeight, frameIndex, token, mode, initializeClips: false)
             ?? throw new InvalidOperationException($"Clip {clip.Id} did not produce a preview frame.");
         try
         {
-            var identity = FrameHashHelper.GetClipHash(clips, clip, frameIndex, context.Options, () => Render(), token);
+            var identity = FrameHashHelper.GetClipHash(clips, clip, frameIndex, context.Options, token);
             var cached = cache.GetOrCreate(clip, clips, identity.Hash, identity.CanReuse,
                 Path.Combine(DiskCacheRoot, "temporary", $"{Guid.NewGuid():N}.vfd2m"),
                 () => { var picture = Render(); rendered = null; return picture; },
                 () => clips.All(c => !ClipInitializationFailure.IsMarked(c) && Timeline.CanCacheClipSource(c)));
             var result = PreviewFrameMaterializer.FromData(new(cached.Path, cached.Data.Width, cached.Data.Height,
                 scRgb ? PreviewPixelFormat.Rgba16FloatScRgb : PreviewPixelFormat.EncodedImage, false)
-                { PreviewContainer = "vfd2m", PreviewEffectHash = identity.Hash }, cached.Data);
+                { PreviewContainer = "vfd2m", PreviewEffectHash = cached.Data.EffectHash }, cached.Data);
             if (!cached.Persistent) File.Delete(cached.Path);
             else
             {

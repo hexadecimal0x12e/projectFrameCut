@@ -6,6 +6,7 @@ namespace projectFrameCut.Render.Effect;
 internal sealed class NativeDynamicEffectGraph(DynamicEffectGraph graph) : IVectorPictureEffect, IDisposable
 {
     public bool IsDeterministic => graph.IsDeterministic;
+    internal IEnumerable<IEffect> NodeEffects => graph.NodeEffects;
 
     public string TypeName => "__NativeDynamicEffectGraph__";
     public string FromPlugin => graph.FromPlugin;

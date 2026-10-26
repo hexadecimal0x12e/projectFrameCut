@@ -102,7 +102,6 @@ public sealed class ScheduleBenchmarkPage : ContentPage
             {
                 OutputDirectory = Path.Combine(MauiProgram.CachePath, "ScheduleBenchmark"),
                 CandidateCount = candidateCount,
-                FrameHashMode = RenderHashSettings.Mode,
                 FFmpegVersion = ffmpeg.av_version_info(),
 #if WINDOWS || LINUX
                 Accelerators = AcceleratorsManager.AcceleratorsForRendering.Select(a => a.Name).ToArray(),
@@ -164,9 +163,7 @@ public sealed class ScheduleBenchmarkPage : ContentPage
         WriteSetting("render_coreAffinityOverride", "");
         WriteSetting("render_enableMemoryBudget", c.EnableMemoryBudget.ToString());
         WriteSetting("render_maxBufferedMiB", (c.MaxBufferedBytes / (1024 * 1024)).ToString(CultureInfo.InvariantCulture));
-        WriteSetting("render_FrameHashMode", c.FrameHashMode.ToString());
         WriteSetting("render_enableChunkRender", false.ToString());
-        WriteSetting("render_enableDeferredComposition", c.EnableDeferredComposition.ToString());
     }
 
     protected override void OnDisappearing()

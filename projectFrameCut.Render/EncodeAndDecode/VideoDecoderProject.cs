@@ -16,6 +16,7 @@ using System.Threading.Channels;
 
 namespace projectFrameCut.Render.EncodeAndDecode
 {
+    [Obsolete("We no longer maintain this decoder. It will not be updated in the future, consider use \"clip referencing\" feature instead.")]
     public class DecoderContextPJFCProject : IVideoSource
     {
         public static Func<ConcurrentDictionary<string, AssetItem>>? GlobalAssetGetter = null;
@@ -38,6 +39,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public int Width => project?.RelativeWidth ?? 0;
 
         public int Height => project?.RelativeHeight ?? 0;
+
+        public bool IsDeterministic => true;
 
         public bool Disposed { get; private set; } = false;
 

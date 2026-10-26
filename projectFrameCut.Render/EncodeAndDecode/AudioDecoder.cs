@@ -10,6 +10,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
 {
     public sealed unsafe class Float32bitAudioDecoder : IAudioSource<float>
     {
+        public bool IsDeterministic => true;
+
         private readonly string _path;
         private AVFormatContext* _fmt = null;
         private AVCodecContext* _codec = null;

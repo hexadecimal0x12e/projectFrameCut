@@ -47,6 +47,10 @@ public sealed class ProjectExternalAudioSource : RemoteRpcAudioSource
         return client.CreateAudioAsync(new() { Source = source });
     }
     protected override ValueTask<ExternalAudioSourceInstance> InitializeInstanceAsync(Guid clientId, ExternalAudioSourceStateRequest state) => client!.InitializeAudioAsync(state);
-    protected override ValueTask<ExternalAudioSamples> ReadInstanceAsync(Guid clientId, ExternalAudioSourceReadRequest request) => client!.ReadSamplesAsync(request);
+    protected override ValueTask<ExternalAudioSamples> ReadInstanceAsync(Guid clientId, ExternalAudioSourceReadRequest request)
+    {
+        ProjectExternalSourceRuntime.EnsureAllowed();
+        return client!.ReadSamplesAsync(request);
+    }
     protected override ValueTask ReleaseInstanceAsync(Guid clientId, ExternalAudioSourceStateRequest state) => client!.ReleaseAudioAsync(state);
 }

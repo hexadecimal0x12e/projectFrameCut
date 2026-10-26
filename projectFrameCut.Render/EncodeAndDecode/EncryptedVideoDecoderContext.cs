@@ -11,6 +11,8 @@ namespace projectFrameCut.Render.EncodeAndDecode;
 /// </summary>
 public sealed class EncryptedVideoDecoderContext : IVideoSource<byte>
 {
+    public bool IsDeterministic => true;
+
     private readonly string _sourceName;
     private readonly Func<string, byte[]> _keyProvider;
     private readonly DecoderContext8Bit _decoder;

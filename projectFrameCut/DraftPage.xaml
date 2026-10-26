@@ -31,7 +31,7 @@
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Option}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe8b8;}" Command="{Binding SettingsCommand}"/>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_RestartBackend}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe042;}" Command="{Binding RestartBackendCommand}"/>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_CreateRpcToken}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe73e;}" Command="{Binding CreateRpcTokenCommand}"/>
+            <MenuFlyoutItem x:Name="CreateRpcPipeMenuItem" Text="{l:Localized Key=DraftPage_CreateRpcToken}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe73e;}" Command="{Binding CreateRpcTokenCommand}"/>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_ExitWithoutSave}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe14a;}" Command="{Binding ExitNoSaveCommand}"/>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Exit}" IconImageSource="{FontImageSource FontFamily=Icons, Glyph=&#xe879;}" Command="{Binding ExitCommand}"/>

@@ -1,9 +1,12 @@
 using projectFrameCut.Drawing.Base;
 using projectFrameCut.Drawing.Base.Picture;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.Rendering;
+using projectFrameCut.Shared;
 using static projectFrameCut.Render.Contracts.Tests.DynamicEffectGraphTests;
 
 namespace projectFrameCut.Render.Contracts.Tests;
@@ -17,6 +20,22 @@ public sealed class FrameHashTests
         public override bool IsDeterministic => false;
     }
 
+    private sealed class AudioSource(bool deterministic) : IAudioSource
+    {
+        public bool IsDeterministic => deterministic;
+        public string TypeName => nameof(AudioSource);
+        public string[] PreferredExtension => [];
+        public uint Duration => 48000;
+        public int ChannelCount => 2;
+        public int SamplePerSecond => 48000;
+        public bool Disposed => false;
+        public void Initialize() { }
+        public IAudioSource CreateNew(string source) => new AudioSource(deterministic);
+        public IAudioSamples GetSample(uint start, long count) => throw new AssertFailedException("Hashing read audio samples.");
+        public object GetSingleSample(uint index) => throw new AssertFailedException("Hashing read audio samples.");
+        public void Dispose() { }
+    }
+
     [TestMethod]
     public void CanonicalValuesIgnoreDictionaryInsertionOrder()
     {
@@ -26,37 +45,42 @@ public sealed class FrameHashTests
     }
 
     [TestMethod]
-    public void StaticMaskHashesNeverRenderOrBecomeReusable()
+    public void MaskHashesIncludeBackdropAndLayout()
     {
-        using var clip = new MaskClip { Id = Guid.NewGuid(), Name = "mask", Duration = 1 };
-        int calls = 0;
-        var options = new FrameHashOptions { Mode = FrameHashMode.Static };
-        var first = FrameHashHelper.GetClipHash([clip], clip, 0, options, () => ++calls);
-        var second = FrameHashHelper.GetClipHash([clip], clip, 0, options, () => ++calls);
-        Assert.IsFalse(first.CanReuse);
-        Assert.AreNotEqual(first.Hash, second.Hash);
-        Assert.AreEqual(0, calls);
+        using var lower = new SolidColorClip { Id = Guid.NewGuid(), Name = "lower", Duration = 1, ExtraData = [] };
+        using var clip = new MaskClip { Id = Guid.NewGuid(), Name = "mask", Duration = 1, LayerIndex = 1 };
+        var first = FrameHashHelper.GetClipHash([lower, clip], clip, 0);
+        Assert.IsTrue(first.CanReuse);
+        lower.TargetX = 20;
+        Assert.AreNotEqual(first.Hash, FrameHashHelper.GetClipHash([lower, clip], clip, 0).Hash);
+        var second = FrameHashHelper.GetClipHash([lower, clip], clip, 0);
+        clip.Rotation = 90;
+        Assert.AreNotEqual(second.Hash, FrameHashHelper.GetClipHash([lower, clip], clip, 0).Hash);
     }
 
     [TestMethod]
-    public void DynamicHashesUseThisInvocationsActualOutput()
+    public void ClipContentIgnoresLayoutAndPositionEffects()
     {
         using var clip = new SolidColorClip
         {
             Id = Guid.NewGuid(), Name = "changing", Duration = 1, ExtraData = [],
             EffectsInstances = [new JitterEffect()],
         };
-        using var left = Picture(10);
-        using var right = Picture(20);
-        int calls = 0;
-        var options = new FrameHashOptions();
-        var first = FrameHashHelper.GetClipHash([clip], clip, 0, options, () => { calls++; return left; });
-        var same = FrameHashHelper.GetClipHash([clip], clip, 0, options, () => { calls++; return left; });
-        var changed = FrameHashHelper.GetClipHash([clip], clip, 0, options, () => { calls++; return right; });
+        var first = FrameHashHelper.GetClipHash([clip], clip, 0);
+        clip.TargetX = 10;
+        clip.TargetY = 20;
+        clip.TargetWidth = 100;
+        clip.TargetHeight = 200;
+        clip.Rotation = 90;
+        var same = FrameHashHelper.GetClipHash([clip], clip, 0);
+        clip.EffectsInstances = [];
+        var withoutPosition = FrameHashHelper.GetClipHash([clip], clip, 0);
         Assert.IsTrue(first.CanReuse);
         Assert.AreEqual(first.Hash, same.Hash);
-        Assert.AreNotEqual(first.Hash, changed.Hash);
-        Assert.AreEqual(3, calls);
+        Assert.AreEqual(first.Hash, withoutPosition.Hash);
+        var frame = FrameHashHelper.GetFrameHash([clip], 0);
+        clip.TargetX++;
+        Assert.AreNotEqual(frame.Hash, FrameHashHelper.GetFrameHash([clip], 0).Hash);
     }
 
     [TestMethod]
@@ -88,7 +112,7 @@ public sealed class FrameHashTests
     }
 
     [TestMethod]
-    public void NonDeterministicDependenciesRunAgainWhileDeterministicConsumersReuseTheirOutput()
+    public void NonDeterministicInputsPreventConsumerReuse()
     {
         int sourceCalls = 0, consumerCalls = 0;
         byte value = 10;
@@ -113,7 +137,75 @@ public sealed class FrameHashTests
             Assert.AreEqual(value, ((IPicture<byte>)result).r[0]);
         }
         Assert.AreEqual(3, sourceCalls);
-        Assert.AreEqual(2, consumerCalls);
+        Assert.AreEqual(3, consumerCalls);
+    }
+
+    [TestMethod]
+    public void ContentBindingsFollowUpstreamDeterminismWithoutEvaluation()
+    {
+        int calls = 0;
+        var source = new Provider(null, EffectArgumentFieldType.IPicture, _ => { calls++; return Picture(1); });
+        var consumer = new Provider(EffectArgumentFieldType.IPicture, EffectArgumentFieldType.IPicture,
+            c => c.Input);
+        consumer.SetMainInputSource(source.Id);
+        consumer.SetFinalOutputSource(true);
+        using var clip = new SolidColorClip
+        {
+            Id = Guid.NewGuid(), Name = "graph", Duration = 2, ExtraData = [],
+            EffectProvidersInstances = [source, consumer],
+        };
+        Assert.IsTrue(FrameHashHelper.CanPersistClipHash([clip], clip));
+        var first = FrameHashHelper.GetClipHash([clip], clip, 0);
+        Assert.IsTrue(first.CanReuse);
+        Assert.AreNotEqual(first.Hash, FrameHashHelper.GetClipHash([clip], clip, 1).Hash);
+        var changing = new ChangingProvider(_ => { calls++; return Picture(2); });
+        consumer.SetMainInputSource(changing.Id);
+        clip.EffectProvidersInstances = [changing, consumer];
+        Assert.IsFalse(FrameHashHelper.CanPersistClipHash([clip], clip));
+        consumer.SetMainInputSource(Guid.NewGuid());
+        Assert.IsFalse(FrameHashHelper.CanPersistClipHash([clip], clip));
+        Assert.AreEqual(0, calls);
+    }
+
+    [TestMethod]
+    public void ProviderCyclesCannotProducePersistentHashes()
+    {
+        var first = new Provider(EffectArgumentFieldType.IPicture, EffectArgumentFieldType.IPicture, c => c.Input);
+        var second = new Provider(EffectArgumentFieldType.IPicture, EffectArgumentFieldType.IPicture, c => c.Input);
+        first.SetMainInputSource(second.Id);
+        second.SetMainInputSource(first.Id);
+        second.SetFinalOutputSource(true);
+        using var clip = new SolidColorClip
+        {
+            Id = Guid.NewGuid(), Name = "cycle", Duration = 1, ExtraData = [],
+            EffectProvidersInstances = [first, second],
+        };
+        Assert.IsFalse(FrameHashHelper.CanPersistClipHash([clip], clip));
+    }
+
+    [TestMethod]
+    public void AudioBindingsUseSourceDeterminismAndMixConfiguration()
+    {
+        var provider = new Provider(EffectArgumentFieldType.IPicture, EffectArgumentFieldType.IPicture,
+            c => c.Input, new EffectArgumentFieldDescriptor { Id = "Audio", FieldType = EffectArgumentFieldType.AudioSample });
+        provider.SetMainInputSource(IEffectProvider.InputAnchorGUID);
+        provider.SetFieldBinding("Audio", ValueProviderFrameContext.BuiltInAudioSampleProviderId);
+        provider.SetFinalOutputSource(true);
+        using var clip = new SolidColorClip
+        {
+            Id = Guid.NewGuid(), Name = "audio", Duration = 1, ExtraData = [], EffectProvidersInstances = [provider],
+        };
+        using var track = new NormalSoundTrack
+        {
+            Id = "audio", Name = "audio", ExtraData = [], AudioSource = new AudioSource(true),
+        };
+        using var scope = EffectProcessing.OpenAudioFrame(new AudioSampleSource([clip], [track], 30));
+        var first = FrameHashHelper.GetClipHash([clip], clip, 0);
+        Assert.IsTrue(first.CanReuse);
+        track.Volume = 0.5f;
+        Assert.AreNotEqual(first.Hash, FrameHashHelper.GetClipHash([clip], clip, 0).Hash);
+        track.AudioSource = new AudioSource(false);
+        Assert.IsFalse(FrameHashHelper.CanPersistClipHash([clip], clip));
     }
 
     [TestMethod]

@@ -22,6 +22,7 @@ internal sealed class RemoteAudioSource : IAudioSource<float>
         new(session, item.TypeName, item.PreferredExtensions.ToArray());
 
     public string[] PreferredExtension { get; private set; }
+    public bool IsDeterministic { get; private set; }
     public string TypeName => _typeName;
     public uint Duration { get; private set; }
     public int ChannelCount { get; private set; }
@@ -69,6 +70,7 @@ internal sealed class RemoteAudioSource : IAudioSource<float>
 
     private void Apply(IsolationAudioSourceDescriptor descriptor)
     {
+        IsDeterministic = descriptor.IsDeterministic;
         _objectId = descriptor.ObjectId;
         PreferredExtension = descriptor.PreferredExtensions.ToArray();
         Duration = descriptor.Duration;

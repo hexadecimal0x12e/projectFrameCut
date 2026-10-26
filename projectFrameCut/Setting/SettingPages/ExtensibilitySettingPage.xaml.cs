@@ -6,6 +6,7 @@ using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationPluginBase;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.Contracts;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RPCProtocol;
 using projectFrameCut.Services;
@@ -36,10 +37,14 @@ public partial class ExtensibilitySettingPage : ContentPage
     {
         base.OnAppearing();
         AdvanceConfigPageViewing = "";
+        if (externalRpcAllowed != ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath).AllowExternalRPC) BuildPPB();
     }
+
+    private bool externalRpcAllowed;
 
     async void BuildPPB()
     {
+        externalRpcAllowed = ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath).AllowExternalRPC;
         if (!string.IsNullOrWhiteSpace(AdvanceConfigPageViewing))
         {
             await BuildAdvancedConfig(AdvanceConfigPageViewing);
@@ -78,10 +83,12 @@ public partial class ExtensibilitySettingPage : ContentPage
             {
                 new() { Header = SettingLocalizedResources.Plugin_ManagePlugins, Tag = "UserPlugins", Content = new ScrollView { Content = userPlugins } },
                 new() { Header = SettingLocalizedResources.Plugin_AIProviderPlugin, Tag = "AIProviders", LazyContentFactory = BuildAIProviders().BuildWithScrollView },
-                new() { Header = SettingLocalizedResources.ExternalRpc_Clients, Tag = "ExternalRpc", LazyContentFactory = BuildExternalRpcClients().ListenToChanges((e) => SettingInvoker(e, this)).BuildWithScrollView },
                 new() { Header = Localized.MainSettingsPage_Tab_Advanced, Tag = "Advanced", LazyContentFactory = BuildPluginAdvanced().ListenToChanges((e) => SettingInvoker(e, this)).BuildWithScrollView }
             }
         };
+        if (externalRpcAllowed)
+            tabs.TabItems.Insert(2, new() { Header = SettingLocalizedResources.ExternalRpc_Clients, Tag = "ExternalRpc", LazyContentFactory = BuildExternalRpcClients().ListenToChanges((e) => SettingInvoker(e, this)).BuildWithScrollView });
+        else if (selectedTab == "ExternalRpc") selectedTab = "UserPlugins";
         tabs.OnTabSwitched += (_, item) => selectedTab = item.Tag;
         tabs.SelectByTag(selectedTab);
         Content = tabs;

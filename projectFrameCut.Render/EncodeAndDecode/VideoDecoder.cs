@@ -87,6 +87,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public string[] PreferredExtension => [".mkv"];
         public int? ResultBitPerPixel => 8;
+        public bool IsDeterministic => true;
 
         public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
@@ -670,12 +671,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public string[] PreferredExtension => [".mkv", ".mp4", ".mov"];
         public int? ResultBitPerPixel => 16;
         public string TypeName => "HDRDecoderContext";
-
+        public bool IsDeterministic => true;
 
         public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
-        
-        
+
+
         private Lock locker = new();
 
         public HDRDecoderContext()
@@ -1421,7 +1422,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
     public sealed unsafe class DecoderContext8Bit : IVideoSource<byte>
     {
-
         private readonly string _path;
         private readonly FFmpegStreamIOContext? _streamIO;
         private AVFormatContext* _fmt = null;
@@ -1458,14 +1458,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public uint Index { get; set; } = 0;
         public string[] PreferredExtension => [".mp4", ".mov"];
         public string TypeName => "DecoderContext8Bit";
+        public bool IsDeterministic => true;
 
 
         public int? ResultBitPerPixel => 8;
 
         public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
-        
-        
+
+
         private Lock locker = new();
 
         public DecoderContext8Bit()

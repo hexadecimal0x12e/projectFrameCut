@@ -23,14 +23,44 @@ public sealed class LocalPreviewCacheIndex
     {
         string relativePath = Path.GetRelativePath(DirectoryPath, path);
         CacheIndexDatabase.ResolvePath(DirectoryPath, relativePath);
+        lock (PreviewFrameContainer.Gate(path))
+        {
+            if (!File.Exists(path)) return;
+            using var connection = database.Open();
+            using var transaction = connection.BeginTransaction();
+            if (!sourceFingerprint.HasValue && path.EndsWith(".vfd2m", StringComparison.OrdinalIgnoreCase))
+            {
+                string key = PreviewFrameContainer.GetSourceKey(relativePath), prefix = PreviewFrameContainer.GetSourcePrefix(relativePath);
+                using var remove = CacheIndexDatabase.Command(connection, """
+                    DELETE FROM local_frames WHERE kind=1 AND path!=$path
+                        AND (path=$key OR (path >= $prefix AND path < $end));
+                    """, ("$path", relativePath), ("$key", key), ("$prefix", prefix), ("$end", prefix + '\uffff'));
+                remove.Transaction = transaction;
+                remove.ExecuteNonQuery();
+            }
+            using var command = CacheIndexDatabase.Command(connection, """
+                INSERT INTO local_frames(path, kind, clip, frame, width, height, source_fingerprint, last_access)
+                VALUES ($path, $kind, $clip, $frame, $width, $height, $source, $time)
+                ON CONFLICT(path) DO UPDATE SET kind=excluded.kind, clip=excluded.clip, frame=excluded.frame,
+                    width=excluded.width, height=excluded.height, source_fingerprint=excluded.source_fingerprint,
+                    last_access=MAX(last_access, excluded.last_access);
+                """, ("$path", relativePath), ("$kind", sourceFingerprint.HasValue ? 0 : 1), ("$clip", clip.ToString("N")),
+                ("$frame", (long)frame), ("$width", width), ("$height", height), ("$source", sourceFingerprint), ("$time", DateTime.UtcNow.Ticks));
+            command.Transaction = transaction;
+            command.ExecuteNonQuery();
+            transaction.Commit();
+        }
+    }
+
+    public string? FindPreviewSource(string sourceKey)
+    {
+        string prefix = Path.GetRelativePath(DirectoryPath, PreviewFrameContainer.GetSourcePrefix(sourceKey));
         using var connection = database.Open();
         using var command = CacheIndexDatabase.Command(connection, """
-            INSERT INTO local_frames(path, kind, clip, frame, width, height, source_fingerprint, last_access)
-            VALUES ($path, $kind, $clip, $frame, $width, $height, $source, $time)
-            ON CONFLICT(path) DO UPDATE SET last_access=excluded.last_access;
-            """, ("$path", relativePath), ("$kind", sourceFingerprint.HasValue ? 0 : 1), ("$clip", clip.ToString("N")),
-            ("$frame", (long)frame), ("$width", width), ("$height", height), ("$source", sourceFingerprint), ("$time", DateTime.UtcNow.Ticks));
-        command.ExecuteNonQuery();
+            SELECT path FROM local_frames WHERE kind=1 AND path >= $prefix AND path < $end
+            ORDER BY last_access DESC LIMIT 1;
+            """, ("$prefix", prefix), ("$end", prefix + '\uffff'));
+        return command.ExecuteScalar() is string path ? CacheIndexDatabase.ResolvePath(DirectoryPath, path) : null;
     }
 
     public string? FindFallback(Guid clip, long fingerprint, uint frame, int width, int height)
@@ -93,6 +123,16 @@ public sealed class LocalPreviewCacheIndex
                     {
                         query.Transaction = transaction;
                         if (query.ExecuteScalar() is null) continue;
+                    }
+                    if (File.Exists(path) && File.GetLastWriteTimeUtc(path).Ticks > entry.Access)
+                    {
+                        using var touch = CacheIndexDatabase.Command(connection,
+                            "UPDATE local_frames SET last_access=$time WHERE path=$path;",
+                            ("$time", DateTime.UtcNow.Ticks), ("$path", entry.Path));
+                        touch.Transaction = transaction;
+                        touch.ExecuteNonQuery();
+                        transaction.Commit();
+                        continue;
                     }
                     File.Delete(path);
                     using var command = CacheIndexDatabase.Command(connection,

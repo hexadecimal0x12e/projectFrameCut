@@ -558,6 +558,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         RegisterCommands();
         InitializeComponent();
         BindingContext = this;
+        UpdateExternalRpcUi(ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath).AllowExternalRPC);
         InitializeQuickCommands();
         RegisterAddTrackButtonGestures();
         if (!BetterAccessibilityMode) DisableTabFocusOnWindows(AddTrackButton);
@@ -645,6 +646,7 @@ public partial class DraftPage : ContentPage, IDraftPage
         if (Directory.Exists(workingDir)) Environment.CurrentDirectory = workingDir;
         RegisterCommands();
         InitializeComponent();
+        UpdateExternalRpcUi(ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath).AllowExternalRPC);
         InitializeQuickCommands();
         RegisterAddTrackButtonGestures();
         if (!BetterAccessibilityMode) DisableTabFocusOnWindows(AddTrackButton);
@@ -766,14 +768,17 @@ public partial class DraftPage : ContentPage, IDraftPage
         try
         {
             if (AlreadyDisappeared) return;
+            ExternalRpcPipeSettings.EnsureAllowed(MauiProgram.BasicDataPath);
             if (IsRemoteProject) throw new NotSupportedException("External pipes must be created on the local render backend.");
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             var client = RenderRpcBootstrap.Client;
             var sessionId = await EnsureGuiRpcSessionAsync(client, timeout.Token);
             var result = await client.CreateGuiProjectPipeAsync(new GuiProjectSession() { SessionId = sessionId }, timeout.Token);
             if (AlreadyDisappeared) return;
+            ExternalRpcPipeSettings.EnsureAllowed(MauiProgram.BasicDataPath);
             if (await DisplayAlertAsync(Localized._Warn, Localized.DraftPage_CreateRpcToken_Warn, Localized._Confirm, Localized._Cancel) && !string.IsNullOrWhiteSpace(await DisplayPromptAsync(Localized._Info, Localized.DraftPage_CreateRpcToken_SuccessCopy, Localized.DraftPage_MenuBar_Edit_Copy, Localized._OK, result.Token, result.Token.Length, Keyboard.Text, result.Token)))
             {
+                ExternalRpcPipeSettings.EnsureAllowed(MauiProgram.BasicDataPath);
                 await Microsoft.Maui.ApplicationModel.DataTransfer.Clipboard.SetTextAsync(result.Token);
             }
         }
@@ -1114,7 +1119,8 @@ public partial class DraftPage : ContentPage, IDraftPage
         ClipEditor.ConfigurePreviewResolution(
             previewResolutionOptions,
             selectedPreviewResolution,
-            OnPreviewResolutionChangedAsync);
+            OnPreviewResolutionChangedAsync,
+            OnDynamicPreviewTargetResolutionChangedAsync);
 
         var w = this.Window?.Width ?? 0;
         var h = this.Window?.Height ?? 0;
@@ -5523,11 +5529,13 @@ public partial class DraftPage : ContentPage, IDraftPage
         }
     }
 
-    private static IEnumerable<(string Path, MenuFlyoutItem Item)> EnumerateMenuItems(System.Collections.IEnumerable items, string path)
+    private IEnumerable<(string Path, MenuFlyoutItem Item)> EnumerateMenuItems(System.Collections.IEnumerable items, string path)
     {
         var index = 0;
         foreach (var child in items)
         {
+            // Keep saved quick-command paths stable when the RPC menu item is hidden.
+            if (ReferenceEquals(items, ProjectNameMenuBarItem) && externalRpcUiAllowed == false && index == externalRpcMenuIndex) index++;
             var childPath = $"{path}/{index++}";
             if (child is MenuFlyoutItem flyoutItem) yield return (childPath, flyoutItem);
             if (child is MenuFlyoutSubItem subItem)
@@ -7820,7 +7828,7 @@ public partial class DraftPage : ContentPage, IDraftPage
             isPlaying = false;
             CancelDynamicPreview();
             try { _playbackCts?.Cancel(); } catch { }
-            await previewer.StopDynamicPreviewAsync();
+            await previewer.StopDynamicPreviewAsync(clearCache: true);
             foreach (var cts in _perClipThumbCts.Values)
             {
                 try { cts.Cancel(); } catch { }
@@ -8154,6 +8162,15 @@ public partial class DraftPage : ContentPage, IDraftPage
         await ShowAPopup(new DraftSettingPage(this).Content, mode: "dialog", disableScrollWrapping: true);
     }
 
+    private async Task OnDynamicPreviewTargetResolutionChangedAsync()
+    {
+        DynamicPreviewProvider.CancelClipWarmups();
+        if (isPlaying || previewer.HasDynamicPreview)
+            await PauseLivePreview();
+        else
+            await RefreshPreviewFromCurrentProviderAsync();
+    }
+
     private async Task OnPreviewResolutionChangedAsync(string picked)
     {
         var requireCustomResolution = false;
@@ -8294,6 +8311,7 @@ public partial class DraftPage : ContentPage, IDraftPage
     {
         if (e.WasPreviousPageACommunityToolkitPopupPage()) return;
         base.OnNavigatedTo(e);
+        UpdateExternalRpcUi(ExternalRpcPipeSettings.Load(MauiProgram.BasicDataPath).AllowExternalRPC);
         if (AlreadyDisappeared)
         {
             Log($"FATAL: DraftPage has been appeared again since disappeared. \r\nStackTrace:{Environment.StackTrace}", "fatal");

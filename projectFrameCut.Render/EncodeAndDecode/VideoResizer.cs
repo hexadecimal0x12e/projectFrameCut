@@ -1,7 +1,6 @@
 using FFmpeg.AutoGen;
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace projectFrameCut.Render.EncodeAndDecode
@@ -57,23 +56,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
-        internal readonly record struct ReencodeResult(int Width, int Height, bool HasAlpha, bool HasAuxiliary);
-
-        internal static ReencodeResult ReencodePreviewProxy(string inputPath, string outputPath, int targetWidth, int targetHeight,
-            CancellationToken cancellationToken = default)
-            => Reencode(inputPath, outputPath, targetWidth, targetHeight, "ffv1", 0, true, cancellationToken, previewProxy: true);
-
-        private static ReencodeResult Reencode(string inputPath, string outputPath, int targetWidth, int targetHeight,
-            string videoEncoder, long targetBitrate, bool preserveSourceFormat, CancellationToken cancellationToken, bool previewProxy = false)
+        private static void Reencode(string inputPath, string outputPath, int targetWidth, int targetHeight,
+            string videoEncoder, long targetBitrate, bool preserveSourceFormat, CancellationToken cancellationToken)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(inputPath);
             ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
             ArgumentException.ThrowIfNullOrWhiteSpace(videoEncoder);
-            if ((!preserveSourceFormat || previewProxy) && (targetWidth <= 0 || targetHeight <= 0))
+            if (!preserveSourceFormat && (targetWidth <= 0 || targetHeight <= 0))
                 throw new ArgumentOutOfRangeException(nameof(targetWidth));
             if (!preserveSourceFormat && ((targetWidth & 1) != 0 || (targetHeight & 1) != 0))
                 throw new ArgumentException("Target resolution must be even when encoding to YUV420P.");
-            if (!previewProxy && targetBitrate <= 0) throw new ArgumentOutOfRangeException(nameof(targetBitrate));
+            if (targetBitrate <= 0) throw new ArgumentOutOfRangeException(nameof(targetBitrate));
             cancellationToken.ThrowIfCancellationRequested();
             if (!File.Exists(inputPath)) throw new FileNotFoundException($"Input file '{inputPath}' doesn't exist.", inputPath);
             ffmpeg.avformat_network_init();
@@ -87,27 +80,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 FFmpegHelper.Throw(ffmpeg.avformat_open_input(&input, inputPath, null, null), "avformat_open_input");
                 FFmpegHelper.Throw(ffmpeg.avformat_find_stream_info(input, null), "avformat_find_stream_info");
-                int mainIndex = -1;
-                if (previewProxy)
-                {
-                    for (int i = 0; i < input->nb_streams; i++)
-                    {
-                        if (input->streams[i]->codecpar->codec_type != AVMediaType.AVMEDIA_TYPE_VIDEO) continue;
-                        mainIndex = i;
-                        break;
-                    }
-                }
-                else mainIndex = ffmpeg.av_find_best_stream(input, AVMediaType.AVMEDIA_TYPE_VIDEO, -1, -1, null, 0);
+                int mainIndex = ffmpeg.av_find_best_stream(input, AVMediaType.AVMEDIA_TYPE_VIDEO, -1, -1, null, 0);
                 if (mainIndex < 0) throw new InvalidDataException($"No video stream found in '{inputPath}'.");
-                bool auxiliary = previewProxy && ReadMetadata(input->metadata, AlphaBrightnessVideoWriter.FormatMetadataKey)
-                    == AlphaBrightnessVideoWriter.FormatVersion;
-                if (preserveSourceFormat && !previewProxy)
+                if (preserveSourceFormat)
                 {
                     targetWidth = input->streams[mainIndex]->codecpar->width;
                     targetHeight = input->streams[mainIndex]->codecpar->height;
                     Log($"Final video encoding: {videoEncoder}, {targetBitrate} bps, {targetWidth}x{targetHeight}.");
                 }
-                FFmpegHelper.Throw(ffmpeg.avformat_alloc_output_context2(&output, null, previewProxy ? "matroska" : null, outputPath),
+                FFmpegHelper.Throw(ffmpeg.avformat_alloc_output_context2(&output, null, null, outputPath),
                     "avformat_alloc_output_context2");
                 if (output == null) throw new OutOfMemoryException();
                 if (preserveSourceFormat) ffmpeg.av_dict_copy(&output->metadata, input->metadata, 0);
@@ -117,16 +98,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     cancellationToken.ThrowIfCancellationRequested();
                     var stream = input->streams[i];
                     var type = stream->codecpar->codec_type;
-                    if (i == mainIndex || auxiliary && type == AVMediaType.AVMEDIA_TYPE_VIDEO)
+                    if (i == mainIndex)
                     {
                         if (!preserveSourceFormat) continue;
                         tracks.Add(i, new Track(input, stream, output, targetWidth, targetHeight, videoEncoder, targetBitrate,
-                            preserveSourceFormat, previewProxy));
-                        if (auxiliary && ReadMetadata(stream->metadata, AlphaBrightnessVideoWriter.StreamRoleMetadataKey) == "main")
-                            mainIndex = i;
+                            preserveSourceFormat));
                     }
-                    else if (!previewProxy && (type is AVMediaType.AVMEDIA_TYPE_AUDIO or AVMediaType.AVMEDIA_TYPE_SUBTITLE or AVMediaType.AVMEDIA_TYPE_DATA
-                        || preserveSourceFormat && type == AVMediaType.AVMEDIA_TYPE_VIDEO))
+                    else if (type is AVMediaType.AVMEDIA_TYPE_AUDIO or AVMediaType.AVMEDIA_TYPE_SUBTITLE or AVMediaType.AVMEDIA_TYPE_DATA
+                        || preserveSourceFormat && type == AVMediaType.AVMEDIA_TYPE_VIDEO)
                     {
                         var copy = ffmpeg.avformat_new_stream(output, null);
                         if (copy == null) throw new OutOfMemoryException();
@@ -143,7 +122,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 }
                 if (!tracks.ContainsKey(mainIndex))
                     tracks.Add(mainIndex, new Track(input, input->streams[mainIndex], output, targetWidth, targetHeight,
-                        videoEncoder, targetBitrate, preserveSourceFormat, previewProxy));
+                        videoEncoder, targetBitrate, preserveSourceFormat));
                 if ((output->oformat->flags & ffmpeg.AVFMT_NOFILE) == 0)
                     FFmpegHelper.Throw(ffmpeg.avio_open(&output->pb, outputPath, ffmpeg.AVIO_FLAG_WRITE), "avio_open");
                 FFmpegHelper.Throw(ffmpeg.avformat_write_header(output, null), "avformat_write_header");
@@ -164,12 +143,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 }
                 if (result != ffmpeg.AVERROR_EOF) FFmpegHelper.Throw(result, "av_read_frame");
                 foreach (var track in tracks.Values) track.Finish(output, cancellationToken);
-                var main = tracks[mainIndex];
-                if (previewProxy && (tracks.Values.Any(t => t.Frames == 0) || auxiliary && tracks.Values.Any(t => t.Frames != main.Frames)))
-                    throw new InvalidDataException("The preview proxy contains incomplete video channels.");
                 cancellationToken.ThrowIfCancellationRequested();
                 FFmpegHelper.Throw(ffmpeg.av_write_trailer(output), "av_write_trailer");
-                return new(targetWidth, targetHeight, main.HasAlpha, auxiliary);
             }
             finally
             {
@@ -184,12 +159,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
-        private static string? ReadMetadata(AVDictionary* metadata, string key)
-        {
-            var entry = ffmpeg.av_dict_get(metadata, key, null, 0);
-            return entry == null ? null : Marshal.PtrToStringUTF8((nint)entry->value);
-        }
-
         private sealed class Track : IDisposable
         {
             private AVCodecContext* decoder;
@@ -201,17 +170,13 @@ namespace projectFrameCut.Render.EncodeAndDecode
             private readonly AVStream* input;
             private readonly AVStream* output;
             private readonly bool preserveSourceFormat;
-            private readonly bool previewProxy;
             private long nextPts;
-            public long Frames { get; private set; }
-            public bool HasAlpha { get; private set; }
 
             public Track(AVFormatContext* sourceFormat, AVStream* input, AVFormatContext* format, int width, int height,
-                string videoEncoder, long bitrate, bool preserveSourceFormat, bool previewProxy)
+                string videoEncoder, long bitrate, bool preserveSourceFormat)
             {
                 this.input = input;
                 this.preserveSourceFormat = preserveSourceFormat;
-                this.previewProxy = previewProxy;
                 try
                 {
                     var codec = ffmpeg.avcodec_find_decoder(input->codecpar->codec_id);
@@ -220,34 +185,27 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     if (decoder == null) throw new OutOfMemoryException();
                     FFmpegHelper.Throw(ffmpeg.avcodec_parameters_to_context(decoder, input->codecpar), "avcodec_parameters_to_context");
                     decoder->pkt_timebase = input->time_base;
-                    if (previewProxy) decoder->thread_count = 2;
                     FFmpegHelper.Throw(ffmpeg.avcodec_open2(decoder, codec, null), "avcodec_open2(decoder)");
-                    var sourceInfo = ffmpeg.av_pix_fmt_desc_get(decoder->pix_fmt);
-                    if (previewProxy && ReadMetadata(input->metadata, "alpha_mode") == "1"
-                        && (sourceInfo == null || (sourceInfo->flags & ffmpeg.AV_PIX_FMT_FLAG_ALPHA) == 0))
-                        throw new NotSupportedException("The source decoder cannot preserve this video's alpha channel.");
 
                     codec = ffmpeg.avcodec_find_encoder_by_name(videoEncoder);
                     if (codec == null) throw new VideoEncoderException($"Could not find video encoder '{videoEncoder}'.");
                     encoder = ffmpeg.avcodec_alloc_context3(codec);
                     if (encoder == null) throw new OutOfMemoryException();
-                    var frameRate = previewProxy ? input->avg_frame_rate : ffmpeg.av_guess_frame_rate(sourceFormat, input, null);
+                    var frameRate = ffmpeg.av_guess_frame_rate(sourceFormat, input, null);
                     if (frameRate.num <= 0 || frameRate.den <= 0) frameRate = input->avg_frame_rate;
-                    if (previewProxy && (frameRate.num <= 0 || frameRate.den <= 0)) frameRate = input->r_frame_rate;
                     if (frameRate.num <= 0 || frameRate.den <= 0) frameRate = new() { num = 30, den = 1 };
                     encoder->codec_id = codec->id;
                     encoder->codec_type = AVMediaType.AVMEDIA_TYPE_VIDEO;
                     encoder->width = width;
                     encoder->height = height;
-                    encoder->pix_fmt = preserveSourceFormat ? SelectPixelFormat(codec, decoder->pix_fmt, previewProxy) : AVPixelFormat.AV_PIX_FMT_YUV420P;
-                    encoder->time_base = previewProxy ? input->time_base : new() { num = frameRate.den, den = frameRate.num };
+                    encoder->pix_fmt = preserveSourceFormat ? SelectPixelFormat(codec, decoder->pix_fmt) : AVPixelFormat.AV_PIX_FMT_YUV420P;
+                    encoder->time_base = new() { num = frameRate.den, den = frameRate.num };
                     if (encoder->time_base.num <= 0 || encoder->time_base.den <= 0)
                         throw new InvalidDataException("The source video has no valid time base.");
                     encoder->framerate = frameRate;
-                    encoder->gop_size = previewProxy ? 1 : 12;
+                    encoder->gop_size = 12;
                     encoder->max_b_frames = preserveSourceFormat ? 0 : 2;
                     encoder->bit_rate = bitrate;
-                    if (previewProxy) encoder->thread_count = 2;
                     if (preserveSourceFormat)
                     {
                         encoder->sample_aspect_ratio = input->codecpar->sample_aspect_ratio;
@@ -272,7 +230,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         CheckEncoderResult(ffmpeg.avcodec_open2(encoder, codec, &options), "avcodec_open2(encoder)");
                     }
                     finally { ffmpeg.av_dict_free(&options); }
-                    HasAlpha = (ffmpeg.av_pix_fmt_desc_get(encoder->pix_fmt)->flags & ffmpeg.AV_PIX_FMT_FLAG_ALPHA) != 0;
                     output = ffmpeg.avformat_new_stream(format, null);
                     if (output == null) throw new OutOfMemoryException();
                     FFmpegHelper.Throw(ffmpeg.avcodec_parameters_from_context(output->codecpar, encoder), "avcodec_parameters_from_context");
@@ -280,8 +237,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     output->time_base = encoder->time_base;
                     if (preserveSourceFormat)
                     {
-                        output->avg_frame_rate = previewProxy ? input->avg_frame_rate : frameRate;
-                        if (previewProxy) output->r_frame_rate = input->r_frame_rate;
+                        output->avg_frame_rate = frameRate;
                         output->sample_aspect_ratio = input->sample_aspect_ratio;
                         output->disposition = input->disposition;
                         ffmpeg.av_dict_copy(&output->metadata, input->metadata, 0);
@@ -315,33 +271,19 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     int result = ffmpeg.avcodec_receive_frame(decoder, source);
                     if (result == ffmpeg.AVERROR(ffmpeg.EAGAIN) || result == ffmpeg.AVERROR_EOF) return;
                     FFmpegHelper.Throw(result, "avcodec_receive_frame");
-                    if (previewProxy && (source->width != input->codecpar->width || source->height != input->codecpar->height))
-                        throw new NotSupportedException("Variable-resolution videos cannot use a preview proxy.");
                     scaler = ffmpeg.sws_getCachedContext(scaler, source->width, source->height, (AVPixelFormat)source->format,
                         encoder->width, encoder->height, encoder->pix_fmt, 4, null, null, null);
                     if (scaler == null) throw new InvalidOperationException("Cannot create video scaler.");
-                    if (previewProxy && (AVPixelFormat)source->format != encoder->pix_fmt
-                        && ffmpeg.av_pix_fmt_desc_get((AVPixelFormat)source->format)->nb_components >= 3)
-                    {
-                        var coefficients = ffmpeg.sws_getCoefficients((int)source->colorspace);
-                        if (coefficients == null) throw new NotSupportedException("Unknown proxy colorspace.");
-                        var details = new int_array4();
-                        details.UpdateFrom(new[] { coefficients[0], coefficients[1], coefficients[2], coefficients[3] });
-                        int fullRange = source->color_range == AVColorRange.AVCOL_RANGE_JPEG ? 1 : 0;
-                        FFmpegHelper.Throw(ffmpeg.sws_setColorspaceDetails(scaler, details, fullRange,
-                            details, fullRange, 0, 1 << 16, 1 << 16), "Set proxy colorspace");
-                    }
                     FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(scaled), "av_frame_make_writable");
                     if (FFmpegHelper.ScaleFrame(scaler, source, scaled) != encoder->height)
                         throw new InvalidDataException("Incomplete scaled video frame.");
                     if (preserveSourceFormat) CopyFrameProperties(scaled, source, input->time_base, encoder->time_base);
                     long pts = source->best_effort_timestamp;
                     scaled->pts = pts == ffmpeg.AV_NOPTS_VALUE ? nextPts : ffmpeg.av_rescale_q(pts, input->time_base, encoder->time_base);
-                    if (!previewProxy && scaled->pts < 0) scaled->pts = nextPts;
-                    nextPts = scaled->pts + (previewProxy ? Math.Max(1, scaled->duration) : 1);
+                    if (scaled->pts < 0) scaled->pts = nextPts;
+                    nextPts = scaled->pts + 1;
                     CheckEncoderResult(ffmpeg.avcodec_send_frame(encoder, scaled), "avcodec_send_frame");
                     WritePackets(format);
-                    Frames++;
                     ffmpeg.av_frame_unref(source);
                 }
             }
@@ -400,10 +342,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
             target->duration = ffmpeg.av_rescale_q(source->duration, sourceTimeBase, targetTimeBase);
         }
 
-        private static AVPixelFormat SelectPixelFormat(AVCodec* encoder, AVPixelFormat source, bool preserveAlpha = false)
+        private static AVPixelFormat SelectPixelFormat(AVCodec* encoder, AVPixelFormat source)
         {
-            var sourceInfo = ffmpeg.av_pix_fmt_desc_get(source);
-            if (preserveAlpha && sourceInfo == null) throw new VideoEncoderException("Unknown source pixel format.");
             AVPixelFormat* formats;
             int count;
             int result = ffmpeg.avcodec_get_supported_config(null, encoder,
@@ -416,8 +356,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 var desc = ffmpeg.av_pix_fmt_desc_get(formats[i]);
                 if (desc == null || (desc->flags & ffmpeg.AV_PIX_FMT_FLAG_HWACCEL) != 0) continue;
                 if (desc->nb_components > 0 && desc->comp[0].depth < depth) continue;
-                if (preserveAlpha && (sourceInfo->flags & ffmpeg.AV_PIX_FMT_FLAG_ALPHA) != 0
-                    && (desc->flags & ffmpeg.AV_PIX_FMT_FLAG_ALPHA) == 0) continue;
                 if (formats[i] == source) return source;
                 best = best == AVPixelFormat.AV_PIX_FMT_NONE
                     ? formats[i] : ffmpeg.av_find_best_pix_fmt_of_2(best, formats[i], source, 1, null);
